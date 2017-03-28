@@ -1,0 +1,183 @@
+$def with (data)
+<div class="main-content">
+		<div class="container-fluid">
+			<div class="pos-ser">
+				<div class="position">
+					<a href="/">首页</a>/<span>系统设置</span>
+				</div>
+				<div class="search">
+				</div>
+			</div>
+			<div class="safe container-fluid btsetting" style="overflow: hidden; margin-bottom: 15px;">
+				<div class="safe-port pull-left">
+					<div class="ss-text">
+						<em>关闭面板</em>
+						<div class='ssh-item'>
+							<input class='btswitch btswitch-ios' id='closePl' type='checkbox'>
+							<label class='btswitch-btn' for='closePl' onclick='ClosePanel()'></label>
+						</div>
+					</div>
+					<div class="ss-text">
+						<em>自动更新</em>
+						<div class='ssh-item'>
+							<input class='btswitch btswitch-ios' id='autoUpdate' type='checkbox' $data['panel']['auto'] >
+							<label class='btswitch-btn' for='autoUpdate' onclick="SetPanelAutoUpload()"></label>
+						</div>
+					</div>
+					<div class="ss-text" style="margin-right:0; display:none">
+						<button class="btn btn-success btn-sm" id="twoPassword">模块加锁</button>
+					</div>
+				</div>
+			</div>
+			<div class="setbox">
+				<div class="s-title">
+					<h3>设置</h3>
+				</div>
+				<div class="setting-con">
+					<form id="set-Config">
+						<p><span class="set-tit">别名</span><input id="webname" name="webname" class="inputtxt" type="text" value="$web.ctx.session.webname" ><span class="set-info">给面板取个别名，用于伪装面板</span></p>
+						<p><span class="set-tit">面板端口</span><input id="banport" name="port" class="inputtxt" type="numner" value="$data['panel']['port']" maxlength="5"><span class="set-info">建议端口范围8888 - 65535</span></p>
+						<p><span class="set-tit">域名</span><input name="domain" class="inputtxt" type="text" value="$data['panel']['domain']"><span class="set-info">为面板绑定一个访问域名;注意：一旦绑定域名,只能通过域名访问面板!</span></p>
+						<p><span class="set-tit">默认建站目录</span><input name="sites_path" class="inputtxt" type="text" value="$data['sites_path']"><span class="set-info">新创建的站点,默认将保存到该目录的下级目录!</span></p>
+						<p><span class="set-tit">默认备份目录</span><input name="backup_path" class="inputtxt" type="text" value="$data['backup_path']"><span class="set-info">网站和数据库的备份目录!</span></p>
+						<p><span class="set-tit">服务器名称</span><input name="address" class="inputtxt" type="text" value="$data['panel']['address']"><span class="set-info">默认为服务器IP,您可以任意修改!</span></p>
+						<p><span class="set-tit">服务器时间</span><input id="systemdate" name="systemdate" class="inputtxt disable" type="text" value="$data['systemdate']"><span class="modify btn btn-xs btn-success" onclick="syncDate()">同步</span></p>
+						<p><span class="set-tit">面板用户</span><input name="username_" class="inputtxt disable" type="text" value="$web.ctx.session.username" disabled><span class="modify btn btn-xs btn-success" onclick="setUserName()">修改</span></p>
+						<p><span class="set-tit">面板密码</span><input name="password_" class="inputtxt disable" type="text" value="******" disabled><span class="modify btn btn-xs btn-success" onclick="setPassword()">修改</span></p>
+					</form>
+					<div class="set-submit">保存</div>
+				</div>
+			</div>
+			<div class="setbox">
+				<div class="s-title">
+					<h3>修改默认页</h3>
+				</div>
+				<div class="setting-con">
+					<div class="changeDefault">
+						<button class="btn btn-default btn-sm" onclick="changeDefault(1)">默认文档</button>
+						<button class="btn btn-default btn-sm" onclick="changeDefault(2)">404错误页</button>
+						$if web.ctx.session.webserver == 'nginx':
+							<button class="btn btn-default btn-sm" onclick="changeDefault(3)">Nginx空白页</button>
+						$else:
+							<button class="btn btn-default btn-sm" onclick="changeDefault(4)">Apache空白页</button>
+						<button class="btn btn-default btn-sm" onclick="changeDefault(5)">默认站点停止页</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<script type="text/javascript">
+	setCookie('serverType','$web.ctx.session.webserver');
+	//校验端口格式
+	$$(function(){
+		$$("#banport").keyup(function(){
+			var text = $$(this).val();
+			if(isNaN(text)){
+				text = text.substring(0,text.length-1);
+				$$(this).val(text);
+			}
+			if($$(this).val()>65535){
+				$$(this).val(65535);
+			}
+		});
+		$$("#twoPassword").click(function(){
+			layer.open({
+				type: 1,
+				area: '500px',
+				title: '模块加锁设置',
+				closeBtn: 2,
+				shift: 5,
+				shadeClose: false,
+				content: "<div class='zun-form-new twoPassword'>\
+					<div class='tp-tit'>设置加锁模块</div>\
+					<div class='tp-con' style='margin-bottom:30px'>\
+						<label><input type='checkbox'>文件管理</label>\
+						<label><input type='checkbox'>计划任务</label>\
+						<label><input type='checkbox'>面板设置</label>\
+					</div>\
+					<div class='tp-tit'>设置加锁密码</div>\
+					<div class='tp-con'>\
+						<div class='line'><label><span>校验面板密码</span></label><div class='info-r'><input type='password' name='btpw' value=''></div></div>\
+						<div class='line'><label><span>设置二级密码</span></label><div class='info-r'><input type='password' name='bttpw' value=''></div></div>\
+						<div class='line'><label><span>重复输入</span></label><div class='info-r'><input type='password' name='bttpw' value=''></div></div>\
+					</div>\
+					<div class='submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button>\
+					<button type='button' class='btn btn-success btn-sm' onclick=\"setPassword(1)\">提交</button></div>\
+				</div>"
+			})
+		})
+	});
+	
+	
+	//关闭面板
+	function ClosePanel(){
+		layer.confirm('关闭面板会导致您无法访问面板 ,您真的要关闭宝塔Linux面板吗？',{title:'关闭面板',closeBtn:2,icon:13}, function() {
+			$$.post('/config?action=ClosePanel','',function(rdata){
+				layer.msg(rdata.msg,{icon:rdata.status?1:2});
+				setTimeout(function(){window.location.reload();},1000);
+			});
+		},function(){
+			$$("#closePl").prop("checked",false);
+		});
+	}
+	
+	//设置自动更新
+	function SetPanelAutoUpload(){
+		loadT = layer.msg('正在设置...',{icon:16,time:0})
+		$$.post('/config?action=AutoUpdatePanel','',function(rdata){
+			layer.close(loadT)
+			layer.msg(rdata.msg,{icon:rdata.status?1:2})
+		});
+	}
+
+	
+	$$(".set-submit").click(function(){
+		var data = $$("#set-Config").serialize();
+		layer.msg('正在保存数据...',{icon:16,time:0,shade: [0.3, '#000']});
+		$$.post('/config?action=setPanel',data,function(rdata){
+			layer.closeAll();
+			layer.msg(rdata.msg,{icon:rdata.status?1:2});
+			if(rdata.status){
+				if(rdata.isReWeb) $$.get('/system?action=ReWeb',function(){});
+				setTimeout(function(){
+					window.location.href = 'http://'+rdata.host+rdata.uri;
+				},3000);
+			}
+		});
+		
+	});
+	
+	
+	function syncDate(){
+		var loadT = layer.msg('正在同步时间...',{icon:16,time:0,shade: [0.3, '#000']});
+		$$.post('/config?action=syncDate','',function(rdata){
+			layer.close(loadT)
+			layer.msg(rdata.msg,{icon:1});
+			setTimeout(function(){
+					window.location.reload()
+				},3000);
+		})
+	}
+	function changeDefault(type){
+		var vhref='';
+		switch(type){
+			case 1:
+				vhref = '$web.ctx.session.setupPath/panel/data/defaultDoc.html';
+				break;
+			case 2:
+				vhref = '$web.ctx.session.setupPath/panel/data/404.html';
+				break;
+			case 3:
+				vhref = '$web.ctx.session.setupPath/nginx/html/index.html';
+				break;
+			case 4:
+				vhref = '$web.ctx.session.setupPath/apache/htdocs/index.html';
+				break;
+			case 5:
+				vhref = '$web.ctx.session.setupPath/stop/index.html';
+				break;
+		}
+		OnlineEditFile(0,vhref);
+	}
+</script>

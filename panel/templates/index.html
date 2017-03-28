@@ -1,0 +1,670 @@
+$def with (data)
+<div class="main-content">
+		<div class="container-fluid">
+			<div class="pos-ser">
+				<div class="position">
+					<a href="/">首页</a>/<span>服务器状态</span>
+				</div>
+			</div>
+			<div class="system-info">
+				<div class="tips">
+					系统: <span id="info"> 获取中</span>&#12288;&#12288;&#12288;已不间断运行: <span id="running"> 获取中</span><button onclick="ReBoot()" class="btn btn-success btn-xs" style="vertical-align:1px;margin-left:10px;">安全重启</button>
+					<span style="position:relative;left: 50px;">
+						版本: <span id="btversion" onclick="openLog()">$web.ctx.session.version</span>
+						<span id="toUpdate"><a href="javascript:checkUpdate();">检查更新</a></span>
+					</span>
+				</div>
+				<div class="list-serve">
+				<ul class="row">
+					<li class="col-xs-12 col-sm-4 col-md-4 col-lg-3">
+						<div class="serve-box">
+							<h3>网站</h3>
+							<div class="server-box-right">
+								<h4>$data['siteCount'] 个</h4>
+								<p>在此添加以及管理服务器上的网站</p>
+								<div class="sbr-btn">
+									<a href="/site">管理</a>|<a href="javascript:;" onclick="webAdd(0)">添加</a>
+								</div>
+							</div>
+						</div>
+					</li>
+					<li class="col-xs-12 col-sm-4 col-md-4 col-lg-3">
+						<div class="serve-box">
+							<h3>FTP</h3>
+							<div class="server-box-right">
+								<h4>$data['ftpCount'] 个</h4>
+								<p>在此添加以及管理服务器上的FTP</p>
+								<div class="sbr-btn">
+									<a href="/ftp">管理</a>|<a href="javascript:;" onclick="ftpAdd(0)">添加</a>
+								</div>
+							</div>
+						</div>
+					</li>
+					<li class="col-xs-12 col-sm-4 col-md-4 col-lg-3">
+						<div class="serve-box">
+							<h3>数据库</h3>
+							<div class="server-box-right">
+								<h4>$data['databaseCount'] 个</h4>
+								<p>在此添加以及管理服务器上的数据库</p>
+								<div class="sbr-btn">
+									<a href="/database">管理</a>|<a href="javascript:;" onclick="DataAdd(0)">添加</a>
+								</div>
+							</div>
+						</div>
+					</li>
+				</ul>
+			</div>
+			</div>
+			<div class="server">
+				<div class="s-title">
+					<h3>服务器使用情况</h3>
+					<a href="javascript:;" style="background:none;padding:0; margin-left:22px" onclick="ReMemory()">内存释放</a>
+					<a href="javascript:;" style="background:none;padding:0; margin-left:22px" onclick="GetNetWorkList()">连接管理</a>
+					<a href="javascript:;" style="background:none;padding:0; margin-left:22px" onclick="GetProcessList()">进程管理</a>
+					<a href="javascript:;" style="background:none;padding:0; margin-left:22px;display: none;" onclick="testServer()">性能测试</a>
+				</div>
+				<div class="server-circle">
+					<ul class="row" id="systemInfoList">
+						<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2">
+							<h3>CPU使用率</h3>
+							<div class="circle">
+								<div class="pie_left">
+									<div class="left"></div>
+								</div>
+								<div class="pie_right">
+									<div class="right"></div>
+								</div>
+								<div class="mask"><span id="state">0</span>%</div>
+							</div>
+							<h4 id="core">获取中</h4>
+						</li> 
+						<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2">
+							<h3>内存使用率</h3>
+							<div class="circle">
+								<div class="pie_left">
+									<div class="left"></div>
+								</div>
+								<div class="pie_right">
+									<div class="right"></div>
+								</div>
+								<div class="mask"><span id="left">0</span>%</div>
+							</div>
+							<h4 id="memory">获取中</h4>
+						</li> 
+						
+					</ul>
+				</div>
+			</div>
+			<div class="span6">
+				<div class="bw">
+					<div class="bg">
+					<div class="bw-title">网络流量</div>
+					<div class="bw-info">
+						<ul>
+							<li class="bi-line"><span>上行速度</span><a id="upSpeed">获取中</a></li>
+							<li class="bi-line"><span>下行速度</span><a id="downSpeed">获取中</a></li>
+							<li><span>总发送</span><a id="upAll" title="">获取中</a></li>
+							<li><span>总接收</span><a id="downAll" title="">获取中</a></li>
+						</ul>
+					</div>
+					<div id="NetImg" style="width:100%;height:330px;"></div>
+					</div>
+				</div>
+			</div>
+			<div class="span6">
+				<div class="bw zun-updata">
+				<div class="bg">
+				<div class="bw-title">套件</div>
+				<div class="setting-con" style="padding:0; height:442px; overflow:auto">
+						<div class="divtable" style="margin-top:0">
+						<table width="100%" cellspacing="0" cellpadding="0" border="0" class="table table-hover" style="border-left:0;border-top:0;border-right:0;">
+							<thead>
+								<tr>
+									<th style="padding-left:17px">安装软件</th>
+									<th>配置</th>
+									<th>状态</th>
+									<th width="90" style="text-align: right;padding-right:18px">操作</th>
+								</tr>
+							</thead>
+							<tbody id="tjBody">
+								$if data['web']['setup']:
+									<tr>
+										<td style="padding-left:18px">$data['web']['type'] $data['web']['version'] </td>
+										<td><a class="link" href="javascript:GetConfigFile('$data['web']['type']');">修改</a> | 
+											<a class="link" href="javascript:ServiceAdmin('$data['web']['type']','reload');">重载</a>
+											$if web.ctx.session.webserver == 'nginx':
+												| <a class="link" href="javascript:GetNginxStatus();">负载状态</a></td>
+										</td>
+										$if data['web']['status']:
+											<td><span class="ico-start glyphicon glyphicon-play"></span></td>
+											<td style="text-align: right;padding-right:18px"><a class="link" href="javascript:ServiceAdmin('$data['web']['type']','stop');">停止</a></td>
+										$else:
+											<td><span class="ico-stop glyphicon glyphicon-stop"></span></td>
+											<td style="text-align: right;padding-right:18px"><a class="link" href="javascript:ServiceAdmin('$data['web']['type']','start');">启动</a></td>
+									</tr>
+								$if data['mysql']['setup']:
+									<tr>
+										<td style="padding-left:18px">MySQL $data['mysql']['version']</td>
+										<td><a class="link" href="javascript:GetConfigFile('mysql');">修改</a> | <a class="link" href="javascript:ServiceAdmin('mysqld','reload');">重载</a></td>
+										$if data['mysql']['status']:
+											<td><span class="ico-start glyphicon glyphicon-play"></span></td>
+										$else:
+											<td><span class="ico-stop glyphicon glyphicon-stop"></span></td>
+										<td style="text-align: right;padding-right:18px"><a class="link" href="javascript:ServiceAdmin('mysqld','restart');">重启</a>
+											$if not data['mysql']['status']:
+												| <a class="link" href="javascript:ServiceAdmin('mysqld','start');">启动</a></td>
+									</tr>
+								$if data['pure-ftpd']['setup']:
+									<tr>
+										<td style="padding-left:18px">Pure-Ftpd $data['pure-ftpd']['version'] </td>
+										<td><a class="link" href="javascript:GetConfigFile('pure-ftpd');">修改</a> | <a class="link" href="javascript:ServiceAdmin('pure-ftpd','reload');">重载</a></td>
+										$if data['pure-ftpd']['status']:
+											<td><span class="ico-start glyphicon glyphicon-play"></span></td>
+										$else:
+											<td><span class="ico-stop glyphicon glyphicon-stop"></span></td>
+										<td style="text-align: right;padding-right:18px"><a class="link" href="javascript:ServiceAdmin('pure-ftpd','restart');">重启</a> | 
+											$if data['pure-ftpd']['status']:
+												<a class="link" href="javascript:ServiceAdmin('pure-ftpd','stop');">停止</a></td>
+											$else:
+												<a class="link" href="javascript:ServiceAdmin('pure-ftpd','start');">启动</a></td>
+									</tr>
+								$for key in data['php']:
+									<tr>
+										<td style="padding-left:18px">PHP版本：$key['version'] </td>
+										<td><a class="link" href="javascript:GetConfigFile('$key['version']');">修改</a> | 
+											<a class="link" href="javascript:ServiceAdmin('php-fpm-$key['version']','reload');">重载</a> | 
+											<a class="link" href="javascript:GetPHPStatus('$key['version']');">负载状态</a></td>
+										$if key['status']:
+											<td><span class="ico-start glyphicon glyphicon-play"></span></td>
+										$else:
+											<td><span class="ico-stop glyphicon glyphicon-stop"></span></td>
+										<td style="text-align: right;padding-right:18px"><a class="link" href="javascript:ServiceAdmin('php-fpm-$key['version']','restart');">重启</a>
+											$if not key['status']:
+												| <a class="link" href="javascript:ServiceAdmin('php-fpm-$key['version']','start');">启动</a></td>
+									</tr>
+								<tr>
+									<td style="padding-left:18px">日志文件</td>
+									<td><a class="link" href="javascript:openPath('/www/wwwlogs');">/www/wwwlogs</a></td>
+									<td id="logSize"></td>
+									<td style="text-align: right;padding-right:18px"><a class="link"  href="javascript:CloseLogs();">清空</a></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+				</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	</div>
+	<script type="text/javascript" src="/static/js/echarts.min.js"></script>
+	<script type="text/javascript" src="/static/js/web.js?$web.ctx.session.version"></script>
+	<script type="text/javascript" src="/static/js/ftp.js?$web.ctx.session.version"></script>
+	<script type="text/javascript" src="/static/js/data.js?$web.ctx.session.version"></script>
+	<script type="text/javascript" src="/static/js/server.js"></script>
+	<script type="text/javascript">
+		setCookie('serverType','$web.ctx.session.webserver');
+		//checkConfig();
+		GetDiskInfo();
+		getInfo();
+		//检测是否安装环境
+		$$.post("/ajax?action=CheckInstalled",function(rdata){
+			if(rdata == false){
+				RecInstall();
+			}
+		})
+		
+		//释放内存
+		function ReMemory(){
+			var loadT = layer.msg('正在处理,请稍候..',{icon:16,time:0,shade: [0.3, '#000']});
+			$$.post('/system?action=ReMemory','',function(rdata){
+				layer.msg(rdata.msg,{icon:rdata.status?1:5});
+				$$.get('/system?action=ReWeb',function(){
+					layer.close(loadT);
+					setTimeout(function(){
+						getInfo();
+					},3000)
+					
+				}).error(function(){
+					layer.close(loadT);
+					setTimeout(function(){
+						getInfo();
+					},3000)
+				});
+				
+			});
+		}
+		function GetDiskInfo(){
+			$$.get('/system?action=GetDiskInfo',function(rdata){
+				var dBody
+				for(var i=0;i<rdata.length;i++){
+					dBody = '<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2">'
+								+'<h3>'+rdata[i].path+'</h3>'
+								+'<div class="circle">'
+									+'<div class="pie_left">'
+										+'<div class="left"></div>'
+									+'</div>'
+									+'<div class="pie_right">'
+										+'<div class="right"></div>'
+									+'</div>'
+									+'<div class="mask"><span>'+rdata[i].size[3]+'</span>%</div>'
+								+'</div>'
+								+'<h4>'+ToSize(rdata[i].size[1])+'/'+ToSize(rdata[i].size[0])+'</h4>'
+							+'</li>'
+					$$("#systemInfoList").append(dBody)
+					setImg();
+				}
+				
+			});
+
+		}
+		
+		//检查配置
+		function checkConfig(){
+			$$.get('/system?action=ServiceAdmin&name='+getCookie('serverType')+'&type=test',function(rdata){
+				if(rdata.status) return;
+				layer.open({
+					type:1,
+					title:'检测到配置文件错误!',
+					area: '600px', 
+					shadeClose:false,
+					closeBtn:2,
+					content:'<div class="setchmod zun-form-new">'
+							+'<p style="padding: 0 20px 10px;line-height: 24px;">'+rdata.msg+'</p>'
+							+'<p style="font-weight:bold;margin-left: 24px;margin-top: 20px;">注意：</p><ul style="padding: 0 20px 10px;margin-top: 3px;" class="help-info-text">'
+							+'============================================================================'
+							+'<li>请根据以上错误信息排除配置文件错误！</li>'
+							+'<li>配置文件有错误的情况下，您添加的站点、域名将无法生效！</li>'
+							+'<li>排除配置错误之前请不要重启服务器或apache/nginx，这会导致您的Web服务无法启动！</li>'
+							+'<li>若您无法排除错误，请附上错误信息到我们官方论坛发贴求助;<a href="http://www.bt.cn/bbs" target="_blank" style="color:#20a53a"> >>点击求助</a></li>'
+							+'</ul>'
+							+'<div class="submit-btn">'
+							+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">知道了</button>'
+						    +'</div>'
+							+'</div>'
+				});
+			});
+		}
+		
+		
+		function getInfo() {
+			var loadT = layer.load({
+				shade: true,
+				shadeClose: false
+			});
+			$$.get("/system?action=GetSystemTotal", function(info) {
+				$$("#memory").html(parseInt((info.memRealUsed))+'/'+info.memTotal+' (MB)');
+				$$("#left").html(Math.floor(info.memRealUsed / (info.memTotal / 100)));
+				$$("#info").html(info.system);
+				$$("#running").html(info.time);
+				$$("#core").html(info.cpuNum + " 核心");
+				$$("#state").html(info.cpuRealUsed);
+				layer.close(loadT);
+				setImg();
+			});
+		}
+	
+		
+		function getNet(){
+			var up;
+			var down;
+			$$.ajax({
+				type:"get",
+				url:"/system?action=GetNetWork",
+				async:true,
+				success:function(net){
+					$$("#InterfaceSpeed").html("接口速率： 1.0Gbps");
+					$$("#upSpeed").html(net.up+' KB');
+					$$("#downSpeed").html(net.down+' KB');
+					$$("#downAll").html(ToSize(net.downTotal));
+					$$("#downAll").attr('title','报文数量:'+net.downPackets)
+					$$("#upAll").html(ToSize(net.upTotal));
+					$$("#upAll").attr('title','报文数量:'+net.upPackets)
+					$$("#core").html(net.cpu[1] + " 核心");
+					$$("#state").html(net.cpu[0]);
+					setCookie("upNet",net.up);
+					setCookie("downNet",net.down);
+					setImg();
+				}
+			});
+			//var result = Number(getCookie("upNet"));
+			//return result;
+		}
+		//网络Io
+		function NetImg(){
+			var myChartNetwork = echarts.init(document.getElementById('NetImg'));
+			var xData = [];
+			var yData = [];
+			var zData = [];
+			function getTime(){
+				var now = new Date();
+				var hour=now.getHours();
+				var minute=now.getMinutes();
+				var second=now.getSeconds();
+				if(minute<10){
+					minute = "0"+minute;
+				}
+				if(second<10){
+					second = "0"+second;
+				}
+				var nowdate = hour+":"+minute+":"+second;
+				return nowdate;
+			}
+			function ts(m){return m<10?'0'+m:m }
+			function format(sjc){
+				var time = new Date(sjc);
+				var h = time.getHours();
+				var mm = time.getMinutes();
+				var s = time.getSeconds();
+				return ts(h)+':'+ts(mm)+':'+ts(s);
+			}
+			function addData(shift) {
+				xData.push(getTime());
+				yData.push(getCookie("upNet"));
+				zData.push(getCookie("downNet"));
+				if (shift) {
+					xData.shift();
+					yData.shift();
+					zData.shift();
+				}
+			}
+			for (var i = 8; i >= 0; i--){
+				var time = (new Date()).getTime();
+				xData.push(format(time - (i * 3 * 1000)));
+				yData.push(0);
+				zData.push(0);                                                       
+			}
+			// 指定图表的配置项和数据
+			var option = {
+				title: {
+					text: '接口流量实时',
+					left: 'center',
+					textStyle:{
+						color:'#888888',
+						fontStyle: 'normal',
+						fontFamily: '宋体',
+						fontSize: 16,
+					}
+				},
+				tooltip: {
+					trigger: 'axis'
+				},
+				legend: {
+					data:['上行','下行'],
+					bottom:'2%'
+				},
+				xAxis: {
+					type: 'category',
+					boundaryGap: false,
+					data: xData
+				},
+				yAxis: {
+					name: '单位KB/s',
+					splitLine:{
+						lineStyle:{
+							color:"#eee"
+						}
+					}
+				},
+				series: [{
+					name: '上行',
+					type: 'line',
+					data: yData,
+					smooth:true,
+					symbol: 'none',
+					stack: 'a',
+					areaStyle: {
+						normal: {}
+					},
+					itemStyle: {
+						normal: {
+							color: 'rgba(255, 140, 0, 0.7)'
+						}
+					}
+				},{
+					name: '下行',
+					type: 'line',
+					data: zData,
+					smooth:true,
+					symbol: 'none',
+					stack: 'a',
+					areaStyle: {
+						normal: {}
+					},
+					itemStyle: {
+						normal: {
+							color: 'rgba(30, 144, 255, 0.7)'
+						}
+					}
+				}]
+			};
+			setInterval(function () {
+				getNet();
+				addData(true);
+				myChartNetwork.setOption({
+					xAxis: {
+						data: xData
+					},
+					series: [{
+						name:'上行',
+						data: yData
+					},{
+						name:'下行',
+						data: zData
+					}]
+				});
+			}, 3000);
+			// 使用刚指定的配置项和数据显示图表。
+			myChartNetwork.setOption(option);
+			window.addEventListener("resize",function(){
+				myChartNetwork.resize();
+			});
+		}
+		NetImg();
+		function setImg() {
+			$$('.circle').each(function(index, el) {
+				var num = $$(this).find('span').text() * 3.6;
+				if (num <= 180) {
+					$$(this).find('.left').css('transform', "rotate(0deg)");
+					$$(this).find('.right').css('transform', "rotate(" + num + "deg)");
+				} else {
+					$$(this).find('.right').css('transform', "rotate(180deg)");
+					$$(this).find('.left').css('transform', "rotate(" + (num - 180) + "deg)");
+				};
+			});
+		
+		}
+		setImg();
+		
+		//检查更新
+		$$(function(){
+			$$.get('/ajax?action=UpdatePanel',function(rdata){
+				if(rdata.status == false) return;
+				if(rdata.version != undefined){
+					$$("#toUpdate").html('<a href="javascript:updateMsg();">立即更新</a>');
+					return;
+				}
+				layer.msg(rdata.msg,{icon:1});
+			});
+		});
+	
+		
+		//检查更新
+		function checkUpdate(){
+			var loadT = layer.msg('正在获取版本信息...',{icon:16,time:0,shade: [0.3, '#000']});
+			$$.get('/ajax?action=UpdatePanel&check=true',function(rdata){
+				layer.close(loadT);
+				layer.msg(rdata.msg,{icon:1});
+				if(rdata.version != undefined) updateMsg();
+			});
+		}
+		
+		
+		function updateMsg(){
+			window.open("http://www.bt.cn/bbs/thread-1186-1-1.html");
+			$$.get('/ajax?action=UpdatePanel',function(rdata){
+				layer.open({
+					type:1,
+					title:'升级到['+rdata.version+']',
+					area: '400px', 
+					shadeClose:false,
+					closeBtn:2,
+					content:'<div class="setchmod zun-form-new">'
+							+'<p style="padding: 0 20px 10px;line-height: 24px;">'+rdata.updateMsg+'</p>'
+							+'<div class="submit-btn">'
+							+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>'
+							+'<button type="button" class="btn btn-success btn-sm btn-title" onclick="updateVersion(\''+rdata.version+'\')" >立即升级</button>'
+						    +'</div>'
+							+'</div>'
+				});
+			});
+		}
+		
+		//开始升级
+		function updateVersion(version){
+			var loadT = layer.msg('正在升级面板..',{icon:16,time:0,shade: [0.3, '#000']});
+			$$.get('/ajax?action=UpdatePanel','toUpdate=yes',function(rdata){
+				layer.closeAll();
+				layer.msg(rdata.msg,{icon:rdata.status?1:2});
+				if(rdata.status){
+					$$("#btversion").html(version);
+					$$("#toUpdate").html('');
+				}
+				
+				layer.msg('升级成功!',{icon:1});
+				$$.get('/system?action=ReWeb',function(){});
+				setTimeout(function(){
+					window.location.reload();
+				},3000);
+			}).error(function(){
+				layer.msg('升级成功!',{icon:1});
+				setTimeout(function(){
+					window.location.reload();
+				},3000);
+			});
+		}
+		
+		//更新日志
+		function openLog(){
+			layer.open({
+			type: 1,
+			area: ['682px','462px'],
+			title: '版本更新',
+			closeBtn: 2,
+			shift: 5,
+			shadeClose: false,
+			content: '<div class="DrawRecordCon"></div>'	
+			})
+			$$.get('http://www.bt.cn/Api/getUpdateLogs',function(rdata){
+				var body = '';
+				for(var i=0;i<rdata.length;i++){
+					body += '<div class="DrawRecord DrawRecordlist">\
+							<div class="DrawRecordL">'+rdata[i].addtime+'<i></i></div>\
+							<div class="DrawRecordR">\
+								<h3>'+rdata[i].title+'</h3>\
+								<p>'+rdata[i].body+'</p>\
+							</div>\
+						</div>'
+				}
+				$$(".DrawRecordCon").html(body);
+			},'jsonp');
+		}
+		
+		function CloseLogs(){
+			$$.post('/files?action=CloseLogs','',function(rdata){
+				$$("#logSize").html(rdata);
+				layer.msg('已清理!',{icon:1});
+			});
+		}
+		
+		$$(function(){
+			$$.post('/files?action=GetDirSize','path=$web.ctx.session.logsPath',function(rdata){
+				$$("#logSize").html(rdata);
+			});
+		})
+		
+		//重启服务器
+		function ReBoot(){
+			layer.open({
+				type: 1,
+				title: "安全重启服务器",
+				area: ['500px', '280px'],
+				closeBtn: 2,
+				shadeClose: false,
+				content:"<div class='zun-form-new webDelete' style='padding-top:15px'>\
+					<p style='color:red; margin-bottom:10px; font-size:15px;'>注意，若您的服务器是一个容器，请取消。</p>\
+					<div class='SafeRestart' style='line-height:26px'>\
+						<p>安全重启有利于保障文件安全，将执行以下操作：</p>\
+						<p>1.停止$web.ctx.session.webserver服务</p>\
+						<p>2.停止MySQL服务</p>\
+						<p>3.开始重启服务器</p>\
+						<p>4.等待服务器启动</p>\
+					</div>\
+					<div class='submit-btn'>\
+						<button type='button' id='web_end_time' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
+						<button type='button' id='web_del_send' class='btn btn-success btn-sm btn-title'  onclick='WSafeRestart()'>确定</button>\
+					</div>\
+				</div>"
+			})
+		}
+		
+		//重启服务器
+		function WSafeRestart(){
+			var body = '<div class="SafeRestartCode" style="line-height:26px"></div>';
+			$$(".webDelete").html(body);
+			var data = "name=$web.ctx.session.webserver&type=stop";
+			$$(".SafeRestartCode").html("<p>正在停止$web.ctx.session.webserver服务...</p>");
+			$$.post('/system?action=ServiceAdmin',data,function(r1){
+				data = "name=mysqld&type=stop";
+				$$(".SafeRestartCode").html("<p style='color:999'>正在停止$web.ctx.session.webserver服务</p><p>正在停止MySQL服务...</p>");
+				$$.post('/system?action=ServiceAdmin',data,function(r2){
+					$$(".SafeRestartCode").html("<p style='color:999'>正在停止$web.ctx.session.webserver服务</p><p style='color:#999'>正在停止MySQL服务</p><p>开始重启服务器...</p>");
+					$$.post('/system?action=RestartServer','',function(rdata){
+						$$(".SafeRestartCode").html("<p style='color:#999'>正在停止$web.ctx.session.webserver服务</p><p style='color:#999'>正在停止MySQL服务</p><p style='color:#999'>开始重启服务器</p><p>等待服务器启动...</p>");
+						var sEver = setInterval(function(){
+							$$.get("/system?action=GetSystemTotal", function(info) {
+								clearInterval(sEver);
+								$$(".SafeRestartCode").html("<p style='color:#999'>正在停止$web.ctx.session.webserver服务</p><p style='color:#999'>正在停止MySQL服务</p><p style='color:#999'>开始重启服务器</p><p style='color:#999'>等待服务器启动</p><p>服务器重启成功!</p>");
+								setTimeout(function(){
+									layer.closeAll();
+								},3000);
+							}).error(function(){
+								
+							});
+						},3000);
+					}).error(function(){
+						$$(".SafeRestartCode").html("<p style='color:#999'>正在停止$web.ctx.session.webserver服务</p><p style='color:#999'>正在停止MySQL服务</p><p style='color:#999'>开始重启服务器</p><p>等待服务器启动...</p>");
+						var sEver = setInterval(function(){
+							$$.get("/system?action=GetSystemTotal", function(info) {
+								clearInterval(sEver);
+								$$(".SafeRestartCode").html("<p style='color:#999'>正在停止$web.ctx.session.webserver服务</p><p style='color:#999'>正在停止MySQL服务</p><p style='color:#999'>开始重启服务器</p><p style='color:#999'>等待服务器启动</p><p>服务器重启成功!</p>");
+								setTimeout(function(){
+									layer.closeAll();
+								},3000);
+								
+							}).error(function(){
+								
+							});
+						},3000);
+					});
+				});
+			});
+			$$(".layui-layer-close").unbind("click");
+		}
+		
+		
+		//测试更新
+		function isupdate(){
+			var version = '$web.ctx.session.version';
+			if(version != '3.5.0'){
+				$$.post('/files?action=DeleteDir','path=/www/server/panel/class',function(rdata){
+					$$.post('/files?action=DeleteFile','path=/www/server/panel/main.pyc',function(rdata){
+						updateVersion();
+					})
+				});
+			}
+		}
+		isupdate();
+		
+	</script>

@@ -1,0 +1,367 @@
+$def with (data)
+<div class="main-content">
+		<div class="container-fluid">
+			<div class="pos-ser">
+				<div class="position">
+					<a href="/">首页</a>/<span>系统安全</span>
+				</div>
+				<div class="search">
+					<form target="hid" onsubmit='getLogs(1,$$("#SearchValue").prop("value"))'>
+						<input type="text" id="SearchValue" class="ser-text" placeholder="搜索日志" />
+						<button type="button" class="ser-sub"onclick='getLogs(1,$$("#SearchValue").prop("value"))'></button>
+					</form>
+					<iframe name='hid' id="hid" style="display:none"></iframe>
+				</div>
+			</div>
+			<div class="safe container-fluid" style="overflow: hidden; margin-bottom: 15px;">
+				<div class="safe-screen pull-left">
+					<form>
+						<div class="ss-text">
+							<em>启用SSH</em>
+							<div class='ssh-item' id="in_safe">
+								
+							</div>
+						</div>
+					</form>
+				</div>
+				<div class="safe-port pull-left" style="margin:0 80px">
+					<div class="ss-text">
+						<em>SSH端口：</em>
+						<input type="text" class="sp-text" id="mstscPort" value=""  />
+					</div>
+					<div class="ss-text">
+						<button id="mstscSubmit" onclick='mstsc($$("#mstscPort").prop("value"))' class="btn btn-default btn-sm" type="button">更改</button>
+					</div>
+				</div>
+				<div class="safe-port pull-left">
+					<div class="ss-text">
+						<em>启用禁ping</em>
+						<div class='ssh-item' id="isPing">
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="white-black-ip">
+				<div class="black-ip">
+					<div class="def-log">
+						<div class="def-log-title">
+							<h3 class="dlt-h3">
+								防火墙</h3>
+							<select id="firewalldType" class="dlt-text" name="type" style="width:95px;">
+								<option value="port">放行端口</option>
+								<option value="address">屏蔽IP</option>
+							</select>
+							<input type="text" class="dlt-text" style="width: 60px;" id="AcceptPort" placeholder="端口">
+							<input type="text" class="dlt-text" id="Ps" placeholder="备注/说明">
+							<button id="toAccept" onclick="AddAcceptPort()" class="btn btn-default btn-sm" type="button">放行</button>
+						</div>
+						<div class="divtable">
+							<table width="100%" border="0" cellpadding="0" cellspacing="0" class="table table-hover">
+								<thead>
+								<tr>
+									<th>编号</th>
+									<th>行为</th>
+									<th>添加时间</th>
+									<th>说明</th>
+									<th width="50px" class="text-right">操作</th>
+								</tr>
+								</thead>
+								<tbody id="firewallBody"></tbody>
+							</table>
+							<div class="dataTables_paginate paging_bootstrap pagination">
+								<ul id="firewallPage" class="page"></ul>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="white-black-ip">
+				<div class="black-ip">
+					<div class="def-log">
+						<div class="def-log-title">
+							<h3 class="dlt-h3">
+								操作日志</h3>
+							<a class="btn btn-default btn-sm" onclick="delLogs();" style="margin-top: 1px;">清空</a>
+						</div>
+						<div class="divtable">
+							<table width="100%" border="0" cellpadding="0" cellspacing="0" class="table table-hover">
+								<thead>
+								<tr>
+									<th>编号</th>
+									<th>操作类型</th>
+									<th>详情</th>
+									<th>操作时间</th>
+								</tr>
+								</thead>
+								<tbody id="logsBody"></tbody>
+							</table>
+							<div class="dataTables_paginate paging_bootstrap pagination">
+								<ul id="logsPage" class="page"></ul>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div> 
+<script type="text/javascript">
+	
+	$$("#firewalldType").change(function(){
+		var type = $$(this).val();
+		var w = '60px';
+		var p = '端口';
+		var t = '放行'
+		if(type == 'address'){
+			w = '150px';
+			p = '欲屏蔽的IP地址';
+			t = '屏蔽';
+		}
+		$$("#AcceptPort").css("width",w);
+		$$("#AcceptPort").attr('placeholder',p);
+		$$("#toAccept").html(t);
+		 
+	});
+	
+	$$(function(){
+		$$( "#spinner1" ).spinner({min:0});
+		$$( "#spinner2" ).spinner({min:0});
+		$$( "#spinner3" ).spinner({min:0});
+		$$('.tacticsNum').mouseover(function(){
+			var titletips = $$(this).attr("data-title");
+		    layer.tips(titletips, this, {
+			    tips: [1, '#3c8dbc'],
+			    time:0
+			})
+		})
+		$$('.tacticsNum').mouseout(function(){
+			$$(".layui-layer-tips").remove();
+		})
+	});
+	
+	GetSshInfo()
+	function GetSshInfo(){
+		$$.post('/firewall?action=GetSshInfo','',function(rdata){
+			var SSHchecked = ''
+			if(rdata.status){
+				SSHchecked = "<input class='btswitch btswitch-ios' id='sshswitch' type='checkbox' checked><label class='btswitch-btn' for='sshswitch' onclick='SetMstscStatus()'></label>"
+			}else{
+				SSHchecked = "<input class='btswitch btswitch-ios' id='sshswitch' type='checkbox'><label class='btswitch-btn' for='sshswitch' onclick='SetMstscStatus()'></label>"
+				$$("#mstscSubmit").attr('disabled','disabled')
+				$$("#mstscPort").attr('disabled','disabled')
+			}
+			
+			$$("#in_safe").html(SSHchecked)
+			$$("#mstscPort").val(rdata.port)
+			var isPint = ""
+			if(rdata.ping){
+				isPing = "<input class='btswitch btswitch-ios' id='noping' type='checkbox'><label class='btswitch-btn' for='noping' onclick='ping(0)'></label>"
+			}else{
+				isPing = "<input class='btswitch btswitch-ios' id='noping' type='checkbox' checked><label class='btswitch-btn' for='noping' onclick='ping(1)'></label>"
+			}
+			
+			$$("#isPing").html(isPing)
+			
+		});
+	}
+	
+	
+		/**
+	 * 修改远程端口
+	 */
+
+function mstsc(port) {
+		layer.confirm('更改远程端口时，将会注消所有已登陆帐户，您真的要更改远程端口吗？', {
+			title: '远程端口'
+		}, function(index) {
+			var data = "port=" + port;
+			var loadT = layer.load({
+				shade: true,
+				shadeClose: false
+			});
+			$$.post('/firewall?action=SetSshPort', data, function(ret) {
+				layer.msg(ret.msg,{icon:ret.status?1:2})
+				layer.close(loadT)
+				GetSshInfo()
+			});
+		});
+	}
+/**
+ * 更改禁ping状态
+ * @param {Int} state 0.禁ping 1.可ping
+ */
+function ping(status){
+	var msg = status==0?'禁PING后不影响服务器正常使用，但无法ping通服务器，您真的要禁PING吗？':'解除禁PING状态可能会被黑客发现您的服务器，您真的要解禁吗？';
+	layer.confirm(msg,{title:'是否禁ping',closeBtn:2},function(){
+		layer.msg('正在处理……',{icon:16,time:20000});
+		$$.post('/firewall?action=SetPing','status='+status, function(ret) {
+			layer.closeAll();
+			if (ret.status == true) {
+				if(status == 0){
+					layer.msg('已禁Ping', {icon: 1});
+				}
+				else{
+					layer.msg('已解除禁Ping', {icon: 1});
+				}
+				setTimeout(function(){window.location.reload();},3000);
+				
+				
+			} else {
+				layer.msg('连接服务器失败', {icon: 2});
+			}
+		})
+	},function(){
+		if(status == 1){
+			$$("#noping").prop("checked",true);
+		}
+		else{
+			$$("#noping").prop("checked",false);
+		}
+	})
+}
+
+	
+	ShowAccept(1);
+	/**
+	 * 设置远程服务状态
+	 * @param {Int} state 0.启用 1.关闭
+	 */
+	function SetMstscStatus(){
+		status = $$("#sshswitch").prop("checked")==true?1:0;
+		
+		var msg = status==1?'停用SSH服务的同时也将注销所有已登陆用户,继续吗？':'确定启用SSH服务吗？';
+		layer.confirm(msg,{title:'警告',closeBtn:2},function(index){
+			if(index > 0){
+				layer.msg('正在处理……',{icon:16,time:20000});
+				$$.post('/firewall?action=SetSshStatus','status='+status,function(rdata){
+					layer.closeAll();
+					layer.msg(rdata.msg,{icon:rdata.status?1:2});
+					refresh();
+				})
+			}
+		},function(){
+			if(status == 0){
+				$$("#sshswitch").prop("checked",false);
+			}
+			else{
+				$$("#sshswitch").prop("checked",true);
+			}
+		})
+	}
+	
+	/**
+	 * 取回数据
+	 * @param {Int} page  分页号
+	 */
+	function ShowAccept(page,search) {
+		search = search == undefined ? '':search;
+		var loadT = layer.load();
+		$$.post('/data?action=getData','table=firewall&tojs=ShowAccept&limit=10&p=' + page+"&search="+search, function(data) {
+			layer.close(loadT);
+			var Body = '';
+			for (var i = 0; i < data.data.length; i++) {
+				Body += "<tr>\
+								<td><em class='dlt-num'>" + data.data[i].id + "</em></td>\
+								<td>" + (data.data[i].port.indexOf('.') == -1?'放行端口:['+data.data[i].port+']':'屏蔽IP:['+data.data[i].port+']') + "</td>\
+								<td>" + data.data[i].addtime + "</td>\
+								<td>" + data.data[i].ps + "</td>\
+								<td class='text-right'><a href='javascript:;' class='link' onclick=\"DelAcceptPort(" + data.data[i].id + ",'" + data.data[i].port + "')\">删除</a></td>\
+							</tr>";
+			}
+			$$("#firewallBody").html(Body);
+			$$("#firewallPage").html(data.page);
+		})
+	}
+	
+	//添加放行
+	function AddAcceptPort(){
+		var type = $$("#firewalldType").val();
+		var port = $$("#AcceptPort").val();
+		var ps = $$("#Ps").val();
+		var action = "AddDropAddress";
+		if(type == 'port'){
+			if(isNaN(port) == true || port < 1 || port >= 65535){
+				layer.msg("请填写正确的端口!",{icon:2});
+				$$("#AcceptPort").focus();
+				return;
+			}
+			action = "AddAcceptPort";
+		}
+		
+		
+		if(ps.length < 1){
+			layer.msg("备注/说明 不能为空!",{icon:2});
+			$$("#Ps").focus();
+			return;
+		}
+		var loadT = layer.msg('正在添加...',{icon:16,time:0,shade: [0.3, '#000']})
+		$$.post('/firewall?action='+action,'port='+port+"&ps="+ps+'&type='+type,function(rdata){
+			layer.close(loadT);
+			if(rdata.status == true || rdata.status == 'true'){
+				layer.msg(rdata.msg,{icon:1});
+				ShowAccept(1);
+				$$("#AcceptPort").val('');
+				$$("#Ps").val('');
+			}else{
+				layer.msg('防火墙连接失败,请检查是否启用 Fiewalld',{icon:2});
+			}
+			
+			$$("#AcceptPort").attr('value',"");
+			$$("#Ps").attr('value',"");
+		})
+		
+	}
+	
+	//删除放行
+	function DelAcceptPort(id, port) {
+		var action = "DelDropAddress";
+		if(port.indexOf('.') == -1){
+			action = "DelAcceptPort";
+		}
+		
+		layer.confirm("您真的要删除"+port+"吗？", {title: '删除防火墙规则'}, function(index) {
+			var loadT = layer.msg('正在删除...',{icon:16,time:0,shade: [0.3, '#000']})
+			$$.post("/firewall?action="+action,"id=" + id + "&port=" + port, function(ret) {
+				layer.close(loadT);
+				layer.msg(ret.msg,{icon:ret.status?1:2})
+				ShowAccept(1);
+			});
+		});
+	}
+	
+	getLogs(1);
+	/**
+	 * 取回数据
+	 * @param {Int} page  分页号
+	 */
+	function getLogs(page,search) {
+		search = search == undefined ? '':search;
+		var loadT = layer.load();
+		$$.post('/data?action=getData','table=logs&tojs=getLogs&limit=10&p=' + page+"&search="+search, function(data) {
+			layer.close(loadT);
+			var Body = '';
+			for (var i = 0; i < data.data.length; i++) {
+				Body += "<tr>\
+								<td><em class='dlt-num'>" + data.data[i].id + "</em></td>\
+								<td>" + data.data[i].type + "</td>\
+								<td>" + data.data[i].log + "</td>\
+								<td>" + data.data[i].addtime + "</td>\
+							</tr>";
+			}
+			$$("#logsBody").html(Body);
+			$$("#logsPage").html(data.page);
+		})
+	}
+	
+	//清理面板日志
+	function delLogs(){
+		layer.confirm('即将清空面板日志，继续吗？',{title:'清空日志',closeBtn:2},function(){
+			var loadT = layer.msg('正在清理...',{icon:16});
+			$$.post('/ajax?action=delClose','',function(rdata){
+				layer.close(loadT);
+				layer.msg(rdata.msg,{icon:rdata.status?1:2});
+				getLogs(1);
+			});
+		});
+	}
+</script>

@@ -1,0 +1,321 @@
+$def with (tData)
+<div class="main-content">
+		<div class="container-fluid">
+			<div class="pos-ser">
+				<div class="position">
+					<a href="/">首页</a>/<span>数据库管理</span>
+				</div>
+				<div class="search">
+					<form target="hid" onsubmit='getData(1,$$("#SearchValue").prop("value"))'>
+						<input type="text" id="SearchValue" class="ser-text" placeholder="搜索数据库" />
+						<button type="button" class="ser-sub"onclick='getData(1,$$("#SearchValue").prop("value"))'></button>
+					</form>
+					<iframe name='hid' id="hid" style="display:none"></iframe>
+				</div>
+			</div>
+			<div class="safe">
+					<button onclick="DataAdd(0)" title="添加数据库" class="btn btn-success btn-sm" type="button" style="margin-right: 5px;">添加数据库</button>
+					<button onclick="DataSetuppwd(0)" title="设置管理员密码" class="btn btn-default btn-sm" type="button" style="margin-right: 5px;">root密码</button>
+					<button onclick="AdminDatabase('','root','$web.ctx.session.config['mysql_root']')" title="打开phpMyadmin" class="btn btn-default btn-sm" type="button" style="margin-right: 5px;">phpMyAdmin</button>
+					<div class="divtable">
+						<table class="table table-hover" width="100%" border="0" cellpadding="0" cellspacing="0">
+							<thead>
+							<tr>
+								<th width='30px'><input type="checkbox" id="setBox"></th>
+                                <th>数据库名</th>
+                                <th>用户名</th>
+                                <th width="15%">密码</th>
+                                <th>打包文件</th>
+                                <th width="15%">备注</th>
+                                <th width="150px" class="text-right">操作</th>
+							</tr>
+							</thead>
+							<tbody id="DataBody"></tbody>
+						</table>
+						<div class="dataTables_paginate paging_bootstrap pagination">
+							<span class="sync" onclick="SyncToDatabases(1)" title="将选中数据库同步到服务器">同步选中</span>
+							<span class="sync" onclick="SyncToDatabases(0)" title="将所有数据库同步到服务器">同步所有</span>
+							<span class="sync" onclick="SyncGetDatabases()">从服务器获取</span>
+							<ul id="DataPage" class="page"></ul>
+						</div>
+					</div>
+			</div>
+			<form id="toPHPMyAdmin" action="$web.ctx.session.phpmyadminDir/index.php" method="post" style="display: none;"  target="_blank">
+				<input type="text" name="pma_username" id="pma_username" value="" />
+				<input type="password" name="pma_password" id="pma_password" value="" />
+				<input type="text" name="db" id="db" value="" />
+			</form>
+		</div>
+	</div>
+</div>
+		<script type="text/javascript" src="/static/js/data.js"></script>
+		
+		<script type="text/javascript">
+			$if not tData['isSetup']:
+				layer.msg('请先安装MySQL数据库！<a href="/soft#i" style="color:#20a53a;float: right;">去安装</a>',{icon:7,shade: [0.3, '#000'],time:0});
+				$$(".layui-layer-shade").css("margin-left","180px");
+				//setTimeout(function(){ window.location.href = '/soft'; },3000);
+			//setCookie('uploadSize','<?php echo intval(ini_get("upload_max_filesize"))*1024*1024; ?>');
+			getData(1);
+			//重载MySQL配置
+			function ReloadMySQL(){
+				layer.msg('已重载MySQL配置!',{icon:1});
+				$$.post('/database?action=ReloadMySQL','',function(rdata){});
+			}
+			
+			Date.prototype.format = function(format)
+			{
+				 var o = {
+				 "M+" : this.getMonth()+1, //month
+				 "d+" : this.getDate(),    //day
+				 "h+" : this.getHours(),   //hour
+				 "m+" : this.getMinutes(), //minute
+				 "s+" : this.getSeconds(), //second
+				 "q+" : Math.floor((this.getMonth()+3)/3),  //quarter
+				 "S" : this.getMilliseconds() //millisecond
+				 }
+				 if(/(y+)/.test(format)) format=format.replace(RegExp.$$1,
+				 (this.getFullYear()+"").substr(4 - RegExp.$$1.length));
+				 for(var k in o)if(new RegExp("("+ k +")").test(format))
+				 format = format.replace(RegExp.$$1,
+				 RegExp.$$1.length==1 ? o[k] :
+				 ("00"+ o[k]).substr((""+ o[k]).length));
+				 return format;
+			}
+			//时间戳到格式日期
+			function getLocalTime(tm) {
+				return new Date(parseInt(tm) * 1000).format("yyyy/MM/dd hh:mm:ss");
+			}
+			
+			
+			//取扩展名
+			function GetExtName(fileName,oext){
+				var extArr = fileName.split(".");
+				var exts = ['conf','sh','cnf','pl','so','passwd','cshrc','deny','cache','init','po','ext2','ext3','ext4','i686','img','gz','efi','old','pid','lock','frm','opt','err','MYI','MYD','CSM'];
+				var extLastName = extArr[extArr.length - 1];
+				if(oext) return extLastName;
+				if(extArr.length<2 || extLastName.length>5 || extLastName.length < 2){
+					return "file";
+				}
+				for(var i=0; i<exts.length; i++){
+					if(exts[i]==extLastName){
+						return "file";
+					}
+				}
+				return extLastName;
+			}
+			
+			//导入数据库
+			function InputDatabase(name){
+				var path = "$web.ctx.session.config['backup_path']/database";
+				$$.post('/files?action=GetDir','path='+path,function(rdata){
+					var Body = '';
+					for (var i = 0; i < rdata.FILES.length; i++) {
+						if(rdata.FILES[i] == null) continue;
+						var fmp = rdata.FILES[i].split(";");
+						var ext = GetExtName(fmp[0],true);
+						
+						if(ext != 'sql' && ext != 'zip' && ext != 'gz' && ext != 'tgz') continue;
+						Body += "<tr>\
+									<td class='column-name'><span class='ico ico-"+ext+"'></span><a class='text'>" + fmp[0] + "</a></td>\
+									<td>" + ((fmp[2].length > 11)?fmp[2]:getLocalTime(fmp[2])) + "</td>\
+									<td>" + (ToSize(fmp[1])) + "</td>\
+									<td class='editmenu'>\
+										<a class='link' href='javascript:;' onclick=\"RecoveryData('" + rdata.PATH +"/"+ fmp[0] + "','"+name+"')\">导入</a>\
+									</span></td>\
+								</tr>";
+					}
+					layer.open({
+							type: 1,
+							skin: 'demo-class',
+							area: '600px',
+							title: '从文件导入数据',
+							closeBtn: 2,
+							shift: 5,
+							shadeClose: false,
+							content: '<div style="padding:10px">'
+										+'<button class="btn btn-default btn-sm" onclick="UploadFiles(\''+name+'\')">从本地上传</button>'
+										+'<div class="divtable" style="max-height:300px; overflow:auto">'
+											+'<table class="table table-hover">'
+												+'<thead>'
+													+'<tr>'
+														+'<th>文件名</th>'
+														+'<th>修改时间</th>'
+														+'<th>大小</th>'
+														+'<th>操作</th>'
+													+'</tr>'
+												+'</thead>'
+												+'<tbody>'+Body+'</tbody>'
+											+'</table>'
+										+'</div>'
+										+'<ul class="help-info-text">'
+										   +'<li>仅支持sql、zip、(tar.gz|gz|tgz)</li>'
+										   +'<li>zip、tar.gz压缩包结构：test.zip或test.tar.gz压缩包内，必需包含test.sql</li>'
+										   +'<li>若文件过大，您还可以使用SFTP工具，将数据库文件上传到$web.ctx.session.config['backup_path']/database</li>'
+										+'</ul>'
+									+'</div>'
+					});
+				});
+			}
+			
+			
+			//上传文件
+			function UploadFiles(name){
+				var path = "$web.ctx.session.config['backup_path']/database/";
+				var index = layer.open({
+					type:1,
+					closeBtn: 2,
+					title:'上传文件 --- <span style="color:red;">请上传sql或zip或tar.gz压缩包</span>',
+					area: ['500px','500px'], 
+					shadeClose:false,
+					content:'<div class="fileUploadDiv"><input type="hidden" id="input-val" value="'+path+'" />\
+							<input type="file" id="file_input"  multiple="true" autocomplete="off" />\
+							<button type="button"  id="opt" autocomplete="off">添加文件</button>\
+							<button type="button" id="up" autocomplete="off" >开始上传</button>\
+							<span id="totalProgress" style="float:right;"></span>\
+							<button type="button" id="filesClose" autocomplete="off">关闭</button>\
+							<ul id="up_box"></ul></div>'
+				});
+				$$("#filesClose").click(function(){
+					layer.closeAll();
+					InputDatabase(name);
+				});
+				UploadStart(true);
+			}
+			
+			
+			//设置访问权限
+			function SetDatabaseAccess(dataName,action){
+				if(action == 1){
+					var access = $$("#dataAccess").val();
+					if(access == 'ip') access = $$("input[name=address]").val();
+					layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
+					$$.post('/database?action=SetDatabaseAccess','name='+dataName+'&access='+access,function(rdata){
+						layer.closeAll();
+						layer.msg(rdata.msg,{icon:rdata.status?1:2});
+					});
+					return;
+				}
+				
+				
+				$$.post('/database?action=GetDatabaseAccess','name='+dataName,function(rdata){
+					if(rdata == null){
+						layer.msg('此数据库不能修改访问权限!',{icon:2});
+						return;
+					}
+					layer.open({
+						type: 1,
+						skin: 'demo-class',
+						area: '480px',
+						title: '设置数据库权限['+dataName+']',
+						closeBtn: 2,
+						shift: 5,
+						shadeClose: false,
+						content: "<form class='zun-form-new' id='DatabaseAccess'>\
+				                        <div class='line'>\
+										<label><span>访问权限</span></label>\
+										<div class='info-r'>\
+										<select id='dataAccess' style='width:100px;'>\
+											<option value='127.0.0.1' "+(rdata.msg[1] == '127.0.0.1'?'selected':'')+">本地服务器</option>\
+											<option value='%' "+(rdata.msg[1] == '%'?'selected':'')+">所有人</option>\
+											<option value='ip' "+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'selected':'')+">指定IP</option>\
+										</select>\
+										<input type='text' name='address' placeholder='请输入允许访问的IP地址' value='"+rdata.msg[1]+"' style='width:230px;"+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'':'display:none;')+"' />\
+										</div>\
+										</div>\
+				                        <div class='submit-btn'>\
+											<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
+									        <button type='button' class='btn btn-success btn-sm btn-title' onclick=\"SetDatabaseAccess('"+dataName+"',1)\" >确定</button>\
+								        </div>\
+								      </form>"
+					});
+					
+					$$("#dataAccess").change(function(){
+						var access = $$(this).val();
+						if(access == 'ip'){
+							$$("input[name=address]").show().val('');
+						}else{
+							$$("input[name=address]").hide();
+						}
+					});
+				});
+			}
+			
+			//同步到数据库
+			function SyncToDatabases(type){
+				//取选中对象
+				var el = document.getElementsByTagName('input');
+				var len = el.length;
+				var data='';
+				var a = '';
+				var count = 0;
+				//构造POST数据
+				for(var i=0;i<len;i++){
+					if(el[i].checked == true && el[i].value != 'on'){
+						data += a+count+'='+el[i].value;
+						a = '&';
+						count++;
+					}
+				}
+				
+				var loadT = layer.msg('正在同步...',{icon:16,time:0,shade: [0.3, '#000']});
+				$$.post('/database?action=SyncToDatabases&type='+type,data,function(rdata){
+					layer.close(loadT);
+					layer.msg(rdata.msg,{icon:rdata.status?1:2});
+				});
+			}
+			
+			//从数据库中获取
+			function SyncGetDatabases(){
+				var loadT = layer.msg('正在同步...',{icon:16,time:0,shade: [0.3, '#000']});
+				$$.post('/database?action=SyncGetDatabases',function(rdata){
+					layer.close(loadT);
+					getData(1);
+					layer.msg(rdata.msg,{icon:rdata.status?1:2});
+				});
+			}
+			
+			/**
+			 * 全选/反选
+			 */
+			$$("#setBox").click(function() {
+				if ($$(this).prop("checked")) {
+					$$("input[name=id]").prop("checked", true);
+				} else {
+					$$("input[name=id]").prop("checked", false);
+				}
+			});
+			
+			
+			//管理数据库
+			function AdminDatabase(name,username,password){
+				if($$("#toPHPMyAdmin").attr('action').indexOf('phpmyadmin') == -1){
+					layer.msg('请选安装phpMyAdmin',{icon:2,shade: [0.3, '#000']})
+					setTimeout(function(){ window.location.href = '/soft'; },3000);
+					return;
+				}
+				
+				$$("#db").val(name);
+				$$("#pma_username").val(username);
+				$$("#pma_password").val(password);
+				$$("#toPHPMyAdmin").submit();
+			}
+			
+			$$(".safe .tipstitle").mouseover(function(){
+			var title = $$(this).attr("data-title");
+		    layer.tips(title, this, {
+			    tips: [1, '#3c8dbc'],
+			    time:0
+			})
+			}).mouseout(function(){
+				$$(".layui-layer-tips").remove();
+			})
+			$$(".btn-more").hover(function(){
+				$$(this).addClass("open");
+			},function(){
+				$$(this).removeClass("open");
+			});
+			
+</script>
+<script src="/static/js/upload.js"></script>
+<script src="/static/js/ajax.js"></script>

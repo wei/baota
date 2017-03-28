@@ -1,0 +1,36 @@
+#!/usr/bin/python
+#coding: utf-8
+#-----------------------------
+#宝塔Linux面板网站日志切割脚本
+#-----------------------------
+import sys
+import os
+import shutil
+import time
+import glob
+print '=================================================================='
+print '★['+time.strftime("%Y/%m/%d %I:%M:%S")+']，切割日志'
+print '=================================================================='
+print '|--当前保留最新的['+sys.argv[2]+']份'
+logsPath = '/www/wwwlogs/'
+oldFileName = logsPath+sys.argv[1]
+if not os.path.exists(oldFileName):
+    print '|---'+sys.argv[1]+'文件不存在!'
+    exit()
+
+
+
+logs=sorted(glob.glob(oldFileName+"_*"))
+count=len(logs)
+num=count - int(sys.argv[2])
+
+for i in range(count):
+    if i>num:
+	    break;
+    os.remove(logs[i])
+    print '|---多余日志['+logs[i]+']已删除!'
+
+newFileName=oldFileName+'_'+time.strftime("%Y-%m-%d_%I%M%S")+'.log'
+shutil.move(oldFileName,newFileName)
+os.system("kill -USR1 `cat /www/server/nginx/logs/nginx.pid`");
+print '|---已切割日志到:'+newFileName

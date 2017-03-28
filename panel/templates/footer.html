@@ -1,0 +1,85 @@
+<div class="footer"><?php echo $_SESSION['brand'].$_SESSION['product']; ?>  ©2014-2016 <?php echo $_SESSION['brand']; ?>(bt.cn)<a style="margin-left:20px;color:#20a53a;" href="http://www.bt.cn/bbs" target="_blank">问题求助|产品建议请上宝塔论坛</a></div></div>
+<script>
+var W_window = $(window).width();
+if(W_window <= 980){
+	$(window).scroll(function (){
+		var top = $(window).scrollTop();
+		$(".sidebar-scroll").css({"position":"absolute","top":top});
+	})
+}
+else{
+	$(".sidebar-scroll").css({"position":"fixed","top":"0"});
+}
+$(function(){
+	$(".fb-ico").hover(function(){
+		$(".fb-text").css({"left":"36px","top":0,"width":"80px"})
+	},function(){
+		$(".fb-text").css({"left":0,"width":"36px"})
+	}).click(function(){
+		$(".fb-text").css({"left":0,"width":"36px"});
+		$(".zun-feedback-suggestion").show();
+	});
+	$(".fb-close").click(function(){
+		$(".zun-feedback-suggestion").hide();
+	});
+	$(".fb-attitudes li").click(function(){
+		$(this).addClass("fb-selected").siblings().removeClass("fb-selected");
+	});
+});
+
+$("#dologin").click(function(){
+	layer.confirm('您真的要退出面板吗?',{closeBtn:2},function(){
+		window.location.href = '/login.php?dologin';
+	});
+	return false;
+});
+
+
+function setPassword(to){
+	if(to == 1){
+		p1 = $("#p1").val();
+		p2 = $("#p2").val();
+		if(p1 == '' || p1.length < 6){
+			layer.msg('新密码为空或少于6位!',{icon:2});
+			return;
+		}
+		if(p1 != p2){
+			layer.msg('两次输入的密码不一致',{icon:2});
+			return;
+		}
+		
+		$.post('/index.php?action=setPassword','password1='+p1+'&password2='+p2,function(rdata){
+			if(rdata.status){
+				layer.closeAll();
+				layer.msg(rdata.msg,{icon:1});
+			}else{
+				layer.msg(rdata.msg,{icon:2});
+			}
+		})
+		return;
+	}
+
+	layer.open({
+		type: 1,
+			area: '290px',
+			title: '修改密码',
+			closeBtn: 2,
+			shift: 5,
+			shadeClose: false,
+			content: "<div class='zun-form-new'>\
+					<div class='line'>\
+					<label><span>密码</span></label>\
+					<div class='info-r'><input type='password' name='password1' id='p1' value='' placeholder='新的密码'/></div></div>\
+					<div class='line'>\
+					<label><span>重复</span></label>\
+					<div class='info-r'><input type='password' name='password2' id='p2' value='' placeholder='再输一次'/></div></div>\
+					<div class='submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button>\
+					<button type='button' class='btn btn-success btn-sm' onclick=\"setPassword(1)\">修改</button></div>\
+				</div>"
+	});
+}
+  
+</script>
+</div>
+</body>
+</html>

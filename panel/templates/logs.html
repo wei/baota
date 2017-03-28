@@ -1,0 +1,68 @@
+			<div class="main-content">
+				<div class="container-fluid">
+					<div class="pos-ser">
+						<div class="position">
+							<a href="/index.php">首页</a>/<span>操作日志</span>
+						</div>
+						<div class="search">
+							<form target="hid" onsubmit='getLogs(1,$("#SearchValue").prop("value"))'>
+								<input type="text" id="SearchValue" class="ser-text" placeholder="搜索日志" />
+								<button type="button" class="ser-sub"onclick='getLogs(1,$("#SearchValue").prop("value"))'></button>
+							</form>
+							<iframe name='hid' id="hid" style="display:none"></iframe>
+						</div>
+					</div>
+					<div class="white-black-ip">
+							<div class="black-ip">
+								<div class="def-log">
+									<div class="def-log-title">
+										<h3 class="dlt-h3">
+											操作日志</h3>
+									</div>
+									<div class="divtable">
+										<table width="100%" border="0" cellpadding="0" cellspacing="0" class="table table-hover">
+											<thead>
+											<tr>
+												<th>编号</th>
+												<th>操作类型</th>
+												<th>详情</th>
+												<th>操作时间</th>
+											</tr>
+											</thead>
+											<tbody id="logsBody"></tbody>
+										</table>
+										<div class="dataTables_paginate paging_bootstrap pagination">
+											<ul id="logsPage" class="page"></ul>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+				</div>
+			</div>
+		</div> 
+<script type="text/javascript">
+getLogs();
+/**
+ * 取回数据
+ * @param {Int} page  分页号
+ */
+function getLogs(page,search) {
+	search = search == undefined ? '':search;
+	var loadT = layer.load();
+	$.get('/Ajax.php?action=getData&tab=logs&tojs=getLogs&limit=10&p=' + page+"&search="+search, function(data) {
+		layer.close(loadT);
+		var Body = '';
+		for (var i = 0; i < data.data.length; i++) {
+			Body += "<tr>\
+							<td><em class='dlt-num'>" + data.data[i].id + "</em></td>\
+							<td>" + data.data[i].type + "</td>\
+							<td>" + data.data[i].log + "</td>\
+							<td>" + data.data[i].addtime + "</td>\
+						</tr>";
+		}
+		$("#logsBody").html(Body);
+		$("#logsPage").html(data.page);
+	})
+}
+</script>
