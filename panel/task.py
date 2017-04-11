@@ -12,7 +12,7 @@
 #------------------------------
 import sys,os,json
 sys.path.append("class/")
-import db
+import db,public,time
 global pre,timeoutCount,logPath,isTask
 pre = 0
 timeoutCount = 0
@@ -214,11 +214,133 @@ def GetMemUsed():
     tmp1 = memInfo['memTotal'] / 100
     return (tmp / tmp1)
 
+#检查502错误 
+def check502():
+    phpversions = ['52','53','54','55','56','70','71']
+    for version in phpversions:
+        if not os.path.exists('/etc/init.d/php-fpm-'+version): continue;
+        if checkPHPVersion(version): continue;
+        if startPHPVersion(version):
+            public.WriteLog('PHP守护程序','检测到PHP-' + version + '处理异常,已自动修复!')
+        else:
+            public.WriteLog('PHP守护程序','检测到PHP-' + version + '处理异常,无法完成自动修复，请手动检查!')
+            
+#处理指定PHP版本   
+def startPHPVersion(version):
+    fpm = '/etc/init.d/php-fpm-'+version
+    if not os.path.exists(fpm): return False;
+    
+    #尝试重载服务
+    os.system(fpm + ' reload');
+    if checkPHPVersion(version): return True;
+    
+    #尝试重启服务
+    cgi = '/tmp/php-cgi-'+version
+    os.system('pkill -9 php-fpm-'+version)
+    time.sleep(0.5);
+    os.system('rm -f ' + cgi);
+    os.system(fpm + ' start');
+    if checkPHPVersion(version): return True;
+    
+    #检查是否正确启动
+    if os.path.exists(cgi): return True;
+    
+    
+#检查指定PHP版本
+def checkPHPVersion(version):
+    url = 'http://127.0.0.2/'+version+'/phpinfo.php';
+    result = public.httpGet(url);
+    #检查nginx
+    if result.find('Bad Gateway') != -1: return False;
+    #检查Apache
+    if result.find('Service Unavailable') != -1: return False;
+    if result.find('Not Found') != -1: CheckPHPINFO();
+    
+    #检查Web服务是否启动
+    if result.find('Connection refused') != -1: 
+        global isTask
+        if os.path.exists(isTask): 
+            isStatus = public.readFile(isTask);
+            if isStatus == 'True': return True;
+        filename = '/etc/init.d/nginx';
+        if os.path.exists(filename): os.system(filename + ' start');
+        filename = '/etc/init.d/httpd';
+        if os.path.exists(filename): os.system(filename + ' start');
+        
+    return True;
+
+
+#检测PHPINFO配置
+def CheckPHPINFO():
+    php_versions = ['52','53','54','55','56','70','71'];
+    setupPath = '/www/server'
+    for version in php_versions:
+        sPath = setupPath + '/phpinfo/' + version;
+        if not os.path.exists(sPath + '/phpinfo.php'):
+            os.system("mkdir -p " + sPath);
+            public.writeFile(sPath + '/phpinfo.php','<?php phpinfo(); ?>');
+    
+    
+    path = setupPath +'/panel/vhost/nginx/phpinfo.conf';
+    if not os.path.exists(path):
+        opt = "";
+        for version in php_versions:
+            opt += "\n\tlocation /"+version+" {\n\t\tinclude enable-php-"+version+".conf;\n\t}";
+        
+        phpinfoBody = '''server
+{
+    listen 80;
+    server_name 127.0.0.2;
+    allow 127.0.0.1;
+    index phpinfo.php index.html index.php;
+    root  /www/server/phpinfo;
+%s   
+}''' % (opt,);
+        public.writeFile(path,phpinfoBody);
+    
+    
+    path = setupPath + '/panel/vhost/apache/phpinfo.conf';
+    if not os.path.exists(path):
+        opt = "";
+        for version in php_versions:
+            opt += """\n<Location /%s>
+    SetHandler "proxy:unix:/tmp/php-cgi-%s.sock|fcgi://localhost"
+</Location>""" % (version,version);
+            
+        phpinfoBody = '''
+<VirtualHost *:80>
+DocumentRoot "/www/server/phpinfo"
+ServerAdmin phpinfo
+ServerName 127.0.0.2
+%s
+<Directory "/www/server/phpinfo">
+    SetOutputFilter DEFLATE
+    Options FollowSymLinks
+    AllowOverride All
+    Order allow,deny
+    Allow from all
+    DirectoryIndex index.php index.html index.htm default.php default.html default.htm
+</Directory>
+</VirtualHost>
+''' % (opt,);
+        public.writeFile(path,phpinfoBody);
+
+#502错误检查线程
+def check502Task():
+    while True:
+        if os.path.exists('/www/server/panel/data/502Task.pl'): check502();
+        time.sleep(60);
+
 if __name__ == "__main__":
     import threading
     t = threading.Thread(target=systemTask)
     t.setDaemon(True)
     t.start()
+    
+    p = threading.Thread(target=check502Task)
+    p.setDaemon(True)
+    p.start()
+    
     startTask()
     
 

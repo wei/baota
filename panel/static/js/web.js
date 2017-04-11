@@ -94,7 +94,6 @@ function webAdd(type) {
 		var loadT = layer.msg('正在处理...',{icon:16,time:0})
 		var data = $("#addweb").serialize()+"&port="+Webport+"&webname="+domain;
 		$.post('/site?action=AddSite', data, function(ret) {
-			
 			if(ret.status === false){
 				layer.msg(ret.msg,{icon:ret.status?1:2})
 				return
@@ -159,14 +158,14 @@ function webAdd(type) {
             php_version += "<option value='"+rdata[i].version+"'>"+rdata[i].name+"</option>";
         }
 		php_version += "</select></div>";
-		var index = layer.open({
+		layer.open({
 			type: 1,
 			skin: 'demo-class',
 			area: '560px',
 			title: '添加网站',
 			closeBtn: 2,
 			shift: 0,
-			shadeClose: true,
+			shadeClose: false,
 			content: "<form class='zun-form-new' id='addweb'>\
 						<div class='line'>\
 		                    <label><span>域名</span></label>\

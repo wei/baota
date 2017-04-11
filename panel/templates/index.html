@@ -248,9 +248,9 @@ $def with (data)
 									+'<div class="pie_right">'
 										+'<div class="right"></div>'
 									+'</div>'
-									+'<div class="mask"><span>'+rdata[i].size[3]+'</span>%</div>'
+									+'<div class="mask"><span>'+rdata[i].size[3].replace('%','')+'</span>%</div>'
 								+'</div>'
-								+'<h4>'+ToSize(rdata[i].size[1])+'/'+ToSize(rdata[i].size[0])+'</h4>'
+								+'<h4>'+rdata[i].size[1]+'/'+rdata[i].size[0]+'</h4>'
 							+'</li>'
 					$$("#systemInfoList").append(dBody)
 					setImg();
@@ -657,7 +657,7 @@ $def with (data)
 		//测试更新
 		function isupdate(){
 			var version = '$web.ctx.session.version';
-			if(version != '3.5.0'){
+			if(version != '3.6.0'){
 				$$.post('/files?action=DeleteDir','path=/www/server/panel/class',function(rdata){
 					$$.post('/files?action=DeleteFile','path=/www/server/panel/main.pyc',function(rdata){
 						updateVersion();
@@ -665,6 +665,6 @@ $def with (data)
 				});
 			}
 		}
-		isupdate();
+		//isupdate();
 		
 	</script>

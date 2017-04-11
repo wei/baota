@@ -456,13 +456,14 @@ $def with (tData)
 						  + '<div class="ssl-type-con"></div>'
 						  + '</div>';
 				var mykeyhtml = '<div class="myKeyCon"><div class="ssl-con-key">密钥(KEY)<br><textarea id="key" readonly="" style="background-color:#f6f6f6">'+rdata.key+'</textarea></div>'
-							+ '<div class="ssl-con-key">证书(CRT)<br><textarea id="csr" readonly="" style="background-color:#f6f6f6">'+rdata.csr+'</textarea></div>'
+							+ '<div class="ssl-con-key">证书(CRT/PEM)<br><textarea id="csr" readonly="" style="background-color:#f6f6f6">'+rdata.csr+'</textarea></div>'
 							+ '<div class="ssl-btn"><button class="btn btn-success btn-sm" onclick="ChangeSaveSSL(\''+siteName+'\')">更新证书</button></div></div>'
 							+ '<div class="ssl-info"><p>已为您自动生成Let\'s Encrypt免费证书；</p><p>如需使用其他SSL,请切换其他证书后粘贴您的KEY以及CRT内容，然后保存即可。</p></div>';
+				
 				var othersslhtml = '<div class="myKeyCon"><div class="ssl-con-key">密钥(KEY)<br><textarea id="key">'+rdata.key+'</textarea></div>'
-							+ '<div class="ssl-con-key">证书(CRT)<br><textarea id="csr">'+rdata.csr+'</textarea></div>'
+							+ '<div class="ssl-con-key">证书(CRT/PEM)<br><textarea id="csr">'+rdata.csr+'</textarea></div>'
 							+ '<div class="ssl-btn"><button class="btn btn-success btn-sm" onclick="SaveSSL(\''+siteName+'\')">保存</button></div></div>'
-							+ '<div class="ssl-info"><p>粘贴您的KEY以及CRT内容，然后保存即可。</p></div>';
+							+ '<div class="ssl-info"><p>粘贴您的KEY以及CRT内容，然后保存即可<a href="http://www.bt.cn/bbs/thread-704-1-1.html" target="_blank" style="color:green;">[帮助]</a>。</p></div>';
 				$$("#webEdit-con").html(mBody);
 				if(rdata.type == 1){
 					$$(".ssl-type-con").html(mykeyhtml);

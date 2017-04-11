@@ -80,7 +80,7 @@ $def with (data)
 					<div class="def-log">
 						<div class="def-log-title">
 							<h3 class="dlt-h3">
-								操作日志</h3>
+								面板操作日志</h3>
 							<a class="btn btn-default btn-sm" onclick="delLogs();" style="margin-top: 1px;">清空</a>
 						</div>
 						<div class="divtable">
@@ -106,6 +106,20 @@ $def with (data)
 	</div>
 </div> 
 <script type="text/javascript">
+	
+	
+	function CloseLogs(){
+			$$.post('/files?action=CloseLogs','',function(rdata){
+				$$("#logSize").html(rdata);
+				layer.msg('已清理!',{icon:1});
+			});
+		}
+		
+		$$(function(){
+			$$.post('/files?action=GetDirSize','path=$web.ctx.session.logsPath',function(rdata){
+				$$("#logSize").html(rdata);
+			});
+		})
 	
 	$$("#firewalldType").change(function(){
 		var type = $$(this).val();

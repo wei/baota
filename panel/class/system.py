@@ -36,7 +36,6 @@ class system:
                 tmp['max'] = phpConfig['max']
                 tmp['maxTime'] = phpConfig['maxTime']
                 tmp['pathinfo'] = phpConfig['pathinfo']
-            
                 tmp['status'] = os.path.exists('/tmp/php-cgi-'+version+'.sock')
                 data['php'].append(tmp)
             
@@ -148,7 +147,10 @@ class system:
         
         autoUpdate = ''
         if os.path.exists('data/autoUpdate.pl'): autoUpdate = 'checked';
-        return {'port':port,'address':address,'domain':domain,'auto':autoUpdate}
+        
+        check502 = ''
+        if os.path.exists('data/502Task.pl'): check502 = 'checked';
+        return {'port':port,'address':address,'domain':domain,'auto':autoUpdate,'502':check502}
     
     def GetPHPConfig(self,version):
         #取PHP配置
@@ -174,7 +176,7 @@ class system:
             rep = ur"\n;*\s*cgi\.fix_pathinfo\s*=\s*([0-9]+)\s*\n"
             tmp = re.search(rep,phpini).groups()
             
-            if tmp[0] == '0':
+            if tmp[0] == '1':
                 data['pathinfo'] = True
             else:
                 data['pathinfo'] = False
@@ -230,6 +232,7 @@ class system:
         return memInfo
     
     def GetDiskInfo(self):
+        return self.GetDiskInfo2();
         #取磁盘分区信息
         diskIo = psutil.disk_partitions()
         diskInfo = []
@@ -241,6 +244,25 @@ class system:
             tmp['path'] = disk[1]
             tmp['size'] = psutil.disk_usage(disk[1])
             diskInfo.append(tmp)
+        return diskInfo
+    
+    def GetDiskInfo2(self):
+        #取磁盘分区信息
+        temp = public.ExecShell("df -h -P|grep '/'|grep -v tmpfs")[0];
+        temp1 = temp.split('\n');
+        diskInfo = [];
+        for tmp in temp1:
+            disk = tmp.split();
+            if len(disk) < 5: continue;
+            if len(disk[5]) > 24: continue;
+            if disk[5] == '/mnt/cdrom':continue;
+            if disk[5] == '/boot':continue;
+            if disk[5] == '/boot/efi':continue;
+            arr = {}
+            arr['path'] = disk[5];
+            tmp1 = [disk[1],disk[2],disk[3],disk[4]];
+            arr['size'] = tmp1;
+            diskInfo.append(arr);
         return diskInfo
     
     def GetNetWork(self):
@@ -289,6 +311,21 @@ class system:
                 public.ExecShell('/etc/init.d/nginx start');
             
             result = public.ExecShell('nginx -t -c '+self.setupPath+'/nginx/conf/nginx.conf');
+            if result[1].find('perserver') != -1:
+                limit = self.setupPath + '/nginx/conf/nginx.conf';
+                nginxConf = public.readFile(limit);
+                limitConf = "limit_conn_zone $binary_remote_addr zone=perip:10m;\n\t\tlimit_conn_zone $server_name zone=perserver:10m;";
+                nginxConf = nginxConf.replace("#limit_conn_zone $binary_remote_addr zone=perip:10m;",limitConf);
+                public.writeFile(limit,nginxConf)
+                public.ExecShell('/etc/init.d/nginx start');
+                return public.returnMsg(True,'因重装Nginx导致的配置文件不匹配已修正!');
+            
+            if result[1].find('proxy') != -1:
+                import panelSite
+                panelSite.panelSite().CheckProxy(get);
+                public.ExecShell('/etc/init.d/nginx start');
+                return public.returnMsg(True,'因重装Nginx导致的配置文件不匹配已修正!');
+            
             #return result
             if result[1].find('successful') == -1:
                 public.WriteLog("环境设置", "执行失败: "+str(result));
@@ -297,8 +334,9 @@ class system:
         #执行
         execStr = "/etc/init.d/"+get.name+" "+get.type
         if execStr == '/etc/init.d/pure-ftpd reload': execStr = self.setupPath+'/pure-ftpd/bin/pure-pw mkdb '+self.setupPath+'/pure-ftpd/etc/pureftpd.pdb'
-        if execStr == '/etc/init.d/tomcat reload': execStr = '/etc/init.d/tomcat start';
-        if execStr == '/etc/init.d/tomcat restart': execStr = '/etc/init.d/tomcat start';
+        if execStr == '/etc/init.d/pure-ftpd start': os.system('pkill -9 pure-ftpd');
+        if execStr == '/etc/init.d/tomcat reload': execStr = '/etc/init.d/tomcat stop && /etc/init.d/tomcat start';
+        if execStr == '/etc/init.d/tomcat restart': execStr = '/etc/init.d/tomcat stop && /etc/init.d/tomcat start';
                                 
         result = public.ExecShell(execStr)
         if result[1].find('nginx.pid') != -1:

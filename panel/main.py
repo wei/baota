@@ -1,4 +1,5 @@
-#coding: utf-8
+#!/usr/bin/env python
+#coding:utf-8
 # +-------------------------------------------------------------------
 # | 宝塔Linux面板
 # +-------------------------------------------------------------------
@@ -11,8 +12,6 @@
 # Panel 入口
 #------------------------------
 import sys,web,io,os
-reload(sys)
-sys.setdefaultencoding('utf-8')
 global panelPath
 panelPath = os.path.dirname(__file__)
 if len(panelPath) > 3: 
@@ -215,7 +214,7 @@ class panelConfig(common.panelAdmin):
         get = web.input()
         import config
         configObject = config.config()
-        defs = ('setPassword','setUsername','setPanel','setPathInfo','setPHPMaxSize','getFpmConfig','setFpmConfig','setPHPMaxTime','syncDate','setPHPDisable','SetControl','ClosePanel','AutoUpdatePanel','SetPanelLock')
+        defs = ('Set502','setPassword','setUsername','setPanel','setPathInfo','setPHPMaxSize','getFpmConfig','setFpmConfig','setPHPMaxTime','syncDate','setPHPDisable','SetControl','ClosePanel','AutoUpdatePanel','SetPanelLock')
         for key in defs:
             if key == get.action:
                 fun = 'configObject.'+key+'(get)'
@@ -227,6 +226,7 @@ class panelDownload(common.panelAdmin):
     def GET(self):
         get = web.input()
         try:
+            get.filename = get.filename.encode('utf-8');
             import os        
             fp = open(get.filename,'rb')
             size = os.path.getsize(get.filename)
@@ -271,7 +271,8 @@ class panelFiles(common.panelAdmin):
         defs = ('UploadFile','GetDir','CreateFile','CreateDir','DeleteDir','DeleteFile',
                 'CopyFile','CopyDir','MvFile','GetFileBody','SaveFileBody','Zip','UnZip',
                 'GetFileAccess','SetFileAccess','GetDirSize','SetBatchData','BatchPaste',
-                'DownloadFile','GetTaskSpeed','CloseLogs','InstallSoft','UninstallSoft')
+                'DownloadFile','GetTaskSpeed','CloseLogs','InstallSoft','UninstallSoft',
+                'RemoveTask','ActionTask')
         for key in defs:
             if key == get.action:
                 fun = 'filesObject.'+key+'(get)'
@@ -566,5 +567,7 @@ def internalerror():
 
 if __name__ == "__main__":
     app.notfound = notfound  
-    app.internalerror = internalerror  
+    app.internalerror = internalerror
+    reload(sys)
+    sys.setdefaultencoding("utf-8")
     app.run()

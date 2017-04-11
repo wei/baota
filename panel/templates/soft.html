@@ -565,7 +565,7 @@ $def with (data)
 				type: 1,
 				skin: 'demo-class',
 				area: '700px',
-				title: '七牛空间文件列表',
+				title: '文件列表',
 				closeBtn: 2,
 				shift: 0,
 				content: "<div class='divtable' style='margin:17px'>\
@@ -967,12 +967,19 @@ function GetSList(){
 }
 function AddVersion(obj,n){
 	var titlename = '';
+	var warning = '';
+	var version = $$(obj).parents("tr").find(".sl-s-info option:selected").text()
+	var tmps = version.split(' ');
+	var name = tmps[0];
 	switch (n){
 		case 0:
 			titlename = "安装版本";
 			break;
 		case 1:
 			titlename = "切换版本";
+			if(name == 'MySQL'){
+				warning = '<p style="color:red;margin-left: 29px;">警告：切换MySQL版本数据库将被覆盖，请注意备份数据!</p>';
+			}
 			break;
 		case 2:
 			titlename = "添加版本";
@@ -980,26 +987,6 @@ function AddVersion(obj,n){
 	}
 	
 	
-	if (name == 'apache' || name == 'nginx'){
-		var isError = false
-		$$.ajax({
-			url:'/ajax?action=GetInstalled',
-			type:'get',
-			async:false,
-			success:function(rdata){
-				if(rdata.webserver != name && rdata.webserver != false){
-					layer.msg('请先卸载Nginx',{icon:2,shade: [0.3, '#000']})
-					isError = true;
-					return;
-				}
-			}
-		});
-	}
-	
-	if (isError) return;
-	
-	var version = $$(obj).parents("tr").find(".sl-s-info option:selected").text()
-	var tmps = version.split(' ');
 	if(tmps[0] == 'phpMyAdmin' || tmps[0] == 'Nginx'){
 		var isError = false
 		$$.ajax({
@@ -1051,7 +1038,7 @@ function AddVersion(obj,n){
 	    closeBtn: 2,
 	    shadeClose: true,
 	    content:"<div class='zun-form-new'>\
-	    	<p style='margin-left:29px'>当前选择的版本是："+version+"</p>\
+	    	<p style='margin-left:29px'>当前选择的版本是："+version+"</p>"+warning+"\
 	    	<div class='fangshi'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></div>\
 	    	<div class='submit-btn' style='margin-top:15px'>\
 				<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\

@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-  
+#!/usr/bin/env python
+#coding:utf-8
 # +-------------------------------------------------------------------
 # | 宝塔Linux面板
 # +-------------------------------------------------------------------
@@ -52,12 +53,13 @@ class files:
     #上传文件
     def UploadFile(self,get):
         try:
+            get.path = get.path.encode('utf-8');
             if not os.path.exists(get.path): os.makedirs(get.path);
-            filename = get['path'] + get['zunfile'].filename.encode('utf8');
+            filename = (get['path'] + get['zunfile'].filename).encode('utf-8');
             fp = open(filename,'w+');
             fp.write(get['zunfile'].file.read());
             fp.close()
-            public.ExecShell('chown www.www ' + filename);
+            os.system('chown www.www ' + filename);
             public.WriteLog('文件管理','上传文件['+get['zunfile'].filename+'] 到 ['+get['path']+']成功!')
             return public.returnMsg(True,'上传成功')
         except:
@@ -69,15 +71,16 @@ class files:
             else:
                 ext = "." + tmp[-1];
             filename = get['path'] + "New_uploaded_files_" + opt + ext;   
-            fp = open(filename.decode('utf-8'),'w+');
+            fp = open(filename.encode('utf-8'),'w+');
             fp.write(get['zunfile'].file.read());
             fp.close()
-            public.ExecShell('chown www.www ' + filename);
+            os.system('chown www.www ' + filename);
             public.WriteLog('文件管理','上传文件['+"New_uploaded_files_" + opt + ext+'] 到 ['+get['path']+']成功!')
             return public.returnMsg(True,'上传成功')
         
     #取文件/目录列表
     def GetDir(self,get):
+        get.path = get.path.encode('utf-8');
         #if get.path.find('/www/wwwroot') == -1: get.path = '/www/wwwroot';
         if not os.path.exists(get.path): get.path = '/www'
         
@@ -86,9 +89,8 @@ class files:
         filenames = []
         for filename in os.listdir(get.path):
             try:
-                filePath = get.path+'/'+filename
-                if os.path.islink(filePath):
-                        continue
+                filePath = (get.path+'/'+filename).encode('utf8')
+                if os.path.islink(filePath): continue
                 stat = os.stat(filePath)
                 accept = str(oct(stat.st_mode)[-3:])
                 mtime = str(int(stat.st_mtime))
@@ -116,6 +118,7 @@ class files:
     
     #创建文件
     def CreateFile(self,get):
+        get.path = get.path.encode('utf-8');
         try:
             if os.path.exists(get.path):
                 return public.returnMsg(False,'指定文件已存在!')
@@ -132,6 +135,7 @@ class files:
     
     #创建目录
     def CreateDir(self,get):
+        get.path = get.path.encode('utf-8');
         try:
             if os.path.exists(get.path):
                 return public.returnMsg(False,'指定目录已存在!')
@@ -145,6 +149,7 @@ class files:
     
     #删除目录
     def DeleteDir(self,get) :
+        get.path = get.path.encode('utf-8');
         #if get.path.find('/www/wwwroot') == -1: return public.returnMsg(False,'此为演示服务器,禁止删除此目录!');
         if not os.path.exists(get.path):
             return public.returnMsg(False,'指定目录不存在!')
@@ -169,12 +174,14 @@ class files:
     
     #删除 空目录 
     def delete_empty(self,path):
+        get.path = get.path.encode('utf-8');
         for files in os.listdir(path):
             return False
         return True
     
     #删除文件
     def DeleteFile(self,get):
+        get.path = get.path.encode('utf-8');
         #if get.path.find('/www/wwwroot') == -1: return public.returnMsg(False,'此为演示服务器,禁止删除此文件!');
         if not os.path.exists(get.path):
             return public.returnMsg(False,'指定文件不存在!')
@@ -182,7 +189,6 @@ class files:
         #检查是否为.user.ini
         if get.path.find('.user.ini'):
             os.system("chattr -i '"+get.path+"'")
-            
         try:
             os.remove(get.path)
             public.WriteLog('文件管理','删除文件['+get.path+']成功!')
@@ -192,6 +198,8 @@ class files:
         
     #复制文件
     def CopyFile(self,get) :
+        get.sfile = get.sfile.encode('utf-8');
+        get.dfile = get.dfile.encode('utf-8');
         if not os.path.exists(get.sfile):
             return public.returnMsg(False,'指定文件不存在!')
         
@@ -209,6 +217,8 @@ class files:
     
     #复制文件夹
     def CopyDir(self,get):
+        get.sfile = get.sfile.encode('utf-8');
+        get.dfile = get.dfile.encode('utf-8');
         if not os.path.exists(get.sfile):
             return public.returnMsg(False,'指定目录不存在!')
         
@@ -228,6 +238,8 @@ class files:
     
     #移动文件或目录
     def MvFile(self,get) :
+        get.sfile = get.sfile.encode('utf-8');
+        get.dfile = get.dfile.encode('utf-8');
         if not os.path.exists(get.sfile):
             return public.returnMsg(False,'指定文件或目录不存在!')
         
@@ -247,6 +259,7 @@ class files:
     
     #获取文件内容
     def GetFileBody(self,get) :
+        get.path = get.path.encode('utf-8');
         if not os.path.exists(get.path):
             return public.returnMsg(False,'指定文件不存在!')
         #try:
@@ -271,6 +284,7 @@ class files:
     
     #保存文件
     def SaveFileBody(self,get):
+        get.path = get.path.encode('utf-8');
         if not os.path.exists(get.path):
             if get.path.find('.htaccess') == -1:
                 return public.returnMsg(False,'指定文件不存在!')
@@ -278,7 +292,7 @@ class files:
         try:
             isConf = get.path.find('.conf')
             if isConf != -1:
-                public.ExecShell('\\cp -a '+get.path+' /tmp/backup.conf');
+                os.system('\\cp -a '+get.path+' /tmp/backup.conf');
             
             data = get.data[0];
             if get.encoding == 'ascii':get.encoding = 'utf-8';
@@ -288,7 +302,7 @@ class files:
             if isConf != -1:
                 isError = public.checkWebConfig();
                 if isError != True:
-                    public.ExecShell('\\cp -a /tmp/backup.conf '+get.path);
+                    os.system('\\cp -a /tmp/backup.conf '+get.path);
                     return public.returnMsg(False,'配置文件错误:<br><font style="color:red;">'+isError.replace("\n",'<br>')+'</font>');
                 public.serviceReload();
                 
@@ -300,14 +314,17 @@ class files:
     
     #文件压缩
     def Zip(self,get) :
+        get.sfile = get.sfile.encode('utf-8');
+        get.dfile = get.dfile.encode('utf-8');
+        get.path = get.path.encode('utf-8');
         if not os.path.exists(get.path+'/'+get.sfile):
                 return public.returnMsg(False,'指定文件或目录不存在');
         try:
             tmps = '/tmp/panelExec.log'
             if get.type == 'zip':
-                public.ExecShell("cd '"+get.path+"' && zip '"+get.dfile+"' -r '"+get.sfile+"' > "+tmps+" 2>&1")
+                os.system("cd '"+get.path+"' && zip '"+get.dfile+"' -r '"+get.sfile+"' > "+tmps+" 2>&1")
             else:
-                public.ExecShell("cd '"+get.path+"' && tar -zcvf '"+get.dfile+"' '"+get.sfile+"' > "+tmps+" 2>&1")
+                os.system("cd '"+get.path+"' && tar -zcvf '"+get.dfile+"' '"+get.sfile+"' > "+tmps+" 2>&1")
             self.SetFileAccept(get.dfile);
             public.WriteLog("文件管理", "压缩文件[sfile]至[dfile]成功!");
             return public.returnMsg(True,'文件压缩成功!')
@@ -317,23 +334,27 @@ class files:
     
     #文件解压
     def UnZip(self,get):
+        get.sfile = get.sfile.encode('utf-8');
+        get.dfile = get.dfile.encode('utf-8');
         if not os.path.exists(get.sfile):
             return public.returnMsg(False,'指定文件或目录不存在');
-        try:
-            tmps = '/tmp/panelExec.log'
-            if get.type == 'zip':
-                public.ExecShell("unzip -o '"+get.sfile+"' -d '"+get.dfile+"' > "+tmps+" 2>&1")
-            else:
-                public.ExecShell("tar zxf '"+get.sfile+"' -C '"+get.dfile+"' > "+tmps+" 2>&1")
-            self.SetFileAccept(get.dfile);
-            public.WriteLog("文件管理", "解压文件[sfile]至[dfile]成功!");
-            return public.returnMsg(True,'文件解压成功!')
-        except:
-            return public.returnMsg(False,'文件解压失败!')
+        #try:
+        if not hasattr(get,'coding'): get.coding = 'UTF-8';
+        tmps = '/tmp/panelExec.log'
+        if get.type == 'zip':
+            os.system("export LANG=\"zh_CN."+get.coding+"\" && unzip -o '"+get.sfile+"' -d '"+get.dfile+"' > "+tmps+" 2>&1")
+        else:
+            os.system("tar zxf '"+get.sfile+"' -C '"+get.dfile+"' > "+tmps+" 2>&1")
+        self.SetFileAccept(get.dfile);
+        public.WriteLog("文件管理", "解压文件[sfile]至[dfile]成功!");
+        return public.returnMsg(True,'文件解压成功!')
+        #except:
+        #    return public.returnMsg(False,'文件解压失败!')
     
     
     #获取文件/目录 权限信息
     def GetFileAccess(self,get):
+        get.filename = get.filename.encode('utf-8');
         data = {}
         try:
             import pwd
@@ -348,21 +369,26 @@ class files:
     
     #设置文件权限和所有者
     def SetFileAccess(self,get,all = '-R'):
-        if not os.path.exists(get.filename):
-            return public.returnMsg(False,'指定文件或目录不存在!')
-        public.ExecShell('chmod '+all+' '+get.access+" '"+get.filename+"'")
-        public.ExecShell('chown '+all+' '+get.user+':'+get.user+" '"+get.filename+"'")
-        public.WriteLog('文件管理','设置['+get.filename+']权限为['+get.access+'],所有者为['+get.user+']')
-        return public.returnMsg(True,'权限设置成功!')
+        get.filename = get.filename.encode('utf-8');
+        try:
+            if not os.path.exists(get.filename):
+                return public.returnMsg(False,'指定文件或目录不存在!')
+            os.system('chmod '+all+' '+get.access+" '"+get.filename+"'")
+            os.system('chown '+all+' '+get.user+':'+get.user+" '"+get.filename+"'")
+            public.WriteLog('文件管理','设置['+get.filename+']权限为['+get.access+'],所有者为['+get.user+']')
+            return public.returnMsg(True,'权限设置成功!')
+        except:
+            return public.returnMsg(False,'权限设置失败!')
 
     def SetFileAccept(self,filename):
-        public.ExecShell('chown -R www:www ' + filename)
-        public.ExecShell('chmod -R 755 ' + filename)
+        os.system('chown -R www:www ' + filename)
+        os.system('chmod -R 755 ' + filename)
     
     
     
     #取目录大小
     def GetDirSize(self,get):
+        get.path = get.path.encode('utf-8');
         import web
         tmp = public.ExecShell('du -sbh '+ get.path)
         return tmp[0].split()[0]
@@ -370,11 +396,11 @@ class files:
     def CloseLogs(self,get):
         import web
         get.path = web.ctx.session.rootPath
-        public.ExecShell('rm -f '+web.ctx.session.logsPath+'/*')
+        os.system('rm -f '+web.ctx.session.logsPath+'/*')
         if web.ctx.session.webserver == 'nginx':
-            public.ExecShell('kill -USR1 `cat '+web.ctx.session.setupPath+'/nginx/logs/nginx.pid`');
+            os.system('kill -USR1 `cat '+web.ctx.session.setupPath+'/nginx/logs/nginx.pid`');
         else:
-            public.ExecShell('/etc/init.d/httpd reload');
+            os.system('/etc/init.d/httpd reload');
         
         public.WriteLog('文件管理','清理网站日志成功!')
         get.path = web.ctx.session.logsPath
@@ -382,6 +408,7 @@ class files:
             
     #批量操作
     def SetBatchData(self,get):
+        get.path = get.path.encode('utf-8');
         if get.type == '1' or get.type == '2':
             import web
             web.ctx.session.selected = get
@@ -390,13 +417,14 @@ class files:
             for key in get.data:
                 try:
                     filename = get.path+'/'+key
-                    public.ExecShell('chmod -R '+get.access+" '"+filename+"'")
-                    public.ExecShell('chown -R '+get.user+':'+get.user+" '"+filename+"'")
+                    os.system('chmod -R '+get.access+" '"+filename+"'")
+                    os.system('chown -R '+get.user+':'+get.user+" '"+filename+"'")
                 except:
                     continue;
             public.WriteLog('文件管理','批量设置权限成功!')
             return public.returnMsg(True,'批量设置权限成功!')
         else:
+            
             import shutil
             for key in get.data:
                 try:
@@ -405,7 +433,7 @@ class files:
                     if os.path.isdir(filename):
                         shutil.rmtree(filename)
                     else:
-                        if key == '.user.ini': public.ExecShell('chattr -i ' + filename);
+                        if key == '.user.ini': os.system('chattr -i ' + filename);
                         os.remove(filename)
                 except:
                     continue;
@@ -418,6 +446,7 @@ class files:
     def BatchPaste(self,get):
         import shutil,web
         i = 0;
+        get.path = get.path.encode('utf-8');
         if get.type == '1':
             for key in web.ctx.session.selected.data:
                 i += 1
@@ -448,6 +477,7 @@ class files:
     
     #下载文件
     def DownloadFile(self,get):
+        get.path = get.path.encode('utf-8');
         import db,time
         isTask = '/tmp/panelTask.pl'
         execstr = get.url +'|bt|'+get.path+'/'+get.filename
@@ -462,7 +492,7 @@ class files:
     def InstallSoft(self,get):
         import db,time,web
         path = web.ctx.session.setupPath + '/php'
-        if not os.path.exists(path): public.ExecShell("mkdir -p " + path);
+        if not os.path.exists(path): os.system("mkdir -p " + path);
         
         apacheVersion='false';
         if web.ctx.session.webserver == 'apache':
@@ -482,8 +512,16 @@ class files:
         time.sleep(0.1);
         return public.returnMsg(True,'已将安装任务添加到队列');
     
-    #删除安装任务
-    #def RemoveTask(self,get):
+    #删除任务队列
+    def RemoveTask(self,get):
+        public.M('tasks').delete(get.id);
+        return public.returnMsg(True,'任务已删除!');
+    
+    #重新激活任务
+    def ActionTask(self,get):
+        isTask = '/tmp/panelTask.pl'
+        public.writeFile(isTask,'True');
+        return public.returnMsg(True,'任务队列已激活!');
         
     
     #卸载软件
@@ -491,7 +529,7 @@ class files:
         import web
         public.writeFile('/var/bt_setupPath.conf',web.ctx.session.rootPath)
         execstr = "cd " + web.ctx.session.setupPath + "/panel/install && sh install_soft.sh 0 uninstall " + get.name.lower() + " "+ get.version.replace('.','');
-        public.ExecShell(execstr);
+        os.system(execstr);
         public.WriteLog('安装器','卸载软件['+get.name+'-'+get.version+']成功！');
         return public.returnMsg(True,"卸载成功!");
         

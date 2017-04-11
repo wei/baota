@@ -90,9 +90,12 @@ def writeFile(filename,str):
     
 def httpGet(url):
     #发送GET请求
-    import urllib2 
-    response = urllib2.urlopen(url) 
-    return response.read()
+    try:
+        import urllib2 
+        response = urllib2.urlopen(url) 
+        return response.read()
+    except Exception,ex:
+        return str(ex);
 
 def httpPost(url,data):
     #发送POST请求

@@ -230,12 +230,19 @@ function DataRespwd(sign,id,username){
  * @param {Number} id	数据库编号
  * @param {String} dataname	数据库名称
  */
-function DataDetails(id,dataname){
+function DataDetails(id,dataname,page){
+	if(page == undefined){
+		page = '1';
+	}
+	var loadT = layer.msg('获取中...',{icon:16,time:0});
 	$.post('/data?action=getFind','table=databases&id='+id,function(rdata){
-		$.post('/data?action=getData','table=backup&search='+id+'&limit=100&p=1&type=1',function(frdata){
+		$.post('/data?action=getData','table=backup&search='+id+'&limit=5&p=1&type=1&tojs=DataDetails&p='+page,function(frdata){
+			layer.close(loadT);
 			var ftpdown = '';
 			var body='';
 			var port;
+			
+			frdata.page = frdata.page.replace(/'/g,'"').replace(/DataDetails\(/g,"DataDetails(" + id + ",0,");
 			for(var i=0;i<frdata.data.length;i++){
 				if(frdata.data[i].type == '0') continue;
 				if(frdata.data[i].filename.length < 12){
@@ -252,7 +259,19 @@ function DataDetails(id,dataname){
 								</td>\
 							</tr>"
 			}
-			var index = layer.open({
+			
+			
+			if(dataname == 0){
+				var sBody = "<table width='100%' id='DataBackupList' class='table table-hover'>\
+							<thead><tr><th>文件名称</th><th>文件大小</th><th>打包时间</th><th width='140px' class='text-right'>操作</th></tr></thead>\
+							<tbody id='DataBackupBody' class='list-list'>"+body+"</tbody>\
+							</table>"
+				$("#DataBackupList").html(sBody);
+				$(".page").html(frdata.page);
+				return;
+			}
+			layer.closeAll();
+			layer.open({
 					type: 1,
 					skin: 'demo-class',
 					area: '700px',
@@ -266,7 +285,7 @@ function DataDetails(id,dataname){
 							<div class='divtable' style='margin:10px 17px 17px'><table width='100%' id='DataBackupList' class='table table-hover' style='margin-bottom:0'>\
 							<thead><tr><th>备份名称</th><th>文件大小</th><th>备份时间</th><th class='text-right'>操作</th></tr></thead>\
 							<tbody id='DataBackupBody' class='list-list'>"+body+"</tbody>\
-							</table></div>"
+							</table><div class='page'>"+frdata.page+"</div></div>"
 			});
 		});
 	});

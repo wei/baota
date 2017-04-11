@@ -142,6 +142,8 @@ class panelSite:
         self.siteName     = siteMenu['domain'].split(':')[0];
         self.sitePath     = self.GetPath(get.path.replace(' ',''))
         self.sitePort     = get.port.replace(' ','')
+        
+        if self.sitePort == "": get.port = "80";
         if not public.checkPort(self.sitePort): return public.returnMsg(False,'端口范围不合法!');
         
         if hasattr(get,'version'):
@@ -325,10 +327,17 @@ class panelSite:
         if len(get.domain) < 3: return public.returnMsg(False,'域名不能为空!');
         domains = get.domain.split(',')
         for domain in domains:
+            if domain == "": continue;
             domain = domain.split(':')
             get.domain = domain[0]
             get.port = '80'
-            if len(domain) == 2: get.port = domain[1]
+            
+            reg = "^([\w\-\*]{1,100}\.){1,4}(\w{1,10}|\w{1,10}\.\w{1,10})$";
+            if not re.match(reg, get.domain): return public.returnMsg(False,'域名格式不正确!');
+            
+            if len(domain) == 2: get.port = domain[1];
+            if get.port == "": get.port = "80";
+            
             if not public.checkPort(get.port): return public.returnMsg(False,'端口范围不合法!');
             #检查域名是否存在
             sql = public.M('domain');
@@ -345,7 +354,7 @@ class panelSite:
             if isError != True:
                 try:
                     import shutil
-                    shutil.copyfile('/tmp/backup.conf',file)
+                    shutil.copyfile('/tmp/backup.conf',file);
                     return public.returnMsg(False,'配置文件错误: <br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
                 except:
                     pass
@@ -358,8 +367,8 @@ class panelSite:
             
             public.serviceReload();
             public.WriteLog('网站管理', '网站['+get.webname+']添加域名['+get.domain+']成功!');
-            sql.table('domain').add('pid,name,port,addtime',(get.id,get.domain,get.port,public.getDate()))
-        return public.returnMsg(True,'域名添加成功!')
+            sql.table('domain').add('pid,name,port,addtime',(get.id,get.domain,get.port,public.getDate()));
+        return public.returnMsg(True,'域名添加成功!');
     
     #Nginx写域名配置
     def NginxDomain(self,get):
@@ -579,7 +588,7 @@ class panelSite:
              data = {}
              data['out'] = result           #返回错误信息
              data['status'] = False
-             data['msg'] = 'Let\'s Encrypt证书获取失败，请检查站点所有域名是否正确解析!'
+             data['msg'] = 'Let\'s Encrypt证书获取失败，认证服务器无法访问您的站点!'
              return data
         
         public.ExecShell('echo "let" > ' + path + '/README');

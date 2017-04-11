@@ -24,6 +24,13 @@ $def with (data)
 							<label class='btswitch-btn' for='autoUpdate' onclick="SetPanelAutoUpload()"></label>
 						</div>
 					</div>
+					<div class="ss-text">
+						<em title="守护已安装的php-fpm进程,防止批量出现502错误!">PHP守护程序</em>
+						<div class='ssh-item'>
+							<input class='btswitch btswitch-ios' id='502' type='checkbox' $data['panel']['502'] >
+							<label class='btswitch-btn' for='502' onclick="Set502()"></label>
+						</div>
+					</div>
 					<div class="ss-text" style="margin-right:0; display:none">
 						<button class="btn btn-success btn-sm" id="twoPassword">模块加锁</button>
 					</div>
@@ -179,5 +186,15 @@ $def with (data)
 				break;
 		}
 		OnlineEditFile(0,vhref);
+	}
+	
+	//PHP守护程序
+	function Set502(){
+		var loadT = layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
+		$$.post('/config?action=Set502','',function(rdata){
+			layer.close(loadT);
+			layer.msg(rdata.msg,{icon:rdata.status?1:2});
+		});
+			
 	}
 </script>

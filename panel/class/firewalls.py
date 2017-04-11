@@ -34,7 +34,7 @@ class firewalls:
     #添加屏蔽IP
     def AddDropAddress(self,get):
         import time
-        #return public.returnMsg(False,'体验服务器，禁止操作!')
+        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         address = get.port
         if public.M('firewall').where("port=?",(address,)).count() > 0: return public.returnMsg(False,'您要放屏蔽的IP已存在屏蔽列表，无需重复处理!')
         if self.__isFirewalld:
@@ -52,7 +52,7 @@ class firewalls:
     
     #删除IP屏蔽
     def DelDropAddress(self,get):
-        #return public.returnMsg(False,'体验服务器，禁止操作!')
+        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         address = get.port
         id = get.id
         if self.__isFirewalld:
@@ -69,7 +69,7 @@ class firewalls:
     
     #添加放行端口
     def AddAcceptPort(self,get):
-        #return public.returnMsg(False,'体验服务器，禁止操作!')
+        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         import time
         port = get.port
         ps = get.ps
@@ -88,7 +88,7 @@ class firewalls:
     
     #删除放行端口
     def DelAcceptPort(self,get):
-        #return public.returnMsg(False,'体验服务器，禁止操作!')
+        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         port = get.port
         id = get.id
         try:
@@ -108,7 +108,7 @@ class firewalls:
     
     #设置远程端口状态
     def SetSshStatus(self,get):
-        #return public.returnMsg(False,'体验服务器，禁止操作!')
+        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         version = public.readFile('/etc/redhat-release')
         if int(get['status'])==1:
             msg = 'SSH服务已停用'
@@ -152,7 +152,7 @@ class firewalls:
     
     #改远程端口
     def SetSshPort(self,get):
-        #return public.returnMsg(False,'体验服务器，禁止操作!')
+        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         port = get.port
         if int(port) < 22 or int(port) > 65535: return public.returnMsg(False,'端口范围必需在22-65535之间!');
         ports = ['21','25','80','443','8080','888','8888'];

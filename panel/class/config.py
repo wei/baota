@@ -89,7 +89,7 @@ class config:
         public.writeFile(path,conf)
         public.WriteLog("PHP配置", "设置PHP-"+version+" PATH_INFO模块为["+type+"]!");
         public.phpReload(version);
-        return public.returnMsg(True,'设置成功!');
+        return public.returnMsg(True,type+'设置成功!');
     
     
     #设置文件上传大小限制
@@ -314,6 +314,19 @@ class config:
                 public.writeFile(filename,'True');
             else:
                 if os.path.exists(filename): os.remove(filename);
+                
+    #设置PHP守护程序
+    def Set502(self,get):
+        try:
+            filename = 'data/502Task.pl';
+            if os.path.exists(filename):
+                os.system('rm -f ' + filename)
+            else:
+                public.writeFile(filename,'True')
+            
+            return public.returnMsg(True,'设置成功!');
+        except:
+            return public.returnMsg(True,'失败,磁盘不可写!');
         
         
         

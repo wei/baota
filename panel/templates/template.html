@@ -247,23 +247,13 @@ $def with (content)
 										
 										
 									}else{
-										sWait += "<li><span class='titlename'>"+rdata.task[i].name+"</span><span class='state'>等待</span></li>"
+										sWait += "<li><span class='titlename'>"+rdata.task[i].name+"</span><span class='state'>等待 | <a style='color:green' href=\"javascript:RemoveTask("+rdata.task[i].id+")\">删除</a></span></li>"
 									}
 								}
 								
 								$$("#srunning").html(sRunning+sWait);
 								divcenter();
 								$$(".cmd").scrollTop($$('.cmd')[0].scrollHeight);
-								/*$$(".opencmd").click(function(){
-									if($$(this).text() == "展开"){
-										$$(this).text("闭合");
-										$$(this).next().show();
-									}
-									else{
-										$$(this).text("展开");
-										$$(this).next().hide();
-									}
-								});*/
 							}).error(function(){
 								//clearInterval(speed);
 							});
@@ -279,7 +269,7 @@ $def with (content)
 								closeBtn: 2,
 								shadeClose: false,
 								content:"<div class='tasklist'>"
-									+"<div class='tab-nav'><span class='on'>正在处理</span><span>已完成</span></div>"
+									+"<div class='tab-nav'><span class='on'>正在处理</span><span>已完成</span><a href='javascript:ActionTask();' class='btn btn-default btn-sm' style='float: right;margin-top: -3px;' title='若您的任务长时间没有继续，请尝试点此按钮!'>激活队列</a></div>"
 									+"<div class='tab-con'>"
 										+"<ul id='srunning'></ul>"
 										+"<ul id='sbody' style='display:none'></ul>"
@@ -297,6 +287,27 @@ $def with (content)
 								divcenter();
 							});
 						
+					}
+					
+					
+					//重新激活队列
+					function ActionTask(){
+						var loadT = layer.msg('正在删除...',{icon:16,time:0,shade: [0.3, '#000']});
+						$$.post('/files?action=ActionTask','',function(rdata){
+							layer.close(loadT);
+							layer.msg(rdata.msg,{icon:rdata.status?1:5});
+						});
+					}
+					
+					
+					
+					//删除任务
+					function RemoveTask(id){
+						var loadT = layer.msg('正在删除...',{icon:16,time:0,shade: [0.3, '#000']});
+						$$.post('/files?action=RemoveTask','id='+id,function(rdata){
+							layer.close(loadT);
+							layer.msg(rdata.msg,{icon:rdata.status?1:5});
+						});
 					}
 					
 					
@@ -319,7 +330,7 @@ $def with (content)
 										}
 										break;
 									case '0':
-										sWait += "<li><span class='titlename'>"+rdata.data[i].name+"</span><span class='state'>等待</span></li>"
+										sWait += "<li><span class='titlename'>"+rdata.data[i].name+"</span><span class='state'>等待</span> | <a href=\"javascript:RemoveTask("+rdata.data[i].id+")\">删除</a></li>"
 										break;
 									case '1':
 										sBody += "<li><span class='titlename'>"+rdata.data[i].name+"</span><span class='state'>"+rdata.data[i].addtime+"  已完成  耗时"+(rdata.data[i].end - rdata.data[i].start)+"秒</span></li>"
@@ -440,7 +451,7 @@ $def with (content)
 							$$(this).parents("li").find("input").attr("data-info",datainfo);
 						});
 						$$('.onekey').click(function(){
-							var type = $$(this).prev().find("input").eq(0).prop("checked") ? '0':'1';
+							var type = $$(this).prev().find("input").eq(0).prop("checked") ? '1':'0';
 							var l = $$(this).parents(".rec-box-con").find(".rec-list li").length;
 							var name = '';
 							var info = '';

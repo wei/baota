@@ -558,6 +558,7 @@ ServerName 127.0.0.2
     
     #清理日志
     def delClose(self,get):
+        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         public.M('logs').where('id>?',(0,)).delete();
         public.WriteLog('面板设置','面板日志已清空!');
         return public.returnMsg(True,'已清空!');
