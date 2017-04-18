@@ -295,6 +295,7 @@ $def with (data)
 			});
 			$$.get("/system?action=GetSystemTotal", function(info) {
 				$$("#memory").html(parseInt((info.memRealUsed))+'/'+info.memTotal+' (MB)');
+				if(!getCookie('memSize')) setCookie('memSize',parseInt(info.memTotal));
 				$$("#left").html(Math.floor(info.memRealUsed / (info.memTotal / 100)));
 				$$("#info").html(info.system);
 				$$("#running").html(info.time);

@@ -111,7 +111,8 @@ $def with (tData)
 			+"<p onclick='SetIndexEdit("+id+")'>默认文档</p>"
 			+"<p onclick=\"ConfigFile('"+website+"')\">配置文件</p>"
 			+"<p onclick=\"SetSSL('"+website+"')\">SSL</p>"
-			+"<p onclick=\"PHPVersion('"+website+"')\">站点环境</p>"
+			+"<p onclick=\"PHPVersion('"+website+"')\">PHP版本</p>"
+			+"<p onclick=\"toTomcat('"+website+"')\">Tomcat</p>"
 			+"<p onclick=\"To301('"+website+"')\">301重定向</p>"
 			+"<p onclick=\"Proxy('"+website+"')\">反向代理</p>";
 			layer.open({
@@ -492,6 +493,26 @@ $def with (tData)
 			var loadT = layer.msg('正在处理,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
 			$$.post("site?action="+action,'siteName='+siteName+'&updateOf=1',function(rdata){
 				layer.close(loadT)
+				
+				if(!rdata.status){
+					if(rdata.out.length == 0 || rdata.out == null){
+						layer.msg(rdata.msg,{icon:rdata.status?1:2});
+						return;
+					}
+					
+					data = "<p>证书获取失败：</p><hr />"
+					for(var i=0;i<rdata.out.length;i++){
+						data += "<p>域名: "+rdata.out[i].Domain+"</p>"
+							  + "<p>错误类型: "+rdata.out[i].Type+"</p>"
+							  + "<p>详情: "+rdata.out[i].Detail+"</p>"
+							  + "<hr />"
+					}
+					
+					layer.msg(data,{icon:2,time:0,shade:0.3,shadeClose:true});
+					return;
+				}
+				
+				
 				$$.post('/system?action=ServiceAdmin','name='+getCookie('serverType')+'&type=reload',function(result){
 					SetSSL(siteName);
 					if(!result.status) layer.msg(result.msg,{icon:2});
@@ -505,9 +526,29 @@ $def with (tData)
 			var loadT = layer.msg('正在处理,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
 			$$.post('site?action=CreateLet','siteName='+siteName+'&updateOf=1',function(rdata){
 				layer.close(loadT)
-				$$("#key").val(rdata.key);
-				$$("#csr").val(rdata.csr);
-				layer.msg(rdata.msg,{icon:rdata.status?1:2});
+				alert(rdata.msg);
+				if(rdata.status){
+					$$("#key").val(rdata.key);
+					$$("#csr").val(rdata.csr);
+					layer.msg(rdata.msg,{icon:rdata.status?1:2});
+					return;
+				}
+				
+				if(rdata.out.length == 0 || rdata.out == null){
+					layer.msg(rdata.msg,{icon:rdata.status?1:2});
+					return;
+				}
+				
+				data = "<p>证书获取失败，返回如下错误信息：</p><hr />"
+				for(var i=0;i<rdata.out.length;i++){
+					data += "<p>域名:"+rdata.out[i].Domain+"</p>"
+						  + "<p>错误类型:"+rdata.out[i].Type+"</p>"
+						  + "<p>详情:"+rdata.out[i].Detail+"</p>"
+						  + "<hr />"
+				}
+				
+				layer.msg(data,{icon:2,time:0,shade:0.3,shadeClose:true});
+				
 			});
 		}
 		
@@ -559,23 +600,6 @@ $def with (tData)
 									</ul>\
 								</div>\
 							</div>";
-					if(version.tomcatversion){
-						var tomcat_checked = '';
-						if(version.tomcat != -1) tomcat_checked = 'checked';
-						versionSelect += '<div class="webEdit-box padding-10">\
-											<div class="linex">\
-												<label style="font-weight:normal">\
-													<input type="checkbox" name="status"  onclick="Tomcat(\''+siteName+'\')" style="width:15px;height:15px;" '+tomcat_checked+' />启用Tomcat\
-												</label>\
-											</div>\
-												<ul class="help-info-text">\
-											<li>当前版本为Tomcat '+version.tomcatversion+',若您需要其它版本,请到软件管理 - 所有软件 中切换；</li>\
-											<li>Tomcat可以与PHP共存,但无法与Node.js共存；</li>\
-											<li>若您的tomcat应用中有php脚本,访问时请添加.php扩展名</li>\
-											<li>开启成功后,大概需要1分钟时间生效!</li>\
-										</ul>\
-										</div>'
-					}
 					if(version.nodejsversion){
 						var nodejs_checked = '';
 						if(version.nodejs != -1) nodejs_checked = 'checked';
@@ -596,7 +620,36 @@ $def with (tData)
 				});
 			});
 		}
-		
+		//tomcat
+		function toTomcat(siteName){
+			$$.post('/site?action=GetSitePHPVersion','siteName='+siteName,function(version){
+				$$.post('/site?action=GetPHPVersion',function(rdata){
+					var versionSelect ='';
+					if(version.tomcatversion){
+						var tomcat_checked = '';
+						if(version.tomcat != -1) tomcat_checked = 'checked';
+						versionSelect += '<div class="webEdit-box padding-10">\
+											<div class="linex">\
+												<label style="font-weight:normal">\
+													<input type="checkbox" name="status"  onclick="Tomcat(\''+siteName+'\')" style="width:15px;height:15px;" '+tomcat_checked+' />启用Tomcat\
+												</label>\
+											</div>\
+												<ul class="help-info-text">\
+											<li>当前版本为Tomcat '+version.tomcatversion+',若您需要其它版本,请到软件管理 - 所有软件 中切换；</li>\
+											<li>Tomcat可以与PHP共存,但无法与Node.js共存；</li>\
+											<li>若您的tomcat应用中有php脚本,访问时请添加.php扩展名</li>\
+											<li>开启成功后,大概需要1分钟时间生效!</li>\
+										</ul>\
+										</div>'
+					}
+					else{
+						layer.msg('您没有安装Tomcat，请先安装!',{icon:2});
+						versionSelect = '<font>请先安装Tomcat!</font>'
+					}
+					$$("#webEdit-con").html(versionSelect);
+				});
+			});
+		}
 		//设置Tomcat
 		function Tomcat(siteName){
 			var data = 'siteName='+siteName;

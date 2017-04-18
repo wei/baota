@@ -96,6 +96,7 @@ class crontab:
             cuonConfig = self.Month(get)
         cronPath=web.ctx.session.setupPath+'/cron'
         cronName=self.GetShell(get)
+        if type(cronName) == dict: return cronName;
         cuonConfig += ' ' + cronPath+'/'+cronName+' >> '+ cronPath+'/'+cronName+'.log 2>&1'
         self.WriteShell(cuonConfig)
         self.CrondReload()
@@ -231,23 +232,39 @@ class crontab:
                         'database': head + "python " + web.ctx.session.setupPath+"/panel/script/backup_"+param['backupTo']+".py database "+param['sName']+" "+param['save'],
                         'logs'  :   head + web.ctx.session.setupPath+"/panel/script/logsBackup "+param['sName']+log+" "+param['save'],
                         'rememory' : head + "sh " + web.ctx.session.setupPath + '/panel/script/rememory.sh'
-                        }
+                        }              
                 
                 try:
                     shell=wheres[type]
                 except:
-                    shell=head+param['sBody']
+                    if type == 'toUrl':
+                        shell = head + 'curl -sS --connect-timeout 10 -m 60 ' + param.urladdress; 
+                    else:
+                        shell=head+param['sBody']
+                    
+                    shell += '''
+echo "----------------------------------------------------------------------------"
+endDate=`date +"%Y-%m-%d %H:%M:%S"`
+echo "★[$endDate] 任务执行成功"
+echo "----------------------------------------------------------------------------"
+'''
             cronPath=web.ctx.session.setupPath+'/cron'
             if not os.path.exists(cronPath): public.ExecShell('mkdir -p ' + cronPath);
             cronName=public.md5(public.md5(str(time.time()) + '_bt'))
             file = cronPath+'/' + cronName
-            public.writeFile(file,shell)
+            public.writeFile(file,self.CheckScript(shell))
             public.ExecShell('chmod 750 ' + file)
             return cronName
-        except:
-            return public.returnMsg(false, '写入脚本失败!')
+        except Exception,ex:
+            return public.returnMsg(False, '文件写入失败!')
         
-        
+    #检查脚本
+    def CheckScript(self,shell):
+        keys = ['shutdown','init 0','mkfs','passwd','chpasswd','--stdin','mkfs.ext','mke2fs']
+        for key in keys:
+            shell = shell.replace(key,'[***]');
+        return shell;
+    
     #重载配置
     def CrondReload(self):
         if os.path.exists('/usr/bin/systemctl'): 
@@ -265,6 +282,14 @@ class crontab:
             public.ExecShell("chmod 600 '" + file + "' && chown root.root " + file)
             return True
         return public.returnMsg(False,'写入配置到计划任务失败!')
+    
+    #立即执行任务
+    def StartTask(self,get):
+        echo = public.M('crontab').where('id=?',(get.id,)).getField('echo');
+        execstr = web.ctx.session.setupPath + '/cron/' + echo;
+        os.system('chmod +x ' + execstr)
+        os.system('nohup ' + execstr + ' >> ' + execstr + '.log 2>&1 &');
+        return public.returnMsg(True,'任务已执行!')
         
     
         

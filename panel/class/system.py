@@ -337,7 +337,10 @@ class system:
         if execStr == '/etc/init.d/pure-ftpd start': os.system('pkill -9 pure-ftpd');
         if execStr == '/etc/init.d/tomcat reload': execStr = '/etc/init.d/tomcat stop && /etc/init.d/tomcat start';
         if execStr == '/etc/init.d/tomcat restart': execStr = '/etc/init.d/tomcat stop && /etc/init.d/tomcat start';
-                                
+        
+        if get.name != 'nginx':
+            os.system(execStr);
+            return public.returnMsg(True,'执行成功');
         result = public.ExecShell(execStr)
         if result[1].find('nginx.pid') != -1:
             public.ExecShell('pkill -9 nginx && sleep 1');

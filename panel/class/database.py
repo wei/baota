@@ -146,8 +146,10 @@ echo "The root password set ${pwd}  successuful"''';
                 
                 
             else:
-                result = mysql.mysql().execute("update mysql.user set authentication_string=password('" + password + "') where user='root'")
-                result = mysql.mysql().execute("update mysql.user set Password=password('" + password + "') where user='root'")
+                if '5.7' in public.readFile(web.ctx.session.setupPath + '/mysql/version.pl'):
+                    result = mysql.mysql().execute("update mysql.user set authentication_string=password('" + password + "') where User='root'")
+                else:
+                    result = mysql.mysql().execute("update mysql.user set Password=password('" + password + "') where User='root'")
                 mysql.mysql().execute("flush privileges")
 
             msg = 'ROOT密码修改成功!'
@@ -224,7 +226,8 @@ echo "The root password set ${pwd}  successuful"''';
         sea = '[mysqldump]\n'
         subStr = sea + "user=root\npassword=" + root+"\n";
         mycnf = mycnf.replace(sea,subStr)
-        public.writeFile('/etc/my.cnf',mycnf);
+        if len(mycnf) > 100:
+            public.writeFile('/etc/my.cnf',mycnf);
         
         fileName = name + '_' + time.strftime('%Y%m%d_%H%M%S',time.localtime()) + '.sql.gz'
         backupName = web.ctx.session.config['backup_path'] + '/database/' + fileName
@@ -232,7 +235,8 @@ echo "The root password set ${pwd}  successuful"''';
         
         mycnf = public.readFile('/etc/my.cnf');
         mycnf = mycnf.replace(subStr,sea)
-        public.writeFile('/etc/my.cnf',mycnf);
+        if len(mycnf) > 100:
+            public.writeFile('/etc/my.cnf',mycnf);
         
         sql = public.M('backup')
         addTime = time.strftime('%Y-%m-%d %X',time.localtime())

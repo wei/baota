@@ -3,6 +3,7 @@
 body{
 	font-family:"微软雅黑", Arial, Helvetica, sans-serif;
 	font-size:12px;
+	color:#555;
 }
 body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,form,fieldset,input,textarea,p,blockquote,th,td {    
     margin:0;   
@@ -13,7 +14,7 @@ body img{
   border:none;
 }
 a{
- color:#000;
+ color:#333;
  border:0;
  text-decoration:none;
 }

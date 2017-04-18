@@ -348,6 +348,18 @@ $def with (content)
 							$$(".task").text(rdata)
 						});
 					}
+					
+					function setSelectChecked(selectId, checkValue){  
+					    var select = document.getElementById(selectId);  
+					    for(var i=0; i<select.options.length; i++){  
+					        if(select.options[i].innerHTML == checkValue){  
+					            select.options[i].selected = true;  
+					            break;  
+					        }  
+					    }  
+					};  
+					
+					
 					GetTaskCount()
 					
 					//显示软件列表
@@ -377,32 +389,34 @@ $def with (content)
 						GetSoftList();
 					}
 					
-					
 					function RecInstall(){
 					$$.post('/ajax?action=GetSoftList','',function(rdata){
 						var nBody = ""
 						var aBody = ""
 						var mBody = ""
 						for(var i=0;i<rdata.length;i++){
+							if(rdata[i].name == 'Tomcat') continue;
 							var options=""
-							var checkedStr = "<input data-info='"+rdata[i].name+" "+rdata[i].versions[0].version+"' type='checkbox' checked>"
+							var checkedStr = "<input id='data_"+rdata[i].name+"' data-info='"+rdata[i].name+" "+rdata[i].versions[0].version+"' type='checkbox' checked>"
 							for(var n=0;n<rdata[i].versions.length;n++){
 								var selected = '';
 								
-								if(rdata[i].versions[n].version == '5.4' || rdata[i].versions[n].version == '54') {
+								if((rdata[i].name == 'PHP' && (rdata[i].versions[n].version == '5.4' || rdata[i].versions[n].version == '54')) || (rdata[i].name == 'MySQL' && rdata[i].versions[n].version == '5.5') || (rdata[i].name == 'phpMyAdmin' && rdata[i].versions[n].version == '4.4')) {
 									selected = 'selected';
-									checkedStr = "<input data-info='"+rdata[i].name+" "+rdata[i].versions[n].version+"' type='checkbox' checked>"
+									checkedStr = "<input id='data_"+rdata[i].name+"' data-info='"+rdata[i].name+" "+rdata[i].versions[n].version+"' type='checkbox' checked>"
 								}
-								options += "<option " + selected + ">"+rdata[i].name+" "+rdata[i].versions[n].version+"</option>"
+								
+														
+								options += "<option value='"+rdata[i].versions[n].version+"' " + selected + ">"+rdata[i].name+" "+rdata[i].versions[n].version+"</option>"
 							}
 							
 							
-							var tmp = "<li><span class='ico'><img src='/static/img/"+rdata[i].name.toLowerCase()+".png'></span><span class='name'><select class='sl-s-info'>"+options+"</select></span><span class='pull-right'>"+checkedStr+"</span></li>"
+							var tmp = "<li><span class='ico'><img src='/static/img/"+rdata[i].name.toLowerCase()+".png'></span><span class='name'><select id='select_"+rdata[i].name+"' class='sl-s-info'>"+options+"</select></span><span class='pull-right'>"+checkedStr+"</span></li>"
 							if(rdata[i].name == 'Nginx'){
 								nBody = tmp
 								
 							}else if(rdata[i].name == 'Apache'){
-								aBody = tmp
+								aBody = tmp;
 							}else{
 								mBody += tmp;
 							}
@@ -412,7 +426,7 @@ $def with (content)
 						
 						nBody += mBody
 						aBody += mBody
-						
+						aBody = aBody.replace(new RegExp(/(data_)/g),'apache_').replace(new RegExp(/(select_)/g),'apache_select_')
 						
 						var btMenu = layer.open({
 								type: 1,
@@ -447,9 +461,75 @@ $def with (content)
 						});
 						$$(".sl-s-info").change(function(){
 							var datainfo = $$(this).find("option:selected").text();
+							var idName = $$(this).attr('id');
 							datainfo = datainfo.toLowerCase();
 							$$(this).parents("li").find("input").attr("data-info",datainfo);
 						});
+						
+						$$('#apache_select_PHP').change(function(){
+							var php_version = $$(this).val();
+							phpSelect(php_version,'apache_select_','apache_');
+							
+						});
+						
+						$$('#select_PHP').change(function(){
+							var php_version = $$(this).val();
+							phpSelect(php_version,'select_','data_');
+						});
+						
+						
+						
+						function phpSelect(php_version,idpx1,idpx2){
+							var phpmyadmin_version = '4.4';
+							switch(php_version){
+								case '5.2':
+									phpmyadmin_version = '4.0'
+									break;
+								case '5.3':
+									phpmyadmin_version = '4.0'
+									break;
+								case '5.4':
+									phpmyadmin_version = '4.4'
+									break;
+								default:
+									phpmyadmin_version = '4.7'
+							}
+							
+							
+							$$("#"+idpx1+"phpMyAdmin option[value='"+phpmyadmin_version+"']").attr("selected","selected").siblings().removeAttr("selected");
+							$$('#'+idpx1+'_phpMyAdmin').attr('data-info', 'phpmyadmin ' + phpmyadmin_version);
+						}
+						
+						
+						$$('#select_MySQL,#apache_select_MySQL').change(function(){
+							var mysql_version = $$(this).val();
+							mysqlSelect(mysql_version);
+						});
+						
+
+						function mysqlSelect(mysql_version){
+							memSize = getCookie('memSize');
+							max = 128;
+							switch(mysql_version){
+								case '5.7':
+									max = 1500;
+									msg = '2GB';
+									break;
+								case '5.6':
+									max = 800;
+									msg = '1GB';
+									break;
+								case 'AliSQL':
+									max = 800;
+									msg = '1GB';
+									break;
+							}
+							
+							if(memSize < max){
+								layer.msg('您 的内存小于' + msg + '，不建议安装MySQL-' + mysql_version,{icon:5});
+							}
+						}
+								
 						$$('.onekey').click(function(){
 							var type = $$(this).prev().find("input").eq(0).prop("checked") ? '1':'0';
 							var l = $$(this).parents(".rec-box-con").find(".rec-list li").length;

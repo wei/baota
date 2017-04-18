@@ -120,7 +120,14 @@ class ajax:
                     data[i]['task'] = isTask
                     version = public.readFile(web.ctx.session.rootPath+'/server/'+data[i]['name'].lower()+'/version.pl');
                     if not version:continue;
-                    if version.find(data[i]['versions'][n]['version']) == -1:continue;
+                    
+                    
+                    if data[i]['name'] == 'Tomcat':
+                        if version.find(data[i]['versions'][n]['version']+'.') == -1:continue;
+                    else:
+                        if data[i]['name'] == 'Nginx':
+                            if version.find('1.10') != -1: version += ',1.12';
+                        if version.find(data[i]['versions'][n]['version']) == -1:continue;
                     checkFile = data[i]['check'];
                 data[i]['versions'][n]['status'] = os.path.exists(checkFile);
         return data
@@ -346,6 +353,38 @@ class ajax:
         data = public.M('cpuio').dbfile('system').where("addtime>=? AND addtime<=?",(get.start,get.end)).field('id,pro,mem,addtime').order('id asc').select()
         return self.ToAddtime(data,True);
     
+    
+    def ToAddtime(self,data,tomem = False):
+        import time
+        #格式化addtime列
+        
+        if tomem:
+            import psutil
+            mPre = (psutil.virtual_memory().total / 1024 / 1024) / 100
+        length = len(data);
+        he = 1;
+        if length > 100: he = 2;
+        if length > 1000: he = 8;
+        if length > 10000: he = 20;
+        if he == 1:
+            for i in range(length):
+                data[i]['addtime'] = time.strftime('%m/%d %H:%M',time.localtime(float(data[i]['addtime'])))
+                if tomem and data[i]['mem'] > 100: data[i]['mem'] = data[i]['mem'] / mPre
+            
+            return data
+        else:
+            count = 0;
+            tmp = []
+            for value in data:
+                if count < he: 
+                    count += 1;
+                    continue;
+                value['addtime'] = time.strftime('%m/%d %H:%M',time.localtime(float(value['addtime'])))
+                if tomem and value['mem'] > 100: value['mem'] = value['mem'] / mPre
+                tmp.append(value);
+                count = 0;
+            return tmp;
+    
     def UpdatePanel(self,get):
         #return public.returnMsg(False,'演示服务器，禁止此操作!');
         
@@ -415,25 +454,7 @@ class ajax:
             'updateMsg' : updateInfo['updateMsg']
         };
         return data;
-    
-    #参加内测
-    #def JoinBate(self,get):
-        
-            
-    
-    def ToAddtime(self,data,tomem = False):
-        import time
-        #格式化addtime列
-        
-        if tomem:
-            import psutil
-            mPre = (psutil.virtual_memory().total / 1024 / 1024) / 100
-        for i in range(len(data)):
-            data[i]['addtime'] = time.strftime('%Y/%m/%d %H:%M:00',time.localtime(float(data[i]['addtime'])))
-            if tomem and data[i]['mem'] > 100: data[i]['mem'] = data[i]['mem'] / mPre
-        return data
-    
-    
+         
     #检查是否安装任何
     def CheckInstalled(self,get):
         checks = ['nginx','apache','php','pure-ftpd','mysql'];
@@ -634,4 +655,19 @@ ServerName 127.0.0.2
             return public.returnMsg(True,'phpMyAdmin已'+msg+'!');
         #except:
             #return public.returnMsg(False,'操作失败!');
+            
+    def ToPunycode(self,get):
+        import re;
+        get.domain = get.domain.encode('utf8');
+        tmp = get.domain.split('.');
+        newdomain = '';
+        for dkey in tmp:
+                #匹配非ascii字符
+                match = re.search(u"[\x80-\xff]+",dkey);
+                if not match:
+                        newdomain += dkey + '.';
+                else:
+                        newdomain += 'xn--' + dkey.decode('utf-8').encode('punycode') + '.'
+
+        return newdomain[0:-1];
         

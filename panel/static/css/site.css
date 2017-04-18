@@ -342,7 +342,7 @@ ul.sub li.current a,ul.sub li a:hover {
     overflow: hidden;
 }
 .server-box-right h4 {
-    color: #555;
+    color: #666;
     font-size: 32px;
     height: 68px;
     line-height: 60px;
@@ -495,7 +495,7 @@ ul.sub li.current a,ul.sub li a:hover {
 	height: 50px;
 	line-height: 50px;
 	padding: 0 15px;
-	font-size: 18px;
+	font-size: 16px;
 	color: #666;
 	border-bottom: #ddd solid 1px;
 }
@@ -531,9 +531,14 @@ ul.sub li.current a,ul.sub li a:hover {
 	display: block;
 	padding: 0 15px;
 }
+.bw-info ul li a{
+	color:#444;
+}
 .soft-man .col-lg-3{
 	border-bottom: 1px solid #ececfb;
     border-left: 1px solid #ececfb;
+	border-right: 1px solid #ececfb;
+	margin-right:-1px;
 	height:148px;
 	cursor:pointer;
 }
@@ -547,6 +552,7 @@ ul.sub li.current a,ul.sub li a:hover {
 }
 .soft-man .sname {
     text-align: center;
+	color:#555
 }
 
 .soft-man .text {
@@ -579,6 +585,14 @@ ul.sub li.current a,ul.sub li a:hover {
 }
 .soft-man-con .sfm-opt .btn{
 	margin-right:15px;
+}
+.soft-man .sname .glyphicon-True{
+	color:#20a53a;
+	margin-left:10px;
+}
+.soft-man .sname .glyphicon-False{
+	color:red;
+	margin-left:10px;
 }
 
 /*更新记录*/
@@ -951,7 +965,7 @@ ul.sub li.current a,ul.sub li a:hover {
 	padding-right: 2px;
 	line-height: 32px;
 	font-style: normal;
-	color: #333;
+	color: #555;
 	font-size:12px;
 }
 .ss-text .btn{
@@ -1051,7 +1065,7 @@ ul.sub li.current a,ul.sub li a:hover {
 	height: 40px;
 	padding-right: 15px;
 	line-height: 30px;
-	font-size: 18px;
+	font-size: 16px;
 	color: #666;
 }
 .btn-warning, .btn-update {
@@ -1131,7 +1145,7 @@ ul.sub li.current a,ul.sub li a:hover {
 .webEdit{
 	background-color: #fff;
 	width: 600px;
-	height: 450px;
+	height: 490px;
 	float: left;
 }
 .webEdit .webEdit-menu{
@@ -1316,6 +1330,14 @@ ul.sub li.current a,ul.sub li a:hover {
 .zun-form-new .info-r p {
 	margin-top: 10px;
 	color: #999;
+}
+.btn-zhm{
+	position: absolute;
+    top: 2px;
+    right: 88px;
+    border-radius: 0 3px 0 0;
+    display: none;
+	
 }
 .zun-form-new label>span {
 	float: left;
@@ -1992,18 +2014,27 @@ html .zun-form-new .form-control-text {
 }
 /*系统监控*/
 .c-head{
-	height:50px;
-	padding:16px;
+	border-bottom: 1px solid #c3c3c3;
+    height: 60px;
+    margin: 0 15px 25px;
+    padding: 14px 0;
 }
 .c-head .c-tit{
 	float:left;
-	font-size: 18px;
+	font-size: 16px;
 	color: #666;
+	line-height: 32px;
 }
 .control .span6{
-	width:100%;
-	height:360px;
+	width:50%;
+	height:430px;
 	margin-bottom:16px;
+}
+.control .span6:nth-of-type(2n-1){
+	border-right:#e6e9ee 7px solid;
+}
+.control .span6:nth-of-type(2n){
+	border-left:#e6e9ee 8px solid;
 }
 .control .bg{
 	height:100%;
@@ -2017,10 +2048,11 @@ html .zun-form-new .form-control-text {
 .searcTime .tit{
 	float:left;
 	padding:5px 10px;
+	display:none
 }
 .searcTime .gt{
 	padding:5px 10px;
-	border:#ccc 1px solid;
+	border:#ddd 1px solid;
 	margin-right:-1px;
 	cursor:pointer;
 	float:left;
@@ -2037,14 +2069,14 @@ html .zun-form-new .form-control-text {
 }
 .searcTime .ss .st{
 	padding:5px 10px;
-	border:#ccc 1px solid;
+	border:#ddd 1px solid;
 	margin-right:-1px;
 	cursor:pointer;
 	float:left;
 }
 .searcTime .ss .time {
     background-color: #fff;
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
     display: none;
     padding: 10px;
     position: absolute;
@@ -2058,7 +2090,7 @@ html .zun-form-new .form-control-text {
 	display:block;
 }
 .searcTime .ss .time input{
-	border: 1px solid #ccc;
+	border: 1px solid #ddd;
     height: 22px;
     padding: 0 5px;
     width: 132px;
@@ -2135,7 +2167,17 @@ html .zun-form-new .form-control-text {
 	line-height:30px;
 }
 .zun-form-new .fangshi label{
-	margin:0 20px 0 0;
+	height: 20px;
+    line-height: 20px;
+    margin: 4px 20px 0 0;
+}
+.zun-form-new .version{
+	padding:0 30px;
+}
+.zun-form-new .version select{
+	height: 28px;
+    margin-left: 30px;
+    width: 120px;
 }
 .sec-install-btn{
 	font-family:"宋体";
@@ -2227,11 +2269,19 @@ html .zun-form-new .form-control-text {
 	margin: 0;
 	padding-right: 0;
 }
-
-.False{
-	background-color: firebrick;
-    color: #fff;
+.softlist td img{
+	width:24px;
+	height:20px;
+	margin-right:5px;
 }
+.softlist .glyphicon-folder-open{
+	cursor:pointer;
+}
+.softlist .btswitch + .btswitch-btn{
+	width:2.6em;
+	height:1.5em;
+}
+
 @media only screen and (max-width:1120px){
 	.span6{
 		float: left;
@@ -2241,6 +2291,16 @@ html .zun-form-new .form-control-text {
 		padding-left:0;
 		padding-right:0;
 		height: 492px;
+	}
+	.control .span6{
+		width:100%;
+		border:0;
+	}
+	.control .span6:nth-of-type(2n-1){
+		border:0;
+	}
+	.control .span6:nth-of-type(2n){
+		border:0;
 	}
 	.control .view1 .bg{
 		margin-right:0;

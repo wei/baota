@@ -49,6 +49,7 @@ $def with (data)
 								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="database">备份数据库</a></li>
 								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="logs">日志切割</a></li>
 								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="rememory">释放内存</a></li>
+								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="toUrl">访问URL</a></li>
 							  </ul>
 							</div>
 							<div id="implement"></div>
@@ -69,6 +70,7 @@ $def with (data)
 					<input id="sFile" type="file" name="sFile" value="" />
 					<input id="sName" type="text" name="sName" value="" />
 					<input id="backupTo" type="text" name="backupTo" value="localhost" />
+					<input id="urladdress" type="text" name="urladdress" value="" />
 					<input type="number" name="save" value="" />
 					<input type="submit" />
 				</form>
@@ -85,7 +87,7 @@ $def with (data)
 								<th>周期</th>
 								<th>执行时机</th>
 								<th>添加时间</th>
-								<th width="120">操作</th>
+								<th width="150">操作</th>
 							</tr>
 						</thead>
 						<tbody id="cronbody">
@@ -151,14 +153,25 @@ $def with (data)
 								<td>"+rdata[i].cycle+"</td>\
 								<td>"+rdata[i].addtime+"</td>\
 								<td>\
+									<a href=\"javascript:StartTask("+rdata[i].id+");\" class='link'>执行</a> | \
 									<a href=\"javascript:OnlineEditFile(0,'/www/server/cron/"+rdata[i].echo+"');\" class='link'>脚本</a> | \
 									<a href=\"javascript:GetLogs("+rdata[i].id+");\" class='link'>日志</a> | \
-									<a href=\"javascript:planDel("+rdata[i].id+" ,'"+rdata[i].name+"');\" class='link'>删除</a>\
+									<a href=\"javascript:planDel("+rdata[i].id+" ,'"+rdata[i].name.replace('\\','\\\\')+"');\" class='link'>删除</a>\
 								</td>\
 							</tr>"
 				}
 			}
 			$$('#cronbody').html(cbody);
+		});
+	}
+	
+	//执行任务脚本
+	function StartTask(id){
+		layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
+		var data='id='+id;
+		$$.post('/crontab?action=StartTask',data,function(rdata){
+			layer.closeAll();
+			layer.msg(rdata.msg,{icon:rdata.status?1:2});
 		});
 	}
 	
@@ -224,6 +237,25 @@ $def with (data)
 		}
 	}
 	
+	
+	function IsURL(str_url){
+		var strRegex = '^((https|http|ftp|rtsp|mms)?://)'
+		+ "?(([0-9a-z_!~*'().&=+$$%-]+: )?[0-9a-z_!~*'().&=+$$%-]+@)?"
+		+ '(([0-9]{1,3}.){3}[0-9]{1,3}'
+		+ '|'
+		+ "([0-9a-z_!~*'()-]+.)*"
+		+ '([0-9a-z][0-9a-z-]{0,61})?[0-9a-z].'
+		+ '[a-z]{2,6})'
+		+ '(:[0-9]{1,4})?'
+		+ '((/?)|'
+		+ "(/[0-9a-z_!~*'().;?:@&=+$$,%#-]+)+/?)$$";
+		var re=new RegExp(strRegex);
+		if (re.test(str_url)){
+			return (true);
+		}else{
+			return (false);
+		}
+	}
 
 	
 	//提交
@@ -283,12 +315,17 @@ $def with (data)
 		
 		var save = $$("#save").val();
 		
+		if(save < 0){
+			layer.msg('不能有负数!',{icon:2});
+			return;
+		}
 		
 		$$("#set-Config input[name='save']").val(save);
 		
+		
 		$$("#set-Config input[name='week']").val($$(".planweek").find("b").attr("val"));
 		var sType = $$(".planjs").find("b").attr("val");
-		var sBody = $$("#implement textarea[name='sBody']").val();
+		var sBody = encodeURIComponent($$("#implement textarea[name='sBody']").val());
 		
 		if(sType == 'toFile'){
 			if($$("#viewfile").val() == ''){
@@ -303,8 +340,18 @@ $def with (data)
 			}
 		}
 		
+		var urladdress = $$("#urladdress").val();
+		if(sType == 'toUrl'){
+			if(!IsURL(urladdress)){
+				layer.msg('URL地址不正确!',{icon:2});
+				$$("implement textarea[name='urladdress']").focus();
+				return;
+			}
+		}
+		urladdress = encodeURIComponent(urladdress);
+		$$("#set-Config input[name='urladdress']").val(urladdress);
 		$$("#set-Config input[name='sType']").val(sType);
-		$$("#set-Config textarea[name='sBody']").val(sBody);
+		$$("#set-Config textarea[name='sBody']").val(decodeURIComponent(sBody));
 		
 		var sName = $$("#sName").attr("val");
 		
@@ -316,7 +363,7 @@ $def with (data)
 		$$("#set-Config input[name='sName']").val(sName);
 		
 		layer.msg('正在添加...',{icon:16,time:0,shade: [0.3, '#000']});
-		var data= $$("#set-Config").serialize();
+		var data= $$("#set-Config").serialize() + '&sBody='+sBody + '&urladdress=' + urladdress;
 		$$.post('/crontab?action=AddCrontab',data,function(rdata){
 			layer.closeAll();
 			layer.msg(rdata.msg,{icon:rdata.status?1:2});
@@ -382,6 +429,9 @@ $def with (data)
 				break;
 			case 'logs':
 				toBackup('logs');
+				break;
+			case 'toUrl':
+				toUrl();
 				break;
 		}
 	})
@@ -528,6 +578,13 @@ $def with (data)
 		var tBody = "<textarea class='txtsjs' name='sBody'></textarea>";
 		$$("#implement").html(tBody);
 		$$(".planname input[name='name']").removeAttr('readonly style').val("");
+	}
+	
+	//从脚本
+	function toUrl(){
+		var tBody = "<input type='text' style='width:400px;' class='form-control' name='urladdress' id='urladdress' placeholder='URL地址' value='http://' />";
+		$$("#implement").html(tBody);
+		//$$(".planname input[name='name']").removeAttr('readonly style').val("");
 	}
 	
 	//释放内存

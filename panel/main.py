@@ -50,7 +50,8 @@ urls = (
     '/soft'    , 'panelSoft',
     '/cloud'   , 'panelCloud',
     '/test'    , 'panelTest',
-    '/close'   , 'panelClose'
+    '/close'   , 'panelClose',
+    '/plugin'  , 'panelPlugin'
 )
 
 
@@ -195,7 +196,7 @@ class panelSite(common.panelAdmin):
         siteObject = panelSite.panelSite()
         
         defs = ('CloseTomcat','SetTomcat','apacheAddPort','AddSite','GetPHPVersion','SetPHPVersion','DeleteSite','AddDomain','DelDomain','GetDirBinding','AddDirBinding','GetDirRewrite','DelDirBinding'
-                ,'SetPath','SetIndex','GetIndex','GetDirUserINI','SetDirUserINI','GetRewriteList','SetSSL','SetSSLConf','CreateLet','CloseSSLConf','GetSSL','SiteStart','SiteStop'
+                ,'SetSiteRunPath','GetSiteRunPath','SetPath','SetIndex','GetIndex','GetDirUserINI','SetDirUserINI','GetRewriteList','SetSSL','SetSSLConf','CreateLet','CloseSSLConf','GetSSL','SiteStart','SiteStop'
                 ,'Set301Status','Get301Status','CloseLimitNet','SetLimitNet','GetLimitNet','SetProxy','GetProxy','ToBackup','DelBackup','GetSitePHPVersion','logsOpen','GetLogsStatus','CloseHasPwd','SetHasPwd','GetHasPwd')
         for key in defs:
             if key == get.action:
@@ -403,7 +404,7 @@ class panelCrontab(common.panelAdmin):
         
         import crontab
         crontabObject = crontab.crontab()
-        defs = ('GetCrontab','AddCrontab','GetDataList','GetLogs','DelLogs','DelCrontab')
+        defs = ('GetCrontab','AddCrontab','GetDataList','GetLogs','DelLogs','DelCrontab','StartTask')
         for key in defs:
             if key == get.action:
                 fun = 'crontabObject.'+key+'(get)'
@@ -461,7 +462,7 @@ class panelAjax(common.panelAdmin):
         import ajax,json
         get = web.input()
         ajaxObject = ajax.ajax()
-        defs = ('GetBetaStatus','SetBeta','setPHPMyAdmin','delClose','KillProcess','GetPHPInfo','GetQiniuFileList','UninstallLib','InstallLib','SetQiniuAS','GetQiniuAS','GetLibList','GetProcessList','GetNetWorkList','GetNginxStatus','GetPHPStatus','GetTaskCount','GetSoftList','GetNetWorkIo','GetDiskIo','GetCpuIo','CheckInstalled','UpdatePanel','GetInstalled','GetPHPConfig','SetPHPConfig')
+        defs = ('ToPunycode','GetBetaStatus','SetBeta','setPHPMyAdmin','delClose','KillProcess','GetPHPInfo','GetQiniuFileList','UninstallLib','InstallLib','SetQiniuAS','GetQiniuAS','GetLibList','GetProcessList','GetNetWorkList','GetNginxStatus','GetPHPStatus','GetTaskCount','GetSoftList','GetNetWorkIo','GetDiskIo','GetCpuIo','CheckInstalled','UpdatePanel','GetInstalled','GetPHPConfig','SetPHPConfig')
         for key in defs:
             if key == get.action:
                 fun = 'ajaxObject.'+key+'(get)'
@@ -532,11 +533,33 @@ class panelTest(common.panelAdmin):
                 return public.getJson(eval(fun))
         
         return public.returnJson(False,'指定参数无效!')
+
+class panelPlugin(common.panelAdmin):
+    def GET(self):
+        return self.funObj()
+        
+    def POST(self):
+        return self.funObj()
+    
+    def funObj(self):
+        get = web.input()
+        import panelPlugin
+        pluginObject = panelPlugin.panelPlugin()
+        defs = ('install','unInstall','getPluginList','getPluginInfo','getPluginStatus','setPluginStatus','a','getCloudPlugin','getConfigHtml')
+        for key in defs:
+            if key == get.action:
+                fun = 'pluginObject.'+key+'(get)'
+                return public.getJson(eval(fun))
+        
+        return public.returnJson(False,'指定参数无效!')
+
+
 class panelClose:
     def GET(self):
         if not os.path.exists('data/close.pl'): raise web.seeother('/');
         render = web.template.render(panelPath + 'templates/',globals={'session': session})
         return render.close(web.ctx.session.version)
+
 #定义404错误
 def notfound():  
     errorStr = '''

@@ -43,7 +43,7 @@ $def with (data)
 								</div>
 							</div>
 						</div>
-						<div id="cupview" style="width:100%; height:280px"></div>
+						<div id="cupview" style="width:100%; height:320px"></div>
 					</div>
 				</div>
 				<div class="span6 view2">
@@ -61,7 +61,7 @@ $def with (data)
 								</div>
 							</div>
 						</div>
-						<div id="memview" style="width:100%; height:280px"></div>
+						<div id="memview" style="width:100%; height:320px"></div>
 					</div>
 				</div>
 				<div class="span6 view1">
@@ -79,7 +79,7 @@ $def with (data)
 								</div>
 							</div>
 						</div>
-						<div id="diskview" style="width:100%; height:280px"></div>
+						<div id="diskview" style="width:100%; height:320px"></div>
 					</div>
 				</div>
 				<div class="span6 view2">
@@ -97,7 +97,7 @@ $def with (data)
 								</div>
 							</div>
 						</div>
-						<div id="network" style="width:100%; height:280px"></div>
+						<div id="network" style="width:100%; height:320px"></div>
 					</div>
 				</div>
 			</div>
@@ -308,22 +308,38 @@ $$.get('/ajax?action=GetCpuIo&start='+b+'&end='+e,function(rdata){
 		xAxis: {
 			type: 'category',
 			boundaryGap: false,
-			data: xData
+			data: xData,
+			axisLine:{
+				lineStyle:{
+					color:"#666"
+				}
+			}
 		},
 		yAxis: {
 			type: 'value',
 			name: '百分比',
 			boundaryGap: [0, '100%'],
 			min:0,
-			max: 100
+			max: 100,
+			splitLine:{
+				lineStyle:{
+					color:"#ddd"
+				}
+			},
+			axisLine:{
+				lineStyle:{
+					color:"#666"
+				}
+			}
 		},
 		dataZoom: [{
 			type: 'inside',
 			start: 0,
-			end: 10
+			end: 100,
+			zoomLock:true
 		}, {
 			start: 0,
-			end: 10,
+			end: 100,
 			handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
 			handleSize: '80%',
 			handleStyle: {
@@ -378,22 +394,38 @@ $$.get('/ajax?action=GetCpuIo&start='+b+'&end='+e,function(rdata){
 		xAxis: {
 			type: 'category',
 			boundaryGap: false,
-			data: xData
+			data: xData,
+			axisLine:{
+				lineStyle:{
+					color:"#666"
+				}
+			}
 		},
 		yAxis: {
 			type: 'value',
 			name: '百分比',
 			boundaryGap: [0, '100%'],
 			min:0,
-			max: 100
+			max: 100,
+			splitLine:{
+				lineStyle:{
+					color:"#ddd"
+				}
+			},
+			axisLine:{
+				lineStyle:{
+					color:"#666"
+				}
+			}
 		},
 		dataZoom: [{
 			type: 'inside',
 			start: 0,
-			end: 10
+			end: 100,
+			zoomLock:true
 		}, {
 			start: 0,
-			end: 10,
+			end: 100,
 			handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
 			handleSize: '80%',
 			handleStyle: {
@@ -454,28 +486,54 @@ $$.get('/ajax?action=GetDiskIo&start='+b+'&end='+e,function(rdata){
 		xAxis: {
 			type: 'category',
 			boundaryGap: false,
-			data: xData
+			data: xData,
+			axisLine:{
+				lineStyle:{
+					color:"#666"
+				}
+			}
 		},
 		yAxis: [
 			{
 				type: 'value',
-				name: '次数'
+				name: '次数',
+				splitLine:{
+					lineStyle:{
+						color:"#ddd"
+					}
+				},
+				axisLine:{
+					lineStyle:{
+						color:"#666"
+					}
+				}
 			},
 			{
 				type: 'value',
 				name: '字节',
 				axisLabel: {
 					formatter: '{value}'
+				},
+				splitLine:{
+					lineStyle:{
+						color:"#ddd"
+					}
+				},
+				axisLine:{
+					lineStyle:{
+						color:"#666"
+					}
 				}
 			}
 		],
 		dataZoom: [{
 			type: 'inside',
 			start: 0,
-			end: 10
+			end: 100,
+			zoomLock:true
 		}, {
 			start: 0,
-			end: 10,
+			end: 100,
 			handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
 			handleSize: '80%',
 			handleStyle: {
@@ -565,20 +623,36 @@ $$.get('/ajax?action=GetNetWorkIo&start='+b+'&end='+e,function(rdata){
 		xAxis: {
 			type: 'category',
 			boundaryGap: false,
-			data: xData
+			data: xData,
+			axisLine:{
+				lineStyle:{
+					color:"#666"
+				}
+			}
 		},
 		yAxis: {
 			type: 'value',
 			name: '带宽KB/s',
-			boundaryGap: [0, '100%']
+			boundaryGap: [0, '100%'],
+			splitLine:{
+				lineStyle:{
+					color:"#ddd"
+				}
+			},
+			axisLine:{
+				lineStyle:{
+					color:"#666"
+				}
+			}
 		},
 		dataZoom: [{
 			type: 'inside',
 			start: 0,
-			end: 10
+			end: 100,
+			zoomLock:true
 		}, {
 			start: 0,
-			end: 10,
+			end: 100,
 			handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
 			handleSize: '80%',
 			handleStyle: {

@@ -99,12 +99,15 @@ def httpGet(url):
 
 def httpPost(url,data):
     #发送POST请求
-    import urllib 
-    import urllib2 
-    data = urllib.urlencode(data)
-    req = urllib2.Request(url, data)
-    response = urllib2.urlopen(req)
-    return response.read()
+    try:
+        import urllib 
+        import urllib2 
+        data = urllib.urlencode(data)
+        req = urllib2.Request(url, data)
+        response = urllib2.urlopen(req)
+        return response.read()
+    except Exception,ex:
+        return str(ex);
 
 
 def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):

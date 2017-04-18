@@ -7,7 +7,7 @@ function getWeb(page, search) {
 	search = search == undefined ? '':search;
 	page = page == undefined ? '1':page;
 	var sUrl = '/data?action=getData'
-	var pdata = 'tojs=getWeb&table=sites&limit=10&p=' + page + '&search=' + search;
+	var pdata = 'tojs=getWeb&table=sites&limit=15&p=' + page + '&search=' + search;
 	var loadT = layer.load();
 	//取回数据
 	$.post(sUrl,pdata, function(data) {
@@ -17,9 +17,9 @@ function getWeb(page, search) {
 		for (var i = 0; i < data.data.length; i++) {
 			//当前站点状态
 			if (data.data[i].status == '正在运行' || data.data[i].status == '1') {
-				var status = "<a href='javascript:;' title='停用这个站点' onclick=\"webStop(" + data.data[i].id + ",'" + data.data[i].name + "')\" class='btn-defsult'><span style='color:rgb(92, 184, 92)'>运行中    </span><span style='color:rgb(92, 184, 92)' class='glyphicon glyphicon-pause'></span></a>";
+				var status = "<a href='javascript:;' title='停用这个站点' onclick=\"webStop(" + data.data[i].id + ",'" + data.data[i].name + "')\" class='btn-defsult'><span style='color:rgb(92, 184, 92)'>运行中    </span><span style='color:rgb(92, 184, 92)' class='glyphicon glyphicon-play'></span></a>";
 			} else {
-				var status = "<a href='javascript:;' title='启用这个站点' onclick=\"webStart(" + data.data[i].id + ",'" + data.data[i].name + "')\" class='btn-defsult'><span style='color:red'>已停止    </span><span style='color:rgb(255, 0, 0);' class='glyphicon glyphicon-play'></span></a>";
+				var status = "<a href='javascript:;' title='启用这个站点' onclick=\"webStart(" + data.data[i].id + ",'" + data.data[i].name + "')\" class='btn-defsult'><span style='color:red'>已停止    </span><span style='color:rgb(255, 0, 0);' class='glyphicon glyphicon-pause'></span></a>";
 			}
 
 			//是否有备份
@@ -38,7 +38,7 @@ function getWeb(page, search) {
 					<td><a class='link' title='打开目录' href=\"javascript:openPath('"+data.data[i].path+"');\">" + data.data[i].path + "</a></td>\
 					<td><a class='linkbed' href='javascript:;' data-id='"+data.data[i].id+"'>" + data.data[i].ps + "</a></td>\
 					<td style='text-align:right; color:#bbb'>\
-					<a href='javascript:;' class='link' onclick=\"webEdit(" + data.data[i].id + ",'" + data.data[i].name + "','" + data.data[i].due_date + "','" + data.data[i].addtime + "')\">修改 </a>\
+					<a href='javascript:;' class='link' onclick=\"webEdit(" + data.data[i].id + ",'" + data.data[i].name + "','" + data.data[i].due_date + "','" + data.data[i].addtime + "')\">设置 </a>\
                         | <a href='javascript:;' class='link' onclick=\"webDelete('" + data.data[i].id + "','" + data.data[i].name + "')\" title='删除站点'>删除</a>\
 					</td></tr>"
 		}
@@ -170,7 +170,8 @@ function webAdd(type) {
 						<div class='line'>\
 		                    <label><span>域名</span></label>\
 		                    <div class='info-r'>\
-								<textarea id='mainDomain' name='webname'/></textarea>\
+								<textarea id='mainDomain' name='webname' style='width:398px;line-height:22px' /></textarea>\
+								<a href='#' class='btn btn-default btn-xs btn-zhm'>中文转码</a>\
 							</div>\
 						</div>\
 	                    <div class='line'>\
@@ -264,6 +265,8 @@ function webAdd(type) {
 				$("#Wbeizhu").val(ress);
 				$("#ftp-user").val(res);
 				$("#data-user").val(res);
+				if(isChineseChar(str)) $('.btn-zhm').show();
+				else $('.btn-zhm').hide();
 			})
 			$('#Wbeizhu').on('input', function() {
 				var str = $(this).val();
@@ -333,6 +336,13 @@ function webPathEdit(id){
 		$.post('/site?action=GetDirUserINI','path='+rdata+'&id='+id,function(userini){
 			var userinicheckeds = userini.userini?'checked':'';
 			var logscheckeds = userini.logs?'checked':'';
+			var opt = ''
+			var selected = '';
+			for(var i=0;i<userini.runPath.dirs.length;i++){
+				selected = '';
+				if(userini.runPath.dirs[i] == userini.runPath.runPath) selected = 'selected';
+				opt += '<option value="'+ userini.runPath.dirs[i] +'" '+selected+'>'+ userini.runPath.dirs[i] +'</option>'
+			}
 			var webPathHtml = "<div class='webEdit-box padding-10'>\
 						<div>\
 							<input type='checkbox' name='userini' id='userini'"+userinicheckeds+" /><label for='userini' style='font-weight:normal'>防跨站攻击</label>\
@@ -342,7 +352,16 @@ function webPathEdit(id){
 							<input type='text' style='width:80%' placeholder='网站根目录' value='"+rdata+"' name='webdir' id='inputPath'>\
 							<span onclick='ChangePath(&quot;inputPath&quot;)' class='glyphicon glyphicon-folder-open cursor'></span>\
 						</div>\
-						<button class='btn btn-success btn-sm' onclick='SetSitePath("+id+")'>保存</button>\
+						<button class='btn btn-success btn-sm' onclick='SetSitePath("+id+")'>保存</button><hr />\
+						<div class='line' style='margin-top:5px'>\
+							<span>运行目录</span>\
+							<select type='text' style='width:30%;margin: 5px;' name='runPath' id='runPath'>"+opt+"</select>\
+							<button class='btn btn-success btn-sm' onclick='SetSiteRunPath("+id+")' style='margin-top: -4px;'>保存</button>\
+							<ul class='help-info-text'>\
+								<li>部分程序的运行目录不在根目录,需要指定二级目录作为运行目录,如ThinkPHP5,Laravel</li>\
+								<li>选择您的运行目录,点保存即可</li>\
+							</ul>\
+						</div>\
 					</div>";
 			$("#webEdit-con").html(webPathHtml);
 			
@@ -359,6 +378,18 @@ function webPathEdit(id){
 			});
 			
 		});
+	});
+}
+
+
+//提交运行目录
+function SetSiteRunPath(id){
+	var NewPath = $("#runPath").val();
+	var loadT = layer.msg('正在处理...',{icon:16,time:100000});
+	$.post('/site?action=SetSiteRunPath','id='+id+'&runPath='+NewPath,function(rdata){
+		layer.close(loadT);
+		var ico = rdata.status?1:2;
+		layer.msg(rdata.msg,{icon:ico});
 	});
 }
 
@@ -538,6 +569,7 @@ function DomainEdit(id, name,msg,status) {
 		var bodyHtml = "<div class='webEdit-box padding-10' style='display:block'>\
 							<div class='divtable'>\
 								<textarea id='newdomain'></textarea>\
+								<a href='#' class='btn btn-default btn-xs btn-zhm' style='top:22px;right:154px'>中文转码</a>\
 								<input type='hidden' id='newport' value='80' />\
 								<button type='button' class='btn btn-success btn-sm pull-right' style='margin:30px 35px 0 0' onclick=\"DomainAdd(" + id + ",'" + name + "',1)\">添加</button>\
 								<table class='table table-hover' width='100%' style='margin-bottom:0'>\
@@ -565,6 +597,11 @@ function DomainEdit(id, name,msg,status) {
 				$(".placeholder").show();
 			}  
 		});
+		$("#newdomain").on("input",function(){
+			var str = $(this).val();
+			if(isChineseChar(str)) $('.btn-zhm').show();
+			else $('.btn-zhm').hide();
+		})
 		//checkDomain();
 	});
 }
@@ -585,6 +622,7 @@ function DomainRoot(id, name,msg) {
 			shadeClose: true,
 			content: "<div class='divtable padding-10'>\
 						<textarea id='newdomain'></textarea>\
+						<a href='#' class='btn btn-default btn-xs btn-zhm' style='top:22px;right:154px'>中文转码</a>\
 						<input type='hidden' id='newport' value='80' />\
 						<button type='button' class='btn btn-success btn-sm pull-right' style='margin:30px 35px 0 0' onclick=\"DomainAdd(" + id + ",'" + name + "')\">添加</button>\
 						<table class='table table-hover' width='100%' style='margin-bottom:0'>\
@@ -610,6 +648,11 @@ function DomainRoot(id, name,msg) {
 				$(".placeholder").show();
 			}  
 		});
+		$("#newdomain").on("input",function(){
+			var str = $(this).val();
+			if(isChineseChar(str)) $('.btn-zhm').show();
+			else $('.btn-zhm').hide();
+		})
 		//checkDomain();
 	});
 }

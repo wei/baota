@@ -320,7 +320,22 @@ class panelSite:
                 ftp.ftp().DeleteUser(get)
             
         return public.returnMsg(True,'删除成功!')
-        
+    
+    #域名编码转换
+    def ToPunycode(self,domain):
+        import re;
+        domain = domain.encode('utf8');
+        tmp = domain.split('.');
+        newdomain = '';
+        for dkey in tmp:
+                #匹配非ascii字符
+                match = re.search(u"[\x80-\xff]+",dkey);
+                if not match:
+                        newdomain += dkey + '.';
+                else:
+                        newdomain += 'xn--' + dkey.decode('utf-8').encode('punycode') + '.'
+
+        return newdomain[0:-1];
     
     #添加域名
     def AddDomain(self,get):
@@ -329,7 +344,7 @@ class panelSite:
         for domain in domains:
             if domain == "": continue;
             domain = domain.split(':')
-            get.domain = domain[0]
+            get.domain = self.ToPunycode(domain[0])
             get.port = '80'
             
             reg = "^([\w\-\*]{1,100}\.){1,4}(\w{1,10}|\w{1,10}\.\w{1,10})$";
@@ -569,8 +584,7 @@ class panelSite:
         actionstr = get.updateOf
         siteInfo = public.M('sites').where('name=?',(get.siteName,)).field('id,name,path').find();
         domains = public.M('domain').where("pid=?",(siteInfo['id'],)).field('name').select()
-        execStr = 'echo ' + actionstr + '|' + self.setupPath + "/panel/certbot-auto certonly --email 287962566@qq.com --agree-tos --webroot -w "+siteInfo['path'];
-        
+        execStr = 'echo ' + actionstr + '|' + self.setupPath + "/panel/certbot-auto certonly -n --email 287962566@qq.com --agree-tos --webroot -w "+siteInfo['path'];
         #构造参数
         domainCount = 0
         for domain in domains:
@@ -581,14 +595,17 @@ class panelSite:
         
         #获取域名数据
         if domainCount == 0: return public.returnMsg(False,'请至少为您的站点绑定一个常规域名(不包括IP地址与泛域名)')
+        
         result = public.ExecShell(execStr);
         
         #判断是否获取成功
         if not os.path.exists(csrpath): 
              data = {}
-             data['out'] = result           #返回错误信息
+             data['out'] = self.GetFormatSSLResult(result[0])           #返回错误信息
+             data['err'] = result;
              data['status'] = False
              data['msg'] = 'Let\'s Encrypt证书获取失败，认证服务器无法访问您的站点!'
+             if result[0].find('Too many invalid authorizations recently') != -1: data['msg'] = "授权错误: 您的服务器最近提交了过多无效申请!";
              return data
         
         public.ExecShell('echo "let" > ' + path + '/README');
@@ -598,7 +615,26 @@ class panelSite:
         return self.SetSSLConf(get)
         
     
-    
+    def GetFormatSSLResult(self,result):
+        try:
+            import re
+            rep = "\s*Domain:.+\n\s+Type:.+\n\s+Detail:.+"
+            tmps = re.findall(rep,result);
+        
+            statusList = [];
+            for tmp in tmps:
+                arr = tmp.strip().split('\n')
+                status={}
+                for ar in arr:
+                    tmp1 = ar.strip().split(':');
+                    status[tmp1[0].strip()] = tmp1[1].strip();
+                    if len(tmp1) > 2:
+                        status[tmp1[0].strip()] = tmp1[1].strip() + ':' + tmp1[2];
+                statusList.append(status);        
+            return statusList;
+        except:
+            return None;
+        
     #添加SSL配置
     def SetSSLConf(self,get):
         import shutil
@@ -918,10 +954,21 @@ class panelSite:
     #取301配置状态
     def Get301Status(self,get):
         siteName = get.siteName
-        
+        result = {}
+        domains = ''
+        id = public.M('sites').where("name=?",(siteName,)).getField('id')
+        tmp = public.M('domain').where("pid=?",(id,)).field('name').select()
+        for key in tmp:
+            domains += key['name'] + ','
         try:
             if(web.ctx.session.webserver == 'nginx'):
                 conf = public.readFile(self.setupPath + '/panel/vhost/nginx/' + siteName + '.conf');
+                if conf.find('301-START') == -1:
+                    result['domain'] = domains[:-1]
+                    result['src'] = "";
+                    result['status'] = False
+                    result['url'] = "";
+                    return result;
                 rep = "return\s+301\s+((http|https)\://.+);";
                 arr = re.search(rep, conf).groups()[0];
                 rep = "'\^((\w+\.)+\w+)'";
@@ -941,13 +988,7 @@ class panelSite:
         except:
             src = ''
             arr = ''
-        
-        result = {}
-        domains = ''
-        id = public.M('sites').where("name=?",(siteName,)).getField('id')
-        tmp = public.M('domain').where("pid=?",(id,)).field('name').select()
-        for key in tmp:
-            domains += key['name'] + ','
+            
         result['domain'] = domains[:-1]
         result['src'] = src.replace("'", '');
         result['status'] = True
@@ -1016,10 +1057,13 @@ class panelSite:
         if not os.path.exists(path): return public.returnMsg(False,'目录不存在!')
         dirnames = []
         for filename in os.listdir(path):
-            filePath = path + '/' + filename
-            if os.path.islink(filePath): continue
-            if os.path.isdir(filePath):
-                dirnames.append(filename)
+            try:
+                filePath = path + '/' + filename
+                if os.path.islink(filePath): continue
+                if os.path.isdir(filePath):
+                    dirnames.append(filename)
+            except:
+                pass
         
         data = {}
         data['dirs'] = dirnames
@@ -1368,6 +1412,7 @@ server
         data['userini'] = False;
         if os.path.exists(path+'/.user.ini'):
             data['userini'] = True;
+        data['runPath'] = self.GetSiteRunPath(get);
         return data;
 
     
@@ -1391,10 +1436,15 @@ server
     def GetProxy(self,get):
         if web.ctx.session.webserver != 'nginx': return public.returnMsg(False, '抱歉，反向代理功能暂时只支持Nginx'); 
         name = get.name
+        data = {}
         file = self.setupPath + "/panel/vhost/nginx/"+name+".conf";
         conf = public.readFile(file);
+        if conf.find('PROXY-START') == -1:
+            data['status'] = False;
+            data['proxyUrl'] = "";
+            data['toDomain'] = '$host';
+            return data;
         
-        data = {}
         rep = "proxy_pass\s+(.+);";
         tmp = re.search(rep, conf);
         data['proxyUrl'] = ""
@@ -1433,11 +1483,11 @@ server
     location / 
     {
         proxy_pass %s;
-        proxy_cache_key %s$uri$is_args$args;
         proxy_set_header Host %s;
         proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_cache_valid 200 304 12h;
-        expires 2d;
+        #proxy_cache_key %s$uri$is_args$args;
+        #proxy_cache_valid 200 304 12h;
+        #expires 2d;
     }
     
     location ~ .*\\.(php|jsp|cgi|asp|aspx|flv|swf|xml)?$
@@ -1876,6 +1926,121 @@ server
         public.serviceReload();
         public.WriteLog('网站管理','关闭站点['+siteName+']的tomcat支持!')
         return public.returnMsg(True,'已关闭Tomcat映射!');
+    
+    #取当站点前运行目录
+    def GetSiteRunPath(self,get):
+        siteName = public.M('sites').where('id=?',(get.id,)).getField('name');
+        sitePath = public.M('sites').where('id=?',(get.id,)).getField('path');
+        if web.ctx.session.webserver == 'nginx':
+            filename = self.setupPath + '/panel/vhost/nginx/' + siteName + '.conf'
+            conf = public.readFile(filename)
+            rep = '\s*root\s*(.+);'
+            path = re.search(rep,conf).groups()[0];
+        else:
+            filename = self.setupPath + '/panel/vhost/apache/' + siteName + '.conf'
+            conf = public.readFile(filename)
+            rep = '\s*DocumentRoot\s*"(.+)"\s*\n'
+            path = re.search(rep,conf).groups()[0];
+        
+        data = {}
+        if sitePath == path: 
+            data['runPath'] = '/';
+        else:
+            data['runPath'] = path.replace(sitePath,'');
+        
+        
+        dirnames = []
+        dirnames.append('/');
+        for filename in os.listdir(sitePath):
+            try:
+                filePath = sitePath + '/' + filename
+                if os.path.islink(filePath): continue
+                if os.path.isdir(filePath):
+                    dirnames.append('/' + filename)
+            except:
+                pass
+        
+        data['dirs'] = dirnames;
+        
+        return data;
+    
+    #设置当前站点运行目录
+    def SetSiteRunPath(self,get):
+        siteName = public.M('sites').where('id=?',(get.id,)).getField('name');
+        sitePath = public.M('sites').where('id=?',(get.id,)).getField('path');
+        
+        #处理Nginx
+        filename = self.setupPath + '/panel/vhost/nginx/' + siteName + '.conf'
+        if os.path.exists(filename):
+            conf = public.readFile(filename)
+            rep = '\s*root\s*(.+);'
+            path = re.search(rep,conf).groups()[0];
+            conf = conf.replace(path,sitePath + get.runPath);
+            public.writeFile(filename,conf);
+            
+        #处理Apache
+        filename = self.setupPath + '/panel/vhost/apache/' + siteName + '.conf'
+        if os.path.exists(filename):
+            conf = public.readFile(filename)
+            rep = '\s*DocumentRoot\s*"(.+)"\s*\n'
+            path = re.search(rep,conf).groups()[0];
+            conf = conf.replace(path,sitePath + get.runPath);
+            public.writeFile(filename,conf);
+        
+        public.serviceReload();
+        return public.returnMsg(True,'设置成功!');
+    
+    #设置默认站点
+    def SetDefaultSite(self,get):
+        import time;
+        #清理旧的
+        defaultSite = public.readFile('data/defaultSite.pl');
+        if defaultSite:
+            path = self.setupPath + '/panel/vhost/apache/' + defaultSite + '.conf';
+            if os.path.exists(path):
+                conf = public.readFile(path);
+                rep = "ServerName\s+.+\n"
+                conf = re.sub(rep,'ServerName ' + public.md5(str(time.time()))[0:8] + '_' + defaultSite + '\n',conf,1);
+                public.writeFile(path,conf);
+            path = self.setupPath + '/panel/vhost/nginx/' + defaultSite + '.conf';
+            if os.path.exists(path):
+                conf = public.readFile(path);
+                rep = "listen\s+80.+;"
+                conf = re.sub(rep,'listen 80;',conf,1);
+                public.writeFile(path,conf);
+            
+        
+        #处理新的
+        path = self.setupPath + '/panel/vhost/apache/' + get.name + '.conf';
+        if os.path.exists(path):
+            conf = public.readFile(path);
+            rep = "ServerName\s+.+\n"
+            conf = re.sub(rep,'ServerName ' + public.GetLocalIp() + '\n',conf,1);
+            public.writeFile(path,conf);
+        
+        path = self.setupPath + '/panel/vhost/nginx/' + get.name + '.conf';
+        if os.path.exists(path):
+            conf = public.readFile(path);
+            rep = "listen\s+80\s*;"
+            conf = re.sub(rep,'listen 80 default_server;',conf,1);
+            public.writeFile(path,conf);
+        
+        path = self.setupPath + '/panel/vhost/nginx/default.conf';
+        if os.path.exists(path): public.ExecShell('rm -f ' + path);
+        public.writeFile('data/defaultSite.pl',get.name);
+        public.serviceReload();
+        return public.returnMsg(True,'设置成功!');
+    
+    #取默认站点
+    def GetDefaultSite(self,get):
+        data = {}
+        data['sites'] = public.M('sites').field('name').order('id desc').select();
+        data['defaultSite'] = public.readFile('data/defaultSite.pl');
+        return data;
+        
+        
+        
+            
 
     
     
