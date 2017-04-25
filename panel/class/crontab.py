@@ -223,14 +223,17 @@ class crontab:
                 wheres={
                         'site'  :   head + "python " + web.ctx.session.setupPath+"/panel/script/backup.py site "+param['sName']+" "+param['save'],
                         'database': head + "python " + web.ctx.session.setupPath+"/panel/script/backup.py database "+param['sName']+" "+param['save'],
-                        'logs'  :   head + web.ctx.session.setupPath+"/panel/script/logsBackup "+param['sName']+log+" "+param['save'],
+                        'logs'  :   head + "python " + web.ctx.session.setupPath+"/panel/script/logsBackup "+param['sName']+log+" "+param['save'],
                         'rememory' : head + "sh " + web.ctx.session.setupPath + '/panel/script/rememory.sh'
                         }
                 if param['backupTo'] != 'localhost':
+                    cfile = web.ctx.session.setupPath + "/panel/plugin/" + param['backupTo'] + "/" + param['backupTo'] + "_main.py";
+                    if not os.path.exists(cfile): cfile = web.ctx.session.setupPath + "/panel/script/backup_" + param['backupTo'] + ".py";
+                    
                     wheres={
-                        'site'  :   head + "python " + web.ctx.session.setupPath+"/panel/script/backup_"+param['backupTo']+".py site "+param['sName']+" "+param['save'],
-                        'database': head + "python " + web.ctx.session.setupPath+"/panel/script/backup_"+param['backupTo']+".py database "+param['sName']+" "+param['save'],
-                        'logs'  :   head + web.ctx.session.setupPath+"/panel/script/logsBackup "+param['sName']+log+" "+param['save'],
+                        'site'  :   head + "python " + cfile + " site " + param['sName'] + " " + param['save'],
+                        'database': head + "python " + cfile + " database " + param['sName'] + " " + param['save'],
+                        'logs'  :   head + "python " + web.ctx.session.setupPath+"/panel/script/logsBackup "+param['sName']+log+" "+param['save'],
                         'rememory' : head + "sh " + web.ctx.session.setupPath + '/panel/script/rememory.sh'
                         }              
                 

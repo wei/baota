@@ -29,9 +29,7 @@ class backupTools:
         
         filename= backup_path + "/Web_" + name + "_" + time.strftime('%Y%m%d_%H%M%S',time.localtime()) + '.tar.gz'
         public.ExecShell("cd " + os.path.dirname(path) + " && tar zcvf '" + filename + "' '" + os.path.basename(path) + "' > /dev/null")
-        
-        self.updateFtp(filename);
-        
+                
         endDate = time.strftime('%Y/%m/%d %X',time.localtime())
         
         if not os.path.exists(filename):
@@ -123,39 +121,7 @@ class backupTools:
                 num -= 1;
                 print "|---已清理过期备份文件：" + backup['filename']
                 if num < 1: break;
-    
-    #连接FTP
-    def connentFtp(self):
-        from ftplib import FTP
-        ftp=FTP() 
-        ftp.set_debuglevel(0)
-        ftp.connect('192.168.1.245','21')
-        ftp.login('uptest','admin')
-        ftp.cwd('test')
-        bufsize = 1024
-        return ftp;
-    
-    #上传文件
-    def updateFtp(self,filename):
-        ftp = self.connentFtp();
-        file_handler = open(filename,'rb')
-        ftp.storbinary('STOR %s' % os.path.basename(filename),file_handler,bufsize)
-        ftp.set_debuglevel(0) 
-        file_handler.close() 
-        ftp.quit()
-    
-    #从FTP删除文件
-    def deleteFtp(self,filename):
-        ftp = self.connentFtp();
-        ftp.delete(filename);
-        return True;
-    
-    #获取列表
-    def getList(self):
-        ftp = self.connentFtp();
-        return ftp.nlst();
-    
-    
+        
     
 
 

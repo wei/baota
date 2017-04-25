@@ -13,7 +13,7 @@ class panelAdmin(panelSetup):
     def __init__(self):
         web.ctx.session.brand = '宝塔'
         web.ctx.session.product = 'Linux面板'
-        web.ctx.session.version = "3.8.0"
+        web.ctx.session.version = "3.9.0"
         web.ctx.session.rootPath = '/www'
         web.ctx.session.webname = '宝塔Linux面板'
         if os.path.exists('data/title.pl'):

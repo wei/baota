@@ -47,28 +47,12 @@ $def with (data)
 						<p><span class="set-tit">域名</span><input name="domain" class="inputtxt" type="text" value="$data['panel']['domain']"><span class="set-info">为面板绑定一个访问域名;注意：一旦绑定域名,只能通过域名访问面板!</span></p>
 						<p><span class="set-tit">默认建站目录</span><input name="sites_path" class="inputtxt" type="text" value="$data['sites_path']"><span class="set-info">新创建的站点,默认将保存到该目录的下级目录!</span></p>
 						<p><span class="set-tit">默认备份目录</span><input name="backup_path" class="inputtxt" type="text" value="$data['backup_path']"><span class="set-info">网站和数据库的备份目录!</span></p>
-						<p><span class="set-tit">服务器名称</span><input name="address" class="inputtxt" type="text" value="$data['panel']['address']"><span class="set-info">默认为服务器IP,您可以任意修改!</span></p>
+						<p><span class="set-tit">服务器IP</span><input name="address" class="inputtxt" type="text" value="$data['panel']['address']"><span class="set-info">默认为外网IP,若您在本地虚拟机测试,请填写虚拟机内网IP!</span></p>
 						<p><span class="set-tit">服务器时间</span><input id="systemdate" name="systemdate" class="inputtxt disable" type="text" value="$data['systemdate']"><span class="modify btn btn-xs btn-success" onclick="syncDate()">同步</span></p>
 						<p><span class="set-tit">面板用户</span><input name="username_" class="inputtxt disable" type="text" value="$web.ctx.session.username" disabled><span class="modify btn btn-xs btn-success" onclick="setUserName()">修改</span></p>
 						<p><span class="set-tit">面板密码</span><input name="password_" class="inputtxt disable" type="text" value="******" disabled><span class="modify btn btn-xs btn-success" onclick="setPassword()">修改</span></p>
 					</form>
 					<div class="set-submit">保存</div>
-				</div>
-			</div>
-			<div class="setbox">
-				<div class="s-title">
-					<h3>修改默认页</h3>
-				</div>
-				<div class="setting-con">
-					<div class="changeDefault">
-						<button class="btn btn-default btn-sm" onclick="changeDefault(1)">默认文档</button>
-						<button class="btn btn-default btn-sm" onclick="changeDefault(2)">404错误页</button>
-						$if web.ctx.session.webserver == 'nginx':
-							<button class="btn btn-default btn-sm" onclick="changeDefault(3)">Nginx空白页</button>
-						$else:
-							<button class="btn btn-default btn-sm" onclick="changeDefault(4)">Apache空白页</button>
-						<button class="btn btn-default btn-sm" onclick="changeDefault(5)">默认站点停止页</button>
-					</div>
 				</div>
 			</div>
 		</div>

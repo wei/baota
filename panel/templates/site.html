@@ -18,7 +18,9 @@ $def with (tData)
 						<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span> 使用$web.ctx.session.brand$web.ctx.session.product创建站点时会自动创建权限配置，统一使用www用户。</p>
 					</div>
 
-					<button onclick="webAdd(0)" class="btn btn-success btn-sm btn-title" type="button">添加站点</button>
+					<button onclick="webAdd(0)" class="btn btn-success btn-sm btn-title" type="button">添加站点</button>&nbsp;
+					<button onclick="SiteDefaultPage()" class="btn btn-default btn-sm btn-title" type="button">修改默认页</button>
+					<button onclick="GetDefaultSite()" class="btn btn-default btn-sm btn-title" type="button">默认站点</button>
 					<div class="divtable">
 						<table class="table table-hover" width="100%" border="0" cellpadding="0" cellspacing="0">
 							<thead>
@@ -56,7 +58,7 @@ $def with (tData)
 		function SetIndex(id){
 			var quanju = (id==undefined)?"全局设置":"本站";
 			var data=id==undefined?"":"id="+id;
-			$$.get('/site?action=GetIndex',data,function(rdata){
+			$$.post('/site?action=GetIndex',data,function(rdata){
 				rdata= rdata.replace(new RegExp(/(,)/g), "\n");
 				layer.open({
 						type: 1,
@@ -78,6 +80,53 @@ $def with (tData)
 					    +"    <button type='button' class='btn btn-success btn-sm btn-title' onclick='SetIndexList("+id+")'>确定</button>"
 				        +"</div>"
 						+"</div></form>"
+				});
+			});
+		}
+		
+		//设置默认站点
+		function SetDefaultSite(){
+			var name = $$("#defaultSite").val();
+			var loadT = layer.msg('正在处理,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+			$$.post('/site?action=SetDefaultSite','name='+name,function(rdata){
+				layer.closeAll();
+				layer.msg(rdata.msg,{icon:rdata.status?1:5});
+			});
+		}
+		
+		
+		//默认站点
+		function GetDefaultSite(){
+			$$.post('/site?action=GetDefaultSite','',function(rdata){
+				var opt = '<option value="off">未设置默认站点</option>';
+				var selected = '';
+				for(var i=0;i<rdata.sites.length;i++){
+					selected = '';
+					if(rdata.defaultSite == rdata.sites[i].name) selected = 'selected';
+					opt += '<option value="' + rdata.sites[i].name + '" ' + selected + '>' + rdata.sites[i].name + '</option>';
+				}
+				
+				layer.open({
+						type: 1,
+						area: '500px',
+						title: '设置默认站点',
+						closeBtn: 2,
+						shift: 5,
+						shadeClose: true,
+						content:'<div class="zun-form-new bingfa">\
+									<p>\
+										<span class="span_tit">默认站点：</span>\
+										<select id="defaultSite" style="width: 300px;">'+opt+'</select>\
+									</p>\
+										<ul class="help-info-text" style="margin-left: 60px;">\
+									    <li>设置默认站点后,所有未绑定的域名和IP都被定向到默认站点</li>\
+									    <li>可有效防止恶意解析</li>\
+								    </ul>\
+									<div class="submit-btn">\
+										<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>\
+										<button class="btn btn-success btn-sm btn-title" onclick="SetDefaultSite()">保存</button>\
+									</div>\
+								</div>'
 				});
 			});
 		}
@@ -363,7 +412,9 @@ $def with (tData)
 				type = $$("input[name='status']").attr('checked')?'0':'1';
 				toUrl = $$("input[name='toUrl']").val();
 				toDomain = $$("input[name='toDomain']").val();
-				var data = 'name='+siteName+'&type='+type+'&proxyUrl='+toUrl+'&toDomain=' + toDomain;
+				var sub1 = $$("input[name='sub1']").val();
+				var sub2 = $$("input[name='sub2']").val();
+				var data = 'name='+siteName+'&type='+type+'&proxyUrl='+toUrl+'&toDomain=' + toDomain + '&sub1=' + sub1 + '&sub2=' + sub2;
 				var loadT = layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
 				$$.post('/site?action=SetProxy',data,function(rdata){
 					layer.close(loadT);
@@ -382,11 +433,14 @@ $def with (tData)
 				var body = "<div style='margin: 10px 15px;'>"
 					   +"<p style='margin-bottom:8px'><span>目标URL</span><input type='text' name='toUrl' value='"+rdata.proxyUrl+"' style='margin-left: 5px;width: 380px;height: 30px;margin-right:10px;' placeholder='请填写完整URL,例：http://www.test.com' /></p>"
 					   +"<p style='margin-bottom:8px'><span>发送域名</span><input type='text' name='toDomain' value='"+rdata.toDomain+"' style='margin-left: 5px;width: 380px;height: 30px;margin-right:10px;' placeholder='发送到目标服务器的域名,例：www.test.com' /></p>"
+					   +"<p style='margin-bottom:8px'><span>内容替换</span><input type='text' name='sub1' value='"+rdata.sub1+"' style='margin-left: 5px;width: 182px;height: 30px;margin-right:10px;' placeholder='被替换的文本,可留空' />"
+					   +"<input type='text' name='sub2' value='"+rdata.sub2+"' style='margin-left: 5px;width: 183px;height: 30px;margin-right:10px;' placeholder='替换为,可留空' /></p>"
 					   +'<label style="font-weight:normal"><input type="checkbox" name="status" '+status_selected+' onclick="Proxy(\''+siteName+'\',1)" style="width:15px;height:15px;" />启用反向代理</label>'
 					   +'<ul class="help-info-text">'
 					   +'<li>目标Url必需是可以访问的，否则将直接502</li>'
 					   +'<li>默认本站点所有域名访问将被传递到目标服务器，请确保目标服务器已绑定域名</li>'
 					   +'<li>若您是被动代理，请在发送域名处填写上目标站点的域名</li>'
+					   +'<li>若您不需要内容替换功能，请直接留空</li>'
 					   +'</ul>'
 					   +"</div>";
 					$$("#webEdit-con").html(body);
@@ -620,6 +674,7 @@ $def with (tData)
 				});
 			});
 		}
+		
 		//tomcat
 		function toTomcat(siteName){
 			$$.post('/site?action=GetSitePHPVersion','siteName='+siteName,function(version){
@@ -641,11 +696,11 @@ $def with (tData)
 											<li>开启成功后,大概需要1分钟时间生效!</li>\
 										</ul>\
 										</div>'
-					}
-					else{
+					}else{
 						layer.msg('您没有安装Tomcat，请先安装!',{icon:2});
 						versionSelect = '<font>请先安装Tomcat!</font>'
 					}
+					
 					$$("#webEdit-con").html(versionSelect);
 				});
 			});
@@ -756,5 +811,41 @@ $def with (tData)
 				}
 			});
 		}
-		
+		//修改默认页
+		function SiteDefaultPage(){
+			layer.open({
+				type: 1,
+				area: '360px',
+				title: '修改默认页',
+				closeBtn: 2,
+				shift: 0,
+				content: '<div class="changeDefault">\
+								<button class="btn btn-default btn-sm" onclick="changeDefault(1)">默认文档</button>\
+								<button class="btn btn-default btn-sm" onclick="changeDefault(2)">404错误页</button>\
+									<button class="btn btn-default btn-sm" onclick="changeDefault(3)">Nginx空白页</button>\
+								<button class="btn btn-default btn-sm" onclick="changeDefault(5)">默认站点停止页</button>\
+						</div>'
+			})
+		}
+		function changeDefault(type){
+			var vhref='';
+			switch(type){
+				case 1:
+					vhref = '$web.ctx.session.setupPath/panel/data/defaultDoc.html';
+					break;
+				case 2:
+					vhref = '$web.ctx.session.setupPath/panel/data/404.html';
+					break;
+				case 3:
+					vhref = '$web.ctx.session.setupPath/nginx/html/index.html';
+					break;
+				case 4:
+					vhref = '$web.ctx.session.setupPath/apache/htdocs/index.html';
+					break;
+				case 5:
+					vhref = '$web.ctx.session.setupPath/stop/index.html';
+					break;
+			}
+			OnlineEditFile(0,vhref);
+		}
 	</script>

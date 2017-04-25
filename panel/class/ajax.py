@@ -120,14 +120,7 @@ class ajax:
                     data[i]['task'] = isTask
                     version = public.readFile(web.ctx.session.rootPath+'/server/'+data[i]['name'].lower()+'/version.pl');
                     if not version:continue;
-                    
-                    
-                    if data[i]['name'] == 'Tomcat':
-                        if version.find(data[i]['versions'][n]['version']+'.') == -1:continue;
-                    else:
-                        if data[i]['name'] == 'Nginx':
-                            if version.find('1.10') != -1: version += ',1.12';
-                        if version.find(data[i]['versions'][n]['version']) == -1:continue;
+                    if version.find(data[i]['versions'][n]['version']) == -1:continue;
                     checkFile = data[i]['check'];
                 data[i]['versions'][n]['status'] = os.path.exists(checkFile);
         return data
@@ -384,6 +377,14 @@ class ajax:
                 tmp.append(value);
                 count = 0;
             return tmp;
+        
+    def GetInstalleds(self,softlist):
+        softs = '';
+        for soft in softlist:
+            for v in soft['versions']:
+                if v['status']: softs += soft['name'] + '-' + v['version'] + '|';
+            
+        return softs;
     
     def UpdatePanel(self,get):
         #return public.returnMsg(False,'演示服务器，禁止此操作!');
@@ -406,16 +407,29 @@ class ajax:
                 logs = '';
             import psutil;
             mem = psutil.virtual_memory();
+            
             data = {}
             data['sites'] = str(public.M('sites').count());
             data['ftps'] = str(public.M('ftps').count());
             data['databases'] = str(public.M('databases').count());
             data['system'] = public.readFile('/etc/redhat-release').replace('release','') + '|' + str(mem.total / 1024 / 1024) + 'MB|' + public.getCpuType() + '*' + str(psutil.cpu_count()) + '|' + web.ctx.session.webserver + '|' + web.ctx.session.version;
+            try:
+                import panelPlugin;
+                mplugin = panelPlugin.panelPlugin();
+                data['system'] += '||'+self.GetInstalleds(mplugin.getPluginList(None));
+            except:
+                pass
             data['logs'] = logs
             
             sUrl = 'http://www.bt.cn/Api/updateLinux';
             betaIs = 'data/beta.pl';
-            betaStr = public.readFile(betaIs)
+            betaStr = public.readFile(betaIs);
+            if betaStr:
+                if betaStr.strip() != 'False':
+                    sUrl = 'http://www.bt.cn/Api/updateLinuxBeta';
+            
+            betaIs = 'plugin/beta/config.conf';
+            betaStr = public.readFile(betaIs);
             if betaStr:
                 if betaStr.strip() != 'False':
                     sUrl = 'http://www.bt.cn/Api/updateLinuxBeta';

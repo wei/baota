@@ -539,11 +539,24 @@ ul.sub li.current a,ul.sub li a:hover {
     border-left: 1px solid #ececfb;
 	border-right: 1px solid #ececfb;
 	margin-right:-1px;
+	margin-bottom:-1px;
 	height:148px;
 	cursor:pointer;
+	padding:0;
 }
 .soft-man .col-lg-3:hover{
-	background-color:#fafafa;
+	box-shadow: 0 0 38px rgba(0,0,0,.08) inset;
+	-webkit-transition: all .25s ease;
+	transition: all .25s ease
+}
+.soft-man .dashed-border{
+	border: 1px dashed #20a53a;
+	z-index:1;
+}
+.soft-man .no-bg:hover{
+	box-shadow: 0 0 38px rgba(0,0,0,.01) inset;
+	-webkit-transition: all .15s ease;
+	transition: all .15s ease
 }
 .soft-man .image {
     height: 40px;
@@ -554,7 +567,18 @@ ul.sub li.current a,ul.sub li a:hover {
     text-align: center;
 	color:#555
 }
-
+.soft-man .spanmove{
+	background: url(../images/move.png) no-repeat;
+	width:30px;
+	height:30px;
+	display:none;
+	position:absolute;
+	top:5px;
+	right:5px;
+}
+.soft-man .col-lg-3:hover .spanmove{
+	display:block;
+}
 .soft-man .text {
     background-color: rgba(0, 0, 0, 0.3);
     height: 100%;
@@ -593,6 +617,25 @@ ul.sub li.current a,ul.sub li a:hover {
 .soft-man .sname .glyphicon-False{
 	color:red;
 	margin-left:10px;
+}
+
+.soft-man{
+	position:relative;
+}
+.soft-man .rowbg{
+	position:absolute;
+	top:0;
+	width:100%;
+	z-index:0;
+}
+.soft-man .rowbg .col-lg-3{
+	cursor:default;
+}
+
+.soft-man .rowbg .col-lg-3:hover{
+	box-shadow: 0 0 38px rgba(0,0,0,.01) inset;
+	-webkit-transition: all .15s ease;
+	transition: all .15s ease
 }
 
 /*更新记录*/
@@ -1685,7 +1728,8 @@ html .zun-form-new .form-control-text {
 	padding:20px;
 }
 .changeDefault button{
-	margin-right:20px;
+	margin: 10px;
+    width: 138px;
 }
 /*二级密码*/
 .twoPassword .tp-tit{
@@ -2241,6 +2285,9 @@ html .zun-form-new .form-control-text {
 	width: 50px;
 	display: inline-block;
 }
+.soft-man-con .user_pw span{
+	margin-right:10px;
+}
 .btswitch-p{
 	margin-left: 10px;
 }
@@ -2276,12 +2323,12 @@ html .zun-form-new .form-control-text {
 }
 .softlist .glyphicon-folder-open{
 	cursor:pointer;
+	color:#efd566
 }
 .softlist .btswitch + .btswitch-btn{
-	width:2.6em;
-	height:1.5em;
+	width:2.4em;
+	height:1.4em;
 }
-
 @media only screen and (max-width:1120px){
 	.span6{
 		float: left;

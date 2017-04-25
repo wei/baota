@@ -5,7 +5,7 @@
 function getFtp(page,search) {
 	search = search == undefined ? '':search;
 	var sUrl = '/data?action=getData'
-	var data = 'tojs=getFtp&tab=ftps&limit=10&p='+page+'&search='+search;
+	var data = 'tojs=getFtp&tab=ftps&limit=15&p='+page+'&search='+search;
 	var loadT = layer.load();
 	$.post(sUrl,data, function(data){
 		layer.close(loadT);
@@ -13,9 +13,9 @@ function getFtp(page,search) {
 		var Body = '';
 		for (var i = 0; i < data.data.length; i++) {
 			if(data.data[i].status == '1'){
-				var ftp_status = "<a href='javascript:;' title='停止这个帐号' onclick=\"ftpStop("+data.data[i].id+",'"+data.data[i].name+"')\"><span style='color:#5CB85C'>已启用 </span> <span style='color:#5CB85C' class='glyphicon glyphicon-pause'></span></a>";
+				var ftp_status = "<a href='javascript:;' title='停止这个帐号' onclick=\"ftpStop("+data.data[i].id+",'"+data.data[i].name+"')\"><span style='color:#5CB85C'>已启用 </span> <span style='color:#5CB85C' class='glyphicon glyphicon-play'></span></a>";
 			}else{
-				var ftp_status = "<a href='javascript:;' title='启用这个帐号' onclick=\"ftpStart("+data.data[i].id+",'"+data.data[i].name+"')\"><span style='color:red'>已停用 </span> <span style='color:red;' class='glyphicon glyphicon-play'></span></a>";;
+				var ftp_status = "<a href='javascript:;' title='启用这个帐号' onclick=\"ftpStart("+data.data[i].id+",'"+data.data[i].name+"')\"><span style='color:red'>已停用 </span> <span style='color:red;' class='glyphicon glyphicon-pause'></span></a>";;
 			}
 			Body +="<tr><td style='display:none'><input type='checkbox' name='id' value='"+data.data[i].id+"'></td>\
 					<td>"+data.data[i].name+"</td>\
@@ -126,60 +126,19 @@ function ftpAdd(type) {
  * @return {bool}
  */
 function ftpDelete(id,ftp_username){
-	layer.open({
-		type: 1,
-	    title: "删除["+ftp_username+"]",
-	    area: '350px',
-	    closeBtn: 2,
-	    shadeClose: true,
-	    content:"<div class='zun-form-new webDelete'>\
-	    	<p>您真的要删除吗？</p>\
-			<div class='vcode'>计算结果：<span class='text'></span>=<input type='text' id='vcodeResult' value=''></div>\
-	    	<div class='submit-btn' style='margin-top:15px'>\
-				<button type='button' id='web_end_time' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
-		        <button type='button' id='web_del_send' class='btn btn-success btn-sm btn-title'  onclick=\"ftpall('"+id+"','"+ftp_username+"')\">提交</button>\
-	        </div>\
-	    </div>"
-	})
-	randomSum();
-}
-//随机生成验证计算
-function randomSum(){
-	var a = Math.round(Math.random()*9+1);
-	var b = Math.round(Math.random()*9+1);
-	var sum = '';
-	sum = a + b;
-	$(".vcode .text").text(a+' + '+b);
-	setCookie("vcodesum",sum);
-	$("#vcodeResult").focus().keyup(function(e){
-		if(e.keyCode == 13) $("#web_del_send").click();
+	SafeMessage("删除["+ftp_username+"]","您真的要删除["+ftp_username+"]吗?",function(){
+		layer.msg('正在删除,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+		var data='&id='+id+'&username='+ftp_username;
+		$$.post('/ftp?action=DeleteUser',data,function(rdata){
+			layer.closeAll();
+			if(rdata['status'] == true){
+				getFtp(1);
+				layer.msg(rdata.msg,{icon:1});
+			}else{
+				layer.msg(rdata.msg,{icon:2});
+			}
+		});
 	});
-}
-//删除操作
-function ftpall(id,ftp_username){
-	var sum = $("#vcodeResult").val();
-	if(sum == undefined || sum ==''){
-		layer.msg("输入计算结果，否则无法删除");
-		return;
-	}
-	else{
-		if(sum == getCookie("vcodesum")){
-			var loadT = layer.load();
-			$.get('/ftp.php?action=DeleteUser&id='+id+'&username='+ftp_username,function(rdata){
-				layer.closeAll();
-				if(rdata['status'] == true){
-					getFtp(1);
-					layer.msg(rdata.msg,{icon:1});
-				}else{
-					layer.msg(rdata.msg,{icon:2});
-				}
-			});
-		}
-		else{
-			layer.msg("计算错误，请重新计算");
-			return;
-		}
-	}
 }
 
 //同步

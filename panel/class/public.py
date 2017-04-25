@@ -163,19 +163,27 @@ def downloadHook(count, blockSize, totalSize):
 def GetLocalIp():
     #取本地外网IP
     try:
+        import re;
         filename = 'data/iplist.txt'
         ipaddress = readFile(filename)
         if not ipaddress:
-            import re,urllib2
+            import urllib2
             url = 'http://pv.sohu.com/cityjson?ie=utf-8'
             opener = urllib2.urlopen(url)
             str = opener.read()
             ipaddress = re.search('\d+.\d+.\d+.\d+',str).group(0)
             writeFile(filename,ipaddress)
+        
+        ipaddress = re.search('\d+.\d+.\d+.\d+',ipaddress).group(0);
         return ipaddress
     except:
-        import web
-        return web.ctx.host.split(':')[0];
+        try:
+            url = 'http://www.bt.cn/Api/getIpAddress';
+            opener = urllib2.urlopen(url)
+            return opener.read()
+        except:
+            import web
+            return web.ctx.host.split(':')[0];
 
 #搜索数据中是否存在
 def inArray(arrays,searchStr):

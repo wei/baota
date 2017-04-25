@@ -352,7 +352,7 @@ function webPathEdit(id){
 							<input type='text' style='width:80%' placeholder='网站根目录' value='"+rdata+"' name='webdir' id='inputPath'>\
 							<span onclick='ChangePath(&quot;inputPath&quot;)' class='glyphicon glyphicon-folder-open cursor'></span>\
 						</div>\
-						<button class='btn btn-success btn-sm' onclick='SetSitePath("+id+")'>保存</button><hr />\
+						<button class='btn btn-success btn-sm' onclick='SetSitePath("+id+")'>保存</button>\
 						<div class='line' style='margin-top:5px'>\
 							<span>运行目录</span>\
 							<select type='text' style='width:30%;margin: 5px;' name='runPath' id='runPath'>"+opt+"</select>\
@@ -381,11 +381,10 @@ function webPathEdit(id){
 	});
 }
 
-
 //提交运行目录
 function SetSiteRunPath(id){
 	var NewPath = $("#runPath").val();
-	var loadT = layer.msg('正在处理...',{icon:16,time:100000});
+	var loadT = layer.msg('正在执行,请稍候...',{icon:16,time:10000,shade: [0.3, '#000']});
 	$.post('/site?action=SetSiteRunPath','id='+id+'&runPath='+NewPath,function(rdata){
 		layer.close(loadT);
 		var ico = rdata.status?1:2;
@@ -396,7 +395,7 @@ function SetSiteRunPath(id){
 //提交网站目录
 function SetSitePath(id){
 	var NewPath = $("#inputPath").val();
-	var loadT = layer.msg('正在处理...',{icon:16,time:100000});
+	var loadT = layer.msg('正在执行,请稍候...',{icon:16,time:10000,shade: [0.3, '#000']});
 	$.post('/site?action=SetPath','id='+id+'&path='+NewPath,function(rdata){
 		layer.close(loadT);
 		var ico = rdata.status?1:2;
@@ -488,73 +487,31 @@ function webStart(wid, wname) {
  * @param {String} wname 网站名称
  */
 function webDelete(wid, wname){
-	layer.open({
-		type: 1,
-	    title: "删除站点["+wname+"]",
-	    area: '350px',
-	    closeBtn: 2,
-	    shadeClose: true,
-	    content:"<div class='zun-form-new webDelete'>\
-	    	<p>是否要删除的同名FTP、数据库、根目录</p>\
-	    	<div class='options'>\
+	var thtml = "<div class='options'>\
 	    	<label><input type='checkbox' id='delftp' name='ftp'><span>FTP</span></label>\
 	    	<label><input type='checkbox' id='deldata' name='data'><span>数据库</span></label>\
 	    	<label><input type='checkbox' id='delpath' name='path'><span>根目录</span></label>\
-	    	</div>\
-			<div class='vcode'>计算结果：<span class='text'></span>=<input type='text' id='vcodeResult' value=''></div>\
-	    	<div class='submit-btn' style='margin-top:15px'>\
-				<button type='button' id='web_end_time' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
-		        <button type='button' id='web_del_send' class='btn btn-success btn-sm btn-title'  onclick=\"weball('"+wid+"','"+wname+"')\">提交</button>\
-	        </div>\
-	    </div>"
-	})
-	randomSum()
-}
-//随机生成验证计算
-function randomSum(){
-	var a = Math.round(Math.random()*9+1);
-	var b = Math.round(Math.random()*9+1);
-	var sum = '';
-	sum = a + b;
-	$(".vcode .text").text(a+' + '+b);
-	setCookie("vcodesum",sum);
-	$("#vcodeResult").focus().keyup(function(e){
-		if(e.keyCode == 13) $("#web_del_send").click();
-	});
-}
-function weball(wid, wname){
-	var sum = $("#vcodeResult").val();
-	var ftp='',data='',path='';
-	
-	if($("#delftp").is(":checked")){
-		ftp='&ftp=1';
-	}
-	if($("#deldata").is(":checked")){
-		data='&data=1';
-	}
-	if($("#delpath").is(":checked")){
-		path='&path=1';
-	}
-	if(sum == undefined || sum ==''){
-		layer.msg("输入计算结果，否则无法删除");
-		return;
-	}
-	else{
-		if(sum == getCookie("vcodesum")){
-			layer.closeAll()
-			var loadT = layer.msg('正在删除...',{icon:16,time:0})
-			$.post("/site?action=DeleteSite","id=" + wid + "&webname=" + wname+ftp+data+path, function(ret) {
-				layer.close(loadT)
-				layer.msg(ret.msg,{icon:ret.status?1:2})
-				getWeb(1);
-			});
+	    	</div>";
+	SafeMessage("删除站点["+wname+"]","是否要删除的同名FTP、数据库、根目录",function(){
+		var ftp='',data='',path='';
+		if($("#delftp").is(":checked")){
+			ftp='&ftp=1';
 		}
-		else{
-			layer.msg("计算错误，请重新计算");
-			return;
+		if($("#deldata").is(":checked")){
+			data='&data=1';
 		}
-	}
+		if($("#delpath").is(":checked")){
+			path='&path=1';
+		}
+		var loadT = layer.msg('正在执行,请稍候...',{icon:16,time:10000,shade: [0.3, '#000']});
+		$.post("/site?action=DeleteSite","id=" + wid + "&webname=" + wname+ftp+data+path, function(ret){
+			layer.closeAll();
+			layer.msg(ret.msg,{icon:ret.status?1:2})
+			getWeb(1);
+		});
+	},thtml);
 }
+
 
 /**
  * 域名管理

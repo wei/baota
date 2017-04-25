@@ -189,55 +189,18 @@ $def with (data)
 	
 	//删除
 	function planDel(id,name){
-		layer.open({
-			type: 1,
-		    title: "删除计划任务["+name+"]",
-		    area: '350px',
-		    closeBtn: 2,
-		    shadeClose: true,
-		    content:"<div class='zun-form-new webDelete'>\
-		    	<p>您确定要删除该任务吗？</p>\
-				<div class='vcode'>计算结果：<span class='text'></span>=<input type='text' id='vcodeResult' value=''></div>\
-		    	<div class='submit-btn' style='margin-top:15px'>\
-					<button type='button' id='web_end_time' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
-			        <button type='button' id='web_del_send' class='btn btn-success btn-sm btn-title'  onclick=\"ftpall('"+id+"')\">提交</button>\
-		        </div>\
-		    </div>"
-		});
-		randomSum();
-	}
-	
-	//随机生成验证计算
-	function randomSum(){
-		var a = Math.round(Math.random()*9+1);
-		var b = Math.round(Math.random()*9+1);
-		var sum = '';
-		sum = a + b;
-		$$(".vcode .text").text(a+' + '+b);
-		setCookie("vcodesum",sum);
-		$$("#vcodeResult").focus().keyup(function(e){
-			if(e.keyCode == 13) $$("#web_del_send").click();
+		SafeMessage("删除["+name+"]","您确定要该任务吗?",function(){
+				layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
+				var data='id='+id;
+				$$.post('/crontab?action=DelCrontab',data,function(rdata){
+					layer.closeAll();
+					layer.msg(rdata.msg,{icon:rdata.status?1:2});
+					getCronData();
+				});
 		});
 	}
-	//删除操作
-	function ftpall(id){
-		var sum = $$("#vcodeResult").val();
-		if(sum == undefined || sum ==''){
-			layer.msg("输入计算结果，否则无法删除");
-			return;
-		}
-		else{
-			layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
-			var data='id='+id;
-			$$.post('/crontab?action=DelCrontab',data,function(rdata){
-				layer.closeAll();
-				layer.msg(rdata.msg,{icon:rdata.status?1:2});
-				getCronData();
-			});
-		}
-	}
 	
-	
+		
 	function IsURL(str_url){
 		var strRegex = '^((https|http|ftp|rtsp|mms)?://)'
 		+ "?(([0-9a-z_!~*'().&=+$$%-]+: )?[0-9a-z_!~*'().&=+$$%-]+@)?"

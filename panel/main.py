@@ -51,7 +51,8 @@ urls = (
     '/cloud'   , 'panelCloud',
     '/test'    , 'panelTest',
     '/close'   , 'panelClose',
-    '/plugin'  , 'panelPlugin'
+    '/plugin'  , 'panelPlugin',
+    '/waf'     , 'panelWaf'
 )
 
 
@@ -195,7 +196,7 @@ class panelSite(common.panelAdmin):
         import panelSite
         siteObject = panelSite.panelSite()
         
-        defs = ('CloseTomcat','SetTomcat','apacheAddPort','AddSite','GetPHPVersion','SetPHPVersion','DeleteSite','AddDomain','DelDomain','GetDirBinding','AddDirBinding','GetDirRewrite','DelDirBinding'
+        defs = ('GetDefaultSite','SetDefaultSite','CloseTomcat','SetTomcat','apacheAddPort','AddSite','GetPHPVersion','SetPHPVersion','DeleteSite','AddDomain','DelDomain','GetDirBinding','AddDirBinding','GetDirRewrite','DelDirBinding'
                 ,'SetSiteRunPath','GetSiteRunPath','SetPath','SetIndex','GetIndex','GetDirUserINI','SetDirUserINI','GetRewriteList','SetSSL','SetSSLConf','CreateLet','CloseSSLConf','GetSSL','SiteStart','SiteStop'
                 ,'Set301Status','Get301Status','CloseLimitNet','SetLimitNet','GetLimitNet','SetProxy','GetProxy','ToBackup','DelBackup','GetSitePHPVersion','logsOpen','GetLogsStatus','CloseHasPwd','SetHasPwd','GetHasPwd')
         for key in defs:
@@ -552,6 +553,20 @@ class panelPlugin(common.panelAdmin):
                 return public.getJson(eval(fun))
         
         return public.returnJson(False,'指定参数无效!')
+    
+class panelWaf(common.panelAdmin):
+    def GET(self):
+        return self.funObj()
+        
+    def POST(self):
+        return self.funObj()
+    
+    def funObj(self):
+        import panelWaf
+        toObject = panelWaf.panelWaf()
+        defs = ('GetConfig','SetConfigString','SetConfigList','GetWafConf','SetWafConf')
+        return publicObject(toObject,defs);
+    
 
 
 class panelClose:
@@ -559,6 +574,16 @@ class panelClose:
         if not os.path.exists('data/close.pl'): raise web.seeother('/');
         render = web.template.render(panelPath + 'templates/',globals={'session': session})
         return render.close(web.ctx.session.version)
+
+
+def publicObject(toObject,defs):
+    get = web.input();
+    for key in defs:
+        if key == get.action:
+            fun = 'toObject.'+key+'(get)'
+            return public.getJson(eval(fun))
+    
+    return public.returnJson(False,'指定参数无效!')
 
 #定义404错误
 def notfound():  

@@ -404,22 +404,7 @@ function Batch(type,access){
 		layer.closeAll();
 	}
 	if(type == 4){
-		layer.open({
-			type: 1,
-			title: "批量删除",
-			area: '350px',
-			closeBtn: 2,
-			shadeClose: true,
-			content:"<div class='zun-form-new webDelete'>\
-				<p>您真的要删除吗？</p>\
-				<div class='vcode'>计算结果：<span class='text'></span>=<input type='text' id='vcodeResult' value=''></div>\
-				<div class='submit-btn' style='margin-top:15px'>\
-					<button type='button' id='web_end_time' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
-					<button type='button' id='web_del_send' class='btn btn-success btn-sm btn-title'  onclick=\"AllDeleteFileSub('"+data+"','"+path+"')\">提交</button>\
-				</div>\
-			</div>"
-		})
-		randomSum();
+		AllDeleteFileSub(data,path);
 		return;
 	}
 	myloadT = layer.msg('正在执行,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
@@ -586,127 +571,41 @@ function CreateDir(type, path) {
 
 //删除文件
 function DeleteFile(fileName){
-	layer.open({
-		type: 1,
-	    title: "删除文件",
-	    area: '350px',
-	    closeBtn: 2,
-	    shadeClose: true,
-	    content:"<div class='zun-form-new webDelete'>\
-	    	<p>您真的要删除" + fileName + "吗？</p>\
-			<div class='vcode'>计算结果：<span class='text'></span>=<input type='text' id='vcodeResult' value=''></div>\
-	    	<div class='submit-btn' style='margin-top:15px'>\
-				<button type='button' id='web_end_time' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
-		        <button type='button' id='web_del_send' class='btn btn-success btn-sm btn-title'  onclick=\"DeleteFileSub('"+fileName+"')\">提交</button>\
-	        </div>\
-	    </div>"
-	})
-	randomSum();
-}
-//删除目录
-function DeleteDir(dirName){
-	layer.open({
-		type: 1,
-	    title: "删除目录",
-	    area: '350px',
-	    closeBtn: 2,
-	    shadeClose: true,
-	    content:"<div class='zun-form-new webDelete'>\
-	    	<p>您真的要删除" + dirName + "吗？</p>\
-			<div class='vcode'>计算结果：<span class='text'></span>=<input type='text' id='vcodeResult' value=''></div>\
-	    	<div class='submit-btn' style='margin-top:15px'>\
-				<button type='button' id='web_end_time' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
-		        <button type='button' id='web_del_send' class='btn btn-success btn-sm btn-title'  onclick=\"DeleteDirSub('"+dirName+"')\">提交</button>\
-	        </div>\
-	    </div>"
-	})
-	randomSum();
-}
-//随机生成验证计算
-function randomSum(){
-	var a = Math.round(Math.random()*9+1);
-	var b = Math.round(Math.random()*9+1);
-	var sum = '';
-	sum = a + b;
-	$$(".vcode .text").text(a+' + '+b);
-	setCookie("vcodesum",sum);
-	$$("#vcodeResult").focus().keyup(function(e){
-		if(e.keyCode == 13) $$("#web_del_send").click();
+	SafeMessage("删除文件","您真的要删除["+fileName+"]吗?",function(){
+		layer.msg('正在执行,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+		$$.post('/files?action=DeleteFile', 'path=' + fileName, function(rdata) {
+			layer.closeAll();
+			layer.msg(rdata.msg, {
+				icon: rdata.status ? 1 : 2
+			});
+			GetFiles($$("#PathPlace input").val());
+		});
 	});
 }
-//删除操作
-function DeleteDirSub(dirName){
-	var sum = $$("#vcodeResult").val();
-	if(sum == undefined || sum ==''){
-		layer.msg("输入计算结果，否则无法删除");
-		return;
-	}
-	else{
-		if(sum == getCookie("vcodesum")){
-			layer.msg('正在删除...', {
-				icon: 16,
-				time: 10000
+
+//删除目录
+function DeleteDir(dirName){
+	SafeMessage("删除目录","您真的要删除["+dirName+"]吗?",function(){
+		layer.msg('正在执行,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+		$$.post('/files?action=DeleteDir', 'path=' + dirName, function(rdata) {
+			layer.closeAll();
+			layer.msg(rdata.msg, {
+				icon: rdata.status ? 1 : 2
 			});
-			$$.post('/files?action=DeleteDir', 'path=' + dirName, function(rdata) {
-				layer.closeAll();
-				layer.msg(rdata.msg, {
-					icon: rdata.status ? 1 : 2
-				});
-				GetFiles($$("#PathPlace input").val());
-			})
-		}
-		else{
-			layer.msg("计算错误，请重新计算");
-			return;
-		}
-	}
+			GetFiles($$("#PathPlace input").val());
+		});
+	});
 }
-function DeleteFileSub(fileName){
-	var sum = $$("#vcodeResult").val();
-	if(sum == undefined || sum ==''){
-		layer.msg("输入计算结果，否则无法删除");
-		return;
-	}
-	else{
-		if(sum == getCookie("vcodesum")){
-			layer.msg('正在删除...', {
-				icon: 16,
-				time: 10000
-			});
-			$$.post('/files?action=DeleteFile', 'path=' + fileName, function(rdata) {
-				layer.closeAll();
-				layer.msg(rdata.msg, {
-					icon: rdata.status ? 1 : 2
-				});
-				GetFiles($$("#PathPlace input").val());
-			})
-		}
-		else{
-			layer.msg("计算错误，请重新计算");
-			return;
-		}
-	}
-}
+//批量删除文件
 function AllDeleteFileSub(data,path){
-	var sum = $$("#vcodeResult").val();
-	if(sum == undefined || sum ==''){
-		layer.msg("输入计算结果，否则无法删除");
-		return;
-	}
-	else{
-		if(sum == getCookie("vcodesum")){
-			myloadT = layer.msg('正在执行,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
-			$$.post('files?action=SetBatchData',data,function(rdata){
-				layer.closeAll();
-				GetFiles(path);
-				layer.msg(rdata.msg,{icon:1});
-			});
-		}
-		else{
-			layer.msg("计算错误，请重新计算");
-			return;
-		}
-	}
+	SafeMessage("批量删除文件","您真的要删除这些文件吗?",function(){
+		layer.msg('正在执行,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+		$$.post('files?action=SetBatchData',data,function(rdata){
+			layer.closeAll();
+			GetFiles(path);
+			layer.msg(rdata.msg,{icon:1});
+		});
+	});
 }
 
 //重载文件列表

@@ -672,7 +672,7 @@ function OnlineEditFile(type, fileName) {
 		return;
 	}
 
-	layer.msg('正在读取文件...', {
+	var loadT = layer.msg('正在读取文件...', {
 		icon: 16,
 		time: 0
 	});
@@ -739,7 +739,7 @@ function OnlineEditFile(type, fileName) {
 			doctype = mixedMode;
 	}
 	$.post('/files?action=GetFileBody', 'path=' + fileName, function(rdata) {
-		layer.closeAll();
+		layer.close(loadT);
 		var encodings = ["utf-8","gbk"];
 		var encoding = ''
 		var opt = ''
@@ -749,7 +749,7 @@ function OnlineEditFile(type, fileName) {
 			encoding += '<option value="'+encodings[i]+'" '+opt+'>'+encodings[i]+'</option>';
 		}
 		
-		layer.open({
+		var editorbox = layer.open({
 			type: 1,
 			shift: 5,
 			closeBtn: 2,
@@ -762,7 +762,7 @@ function OnlineEditFile(type, fileName) {
 			<textarea class="mCustomScrollbar" id="textBody" style="width:100%;margin:0 auto;line-height: 1.8;position: relative;top: 10px;" value="" />\
 			</div>\
 			<div class="submit-btn" style="position:absolute; bottom:0; width:100%">\
-			<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">关闭</button>\
+			<button type="button" class="btn btn-danger btn-sm btn-title btn-editor-close">关闭</button>\
 			<button id="OnlineEditFileBtn" type="button" class="btn btn-success btn-sm btn-title">保存</button>\
 			</div>\
 			</form>'
@@ -788,12 +788,18 @@ function OnlineEditFile(type, fileName) {
 		$("#OnlineEditFileBtn").click(function(){
 			$("#textBody").text(editor.getValue());
 			OnlineEditFile(1,fileName);
+		});
+		$(".btn-editor-close").click(function(){
+			layer.close(editorbox);
 		})
 	});
 }
 
 //服务管理
 function ServiceAdmin(name,type){
+	if(!isNaN(name)){
+		name = 'php-fpm-' + name;
+	}
 	var data = "name="+name+"&type="+type;
 	var msg = '';
 	switch(type){
@@ -1124,4 +1130,52 @@ function btcopy(){
 function isChineseChar(str){   
    var reg = /[\u4E00-\u9FA5\uF900-\uFA2D]/;
    return reg.test(str);
+}
+
+
+//操作验证
+function SafeMessage(title,msg,success,thtml){
+	if(thtml == undefined) thtml = "";
+	var a = Math.round(Math.random()*9+1);
+	var b = Math.round(Math.random()*9+1);
+	var sum = '';
+	sum = a + b;
+	sumtext = a + ' + ' + b; 
+	setCookie("vcodesum",sum);
+	layer.open({
+		type: 1,
+	    title: title,
+	    area: '350px',
+	    closeBtn: 2,
+	    shadeClose: true,
+	    content:"<div class='zun-form-new webDelete'>\
+	    	<p>" + msg + "</p>\
+	    	" + thtml + "\
+			<div class='vcode'>计算结果：<span class='text'>"+sumtext+"</span>=<input type='number' id='vcodeResult' value=''></div>\
+	    	<div class='submit-btn' style='margin-top:15px'>\
+				<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
+		        <button type='button' id='toSubmit' class='btn btn-success btn-sm btn-title' >提交</button>\
+	        </div>\
+	    </div>"
+	});
+	
+	
+	$("#vcodeResult").focus().keyup(function(e){
+		if(e.keyCode == 13) $("#toSubmit").click();
+	});
+	
+	$("#toSubmit").click(function(){
+		var sum = $("#vcodeResult").val().replace(/ /g,"");
+		if(sum == undefined || sum ==''){
+			layer.msg("输入计算结果，否则无法删除");
+			return;
+		}
+		
+		if(sum != getCookie("vcodesum")){
+			layer.msg("计算错误，请重新计算");
+			return;
+		}
+		
+		success();
+	});
 }

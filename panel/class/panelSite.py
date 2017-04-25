@@ -967,7 +967,7 @@ class panelSite:
                     result['domain'] = domains[:-1]
                     result['src'] = "";
                     result['status'] = False
-                    result['url'] = "";
+                    result['url'] = "http://";
                     return result;
                 rep = "return\s+301\s+((http|https)\://.+);";
                 arr = re.search(rep, conf).groups()[0];
@@ -976,18 +976,22 @@ class panelSite:
                 src = ''
                 if tmp : src = tmp.groups()[0]
             else:
-                sitePath = public.M('sites').where("name=?",(siteName,)).getField('path');
-                conf = public.readFile(sitePath+'/.htaccess');
+                conf = public.readFile(self.setupPath + '/panel/vhost/apache/' + siteName + '.conf');
+                if conf.find('301-START') == -1:
+                    result['domain'] = domains[:-1]
+                    result['src'] = "";
+                    result['status'] = False
+                    result['url'] = "http://";
+                    return result;
                 rep = "RewriteRule\s+.+\s+((http|https)\://.+)\s+\[";
                 arr = re.search(rep, conf).groups()[0];
                 rep = "\^((\w+\.)+\w+)\s+\[NC";
                 tmp = re.search(rep, conf);
-                
                 src = ''
                 if tmp : src = tmp.groups()[0]
         except:
             src = ''
-            arr = ''
+            arr = 'http://'
             
         result['domain'] = domains[:-1]
         result['src'] = src.replace("'", '');
@@ -1026,21 +1030,20 @@ class panelSite:
         
         
         #apache
-        sitePath = public.M('sites').where("name=?",(siteName,)).getField('path');
-        filename = sitePath+'/.htaccess';
-        if(srcDomain == 'all'):
-            conf301 = "RewriteEngine on\nRewriteRule ^(.*)$ "+toDomain+" [L,R=301]\n";
-        else:
-            conf301 = "RewriteEngine on\nRewriteCond %{HTTP_HOST} ^"+srcDomain+" [NC]\nRewriteRule ^(.*) "+toDomain+" [L,R=301]\n";
+        filename = self.setupPath + '/panel/vhost/apache/' + siteName + '.conf';
         mconf = public.readFile(filename);
-        if not mconf: mconf = "";
         if type == '1': 
-            conf = conf301 + mconf;
+            if(srcDomain == 'all'):
+                conf301 = "\n\t#301-START\n\t<IfModule mod_rewrite.c>\n\t\tRewriteEngine on\n\t\tRewriteRule ^(.*)$ "+toDomain+" [L,R=301]\n\t</IfModule>\n\t#301-END\n";
+            else:
+                conf301 = "\n\t#301-START\n\t<IfModule mod_rewrite.c>\n\t\tRewriteEngine on\n\t\tRewriteCond %{HTTP_HOST} ^"+srcDomain+" [NC]\n\t\tRewriteRule ^(.*) "+toDomain+" [L,R=301]\n\t</IfModule>\n\t#301-END\n";
+            rep = "combined"
+            mconf = mconf.replace(rep,rep + "\n\t" + conf301);
         else:
-            conf = mconf.replace("RewriteEngine on\nRewriteCond %{HTTP_HOST} ^"+srcDomain+" [NC]\nRewriteRule ^(.*) "+toDomain+" [L,R=301]\n","");
-            conf = conf.replace("RewriteEngine on\nRewriteRule ^(.*)\ "+toDomain+" [L,R=301]\n","");
+            rep = "\n\s+#301-START(.|\n)+#301-END\n*";
+            mconf = re.sub(rep, '\n\n', mconf);
         
-        public.writeFile(filename,conf)
+        public.writeFile(filename,mconf)
         
         
         isError = public.checkWebConfig();
@@ -1138,16 +1141,17 @@ server
             if httpdVersion == '2.2.31':
                 phpConfig = "";
             else:
-                rep = "php-cgi-([0-9]{2,3})\.sock";
-                tmp = re.search(rep,conf).groups()
-                version = tmp[0];
-                phpConfig ='''#PHP
+                try:
+                    rep = "php-cgi-([0-9]{2,3})\.sock";
+                    tmp = re.search(rep,conf).groups()
+                    version = tmp[0];
+                    phpConfig ='''#PHP
     <FilesMatch \\.php>
         SetHandler "proxy:unix:/tmp/php-cgi-%s.sock|fcgi://localhost"
     </FilesMatch>''' % (version,)
             
             
-                bindingConf ='''
+                    bindingConf ='''
 \n#BINDING-%s-START
 <VirtualHost *:%s>
     ServerAdmin webmaster@example.com
@@ -1170,12 +1174,13 @@ server
     </Directory>
 </VirtualHost>
 #BINDING-%s-END''' % (domain,port,webdir,domain,web.ctx.session.logsPath+'/'+siteInfo['name'],web.ctx.session.logsPath+'/'+siteInfo['name'],phpConfig,webdir,domain)
-        
-            conf += bindingConf;
-            
-            if web.ctx.session.webserver == 'apache':
-                shutil.copyfile(filename, '/tmp/backup.conf')
-            public.writeFile(filename,conf)        
+                
+                    conf += bindingConf;
+                    if web.ctx.session.webserver == 'apache':
+                        shutil.copyfile(filename, '/tmp/backup.conf')
+                    public.writeFile(filename,conf)
+                except:
+                    pass
         
         #检查配置是否有误
         isError = public.checkWebConfig()
@@ -1434,26 +1439,51 @@ server
     
     #取反向代理
     def GetProxy(self,get):
-        if web.ctx.session.webserver != 'nginx': return public.returnMsg(False, '抱歉，反向代理功能暂时只支持Nginx'); 
         name = get.name
         data = {}
+        data['status'] = False;
+        data['proxyUrl'] = "http://";
+        data['toDomain'] = '$host';
+        data['sub1'] = '';
+        data['sub2'] = '';
+        if web.ctx.session.webserver != 'nginx': 
+            file = self.setupPath + "/panel/vhost/apache/"+name+".conf";
+            conf = public.readFile(file);
+            if conf.find('PROXY-START') == -1: return data;
+            rep = "ProxyPass\s+/\w*\s+(.+)/";
+            tmp = re.search(rep, conf);
+            data['proxyUrl'] = "http://"
+            if tmp: data['proxyUrl'] = tmp.groups()[0];
+            data['toDomain'] = '$host';
+            if data['proxyUrl']: data['status'] = True
+            
+            rep = "\/bin\/sed\s+'s,(.+),(.+),g'";
+            tmp = re.search(rep, conf);
+            if tmp:
+                data['sub1'] = tmp.groups()[0];
+                data['sub2'] = tmp.groups()[1];
+            return data;
+        
         file = self.setupPath + "/panel/vhost/nginx/"+name+".conf";
         conf = public.readFile(file);
-        if conf.find('PROXY-START') == -1:
-            data['status'] = False;
-            data['proxyUrl'] = "";
-            data['toDomain'] = '$host';
-            return data;
+        if conf.find('PROXY-START') == -1: return data;
         
         rep = "proxy_pass\s+(.+);";
         tmp = re.search(rep, conf);
-        data['proxyUrl'] = ""
+        data['proxyUrl'] = "http://"
         if tmp: data['proxyUrl'] = tmp.groups()[0];
         
         rep = "proxy_set_header\s+Host\s+(.+);";
         tmp = re.search(rep, conf);
         data['toDomain'] = '$host';
         if tmp: data['toDomain'] = tmp.groups()[0];
+        rep = "sub_filter \"(.+)\" \"(.+)\";"
+        tmp = re.search(rep, conf);
+        if tmp:
+            data['sub1'] = tmp.groups()[0];
+            data['sub2'] = tmp.groups()[1];
+        
+        
         
         data['status'] = False
         if data['proxyUrl']: data['status'] = True
@@ -1467,19 +1497,26 @@ server
         proxyUrl = get.proxyUrl
         rep = "(http|https)\://.+";
         if not re.match(rep, proxyUrl): return public.returnMsg(False,'Url地址不正确!');
-        if web.ctx.session.webserver != 'nginx': return public.returnMsg(False, '抱歉，反向代理功能暂时只支持Nginx');
+        #if web.ctx.session.webserver != 'nginx': return public.returnMsg(False, '抱歉，反向代理功能暂时只支持Nginx');
         
         if get.toDomain != '$host':
             rep = "^([\w\-\*]{1,100}\.){1,4}(\w{1,10}|\w{1,10}\.\w{1,10})$";
             if not re.match(rep, get.toDomain): return public.returnMsg(False,'发送域名格式不正确!');
         
         
-        self.CheckProxy(get);
+        #配置Nginx
         file = self.setupPath + "/panel/vhost/nginx/"+name+".conf";
-        conf = public.readFile(file);
-        
-        if(type == "1"):
-            proxy='''#PROXY-START
+        if os.path.exists(file):
+            self.CheckProxy(get);
+            conf = public.readFile(file);
+            if(type == "1"):
+                sub_filter = '';
+                if get.sub1 != '':
+                    sub_filter = '''proxy_set_header Accept-Encoding "";
+        sub_filter "%s" "%s";
+        sub_filter_once off;''' % (get.sub1,get.sub2)
+                
+                proxy='''#PROXY-START
     location / 
     {
         proxy_pass %s;
@@ -1487,7 +1524,8 @@ server
         proxy_set_header X-Forwarded-For $remote_addr;
         #proxy_cache_key %s$uri$is_args$args;
         #proxy_cache_valid 200 304 12h;
-        #expires 2d;
+        %s
+        expires 2d;
     }
     
     location ~ .*\\.(php|jsp|cgi|asp|aspx|flv|swf|xml)?$
@@ -1495,15 +1533,15 @@ server
         proxy_set_header Host %s;
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_pass %s;
+        %s
     }
-    #PROXY-END''' % (proxyUrl,get.toDomain,get.toDomain,get.toDomain,proxyUrl)
-            rep = "location(.|\n)+access_log\s+/"
-            conf = re.sub(rep, 'access_log  /', conf)
-            conf = conf.replace("include enable-php-", proxy+"\n\n\tinclude enable-php-")
-            public.writeFile(file,conf)
-        else:
-            rep = "\n\s+#PROXY-START(.|\n)+#PROXY-END"
-            oldconf = '''location ~ .*\\.(gif|jpg|jpeg|png|bmp|swf)$
+    #PROXY-END''' % (proxyUrl,get.toDomain,get.toDomain,sub_filter,get.toDomain,proxyUrl,sub_filter)
+                rep = "location(.|\n)+access_log\s+/"
+                conf = re.sub(rep, 'access_log  /', conf)
+                conf = conf.replace("include enable-php-", proxy+"\n\n\tinclude enable-php-")
+            else:
+                rep = "\n\s+#PROXY-START(.|\n)+#PROXY-END"
+                oldconf = '''location ~ .*\\.(gif|jpg|jpeg|png|bmp|swf)$
     {
         expires      30d;
         access_log off; 
@@ -1513,8 +1551,34 @@ server
         expires      12h;
         access_log off; 
     }'''
-            conf = re.sub(rep, '', conf)
-            conf = conf.replace('access_log',oldconf + "\n\taccess_log");
+                conf = re.sub(rep, '', conf)
+                conf = conf.replace('access_log',oldconf + "\n\taccess_log");
+            public.writeFile(file,conf)
+                
+        #APACHE
+        file = self.setupPath + "/panel/vhost/apache/"+name+".conf";
+        if os.path.exists(file):
+            conf = public.readFile(file);
+            if(type == "1"):
+                sub_filter = '';
+                if get.sub1 != '':
+                    sub_filter = '''RequestHeader unset Accept-Encoding
+        ExtFilterDefine fixtext mode=output intype=text/html cmd="/bin/sed 's,%s,%s,g'"
+        SetOutputFilter fixtext''' % (get.sub1,get.sub2)
+                proxy = '''#PROXY-START
+    <IfModule mod_proxy.c>
+        ProxyRequests Off
+        SSLProxyEngine on
+        ProxyPass / %s/
+        ProxyPassReverse / %s/
+        %s
+    </IfModule>
+    #PROXY-END''' % (proxyUrl,proxyUrl,sub_filter)
+                rep = "combined"
+                conf = conf.replace(rep,rep + "\n\n\t" + proxy);
+            else:
+                rep = "\n\s+#PROXY-START(.|\n)+#PROXY-END"
+                conf = re.sub(rep, '', conf)
             public.writeFile(file,conf)
         
         public.serviceReload()
@@ -1523,10 +1587,11 @@ server
     
     #检查反向代理配置
     def CheckProxy(self,get):
+        if web.ctx.session.webserver != 'nginx': return True;
         file = self.setupPath + "/nginx/conf/proxy.conf";
         if not os.path.exists(file):
             conf='''proxy_temp_path %s/nginx/proxy_temp_dir;
-    proxy_cache_path %s/nginx/proxy_cache_dir levels=1:2 keys_zone=cache_one:20m inactive=1d max_size=5g;
+    proxy_cache_path %s/nginx/proxy_cache_dir levels=1:2 keys_zone=cache_one:10m inactive=1d max_size=5g;
     client_body_buffer_size 512k;
     proxy_connect_timeout 60;
     proxy_read_timeout 60;
@@ -1551,8 +1616,14 @@ server
     #取伪静态规则应用列表
     def GetRewriteList(self,get):
         rewriteList = {}
-        if web.ctx.session.webserver == 'apache': rewriteList['sitePath'] = public.M('sites').where("name=?",(get.siteName,)).getField('path');
+        if web.ctx.session.webserver == 'apache': 
+            get.id = public.M('sites').where("name=?",(get.siteName,)).getField('id');
+            runPath = self.GetSiteRunPath(get);
+            rewriteList['sitePath'] = public.M('sites').where("name=?",(get.siteName,)).getField('path') + runPath['runPath'];
+            
         rewriteList['rewrite'] = public.readFile('rewrite/' + web.ctx.session.webserver + '/list.txt').split(',');
+       
+        
         return rewriteList
     
     #打包

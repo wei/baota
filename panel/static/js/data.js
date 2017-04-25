@@ -5,7 +5,7 @@
 function getData(page,search) {
 	search = search == undefined ? '':search;
 	var sUrl = '/data?action=getData';
-	var sUrlData='tojs=getData&table=databases&limit=10&p='+page+'&search='+search;
+	var sUrlData='tojs=getData&table=databases&limit=15&p='+page+'&search='+search;
 	var loadT = layer.load();
 	$.post(sUrl, sUrlData,function(data) {
 		layer.close(loadT);
