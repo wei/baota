@@ -220,7 +220,7 @@ echo "The root password set ${pwd}  successuful"''';
         id = get['id']
         name = public.M('databases').where("id=?",(id,)).getField('name')
         root = web.ctx.session.config['mysql_root']
-        
+        if not os.path.exists(web.ctx.session.config['backup_path'] + '/database'): os.system('mkdir -p ' + web.ctx.session.config['backup_path'] + '/database');
         mycnf = public.readFile('/etc/my.cnf');
         rep = "\[mysqldump\]\nuser=root"
         sea = '[mysqldump]\n'
@@ -232,6 +232,7 @@ echo "The root password set ${pwd}  successuful"''';
         fileName = name + '_' + time.strftime('%Y%m%d_%H%M%S',time.localtime()) + '.sql.gz'
         backupName = web.ctx.session.config['backup_path'] + '/database/' + fileName
         public.ExecShell("/www/server/mysql/bin/mysqldump --opt --default-character-set=utf8 " + name + " | gzip > " + backupName)
+        if not os.path.exists(backupName): return public.returnMsg(False,'备份失败!');
         
         mycnf = public.readFile('/etc/my.cnf');
         mycnf = mycnf.replace(subStr,sea)

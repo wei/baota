@@ -154,6 +154,25 @@ class Sql():
         except Exception,ex:
             return "error: " + str(ex)
     
+    def addAll(self,keys,param):
+        #插入数据
+        self.__GetConn()
+        self.__DB_CONN.text_factory = str
+        try:
+            values=""
+            for key in keys.split(','):
+                values += "?,"
+            values = values[0:len(values)-1]
+            sql = "INSERT INTO "+self.__DB_TABLE+"("+keys+") "+"VALUES("+values+")"
+            result = self.__DB_CONN.execute(sql,param)
+            return True
+        except Exception,ex:
+            return "error: " + str(ex)
+        
+    def commit(self):
+        self.__close()
+        self.__DB_CONN.commit()
+    
     
     def save(self,keys,param):
         #更新数据
@@ -225,8 +244,17 @@ class Sql():
         import public
         script = public.readFile('data/' + name + '.sql')
         result = self.__DB_CONN.executescript(script)
-        print result
-        return result
+        self.__DB_CONN.commit()
+        return result.rowcount
+    
+    def fofile(self,filename):
+        #执行脚本
+        self.__GetConn()
+        import public
+        script = public.readFile(filename)
+        result = self.__DB_CONN.executescript(script)
+        self.__DB_CONN.commit()
+        return result.rowcount
         
     def __close(self):
         #清理条件属性

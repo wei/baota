@@ -232,7 +232,7 @@ function webAdd(type) {
 	                  </form>",
 		});
 		$(function() {
-			var placeholder = "<div class='placeholder' style='top:10px;left:10px'>每行填写一个域名<br>默认为80端口<br>如另加端口格式为 www.domain.com:88</div>";
+			var placeholder = "<div class='placeholder' style='top:10px;left:10px'>每行填写一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88</div>";
 			$('#mainDomain').after(placeholder);
 			$(".placeholder").click(function(){
 				$(this).hide();
@@ -539,7 +539,7 @@ function DomainEdit(id, name,msg,status) {
 		if(msg != undefined){
 			layer.msg(msg,{icon:status?1:5});
 		}
-		var placeholder = "<div class='placeholder'>每行填写一个域名!<br>默认为80端口<br>如另加端口格式为 www.domain.com:88</div>";
+		var placeholder = "<div class='placeholder'>每行填写一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88</div>";
 		$('#newdomain').after(placeholder);
 		$(".placeholder").click(function(){
 			$(this).hide();
@@ -590,7 +590,7 @@ function DomainRoot(id, name,msg) {
 		if(msg != undefined){
 			layer.msg(msg,{icon:1});
 		}
-		var placeholder = "<div class='placeholder'>每行填写一个域名!<br>默认为80端口<br>如另加端口格式为 www.domain.com:88</div>";
+		var placeholder = "<div class='placeholder'>每行填写一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88</div>";
 		$('#newdomain').after(placeholder);
 		$(".placeholder").click(function(){
 			$(this).hide();

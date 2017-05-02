@@ -381,8 +381,11 @@ class ajax:
     def GetInstalleds(self,softlist):
         softs = '';
         for soft in softlist:
-            for v in soft['versions']:
-                if v['status']: softs += soft['name'] + '-' + v['version'] + '|';
+            try:
+                for v in soft['versions']:
+                    if v['status']: softs += soft['name'] + '-' + v['version'] + '|';
+            except:
+                continue;
             
         return softs;
     
@@ -405,20 +408,15 @@ class ajax:
                 os.remove(login_temp);
             else:
                 logs = '';
-            import psutil;
+            import psutil,panelPlugin;
             mem = psutil.virtual_memory();
-            
+            mplugin = panelPlugin.panelPlugin();
             data = {}
             data['sites'] = str(public.M('sites').count());
             data['ftps'] = str(public.M('ftps').count());
             data['databases'] = str(public.M('databases').count());
             data['system'] = public.readFile('/etc/redhat-release').replace('release','') + '|' + str(mem.total / 1024 / 1024) + 'MB|' + public.getCpuType() + '*' + str(psutil.cpu_count()) + '|' + web.ctx.session.webserver + '|' + web.ctx.session.version;
-            try:
-                import panelPlugin;
-                mplugin = panelPlugin.panelPlugin();
-                data['system'] += '||'+self.GetInstalleds(mplugin.getPluginList(None));
-            except:
-                pass
+            data['system'] += '||'+self.GetInstalleds(mplugin.getPluginList(None));
             data['logs'] = logs
             
             sUrl = 'http://www.bt.cn/Api/updateLinux';
@@ -684,4 +682,10 @@ ServerName 127.0.0.2
                         newdomain += 'xn--' + dkey.decode('utf-8').encode('punycode') + '.'
 
         return newdomain[0:-1];
+    
+    #保存PHP排序
+    def phpSort(self,get):
+        if public.writeFile('/www/server/php/sort.pl',get.ssort): return public.returnMsg(True,'保存排序成功!');
+        return public.returnMsg(False,'保存失败!');
+        
         

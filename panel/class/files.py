@@ -324,7 +324,7 @@ class files:
             else:
                 os.system("cd '"+get.path+"' && tar -zcvf '"+get.dfile+"' '"+get.sfile+"' > "+tmps+" 2>&1")
             self.SetFileAccept(get.dfile);
-            public.WriteLog("文件管理", "压缩文件[sfile]至[dfile]成功!");
+            public.WriteLog("文件管理", "压缩文件["+get.sfile+"]至["+get.dfile+"]成功!");
             return public.returnMsg(True,'文件压缩成功!')
         except:
             return public.returnMsg(False,'文件压缩失败!')
@@ -344,7 +344,7 @@ class files:
         else:
             os.system("tar zxf '"+get.sfile+"' -C '"+get.dfile+"' > "+tmps+" 2>&1")
         self.SetFileAccept(get.dfile);
-        public.WriteLog("文件管理", "解压文件[sfile]至[dfile]成功!");
+        public.WriteLog("文件管理", "解压文件["+get.sfile+"]至["+get.dfile+"]成功!");
         return public.returnMsg(True,'文件解压成功!')
         #except:
         #    return public.returnMsg(False,'文件解压失败!')
@@ -414,7 +414,7 @@ class files:
         elif get.type == '3':
             for key in get.data:
                 try:
-                    filename = get.path+'/'+key
+                    filename = get.path+'/'+key.encode('utf-8');
                     os.system('chmod -R '+get.access+" '"+filename+"'")
                     os.system('chown -R '+get.user+':'+get.user+" '"+filename+"'")
                 except:
@@ -426,7 +426,7 @@ class files:
             import shutil
             for key in get.data:
                 try:
-                    filename = get.path+'/'+key
+                    filename = get.path+'/'+key.encode('utf-8');
                     if not os.path.exists(filename): continue
                     if os.path.isdir(filename):
                         shutil.rmtree(filename)
@@ -445,12 +445,13 @@ class files:
         import shutil,web
         i = 0;
         get.path = get.path.encode('utf-8');
+        
         if get.type == '1':
             for key in web.ctx.session.selected.data:
                 i += 1
                 try:
-                    sfile = web.ctx.session.selected.path + '/' + key
-                    dfile = get.path + '/' + key
+                    sfile = web.ctx.session.selected.path + '/' + key.encode('utf-8')
+                    dfile = get.path + '/' + key.encode('utf-8')
                     if os.path.isdir(sfile):
                         shutil.copytree(sfile,dfile)
                     else:
@@ -461,8 +462,8 @@ class files:
         else:
             for key in web.ctx.session.selected.data:
                 try:
-                    sfile = web.ctx.session.selected.path + '/' + key
-                    dfile = get.path + '/' + key
+                    sfile = web.ctx.session.selected.path + '/' + key.encode('utf-8')
+                    dfile = get.path + '/' + key.encode('utf-8')
                     shutil.move(sfile,dfile)
                     i += 1
                 except:

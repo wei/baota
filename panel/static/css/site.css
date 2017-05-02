@@ -226,6 +226,39 @@ ul.sub li.current a,ul.sub li a:hover {
 .sub .current .menu_exit,.sub .menu_exit:hover{
 	background-image:url("../img/ico/menu_icon_exit_active.png");
 }
+html .sub  .menu_home:hover{
+	background-image:url("../img/ico/menu_icon_home_active.gif");
+}
+html .sub  .menu_web:hover{
+	background-image:url("../img/ico/menu_icon_web_active.gif");
+}
+html .sub  .menu_ftp:hover{
+	background-image:url("../img/ico/menu_icon_ftp_active.gif");
+}
+html .sub  .menu_data:hover{
+	background-image:url("../img/ico/menu_icon_data_active.gif");
+}
+html .sub  .menu_control:hover{
+	background-image:url("../img/ico/menu_icon_control_active.gif");
+}
+html .sub  .menu_firewall:hover{
+	background-image:url("../img/ico/menu_icon_firewall_active.gif");
+}
+html .sub  .menu_day:hover{
+	background-image:url("../img/ico/menu_icon_day_active.gif");
+}
+html .sub  .menu_soft:hover{
+	background-image:url("../img/ico/menu_icon_soft_active.gif");
+}
+html .sub  .menu_set:hover{
+	background-image:url("../img/ico/menu_icon_set_active.gif");
+}
+html .sub  .menu_folder:hover{
+	background-image:url("../img/ico/menu_icon_folder_active.gif");
+}
+html .sub  .menu_exit:hover{
+	background-image:url("../img/ico/menu_icon_exit_active.gif");
+}
 /**/
 .pos-ser {
     background-color: #fff;
@@ -567,6 +600,14 @@ ul.sub li.current a,ul.sub li a:hover {
     text-align: center;
 	color:#555
 }
+.soft-man .col-sm-3 > div{
+	height: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 0;
+}
 .soft-man .spanmove{
 	background: url(../images/move.png) no-repeat;
 	width:30px;
@@ -575,6 +616,7 @@ ul.sub li.current a,ul.sub li a:hover {
 	position:absolute;
 	top:5px;
 	right:5px;
+	z-index:3;
 }
 .soft-man .col-lg-3:hover .spanmove{
 	display:block;
@@ -1200,10 +1242,15 @@ ul.sub li.current a,ul.sub li a:hover {
 .webEdit .webEdit-menu p{
 	line-height: 40px;
 	padding-left: 20px;
-	cursor: pointer;
+	position:relative;
+	cursor:pointer;
 }
 .webEdit .webEdit-menu p.active{
 	background-color: #fff;
+}
+.webEdit .webEdit-menu p a{
+	color:#666;
+	text-decoration:none
 }
 .webEdit .webEdit-con{
 	margin-left: 100px;
@@ -1238,6 +1285,26 @@ ul.sub li.current a,ul.sub li a:hover {
 }
 #webbeizhu{
 	height: 80px;
+}
+
+.webEdit-menu p .spanmove{
+	background: url(../images/move.png) no-repeat center center;
+	width:24px;
+	height:30px;
+	display:none;
+	position:absolute;
+	top:6px;
+	right:0px;
+}
+.webEdit-menu p:hover .spanmove{
+	display:block;
+}
+.webEdit .soft-man-menu p{
+	padding:0;
+}
+.webEdit .soft-man-menu p a{
+	padding-left:20px;
+	display: block;
 }
 /*SSL*/
 .ssl-con{
@@ -2329,6 +2396,86 @@ html .zun-form-new .form-control-text {
 	width:2.4em;
 	height:1.4em;
 }
+/*waf防火墙*/
+.wafConf{
+	overflow:hidden;
+	height:460px;
+}
+.wafConf_checkbox label{
+	font-weight:normal;
+	margin-right:22px;
+}
+.wafConf button{
+	vertical-align:0;
+}
+.wafConf_cc {
+	border-bottom: 1px solid #ddd;
+    border-top: 1px solid #ddd;
+    margin: 10px 0;
+    padding: 15px 0;
+}
+.wafConf_cc span{
+	margin-right:5px;
+}
+
+.wafConf fieldset {
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    float: left;
+    padding-bottom: 0;
+    width: 245px;
+}
+.wafConf fieldset:nth-of-type(2){
+	margin:0 10px;
+}
+.wafConf legend {
+    border: 0 none;
+    font-size: 14px;
+    margin: 0 6px;
+    padding: 3px;
+    width: auto;
+}
+.wafConf fieldset input{
+	margin-left:4px;
+}
+.wafConf fieldset .table{
+	margin-top:-1px;
+	margin-bottom:0;
+}
+.wafConf fieldset .table tr td:nth-of-type(2){
+	width:42px;
+}
+.wafConf fieldset .table-overflow{
+	height:220px;
+	overflow:auto;
+	margin-top:10px;
+	border-top:#ddd 1px solid;
+}
+.wafConf-btn{
+	border-bottom:#ddd 1px solid;
+	margin-bottom:12px;
+	padding-bottom:15px;
+	height:45px
+}
+.wafConf-btn span{
+	float:left;
+	margin-right:8px;
+	line-height:33px;
+}
+.wafConf-btn .btn{
+	margin-right:10px
+}
+.wafConf-btn .ssh-item{
+	margin-right:50px;
+}
+.gzEdit{
+	padding:13px 20px;
+}
+.gzEdit button {
+    margin: 8px;
+    width: 88px;
+}
+
 @media only screen and (max-width:1120px){
 	.span6{
 		float: left;

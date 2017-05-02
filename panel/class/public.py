@@ -253,7 +253,131 @@ def IsRestart():
 #加密密码字符
 def hasPwd(password):
     import crypt;
-    return crypt.crypt(password,password);    
+    return crypt.crypt(password,password);
+
+
+#处理MySQL配置文件
+def CheckMyCnf():
+    import os;
+    confFile = '/etc/my.cnf'
+    if not os.path.exists(confFile): return False;
+    conf = readFile(confFile)
+    if len(conf) > 100: return True;
+    versionFile = '/www/server/mysql/version.pl';
+    if not os.path.exists(versionFile): return False;
+    
+    versions = ['5.1','5.5','5.6','5.7','AliSQL']
+    version = readFile(versionFile);
+    for key in versions:
+        if key in version:
+            version = key;
+            break;
+    
+    shellStr = '''
+#!/bin/bash
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+CN='125.88.182.172'
+HK='103.224.251.79'
+HK2='103.224.251.67'
+US='174.139.221.74'
+sleep 0.5;
+CN_PING=`ping -c 1 -w 1 $CN|grep time=|awk '{print $7}'|sed "s/time=//"`
+HK_PING=`ping -c 1 -w 1 $HK|grep time=|awk '{print $7}'|sed "s/time=//"`
+HK2_PING=`ping -c 1 -w 1 $HK2|grep time=|awk '{print $7}'|sed "s/time=//"`
+US_PING=`ping -c 1 -w 1 $US|grep time=|awk '{print $7}'|sed "s/time=//"`
+
+echo "$HK_PING $HK" > ping.pl
+echo "$HK2_PING $HK2" >> ping.pl
+echo "$US_PING $US" >> ping.pl
+echo "$CN_PING $CN" >> ping.pl
+nodeAddr=`sort -n -b ping.pl|sed -n '1p'|awk '{print $2}'`
+if [ "$nodeAddr" == "" ];then
+    nodeAddr=$HK
+fi
+
+Download_Url=http://$nodeAddr:5880
+
+
+MySQL_Opt()
+{
+    MemTotal=`free -m | grep Mem | awk '{print  $2}'`
+    if [[ ${MemTotal} -gt 1024 && ${MemTotal} -lt 2048 ]]; then
+        sed -i "s#^key_buffer_size.*#key_buffer_size = 32M#" /etc/my.cnf
+        sed -i "s#^table_open_cache.*#table_open_cache = 128#" /etc/my.cnf
+        sed -i "s#^sort_buffer_size.*#sort_buffer_size = 768K#" /etc/my.cnf
+        sed -i "s#^read_buffer_size.*#read_buffer_size = 768K#" /etc/my.cnf
+        sed -i "s#^myisam_sort_buffer_size.*#myisam_sort_buffer_size = 8M#" /etc/my.cnf
+        sed -i "s#^thread_cache_size.*#thread_cache_size = 16#" /etc/my.cnf
+        sed -i "s#^query_cache_size.*#query_cache_size = 16M#" /etc/my.cnf
+        sed -i "s#^tmp_table_size.*#tmp_table_size = 32M#" /etc/my.cnf
+        sed -i "s#^innodb_buffer_pool_size.*#innodb_buffer_pool_size = 128M#" /etc/my.cnf
+        sed -i "s#^innodb_log_file_size.*#innodb_log_file_size = 32M#" /etc/my.cnf
+    elif [[ ${MemTotal} -ge 2048 && ${MemTotal} -lt 4096 ]]; then
+        sed -i "s#^key_buffer_size.*#key_buffer_size = 64M#" /etc/my.cnf
+        sed -i "s#^table_open_cache.*#table_open_cache = 256#" /etc/my.cnf
+        sed -i "s#^sort_buffer_size.*#sort_buffer_size = 1M#" /etc/my.cnf
+        sed -i "s#^read_buffer_size.*#read_buffer_size = 1M#" /etc/my.cnf
+        sed -i "s#^myisam_sort_buffer_size.*#myisam_sort_buffer_size = 16M#" /etc/my.cnf
+        sed -i "s#^thread_cache_size.*#thread_cache_size = 32#" /etc/my.cnf
+        sed -i "s#^query_cache_size.*#query_cache_size = 32M#" /etc/my.cnf
+        sed -i "s#^tmp_table_size.*#tmp_table_size = 64M#" /etc/my.cnf
+        sed -i "s#^innodb_buffer_pool_size.*#innodb_buffer_pool_size = 256M#" /etc/my.cnf
+        sed -i "s#^innodb_log_file_size.*#innodb_log_file_size = 64M#" /etc/my.cnf
+    elif [[ ${MemTotal} -ge 4096 && ${MemTotal} -lt 8192 ]]; then
+        sed -i "s#^key_buffer_size.*#key_buffer_size = 128M#" /etc/my.cnf
+        sed -i "s#^table_open_cache.*#table_open_cache = 512#" /etc/my.cnf
+        sed -i "s#^sort_buffer_size.*#sort_buffer_size = 2M#" /etc/my.cnf
+        sed -i "s#^read_buffer_size.*#read_buffer_size = 2M#" /etc/my.cnf
+        sed -i "s#^myisam_sort_buffer_size.*#myisam_sort_buffer_size = 32M#" /etc/my.cnf
+        sed -i "s#^thread_cache_size.*#thread_cache_size = 64#" /etc/my.cnf
+        sed -i "s#^query_cache_size.*#query_cache_size = 64M#" /etc/my.cnf
+        sed -i "s#^tmp_table_size.*#tmp_table_size = 64M#" /etc/my.cnf
+        sed -i "s#^innodb_buffer_pool_size.*#innodb_buffer_pool_size = 512M#" /etc/my.cnf
+        sed -i "s#^innodb_log_file_size.*#innodb_log_file_size = 128M#" /etc/my.cnf
+    elif [[ ${MemTotal} -ge 8192 && ${MemTotal} -lt 16384 ]]; then
+        sed -i "s#^key_buffer_size.*#key_buffer_size = 256M#" /etc/my.cnf
+        sed -i "s#^table_open_cache.*#table_open_cache = 1024#" /etc/my.cnf
+        sed -i "s#^sort_buffer_size.*#sort_buffer_size = 4M#" /etc/my.cnf
+        sed -i "s#^read_buffer_size.*#read_buffer_size = 4M#" /etc/my.cnf
+        sed -i "s#^myisam_sort_buffer_size.*#myisam_sort_buffer_size = 64M#" /etc/my.cnf
+        sed -i "s#^thread_cache_size.*#thread_cache_size = 128#" /etc/my.cnf
+        sed -i "s#^query_cache_size.*#query_cache_size = 128M#" /etc/my.cnf
+        sed -i "s#^tmp_table_size.*#tmp_table_size = 128M#" /etc/my.cnf
+        sed -i "s#^innodb_buffer_pool_size.*#innodb_buffer_pool_size = 1024M#" /etc/my.cnf
+        sed -i "s#^innodb_log_file_size.*#innodb_log_file_size = 256M#" /etc/my.cnf
+    elif [[ ${MemTotal} -ge 16384 && ${MemTotal} -lt 32768 ]]; then
+        sed -i "s#^key_buffer_size.*#key_buffer_size = 512M#" /etc/my.cnf
+        sed -i "s#^table_open_cache.*#table_open_cache = 2048#" /etc/my.cnf
+        sed -i "s#^sort_buffer_size.*#sort_buffer_size = 8M#" /etc/my.cnf
+        sed -i "s#^read_buffer_size.*#read_buffer_size = 8M#" /etc/my.cnf
+        sed -i "s#^myisam_sort_buffer_size.*#myisam_sort_buffer_size = 128M#" /etc/my.cnf
+        sed -i "s#^thread_cache_size.*#thread_cache_size = 256#" /etc/my.cnf
+        sed -i "s#^query_cache_size.*#query_cache_size = 256M#" /etc/my.cnf
+        sed -i "s#^tmp_table_size.*#tmp_table_size = 256M#" /etc/my.cnf
+        sed -i "s#^innodb_buffer_pool_size.*#innodb_buffer_pool_size = 2048M#" /etc/my.cnf
+        sed -i "s#^innodb_log_file_size.*#innodb_log_file_size = 512M#" /etc/my.cnf
+    elif [[ ${MemTotal} -ge 32768 ]]; then
+        sed -i "s#^key_buffer_size.*#key_buffer_size = 1024M#" /etc/my.cnf
+        sed -i "s#^table_open_cache.*#table_open_cache = 4096#" /etc/my.cnf
+        sed -i "s#^sort_buffer_size.*#sort_buffer_size = 16M#" /etc/my.cnf
+        sed -i "s#^read_buffer_size.*#read_buffer_size = 16M#" /etc/my.cnf
+        sed -i "s#^myisam_sort_buffer_size.*#myisam_sort_buffer_size = 256M#" /etc/my.cnf
+        sed -i "s#^thread_cache_size.*#thread_cache_size = 512#" /etc/my.cnf
+        sed -i "s#^query_cache_size.*#query_cache_size = 512M#" /etc/my.cnf
+        sed -i "s#^tmp_table_size.*#tmp_table_size = 512M#" /etc/my.cnf
+        sed -i "s#^innodb_buffer_pool_size.*#innodb_buffer_pool_size = 4096M#" /etc/my.cnf
+        sed -i "s#^innodb_log_file_size.*#innodb_log_file_size = 1024M#" /etc/my.cnf
+    fi
+}
+
+wget -O /etc/my.cnf $Download_Url/install/conf/mysql-%s.conf -T 5
+MySQL_Opt
+''' % (version,)
+    os.system(shellStr);
+    WriteLog('守护程序', '检测到MySQL配置文件异常,可能导致mysqld服务无法正常启动,已自动修复!');
+    return True;
     
     
     

@@ -509,8 +509,13 @@ $def with (content)
 
 						function mysqlSelect(mysql_version){
 							memSize = getCookie('memSize');
-							max = 128;
+							max = 64;
+							msg = '64M'
 							switch(mysql_version){
+								case '5.1':
+									max = 256;
+									msg = '256M';
+									break;
 								case '5.7':
 									max = 1500;
 									msg = '2GB';
@@ -522,6 +527,14 @@ $def with (content)
 								case 'AliSQL':
 									max = 800;
 									msg = '1GB';
+									break;
+								case 'mariadb_10.0':
+									max = 800;
+									msg = '1GB';
+									break;
+								case 'mariadb_10.1':
+									max = 1500;
+									msg = '2GB';
 									break;
 							}
 							

@@ -463,7 +463,7 @@ class panelAjax(common.panelAdmin):
         import ajax,json
         get = web.input()
         ajaxObject = ajax.ajax()
-        defs = ('ToPunycode','GetBetaStatus','SetBeta','setPHPMyAdmin','delClose','KillProcess','GetPHPInfo','GetQiniuFileList','UninstallLib','InstallLib','SetQiniuAS','GetQiniuAS','GetLibList','GetProcessList','GetNetWorkList','GetNginxStatus','GetPHPStatus','GetTaskCount','GetSoftList','GetNetWorkIo','GetDiskIo','GetCpuIo','CheckInstalled','UpdatePanel','GetInstalled','GetPHPConfig','SetPHPConfig')
+        defs = ('phpSort','ToPunycode','GetBetaStatus','SetBeta','setPHPMyAdmin','delClose','KillProcess','GetPHPInfo','GetQiniuFileList','UninstallLib','InstallLib','SetQiniuAS','GetQiniuAS','GetLibList','GetProcessList','GetNetWorkList','GetNginxStatus','GetPHPStatus','GetTaskCount','GetSoftList','GetNetWorkIo','GetDiskIo','GetCpuIo','CheckInstalled','UpdatePanel','GetInstalled','GetPHPConfig','SetPHPConfig')
         for key in defs:
             if key == get.action:
                 fun = 'ajaxObject.'+key+'(get)'
@@ -546,7 +546,7 @@ class panelPlugin(common.panelAdmin):
         get = web.input()
         import panelPlugin
         pluginObject = panelPlugin.panelPlugin()
-        defs = ('install','unInstall','getPluginList','getPluginInfo','getPluginStatus','setPluginStatus','a','getCloudPlugin','getConfigHtml')
+        defs = ('install','unInstall','getPluginList','getPluginInfo','getPluginStatus','setPluginStatus','a','getCloudPlugin','getConfigHtml','savePluginSort')
         for key in defs:
             if key == get.action:
                 fun = 'pluginObject.'+key+'(get)'
@@ -564,7 +564,7 @@ class panelWaf(common.panelAdmin):
     def funObj(self):
         import panelWaf
         toObject = panelWaf.panelWaf()
-        defs = ('GetConfig','SetConfigString','SetConfigList','GetWafConf','SetWafConf')
+        defs = ('GetConfig','SetConfigString','SetConfigList','GetWafConf','SetWafConf','SetStatus','updateWaf')
         return publicObject(toObject,defs);
     
 

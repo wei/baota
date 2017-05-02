@@ -10,7 +10,7 @@ $def with (data)
 				<div class="tips">
 					系统: <span id="info"> 获取中</span>&#12288;&#12288;&#12288;已不间断运行: <span id="running"> 获取中</span><button onclick="ReBoot()" class="btn btn-success btn-xs" style="vertical-align:1px;margin-left:10px;">安全重启</button>
 					<span style="position:relative;left: 50px;">
-						版本: <span id="btversion" onclick="openLog()">$web.ctx.session.version</span>
+						版本: <span id="btversion" onclick="openLog()">$web.ctx.session.version </span>
 						<span id="toUpdate"><a href="javascript:checkUpdate();">检查更新</a></span>
 					</span>
 				</div>
@@ -57,7 +57,7 @@ $def with (data)
 			</div>
 			<div class="server">
 				<div class="s-title">
-					<h3>服务器使用情况</h3>
+					<h3>服务器状态</h3>
 					<a href="javascript:;" style="background:none;padding:0; margin-left:22px" onclick="ReMemory()">内存释放</a>
 					<a href="javascript:;" style="background:none;padding:0; margin-left:22px" onclick="GetNetWorkList()">连接管理</a>
 					<a href="javascript:;" style="background:none;padding:0; margin-left:22px" onclick="GetProcessList()">进程管理</a>
@@ -97,6 +97,19 @@ $def with (data)
 			</div>
 			<div class="span6">
 				<div class="bw">
+				<div class="bg">
+				<div class="bw-title">软件</div>
+				<div class="setting-con" style="padding:0; height:442px; margin-right: -4px;">
+					<div class="container-fluid soft-man">
+						<input name="list1SortOrder" type="hidden" value="" />
+						<div id="indexsoft" class="row"></div>
+					</div>
+				</div>
+				</div>
+				</div>
+			</div>
+			<div class="span6">
+				<div class="bw zun-updata">
 					<div class="bg">
 					<div class="bw-title">网络流量</div>
 					<div class="bw-info">
@@ -111,90 +124,6 @@ $def with (data)
 					</div>
 				</div>
 			</div>
-			<div class="span6">
-				<div class="bw zun-updata">
-				<div class="bg">
-				<div class="bw-title">套件</div>
-				<div class="setting-con" style="padding:0; height:442px; overflow:auto">
-						<div class="divtable" style="margin-top:0">
-						<table width="100%" cellspacing="0" cellpadding="0" border="0" class="table table-hover" style="border-left:0;border-top:0;border-right:0;">
-							<thead>
-								<tr>
-									<th style="padding-left:17px">安装软件</th>
-									<th>配置</th>
-									<th>状态</th>
-									<th width="90" style="text-align: right;padding-right:18px">操作</th>
-								</tr>
-							</thead>
-							<tbody id="tjBody">
-								$if data['web']['setup']:
-									<tr>
-										<td style="padding-left:18px">$data['web']['type'] $data['web']['version'] </td>
-										<td><a class="link" href="javascript:GetConfigFile('$data['web']['type']');">修改</a> | 
-											<a class="link" href="javascript:ServiceAdmin('$data['web']['type']','reload');">重载</a>
-											$if web.ctx.session.webserver == 'nginx':
-												| <a class="link" href="javascript:GetNginxStatus();">负载状态</a></td>
-										</td>
-										$if data['web']['status']:
-											<td><span class="ico-start glyphicon glyphicon-play"></span></td>
-											<td style="text-align: right;padding-right:18px"><a class="link" href="javascript:ServiceAdmin('$data['web']['type']','stop');">停止</a></td>
-										$else:
-											<td><span class="ico-stop glyphicon glyphicon-stop"></span></td>
-											<td style="text-align: right;padding-right:18px"><a class="link" href="javascript:ServiceAdmin('$data['web']['type']','start');">启动</a></td>
-									</tr>
-								$if data['mysql']['setup']:
-									<tr>
-										<td style="padding-left:18px">MySQL $data['mysql']['version']</td>
-										<td><a class="link" href="javascript:GetConfigFile('mysql');">修改</a> | <a class="link" href="javascript:ServiceAdmin('mysqld','reload');">重载</a></td>
-										$if data['mysql']['status']:
-											<td><span class="ico-start glyphicon glyphicon-play"></span></td>
-										$else:
-											<td><span class="ico-stop glyphicon glyphicon-stop"></span></td>
-										<td style="text-align: right;padding-right:18px"><a class="link" href="javascript:ServiceAdmin('mysqld','restart');">重启</a>
-											$if not data['mysql']['status']:
-												| <a class="link" href="javascript:ServiceAdmin('mysqld','start');">启动</a></td>
-									</tr>
-								$if data['pure-ftpd']['setup']:
-									<tr>
-										<td style="padding-left:18px">Pure-Ftpd $data['pure-ftpd']['version'] </td>
-										<td><a class="link" href="javascript:GetConfigFile('pure-ftpd');">修改</a> | <a class="link" href="javascript:ServiceAdmin('pure-ftpd','reload');">重载</a></td>
-										$if data['pure-ftpd']['status']:
-											<td><span class="ico-start glyphicon glyphicon-play"></span></td>
-										$else:
-											<td><span class="ico-stop glyphicon glyphicon-stop"></span></td>
-										<td style="text-align: right;padding-right:18px"><a class="link" href="javascript:ServiceAdmin('pure-ftpd','restart');">重启</a> | 
-											$if data['pure-ftpd']['status']:
-												<a class="link" href="javascript:ServiceAdmin('pure-ftpd','stop');">停止</a></td>
-											$else:
-												<a class="link" href="javascript:ServiceAdmin('pure-ftpd','start');">启动</a></td>
-									</tr>
-								$for key in data['php']:
-									<tr>
-										<td style="padding-left:18px">PHP版本：$key['version'] </td>
-										<td><a class="link" href="javascript:GetConfigFile('$key['version']');">修改</a> | 
-											<a class="link" href="javascript:ServiceAdmin('php-fpm-$key['version']','reload');">重载</a> | 
-											<a class="link" href="javascript:GetPHPStatus('$key['version']');">负载状态</a></td>
-										$if key['status']:
-											<td><span class="ico-start glyphicon glyphicon-play"></span></td>
-										$else:
-											<td><span class="ico-stop glyphicon glyphicon-stop"></span></td>
-										<td style="text-align: right;padding-right:18px"><a class="link" href="javascript:ServiceAdmin('php-fpm-$key['version']','restart');">重启</a>
-											$if not key['status']:
-												| <a class="link" href="javascript:ServiceAdmin('php-fpm-$key['version']','start');">启动</a></td>
-									</tr>
-								<tr>
-									<td style="padding-left:18px">日志文件</td>
-									<td><a class="link" href="javascript:openPath('/www/wwwlogs');">/www/wwwlogs</a></td>
-									<td id="logSize"></td>
-									<td style="text-align: right;padding-right:18px"><a class="link"  href="javascript:CloseLogs();">清空</a></td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-				</div>
-				</div>
-				</div>
-			</div>
 		</div>
 	</div>
 	</div>
@@ -203,11 +132,14 @@ $def with (data)
 	<script type="text/javascript" src="/static/js/ftp.js?$web.ctx.session.version"></script>
 	<script type="text/javascript" src="/static/js/data.js?$web.ctx.session.version"></script>
 	<script type="text/javascript" src="/static/js/server.js"></script>
+	<script type="text/javascript" src="/static/js/jquery.dragsort-0.5.2.min.js"></script>
+	<script type="text/javascript" src="/static/js/soft.js?$web.ctx.session.version"></script>
 	<script type="text/javascript">
 		setCookie('serverType','$web.ctx.session.webserver');
 		//checkConfig();
 		GetDiskInfo();
 		getInfo();
+		indexsoft();
 		//检测是否安装环境
 		$$.post("/ajax?action=CheckInstalled",function(rdata){
 			if(rdata == false){
@@ -398,13 +330,23 @@ $def with (data)
 				xAxis: {
 					type: 'category',
 					boundaryGap: false,
-					data: xData
+					data: xData,
+					axisLine:{
+						lineStyle:{
+							color:"#666"
+						}
+					}
 				},
 				yAxis: {
 					name: '单位KB/s',
 					splitLine:{
 						lineStyle:{
 							color:"#eee"
+						}
+					},
+					axisLine:{
+						lineStyle:{
+							color:"#666"
 						}
 					}
 				},
@@ -667,5 +609,4 @@ $def with (data)
 			}
 		}
 		//isupdate();
-		
 	</script>

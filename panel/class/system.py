@@ -289,6 +289,13 @@ class system:
         #服务管理
         get = web.input()
         
+        if get.name == 'mysqld': public.CheckMyCnf();
+        
+        if get.name == 'phpmyadmin':
+            import ajax
+            get.status = 'True';
+            ajax.ajax().setPHPMyAdmin(get);
+        
         #检查httpd配置文件
         if get.name == 'apache' or get.name == 'httpd':
             get.name = 'httpd';
@@ -367,6 +374,7 @@ class system:
         if not public.IsRestart(): return public.returnMsg(False,'请等待所有安装任务完成再执行!');
         public.ExecShell('/etc/init.d/bt restart &')
         return True
+        
         
         
         

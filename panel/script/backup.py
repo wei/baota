@@ -28,8 +28,7 @@ class backupTools:
         if not os.path.exists(backup_path): public.ExecShell("mkdir -p " + backup_path);
         
         filename= backup_path + "/Web_" + name + "_" + time.strftime('%Y%m%d_%H%M%S',time.localtime()) + '.tar.gz'
-        public.ExecShell("cd " + os.path.dirname(path) + " && tar zcvf '" + filename + "' '" + os.path.basename(path) + "' > /dev/null")
-                
+        public.ExecShell("cd " + os.path.dirname(path) + " && tar zcvf '" + filename + "' '" + os.path.basename(path) + "' > /dev/null")        
         endDate = time.strftime('%Y/%m/%d %X',time.localtime())
         
         if not os.path.exists(filename):
@@ -121,8 +120,6 @@ class backupTools:
                 num -= 1;
                 print "|---已清理过期备份文件：" + backup['filename']
                 if num < 1: break;
-        
-    
 
 
 if __name__ == "__main__":

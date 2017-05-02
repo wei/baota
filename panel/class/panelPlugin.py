@@ -81,7 +81,7 @@ class panelPlugin:
     
     #取插件列表
     def getPluginList(self,get):
-        arr = public.M('plugin_list').dbfile('plugin').field('pid,title,tip,name,type,status,versions,ps,checks,author,home,shell,addtime').select();
+        arr = public.M('plugin_list').dbfile('plugin').field('pid,title,tip,name,type,status,versions,ps,checks,author,home,shell,addtime,ssort').order('ssort asc').select();
         for i in range(len(arr)):
             arr[i]['versions'] = self.checksSetup(arr[i]['name'],arr[i]['checks'],arr[i]['versions'])
             
@@ -90,8 +90,18 @@ class panelPlugin:
                 arr[i]['config'] = os.path.exists(arr[i]['path'] + '/index.html');
             else:
                 arr[i]['path'] = '/www/server/' + arr[i]['name'];
+        
+        arr.append(public.M('tasks').where("status!=?",('1',)).count());
         return arr;
     
+    #保存插件排序
+    def savePluginSort(self,get):
+        ssort = get.ssort.split('|');
+        sql = public.M('plugin_list').dbfile('plugin');
+        for i in range(len(ssort)):
+            if int(ssort[i]) > 1000: continue;
+            sql.where('pid=?',(ssort[i],)).setField('ssort',i);
+        return public.returnMsg(True,'排序已保存!');
     
     #检查是否安装
     def checksSetup(self,name,checks,vers = ''):
@@ -123,17 +133,18 @@ class panelPlugin:
                         else:
                             status = True
                             isStatus += 1;
-                
             #处理任务标记
             isTask = '1';
             for task in self.__tasks:
                 tmpt = public.getStrBetween('[',']',task['name'])
                 if not tmpt:continue;
                 tmp1 = tmpt.split('-');
-                if name == 'php': 
-                    if tmp1[0].lower() == name and tmp1[1] == v: isTask = task['status'];
+                name1 = tmp1[0].lower();
+                if name == 'php':
+                    if name1 == name and tmp1[1] == v: isTask = task['status'];
                 else:
-                    if tmp1[0].lower() == name: isTask = task['status']; 
+                    if name1 == 'pure': name1 = 'pure-ftpd';
+                    if name1 == name: isTask = task['status']; 
             
             version['status'] = status 
             version['version'] = v;
@@ -343,6 +354,8 @@ class panelPlugin:
         try:
             pluginInfo = public.M('plugin_list').dbfile('plugin').where('name=?',(get.name,)).field('pid,name,type,status,versions,ps,checks,author,home,shell,addtime').find();
             pluginInfo['versions'] = self.checksSetup(pluginInfo['name'],pluginInfo['checks'],pluginInfo['versions'])
+            if get.name == 'php':
+                pluginInfo['phpSort'] = public.readFile('/www/server/php/sort.pl');
             return pluginInfo
         except:
             return False
@@ -391,8 +404,7 @@ class panelPlugin:
         downloadUrl = web.ctx.session.downloadUrl + '/install/lib/list.json'
         data = json.loads(public.httpGet(downloadUrl))
         
-        n=0;
-        j=0;
+        n = i = j = 0;
         for pluginInfo in data:
             find = public.M('plugin_list').dbfile('plugin').where('name=?',(pluginInfo['name'],)).field('pid,name,versions').find();
             if find:
@@ -400,9 +412,10 @@ class panelPlugin:
                     result = public.M('plugin_list').dbfile('plugin').where('name=?',(pluginInfo['name'],)).save('title,tip,name,type,versions,ps,checks,author,home,shell,addtime',(pluginInfo['title'],pluginInfo['tip'],pluginInfo['name'],pluginInfo['type'],pluginInfo['versions'],pluginInfo['ps'],pluginInfo['checks'],pluginInfo['author'],pluginInfo['home'],pluginInfo['shell'],pluginInfo['date']));
                     j += 1
             else:
-                public.M('plugin_list').dbfile('plugin').add('title,tip,name,type,status,versions,ps,checks,author,home,shell,addtime',(pluginInfo['title'],pluginInfo['tip'],pluginInfo['name'],pluginInfo['type'],pluginInfo['display'],pluginInfo['versions'],pluginInfo['ps'],pluginInfo['checks'],pluginInfo['author'],pluginInfo['home'],pluginInfo['shell'],pluginInfo['date']));
-                n += 1
+                public.M('plugin_list').dbfile('plugin').add('ssort,title,tip,name,type,status,versions,ps,checks,author,home,shell,addtime',(i,pluginInfo['title'],pluginInfo['tip'],pluginInfo['name'],pluginInfo['type'],pluginInfo['display'],pluginInfo['versions'],pluginInfo['ps'],pluginInfo['checks'],pluginInfo['author'],pluginInfo['home'],pluginInfo['shell'],pluginInfo['date']));
                 
+                n += 1
+            i += 1;
             if pluginInfo['default']: 
                 get.name = pluginInfo['name'];
                 self.install(get);

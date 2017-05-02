@@ -400,7 +400,7 @@ class panelSite:
             conf = conf.replace(tmp,newServerName)
         
         #添加端口
-        rep = "listen\s+([0-9]+);";
+        rep = "listen\s+([0-9]+)\s*[default_server]*\s*;";
         tmp = re.findall(rep,conf);
         if not public.inArray(tmp,get.port):
             listen = re.search(rep,conf).group()

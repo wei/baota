@@ -24,13 +24,6 @@ $def with (data)
 							<label class='btswitch-btn' for='autoUpdate' onclick="SetPanelAutoUpload()"></label>
 						</div>
 					</div>
-					<div class="ss-text">
-						<em title="守护已安装的php-fpm进程,防止批量出现502错误!">PHP守护程序</em>
-						<div class='ssh-item'>
-							<input class='btswitch btswitch-ios' id='502' type='checkbox' $data['panel']['502'] >
-							<label class='btswitch-btn' for='502' onclick="Set502()"></label>
-						</div>
-					</div>
 					<div class="ss-text" style="margin-right:0; display:none">
 						<button class="btn btn-success btn-sm" id="twoPassword">模块加锁</button>
 					</div>
@@ -149,27 +142,6 @@ $def with (data)
 					window.location.reload()
 				},3000);
 		})
-	}
-	function changeDefault(type){
-		var vhref='';
-		switch(type){
-			case 1:
-				vhref = '$web.ctx.session.setupPath/panel/data/defaultDoc.html';
-				break;
-			case 2:
-				vhref = '$web.ctx.session.setupPath/panel/data/404.html';
-				break;
-			case 3:
-				vhref = '$web.ctx.session.setupPath/nginx/html/index.html';
-				break;
-			case 4:
-				vhref = '$web.ctx.session.setupPath/apache/htdocs/index.html';
-				break;
-			case 5:
-				vhref = '$web.ctx.session.setupPath/stop/index.html';
-				break;
-		}
-		OnlineEditFile(0,vhref);
 	}
 	
 	//PHP守护程序
