@@ -56,7 +56,10 @@ $def with (tData)
 				$$(".layui-layer-shade").css("margin-left","180px");
 				//setTimeout(function(){ window.location.href = '/soft'; },3000);
 			//setCookie('uploadSize','<?php echo intval(ini_get("upload_max_filesize"))*1024*1024; ?>');
-			getData(1);
+			setTimeout(function(){
+				getData(1);
+			},300);
+			
 			//重载MySQL配置
 			function ReloadMySQL(){
 				layer.msg('已重载MySQL配置!',{icon:1});

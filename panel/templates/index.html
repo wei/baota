@@ -6,6 +6,10 @@ $def with (data)
 					<a href="/">首页</a>/<span>服务器状态</span>
 				</div>
 			</div>
+			<div class="danger-tips">
+				<div class="alert alert-warning" id="messageError" style="display: none;">
+				</div>
+			</div>
 			<div class="system-info">
 				<div class="tips">
 					系统: <span id="info"> 获取中</span>&#12288;&#12288;&#12288;已不间断运行: <span id="running"> 获取中</span><button onclick="ReBoot()" class="btn btn-success btn-xs" style="vertical-align:1px;margin-left:10px;">安全重启</button>
@@ -58,10 +62,9 @@ $def with (data)
 			<div class="server">
 				<div class="s-title">
 					<h3>服务器状态</h3>
-					<a href="javascript:;" style="background:none;padding:0; margin-left:22px" onclick="ReMemory()">内存释放</a>
+					<a href="javascript:;" style="background:none;padding:0; margin-left:22px;display: none;" onclick="ReMemory()">内存释放</a>
 					<a href="javascript:;" style="background:none;padding:0; margin-left:22px" onclick="GetNetWorkList()">连接管理</a>
 					<a href="javascript:;" style="background:none;padding:0; margin-left:22px" onclick="GetProcessList()">进程管理</a>
-					<a href="javascript:;" style="background:none;padding:0; margin-left:22px;display: none;" onclick="testServer()">性能测试</a>
 				</div>
 				<div class="server-circle">
 					<ul class="row" id="systemInfoList">
@@ -80,7 +83,7 @@ $def with (data)
 						</li> 
 						<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2">
 							<h3>内存使用率</h3>
-							<div class="circle">
+							<div class="circle mem-release">
 								<div class="pie_left">
 									<div class="left"></div>
 								</div>
@@ -88,6 +91,8 @@ $def with (data)
 									<div class="right"></div>
 								</div>
 								<div class="mask"><span id="left">0</span>%</div>
+								<div class="mem-re-min"></div>
+								<div class="mem-re-con" title="点击释放内存"></div>
 							</div>
 							<h4 id="memory">获取中</h4>
 						</li> 
@@ -136,10 +141,18 @@ $def with (data)
 	<script type="text/javascript" src="/static/js/soft.js?$web.ctx.session.version"></script>
 	<script type="text/javascript">
 		setCookie('serverType','$web.ctx.session.webserver');
-		//checkConfig();
-		GetDiskInfo();
-		getInfo();
-		indexsoft();
+		setTimeout(function(){
+			GetDiskInfo();
+		},500)
+
+		setTimeout(function(){
+			indexsoft();
+		},1000);
+		
+		setTimeout(function(){
+			getInfo();
+		},1500);
+		
 		//检测是否安装环境
 		$$.post("/ajax?action=CheckInstalled",function(rdata){
 			if(rdata == false){
@@ -147,30 +160,100 @@ $def with (data)
 			}
 		})
 		
+		$$(function(){
+			$$(".mem-release").hover(function(){
+				$$(this).addClass("shine_green");
+				if(!($$(this).hasClass("mem-action"))){
+					$$(this).find(".mem-re-min").hide();
+					$$(this).find(".mask").css({"color":"#d2edd8"});
+					$$(this).find(".mem-re-con").css({"display":"block"});
+					$$(this).find(".mem-re-con").animate({"top":"0",opacity:1});
+					//$$(this).prev().text("内存释放");
+					$$("#memory").text("内存释放");
+				}
+			},function(){
+				if(!($$(this).hasClass("mem-action"))){
+					$$(this).find(".mem-re-min").show();
+				}
+				else{
+					$$(this).find(".mem-re-min").hide();
+				}
+				$$(this).removeClass("shine_green");
+				$$(this).find(".mask").css({"color":"#20a53a"});
+				$$(this).find(".mem-re-con").css({"top":"15px",opacity:1,"display":"none"});
+				//$$(this).prev().text("内存使用率");
+				$$("#memory").text(getCookie("mem-before"));
+			}).click(function(){
+				$$(this).find(".mem-re-min").hide();
+				if(!($$(this).hasClass("mem-action"))){
+					ReMemory();
+					var btlen = $$(".mem-release").find(".mask span").text();
+					$$(this).addClass("mem-action");
+					$$(this).find(".mask").css({"color":"#20a53a"});
+					$$(this).find(".mem-re-con").animate({"top":"-400px",opacity:0});
+					$$(this).find(".pie_right .right").css({"transform":"rotate(3deg)"});
+					for(var i=0;i<btlen;i++){
+						setTimeout("rocket("+btlen+","+i+")",i*30);
+					}
+				}
+				//setTimeout("location.reload()",2000);
+			})
+		})
+		
+		function rocket(sum,m){
+			var n = sum-m;
+			$$(".mem-release").find(".mask span").text(n);
+		}
 		//释放内存
 		function ReMemory(){
-			var loadT = layer.msg('正在处理,请稍候..',{icon:16,time:0,shade: [0.3, '#000']});
-			$$.post('/system?action=ReMemory','',function(rdata){
-				layer.msg(rdata.msg,{icon:rdata.status?1:5});
-				$$.get('/system?action=ReWeb',function(){
-					layer.close(loadT);
+			//var loadT = layer.msg('正在处理,请稍候..',{icon:16,time:0,shade: [0.3, '#000']});
+			setTimeout(function(){
+				$$(".mem-release").find('.mask').css({'color':'#20a53a','font-size':'14px'}).html('<span style="display:none">1</span>释放中 <img src="/static/img/ings.gif">');
+				$$.post('/system?action=ReMemory','',function(rdata){
+					//layer.msg(rdata.msg,{icon:rdata.status?1:5});
+					var percent = GetPercent(rdata.memRealUsed,rdata.memTotal);
+					var memText = rdata.memRealUsed+"/"+rdata.memTotal + " (MB)";
+					percent = Math.round(percent);
+					$$(".mem-release").find('.mask').css({'color':'#20a53a','font-size':'14px'}).html("<span style='display:none'>"+percent+"</span>释放完成");
+					setCookie("mem-before",memText);
+					var memNull = getCookie("memRealUsed") - rdata.memRealUsed;
 					setTimeout(function(){
-						getInfo();
-					},3000)
-					
-				}).error(function(){
-					layer.close(loadT);
+						if(memNull > 0){
+							$$(".mem-release").find('.mask').css({'color':'#20a53a','font-size':'14px','line-height':'22px','padding-top':'22px'}).html("<span style='display:none'>"+percent+"</span>已释放<br>"+memNull+"MB");
+						}
+						else{
+							$$(".mem-release").find('.mask').css({'color':'#20a53a','font-size':'14px'}).html("<span style='display:none'>"+percent+"</span>状态最佳");
+						}
+						$$(".mem-release").removeClass("mem-action");
+						$$("#memory").text(memText);
+						//layer.msg("已释放"+memNull+"MB，可用"+rdata.memFree+"MB",{icon:1});
+						setCookie("memRealUsed",rdata.memRealUsed);
+					},1000);
 					setTimeout(function(){
-						getInfo();
-					},3000)
+						$$(".mem-release").find('.mask').removeAttr("style").html("<span>"+percent+"</span>%");
+						$$(".mem-release").find(".mem-re-min").show();
+					},2000)
 				});
-				
-			});
+			},2000);
+		}
+		function GetPercent(num, total){
+			num = parseFloat(num);
+			total = parseFloat(total);
+			if (isNaN(num) || isNaN(total)) {
+				return "-";
+			}
+			return total <= 0 ? "0%" : (Math.round(num / total * 10000) / 100.00);
 		}
 		function GetDiskInfo(){
 			$$.get('/system?action=GetDiskInfo',function(rdata){
 				var dBody
 				for(var i=0;i<rdata.length;i++){
+					if(rdata[i].path == '/' || rdata[i].path == '/www'){
+						if(rdata[i].size[2].indexOf('M') != -1){
+							$$("#messageError").show();
+							$$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span> 磁盘分区['+rdata[i].path+']的可用容量小于1GB，这可能会导致MySQL自动停止，面板无法访问等问题，请及时清理!</p>')
+						}
+					}
 					dBody = '<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2">'
 								+'<h3>'+rdata[i].path+'</h3>'
 								+'<div class="circle">'
@@ -221,19 +304,22 @@ $def with (data)
 		
 		
 		function getInfo() {
-			var loadT = layer.load({
-				shade: true,
-				shadeClose: false
-			});
 			$$.get("/system?action=GetSystemTotal", function(info) {
+				setCookie("memRealUsed",parseInt((info.memRealUsed)));
 				$$("#memory").html(parseInt((info.memRealUsed))+'/'+info.memTotal+' (MB)');
+				setCookie("mem-before",$$("#memory").text());
 				if(!getCookie('memSize')) setCookie('memSize',parseInt(info.memTotal));
 				$$("#left").html(Math.floor(info.memRealUsed / (info.memTotal / 100)));
 				$$("#info").html(info.system);
 				$$("#running").html(info.time);
 				$$("#core").html(info.cpuNum + " 核心");
 				$$("#state").html(info.cpuRealUsed);
-				layer.close(loadT);
+				var memFree = info.memTotal - info.memRealUsed;
+				
+				if(memFree < 64){
+					$$("#messageError").show();
+					$$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span> 当前可用物理内存小于64M，这可能导致MySQL自动停止，站点502等错误，请尝试释放内存!</p>')
+				}
 				setImg();
 			});
 		}
@@ -584,6 +670,7 @@ $def with (data)
 								$$(".SafeRestartCode").html("<p style='color:#999'>正在停止$web.ctx.session.webserver服务</p><p style='color:#999'>正在停止MySQL服务</p><p style='color:#999'>开始重启服务器</p><p style='color:#999'>等待服务器启动</p><p>服务器重启成功!</p>");
 								setTimeout(function(){
 									layer.closeAll();
+									window.location.reload();
 								},3000);
 								
 							}).error(function(){

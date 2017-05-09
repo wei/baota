@@ -129,7 +129,7 @@ class system:
         tmp['status'] = os.path.exists('/var/run/pure-ftpd.pid')
         data['pure-ftpd'] = tmp
         data['panel'] = self.GetPanelInfo()
-        data['systemdate'] = public.getDate();
+        data['systemdate'] = public.ExecShell('date +"%Y-%m-%d %H:%M:%S %Z %z"')[0];
         
         
         return data
@@ -147,10 +147,13 @@ class system:
         
         autoUpdate = ''
         if os.path.exists('data/autoUpdate.pl'): autoUpdate = 'checked';
+        limitip = ''
+        if os.path.exists('data/limitip.conf'): limitip = public.readFile('data/limitip.conf');
+        
         
         check502 = ''
         if os.path.exists('data/502Task.pl'): check502 = 'checked';
-        return {'port':port,'address':address,'domain':domain,'auto':autoUpdate,'502':check502}
+        return {'port':port,'address':address,'domain':domain,'auto':autoUpdate,'502':check502,'limitip':limitip}
     
     def GetPHPConfig(self,version):
         #取PHP配置
@@ -199,7 +202,11 @@ class system:
     def GetSystemVersion(self):
         #取操作系统版本
         import public
-        version = public.readFile('/etc/redhat-release').replace('release ','').strip()
+        version = public.readFile('/etc/redhat-release')
+        if not version:
+            version = public.readFile('/etc/issue').replace('\\n \\l','').strip();
+        else:
+            version = version.replace('release ','').strip();
         return version
     
     def GetBootTime(self):
@@ -251,13 +258,12 @@ class system:
         temp = public.ExecShell("df -h -P|grep '/'|grep -v tmpfs")[0];
         temp1 = temp.split('\n');
         diskInfo = [];
+        cuts = ['/mnt/cdrom','/boot','boot/efi','/dev','/dev/shm'];
         for tmp in temp1:
             disk = tmp.split();
             if len(disk) < 5: continue;
             if len(disk[5]) > 24: continue;
-            if disk[5] == '/mnt/cdrom':continue;
-            if disk[5] == '/boot':continue;
-            if disk[5] == '/boot/efi':continue;
+            if disk[5] in cuts: continue;
             arr = {}
             arr['path'] = disk[5];
             tmp1 = [disk[1],disk[2],disk[3],disk[4]];
@@ -366,8 +372,8 @@ class system:
         scriptFile = 'script/rememory.sh'
         if not os.path.exists(scriptFile):
             public.downloadFile('http://www.bt.cn/script/rememory.sh',scriptFile);
-        public.ExecShell("sh " + self.setupPath + '/panel/' + scriptFile);
-        return public.returnMsg(True,'内存已释放!');
+        public.ExecShell("/bin/bash " + self.setupPath + '/panel/' + scriptFile);
+        return self.GetMemInfo();
     
     #重启面板     
     def ReWeb(self):

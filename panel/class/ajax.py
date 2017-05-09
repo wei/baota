@@ -1,4 +1,4 @@
-#coding: utf-8
+ #coding: utf-8
 # +-------------------------------------------------------------------
 # | 宝塔Linux面板
 # +-------------------------------------------------------------------
@@ -188,7 +188,7 @@ class ajax:
         filename = web.ctx.session.setupPath + '/panel/script/'+get.name+'_install.sh';
         pdata = public.httpGet(url);
         public.writeFile(filename,pdata);    
-        public.ExecShell("sh "+filename+" install > /tmp/panel_lib.pl");
+        public.ExecShell("/bin/bash "+filename+" install > /tmp/panel_lib.pl");
         public.WriteLog("插件管理", "安装"+info['name']+"插件成功!");
         return public.returnMsg(True, '安装成功!');
 
@@ -202,7 +202,7 @@ class ajax:
             pdata = public.httpGet(url);
             public.writeFile(filename,pdata);
             
-        public.ExecShell("sh "+filename+" uninstall ");
+        public.ExecShell("/bin/bash "+filename+" uninstall ");
         public.WriteLog("插件管理", "卸载"+info['name']+"成功!");
         return public.returnMsg(True, '卸载成功!');
     
@@ -309,6 +309,7 @@ class ajax:
                 continue;
         import operator
         processList = sorted(processList, key=lambda x : x['memory_percent'], reverse=True);
+        processList = sorted(processList, key=lambda x : x['cpu_times'], reverse=True);
         return processList
     
     #结束指定进程
@@ -408,14 +409,15 @@ class ajax:
                 os.remove(login_temp);
             else:
                 logs = '';
-            import psutil,panelPlugin;
+            import psutil,panelPlugin,system;
             mem = psutil.virtual_memory();
             mplugin = panelPlugin.panelPlugin();
+            panelsys = system.system();
             data = {}
             data['sites'] = str(public.M('sites').count());
             data['ftps'] = str(public.M('ftps').count());
             data['databases'] = str(public.M('databases').count());
-            data['system'] = public.readFile('/etc/redhat-release').replace('release','') + '|' + str(mem.total / 1024 / 1024) + 'MB|' + public.getCpuType() + '*' + str(psutil.cpu_count()) + '|' + web.ctx.session.webserver + '|' + web.ctx.session.version;
+            data['system'] = panelsys.GetSystemVersion() + '|' + str(mem.total / 1024 / 1024) + 'MB|' + public.getCpuType() + '*' + str(psutil.cpu_count()) + '|' + web.ctx.session.webserver + '|' + web.ctx.session.version;
             data['system'] += '||'+self.GetInstalleds(mplugin.getPluginList(None));
             data['logs'] = logs
             
@@ -607,6 +609,9 @@ ServerName 127.0.0.2
         
         conf = public.readFile(filename);
         if hasattr(get,'port'):
+            mainPort = public.readFile('data/port.pl').strip();
+            if mainPort == get.port:
+                return public.returnMsg(False,'不能和面板设为同一端口!');
             if web.ctx.session.webserver == 'nginx':
                 rep = "listen\s+([0-9]+)\s*;"
                 oldPort = re.search(rep,conf).groups()[0];
@@ -687,5 +692,13 @@ ServerName 127.0.0.2
     def phpSort(self,get):
         if public.writeFile('/www/server/php/sort.pl',get.ssort): return public.returnMsg(True,'保存排序成功!');
         return public.returnMsg(False,'保存失败!');
+    
+    #获取广告代码
+    def GetAd(self,get):
+        try:
+            return public.httpGet('http://www.bt.cn/Api/GetAD?name='+get.name + '&soc=' + get.soc);
+        except:
+            return '';
+        
         
         

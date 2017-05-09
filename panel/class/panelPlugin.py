@@ -2,7 +2,7 @@
 # +-------------------------------------------------------------------
 # | 宝塔Linux面板
 # +-------------------------------------------------------------------
-# | Copyright (c) 2015-2016 宝塔软件(http://bt.cn) All rights reserved.
+# | Copyright (c) 2015-2017 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
 # | Author: 黄文良 <2879625666@qq.com>
 # +-------------------------------------------------------------------
@@ -31,7 +31,7 @@ class panelPlugin:
             downloadUrl = web.ctx.session.downloadUrl + '/install/lib/plugin/' + pluginInfo['name'] + '/install.sh';
             toFile = self.__install_path + '/' + pluginInfo['name'] + '/install.sh';
             public.downloadFile(downloadUrl,toFile)
-            os.system('sh ' + toFile + ' install')
+            os.system('/bin/bash ' + toFile + ' install')
             if self.checksSetup(pluginInfo['name'],pluginInfo['checks'],pluginInfo['versions'])[0]['status'] or os.path.exists(self.__install_path + '/' + get.name): 
                 public.WriteLog('安装器','安装插件['+pluginInfo['title']+']成功！');
                 os.system('rm -f ' + toFile);
@@ -41,6 +41,8 @@ class panelPlugin:
             import db,time
             path = web.ctx.session.setupPath + '/php'
             if not os.path.exists(path): os.system("mkdir -p " + path);
+            issue = public.readFile('/etc/issue')
+            if web.ctx.session.server_os['x'] != 'RHEL': get.type = '3'
             
             apacheVersion='false';
             if web.ctx.session.webserver == 'apache':
@@ -48,7 +50,7 @@ class panelPlugin:
             public.writeFile('/var/bt_apacheVersion.pl',apacheVersion)
             public.writeFile('/var/bt_setupPath.conf',web.ctx.session.rootPath)
             isTask = '/tmp/panelTask.pl'
-            execstr = "cd " + web.ctx.session.setupPath + "/panel/install && sh install_soft.sh " + get.type + " install " + get.name + " "+ get.version;
+            execstr = "cd " + web.ctx.session.setupPath + "/panel/install && /bin/bash install_soft.sh " + get.type + " install " + get.name + " "+ get.version;
             sql = db.Sql()
             if hasattr(get,'id'):
                 id = get.id;
@@ -67,30 +69,49 @@ class panelPlugin:
             downloadUrl = web.ctx.session.downloadUrl + '/install/lib/plugin/' + pluginInfo['name'] + '/install.sh';
             toFile = self.__install_path + '/' + pluginInfo['name'] + '/install.sh';
             public.downloadFile(downloadUrl,toFile)
-            os.system('sh ' + toFile + ' uninstall')
+            os.system('/bin/bash ' + toFile + ' uninstall')
             os.system('rm -rf ' + web.ctx.session.downloadUrl + '/install/lib/plugin/' + pluginInfo['name'])
             public.M('plugin_list').dbfile('plugin').execute('drop table plugin_' + get.name,());
             public.WriteLog('安装器','卸载软件['+pluginInfo['title']+']成功！');
             return public.returnMsg(True,'卸载成功!');
         else:
+            get.type = '0'
+            issue = public.readFile('/etc/issue')
+            if web.ctx.session.server_os['x'] != 'RHEL': get.type = '3'
             public.writeFile('/var/bt_setupPath.conf',web.ctx.session.rootPath)
-            execstr = "cd " + web.ctx.session.setupPath + "/panel/install && sh install_soft.sh 0 uninstall " + get.name.lower() + " "+ get.version.replace('.','');
+            execstr = "cd " + web.ctx.session.setupPath + "/panel/install && /bin/bash install_soft.sh "+get.type+" uninstall " + get.name.lower() + " "+ get.version.replace('.','');
             os.system(execstr);
             public.WriteLog('安装器','卸载软件['+get.name+'-'+get.version+']成功！');
             return public.returnMsg(True,"卸载成功!");
     
     #取插件列表
     def getPluginList(self,get):
+        import json
         arr = public.M('plugin_list').dbfile('plugin').field('pid,title,tip,name,type,status,versions,ps,checks,author,home,shell,addtime,ssort').order('ssort asc').select();
+        n = 0;
+        for dirinfo in os.listdir(self.__install_path):
+            path = self.__install_path + '/' + dirinfo
+            if os.path.isdir(path):
+                jsonFile = path + '/info.json'
+                if os.path.exists(jsonFile):
+                    tmp = json.loads(public.readFile(jsonFile))
+                    tmp['pid'] = len(arr) + 1000 + n
+                    isTrue = True
+                    for tm in arr:
+                        if tmp['name'] == tm['name']: isTrue = False
+                    if isTrue:
+                        iconFile = web.ctx.session.setupPath + '/panel/static/img/soft_ico/ico-' + dirinfo + '.png' 
+                        if not os.path.exists(iconFile): os.system('\cp -a -r ' + self.__install_path + '/' + dirinfo + '/icon.png ' + iconFile)
+                        tmp['status'] = tmp['display'];
+                        del(tmp['display'])
+                        arr.append(tmp)
         for i in range(len(arr)):
             arr[i]['versions'] = self.checksSetup(arr[i]['name'],arr[i]['checks'],arr[i]['versions'])
-            
             if arr[i]['tip'] == 'lib': 
                 arr[i]['path'] = self.__install_path + '/' + arr[i]['name']
                 arr[i]['config'] = os.path.exists(arr[i]['path'] + '/index.html');
             else:
                 arr[i]['path'] = '/www/server/' + arr[i]['name'];
-        
         arr.append(public.M('tasks').where("status!=?",('1',)).count());
         return arr;
     
@@ -171,9 +192,12 @@ class panelPlugin:
             if os.path.exists('/etc/init.d/nginx'):
                 pidf = '/www/server/nginx/logs/nginx.pid';
                 if os.path.exists(pidf):
-                    pid = public.readFile(pidf)
-                    pname = self.checkProcess(int(pid));
-                    if pname == 'nginx': status = True;
+                    try:
+                        pid = public.readFile(pidf)
+                        pname = self.checkProcess(int(pid));
+                        if pname == 'nginx': status = True;
+                    except:
+                        status = False
             for i in range(len(versions)):
                 versions[i]['run'] = False
                 if versions[i]['status']: versions[i]['run'] = status
@@ -182,9 +206,12 @@ class panelPlugin:
             if os.path.exists('/etc/init.d/httpd'):
                 pidf = '/www/server/apache/logs/httpd.pid';
                 if os.path.exists(pidf):
-                    pid = public.readFile(pidf)
-                    pname = self.checkProcess(int(pid));
-                    if pname == 'httpd': status = True;
+                    try:
+                        pid = public.readFile(pidf)
+                        pname = self.checkProcess(int(pid));
+                        if pname == 'httpd': status = True;
+                    except:
+                        status = False
             for i in range(len(versions)):
                 versions[i]['run'] = False
                 if versions[i]['status']: versions[i]['run'] = status
@@ -430,6 +457,7 @@ class panelPlugin:
         if not os.path.exists(path + '/'+get.name+'_main.py'): return public.returnMsg(False,'该插件没有扩展方法!');
         sys.path.append(path);
         plugin_main = __import__(get.name+'_main');
+        reload(plugin_main)
         pluginObject = eval('plugin_main.' + get.name + '_main()');
         if not hasattr(pluginObject,get.s): return public.returnMsg(False,'指定方法['+get.s+']不存在!');
         execStr = 'pluginObject.' + get.s + '(get)'

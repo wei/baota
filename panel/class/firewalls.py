@@ -11,13 +11,17 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 class firewalls:
     __isFirewalld = False
+    __isUfw = False
     
     def __init__(self):
         if os.path.exists('/usr/sbin/firewalld'): self.__isFirewalld = True
-        print self.__isFirewalld
+        if os.path.exists('/usr/sbin/ufw'): self.__isUfw = True
         
     #重载防火墙配置
     def FirewallReload(self):
+        if self.__isUfw:
+            public.ExecShell('/usr/sbin/ufw reload')
+            return;
         if self.__isFirewalld:
             public.ExecShell('firewall-cmd --reload')
         else:
@@ -37,10 +41,13 @@ class firewalls:
         #return public.returnMsg(False,'演示服务器，禁止此操作!');
         address = get.port
         if public.M('firewall').where("port=?",(address,)).count() > 0: return public.returnMsg(False,'您要放屏蔽的IP已存在屏蔽列表，无需重复处理!')
-        if self.__isFirewalld:
-            public.ExecShell('firewall-cmd --permanent --add-rich-rule=\'rule family=ipv4 source address="'+ address +'" drop\'')
+        if self.__isUfw:
+            public.ExecShell('ufw deny from ' + address + ' to any');
         else:
-            public.ExecShell('iptables -I INPUT -s '+address+' -j DROP')
+            if self.__isFirewalld:
+                public.ExecShell('firewall-cmd --permanent --add-rich-rule=\'rule family=ipv4 source address="'+ address +'" drop\'')
+            else:
+                public.ExecShell('iptables -I INPUT -s '+address+' -j DROP')
         
         public.WriteLog("防火墙管理", '屏蔽IP['+address+']成功!')
         addtime = time.strftime('%Y-%m-%d %X',time.localtime())
@@ -55,10 +62,13 @@ class firewalls:
         #return public.returnMsg(False,'演示服务器，禁止此操作!');
         address = get.port
         id = get.id
-        if self.__isFirewalld:
-            public.ExecShell('firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv4 source address="'+ address +'" drop\'')
+        if self.__isUfw:
+            public.ExecShell('ufw delete deny from ' + address + ' to any');
         else:
-            public.ExecShell('iptables -t filte -D INPUT -s '+address+' -j DROP')
+            if self.__isFirewalld:
+                public.ExecShell('firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv4 source address="'+ address +'" drop\'')
+            else:
+                public.ExecShell('iptables -t filte -D INPUT -s '+address+' -j DROP')
         
         public.WriteLog("防火墙管理", '解除屏蔽IP['+address+']成功!')
         public.M('firewall').where("id=?",(id,)).delete()
@@ -74,10 +84,13 @@ class firewalls:
         port = get.port
         ps = get.ps
         if public.M('firewall').where("port=?",(port,)).count() > 0: return public.returnMsg(False,'您要放行的端口已存在，无需重复放行!')
-        if self.__isFirewalld:
-            public.ExecShell('firewall-cmd --permanent --zone=public --add-port='+port+'/tcp')
+        if self.__isUfw:
+            public.ExecShell('ufw allow ' + port + '/tcp');
         else:
-            public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport '+port+' -j ACCEPT')
+            if self.__isFirewalld:
+                public.ExecShell('firewall-cmd --permanent --zone=public --add-port='+port+'/tcp')
+            else:
+                public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport '+port+' -j ACCEPT')
         public.WriteLog("防火墙管理", '放行端口['+port+']成功!')
         addtime = time.strftime('%Y-%m-%d %X',time.localtime())
         public.M('firewall').add('port,ps,addtime',(port,ps,addtime))
@@ -93,11 +106,13 @@ class firewalls:
         id = get.id
         try:
             if(port == web.ctx.host.split(':')[1]): return public.returnMsg(False,'失败，不能删除当前面板端口!')
-            
-            if self.__isFirewalld:
-                public.ExecShell('firewall-cmd --permanent --zone=public --remove-port='+port+'/tcp')
+            if self.__isUfw:
+                public.ExecShell('ufw delete allow ' + port + '/tcp');
             else:
-                public.ExecShell('iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport '+port+' -j ACCEPT')
+                if self.__isFirewalld:
+                    public.ExecShell('firewall-cmd --permanent --zone=public --remove-port='+port+'/tcp')
+                else:
+                    public.ExecShell('iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport '+port+' -j ACCEPT')
             public.WriteLog("防火墙管理", '删除防火墙放行端口['+port+']成功!')
             public.M('firewall').where("id=?",(id,)).delete()
             
@@ -185,14 +200,20 @@ class firewalls:
         conf = public.readFile(file)
         rep = "#*Port\s+([0-9]+)\s*\n"
         port = re.search(rep,conf).groups(0)[0]
-        version = public.readFile('/etc/redhat-release')
-        if version.find(' 7.') != -1:
-            status = public.ExecShell("systemctl status sshd.service | grep 'dead'")
+        import system
+        panelsys = system.system();
+        
+        version = panelsys.GetSystemVersion();
+        if version.find('Ubuntu') != -1:
+             status = public.ExecShell("service sshd status | grep 'dead'")
         else:
-            status = public.ExecShell("/etc/init.d/sshd status | grep 'stopped'")
+            if version.find(' 7.') != -1:
+                status = public.ExecShell("systemctl status sshd.service | grep 'dead'")
+            else:
+                status = public.ExecShell("/etc/init.d/sshd status | grep 'stopped'")
             
-#        return status;
-        if len(status[0]) > 3: 
+#       return status;
+        if len(status[0]) > 3:
             status = False
         else:
             status = True
@@ -200,7 +221,7 @@ class firewalls:
         try:
             file = '/etc/sysctl.conf'
             conf = public.readFile(file)
-            rep = "net\.ipv4\.icmp_echo_ignore_all\s*=\s*([0-9]+)"
+            rep = "#*net\.ipv4\.icmp_echo_ignore_all\s*=\s*([0-9]+)"
             tmp = re.search(rep,conf).groups(0)[0]
             if tmp == '1': isPing = False
         except:

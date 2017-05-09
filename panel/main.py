@@ -13,10 +13,8 @@
 #------------------------------
 import sys,web,io,os
 global panelPath
-panelPath = os.path.dirname(__file__)
-if len(panelPath) > 3: 
-    panelPath += '/'
-    os.chdir(panelPath)
+panelPath = '/www/server/panel/';
+os.chdir(panelPath)
 sys.path.append(panelPath + "class/")
 import common,public,data,page,db
 
@@ -66,10 +64,16 @@ web.config.session_parameters['ignore_expiry'] = True
 web.config.session_parameters['ignore_change_ip'] = True
 web.config.session_parameters['secret_key'] = 'www.bt.cn'
 web.config.session_parameters['expired_message'] = 'Session expired'
-sessionDB = web.database(dbn='sqlite', db='data/session.db')
-session = web.session.Session(app, web.session.DBStore(sessionDB,'sessions'), initializer={'login': False})
+dbfile = '/dev/shm/session.db';
+src_sessiondb = '/www/server/panel/data/session.db';
+if not os.path.exists(src_sessiondb): 
+    print db.Sql().dbfile('session').create('session');
+if not os.path.exists('/dev/shm'): os.system('mkdir -p /dev/shm');
+if not os.path.exists(dbfile): os.system("\\cp -a -r "+src_sessiondb+" " + dbfile);
+sessionDB = web.database(dbn='sqlite', db=dbfile)
+session = web.session.Session(app, web.session.DBStore(sessionDB,'sessions'), initializer={'login': False});
 def session_hook():
-    session.panelPath = os.path.dirname(__file__)
+    session.panelPath = os.path.dirname(__file__);
     web.ctx.session = session
 app.add_processor(web.loadhook(session_hook))
 
@@ -91,7 +95,39 @@ class panelLogin(common.panelSetup):
         tmp = web.ctx.host.split(':')
         domain = public.readFile('data/domain.conf')
         if domain:
-            if(tmp[0].strip() != domain.strip()): return "not found"
+            if(tmp[0].strip() != domain.strip()): 
+                errorStr = '''
+    <meta charset="utf-8">
+    <title>拒绝访问</title>
+    </head><body>
+    <h1>抱歉,您没有访问权限</h1>
+        <p>请使用正确的域名访问!</p>
+        <p>查看许可域名: cat /www/server/panel/data/domain.conf</p>
+        <p>关闭访问限制: rm -f /www/server/panel/data/domain.conf</p>
+    <hr>
+    <address>宝塔Linux面板 4.x <a href="http://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
+    </body></html>
+    '''
+                web.header('Content-Type','text/html; charset=utf-8', unique=True)
+                return errorStr
+        if os.path.exists('data/limitip.conf'):
+            iplist = public.readFile('data/limitip.conf')
+            if iplist:
+                if not web.ctx.ip in iplist.split(','):
+                    errorStr = '''
+<meta charset="utf-8">
+<title>拒绝访问</title>
+</head><body>
+<h1>抱歉,您的IP没有被授权</h1>
+    <p>您当前的IP为[%s]，请使用正确的IP访问!</p>
+    <p>查看授权IP: cat /www/server/panel/data/limitip.conf</p>
+    <p>关闭访问限制: rm -f /www/server/panel/data/limitip.conf</p>
+<hr>
+<address>宝塔Linux面板 4.x <a href="http://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
+</body></html>
+''' % (web.ctx.ip,)
+                    web.header('Content-Type','text/html; charset=utf-8', unique=True)
+                    return errorStr;
         
         get = web.input()
         sql = db.Sql()
@@ -99,6 +135,8 @@ class panelLogin(common.panelSetup):
             if session.login != False:
                 session.login = False;
                 session.kill();
+            import time
+            time.sleep(0.2);
             raise web.seeother('/login')
         
         if hasattr(session,'login'):
@@ -155,33 +193,35 @@ class panelLogin(common.panelSetup):
         timeFile = 'data/'+web.ctx.ip+'_time.login';
         limit = 6;
         outtime = 1800;
-        
-        #初始化
-        if not os.path.exists(timeFile): public.writeFile(timeFile,str(time.time()));
-        if not os.path.exists(logFile): public.writeFile(logFile,'0');
-        
-        #判断是否解除登陆限制
-        time1 = long(public.readFile(timeFile).split('.')[0]);
-        if (time.time() - time1) > outtime: 
-            public.writeFile(logFile,'0');
-            public.writeFile(timeFile,str(time.time()));
-        
-        #计数
-        num1 = int(public.readFile(logFile));
-        if type == '+':
-            num1 += 1;
-            public.writeFile(logFile,str(num1));
-            if num1 > 1:
-                session.code = True;
+        try:
+            #初始化
+            if not os.path.exists(timeFile): public.writeFile(timeFile,str(time.time()));
+            if not os.path.exists(logFile): public.writeFile(logFile,'0');
+            
+            #判断是否解除登陆限制
+            time1 = long(public.readFile(timeFile).split('.')[0]);
+            if (time.time() - time1) > outtime: 
+                public.writeFile(logFile,'0');
+                public.writeFile(timeFile,str(time.time()));
+            
+            #计数
+            num1 = int(public.readFile(logFile));
+            if type == '+':
+                num1 += 1;
+                public.writeFile(logFile,str(num1));
+                if num1 > 1:
+                    session.code = True;
+                return limit - num1;
+            
+            #清空
+            if type == '-':
+                public.ExecShell('rm -f data/*.login');
+                session.code = False;
+                return 1;
+            
             return limit - num1;
-        
-        #清空
-        if type == '-':
-            public.ExecShell('rm -f data/*.login');
-            session.code = False;
-            return 1;
-        
-        return limit - num1;
+        except:
+            return limit;
         
 
 class panelSite(common.panelAdmin):
@@ -196,8 +236,8 @@ class panelSite(common.panelAdmin):
         import panelSite
         siteObject = panelSite.panelSite()
         
-        defs = ('GetDefaultSite','SetDefaultSite','CloseTomcat','SetTomcat','apacheAddPort','AddSite','GetPHPVersion','SetPHPVersion','DeleteSite','AddDomain','DelDomain','GetDirBinding','AddDirBinding','GetDirRewrite','DelDirBinding'
-                ,'SetSiteRunPath','GetSiteRunPath','SetPath','SetIndex','GetIndex','GetDirUserINI','SetDirUserINI','GetRewriteList','SetSSL','SetSSLConf','CreateLet','CloseSSLConf','GetSSL','SiteStart','SiteStop'
+        defs = ('GetCheckSafe','CheckSafe','GetDefaultSite','SetDefaultSite','CloseTomcat','SetTomcat','apacheAddPort','AddSite','GetPHPVersion','SetPHPVersion','DeleteSite','AddDomain','DelDomain','GetDirBinding','AddDirBinding','GetDirRewrite','DelDirBinding'
+                ,'UpdateRulelist','SetSiteRunPath','GetSiteRunPath','SetPath','SetIndex','GetIndex','GetDirUserINI','SetDirUserINI','GetRewriteList','SetSSL','SetSSLConf','CreateLet','CloseSSLConf','GetSSL','SiteStart','SiteStop'
                 ,'Set301Status','Get301Status','CloseLimitNet','SetLimitNet','GetLimitNet','SetProxy','GetProxy','ToBackup','DelBackup','GetSitePHPVersion','logsOpen','GetLogsStatus','CloseHasPwd','SetHasPwd','GetHasPwd')
         for key in defs:
             if key == get.action:
@@ -274,7 +314,7 @@ class panelFiles(common.panelAdmin):
                 'CopyFile','CopyDir','MvFile','GetFileBody','SaveFileBody','Zip','UnZip',
                 'GetFileAccess','SetFileAccess','GetDirSize','SetBatchData','BatchPaste',
                 'DownloadFile','GetTaskSpeed','CloseLogs','InstallSoft','UninstallSoft',
-                'RemoveTask','ActionTask')
+                'RemoveTask','ActionTask','Re_Recycle_bin','Get_Recycle_bin','Del_Recycle_bin','Close_Recycle_bin','Recycle_bin')
         for key in defs:
             if key == get.action:
                 fun = 'filesObject.'+key+'(get)'
@@ -299,7 +339,7 @@ class panelDatabase(common.panelAdmin):
         import database
         get = web.input(data = [])
         databaseObject = database.database()
-        defs = ('AddDatabase','DeleteDatabase','SetupPassword','ResDatabasePassword','ToBackup','DelBackup','InputSql','SyncToDatabases','SyncGetDatabases','GetDatabaseAccess','SetDatabaseAccess')
+        defs = ('GetMySQLInfo','SetDataDir','SetMySQLPort','AddDatabase','DeleteDatabase','SetupPassword','ResDatabasePassword','ToBackup','DelBackup','InputSql','SyncToDatabases','SyncGetDatabases','GetDatabaseAccess','SetDatabaseAccess')
         for key in defs:
             if key == get.action:
                 fun = 'databaseObject.'+key+'(get)'
@@ -463,7 +503,7 @@ class panelAjax(common.panelAdmin):
         import ajax,json
         get = web.input()
         ajaxObject = ajax.ajax()
-        defs = ('phpSort','ToPunycode','GetBetaStatus','SetBeta','setPHPMyAdmin','delClose','KillProcess','GetPHPInfo','GetQiniuFileList','UninstallLib','InstallLib','SetQiniuAS','GetQiniuAS','GetLibList','GetProcessList','GetNetWorkList','GetNginxStatus','GetPHPStatus','GetTaskCount','GetSoftList','GetNetWorkIo','GetDiskIo','GetCpuIo','CheckInstalled','UpdatePanel','GetInstalled','GetPHPConfig','SetPHPConfig')
+        defs = ('GetAd','phpSort','ToPunycode','GetBetaStatus','SetBeta','setPHPMyAdmin','delClose','KillProcess','GetPHPInfo','GetQiniuFileList','UninstallLib','InstallLib','SetQiniuAS','GetQiniuAS','GetLibList','GetProcessList','GetNetWorkList','GetNginxStatus','GetPHPStatus','GetTaskCount','GetSoftList','GetNetWorkIo','GetDiskIo','GetCpuIo','CheckInstalled','UpdatePanel','GetInstalled','GetPHPConfig','SetPHPConfig')
         for key in defs:
             if key == get.action:
                 fun = 'ajaxObject.'+key+'(get)'
@@ -473,10 +513,28 @@ class panelAjax(common.panelAdmin):
 
 class panelInstall:
     def GET(self):
-        get = web.input()
-        sql = db.Sql()
-        result = sql.dbfile(get.name).create(get.name)
-        return result
+        if not os.path.exists('install.pl'): raise web.seeother('/login');
+        data = {}
+        data['status'] = os.path.exists('install.pl');
+        data['username'] = public.M('users').where('id=?',(1,)).getField('username');
+        render = web.template.render(panelPath + 'templates/',globals={'session': session})
+        return render.install(data);
+    
+    def POST(self):
+        if not os.path.exists('install.pl'): raise web.seeother('/login');
+        get = web.input();
+        if not hasattr(get,'bt_username'): return '用户名不能为空!';
+        if not get.bt_username: return '用户名不能为空!'
+        if not hasattr(get,'bt_password1'): return '密码不能为空!';
+        if not get.bt_password1: return '密码不能为空!';
+        if get.bt_password1 != get.bt_password2: return '两次输入的密码不一致，请重新输入!';
+        public.M('users').where("id=?",(1,)).save('username,password',(get.bt_username,public.md5(get.bt_password1.strip())))
+        os.remove('install.pl');
+        data = {}
+        data['status'] = os.path.exists('install.pl');
+        data['username'] = get.bt_username
+        render = web.template.render(panelPath + 'templates/',globals={'session': session})
+        return render.install(data);
     
 
 class panelData(common.panelAdmin):
@@ -594,21 +652,21 @@ def notfound():
     <h1>抱歉,页面不存在</h1>
         <p>您请求的页面不存在,请检查URL地址是否正确!</p>
     <hr>
-    <address>宝塔Linux面板 3.x <a href="http://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
+    <address>宝塔Linux面板 4.x <a href="http://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
     </body></html>
     '''
     return web.notfound(errorStr);
   
 #定义500错误 
-def internalerror():  
+def internalerror():
     errorStr = '''
     <meta charset="utf-8">
-    <title>404 Not Found</title>
+    <title>500 Internal Server Error</title>
     </head><body>
     <h1>抱歉,程序异常</h1>
         <p>您请求的页面因发生异常而中断!</p>
     <hr>
-    <address>宝塔Linux面板 3.x <a href="http://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
+    <address>宝塔Linux面板 4.x <a href="http://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
     </body></html>
     '''
     return web.internalerror(errorStr)

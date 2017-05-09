@@ -51,8 +51,10 @@ $def with (tData)
 			//setTimeout(function(){ window.location.href = '/soft'; },3000);
 			$$(".layui-layer-shade").css("margin-left","180px");
 	
-		getFtp();
 		
+		setTimeout(function(){
+			getFtp();
+		},300);
 		/**
 		 * 取回FTP数据列表
 		 * @param {Number} page   当前页

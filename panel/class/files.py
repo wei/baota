@@ -7,7 +7,7 @@
 # +-------------------------------------------------------------------
 # | Author: 黄文良 <2879625666@qq.com>
 # +-------------------------------------------------------------------
-import sys,os,public
+import sys,os,public,time
 reload(sys)
 sys.setdefaultencoding('utf-8')
 class files:
@@ -29,29 +29,30 @@ class files:
                 '/sbin',
                 '/var',
                 '/usr', 
-                '/tmp', 
+                '/tmp',
                 '/sys',
-                '/proc', 
-                '/media', 
-                '/mnt', 
-                '/opt', 
-                '/lib', 
+                '/proc',
+                '/media',
+                '/mnt',
+                '/opt',
+                '/lib',
                 '/srv', 
                 '/selinux',
                 '/www/server',
                 web.ctx.session.rootPath,
                 web.ctx.session.logsPath,
-                web.ctx.session.setupPath,
-                web.ctx.session.config['sites_path'],
-                web.ctx.session.config['backup_path'])
+                web.ctx.session.setupPath)
         for dir in nDirs:
             if(dir == path):
                 return False
         return True
     #上传文件
     def UploadFile(self,get):
+        get.path = get.path.encode('utf-8');
+        if get.path.find(':\\') != -1:
+            tmp = get.path.split('\\');
+            get.path = tmp[len(tmp)-1];
         try:
-            get.path = get.path.encode('utf-8');
             if not os.path.exists(get.path): os.makedirs(get.path);
             filename = (get['path'] + get['zunfile'].filename).encode('utf-8');
             fp = open(filename,'w+');
@@ -163,6 +164,9 @@ class files:
             if hasattr(get,'empty'):
                 if not self.delete_empty(get.path): return public.returnMsg(False,'不能删除非空目录 !');
             
+            if os.path.exists('data/recycle_bin.pl'):
+                if self.Mv_Recycle_bin(get): return public.returnMsg(True,'已将目录移动到回收站!');
+            
             import shutil
             shutil.rmtree(get.path)
             public.WriteLog('文件管理','删除目录['+get.path+']成功!')
@@ -188,12 +192,103 @@ class files:
         if get.path.find('.user.ini'):
             os.system("chattr -i '"+get.path+"'")
         try:
+            if os.path.exists('data/recycle_bin.pl'):
+                if self.Mv_Recycle_bin(get): return public.returnMsg(True,'已将文件移动到回收站!');
             os.remove(get.path)
             public.WriteLog('文件管理','删除文件['+get.path+']成功!')
             return public.returnMsg(True,'文件删除成功!')
         except:
             return public.returnMsg(False,'文件删除失败!')
+    
+    #移动到回收站
+    def Mv_Recycle_bin(self,get):
+        rPath = '/www/Recycle_bin/'
+        if not os.path.exists(rPath): os.system('mkdir -p ' + rPath);
+        rFile = rPath + get.path.replace('/','_bt_') + '_t_' + str(time.time());
+        try:
+            import shutil
+            shutil.move(get.path, rFile)
+            public.WriteLog('文件管理','移动['+get.path+']到回收站成功!')
+            return True;
+        except:
+            public.WriteLog('文件管理','移动['+get.path+']到回收站失败!')
+            return False;
+    
+    #从回收站恢复
+    def Re_Recycle_bin(self,get):
+        rPath = '/www/Recycle_bin/'
+        get.path = get.path.encode('utf-8');
+        dFile = get.path.replace('_bt_','/').split('_t_')[0];
+        get.path = rPath + get.path
+        try:
+            import shutil
+            shutil.move(get.path, dFile)
+            public.WriteLog('文件管理','从回收站恢复['+dFile+']成功!')
+            return public.returnMsg(True,'恢复成功!');
+        except:
+            public.WriteLog('文件管理','从回收站恢复['+dFile+']失败!')
+            return public.returnMsg(False,'恢复失败!');
+    
+    #获取回收站信息
+    def Get_Recycle_bin(self,get):
+        rPath = '/www/Recycle_bin/'
+        if not os.path.exists(rPath): os.system('mkdir -p ' + rPath);
+        data = {}
+        data['dirs'] = []
+        data['files'] = []
+        data['status'] = os.path.exists('data/recycle_bin.pl')
+        for file in os.listdir(rPath):
+            tmp = {}
+            fname = rPath + file
+            tmp1 = file.split('_bt_')
+            tmp2 = tmp1[len(tmp1)-1].split('_t_')
+            tmp['rname'] = file;
+            tmp['dname'] = file.replace('_bt_','/').split('_t_')[0]
+            tmp['name'] = tmp2[0];
+            tmp['time'] = int(float(tmp2[1]))
+            tmp['size'] = os.path.getsize(fname)
+            if os.path.isdir(fname):
+                data['dirs'].append(tmp)
+            else:
+                data['files'].append(tmp)
+        return data;
+    
+    #彻底删除
+    def Del_Recycle_bin(self,get):
+        rPath = '/www/Recycle_bin/'
+        get.path = get.path.encode('utf-8');
         
+        if not self.CheckDir(rPath + get.path):
+            return public.returnMsg(False,'请不要花样作死!');
+        if os.path.isdir(rPath + get.path):
+            import shutil
+            shutil.rmtree(rPath + get.path)
+        else:
+            os.remove(rPath + get.path)
+        
+        tfile = get.path.replace('_bt_','/').split('_t_')[0]
+        public.WriteLog('文件管理','已彻底从回收站删除['+tfile+']')
+        return public.returnMsg(True,'已彻底从回收站删除['+tfile+']')
+    
+    #清空回收站
+    def Close_Recycle_bin(self,get):
+        rPath = '/www/Recycle_bin/'
+        os.system('rm -rf ' + rPath + '*');
+        public.WriteLog('文件管理','清空回收站成功!');
+        return public.returnMsg(True,'已清空回收站!');
+    
+    #回收站开关
+    def Recycle_bin(self,get):
+        c = 'data/recycle_bin.pl'
+        if os.path.exists(c):
+            os.remove(c)
+            public.WriteLog('文件管理','关闭回收站功能成功!');
+            return public.returnMsg(True,'已关闭回收站功能!');
+        else:
+            public.writeFile(c,'True');
+            public.WriteLog('文件管理','开启回收站功能成功!');
+            return public.returnMsg(True,'已开启回收站功能!');
+    
     #复制文件
     def CopyFile(self,get) :
         get.sfile = get.sfile.encode('utf-8');
@@ -424,15 +519,25 @@ class files:
         else:
             
             import shutil
+            isRecyle = os.path.exists('data/recycle_bin.pl')
+            path = get.path
             for key in get.data:
                 try:
-                    filename = get.path+'/'+key.encode('utf-8');
+                    filename = path + '/'+key.encode('utf-8');
+                    get.path = filename;
                     if not os.path.exists(filename): continue
                     if os.path.isdir(filename):
-                        shutil.rmtree(filename)
+                        if isRecyle:
+                            self.Mv_Recycle_bin(get)
+                        else:
+                            shutil.rmtree(filename)
                     else:
                         if key == '.user.ini': os.system('chattr -i ' + filename);
-                        os.remove(filename)
+                        if isRecyle:
+                            
+                            self.Mv_Recycle_bin(get)
+                        else:
+                            os.remove(filename)
                 except:
                     continue;
                     
@@ -492,14 +597,14 @@ class files:
         import db,time,web
         path = web.ctx.session.setupPath + '/php'
         if not os.path.exists(path): os.system("mkdir -p " + path);
-        
+        if web.ctx.session.server_os['x'] != 'RHEL': get.type = '3'
         apacheVersion='false';
         if web.ctx.session.webserver == 'apache':
             apacheVersion = public.readFile(web.ctx.session.setupPath+'/apache/version.pl');
         public.writeFile('/var/bt_apacheVersion.pl',apacheVersion)
         public.writeFile('/var/bt_setupPath.conf',web.ctx.session.rootPath)
         isTask = '/tmp/panelTask.pl'
-        execstr = "cd " + web.ctx.session.setupPath + "/panel/install && sh install_soft.sh " + get.type + " install " + get.name + " "+ get.version;
+        execstr = "cd " + web.ctx.session.setupPath + "/panel/install && /bin/bash install_soft.sh " + get.type + " install " + get.name + " "+ get.version;
         sql = db.Sql()
         if hasattr(get,'id'):
             id = get.id;
@@ -527,7 +632,9 @@ class files:
     def UninstallSoft(self,get):
         import web
         public.writeFile('/var/bt_setupPath.conf',web.ctx.session.rootPath)
-        execstr = "cd " + web.ctx.session.setupPath + "/panel/install && sh install_soft.sh 0 uninstall " + get.name.lower() + " "+ get.version.replace('.','');
+        get.type = '0'
+        if web.ctx.session.server_os['x'] != 'RHEL': get.type = '3'
+        execstr = "cd " + web.ctx.session.setupPath + "/panel/install && /bin/bash install_soft.sh "+get.type+" uninstall " + get.name.lower() + " "+ get.version.replace('.','');
         os.system(execstr);
         public.WriteLog('安装器','卸载软件['+get.name+'-'+get.version+']成功！');
         return public.returnMsg(True,"卸载成功!");

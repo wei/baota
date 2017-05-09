@@ -659,7 +659,7 @@ class panelSite:
             
                 conf = conf.replace('#error_page 404/404.html;',sslStr);                
                 #添加端口
-                rep = "listen\s+([0-9]+);";
+                rep = "listen\s+([0-9]+)\s*[default_server]*;";
                 tmp = re.findall(rep,conf);
                 if not public.inArray(tmp,'443'):
                     listen = re.search(rep,conf).group()
@@ -2108,8 +2108,46 @@ server
         data['sites'] = public.M('sites').field('name').order('id desc').select();
         data['defaultSite'] = public.readFile('data/defaultSite.pl');
         return data;
+    
+    #扫描站点
+    def CheckSafe(self,get):
+        import db,time
+        isTask = '/tmp/panelTask.pl'
+        if os.path.exists(self.setupPath + '/panel/class/panelSafe.py'):
+            import py_compile
+            py_compile.compile(self.setupPath + '/panel/class/panelSafe.py');
+        get.path = public.M('sites').where('id=?',(get.id,)).getField('path');
+        execstr = "cd " + web.ctx.session.setupPath + "/panel/class && python panelSafe.pyc " + get.path;
+        sql = db.Sql()
+        sql.table('tasks').add('id,name,type,status,addtime,execstr',(None,'扫描目录 ['+get.path+']','execshell','0',time.strftime('%Y-%m-%d %H:%M:%S'),execstr))
+        public.writeFile(isTask,'True')
+        public.WriteLog('安装器','添加木马扫描任务['+get.path+']成功！');
+        return public.returnMsg(True,'已将扫描任务添加到队列');
+    
+    #获取结果信息
+    def GetCheckSafe(self,get):
+        get.path = public.M('sites').where('id=?',(get.id,)).getField('path');
+        path = get.path + '/scan.pl'
+        result = {};
+        result['data'] = []
+        result['phpini'] = []
+        result['userini'] = result['sshd'] = True;
+        result['scan'] = False
+        result['outime'] = result['count'] = result['error'] = 0
+        if not os.path.exists(path): return result;
+        import json
+        return json.loads(public.readFile(path));
         
-        
+    #更新病毒库
+    def UpdateRulelist(self,get):
+        try:
+            conf = public.httpGet('http://download.bt.cn/install/ruleList.conf')
+            if conf:
+                public.writeFile(self.setupPath + '/panel/data/ruleList.conf',conf);
+                return public.returnMsg(True,'更新成功!');
+            return public.returnMsg(False,'连接服务器失败!');
+        except:
+            return public.returnMsg(False,'连接服务器失败!');
         
             
 

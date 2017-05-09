@@ -246,7 +246,7 @@ class Sql():
         result = self.__DB_CONN.executescript(script)
         self.__DB_CONN.commit()
         return result.rowcount
-    
+        
     def fofile(self,filename):
         #执行脚本
         self.__GetConn()

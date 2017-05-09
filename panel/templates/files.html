@@ -48,9 +48,14 @@ $def with (tData)
 <script src="/static/js/jquery-ui.min.js"></script>
 <script src="/static/js/jquery.contextify.min.js"></script>
 <script type="text/javascript">
-GetDisk();
+setTimeout(function(){
+	GetDisk();
+},500);
 var xPath = getCookie('Path');
-GetFiles((xPath!=undefined?xPath:'/www/wwwroot'));
+setTimeout(function(){
+	GetFiles((xPath!=undefined?xPath:'/www/wwwroot'));
+},800);
+
 PathPlaceBtn((xPath!=undefined?xPath:'/www/wwwroot'));
 setCookie('uploadSize','<?php echo intval(ini_get("upload_max_filesize"))*1024*1024; ?>');
 if(getCookie('rank') == undefined || getCookie('rank') == null){

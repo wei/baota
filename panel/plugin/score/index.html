@@ -1,0 +1,309 @@
+<style>
+	.testServer{
+		padding:15px;
+	}
+	.ts-head{
+		height:130px;
+		position:relative;
+	}
+	.ts-h-score{
+		float: left;
+		height: 52px;
+		margin: 30px 0 0 40px;
+		display:none;
+	}
+	.old-score {
+		color: #888;
+		font-size: 14px;
+		left: 50%;
+		margin-left: -100px;
+		position: absolute;
+		text-align: center;
+		top: 90px;
+		width: 200px;
+		display:none;
+	}
+	.ts-h-s-img{
+		background:url("/static/images/ico-ts-score.jpg") no-repeat center center;
+		height:52px;
+		width:96px;
+		float:left;
+	}
+	.ts-h-s-num{
+		color: #20a53a;
+		float: left;
+		font-size: 20px;
+		margin-left: 30px;
+	}
+	.ts-h-s-num span{
+		font-size: 22px;
+		line-height: 60px;
+		margin-right: 8px;	
+	}
+	.ts-h-s-num span img{
+		margin-left:10px;
+	}
+	.ts-btn{
+		border: 1px solid #cacad9;
+		background-color:#fff;
+		border-radius: 3px;
+		height: 40px;
+		line-height: 40px;
+		color:#666;
+		position: absolute;
+		left: 265px;
+		text-align: center;
+		top: 39px;
+		width: 140px;
+		cursor:pointer;
+	}
+	.ts-btn-start{
+		border: 1px solid #20a53a;
+		background-color:#20a53a;
+		left:265px;
+		color:#fff;
+	}
+	.ts-btn-start:hover{
+		background-color:#10952a;
+	}
+	.ts-btn-reset:hover{
+		border: 1px solid #20a53a;
+		color:#20a53a;
+	}
+	.ts-info{
+		height:30px;
+		color:#666;
+		border-bottom:#CACAD9 1px solid;
+		padding-left:40px;
+		font-size:14px;
+	}
+	.ts-info font{
+		font-size:16px;
+		font-weight:bold;
+		margin-right:3px;
+		color:#20a53a;
+	}
+	.ts-info a{
+	    color: #20a53a;
+	    margin-left: 20px;
+	}
+	.ts-content{
+		float: left;
+		padding: 40px 0;
+		width: 100%;
+	}
+	.ts-c-box{
+		width:33%;
+		float:left;
+		text-align:center;
+		position:relative;
+	}
+	.ts-c-b-score{
+		font-size:16px;
+		height:30px;
+		color:#868686;
+	}
+	.ts-c-b-img{
+		border:#B9B9C8 1px solid;
+		height:90px;
+		width:90px;
+		border-radius:45px;
+		margin:0 auto;
+		background-repeat:no-repeat;
+		background-position:center center;
+		position:relative;
+		z-index:1;
+	}
+	.ts-cpu-ing .ts-c-b-img{
+		border:0 none;
+	}
+	.ts-c-b-name{
+		color:#888;
+		font-size:16px;
+		line-height:40px;
+	}
+	.ts-c-b-info{
+		color:#aaa;
+	}
+
+	@-webkit-keyframes rotation{
+		from {-webkit-transform: rotate(0deg);}
+		to {-webkit-transform: rotate(360deg);}
+	}
+	.ts-box-rotate{
+		background:url("/static/images/ico-ts-refresh.png") no-repeat;
+		border-radius: 50px;
+		height: 100px;
+		left: 61px;
+		position: absolute;
+		top: 25px;
+		width: 100px;
+		z-index: 0;
+		animation: rotation 2s linear infinite;
+		-moz-animation: rotation 2s linear infinite;
+		-webkit-animation: rotation 2s linear infinite;
+		-o-animation: rotation 2s linear infinite;
+	}
+
+	.ts-cpu .ts-c-b-img{
+		background-image:url("/static/images/ico-ts-cpu.png");
+	}
+	.ts-mem .ts-c-b-img{
+		background-image:url("/static/images/ico-ts-mem.png");
+	}
+	.ts-disk .ts-c-b-img{
+		background-image:url("/static/images/ico-ts-disk.png");
+	}
+
+	.ts-cpu-ing .ts-c-b-img{
+		background-image:url("/static/images/ico-ts-cpu-active.png");
+		border:none;
+	}
+	.ts-mem-ing .ts-c-b-img{
+		background-image:url("/static/images/ico-ts-mem-active.png");
+		border:none;
+	}
+	.ts-disk-ing .ts-c-b-img{
+		background-image:url("/static/images/ico-ts-disk-active.png");
+		border:none;
+	}
+	.ts-cpu-over .ts-c-b-img{
+		background-image:url("/static/images/ico-ts-cpu-active.png");
+		border-color:#20a53a;
+	}
+	.ts-mem-over .ts-c-b-img{
+		background-image:url("/static/images/ico-ts-mem-active.png");
+		border-color:#20a53a;
+	}
+	.ts-disk-over .ts-c-b-img{
+		background-image:url("/static/images/ico-ts-disk-active.png");
+		border-color:#20a53a;
+	}
+</style>
+<div class="testServer">
+	<div class="ts-head">
+		<div class="ts-h-score">
+			<div class="ts-h-s-img"></div>
+			<div class="ts-h-s-num"><span>正在跑分中<img src="/static/img/ings.gif"></span></div>
+		</div>
+		<div class="ts-btn ts-btn-start" onclick="startTest();">开始跑分</div>
+		<div class="old-score"></div>
+	</div>
+	<div class="ts-info">公式：1万次整数+2万次浮点+1亿位圆周率+1万次排序 +((磁盘读+磁盘写)*IO速度)+内存容量</div>
+	<div class="ts-content">
+		<div class="ts-c-box ts-cpu">
+			<div class="ts-c-b-score"></div>
+			<div class="ts-c-b-img"></div>
+			<div class="ts-c-b-name">CPU</div>
+			<div class="ts-c-b-info">cpu运算能力</div>
+		</div>
+		<div class="ts-c-box ts-disk">
+			<div class="ts-c-b-score"></div>
+			<div class="ts-c-b-img"></div>
+			<div class="ts-c-b-name">磁盘</div>
+			<div class="ts-c-b-info">磁盘读写能力</div>
+		</div>
+		<div class="ts-c-box ts-mem">
+			<div class="ts-c-b-score"></div>
+			<div class="ts-c-b-img"></div>
+			<div class="ts-c-b-name">内存</div>
+			<div class="ts-c-b-info">内存容量</div>
+		</div>
+	</div>
+</div>
+
+<script type="javascript/text">
+	function startTest(){
+		var name = $(".ts-btn").text();
+		switch(name){
+			case '开始跑分':
+				startTestServer(name);
+				break;
+			case '正在跑分':
+				stopTestServer();
+				break;
+			case '重新跑分':
+				startTestServer(name);
+				break;
+		}
+	}
+	if(getCookie("#Total") >0){
+		$(".old-score").text("上次跑分："+getCookie("#Total") + ' 分').show();
+	}
+
+	function startTestServer(name){
+		layer.confirm('测试过程可能需要几分钟时间且占用大量服务器资源，继续吗？',{title:'性能测试',closeBtn:2},function(){
+				layer.closeAll('dialog');
+				if(name == "重新跑分"){
+					$(".ts-content").find(".ts-box-rotate").remove();
+					$(".ts-h-s-num").html('<span>正在跑分中<img src="/static/img/ings.gif"></span>');
+					$(".ts-cpu-over").removeClass("ts-cpu-over");
+					$(".ts-disk-over").removeClass("ts-disk-over");
+					$(".ts-mem-over").removeClass("ts-mem-over");
+				}
+				$(".old-score").fadeOut();
+				$(".ts-btn").removeClass("ts-btn-start").text("正在跑分").animate({"left":"490px"});
+				$(".ts-h-score").fadeIn();
+				$(".ts-cpu").addClass("ts-cpu-ing").append("<div class='ts-box-rotate'></div>");
+				$(".ts-info").html("正在测试整数运算性能[1万次]<img src='/static/img/ing.gif'>");
+				var cpuscore = 0;
+				$.get('/plugin?action=a&name=score&s=testCpu&type=1',function(rint){
+					cpuscore += rint.score;
+					$(".ts-info").html("正在测试浮点运算性能[2万次]<img src='/static/img/ing.gif'>");
+					$.get('/plugin?action=a&name=score&s=testCpu&type=2',function(rfloat){
+						cpuscore += rfloat.score;
+						$(".ts-info").html("正在测试圆周率运算[1亿位]<img src='/static/img/ing.gif'>");
+						$.get('/plugin?action=a&name=score&s=testCpu&type=3',function(rpi){
+							cpuscore += rpi.score;
+							$(".ts-info").html("正在测试二叉树排序算法[1万次]<img src='/static/img/ing.gif'>");
+							$.get('/plugin?action=a&name=score&s=testCpu&type=4',function(r1){
+								r1.score += cpuscore;
+								$(".ts-cpu").removeClass("ts-cpu-ing").addClass("ts-cpu-over").find(".ts-box-rotate").remove();
+								$(".ts-disk").addClass("ts-disk-ing").append("<div class='ts-box-rotate'></div>");
+								$(".ts-cpu .ts-c-b-score").html(r1.score);
+								$(".ts-cpu .ts-c-b-info").html(r1.cpuType + ' ' +r1.cpuCount + ' 核心');
+								//$("#cpuType").html('型号:' + r1.cpuType);
+								setCookie('cpuTotal',r1.score);
+								setCookie('cpuCount',r1.cpuCount + ' 核心');
+								setCookie('cpuType','型号:' + r1.cpuType);
+								$(".ts-info").html("正在测试磁盘性能<img src='/static/img/ing.gif'>");
+								$.get('/plugin?action=a&name=score&s=testDisk',function(r2){
+									$(".ts-disk").removeClass("ts-disk-ing").addClass("ts-disk-over").find(".ts-box-rotate").remove();
+									$(".ts-mem").addClass("ts-mem-ing").append("<div class='ts-box-rotate'></div>");
+									$(".ts-disk .ts-c-b-score").html(r2.score);
+									$(".ts-disk .ts-c-b-info").html('读: ' + r2.read + ' MB，写: ' + r2.write + ' MB');
+									setCookie('diskTotal',r2.score);
+									setCookie('diskRead','Read: ' + r2.read + ' MB');
+									setCookie('diskWrite','Write: ' + r2.write + ' MB');
+									$(".ts-info").html("正在测试内存<img src='/static/img/ing.gif'>");
+									$.get('/plugin?action=a&name=score&s=testMem','',function(r3){
+										$(".ts-mem").removeClass("ts-mem-ing").addClass("ts-mem-over").find(".ts-box-rotate").remove();
+										$(".ts-mem .ts-c-b-score").html(parseInt(r3));
+										$(".ts-mem .ts-c-b-info").html( r3 + ' MB');
+										var total = r1.score+r2.score+ parseInt(r3);
+										$(".ts-h-s-num span").html(total + ' 分').css({"font-size":"40px"});
+										setCookie("#memTotal",r3 + ' MB');
+										setCookie("#Total",total);
+										$(".ts-btn").addClass("ts-btn-reset").text("重新跑分");
+										var data = "soc="+total;
+										$.get("/ajax?action=GetAd&name=zun",data,function(rad){
+											$(".ts-info").html(rad);
+										});
+									});
+								});
+							});
+						});
+					});
+				});
+			});
+	}
+	function stopTestServer(){
+		/*
+		$(".ts-btn").addClass("ts-btn-start").removeClass("ts-btn-reset").text("开始测试").animate({"left":"233px"});
+		$(".ts-h-score").fadeOut();
+		$(".ts-info").html("跑分计算规则为：通过计算cpu运算能力，计算内存吞吐能力，计算磁盘读写能力");
+		*/
+		//layer.msg("测试中，不能停止",{shade:0.3});
+		return false;
+	}
+</script>

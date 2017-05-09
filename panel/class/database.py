@@ -141,7 +141,7 @@ echo "root密码成功修改为: ${pwd}"
 echo "The root password set ${pwd}  successuful"''';
             
                 public.writeFile('mysql_root.sh',root_mysql)
-                os.system("sh mysql_root.sh " + password)
+                os.system("bash mysql_root.sh " + password)
                 os.system("rm -f mysql_root.sh")
                 
                 
@@ -405,4 +405,63 @@ echo "The root password set ${pwd}  successuful"''';
         except Exception,ex:
             public.WriteLog("数据库管理", "设置数据库权限[" + name + "]失败 => "  +  str(ex))
             return public.returnMsg(False,'设置数据库权限失败!')
+        
+    
+    #获取数据库配置信息
+    def GetMySQLInfo(self,get):
+        data = {}
+        try:
+            public.CheckMyCnf();
+            myfile = '/etc/my.cnf';
+            mycnf = public.readFile(myfile);
+            rep = "datadir\s*=\s*(.+)\n"
+            data['datadir'] = re.search(rep,mycnf).groups()[0];
+            rep = "port\s*=\s*([0-9]+)\s*\n"
+            data['port'] = re.search(rep,mycnf).groups()[0];
+        except:
+            data['datadir'] = '/www/server/data';
+            data['port'] = '3306';
+        return data;
+    
+    #修改数据库目录
+    def SetDataDir(self,get):
+        if get.datadir[-1] == '/': get.datadir = get.datadir[0:-1];
+        if os.path.exists(get.datadir): os.system('mkdir -p ' + get.datadir);
+        mysqlInfo = self.GetMySQLInfo(get);
+        if mysqlInfo['datadir'] == get.datadir: return public.returnMsg(False,'与当前存储目录相同，无法迁移文件!');
+        
+        os.system('/etc/init.d/mysqld stop');
+        os.system('\cp -a -r ' + mysqlInfo['datadir'] + '/* ' + get.datadir + '/');
+        os.system('chown -R mysql.mysql ' + get.datadir);
+        os.system('chmod -R 755 ' + get.datadir);
+        os.system('rm -f ' + get.datadir + '/*.pid');
+        os.system('rm -f ' + get.datadir + '/*.err');
+        
+        public.CheckMyCnf();
+        myfile = '/etc/my.cnf';
+        mycnf = public.readFile(myfile);
+        public.writeFile('/etc/my_backup.cnf',mycnf);
+        mycnf = mycnf.replace(mysqlInfo['datadir'],get.datadir);
+        public.writeFile(myfile,mycnf);
+        os.system('/etc/init.d/mysqld start');
+        result = public.ExecShell('/etc/init.d/mysqld status');
+        if result[0].find('SUCCESS') != -1:
+            public.writeFile('data/datadir.pl',get.datadir);
+            return public.returnMsg(True,'存储目录迁移成功!');
+        else:
+            os.system('pkill -9 mysqld');
+            public.writeFile(myfile,public.readFile('/etc/my_backup.cnf'));
+            os.system('/etc/init.d/mysqld start');
+            return public.returnMsg(False,'文件迁移失败!');
+    
+    #修改数据库端口
+    def SetMySQLPort(self,get):
+        myfile = '/etc/my.cnf';
+        mycnf = public.readFile(myfile);
+        rep = "port\s*=\s*([0-9]+)\s*\n"
+        mycnf = re.sub(rep,'port = ' + get.port + '\n',mycnf);
+        public.writeFile(myfile,mycnf);
+        os.system('/etc/init.d/mysqld restart');
+        return public.returnMsg(True,'修改成功!');
+        
         

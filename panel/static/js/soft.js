@@ -514,6 +514,11 @@ function nginxSoftMain(name,version){
 		if(version != undefined || version !=''){
 			var menu = '<p onclick="softChangeVer(\''+name+'\',\''+version+'\')">切换版本</p>';
 		}
+		
+		var waf = ''
+		if(name == 'nginx'){
+			waf = '<p onclick="waf()">WAF防火墙</p>'
+		}
 		layer.open({
 			type: 1,
 			area: '640px',
@@ -524,7 +529,7 @@ function nginxSoftMain(name,version){
 				<div class="webEdit-menu">\
 					<p class="active" onclick="service(\''+name+'\','+nameA.status+')">Web服务</p>\
 					<p onclick="configChange(\''+name+'\')">配置修改</p>\
-					<p onclick="waf()">WAF防火墙</p>\
+					'+waf+'\
 					'+menu+'\
 					'+status+'\
 				</div>\
@@ -786,6 +791,10 @@ function SoftMan(name,version){
 			var menu = '<p onclick="configChange(\''+name+'\')">配置修改</p>';
 		}
 		
+		if(name == 'mysqld'){
+			menu += '<p onclick="changeMySQLDataPath()">存储位置</p><p onclick="changeMySQLPort()">端口</p>';
+		}
+		
 		layer.open({
 			type: 1,
 			area: '640px',
@@ -809,6 +818,58 @@ function SoftMan(name,version){
 		})
 	})
 }
+
+//数据库存储信置
+function changeMySQLDataPath(act){
+	if(act != undefined){
+		layer.confirm('迁移数据库文件过程中将会停止数据库运行,继续吗?',{closeBtn:2,icon:3},function(){
+			var datadir = $("#datadir").val();
+			var data = 'datadir='+datadir;
+			var loadT = layer.msg('正在迁移文件,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+			$.post('/database?action=SetDataDir',data,function(rdata){
+				layer.close(loadT)
+				layer.msg(rdata.msg,{icon:rdata.status?1:5});
+			});
+		});
+		return;
+	}
+	
+	$.post('/database?action=GetMySQLInfo','',function(rdata){
+		var LimitCon = '<p class="conf_p">\
+							<input id="datadir" class="phpUploadLimit" style="width:350px;" type="text" value="'+rdata.datadir+'" name="datadir">\
+							<span onclick="ChangePath(\'datadir\')" class="glyphicon glyphicon-folder-open cursor"></span>\
+						</p>\
+						<button class="btn btn-success btn-sm" onclick="changeMySQLDataPath(1)">迁移</button>';
+		$(".soft-man-con").html(LimitCon);
+	});
+}
+
+//数据库端口
+function changeMySQLPort(act){
+	if(act != undefined){
+		layer.confirm('修改数据库端口可能会导致您的站点无法连接数据库,确定要修改吗?',{closeBtn:2,icon:3},function(){
+			var port = $("#dataport").val();
+			var data = 'port='+port;
+			var loadT = layer.msg('正在处理,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+			$.post('/database?action=SetMySQLPort',data,function(rdata){
+				layer.close(loadT)
+				layer.msg(rdata.msg,{icon:rdata.status?1:5});
+			});
+		});
+		return;
+	}
+	
+	$.post('/database?action=GetMySQLInfo','',function(rdata){
+		var LimitCon = '<p class="conf_p">\
+							<input id="dataport" class="phpUploadLimit" type="number" value="'+rdata.port+'" name="dataport">\
+							<button style="margin-top: -4px;" class="btn btn-success btn-sm" onclick="changeMySQLPort(1)">修改</button>\
+						</p>';
+						
+		$(".soft-man-con").html(LimitCon);
+	});
+}
+
+
 //软件切换版本
 function softChangeVer(name,version){
 	if(name == "mysqld") name = "mysql";
@@ -817,8 +878,14 @@ function softChangeVer(name,version){
 	for(var i=0; i<veropt.length; i++){
 		SelectVersion += '<option>'+name+' '+veropt[i]+'</option>';
 	}
+	
 	var body = "<div class='ver'><span style='margin-right:10px'>选择版本</span><select id='selectVer' name='phpVersion' style='width:160px'>";
 	body += SelectVersion+'</select></div><button class="btn btn-success btn-sm" style="margin-top:10px;">切换</button>';
+	
+	if(name == 'mysql'){
+		body += "<br><br><li style='color:red;'>注意: 安装新的MySQL版本,会覆盖数据库数据,请先备份数据库!</li>"
+	}
+	
 	$(".soft-man-con").html(body);
 	$(".btn-success").click(function(){
 		var ver = $("#selectVer").val();
@@ -976,7 +1043,10 @@ function indexsoft(){
 					}
 					if(isDisplay){
 						var clickName = 'SoftMan';
-						if(rdata[i].tip == 'lib') clickName = 'PluginMan';
+						if(rdata[i].tip == 'lib'){
+							clickName = 'PluginMan';
+							version_info = rdata[i].title;
+						} 
 						
 						con += '<div class="col-sm-3 col-md-3 col-lg-3" data-id="'+rdata[i].pid+'">\
 									<span class="spanmove"></span>\
@@ -1054,7 +1124,7 @@ function PluginMan(name,title){
 			shift: 5,
 			closeBtn: 2,
 			area: '700px', //宽高
-			title: '配置'+ title,
+			title: ''+ title,
 			content: rhtml
 		});
 		rcode = rhtml.split('<script type="javascript/text">')[1].replace('</script>','');
@@ -1264,6 +1334,10 @@ function oneInstall(name,version){
 		return;
 	}
 	
+	var optw = '';
+	if(name == 'mysql'){
+		optw = "<br><br><li style='color:red;'>注意: 安装新的MySQL版本,会覆盖数据库数据,请先备份数据库!</li>"
+	}
 	
 	if (isError) return;
 	var one = layer.open({
@@ -1273,7 +1347,7 @@ function oneInstall(name,version){
 	    closeBtn: 2,
 	    shadeClose: true,
 	    content:"<div class='zun-form-new'>\
-			<div class='version'>安装版本：<span style='margin-left:30px'>"+name+" "+version+"</span></div>\
+			<div class='version'>安装版本：<span style='margin-left:30px'>"+name+" "+version+"</span>"+optw+"</div>\
 	    	<div class='fangshi'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></div>\
 	    	<div class='submit-btn' style='margin-top:15px'>\
 				<button type='button' class='btn btn-danger btn-sm btn-title one-close'>取消</button>\
@@ -1585,5 +1659,7 @@ function toIndexDisplay(name,version){
 
 
 $(function(){
-	setInterval(function(){GetSList(true);},5000);
+	if(window.document.location.pathname == '/soft'){
+		setInterval(function(){GetSList(true);},5000);
+	}
 });

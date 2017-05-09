@@ -51,8 +51,10 @@ $def with (tData)
 		$if not tData['isSetup']:
 			layer.msg('请先安装Web服务器！<a href="/soft" style="color:#20a53a; float: right;">去安装</a>',{icon:7,shade: [0.3, '#000'],time:0});
 			$$(".layui-layer-shade").css("margin-left","180px");
+		setTimeout(function(){
+			getWeb(1);
+		},500);
 		
-		getWeb(1);
 		setCookie('serverType','$web.ctx.session.webserver');
 		//设置默认文档
 		function SetIndex(id){
@@ -478,7 +480,7 @@ $def with (tData)
 					   +'<label style="font-weight:normal"><input type="checkbox" name="status" '+status_selected+' onclick="To301(\''+siteName+'\',1)" style="width:15px;height:15px;" />启用301</label>'
 					   +'<ul class="help-info-text">'
 					   +'<li>选择[整站]时请不要将目标URL设为同一站点下的域名.</li>'
-					   +'<li>301重定向配置将覆盖伪静态规则，请在设置好301后，再追加伪静态规则.</li>'
+					   +'<li>取消301重定向后，需清空浏览器缓存才能看到生效结果.</li>'
 					   +'</ul>'
 					   +"</div>";
 					$$("#webEdit-con").html(body);

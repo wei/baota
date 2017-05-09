@@ -136,6 +136,18 @@ $def with (data)
 	</div>
 </div> 
 <script type="text/javascript">
+	setTimeout(function(){
+		GetSshInfo();
+	},500);
+	
+	setTimeout(function(){
+		ShowAccept(1);
+	},1000);
+	
+	setTimeout(function(){
+		getLogs(1);
+	},1500);
+	
 	function CloseLogs(){
 		$$.post('/files?action=CloseLogs','',function(rdata){
 			$$("#logSize").html(rdata);
@@ -181,7 +193,7 @@ $def with (data)
 		})
 	});
 	
-	GetSshInfo()
+	
 	function GetSshInfo(){
 		$$.post('/firewall?action=GetSshInfo','',function(rdata){
 			var SSHchecked = ''
@@ -263,7 +275,7 @@ function ping(status){
 }
 
 	
-	ShowAccept(1);
+	
 	/**
 	 * 设置远程服务状态
 	 * @param {Int} state 0.启用 1.关闭
@@ -371,7 +383,7 @@ function ping(status){
 		});
 	}
 	
-	getLogs(1);
+	
 	/**
 	 * 取回数据
 	 * @param {Int} page  分页号

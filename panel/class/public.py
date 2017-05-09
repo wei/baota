@@ -375,6 +375,13 @@ MySQL_Opt()
 wget -O /etc/my.cnf $Download_Url/install/conf/mysql-%s.conf -T 5
 MySQL_Opt
 ''' % (version,)
+    #判断是否迁移目录
+    if os.path.exists('data/datadir.pl'):
+        newPath = public.readFile('data/datadir.pl');
+        mycnf = public.readFile('/etc/my.cnf');
+        mycnf = mycnf.replace('/www/server/data',newPath);
+        public.writeFile('/etc/my.cnf',mycnf);
+        
     os.system(shellStr);
     WriteLog('守护程序', '检测到MySQL配置文件异常,可能导致mysqld服务无法正常启动,已自动修复!');
     return True;

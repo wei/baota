@@ -107,10 +107,18 @@ $def with (data)
 <script src="/static/js/echarts.min.js"></script>
 <script type="text/javascript">
 //默认显示7天周期图表
-Wday(0,'cpu');
-Wday(0,'mem');
-Wday(0,'disk');
-Wday(0,'network');
+setTimeout(function(){
+	Wday(0,'cpu');
+},500);
+setTimeout(function(){
+	Wday(0,'mem');
+},1000);
+setTimeout(function(){
+	Wday(0,'disk');
+},1500);
+setTimeout(function(){
+	Wday(0,'network');
+},2000);
 $$(".st").hover(function(){
 	$$(this).next().show();
 },function(){

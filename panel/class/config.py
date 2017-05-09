@@ -54,6 +54,9 @@ class config:
         
         if get.webname != web.ctx.session.webname: public.writeFile('data/title.pl',get.webname);
         
+        limitip = public.readFile('data/limitip.conf');
+        if get.limitip != limitip: public.writeFile('data/limitip.conf',get.limitip);
+        
         public.writeFile('data/domain.conf',get.domain.strip())
         public.writeFile('data/iplist.txt',get.address)
         
@@ -62,7 +65,7 @@ class config:
         web.ctx.session.config['sites_path'] = get.sites_path
         
         data = {'uri':web.ctx.fullpath,'host':web.ctx.host.split(':')[0]+':'+newPort,'status':True,'isReWeb':isReWeb,'msg':'配置已保存!'}
-        public.WriteLog('面板配置','设置面板端口['+newPort+'],域名['+get.domain+'],默认备份路径['+get.backup_path+'],默认网站路径['+get.sites_path+'],服务器IP['+get.address+']!')
+        public.WriteLog('面板配置','设置面板端口['+newPort+'],域名['+get.domain+'],默认备份路径['+get.backup_path+'],默认网站路径['+get.sites_path+'],服务器IP['+get.address+'],授权IP['+get.limitip+']!')
         return data
     
     def setPathInfo(self,get):
