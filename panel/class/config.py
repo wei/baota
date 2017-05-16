@@ -52,7 +52,9 @@ class config:
             fw.DelAcceptPort(get);
             isReWeb = True
         
-        if get.webname != web.ctx.session.webname: public.writeFile('data/title.pl',get.webname);
+        if get.webname != web.ctx.session.webname: 
+            web.ctx.session.webname = get.webname
+            public.writeFile('data/title.pl',get.webname);
         
         limitip = public.readFile('data/limitip.conf');
         if get.limitip != limitip: public.writeFile('data/limitip.conf',get.limitip);

@@ -217,9 +217,9 @@ function SetPHPConfig(version,pathinfo,go){
 			}else if(rdata.libs[i]['task'] == '0' && rdata.libs[i].phpversions.indexOf(version) != -1){
 				opt = '<a style="color:#C0C0C0;" href="javascript:task();">等待安装..</a>'
 			}else if(rdata.libs[i].status){
-				opt = '<a style="color:red;" href="javascript:UninstallPHPLib(\''+version+'\',\''+rdata.libs[i].name+'\',\''+rdata.libs[i].title+'\');">卸载</a>'
+				opt = '<a style="color:red;" href="javascript:UninstallPHPLib(\''+version+'\',\''+rdata.libs[i].name+'\',\''+rdata.libs[i].title+'\','+pathinfo+');">卸载</a>'
 			}else{
-				opt = '<a class="link" href="javascript:InstallPHPLib(\''+version+'\',\''+rdata.libs[i].name+'\',\''+rdata.libs[i].title+'\');">安装</a>'
+				opt = '<a class="link" href="javascript:InstallPHPLib(\''+version+'\',\''+rdata.libs[i].name+'\',\''+rdata.libs[i].title+'\','+pathinfo+');">安装</a>'
 			}
 			
 			body += '<tr>'
@@ -254,19 +254,18 @@ function SetPHPConfig(version,pathinfo,go){
 	});
 	
 	if(go == undefined){
-		sindex = setInterval(function(){
+		setTimeout(function(){
 			if($(".active a").html() != '扩展配置'){
-				clearInterval(sindex);
 				return;
 			}
-			SetPHPConfig(version,pathinfo,true)
+			SetPHPConfig(version,pathinfo)
 		},5000);
 	}
 	
 }
 
 //安装扩展
-function InstallPHPLib(version,name,title){
+function InstallPHPLib(version,name,title,pathinfo){
 	layer.confirm('您真的要安装['+name+']吗?',{closeBtn:2},function(){
 		name = name.toLowerCase();
 		var data = "name="+name+"&version="+version+"&type=1";
@@ -275,7 +274,7 @@ function InstallPHPLib(version,name,title){
 		{
 			setTimeout(function(){
 				layer.close(loadT);
-				SetPHPConfig(version);
+				SetPHPConfig(version,pathinfo,true);
 				setTimeout(function(){
 					layer.msg(rdata.msg,{icon:rdata.status?1:2});
 				},1000);
@@ -289,7 +288,7 @@ function InstallPHPLib(version,name,title){
 }
 
 //卸载扩展
-function UninstallPHPLib(version,name,title){
+function UninstallPHPLib(version,name,title,pathinfo){
 	layer.confirm('您真的要卸载['+name+']吗?',{closeBtn:2},function(){
 		name = name.toLowerCase();
 		var data = 'name='+name+'&version='+version;
@@ -297,7 +296,7 @@ function UninstallPHPLib(version,name,title){
 		$.post('/files?action=UninstallSoft',data,function(rdata){
 			layer.close(loadT);
 			layer.msg(rdata.msg,{icon:rdata.status?1:2});
-			SetPHPConfig(version);
+			SetPHPConfig(version,pathinfo,true);
 		});
 	});
 }
@@ -1311,10 +1310,11 @@ function GetSList(isdisplay){
 
 //独立安装
 function oneInstall(name,version){
+	var isError = false
 	if (name == 'pure') name += '-'+version.toLowerCase();
 	
 	if (name == 'apache' || name == 'nginx'){
-		var isError = false
+		
 		$.ajax({
 			url:'/ajax?action=GetInstalled',
 			type:'get',
@@ -1337,6 +1337,18 @@ function oneInstall(name,version){
 	var optw = '';
 	if(name == 'mysql'){
 		optw = "<br><br><li style='color:red;'>注意: 安装新的MySQL版本,会覆盖数据库数据,请先备份数据库!</li>"
+		var sUrl = '/data?action=getData&table=databases';
+		$.ajax({
+			url:sUrl,
+			type:"GET",
+			async:false,
+			success:function(dataD){
+				if(dataD.data.length > 0) {
+					layer.msg("抱歉,出于安全考虑,请先到[数据库]管理备份数据库,并中删除所有数据库!",{icon:5,time:5000})
+					isError = true;;
+				}
+			}
+		});
 	}
 	
 	if (isError) return;
@@ -1519,6 +1531,22 @@ function selectChange(){
 
 //卸载软件
 function UninstallVersion(name,version,title){
+	var isError = false
+	if(name == 'mysql'){
+		var sUrl = '/data?action=getData&table=databases';
+		$.ajax({
+			url:sUrl,
+			type:"GET",
+			async:false,
+			success:function(dataD){
+				if(dataD.data.length > 0) {
+					layer.msg("抱歉,为安全考虑,请先到[数据库]管理备份数据库并中删除所有数据库!",{icon:5});
+					isError = true;;
+				}
+			}
+		});
+	}
+	if(isError) return;
 	layer.confirm('您真的要卸载['+title+'-'+version+']吗?',{closeBtn:2},function(){
 		var data = 'name='+name+'&version='+version;
 		var loadT = layer.msg('正在处理,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});

@@ -1265,7 +1265,7 @@ html .sub  .menu_exit:hover{
 .webEdit{
 	background-color: #fff;
 	width: 600px;
-	height: 490px;
+	height: 525px;
 	float: left;
 }
 .webEdit .webEdit-menu{
@@ -1935,47 +1935,58 @@ html .zun-form-new .form-control-text {
 	margin: 0;
 }
 /*计划任务*/
-.plan{
-	padding:10px 20px;
-	margin-bottom:10px;
+.plan {
+	padding: 10px 20px;
+	margin-bottom: 10px;
 }
-.plan .typename{
-	font-size:14px;
-	float:left;
-	margin-right:20px;
-	line-height:34px;
+
+.plan .typename {
+	font-size: 14px;
+	float: left;
+	margin-right: 20px;
+	line-height: 34px;
+	width:80px;
+	text-align:right;
 }
+
 .plan .textname {
-    float: left;
-    height: 34px;
-    line-height: 34px;
-    margin-left: 10px;
-    margin-right: 10px;
+	float: left;
+	height: 34px;
+	line-height: 34px;
+	margin-left: 10px;
+	margin-right: 10px;
 }
-.plan .planname{
-	float:left;
+
+.plan .planname {
+	float: left;
 }
-.plan .planname input{
-	height:32px;
-	padding:0 5px;
-	border:#ccc 1px solid;
-	border-radius:4px;
-	width:260px;
+
+.plan .planname input {
+	height: 32px;
+	padding: 0 5px;
+	border: #ccc 1px solid;
+	border-radius: 4px;
+	width: 260px;
 }
-.plan .dropdown{
-	float:left;
-	margin-right:20px;
+
+.plan .dropdown {
+	float: left;
+	margin-right: 20px;
 }
-.plan .dropdown button b{
-	font-weight:normal;
+
+.plan .dropdown button b {
+	font-weight: normal;
 }
-.plan .dropdown-menu{
+
+.plan .dropdown-menu {
 	min-width: 100px;
 }
-.dropdown-menu > li > a{
+
+.dropdown-menu>li>a {
 	padding: 3px 12px;
 }
-.plan-submit{
+
+.plan-submit {
 	background-color: #20a53a;
 	border-radius: 3px;
 	width: 94px;
@@ -1984,57 +1995,72 @@ html .zun-form-new .form-control-text {
 	text-align: center;
 	color: #fff;
 	cursor: pointer;
-	margin-left:49px;
+	margin-left: 101px;
 }
-.plan_hms{
+
+.plan_hms {
 	border: 1px solid #ccc;
 	float: left;
 	position: relative;
-	border-radius:4px;
-	margin-right:20px;
+	border-radius: 4px;
+	margin-right: 20px;
 }
+
 .plan_hms span {
-    float: left;
-    height: 32px;
-    line-height: 32px;
-    position: relative;
+	float: left;
+	height: 32px;
+	line-height: 32px;
+	position: relative;
 }
+
 .plan_hms .name {
-    border-left: 1px solid #ccc;
-    width: 44px;
-    text-align: center;
-	background-color:#f6f6f6;
+	border-left: 1px solid #ccc;
+	width: 44px;
+	text-align: center;
+	background-color: #f6f6f6;
+}
+.planSign {
+    margin-left: 10px;
+    height: 35px;
+    line-height: 35px;
+}
+.planSign i {
+    margin-right: 8px;
+    font-size: 12px;
+    font-style: initial;
+    color: red;
 }
 .plan_hms span input {
-    float: left;
-    width: 48px;
-    height: 32px;
-    line-height: 32px;
-    border: none;
-    text-align: center;
-    font-size: 12px;
+	float: left;
+	width: 48px;
+	height: 32px;
+	line-height: 32px;
+	border: none;
+	text-align: center;
+	font-size: 12px;
 }
+
 .plan_hms span:first-child input {
-	border-radius:4px 0 0 4px;
+	border-radius: 4px 0 0 4px;
 }
+
 .plan_hms span:last-child {
-	border-radius:0 4px 4px 0;
+	border-radius: 0 4px 4px 0;
 }
-.plan .dropdown  button{
-	width:94px;
+
+.plan .dropdown button {
+	width: 94px;
 }
+
 #ptime {
-    float: left;
-    margin-left: 48px;
-    margin-top: 10px;
-    width: 97%;
+	float: left;
+	/*margin-left: 48px;    margin-top: 10px;    width: 97%;*/
 }
+
 #implement {
-    float: left;
-    margin-left: 48px;
-    margin-top: 10px;
-    position: relative;
-    width: 97%;
+	float: left;
+	line-height: 35px;
+	/*margin-left: 48px;    margin-top: 10px;    position: relative;    width: 97%;*/
 }
 #viewfile{
 	height: 34px;

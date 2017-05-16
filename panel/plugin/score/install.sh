@@ -37,23 +37,6 @@ Install_score()
 		gcc /www/server/panel/plugin/score/testcpu.c -o /www/server/panel/plugin/score/testcpu -lpthread
 	fi
 	
-	if [ ! -f '/www/server/panel/static/images/ico-ts-cpu.png' ];then
-		wget -O /www/server/panel/static/images/ico-ts-cpu.png $download_Url/install/lib/plugin/score/img/ico-ts-cpu.png
-		sleep 0.1;
-		wget -O /www/server/panel/static/images/ico-ts-cpu-active.png $download_Url/install/lib/plugin/score/img/ico-ts-cpu-active.png
-		sleep 0.1;
-		wget -O /www/server/panel/static/images/ico-ts-disk.png $download_Url/install/lib/plugin/score/img/ico-ts-disk.png
-		sleep 0.1;
-		wget -O /www/server/panel/static/images/ico-ts-disk-active.png $download_Url/install/lib/plugin/score/img/ico-ts-disk-active.png
-		sleep 0.1;
-		wget -O /www/server/panel/static/images/ico-ts-mem.png $download_Url/install/lib/plugin/score/img/ico-ts-mem.png
-		sleep 0.1;
-		wget -O /www/server/panel/static/images/ico-ts-mem-active.png $download_Url/install/lib/plugin/score/img/ico-ts-mem-active.png
-		sleep 0.1;
-		wget -O /www/server/panel/static/images/ico-ts-refresh.png $download_Url/install/lib/plugin/score/img/ico-ts-refresh.png
-		sleep 0.1;
-		wget -O /www/server/panel/static/images/ico-ts-score.jpg $download_Url/install/lib/plugin/score/img/ico-ts-score.jpg
-	fi
 	
 	if [ ! -f '/www/server/panel/static/img/soft_ico/ico-score.png' ];then
 		wget -O /www/server/panel/static/img/soft_ico/ico-score.png $download_Url/install/lib/plugin/score/img/ico-score.png

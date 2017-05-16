@@ -13,50 +13,109 @@ $def with (data)
 					<h3>添加计划任务</h3>
 				</div>
 				<div class="setting-con">
-						<div class="row plan">
-							<span class="typename">名称</span>
-							<div class="planname"><input type="text" name="name"></div>
+					<div class="row plan">
+						<span class="typename">任务类型</span>
+						<div class="dropdown planjs">
+							<button class="btn btn-default dropdown-toggle" type="button" id="excode" data-toggle="dropdown" style="width:auto">
+                                <b val="toShell">Shell脚本</b>
+                                <span class="caret"></span>
+                            </button>
+							<ul class="dropdown-menu" role="menu" aria-labelledby="excode">
+								<li>
+									<a role="menuitem" tabindex="-1" href="javascript:;" value="toShell">Shell脚本</a>
+								</li>
+								<li>
+									<a role="menuitem" tabindex="-1" href="javascript:;" value="site">备份网站</a>
+								</li>
+								<li>
+									<a role="menuitem" tabindex="-1" href="javascript:;" value="database">备份数据库</a>
+								</li>
+								<li>
+									<a role="menuitem" tabindex="-1" href="javascript:;" value="logs">日志切割</a>
+								</li>
+								<li>
+									<a role="menuitem" tabindex="-1" href="javascript:;" value="rememory">释放内存</a>
+								</li>
+								<li>
+									<a role="menuitem" tabindex="-1" href="javascript:;" value="toUrl">访问URL</a>
+								</li>
+							</ul>
 						</div>
-						<div class="row plan">
-							<span class="typename">周期</span>
-							<div class="dropdown plancycle">
-							  <button class="btn btn-default dropdown-toggle" type="button" id="cycle" data-toggle="dropdown" style="width:94px">
-								<b val="week">每星期</b>
-								<span class="caret"></span>
-							  </button>
-							  <ul class="dropdown-menu" role="menu" aria-labelledby="cycle">
-								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="day">每天</a></li>
-								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="day-n">N天</a></li>
-								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="hour">每小时</a></li>
-								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="hour-n">N小时</a></li>
-								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="minute-n">N分钟</a></li>
-								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="week">每星期</a></li>
-								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="month">每月</a></li>
-							  </ul>
+						<span class="planSign"><i>*</i>任务类型包含以下部分：Shell脚本、备份网址、备份数据库、日志切割、释放内存、访问URL</span>
+					</div>
+					<div class="row plan">
+						<span class="typename">任务名称</span>
+						<div class="planname"><input type="text" name="name"></div>
+					</div>
+					<div class="row plan">
+						<span class="typename">执行周期</span>
+						<div class="dropdown plancycle">
+							<button class="btn btn-default dropdown-toggle" type="button" id="cycle" data-toggle="dropdown" style="width:94px">
+                                <b val="week">每星期</b>
+                                <span class="caret"></span>
+                            </button>
+							<ul class="dropdown-menu" role="menu" aria-labelledby="cycle">
+								<li>
+									<a role="menuitem" tabindex="-1" href="javascript:;" value="day">每天</a>
+								</li>
+								<li>
+									<a role="menuitem" tabindex="-1" href="javascript:;" value="day-n">N天</a>
+								</li>
+								<li>
+									<a role="menuitem" tabindex="-1" href="javascript:;" value="hour">每小时</a>
+								</li>
+								<li>
+									<a role="menuitem" tabindex="-1" href="javascript:;" value="hour-n">N小时</a>
+								</li>
+								<li>
+									<a role="menuitem" tabindex="-1" href="javascript:;" value="minute-n">N分钟</a>
+								</li>
+								<li>
+									<a role="menuitem" tabindex="-1" href="javascript:;" value="week">每星期</a>
+								</li>
+								<li>
+									<a role="menuitem" tabindex="-1" href="javascript:;" value="month">每月</a>
+								</li>
+							</ul>
+						</div>
+						<div id="ptime">
+
+							<div class="dropdown planweek"> <button class="btn btn-default dropdown-toggle" type="button" id="excode" data-toggle="dropdown">                                                        <b val="1">周一</b> <span class="caret"></span>                                                  </button>
+								<ul class="dropdown-menu" role="menu" aria-labelledby="excode">
+									<li>
+										<a role="menuitem" tabindex="-1" href="javascript:;" value="1">周一</a>
+									</li>
+									<li>
+										<a role="menuitem" tabindex="-1" href="javascript:;" value="2">周二</a>
+									</li>
+									<li>
+										<a role="menuitem" tabindex="-1" href="javascript:;" value="3">周三</a>
+									</li>
+									<li>
+										<a role="menuitem" tabindex="-1" href="javascript:;" value="4">周四</a>
+									</li>
+									<li>
+										<a role="menuitem" tabindex="-1" href="javascript:;" value="5">周五</a>
+									</li>
+									<li>
+										<a role="menuitem" tabindex="-1" href="javascript:;" value="6">周六</a>
+									</li>
+									<li>
+										<a role="menuitem" tabindex="-1" href="javascript:;" value="0">周日</a>
+									</li>
+								</ul>
 							</div>
-							<div id="ptime"></div>
+							<div class="plan_hms"> <span><input type="number" name="hour" value="1" maxlength="2" max="23" min="0"></span> <span class="name">时</span> </div>
+							<div class="plan_hms"> <span><input type="number" name="minute" value="30" maxlength="2" max="59" min="0"></span> <span class="name">分</span> </div>
 						</div>
-						<div class="row plan">
-							<span class="typename">执行</span>
-							<div class="dropdown planjs">
-							  <button class="btn btn-default dropdown-toggle" type="button" id="excode" data-toggle="dropdown" style="width:auto">
-								<b val='toShell'>Shell脚本</b>
-								<span class="caret"></span>
-							  </button>
-							  <ul class="dropdown-menu" role="menu" aria-labelledby="excode">
-								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="toShell">Shell脚本</a></li>
-								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="site">备份网站</a></li>
-								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="database">备份数据库</a></li>
-								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="logs">日志切割</a></li>
-								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="rememory">释放内存</a></li>
-								<li><a role="menuitem" tabindex="-1" href="javascript:;" value="toUrl">访问URL</a></li>
-							  </ul>
-							</div>
-							<div id="implement"></div>
-						</div>
-						<div class="row plan">
-							<div class="plan-submit" onclick="planAdd()">添加</div>
-						</div>
+					</div>
+					<div class="row plan">
+						<span class="typename controls">脚本内容</span>
+						<div id="implement"><textarea class="txtsjs" name="sBody"></textarea></div>
+					</div>
+					<div class="row plan">
+						<div class="plan-submit" onclick="planAdd()">添加任务</div>
+					</div>
 				</div>
 				<form id="set-Config" action="/crontab?action=AddCrontab" enctype="multipart/form-data" method="post" style="display: none;">
 					<input type="text" name="name" value="" />
@@ -380,21 +439,27 @@ $def with (data)
 				break;
 			case 'toShell':
 				toShell();
+				$$(".controls").html('脚本内容');
 				break;
 			case 'rememory':
 				rememory();
+				$$(".controls").html('提示');
 				break;
 			case 'site':
 				toBackup('sites');
+				$$(".controls").html('备份站点');
 				break;
 			case 'database':
 				toBackup('databases');
+				$$(".controls").html('备份数据库');
 				break;
 			case 'logs':
 				toBackup('logs');
+				$$(".controls").html('切割网址');
 				break;
 			case 'toUrl':
 				toUrl();
+				$$(".controls").html('URL地址');
 				break;
 		}
 	})
@@ -547,11 +612,12 @@ $def with (data)
 	function toUrl(){
 		var tBody = "<input type='text' style='width:400px;' class='form-control' name='urladdress' id='urladdress' placeholder='URL地址' value='http://' />";
 		$$("#implement").html(tBody);
-		//$$(".planname input[name='name']").removeAttr('readonly style').val("");
+		$$(".planname input[name='name']").removeAttr('readonly style').val("");
 	}
 	
 	//释放内存
 	function rememory(){
+		$$(".planname input[name='name']").removeAttr('readonly style').val("");
 		$$(".planname input[name='name']").val('释放内存');
 		$$("#implement").html('释放PHP、MYSQL、PURE-FTPD、APACHE、NGINX的内存占用,建议在每天半夜执行!');
 		return;

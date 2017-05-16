@@ -225,7 +225,12 @@ $def with (content)
 											for(var j=0;j<tmp.length;j++){
 												vBody += tmp[j] + '<br>'
 											}
-											sRunning = "<li><span class='titlename'>"+rdata.task[i].name+"</span><span class='state'>正在安装 <img src='/static/img/ing.gif'></span><span class='opencmd'></span><div class='cmd'>"+vBody+"</div></li>"
+											if(rdata.task[i].name.indexOf('扫描') != -1){
+												sRunning = "<li><span class='titlename'>"+rdata.task[i].name+"</span><span class='state'>正在扫描 <img src='/static/img/ing.gif'></span><span class='opencmd'></span><div class='cmd'>"+vBody+"</div></li>"
+											}else{
+												sRunning = "<li><span class='titlename'>"+rdata.task[i].name+"</span><span class='state'>正在安装 <img src='/static/img/ing.gif'></span><span class='opencmd'></span><div class='cmd'>"+vBody+"</div></li>"
+											}
+											
 										}else{
 											sRunning = "<li><div class='line-progress' style='width:"+rdata.msg.pre+"%'></div><span class='titlename'>"
 														+ rdata.task[i].name+"<a style='margin-left:130px;'>"

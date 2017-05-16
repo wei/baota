@@ -76,6 +76,7 @@ _height:expression(document.body.offsetHeight+"px")
 	height: 15px;
 	right: 0;
 	bottom: 0;
+	display:none;
 	cursor: se-resize
 }
 .layui-layer {

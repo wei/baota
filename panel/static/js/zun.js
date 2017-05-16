@@ -316,6 +316,7 @@ function getHelp(id){
 //文件路径选择
 function ChangePath(id){
 	setCookie("SetId",id);
+	setCookie('SetName','');
 	var mycomputer = layer.open({
 		type: 1,
 		area: '650px',
@@ -331,7 +332,7 @@ function ChangePath(id){
 			<div class='path-con'>\
 				<div class='path-con-left'>\
 					<dl>\
-						<dt id='comlist' onclick='BackMyComputer()'>计算机</dt>\
+						<dt id='changecomlist' onclick='BackMyComputer()'>计算机</dt>\
 					</dl>\
 				</div>\
 				<div class='path-con-right'>\
@@ -361,8 +362,18 @@ function ChangePath(id){
 			</div>"
 	});
 	setCookie('ChangePath',mycomputer);
-	var path = $("#inputPath").val();
-	GetDiskList("");
+	var path = $("#"+id).val();
+	tmp = path.split('.');
+	
+	if(tmp[tmp.length-1] == 'gz'){
+		tmp = path.split('/');
+		path = ''
+		for(var i=0;i<tmp.length-1;i++){
+			path += '/' + tmp[i] 
+		}
+		setCookie('SetName',tmp[tmp.length-1]);
+	}
+	path = path.replace(/\/\//g,'/')
 	GetDiskList(path);
 	ActiveDisk();
 }
@@ -377,7 +388,7 @@ function GetDiskList(Path){
 			for(var i=0; i < rdata.DISK.length; i++){
 				LBody +="<dd onclick=\"GetDiskList('"+rdata.DISK[i].path+"')\"><span class='glyphicon glyphicon-hdd'></span>&nbsp;"+rdata.DISK[i].path+"</dd>";
 			}
-			$("#comlist").html(LBody);
+			$("#changecomlist").html(LBody);
 		}
 		for(var i=0; i < rdata.DIR.length; i++){
 			var fmp = rdata.DIR[i].split(";");
@@ -533,7 +544,7 @@ function BackFile(){
 function GetfilePath(){
 	var txt = $("#PathPlace").find("span").text();
 	txt = txt.replace(new RegExp(/(\\)/g),'/');
-	$("#"+getCookie("SetId")).val(txt);
+	$("#"+getCookie("SetId")).val(txt + getCookie('SetName'));
 	layer.close(getCookie('ChangePath'));
 }
 
@@ -740,7 +751,7 @@ function OnlineEditFile(type, fileName) {
 	}
 	$.post('/files?action=GetFileBody', 'path=' + fileName, function(rdata) {
 		layer.close(loadT);
-		var encodings = ["utf-8","gbk"];
+		var encodings = ["utf-8","GBK",'GB2312','BIG5'];
 		var encoding = ''
 		var opt = ''
 		var val = ''

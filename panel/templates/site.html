@@ -165,7 +165,8 @@ $def with (tData)
 			+"<p onclick=\"PHPVersion('"+website+"')\">PHP版本</p>"
 			+"<p onclick=\"toTomcat('"+website+"')\">Tomcat</p>"
 			+"<p onclick=\"To301('"+website+"')\">301重定向</p>"
-			+"<p onclick=\"Proxy('"+website+"')\">反向代理</p>";
+			+"<p onclick=\"Proxy('"+website+"')\">反向代理</p>"
+			+"<p id='site_"+id+"' onclick=\"CheckSafe('"+id+"')\">木马扫描</p>";
 			layer.open({
 				type: 1,
 				area: '600px',
@@ -202,6 +203,80 @@ $def with (tData)
 			$$p.click(function(){
 				$$(this).addClass("active").siblings().removeClass("active");
 			});
+		}
+		
+		
+		//木马扫描
+		function CheckSafe(id,act){
+			if(act != undefined){
+				var loadT = layer.msg('正在提交任务...',{icon:16,time:0,shade: [0.3, '#000']});
+				$$.post('/site?action=CheckSafe','id='+id,function(rdata){
+					$$(".btnStart").hide()
+					setTimeout(function(){
+						CheckSafe(id);
+					},3000);
+					GetTaskCount();
+					layer.close(loadT)
+					layer.msg(rdata.msg,{icon:rdata.status?1:5});
+				});
+				
+				return;
+			}
+			
+			
+			
+		   $$.post('/site?action=GetCheckSafe','id='+id,function(rdata){
+		   		var done = "<button type='button' class='btn btn-success btnStart'  onclick=\"CheckSafe("+id+",1)\" style='margin-right:16px;'>开始扫描</button>\
+		   					<button type='button' class='btn btn-default btnStart'  onclick=\"UpdateRulelist()\" style='margin-right:16px;'>更新病毒库</button>\
+		   					<a style='margin-right:16px;font-size: 16px;color:green;'>已扫描："+rdata.count+"</a><a style='color:red;font-size: 16px;'>风险数量："+rdata.error+"</a>";
+		   		
+		   		if(rdata['scan']) done = "<a style='margin-right:16px;font-size: 16px;color:green;'>已扫描："+rdata.count+"</a><a style='color:red;font-size: 16px;'>风险数量："+rdata.error+"</a>";
+				var echoHtml = "<div style='margin:16px 0;'>"
+							   + done
+							   +"</div>"
+				for(var i=0;i<rdata.phpini.length;i++){
+					echoHtml += "<tr><td>危险函数</td><td>危险</td><td>未禁用危险函数："+rdata.phpini[i].function+"<br>文件：<a style='color: red;' href='javascript:;' onclick=\"OnlineEditFile(0,'/www/server/php/"+rdata.phpini[i].version+"/etc/php.ini')\">/www/server/php/"+rdata.phpini[i].version+"/etc/php.ini</a></td></tr>";
+				}
+				
+				if(!rdata.sshd){
+					echoHtml += "<tr><td>SSH端口</td><td>高危</td><td>sshd文件被篡改</td></tr>";
+				}
+				
+				if(!rdata.userini){
+					echoHtml += "<tr><td>跨站攻击</td><td>危险</td><td>站点未开启防跨站攻击!</td></tr>";
+				}
+				
+				for(var i=0;i<rdata.data.length;i++){
+					echoHtml += "<tr><td>"+rdata.data[i].msg+"</td><td>"+rdata.data[i].level+"</td><td>文件：<a style='color: red;' href='javascript:;' onclick=\"OnlineEditFile(0,'"+rdata.data[i].filename+"')\">"+rdata.data[i].filename+"</a><br>修改时间："+rdata.data[i].etime+"<br>代码："+rdata.data[i].code+"</td></tr>";
+				}
+
+				var body = "<div>"
+							+"<div class='divtable' style='width:96%;margin:10px auto'><table class='table table-hover' width='100%' style='margin-bottom:0'>"
+						  	+"<thead><tr><th width='100px'>行为</th><th width='70px'>风险</th><th>详情</th></tr></thead>"
+						   	+"<tbody id='checkDomain'>" + echoHtml + "</tbody>"
+						   	+"</table></div>"
+				
+				$$("#webEdit-con").html(body);
+				$$(".btnStart").click(function(){
+					fly('btnStart');	
+				});
+				if(rdata['scan']){
+					c = $$("#site_"+id).attr('class');
+					if(c != 'active') return;
+					setTimeout(function(){
+						CheckSafe(id);
+					},1000);
+				}
+			});
+		}
+		
+		function UpdateRulelist(){
+			var loadT = layer.msg('正在更新，请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+			$$.post('/site?action=UpdateRulelist','',function(rdata){
+				layer.close(loadT)
+				layer.msg(rdata.msg,{icon:rdata.status?1:5});
+			});
+			
 		}
 		
 		

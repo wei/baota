@@ -55,11 +55,17 @@ class files:
         try:
             if not os.path.exists(get.path): os.makedirs(get.path);
             filename = (get['path'] + get['zunfile'].filename).encode('utf-8');
-            fp = open(filename,'w+');
+            fp = open(filename,'wb');
             fp.write(get['zunfile'].file.read());
             fp.close()
+            if(get.codeing != 'byte'):
+                srcBody = public.readFile(filename)
+                import chardet
+                char=chardet.detect(srcBody)
+                srcBody = srcBody.decode(char['encoding']).encode('utf-8')
+                public.writeFile(filename,srcBody.encode(get.codeing));
             os.system('chown www.www ' + filename);
-            public.WriteLog('文件管理','上传文件['+get['zunfile'].filename+'] 到 ['+get['path']+']成功!')
+            public.WriteLog('文件管理','上传文件['+get['zunfile'].filename+'] 到 ['+get['path']+']成功!')        
             return public.returnMsg(True,'上传成功')
         except:
             import time
@@ -69,8 +75,8 @@ class files:
                 ext = ""
             else:
                 ext = "." + tmp[-1];
-            filename = get['path'] + "New_uploaded_files_" + opt + ext;   
-            fp = open(filename.encode('utf-8'),'w+');
+            filename = get['path'] + "New_uploaded_files_" + opt + ext;
+            fp = open(filename.encode('utf-8'),'wb');
             fp.write(get['zunfile'].file.read());
             fp.close()
             os.system('chown www.www ' + filename);
@@ -260,6 +266,7 @@ class files:
         
         if not self.CheckDir(rPath + get.path):
             return public.returnMsg(False,'请不要花样作死!');
+        os.system('chattr -R -i ' + rPath + get.path)
         if os.path.isdir(rPath + get.path):
             import shutil
             shutil.rmtree(rPath + get.path)
@@ -273,6 +280,7 @@ class files:
     #清空回收站
     def Close_Recycle_bin(self,get):
         rPath = '/www/Recycle_bin/'
+        os.system('chattr -R -i ' + rPath)
         os.system('rm -rf ' + rPath + '*');
         public.WriteLog('文件管理','清空回收站成功!');
         return public.returnMsg(True,'已清空回收站!');
@@ -410,14 +418,27 @@ class files:
         get.sfile = get.sfile.encode('utf-8');
         get.dfile = get.dfile.encode('utf-8');
         get.path = get.path.encode('utf-8');
-        if not os.path.exists(get.path+'/'+get.sfile):
-                return public.returnMsg(False,'指定文件或目录不存在');
+        if get.sfile.find(',') == -1:
+            if not os.path.exists(get.path+'/'+get.sfile): return public.returnMsg(False,'指定文件或目录不存在');
         try:
             tmps = '/tmp/panelExec.log'
             if get.type == 'zip':
                 os.system("cd '"+get.path+"' && zip '"+get.dfile+"' -r '"+get.sfile+"' > "+tmps+" 2>&1")
             else:
-                os.system("cd '"+get.path+"' && tar -zcvf '"+get.dfile+"' '"+get.sfile+"' > "+tmps+" 2>&1")
+                #for sfile in get.sfile.split(','):
+                #    if not sfile: continue;
+                #    if not os.path.exists(get.dfile):
+                #        os.system("cd '" + get.path + "' && tar -cvf '" + get.dfile + "' '" + sfile + "' > " + tmps + " 2>&1");
+                #    else:
+                #       os.system("cd '" + get.path + "' && tar -uvf '" + get.dfile + "' '" + sfile + "' > " + tmps + " 2>&1");
+                
+                
+                sfiles = ''
+                for sfile in get.sfile.split(','):
+                    if not sfile: continue;
+                    sfiles += " '" + sfile + "'";
+                os.system("cd '" + get.path + "' && tar -zcvf '" + get.dfile + "' " + sfiles + " > " + tmps + " 2>&1");
+                #return "cd '" + get.path + "' && tar -zcvf '" + get.dfile + "' " + sfiles + " > " + tmps + " 2>&1"
             self.SetFileAccept(get.dfile);
             public.WriteLog("文件管理", "压缩文件["+get.sfile+"]至["+get.dfile+"]成功!");
             return public.returnMsg(True,'文件压缩成功!')
@@ -435,12 +456,12 @@ class files:
         if not hasattr(get,'coding'): get.coding = 'UTF-8';
         tmps = '/tmp/panelExec.log'
         if get.type == 'zip':
-            os.system("export LANG=\"zh_CN."+get.coding+"\" && unzip -o '"+get.sfile+"' -d '"+get.dfile+"' > "+tmps+" 2>&1")
+            os.system("export LANG=\"zh_CN." + get.coding + "\" && unzip -o '" + get.sfile + "' -d '" + get.dfile + "' > " + tmps + " 2>&1")
         else:
-            os.system("tar zxf '"+get.sfile+"' -C '"+get.dfile+"' > "+tmps+" 2>&1")
+            os.system("tar zxf '" + get.sfile + "' -C '" + get.dfile + "' > " + tmps + " 2>&1");
         self.SetFileAccept(get.dfile);
-        public.WriteLog("文件管理", "解压文件["+get.sfile+"]至["+get.dfile+"]成功!");
-        return public.returnMsg(True,'文件解压成功!')
+        public.WriteLog("文件管理", "解压文件["+get.sfile+"]至[" + get.dfile + "]成功!");
+        return public.returnMsg(True,'文件解压成功!');
         #except:
         #    return public.returnMsg(False,'文件解压失败!')
     

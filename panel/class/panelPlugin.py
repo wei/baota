@@ -94,17 +94,20 @@ class panelPlugin:
             if os.path.isdir(path):
                 jsonFile = path + '/info.json'
                 if os.path.exists(jsonFile):
-                    tmp = json.loads(public.readFile(jsonFile))
-                    tmp['pid'] = len(arr) + 1000 + n
-                    isTrue = True
-                    for tm in arr:
-                        if tmp['name'] == tm['name']: isTrue = False
-                    if isTrue:
-                        iconFile = web.ctx.session.setupPath + '/panel/static/img/soft_ico/ico-' + dirinfo + '.png' 
-                        if not os.path.exists(iconFile): os.system('\cp -a -r ' + self.__install_path + '/' + dirinfo + '/icon.png ' + iconFile)
-                        tmp['status'] = tmp['display'];
-                        del(tmp['display'])
-                        arr.append(tmp)
+                    try:
+                        tmp = json.loads(public.readFile(jsonFile))
+                        tmp['pid'] = len(arr) + 1000 + n
+                        isTrue = True
+                        for tm in arr:
+                            if tmp['name'] == tm['name']: isTrue = False
+                        if isTrue:
+                            iconFile = web.ctx.session.setupPath + '/panel/static/img/soft_ico/ico-' + dirinfo + '.png' 
+                            if not os.path.exists(iconFile): os.system('\cp -a -r ' + self.__install_path + '/' + dirinfo + '/icon.png ' + iconFile)
+                            tmp['status'] = tmp['display'];
+                            del(tmp['display'])
+                            arr.append(tmp)
+                    except:
+                        pass
         for i in range(len(arr)):
             arr[i]['versions'] = self.checksSetup(arr[i]['name'],arr[i]['checks'],arr[i]['versions'])
             if arr[i]['tip'] == 'lib': 

@@ -4,6 +4,7 @@ function UploadStart(isBackup) {
 	var upload = function(config) {
 		this.uptype = config.UpType;
 		this.url = config.url
+		this.oldurl = config.url
 		this.filessize = config.FilesSize, this.MaxUpNum = config.MaxUpNum, this.str = new MyAjax();
 		this.file_input = document.getElementById("file_input");
 		this.opt = document.getElementById("opt");
@@ -29,8 +30,6 @@ function UploadStart(isBackup) {
 				});
 			}
 			
-			var maxSize=getCookie('uploadSize');
-			
 			for(var i = 0; i < fl; i++) {
 				files = filesall[i];
 				filestype = files.name.split(".");
@@ -47,8 +46,6 @@ function UploadStart(isBackup) {
 					this.up_box.insertAdjacentHTML("beforeEnd", "<li>" + files.name + "<em style='color: red;'>不允许上传的类型文件</em></li>");
 				} else if(files.size <= 0) {
 					this.up_box.insertAdjacentHTML("beforeEnd", "<li>" + files.name + "<em style='color: red;'>不能为空字节文件</em></li>");
-				} else if(files.size > maxSize) {
-					this.up_box.insertAdjacentHTML("beforeEnd", "<li><span class='filename'>" + files.name + "</span><span class='filesize'>" + (ToSize(files.size)) + "</span><em style='color: red;'>文件不能大于"+ToSize(maxSize)+"</em></li>");
 				} else {
 					this.up_box.insertAdjacentHTML("beforeEnd", "<li><span class='filename'>" + files.name + "</span><span class='filesize'>" + (ToSize(files.size)) + "</span><span class='cancel' title='取消' onclick='this.parentNode.remove();'>X</span><em>正在等待</em></li>");
 					this.FilesArray.push([files, (this.filesalllength - 1 < 0 ? 0 : this.filesalllength) + i]);
@@ -64,6 +61,9 @@ function UploadStart(isBackup) {
 				});
 				return;
 			}
+			
+			this.url = this.oldurl+'&codeing='+document.getElementById("fileCodeing").value
+			
 			if(this.FilesArrayLength > 0) {
 				this.opt.disabled = true;
 				this.up.disabled = true;
@@ -100,7 +100,7 @@ function UploadStart(isBackup) {
 				$("#totalProgress").html("<p>已上传" + this.num + "/" + FilesArray.length + "</p><progress value='" + this.num + "' max='" + FilesArray.length + "' ></progress>");
 				$(".cancel").css("visibility", "hidden");
 			}
-
+			
 			this.send(reader, FilesArray, n, l);
 		},
 		SetTxt: function(n, txt, color) {
@@ -109,6 +109,12 @@ function UploadStart(isBackup) {
 			em.innerHTML = txt;
 		},
 		send: function(ResultData, FilesArray, n, l) { //上传逻辑
+			if(!this.up_box_li[n].getElementsByTagName("em")[0]){
+				this.ready(FilesArray, n + 1, l);
+				this.num++;
+				return;
+			}
+			
 			var self = this;
 			this.FileProgress = 0;
 			this.str.carry({

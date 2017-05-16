@@ -10,7 +10,7 @@
 #------------------------------
 # 数据库管理类
 #------------------------------
-import public,db,web,re,time,os,sys,mysql
+import public,db,web,re,time,os,sys,panelMysql
 reload(sys)
 sys.setdefaultencoding('utf-8')
 class database:
@@ -48,14 +48,14 @@ class database:
                     }
             codeStr=wheres[codeing]
             #添加MYSQL
-            result = mysql.mysql().execute("create database " + data_name + " DEFAULT CHARACTER SET " + codeing + " COLLATE " + codeStr)
+            result = panelMysql.panelMysql().execute("create database " + data_name + " DEFAULT CHARACTER SET " + codeing + " COLLATE " + codeStr)
             isError=self.IsSqlError(result)
             if  isError != None: return isError
-            mysql.mysql().execute("drop user '" + username + "'@'localhost'")
-            mysql.mysql().execute("drop user '" + username + "'@'" + address + "'")
-            mysql.mysql().execute("grant all privileges on " + data_name + ".* to '" + username + "'@'localhost' identified by '" + data_pwd + "'")
-            mysql.mysql().execute("grant all privileges on " + data_name + ".* to '" + username + "'@'" + address + "' identified by '" + data_pwd + "'")
-            mysql.mysql().execute("flush privileges")
+            panelMysql.panelMysql().execute("drop user '" + username + "'@'localhost'")
+            panelMysql.panelMysql().execute("drop user '" + username + "'@'" + address + "'")
+            panelMysql.panelMysql().execute("grant all privileges on " + data_name + ".* to '" + username + "'@'localhost' identified by '" + data_pwd + "'")
+            panelMysql.panelMysql().execute("grant all privileges on " + data_name + ".* to '" + username + "'@'" + address + "' identified by '" + data_pwd + "'")
+            panelMysql.panelMysql().execute("flush privileges")
             
             
             if get['ps'] == '': get['ps']='填写备注'
@@ -87,12 +87,12 @@ class database:
             if name == 'bt_default': return public.returnMsg(False,'不能删除宝塔默认数据库!')
             accept = public.M('databases').where("id=?",(id,)).getField('accept')
             #删除MYSQL
-            result = mysql.mysql().execute("drop database " + name)
+            result = panelMysql.panelMysql().execute("drop database " + name)
             isError=self.IsSqlError(result)
             if  isError != None: return isError
-            mysql.mysql().execute("drop user '" + name + "'@'localhost'")
-            mysql.mysql().execute("drop user '" + name + "'@'" + accept + "'")
-            mysql.mysql().execute("flush privileges")
+            panelMysql.panelMysql().execute("drop user '" + name + "'@'localhost'")
+            panelMysql.panelMysql().execute("drop user '" + name + "'@'" + accept + "'")
+            panelMysql.panelMysql().execute("flush privileges")
             #删除SQLITE
             public.M('databases').where("id=?",(id,)).delete()
             public.WriteLog("数据库管理", "删除数据库[" + name + "]成功!")
@@ -109,12 +109,12 @@ class database:
             if not re.match(rep, password): return public.returnMsg(False, '密码中请不要带有特殊字符!')
             mysql_root = public.M('config').where("id=?",(1,)).getField('mysql_root')
             #修改MYSQL
-            result = mysql.mysql().query("show databases")
+            result = panelMysql.panelMysql().query("show databases")
             isError=self.IsSqlError(result)
             if  isError != None: 
                 #尝试使用新密码
                 public.M('config').where("id=?",(1,)).setField('mysql_root',password)
-                result = mysql.mysql().query("show databases")
+                result = panelMysql.panelMysql().query("show databases")
                 isError=self.IsSqlError(result)
                 if  isError != None: 
                     root_mysql = '''#!/bin/bash
@@ -147,10 +147,10 @@ echo "The root password set ${pwd}  successuful"''';
                 
             else:
                 if '5.7' in public.readFile(web.ctx.session.setupPath + '/mysql/version.pl'):
-                    result = mysql.mysql().execute("update mysql.user set authentication_string=password('" + password + "') where User='root'")
+                    result = panelMysql.panelMysql().execute("update mysql.user set authentication_string=password('" + password + "') where User='root'")
                 else:
-                    result = mysql.mysql().execute("update mysql.user set Password=password('" + password + "') where User='root'")
-                mysql.mysql().execute("flush privileges")
+                    result = panelMysql.panelMysql().execute("update mysql.user set Password=password('" + password + "') where User='root'")
+                panelMysql.panelMysql().execute("flush privileges")
 
             msg = 'ROOT密码修改成功!'
             #修改SQLITE
@@ -172,13 +172,13 @@ echo "The root password set ${pwd}  successuful"''';
             if len(re.search(rep, newpassword).groups()) >0: return public.returnMsg(False, '密码中请不要带有特殊字符!')
             #修改MYSQL
             if '5.7' in public.readFile(web.ctx.session.setupPath + '/mysql/version.pl'):
-                result = mysql.mysql().execute("update mysql.user set authentication_string=password('" + newpassword + "') where User='" + username + "'")
+                result = panelMysql.panelMysql().execute("update mysql.user set authentication_string=password('" + newpassword + "') where User='" + username + "'")
             else:
-                result = mysql.mysql().execute("update mysql.user set Password=password('" + newpassword + "') where User='" + username + "'")
+                result = panelMysql.panelMysql().execute("update mysql.user set Password=password('" + newpassword + "') where User='" + username + "'")
             
             isError=self.IsSqlError(result)
             if  isError != None: return isError
-            mysql.mysql().execute("flush privileges")
+            panelMysql.panelMysql().execute("flush privileges")
             
             if result==False: return public.returnMsg(False,'修改失败,数据库用户不存在!')
             #修改SQLITE
@@ -333,27 +333,27 @@ echo "The root password set ${pwd}  successuful"''';
             find['password'] = public.md5(str(time.time()) + find['name'])[0:10]
             public.M('databases').where("id=?",(find['id'],)).save('password,username',(find['password'],find['username']))
         
-        result = mysql.mysql().execute("create database " + find['name'])
+        result = panelMysql.panelMysql().execute("create database " + find['name'])
         if "using password:" in str(result): return -1
         if "Connection refused" in str(result): return -1
-        mysql.mysql().execute("drop user '" + find['username'] + "'@'localhost'")
-        mysql.mysql().execute("drop user '" + find['username'] + "'@'" + find['accept'] + "'")
+        panelMysql.panelMysql().execute("drop user '" + find['username'] + "'@'localhost'")
+        panelMysql.panelMysql().execute("drop user '" + find['username'] + "'@'" + find['accept'] + "'")
         password = find['password']
         if find['password']!="" and len(find['password']) > 20:
             password = find['password']
         
-        mysql.mysql().execute("grant all privileges on " + find['name'] + ".* to '" + find['username'] + "'@'localhost' identified by '" + password + "'")
-        mysql.mysql().execute("grant all privileges on " + find['name'] + ".* to '" + find['username'] + "'@'" + find['accept'] + "' identified by '" + password + "'")
-        mysql.mysql().execute("flush privileges")
+        panelMysql.panelMysql().execute("grant all privileges on " + find['name'] + ".* to '" + find['username'] + "'@'localhost' identified by '" + password + "'")
+        panelMysql.panelMysql().execute("grant all privileges on " + find['name'] + ".* to '" + find['username'] + "'@'" + find['accept'] + "' identified by '" + password + "'")
+        panelMysql.panelMysql().execute("flush privileges")
         return 1
     
     
     #从服务器获取数据库
     def SyncGetDatabases(self,get):
-        data = mysql.mysql().query("show databases")
+        data = panelMysql.panelMysql().query("show databases")
         isError = self.IsSqlError(data)
         if isError != None: return isError
-        users = mysql.mysql().query("select User,Host from mysql.user where User!='root' AND Host!='localhost' AND Host!=''")
+        users = panelMysql.panelMysql().query("select User,Host from mysql.user where User!='root' AND Host!='localhost' AND Host!=''")
         sql = public.M('databases')
         nameArr = ['information_schema','performance_schema','mysql']
         n = 0
@@ -383,7 +383,7 @@ echo "The root password set ${pwd}  successuful"''';
     #获取数据库权限
     def GetDatabaseAccess(self,get):
         name = get['name']
-        users = mysql.mysql().query("select User,Host from mysql.user where User='" + name + "' AND Host!='localhost'")
+        users = panelMysql.panelMysql().query("select User,Host from mysql.user where User='" + name + "' AND Host!='localhost'")
         isError = self.IsSqlError(users)
         if isError != None: return isError
         if len(users)<1:
@@ -398,9 +398,9 @@ echo "The root password set ${pwd}  successuful"''';
             access = get['access']
             #if access != '%' and filter_var(access, FILTER_VALIDATE_IP) == False: return public.returnMsg(False, '权限格式不合法')
             password = public.M('databases').where("name=?",(name,)).getField('password')
-            mysql.mysql().execute("delete from mysql.user where User='" + name + "' AND Host!='localhost'")
-            mysql.mysql().execute("grant all privileges on " + name + ".* to '" + name + "'@'" + access + "' identified by '" + password + "'")
-            mysql.mysql().execute("flush privileges")
+            panelMysql.panelMysql().execute("delete from mysql.user where User='" + name + "' AND Host!='localhost'")
+            panelMysql.panelMysql().execute("grant all privileges on " + name + ".* to '" + name + "'@'" + access + "' identified by '" + password + "'")
+            panelMysql.panelMysql().execute("flush privileges")
             return public.returnMsg(True, '设置成功!')
         except Exception,ex:
             public.WriteLog("数据库管理", "设置数据库权限[" + name + "]失败 => "  +  str(ex))

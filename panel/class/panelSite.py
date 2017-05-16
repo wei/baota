@@ -1926,8 +1926,11 @@ server
         expires      12h;
     }
     
-    rewrite /%s/(.*)$    /%s/$1 break;
-    rewrite /(.*)$    /%s/$1 break;
+    if ($uri !~ ".*\.php$")
+    {
+        rewrite /%s/(.*)$    /%s/$1 break;
+        rewrite /(.*)$    /%s/$1 break;
+    }
     
     location /%s
     {

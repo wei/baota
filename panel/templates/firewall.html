@@ -2,15 +2,16 @@ $def with (data)
 <style>
 	.weblog{
 		font-size: 14px;
-	    padding: 20px 0 10px;
+	    display:inline-block;
+		line-height:30px;
 	}
 	.weblog em{
 		font-style:normal;
 		color:#666;
-		margin-left:10px;
+		margin: 0 30px;
 	}
 	.weblog span{
-		margin-right:10px;
+		margin-right:30px;
 	}
 	.weblog a{
 		color:#20a53a;
@@ -41,7 +42,7 @@ $def with (data)
 						</div>
 					</form>
 				</div>
-				<div class="safe-port pull-left" style="margin:0 80px">
+				<div class="safe-port pull-left">
 					<div class="ss-text">
 						<em>SSH端口：</em>
 						<input type="text" class="sp-text" id="mstscPort" value=""  />
@@ -50,12 +51,16 @@ $def with (data)
 						<button id="mstscSubmit" onclick='mstsc($$("#mstscPort").prop("value"))' class="btn btn-default btn-sm" type="button">更改</button>
 					</div>
 				</div>
-				<div class="safe-port pull-left">
+				<div class="safe-port pull-left" style="border-right: 1px solid #ccc; padding-right: 40px;">
 					<div class="ss-text">
 						<em>启用禁ping</em>
 						<div class='ssh-item' id="isPing">
 						</div>
 					</div>
+				</div>
+				<div class="weblog">
+					<span>Web日志：</span><a href="javascript:openPath('$web.ctx.session.logsPath');">$web.ctx.session.logsPath</a><em id="logSize">0KB</em>
+					<button class="btn btn-default btn-sm" onclick="CloseLogs();">清空</button>
 				</div>
 			</div>
 			<div class="white-black-ip">
@@ -88,19 +93,6 @@ $def with (data)
 							<div class="dataTables_paginate paging_bootstrap pagination">
 								<ul id="firewallPage" class="page"></ul>
 							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="white-black-ip">
-				<div class="black-ip">
-					<div class="def-log">
-						<div class="def-log-title">
-							<h3 class="dlt-h3">Web日志</h3>
-							<a class="btn btn-default btn-sm" onclick="CloseLogs();" style="margin-top: 1px;">清空</a>
-						</div>
-						<div class="weblog">
-							<span>路径：</span><a href="javascript:openPath('$web.ctx.session.logsPath');">$web.ctx.session.logsPath</a><em id="logSize">0KB</em>
 						</div>
 					</div>
 				</div>
