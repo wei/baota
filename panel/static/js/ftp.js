@@ -1,16 +1,22 @@
 /**
- * 取回FTP数据列表
- * @param {Number} page   当前页
- */
+		 * 取回FTP数据列表
+		 * @param {Number} page   当前页
+		 */
 function getFtp(page,search) {
+	if(page == undefined) page = 1
 	search = search == undefined ? '':search;
+	search = $("#SearchValue").prop("value");
 	var sUrl = '/data?action=getData'
-	var data = 'tojs=getFtp&tab=ftps&limit=15&p='+page+'&search='+search;
+	var data = 'tojs=getFtp&table=ftps&limit=15&p='+page+'&search='+search;
 	var loadT = layer.load();
 	$.post(sUrl,data, function(data){
 		layer.close(loadT);
 		//构造数据列表
 		var Body = '';
+		if(data.data == ""){
+			Body="<tr><td colspan='6'>当前没有FTP数据</td></tr>";
+			$(".dataTables_paginate").hide()
+		}
 		for (var i = 0; i < data.data.length; i++) {
 			if(data.data[i].status == '1'){
 				var ftp_status = "<a href='javascript:;' title='停止这个帐号' onclick=\"ftpStop("+data.data[i].id+",'"+data.data[i].name+"')\"><span style='color:#5CB85C'>已启用 </span> <span style='color:#5CB85C' class='glyphicon glyphicon-play'></span></a>";
@@ -129,7 +135,7 @@ function ftpDelete(id,ftp_username){
 	SafeMessage("删除["+ftp_username+"]","您真的要删除["+ftp_username+"]吗?",function(){
 		layer.msg('正在删除,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
 		var data='&id='+id+'&username='+ftp_username;
-		$$.post('/ftp?action=DeleteUser',data,function(rdata){
+		$.post('/ftp?action=DeleteUser',data,function(rdata){
 			layer.closeAll();
 			if(rdata['status'] == true){
 				getFtp(1);
@@ -167,7 +173,7 @@ function FtpToLocal(){
 	    btn: ['确定', '取消']  
     },function(){
 		var loadT =layer.msg('正在连接服务器，请稍候...', {icon: 16,time:20000});
-		$.get('/Api/SyncData?arg=FtpToLocal',function(rdata){
+		$.post('/Api/SyncData?arg=FtpToLocal','',function(rdata){
 			layer.closeAll();
 			layer.msg(rdata.msg,{icon:rdata.status?1:2});
 		})
@@ -185,7 +191,7 @@ function FtpToCloud(){
         btn: ['确定', '取消']   
     },function(){
     	var loadT =layer.msg('正在连接服务器，请稍候...', {icon: 16,time:20000});
-		$.get('/Api/SyncData?arg=FtpToCloud',function(rdata){
+		$.post('/Api/SyncData?arg=FtpToCloud','',function(rdata){
 			layer.closeAll();
 			layer.msg(rdata.msg,{icon:rdata.status?1:2});
 		})
@@ -266,13 +272,14 @@ function ftpStop(id, username) {
 	}, function(index) {
 		if (index > 0) {
 			var loadT = layer.load({shade: true,shadeClose: false});
-			$.get('/ftp.php?action=SetStatus&id=' + id + '&username=' + username + '&status=0', function(rdata) {
+			var data='id=' + id + '&username=' + username + '&status=0';
+			$.post('/ftp?action=SetStatus',data, function(rdata) {
 				layer.close(loadT);
 				if (rdata.status == true) {
 					layer.msg(rdata.msg, {icon: 1});
 					getFtp(1);
 				} else {
-					layer.msg(rdata.msg, {icon:2});
+					layer.msg(rdata.msg, {icon: 5});
 				}
 			});
 		} else {
@@ -287,13 +294,14 @@ function ftpStop(id, username) {
  */
 function ftpStart(id, username) {
 	var loadT = layer.load({shade: true,shadeClose: false});
-	$.get('/ftp.php?action=SetStatus&id=' + id + '&username=' + username + '&status=1', function(rdata) {
+	var data='id=' + id + '&username=' + username + '&status=1';
+	$.post('/ftp?action=SetStatus',data, function(rdata) {
 		layer.close(loadT);
 		if (rdata.status == true) {
 			layer.msg(rdata.msg, {icon: 1});
 			getFtp(1);
 		} else {
-			layer.msg(rdata.msg, {icon:2});
+			layer.msg(rdata.msg, {icon: 5});
 		}
 	});
 }
@@ -342,7 +350,7 @@ function ftpEditSet(id, username, passwd) {
 					shadeClose: false
 				});
 				var data = $("#ftpEditSet").serialize();
-				$.post('/ftp.php?action=SetUserPassword', data, function(rdata) {
+				$.post('/ftp?action=SetUserPassword', data, function(rdata) {
 					if (rdata == true) {
 						getFtp(1);
 						layer.closeAll();
@@ -353,7 +361,7 @@ function ftpEditSet(id, username, passwd) {
 						getFtp(1);
 						layer.closeAll();
 						layer.msg('操作失败', {
-							icon:2
+							icon: 5
 						});
 					}
 
@@ -375,34 +383,33 @@ function ftpPortEdit(port) {
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
-		content: "<form class='zun-form-new' id='ftpEditSet'>\
+		content: "<div class='zun-form-new' id='ftpEditSet'>\
 					<div class='line'><input id='ftp_port' type='text' name='ftp_port' value='" + port + "' /></div>\
 			        <div class='submit-btn'>\
 						<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
 				        <button id='poseFtpPort' type='button' class='btn btn-success btn-sm btn-title'>提交</button>\
 			        </div>\
-			      </form>"
+			      </div>"
 	});
 	 $("#poseFtpPort").click(function(){
 	 	var NewPort = $("#ftp_port").val();
 	 	ftpPortPost(NewPort);
 	 })
+	 $("#ftp_port").focus().keyup(function(e){
+		if(e.keyCode == 13) $("#poseFtpPort").click();
+	});
 }
 //修改FTP服务端口
 function ftpPortPost(port){
 	layer.closeAll();
-	var loadT = layer.load(2);
-	$.get('/ftp.php?action=setPort&port=' + port, function(rdata) {
-			if (rdata.status == true) {
-				layer.msg(rdata.msg, {
-					icon: 1
-				});
-				refresh();
-			} else {
-				layer.msg(rdata.msg, {
-					icon:2
-				});
-			}
-			layer.close(loadT);
-		});
+	var loadT = layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
+	var data='port=' + port;
+	$.post('/ftp?action=setPort',data, function(rdata) {
+		layer.close(loadT)
+		layer.msg(rdata.msg,{icon:rdata.status?1:2})
+		setTimeout(function(){
+			window.location.reload()	
+		},3000)
+		
+	});
 }

@@ -139,8 +139,8 @@ class panelSite:
     def AddSite(self,get):
         import json,files
         siteMenu = json.loads(get.webname)
-        self.siteName     = siteMenu['domain'].split(':')[0];
-        self.sitePath     = self.GetPath(get.path.replace(' ',''))
+        self.siteName     = self.ToPunycode(siteMenu['domain'].split(':')[0]);
+        self.sitePath     = self.ToPunycodePath(self.GetPath(get.path.replace(' ','')))
         self.sitePort     = get.port.replace(' ','')
         
         if self.sitePort == "": get.port = "80";
@@ -155,12 +155,12 @@ class panelSite:
         domain = None
         #if siteMenu['count']:
         #    domain            = get.domain.replace(' ','')
-        
         #表单验证
         if not files.files().CheckDir(self.sitePath): return public.returnMsg(False,'不能以系统关键目录作为站点目录!');
         if len(self.phpVersion) < 2: return public.returnMsg(False,'PHP版本号不能为空!');
-        reg = "^([\w\-\*]{1,100}\.){1,4}(\w{1,10}|\w{1,10}\.\w{1,10})$";
+        reg = "^([\w\-\*]{1,100}\.){1,4}([\w\-]{1,24}|[\w\-]{1,24}\.[\w\-]{1,24})$";
         if not re.match(reg, self.siteName): return public.returnMsg(False,'主域名格式不正确!');
+        if self.siteName.find('*') != -1: return public.returnMsg(False,'主域名不能为泛解析!');
         
         if not domain: domain = self.siteName;
     
@@ -331,12 +331,23 @@ class panelSite:
                 #匹配非ascii字符
                 match = re.search(u"[\x80-\xff]+",dkey);
                 if not match:
-                        newdomain += dkey + '.';
+                    newdomain += dkey + '.';
                 else:
-                        newdomain += 'xn--' + dkey.decode('utf-8').encode('punycode') + '.'
+                    newdomain += 'xn--' + dkey.decode('utf-8').encode('punycode') + '.'
 
         return newdomain[0:-1];
     
+    #中文路径处理
+    def ToPunycodePath(self,path):
+        path = path.encode('utf-8');
+        import re;
+        match = re.search(u"[\x80-\xff]+",path);
+        if not match: return path;
+        npath = '';
+        for ph in path.split('/'):
+            npath += '/' + self.ToPunycode(ph);
+        return npath.replace('//','/')
+        
     #添加域名
     def AddDomain(self,get):
         if len(get.domain) < 3: return public.returnMsg(False,'域名不能为空!');
@@ -347,7 +358,7 @@ class panelSite:
             get.domain = self.ToPunycode(domain[0])
             get.port = '80'
             
-            reg = "^([\w\-\*]{1,100}\.){1,4}(\w{1,10}|\w{1,10}\.\w{1,10})$";
+            reg = "^([\w\-\*]{1,100}\.){1,4}([\w\-]{1,24}|[\w\-]{1,24}\.[\w\-]{1,24})$";
             if not re.match(reg, get.domain): return public.returnMsg(False,'域名格式不正确!');
             
             if len(domain) == 2: get.port = domain[1];
@@ -574,12 +585,30 @@ class panelSite:
     
     #创建Let's Encrypt免费证书
     def CreateLet(self,get):
-        #定义证书存放目录
-        path =   '/etc/letsencrypt/live/'+ get.siteName;
-        if not os.path.exists(path+'/README'): public.ExecShell(path)
-        csrpath = path+"/fullchain.pem";                    #生成证书路径  
-        keypath = path+"/privkey.pem";                      #密钥文件路径
         
+        file = self.setupPath + '/panel/vhost/nginx/'+get.siteName+'.conf';
+        if os.path.exists(file):
+            siteConf = public.readFile(file);
+            if siteConf.find('301-START') != -1: return public.returnMsg(False,'检测到您的站点做了301重定向设置，请先关闭重定向!');
+        
+        file = self.setupPath + '/panel/vhost/apache/'+get.siteName+'.conf';
+        if os.path.exists(file):
+            siteConf = public.readFile(file);
+            if siteConf.find('301-START') != -1: return public.returnMsg(False,'检测到您的站点做了301重定向设置，请先关闭重定向!');
+        
+        #定义证书存放目录       
+        path =   '/etc/letsencrypt/live/'+ get.siteName;
+        if not os.path.exists(path+'/README'): 
+            public.ExecShell('rm -rf ' + path)
+            public.ExecShell('rm -rf ' + path + '-00*')
+            public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName)
+            public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName + '-00*')
+            public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '.conf')
+            public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '-00*.conf')
+            
+        csrpath = path+"/fullchain.pem";                    #生成证书路径
+        keypath = path+"/privkey.pem";                      #密钥文件路径
+                
         #准备基础信息
         actionstr = get.updateOf
         siteInfo = public.M('sites').where('name=?',(get.siteName,)).field('id,name,path').find();

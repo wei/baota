@@ -392,82 +392,83 @@ class ajax:
     
     def UpdatePanel(self,get):
         #return public.returnMsg(False,'演示服务器，禁止此操作!');
-        
-        if not public.IsRestart(): return public.returnMsg(False,'请等待所有安装任务完成再执行!');
-        import web,json
-        if int(web.ctx.session.config['status']) == 0:
-            public.httpGet('http://www.bt.cn/Api/SetupCount?type=Linux');
-            public.M('config').where("id=?",('1',)).setField('status',1);
-        
-        #取回远程版本信息
-        if hasattr(web.ctx.session,'updateInfo') == True and hasattr(get,'check') == False:
-            updateInfo = web.ctx.session.updateInfo;
-        else:
-            login_temp = 'data/login.temp';
-            if os.path.exists(login_temp):
-                logs = public.readFile(login_temp)
-                os.remove(login_temp);
+        try:
+            if not public.IsRestart(): return public.returnMsg(False,'请等待所有安装任务完成再执行!');
+            import web,json
+            if int(web.ctx.session.config['status']) == 0:
+                public.httpGet('http://www.bt.cn/Api/SetupCount?type=Linux');
+                public.M('config').where("id=?",('1',)).setField('status',1);
+            
+            #取回远程版本信息
+            if hasattr(web.ctx.session,'updateInfo') == True and hasattr(get,'check') == False:
+                updateInfo = web.ctx.session.updateInfo;
             else:
-                logs = '';
-            import psutil,panelPlugin,system;
-            mem = psutil.virtual_memory();
-            mplugin = panelPlugin.panelPlugin();
-            panelsys = system.system();
-            data = {}
-            data['sites'] = str(public.M('sites').count());
-            data['ftps'] = str(public.M('ftps').count());
-            data['databases'] = str(public.M('databases').count());
-            data['system'] = panelsys.GetSystemVersion() + '|' + str(mem.total / 1024 / 1024) + 'MB|' + public.getCpuType() + '*' + str(psutil.cpu_count()) + '|' + web.ctx.session.webserver + '|' + web.ctx.session.version;
-            data['system'] += '||'+self.GetInstalleds(mplugin.getPluginList(None));
-            data['logs'] = logs
-            
-            sUrl = 'http://www.bt.cn/Api/updateLinux';
-            betaIs = 'data/beta.pl';
-            betaStr = public.readFile(betaIs);
-            if betaStr:
-                if betaStr.strip() != 'False':
-                    sUrl = 'http://www.bt.cn/Api/updateLinuxBeta';
-            
-            betaIs = 'plugin/beta/config.conf';
-            betaStr = public.readFile(betaIs);
-            if betaStr:
-                if betaStr.strip() != 'False':
-                    sUrl = 'http://www.bt.cn/Api/updateLinuxBeta';
+                login_temp = 'data/login.temp';
+                if os.path.exists(login_temp):
+                    logs = public.readFile(login_temp)
+                    os.remove(login_temp);
+                else:
+                    logs = '';
+                import psutil,panelPlugin,system;
+                mem = psutil.virtual_memory();
+                mplugin = panelPlugin.panelPlugin();
+                panelsys = system.system();
+                data = {}
+                data['sites'] = str(public.M('sites').count());
+                data['ftps'] = str(public.M('ftps').count());
+                data['databases'] = str(public.M('databases').count());
+                data['system'] = panelsys.GetSystemVersion() + '|' + str(mem.total / 1024 / 1024) + 'MB|' + public.getCpuType() + '*' + str(psutil.cpu_count()) + '|' + web.ctx.session.webserver + '|' + web.ctx.session.version;
+                data['system'] += '||'+self.GetInstalleds(mplugin.getPluginList(None));
+                data['logs'] = logs
                 
-            updateInfo = json.loads(public.httpPost(sUrl,data));
-            if not updateInfo: return public.returnMsg(False,"连接云端服务器失败!");
-            web.ctx.session.updateInfo = updateInfo;
-        
-        
-        #检查是否需要升级
-        if updateInfo['version'] == web.ctx.session.version:
-            return public.returnMsg(False,"当前已经是最新版本!");
-        
-        
-        #是否执行升级程序 
-        if(updateInfo['force'] == True or hasattr(get,'toUpdate') == True or os.path.exists('data/autoUpdate.pl') == True):
-            setupPath = web.ctx.session.setupPath;
-            public.downloadFile(updateInfo['downUrl'],'panel.zip');
-            public.ExecShell('unzip -o panel.zip -d ' + setupPath + '/');
-            import compileall
-            if os.path.exists(setupPath + '/panel/main.py'): public.ExecShell('rm -f ' + setupPath + '/panel/*.pyc');
-            if os.path.exists(setupPath + '/panel/class/common.py'): public.ExecShell('rm -f ' + setupPath + '/panel/class/*.pyc');
-            compileall.compile_dir(setupPath + '/panel');
-            compileall.compile_dir(setupPath + '/panel/class');
-            if os.path.exists(setupPath + '/panel/main.pyc'):
-                public.ExecShell('rm -f ' + setupPath + '/panel/class/*.py');
-                public.ExecShell('rm -f ' + setupPath + '/panel/*.py');
-            public.ExecShell('rm -f panel.zip');
-            web.ctx.session.version = updateInfo['version']
-            return public.returnMsg(True,'成功升级到'+updateInfo['version']);
-        
-        #输出新版本信息
-        data = {
-            'status' : True,
-            'version': updateInfo['version'],
-            'updateMsg' : updateInfo['updateMsg']
-        };
-        return data;
+                sUrl = 'http://www.bt.cn/Api/updateLinux';
+                betaIs = 'data/beta.pl';
+                betaStr = public.readFile(betaIs);
+                if betaStr:
+                    if betaStr.strip() != 'False':
+                        sUrl = 'http://www.bt.cn/Api/updateLinuxBeta';
+                
+                betaIs = 'plugin/beta/config.conf';
+                betaStr = public.readFile(betaIs);
+                if betaStr:
+                    if betaStr.strip() != 'False':
+                        sUrl = 'http://www.bt.cn/Api/updateLinuxBeta';
+                    
+                updateInfo = json.loads(public.httpPost(sUrl,data));
+                if not updateInfo: return public.returnMsg(False,"连接云端服务器失败!");
+                web.ctx.session.updateInfo = updateInfo;
+                
+            #检查是否需要升级
+            if updateInfo['version'] == web.ctx.session.version:
+                return public.returnMsg(False,"当前已经是最新版本!");
+            
+            
+            #是否执行升级程序 
+            if(updateInfo['force'] == True or hasattr(get,'toUpdate') == True or os.path.exists('data/autoUpdate.pl') == True):
+                setupPath = web.ctx.session.setupPath;
+                public.downloadFile(updateInfo['downUrl'],'panel.zip');
+                public.ExecShell('unzip -o panel.zip -d ' + setupPath + '/');
+                import compileall
+                if os.path.exists(setupPath + '/panel/main.py'): public.ExecShell('rm -f ' + setupPath + '/panel/*.pyc');
+                if os.path.exists(setupPath + '/panel/class/common.py'): public.ExecShell('rm -f ' + setupPath + '/panel/class/*.pyc');
+                compileall.compile_dir(setupPath + '/panel');
+                compileall.compile_dir(setupPath + '/panel/class');
+                if os.path.exists(setupPath + '/panel/main.pyc'):
+                    public.ExecShell('rm -f ' + setupPath + '/panel/class/*.py');
+                    public.ExecShell('rm -f ' + setupPath + '/panel/*.py');
+                public.ExecShell('rm -f panel.zip');
+                web.ctx.session.version = updateInfo['version']
+                return public.returnMsg(True,'成功升级到'+updateInfo['version']);
+            
+            #输出新版本信息
+            data = {
+                'status' : True,
+                'version': updateInfo['version'],
+                'updateMsg' : updateInfo['updateMsg']
+            };
+            return data;
+        except:
+            return public.returnMsg(False,"连接云端服务器失败!");
          
     #检查是否安装任何
     def CheckInstalled(self,get):

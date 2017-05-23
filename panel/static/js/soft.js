@@ -46,7 +46,7 @@ function phpSoftMain(name,key){
 					<div class="soft-man-con"></div>\
 				</div>\
 			</div>'
-		})
+		});
 		if(name== "52"){
 			$(".phphide").hide();
 		}
@@ -108,7 +108,7 @@ function SetPHPMaxTime(version){
 	$.post('/config?action=setPHPMaxTime','version='+version+'&time='+max,function(rdata){
 		layer.close(loadT);
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
-	})
+	});
 }
 //设置PHP上传限制
 function SetPHPMaxSize(version){
@@ -168,8 +168,8 @@ function configChange(type){
 		$("#OnlineEditFileBtn").click(function(){
 			$("#textBody").text(editor.getValue());
 			confSafe(fileName);
-		})
-	})
+		});
+	});
 }
 //配置保存
 function confSafe(fileName){
@@ -201,7 +201,7 @@ function SetPathInfo(version,type){
 		$("#pathInfo").html(pathinfo1);
 		$(".webEdit-menu .active").attr('onclick',"SetPHPConfig('71',"+pathinfo+")");
 		layer.msg(rdata.msg,{icon:1});
-	})
+	});
 }
 
 //PHP扩展配置
@@ -258,7 +258,7 @@ function SetPHPConfig(version,pathinfo,go){
 			if($(".active a").html() != '扩展配置'){
 				return;
 			}
-			SetPHPConfig(version,pathinfo)
+			SetPHPConfig(version,pathinfo);
 		},5000);
 	}
 	
@@ -316,7 +316,7 @@ function disFun(version){
 				   +"<div class='divtable' style='width:96%;margin:6px auto;height:350px;overflow:auto'><table class='table table-hover' width='100%' style='margin-bottom:0'>"
 				   +"<thead><tr><th>函数名</th><th width='100' class='text-right'>操作</th></tr></thead>"
 				   +"<tbody id='blacktable'>" + dbody + "</tbody>"
-				   +"</table></div>"
+				   +"</table></div>";
 		
 		con +='\
 		<ul class="help-info-text">\

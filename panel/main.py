@@ -54,7 +54,7 @@ urls = (
 )
 
 
-app = web.application(urls, globals())
+app = web.application(urls, globals(),autoreload = False)
 
 #初始化SESSION
 web.config.session_parameters['cookie_name'] = 'BT_PANEL'
@@ -331,6 +331,7 @@ class panelDatabase(common.panelAdmin):
         
         data = {}
         data['isSetup'] = True;
+        data['mysql_root'] = public.M('config').where('id=?',(1,)).getField('mysql_root');
         if os.path.exists(web.ctx.session.setupPath+'/mysql') == False: data['isSetup'] = False;
         return render.database(data)
     

@@ -66,12 +66,17 @@ class crontab:
         if not os.path.exists(filePath):
             public.downloadFile('http://www.bt.cn/linux/logsBackup.py',filePath)
         #检查计划任务服务状态
-        if public.ExecShell('/etc/init.d/crond status')[0].find('running') == -1:
-            public.ExecShell('/etc/init.d/crond start')
+        
+        if os.path.exists('/etc/init.d/crond'): 
+            if public.ExecShell('/etc/init.d/crond status')[0].find('running') == -1: public.ExecShell('/etc/init.d/crond start')
+        elif os.path.exists('/etc/init.d/cron'):
+            if public.ExecShell('/etc/init.d/cron status')[0].find('running') == -1: public.ExecShell('/etc/init.d/cron start')
+        elif os.path.exists('/usr/lib/systemd/system/crond.service'):
+            if public.ExecShell('systemctl status crond')[0].find('running') == -1: public.ExecShell('systemctl start crond')
+            
     
     #添加计划任务
     def AddCrontab(self,get):
-        #return public.returnMsg(False,'此为演示服务器,禁止添加计划任务!')
         if len(get['name'])<1:
              return public.returnMsg(False,'任务名称不能为空!')
         cuonConfig=""
@@ -189,7 +194,11 @@ class crontab:
         try:
             id = get['id']
             find = public.M('crontab').where("id=?",(id,)).field('name,echo').find()
-            file = '/var/spool/cron/root'
+            x = web.ctx.session.server_os['x'];
+            if x == 'RHEL':
+                file='/var/spool/cron/root'
+            else:
+                file='/var/spool/cron/crontabs/root'
             conf=public.readFile(file)
             rep = ".+" + str(find['echo']) + ".+\n"
             conf = re.sub(rep, "", conf)
@@ -270,19 +279,29 @@ echo "--------------------------------------------------------------------------
     
     #重载配置
     def CrondReload(self):
-        if os.path.exists('/usr/bin/systemctl'): 
-            public.ExecShell("systemctl reload crond")
+        if os.path.exists('/etc/init.d/crond'): 
+            public.ExecShell('/etc/init.d/crond reload')
+        elif os.path.exists('/etc/init.d/cron'):
+            public.ExecShell('service cron restart')
         else:
-            public.ExecShell('/etc/rc.d/init.d/crond reload')
+            public.ExecShell("systemctl reload crond")
         
     #将Shell脚本写到文件
     def WriteShell(self,config):
-        file='/var/spool/cron/root'
+        x = web.ctx.session.server_os['x'];
+        if x == 'RHEL':
+            file='/var/spool/cron/root'
+        else:
+            file='/var/spool/cron/crontabs/root'
+        
         if not os.path.exists(file): public.writeFile(file,'')
         conf = public.readFile(file)
         conf += config + "\n"
         if public.writeFile(file,conf):
-            public.ExecShell("chmod 600 '" + file + "' && chown root.root " + file)
+            if x == 'RHEL':
+                public.ExecShell("chmod 600 '" + file + "' && chown root.root " + file)
+            else:
+                public.ExecShell("chmod 600 '" + file + "' && chown root.crontab " + file)
             return True
         return public.returnMsg(False,'写入配置到计划任务失败!')
     

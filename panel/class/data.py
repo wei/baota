@@ -9,7 +9,7 @@
 import web
 import sys
 sys.path.append("class/")
-import db,public
+import db,public,re
 import json
 
 class data:
@@ -157,6 +157,7 @@ class data:
         if hasattr(get,'tojs'):
             info['return_js']   = get.tojs
         
+        data['where'] = where;
         #获取分页数据
         data['page'] = page.GetPage(info)
         #取出数据
@@ -166,10 +167,12 @@ class data:
     #获取条件
     def GetWhere(self,tableName,search): 
         if not search: return ""
+        search = search.encode('utf-8').strip()
+        search = re.search(u"[\w\x80-\xff]+",search).group();
         wheres = {
-            'sites'     :   "id='"+search+"' or  name like '%"+search+"%' or status like 'search' or ps like '%"+search+"%'",
-            'ftps'      :   "id='"+search+"' or  name like '%"+search+"%' or ps like '%"+search+"%'",
-            'databases' :   "id='"+search+"' or  name like '%"+search+"%' or ps like '%"+search+"%'",
+            'sites'     :   "id='"+search+"' or name like '%"+search+"%' or status like '%"+search+"%' or ps like '%"+search+"%'",
+            'ftps'      :   "id='"+search+"' or name like '%"+search+"%' or ps like '%"+search+"%'",
+            'databases' :   "id='"+search+"' or name like '%"+search+"%' or ps like '%"+search+"%'",
             'logs'      :   "type like '%"+search+"%' or log like '%"+search+"%' or addtime like '%"+search+"%'",
             'backup'    :   "pid="+search+"",
             'users'     :   "id='"+search+"' or username='"+search+"'",

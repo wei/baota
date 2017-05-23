@@ -118,7 +118,7 @@ function GetBakPost(tab){
 		bakText='空';
 	}
 	setWebPs(tab, id, bakText);
-	$("a[data-id='"+id+"']").html(bakText)
+	$("a[data-id='"+id+"']").html(bakText);
 	$(".baktext").remove();
 }
 /**
@@ -373,7 +373,7 @@ function ChangePath(id){
 		}
 		setCookie('SetName',tmp[tmp.length-1]);
 	}
-	path = path.replace(/\/\//g,'/')
+	path = path.replace(/\/\//g,'/');
 	GetDiskList(path);
 	ActiveDisk();
 }
@@ -434,7 +434,7 @@ function GetDiskList(Path){
 		$(".default").hide();
 		$(".file-list").show();
 		$("#tbody").html(Body);
-		if(rdata.PATH.substr(rdata.PATH.length-1,1) != '/') rdata.PATH+='/'
+		if(rdata.PATH.substr(rdata.PATH.length-1,1) != '/') rdata.PATH+='/';
 		$("#PathPlace").find("span").html(rdata.PATH);
 		ActiveDisk();
 		return;
@@ -617,10 +617,11 @@ document.cookie = name + "="+ escape (value) + ";expires=" + exp.toGMTString();
 function getCookie(name)
 {
 	var arr,reg=new RegExp("(^| )"+name+"=([^;]*)(;|$)");
-	if(arr=document.cookie.match(reg))
+	if(arr=document.cookie.match(reg)){
 		return unescape(arr[2]);
-	else
+	}else{
 		return null;
+	}
 }
 
 //主体内容高度自适应
@@ -629,10 +630,10 @@ function aotuHeight(){
 	$(".main-content").css("min-height",McontHeight);
 }
 $(function(){
-	aotuHeight()
+	aotuHeight();
 })
 $(window).resize(function(){
-	aotuHeight()
+	aotuHeight();
 })
 
 //显示隐藏密码
@@ -752,9 +753,9 @@ function OnlineEditFile(type, fileName) {
 	$.post('/files?action=GetFileBody', 'path=' + fileName, function(rdata) {
 		layer.close(loadT);
 		var encodings = ["utf-8","GBK",'GB2312','BIG5'];
-		var encoding = ''
-		var opt = ''
-		var val = ''
+		var encoding = '';
+		var opt = '';
+		var val = '';
 		for(var i=0;i<encodings.length;i++){
 			opt = rdata.encoding == encodings[i] ? 'selected':'';
 			encoding += '<option value="'+encodings[i]+'" '+opt+'>'+encodings[i]+'</option>';
@@ -779,7 +780,6 @@ function OnlineEditFile(type, fileName) {
 			</form>'
 		});
 		$("#textBody").text(rdata.data);
-		//$(".layui-layer").css("top", "5%");
 		var h = $(window).height()*0.9;
 		$("#textBody").height(h-160);
 		var editor = CodeMirror.fromTextArea(document.getElementById("textBody"), {
@@ -802,7 +802,7 @@ function OnlineEditFile(type, fileName) {
 		});
 		$(".btn-editor-close").click(function(){
 			layer.close(editorbox);
-		})
+		});
 	});
 }
 
@@ -837,7 +837,7 @@ function ServiceAdmin(name,type){
 			if(type != 'reload' && rdata.status == true){
 				setTimeout(function(){
 					window.location.reload();
-				},1000)
+				},1000);
 			}
 			if(!rdata.status) layer.msg(rdata.msg,{icon:2,time:0,shade:0.3,shadeClose:true});
 			
@@ -1121,5 +1121,573 @@ function SafeMessage(title,msg,success,thtml){
 		}
 		
 		success();
+	});
+}
+
+isAction();
+function isAction(){
+	hrefs =	window.location.href.split('/')
+	name = hrefs[hrefs.length -1]
+	if(!name){
+		$("#memuA").addClass('current');
+		return;
+	} 
+	
+	$("#memuA"+name).addClass('current');
+}
+
+var W_window = $(window).width();
+if(W_window <= 980){
+	$(window).scroll(function (){
+		var top = $(window).scrollTop();
+		$(".sidebar-scroll").css({"position":"absolute","top":top});
+	});
+}
+else{
+	$(".sidebar-scroll").css({"position":"fixed","top":"0"});
+}
+$(function(){
+	$(".fb-ico").hover(function(){
+		$(".fb-text").css({"left":"36px","top":0,"width":"80px"})
+	},function(){
+		$(".fb-text").css({"left":0,"width":"36px"})
+	}).click(function(){
+		$(".fb-text").css({"left":0,"width":"36px"});
+		$(".zun-feedback-suggestion").show();
+	});
+	$(".fb-close").click(function(){
+		$(".zun-feedback-suggestion").hide();
+	});
+	$(".fb-attitudes li").click(function(){
+		$(this).addClass("fb-selected").siblings().removeClass("fb-selected");
+	});
+});
+
+$("#dologin").click(function(){
+	layer.confirm('您真的要退出面板吗?',{closeBtn:2},function(){
+		window.location.href = '/login?dologin=True';
+	});
+	return false;
+});
+
+
+function setPassword(to){
+	if(to == 1){
+		p1 = $("#p1").val();
+		p2 = $("#p2").val();
+		if(p1 == '' || p1.length < 5){
+			layer.msg('新密码为空或少于5位!',{icon:2});
+			return;
+		}
+		if(p1 != p2){
+			layer.msg('两次输入的密码不一致',{icon:2});
+			return;
+		}
+		
+		$.post('/config?action=setPassword','password1='+p1+'&password2='+p2,function(rdata){
+			if(rdata.status){
+				layer.closeAll();
+				layer.msg(rdata.msg,{icon:1});
+			}else{
+				layer.msg(rdata.msg,{icon:2});
+			}
+		})
+		return;
+	}
+
+	layer.open({
+		type: 1,
+		area: '290px',
+		title: '修改密码',
+		closeBtn: 2,
+		shift: 5,
+		shadeClose: false,
+		content: "<div class='zun-form-new'>\
+				<div class='line'>\
+				<label><span>密码</span></label>\
+				<div class='info-r'><input type='password' name='password1' id='p1' value='' placeholder='新的密码'/></div></div>\
+				<div class='line'>\
+				<label><span>重复</span></label>\
+				<div class='info-r'><input type='password' name='password2' id='p2' value='' placeholder='再输一次'/></div></div>\
+				<div class='submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button>\
+				<button type='button' class='btn btn-success btn-sm' onclick=\"setPassword(1)\">修改</button></div>\
+			</div>"
+	});
+}
+
+
+function setUserName(to){
+	if(to == 1){
+		p1 = $("#p1").val();
+		p2 = $("#p2").val();
+		if(p1 == '' || p1.length < 3){
+			layer.msg('用户名为空或少于3位!',{icon:2});
+			return;
+		}
+		if(p1 != p2){
+			layer.msg('两次输入的用户名不一致',{icon:2});
+			return;
+		}
+		
+		$.post('/config?action=setUsername','username1='+p1+'&username2='+p2,function(rdata){
+			if(rdata.status){
+				layer.closeAll();
+				layer.msg(rdata.msg,{icon:1});
+				$("input[name='username_']").val(p1)
+			}else{
+				layer.msg(rdata.msg,{icon:2});
+			}
+		})
+		return;
+	}
+
+	layer.open({
+		type: 1,
+			area: '290px',
+			title: '修改面板用户名',
+			closeBtn: 2,
+			shift: 5,
+			shadeClose: false,
+			content: "<div class='zun-form-new'>\
+					<div class='line'>\
+					<label><span>用户名</span></label>\
+					<div class='info-r'><input type='text' name='password1' id='p1' value='' placeholder='新的用户名'/></div></div>\
+					<div class='line'>\
+					<label><span>重复</span></label>\
+					<div class='info-r'><input type='text' name='password2' id='p2' value='' placeholder='再输一次'/></div></div>\
+					<div class='submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button>\
+					<button type='button' class='btn btn-success btn-sm' onclick=\"setUserName(1)\">修改</button></div>\
+				</div>"
+	});
+}
+
+
+var openWindow = null;
+var downLoad = null;
+var speed = null;
+function GetReloads(){
+	var count = 0
+	speed = setInterval(function(){
+		if($("#taskList").html() != '任务列表'){
+			clearInterval(speed);
+			count = 0;
+			return;
+		}
+		
+		count++
+		$.post('/files?action=GetTaskSpeed','',function(rdata){
+			if(rdata.task == undefined) {
+				$("#srunning").html('当前没有任务!');
+				divcenter();
+				return;
+			}
+			var sRunning = ""
+			var sWait = ""
+			for(var i=0;i<rdata.task.length;i++){
+				if(rdata.task[i].status == '-1'){
+					if(rdata.task[i].type != 'download'){
+						var vBody = "";
+						var tmp = rdata.msg.split("\n");
+						for(var j=0;j<tmp.length;j++){
+							vBody += tmp[j] + '<br>';
+						}
+						if(rdata.task[i].name.indexOf('扫描') != -1){
+							sRunning = "<li><span class='titlename'>"+rdata.task[i].name+"</span><span class='state'>正在扫描 <img src='/static/img/ing.gif'></span><span class='opencmd'></span><div class='cmd'>"+vBody+"</div></li>";
+						}else{
+							sRunning = "<li><span class='titlename'>"+rdata.task[i].name+"</span><span class='state'>正在安装 <img src='/static/img/ing.gif'></span><span class='opencmd'></span><div class='cmd'>"+vBody+"</div></li>";
+						}
+						
+					}else{
+						sRunning = "<li><div class='line-progress' style='width:"+rdata.msg.pre+"%'></div><span class='titlename'>"
+									+ rdata.task[i].name+"<a style='margin-left:130px;'>"
+									+ (ToSize(rdata.msg.used)+'/'+ToSize(rdata.msg.total))
+									+ "</a></span><span class='com-progress'>"+rdata.msg.pre
+									+ "%</span><span class='state'>下载中 <img src='/static/img/ing.gif'></span></li>";
+					}
+					
+					
+				}else{
+					sWait += "<li><span class='titlename'>"+rdata.task[i].name+"</span><span class='state'>等待 | <a style='color:green' href=\"javascript:RemoveTask("+rdata.task[i].id+")\">删除</a></span></li>";
+				}
+			}
+			
+			$("#srunning").html(sRunning+sWait);
+			divcenter();
+			$(".cmd").scrollTop($('.cmd')[0].scrollHeight);
+		}).error(function(){
+			//clearInterval(speed);
+		});
+	},1000)
+}
+//GetReloads();
+//任务列表
+function task(){
+		layer.open({
+			type: 1,
+			title: "<a id='taskList'>任务列表</a>",
+			area: '600px',
+			closeBtn: 2,
+			shadeClose: false,
+			content:"<div class='tasklist'>"
+				+"<div class='tab-nav'><span class='on'>正在处理</span><span>已完成</span><a href='javascript:ActionTask();' class='btn btn-default btn-sm' style='float: right;margin-top: -3px;' title='若您的任务长时间没有继续，请尝试点此按钮!'>激活队列</a></div>"
+				+"<div class='tab-con'>"
+					+"<ul id='srunning'></ul>"
+					+"<ul id='sbody' style='display:none'></ul>"
+				+"</div>"
+			+"</div>"
+		});
+		
+		GetTaskList();
+		GetReloads();
+		$(".tab-nav span").click(function(){
+			var i = $(this).index();
+			$(this).addClass("on").siblings().removeClass("on");
+			$(".tab-con ul").hide().eq(i).show();
+			GetTaskList();
+			divcenter();
+		});
+	
+}
+
+
+//重新激活队列
+function ActionTask(){
+	var loadT = layer.msg('正在删除...',{icon:16,time:0,shade: [0.3, '#000']});
+	$.post('/files?action=ActionTask','',function(rdata){
+		layer.close(loadT);
+		layer.msg(rdata.msg,{icon:rdata.status?1:5});
+	});
+}
+
+
+
+//删除任务
+function RemoveTask(id){
+	var loadT = layer.msg('正在删除...',{icon:16,time:0,shade: [0.3, '#000']});
+	$.post('/files?action=RemoveTask','id='+id,function(rdata){
+		layer.close(loadT);
+		layer.msg(rdata.msg,{icon:rdata.status?1:5});
+	});
+}
+
+
+//取回任务数据
+function GetTaskList(p){
+	p = p == undefined ? 1:p;
+	$.post('/data?action=getData','tojs=GetTaskList&table=tasks&limit=10&p='+p,function(rdata){
+		var sBody = '';
+		var sRunning = '';
+		var sWait = '';
+		var isRunning = false;
+		for(var i=0;i<rdata.data.length;i++){
+			switch(rdata.data[i].status){
+				case '-1':
+					isRunning = true;
+					if(rdata.data[i].type != 'download'){
+						sRunning = "<li><span class='titlename'>"+rdata.data[i].name+"</span><span class='state'>正在安装 <img src='/static/img/ing.gif'></span><span class='opencmd'></span><pre class='cmd'></pre></li>";
+					}else{
+						sRunning = "<li><div class='line-progress' style='width:0%'></div><span class='titlename'>"+rdata.data[i].name+"<a id='speed' style='margin-left:130px;'>0.0M/12.5M</a></span><span class='com-progress'>0%</span><span class='state'>下载中 <img src='/static/img/ing.gif'></span></li>";
+					}
+					break;
+				case '0':
+					sWait += "<li><span class='titlename'>"+rdata.data[i].name+"</span><span class='state'>等待</span> | <a href=\"javascript:RemoveTask("+rdata.data[i].id+")\">删除</a></li>";
+					break;
+				case '1':
+					sBody += "<li><span class='titlename'>"+rdata.data[i].name+"</span><span class='state'>"+rdata.data[i].addtime+"  已完成  耗时"+(rdata.data[i].end - rdata.data[i].start)+"秒</span></li>";
+			}
+		}
+		
+		$("#srunning").html(sRunning+sWait);
+		$("#sbody").html(sBody);
+		return isRunning;
+	});
+}
+
+function GetTaskCount(){
+	$.post('/ajax?action=GetTaskCount','',function(rdata){
+		$(".task").text(rdata);
+	});
+}
+
+function setSelectChecked(selectId, checkValue){  
+    var select = document.getElementById(selectId);  
+    for(var i=0; i<select.options.length; i++){  
+        if(select.options[i].innerHTML == checkValue){  
+            select.options[i].selected = true;  
+            break;  
+        }  
+    }  
+};  
+
+
+GetTaskCount();
+
+//显示软件列表
+function ShowSoftList(){
+	layer.open({
+		type: 1,
+		title: "软件管家",
+		area: '70%',
+		offset: '100px',
+		shadeClose: false,
+		content:'<div class="divtable" style="margin: 10px;">'
+					+'<table width="100%" cellspacing="0" cellpadding="0" border="0" class="table table-hover">'
+						+'<thead>'
+							+'<tr>'
+								+'<th>软件名称</th>'
+								+'<th>类型</th>'
+								+'<th>版本</th>'
+								+'<th>状态</th>'
+								+'<th width="90" style="text-align: right;">操作</th>'
+							+'</tr>'
+						+'</thead>'
+						+'<tbody id="softList"></tbody>'
+					+'</table>'
+				+'</div>'
+	});
+	
+	GetSoftList();
+}
+
+function RecInstall(){
+$.post('/ajax?action=GetSoftList','',function(rdata){
+	var nBody = ""
+	var aBody = ""
+	var mBody = ""
+	for(var i=0;i<rdata.length;i++){
+		if(rdata[i].name == 'Tomcat') continue;
+		var options="";
+		var checkedStr = "<input id='data_"+rdata[i].name+"' data-info='"+rdata[i].name+" "+rdata[i].versions[0].version+"' type='checkbox' checked>";
+		for(var n=0;n<rdata[i].versions.length;n++){
+			var selected = '';
+			
+			if((rdata[i].name == 'PHP' && (rdata[i].versions[n].version == '5.4' || rdata[i].versions[n].version == '54')) || (rdata[i].name == 'MySQL' && rdata[i].versions[n].version == '5.5') || (rdata[i].name == 'phpMyAdmin' && rdata[i].versions[n].version == '4.4')) {
+				selected = 'selected';
+				checkedStr = "<input id='data_"+rdata[i].name+"' data-info='"+rdata[i].name+" "+rdata[i].versions[n].version+"' type='checkbox' checked>";
+			}
+			
+									
+			options += "<option value='"+rdata[i].versions[n].version+"' " + selected + ">"+rdata[i].name+" "+rdata[i].versions[n].version+"</option>";
+		}
+		
+		
+		var tmp = "<li><span class='ico'><img src='/static/img/"+rdata[i].name.toLowerCase()+".png'></span><span class='name'><select id='select_"+rdata[i].name+"' class='sl-s-info'>"+options+"</select></span><span class='pull-right'>"+checkedStr+"</span></li>";
+		if(rdata[i].name == 'Nginx'){
+			nBody = tmp;
+		}else if(rdata[i].name == 'Apache'){
+			aBody = tmp;
+		}else{
+			mBody += tmp;
+		}
+	}
+	
+	
+	
+	nBody += mBody;
+	aBody += mBody;
+	aBody = aBody.replace(new RegExp(/(data_)/g),'apache_').replace(new RegExp(/(select_)/g),'apache_select_');
+	
+	var btMenu = layer.open({
+			type: 1,
+			title: "推荐安装套件",
+			area: ['658px','423px'],
+			closeBtn: 2,
+			shadeClose: false,
+			content:"<div class='rec-install'>"
+					+"<div class='important-title'>"
+					+	"<p><span class='glyphicon glyphicon-alert' style='color: #f39c12; margin-right: 10px;'></span>我们为您推荐以下一键套件，请按需选择或在 <a href='javascript:jump()' style='color:#20a53a'>所有软件</a> 栏自行选择，如你不懂，请安装LNMP。</p>"
+					+"</div>"
+					+"<div class='rec-box'>"
+					+	"<h3>LNMP(推荐)</h3>"
+					+	"<div class='rec-box-con'>"
+					+		"<ul class='rec-list'>"+nBody+"</ul>"	
+					+		"<p class='fangshi'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></p>"
+					+		"<div class='onekey'>一键安装</div>"
+					+	"</div>"
+					+"</div>"
+					+"<div class='rec-box' style='margin-left:16px'>"
+					+	"<h3>LAMP</h3>"
+					+	"<div class='rec-box-con'>"
+					+		"<ul class='rec-list'>"+aBody+"</ul>"	
+					+		"<p class='fangshi'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></p>"
+					+		"<div class='onekey'>一键安装</div>"
+					+	"</div>"
+					+"</div>"
+					+"</div>"
+		});
+	$('.fangshi input').click(function(){
+		$(this).attr('checked','checked').parent().siblings().find("input").removeAttr('checked');
+	});
+	$(".sl-s-info").change(function(){
+		var datainfo = $(this).find("option:selected").text();
+		var idName = $(this).attr('id');
+		datainfo = datainfo.toLowerCase();
+		$(this).parents("li").find("input").attr("data-info",datainfo);
+	});
+	
+	$('#apache_select_PHP').change(function(){
+		var php_version = $(this).val();
+		phpSelect(php_version,'apache_select_','apache_');
+		
+	});
+	
+	$('#select_PHP').change(function(){
+		var php_version = $(this).val();
+		phpSelect(php_version,'select_','data_');
+	});
+	
+	
+	
+	function phpSelect(php_version,idpx1,idpx2){
+		var phpmyadmin_version = '4.4';
+		switch(php_version){
+			case '5.2':
+				phpmyadmin_version = '4.0';
+				break;
+			case '5.3':
+				phpmyadmin_version = '4.0';
+				break;
+			case '5.4':
+				phpmyadmin_version = '4.4';
+				break;
+			default:
+				phpmyadmin_version = '4.7';
+		}
+		
+		
+		$("#"+idpx1+"phpMyAdmin option[value='"+phpmyadmin_version+"']").attr("selected","selected").siblings().removeAttr("selected");
+		$('#'+idpx1+'_phpMyAdmin').attr('data-info', 'phpmyadmin ' + phpmyadmin_version);
+	}
+	
+	
+	$('#select_MySQL,#apache_select_MySQL').change(function(){
+		var mysql_version = $(this).val();
+		mysqlSelect(mysql_version);
+	});
+	
+
+	function mysqlSelect(mysql_version){
+		memSize = getCookie('memSize');
+		max = 64;
+		msg = '64M';
+		switch(mysql_version){
+			case '5.1':
+				max = 256;
+				msg = '256M';
+				break;
+			case '5.7':
+				max = 1500;
+				msg = '2GB';
+				break;
+			case '5.6':
+				max = 800;
+				msg = '1GB';
+				break;
+			case 'AliSQL':
+				max = 800;
+				msg = '1GB';
+				break;
+			case 'mariadb_10.0':
+				max = 800;
+				msg = '1GB';
+				break;
+			case 'mariadb_10.1':
+				max = 1500;
+				msg = '2GB';
+				break;
+		}
+		
+		if(memSize < max){
+			layer.msg('您 的内存小于' + msg + '，不建议安装MySQL-' + mysql_version,{icon:5});
+		}
+	}
+			
+	$('.onekey').click(function(){
+		var type = $(this).prev().find("input").eq(0).prop("checked") ? '1':'0';
+		var l = $(this).parents(".rec-box-con").find(".rec-list li").length;
+		var name = '';
+		var info = '';
+		var sname = '';
+		var sversion = '';
+		var data = '';
+		//取安装软件信息
+		for(var i=0; i<l; i++){
+			var li = $(this).parents(".rec-box-con").find("ul li").eq(i);
+			var checkbox = li.find("input");
+			if(checkbox.prop("checked")){
+				name += checkbox.attr("data-info")+",";
+			}
+		}
+		info = name.split(",");
+		//循环添加任务
+		loadT = layer.msg("正在添加到安装器...",{icon:16,time:0,shade:[0.3,'#000']});
+		for(var i= 0; i<info.length-1; i++){
+			sname = info[i].split(" ")[0].toLowerCase();
+			sversion = info[i].split(" ")[1];
+			data = "name="+sname+"&version="+sversion+"&type="+type+'&id=' + (i+1);
+			$.ajax({
+				url:'/files?action=InstallSoft', 
+				data:data,
+				type:'POST',
+				async:false,
+				success:function(rdata) {}
+			});
+		}
+		
+		layer.close(loadT);
+		
+		layer.close(btMenu);
+		setTimeout(function(){
+			GetTaskCount();
+		},2000);
+		layer.msg('已将安装请求添加到安装器..',{icon:1});
+		setTimeout(function(){ task(); },1000);
+	});
+	
+	InstallTips();
+	fly("onekey");
+	})
+	
+}
+function jump(){
+	layer.closeAll();
+	window.location.href="/soft";
+}
+//安装说明提示
+function InstallTips(){
+	$('.fangshi label').mouseover(function(){
+		var title = $(this).attr("data-title");
+		layer.tips(title, this, {
+			tips: [1, '#787878'],
+			time:0
+		});
+	}).mouseout(function(){
+		$(".layui-layer-tips").remove();
+	});
+}
+//飞入效果
+function fly(name){
+	var offset = $("#task").offset();
+$("."+name).click(function(event){
+	var dlok = $(this);
+	//var img = dlok.parent().find('img').attr('src');
+	var flyer = $('<span class="yuandian"></span>');
+	flyer.fly({
+		start: {
+			left: event.pageX,
+			top: event.pageY
+		},
+		end: {
+			left: offset.left+10,
+			top: offset.top+10,
+			width: 0,
+			height: 0
+		},
+		onEnd: function(){
+			layer.closeAll();
+			layer.msg('已添加到队列',{icon:1});
+				GetTaskCount();
+			}
+		});
 	});
 }
