@@ -130,8 +130,6 @@ class system:
         data['pure-ftpd'] = tmp
         data['panel'] = self.GetPanelInfo()
         data['systemdate'] = public.ExecShell('date +"%Y-%m-%d %H:%M:%S %Z %z"')[0];
-        
-        
         return data
     
     def GetPanelInfo(self):
@@ -143,15 +141,14 @@ class system:
             port = '80';
         domain = ''
         if os.path.exists('data/domain.conf'):
-           domain = public.readFile('data/domain.conf')
+           domain = public.readFile('data/domain.conf');
         
         autoUpdate = ''
         if os.path.exists('data/autoUpdate.pl'): autoUpdate = 'checked';
         limitip = ''
         if os.path.exists('data/limitip.conf'): limitip = public.readFile('data/limitip.conf');
         
-        
-        check502 = ''
+        check502 = '';
         if os.path.exists('data/502Task.pl'): check502 = 'checked';
         return {'port':port,'address':address,'domain':domain,'auto':autoUpdate,'502':check502,'limitip':limitip}
     
@@ -197,6 +194,10 @@ class system:
         data['cpuRealUsed'] = cpu[0]
         data['time'] = self.GetBootTime()
         data['system'] = self.GetSystemVersion()
+        try:
+            data['who'] = public.ExecShell("who|awk '{print $1}'")[0].strip();
+        except:
+            data['who'] = "";
         return data
     
     def GetSystemVersion(self):
@@ -364,11 +365,12 @@ class system:
     
     def RestartServer(self):
         if not public.IsRestart(): return public.returnMsg(False,'请等待所有安装任务完成再执行!');
-        public.ExecShell("/etc/init.d/bt stop && init 6 &");
+        public.ExecShell("sync && /etc/init.d/bt stop && init 6 &");
         return public.returnMsg(True,'命令发送成功!');
     
     #释放内存
     def ReMemory(self):
+        os.system('sync');
         scriptFile = 'script/rememory.sh'
         if not os.path.exists(scriptFile):
             public.downloadFile('http://www.bt.cn/script/rememory.sh',scriptFile);

@@ -27,11 +27,11 @@ function getFtp(page,search) {
 					<td>"+data.data[i].name+"</td>\
 					<td class='relative'><span class='password' data-pw='"+data.data[i].password+"'>**********</span><span class='glyphicon glyphicon-eye-open cursor pw-ico' style='margin-left:10px'></span><span class='ico-copy cursor btcopy' style='margin-left:10px' title='复制密码' data-pw='"+data.data[i].password+"'></span></td>\
 					<td>"+ftp_status+"</td>\
-					<td><a class='link' title='打开目录' href=\"javascript:openPath('"+data.data[i].path+"');\">"+data.data[i].path+"</a></td>\
-					<td><a class='linkbed' href='javascript:;' data-id='"+data.data[i].id+"'>" + data.data[i].ps + "</a></td>\
+					<td><a class='btlink' title='打开目录' href=\"javascript:openPath('"+data.data[i].path+"');\">"+data.data[i].path+"</a></td>\
+					<td><a class='btlinkbed' href='javascript:;' data-id='"+data.data[i].id+"'>" + data.data[i].ps + "</a></td>\
 					<td style='text-align:right; color:#bbb'>\
-                       <a href='javascript:;' class='link' onClick=\"ftpEditSet("+data.data[i].id+",'"+data.data[i].name+"','"+data.data[i].password+"')\">改密 </a>\
-                        | <a href='javascript:;' class='link' onclick=\"ftpDelete('"+data.data[i].id+"','"+data.data[i].name+"')\" title='删除FTP'>删除</a>\
+                       <a href='javascript:;' class='btlink' onClick=\"ftpEditSet("+data.data[i].id+",'"+data.data[i].name+"','"+data.data[i].password+"')\">改密 </a>\
+                        | <a href='javascript:;' class='btlink' onclick=\"ftpDelete('"+data.data[i].id+"','"+data.data[i].name+"')\" title='删除FTP'>删除</a>\
                     </td></tr>"                 			
 		}
 		//输出数据列表
@@ -39,7 +39,7 @@ function getFtp(page,search) {
 		//输出分页
 		$("#ftpPage").html(data.page);
 		//备注
-		$(".linkbed").click(function(){
+		$(".btlinkbed").click(function(){
 			var dataid = $(this).attr("data-id");
 			var databak = $(this).text();
 			$(this).hide().after("<input class='baktext' type='text' data-id='"+dataid+"' name='bak' value='" + databak + "' placeholder='备注信息' onblur='GetBakPost(\"ftps\")' />");
@@ -88,25 +88,25 @@ function ftpAdd(type) {
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
-		content: "<form class='zun-form-new' id='ftpAdd'>\
+		content: "<form class='bt-form pd20 pb70' id='ftpAdd'>\
 					<div class='line'>\
-					<label><span>用户名</span></label>\
-					<div class='info-r'><input type='text' id='ftpUser' name='ftp_username' style='width:340px' /></div>\
+					<span class='tname'>用户名</span>\
+					<div class='info-r'><input class='bt-input-text' type='text' id='ftpUser' name='ftp_username' style='width:340px' /></div>\
 					</div>\
 					<div class='line'>\
-					<label><span>密码</span></label>\
-					<div class='info-r'><input type='text' name='ftp_password' id='MyPassword' style='width:340px' value='"+(RandomStrPwd(10))+"' /><span title='随机密码' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(10)'></span></div>\
+					<span class='tname'>密码</span>\
+					<div class='info-r'><input class='bt-input-text mr5' type='text' name='ftp_password' id='MyPassword' style='width:340px' value='"+(RandomStrPwd(10))+"' /><span title='随机密码' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(10)'></span></div>\
 					</div>\
 					<div class='line'>\
-					<label><span>根目录</span></label>\
-					<div class='info-r'><input id='inputPath' type='text' name='path' value='"+defaultPath+"/' placeholder='帐户根目录，会自动创建同名目录'  style='width:340px' /><span class='glyphicon glyphicon-folder-open cursor' onclick='ChangePath(\"inputPath\")'></span><p>FTP所指向的目录</p></div>\
+					<span class='tname'>根目录</span>\
+					<div class='info-r'><input id='inputPath' class='bt-input-text mr5' type='text' name='path' value='"+defaultPath+"/' placeholder='帐户根目录，会自动创建同名目录'  style='width:340px' /><span class='glyphicon glyphicon-folder-open cursor' onclick='ChangePath(\"inputPath\")'></span><p class='c9 mt10'>FTP所指向的目录</p></div>\
 					</div>\
                     <div class='line' style='display:none'>\
-					<label><span>备注</span></label>\
+					<span class='tname'>备注</span>\
 					<div class='info-r'>\
-					<input type='text' name='ps' value='' placeholder='备注信息(小于255个字符)' />\
+					<input class='bt-input-text' type='text' name='ps' value='' placeholder='备注信息(小于255个字符)' />\
 					</div></div>\
-					<div class='submit-btn'>\
+					<div class='bt-form-submit-btn'>\
 						<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
 				        <button type='button' class='btn btn-success btn-sm btn-title' onclick=\"ftpAdd(1)\" >提交</button>\
 			        </div>\
@@ -325,15 +325,15 @@ function ftpEditSet(id, username, passwd) {
 			closeBtn: 2,
 			shift: 5,
 			shadeClose: false,
-			content: "<form class='zun-form-new' id='ftpEditSet'>\
+			content: "<form class='bt-form pd20 pb70' id='ftpEditSet'>\
 						<div class='line'>\
 						<input type='hidden' name='id' value='" + id + "'/>\
 						<input type='hidden' name='ftp_username' value='" + username + "'/>\
-						<label><span>用户名:</span></label><div class='info-r'><input  type='text' name='myusername' value='" + username + "' disabled /></div></div>\
+						<span class='tname'>用户名:</span><div class='info-r'><input class='bt-input-text' type='text' name='myusername' value='" + username + "' disabled  style='width:100%'/></div></div>\
 						<div class='line'>\
-						<label><span>新密码:</span></label><div class='info-r'><input  type='text' name='new_password' value='" + passwd + "' /></div>\
+						<span class='tname'>新密码:</span><div class='info-r'><input class='bt-input-text' type='text' name='new_password' value='" + passwd + "' style='width:100%' /></div>\
 						</div>\
-				        <div class='submit-btn'>\
+				        <div class='bt-form-submit-btn'>\
 							<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
 					        <button type='button' class='btn btn-success btn-sm btn-title' onclick='ftpEditSet()' >提交</button>\
 				        </div>\
@@ -383,9 +383,9 @@ function ftpPortEdit(port) {
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
-		content: "<div class='zun-form-new' id='ftpEditSet'>\
-					<div class='line'><input id='ftp_port' type='text' name='ftp_port' value='" + port + "' /></div>\
-			        <div class='submit-btn'>\
+		content: "<div class='bt-form pd20 pb70' id='ftpEditSet'>\
+					<div class='line'><input id='ftp_port' class='bt-input-text' type='text' name='ftp_port' value='" + port + "' style='width:100%' /></div>\
+			        <div class='bt-form-submit-btn'>\
 						<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
 				        <button id='poseFtpPort' type='button' class='btn btn-success btn-sm btn-title'>提交</button>\
 			        </div>\

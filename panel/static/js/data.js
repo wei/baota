@@ -20,21 +20,21 @@ function getData(page,search) {
 			$("#DataPage").show();
 			for (var i = 0; i < data.data.length; i++) {
 				if(data.data[i].backup_count==0){
-					var isback = "<a href='javascript:;' class='link' onclick=\"DataDetails('"+data.data[i].id+"','"+data.data[i].name+"')\">无打包</a>"
+					var isback = "<a href='javascript:;' class='btlink' onclick=\"DataDetails('"+data.data[i].id+"','"+data.data[i].name+"')\">无打包</a>"
 				}else{
-					var isback = "<a href='javascript:;' class='link' onclick=\"DataDetails('"+data.data[i].id+"','"+data.data[i].name+"')\">有打包</a>"
+					var isback = "<a href='javascript:;' class='btlink' onclick=\"DataDetails('"+data.data[i].id+"','"+data.data[i].name+"')\">有打包</a>"
 				}
 				Body += "<tr><td><input type='checkbox' name='id' value='"+data.data[i].id+"'>\
 						<td>" + data.data[i].name + "</td>\
 						<td>" + data.data[i].name + "</td>\
 						<td class='relative'><span class='password' data-pw='"+data.data[i].password+"'>**********</span><span class='glyphicon glyphicon-eye-open cursor pw-ico' style='margin-left:10px'></span><span class='ico-copy cursor btcopy' style='margin-left:10px' title='复制密码' data-pw='"+data.data[i].password+"'></span></td>\
-						<td>"+isback+" | <a class='link' href=\"javascript:InputDatabase('"+data.data[i].name+"');\" title='导入数据库'>导入</a></td>\
-						<td><a class='linkbed' href='javascript:;' data-id='"+data.data[i].id+"'>" + data.data[i].ps + "</a></td>\
+						<td>"+isback+" | <a class='btlink' href=\"javascript:InputDatabase('"+data.data[i].name+"');\" title='导入数据库'>导入</a></td>\
+						<td><a class='btlinkbed' href='javascript:;' data-id='"+data.data[i].id+"'>" + data.data[i].ps + "</a></td>\
 						<td style='text-align:right;'>\
-						<a href='javascript:;' class='link' onclick=\"AdminDatabase('"+data.data[i].name+"','"+data.data[i].name+"','"+data.data[i].password+"')\" title='管理数据库'>管理</a> | \
-						<a href='javascript:;' class='link' onclick=\"SetDatabaseAccess('"+data.data[i].name+"')\" title='设置访问权限'>权限</a> | \
-						<a href='javascript:;' class='link' onclick=\"DataRespwd(0,'"+data.data[i].id+"','"+data.data[i].name+"')\" title='修改数据库密码'>改密</a> | \
-						<a href='javascript:;' class='link' onclick=\"DataDelete("+data.data[i].id+",'"+data.data[i].name+"')\" title='删除数据库'>删除</a>\
+						<a href='javascript:;' class='btlink' onclick=\"AdminDatabase('"+data.data[i].name+"','"+data.data[i].name+"','"+data.data[i].password+"')\" title='管理数据库'>管理</a> | \
+						<a href='javascript:;' class='btlink' onclick=\"SetDatabaseAccess('"+data.data[i].name+"')\" title='设置访问权限'>权限</a> | \
+						<a href='javascript:;' class='btlink' onclick=\"DataRespwd(0,'"+data.data[i].id+"','"+data.data[i].name+"')\" title='修改数据库密码'>改密</a> | \
+						<a href='javascript:;' class='btlink' onclick=\"DataDelete("+data.data[i].id+",'"+data.data[i].name+"')\" title='删除数据库'>删除</a>\
 						</td></tr>"
 			}
 		}
@@ -43,7 +43,7 @@ function getData(page,search) {
 		//输出分页
 		$("#DataPage").html(data.page);
 		//备注
-		$(".linkbed").click(function(){
+		$(".btlinkbed").click(function(){
 			var dataid = $(this).attr("data-id");
 			var databak = $(this).text();
 			$(this).hide().after("<input class='baktext' type='text' data-id='"+dataid+"' name='bak' value='" + databak + "' placeholder='备注信息' onblur='GetBakPost(\"databases\")' />");
@@ -73,10 +73,10 @@ function DataAdd(sign){
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
-		content: "<form class='zun-form-new' id='DataAdd'>\
+		content: "<form class='bt-form pd20 pb70' id='DataAdd'>\
 						<div class='line'>\
-							<label><span>数据库名</span></label><div class='info-r'><input  type='text' name='name' placeholder='新的数据库名' style='width:70%' />\
-							<select name='codeing' style='width:22%'>\
+							<span class='tname'>数据库名</span><div class='info-r'><input class='bt-input-text mr5' type='text' name='name' placeholder='新的数据库名' style='width:70%' />\
+							<select class='bt-input-text' name='codeing' style='width:22%'>\
 								<option value='utf8'>utf-8</option>\
 								<option value='utf8mb4'>utf8mb4</option>\
 								<option value='gbk'>gbk</option>\
@@ -85,23 +85,23 @@ function DataAdd(sign){
 							</div>\
 						</div>\
 						<div class='line'>\
-						<label><span>密码</span></label><div class='info-r'><input  type='text' name='password' id='MyPassword' style='width:340px' placeholder='数据库密码' value='"+(RandomStrPwd(10))+"' /><span title='随机密码' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(10)'></span></div>\
+						<span class='tname'>密码</span><div class='info-r'><input class='bt-input-text mr5' type='text' name='password' id='MyPassword' style='width:340px' placeholder='数据库密码' value='"+(RandomStrPwd(10))+"' /><span title='随机密码' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(10)'></span></div>\
 						</div>\
                         <div class='line'>\
-						<label><span>访问权限</span></label>\
+						<span class='tname'>访问权限</span>\
 						<div class='info-r'>\
-						<select id='dataAccess' style='width:100px;'>\
+						<select id='dataAccess' class='bt-input-text mr5' style='width:100px;'>\
 							<option value='127.0.0.1'>本地服务器</option>\
 							<option value='%'>所有人</option>\
 							<option value='ip'>指定IP</option>\
 						</select>\
-						<input type='text' name='address' placeholder='请输入允许访问的IP地址' style='width:230px;display:none;' />\
+						<input class='bt-input-text' type='text' name='address' placeholder='请输入允许访问的IP地址' style='width:230px;display:none;' />\
 						</div>\
 						</div>\
 						<div class='line' style='display:none'>\
-						<label><span>备注</span></label><div class='info-r'><input type='text' name='ps' placeholder='数据库备注' /></div>\
+						<span class='tname'>备注</span><div class='info-r'><input class='bt-input-text' type='text' name='ps' placeholder='数据库备注' /></div>\
 						</div>\
-                        <div class='submit-btn'>\
+                        <div class='bt-form-submit-btn'>\
 							<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
 					        <button type='button' class='btn btn-success btn-sm btn-title' onclick=\"DataAdd(1)\" >提交</button>\
 				        </div>\
@@ -150,11 +150,11 @@ function DataSetuppwd(sign, passwd) {
 				closeBtn: 2,
 				shift: 5,
 				shadeClose: false,
-				content: "<div class='zun-form-new'' id='DataSetuppwd'>\
+				content: "<div class='bt-form pd20 pb70' id='DataSetuppwd'>\
 						<div class='line'>\
-						<label style='width:14%'><span>root密码:</span></label><div class='info-r'><input id='MyPassword' type='text' name='password' value='"+mypasswd+"' style='width:350px' /><span title='随机密码' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(16)'></span>\
+						<span class='tname'>root密码:</span><div class='info-r'><input id='MyPassword' class='bt-input-text mr5' type='text' name='password' value='"+mypasswd+"' style='width:350px' /><span title='随机密码' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(16)'></span>\
 						</div></div>\
-				        <div class='submit-btn'>\
+				        <div class='bt-form-submit-btn'>\
 							<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
 					        <button type='button' id='PostPwBtn' class='btn btn-success btn-sm btn-title' onclick='DataSetuppwd(1)' >提交</button>\
 				        </div>\
@@ -192,20 +192,20 @@ function DataRespwd(sign,id,username){
 		layer.open({
 			type:1,
 			skin:'demo-class',
-			area:'500px',
+			area:'450px',
 			title:'修改数据库密码',
 			closeBtn:2,
 			shift:5,
 			shadeClose:false,
-			content:"<form class='zun-form-new' id='DataRespwd'>\
+			content:"<form class='bt-form pd20 pb70' id='DataRespwd'>\
 						<div class='line'>\
 						<input type='text' name='id' value='"+id+"' hidden />\
-						<label><span>用户名:</span></label><div class='info-r'><input type='text' name='username' value='"+username+"' readonly='readonly'/>\
+						<span class='tname'>用户名:</span><div class='info-r'><input class='bt-input-text' type='text' name='username' value='"+username+"' readonly='readonly' style='width:100%' />\
 						</div></div>\
 						<div class='line'>\
-						<label><span>新密码:</span></label><div class='info-r'><input type='text' name='password' placeholder='新的数据库密码' />\
+						<span class='tname'>新密码:</span><div class='info-r'><input class='bt-input-text' type='text' name='password' placeholder='新的数据库密码' style='width:100%' />\
 						</div></div>\
-				        <div class='submit-btn'>\
+				        <div class='bt-form-submit-btn'>\
 							<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
 					        <button type='button' class='btn btn-success btn-sm btn-title' onclick='DataRespwd(1)' >提交</button>\
 				        </div>\
@@ -247,16 +247,16 @@ function DataDetails(id,dataname,page){
 			for(var i=0;i<frdata.data.length;i++){
 				if(frdata.data[i].type == '0') continue;
 				if(frdata.data[i].filename.length < 12){
-					var ftpdown = "<a class='link' href='/cloud?filename="+frdata.data[i].filename+"&name="+ frdata.data[i].name+"' target='_blank'>下载</a>";
+					var ftpdown = "<a class='btlink' href='/cloud?filename="+frdata.data[i].filename+"&name="+ frdata.data[i].name+"' target='_blank'>下载</a>";
 				}else{
-					var ftpdown = "<a class='link' herf='javascrpit:;' onclick=\"RecoveryData('"+frdata.data[i].filename+"','"+dataname+"')\">恢复</a> | <a class='link' href='/download?filename="+frdata.data[i].filename+"&name="+ frdata.data[i].name+"' target='_blank'>下载</a>";
+					var ftpdown = "<a class='btlink' herf='javascrpit:;' onclick=\"RecoveryData('"+frdata.data[i].filename+"','"+dataname+"')\">恢复</a> | <a class='btlink' href='/download?filename="+frdata.data[i].filename+"&name="+ frdata.data[i].name+"' target='_blank'>下载</a>";
 				}
 				
 				 body += "<tr><td><span class='glyphicon glyphicon-file'></span>"+frdata.data[i].name+"</td>\
 								<td>"+(ToSize(frdata.data[i].size))+"</td>\
 								<td>"+frdata.data[i].addtime+"</td>\
 								<td style='color:#bbb;text-align:right'>\
-								"+ftpdown+" | <a class='link' herf='javascrpit:;' onclick=\"DataBackupDelete('"+id+"','"+frdata.data[i].id+"')\">删除</a>\
+								"+ftpdown+" | <a class='btlink' herf='javascrpit:;' onclick=\"DataBackupDelete('"+id+"','"+frdata.data[i].id+"')\">删除</a>\
 								</td>\
 							</tr>"
 			}
@@ -352,10 +352,10 @@ function DataDelete(id,name){
 	    area: '350px',
 	    closeBtn: 2,
 	    shadeClose: true,
-	    content:"<div class='zun-form-new webDelete'>\
+	    content:"<div class='bt-form webDelete pd20' style='padding-bottom:60px'>\
 	    	<p>一旦删除将无法恢复！您确定要删除该数据库吗？</p>\
-			<div class='vcode'>计算结果：<span class='text'></span>=<input type='text' id='vcodeResult' value=''></div>\
-	    	<div class='submit-btn' style='margin-top:15px'>\
+			<div class='vcode'>计算结果：<span class='text'></span>=<input class='bt-input-text' type='text' id='vcodeResult' value=''></div>\
+	    	<div class='bt-form-submit-btn'>\
 				<button type='button' id='web_end_time' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
 		        <button type='button' id='web_del_send' class='btn btn-success btn-sm btn-title'  onclick=\"ftpall('"+id+"','"+name+"')\">提交</button>\
 	        </div>\
@@ -492,7 +492,7 @@ function InputDatabase(name){
 						<td>" + ((fmp[2].length > 11)?fmp[2]:getLocalTime(fmp[2])) + "</td>\
 						<td>" + (ToSize(fmp[1])) + "</td>\
 						<td class='editmenu'>\
-							<a class='link' href='javascript:;' onclick=\"RecoveryData('" + rdata.PATH +"/"+ fmp[0] + "','"+name+"')\">导入</a>\
+							<a class='btlink' href='javascript:;' onclick=\"RecoveryData('" + rdata.PATH +"/"+ fmp[0] + "','"+name+"')\">导入</a>\
 						</span></td>\
 					</tr>";
 		}
@@ -585,24 +585,24 @@ function SetDatabaseAccess(dataName,action){
 		layer.open({
 			type: 1,
 			skin: 'demo-class',
-			area: '480px',
+			area: '450px',
 			title: '设置数据库权限['+dataName+']',
 			closeBtn: 2,
 			shift: 5,
 			shadeClose: false,
-			content: "<form class='zun-form-new' id='DatabaseAccess'>\
+			content: "<form class='bt-form pd20 pb70' id='DatabaseAccess'>\
 	                        <div class='line'>\
-							<label><span>访问权限</span></label>\
+							<span class='tname'>访问权限</span>\
 							<div class='info-r'>\
-							<select id='dataAccess' style='width:100px;'>\
+							<select id='dataAccess' class='bt-input-text mr5' style='width:100px;'>\
 								<option value='127.0.0.1' "+(rdata.msg[1] == '127.0.0.1'?'selected':'')+">本地服务器</option>\
 								<option value='%' "+(rdata.msg[1] == '%'?'selected':'')+">所有人</option>\
 								<option value='ip' "+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'selected':'')+">指定IP</option>\
 							</select>\
-							<input type='text' name='address' placeholder='请输入允许访问的IP地址' value='"+rdata.msg[1]+"' style='width:230px;"+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'':'display:none;')+"' />\
+							<input class='bt-input-text' type='text' name='address' placeholder='请输入允许访问的IP地址' value='"+rdata.msg[1]+"' style='width:230px;"+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'':'display:none;')+"' />\
 							</div>\
 							</div>\
-	                        <div class='submit-btn'>\
+	                        <div class='bt-form-submit-btn'>\
 								<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
 						        <button type='button' class='btn btn-success btn-sm btn-title' onclick=\"SetDatabaseAccess('"+dataName+"',1)\" >确定</button>\
 					        </div>\

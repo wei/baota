@@ -1,21 +1,19 @@
 $def with (data)
 <div class="main-content">
-		<div class="container-fluid">
-			<div class="pos-ser">
-				<div class="position">
-					<a href="/">首页</a>/<span>计划任务</span>
-				</div>
-				<div class="search">
+		<div class="container-fluid" style="padding-bottom:54px">
+			<div class="pos-box bgw mtb15">
+				<div class="position f14 c9 pull-left">
+					<a class="plr10 c4" href="/">首页</a>/<span class="plr10 c4">计划任务</span>
 				</div>
 			</div>
-			<div class="setbox">
-				<div class="s-title">
-					<h3>添加计划任务</h3>
+			<div class="setbox bgw mtb15">
+				<div class="title c6 plr15">
+					<h3 class="f16">添加计划任务</h3>
 				</div>
-				<div class="setting-con">
-					<div class="row plan">
-						<span class="typename">任务类型</span>
-						<div class="dropdown planjs">
+				<div class="setting-con ptb20">
+					<div class="clearfix plan">
+						<span class="typename c4 pull-left f14 text-right mr20">任务类型</span>
+						<div class="dropdown planjs pull-left mr20">
 							<button class="btn btn-default dropdown-toggle" type="button" id="excode" data-toggle="dropdown" style="width:auto">
                                 <b val="toShell">Shell脚本</b>
                                 <span class="caret"></span>
@@ -43,13 +41,13 @@ $def with (data)
 						</div>
 						<span class="planSign"><i>*</i>任务类型包含以下部分：Shell脚本、备份网址、备份数据库、日志切割、释放内存、访问URL</span>
 					</div>
-					<div class="row plan">
-						<span class="typename">任务名称</span>
-						<div class="planname"><input type="text" name="name"></div>
+					<div class="clearfix plan">
+						<span class="typename c4 pull-left f14 text-right mr20">任务名称</span>
+						<div class="planname pull-left"><input type="text" name="name" class="bt-input-text"></div>
 					</div>
-					<div class="row plan">
-						<span class="typename">执行周期</span>
-						<div class="dropdown plancycle">
+					<div class="clearfix plan">
+						<span class="typename c4 pull-left f14 text-right mr20">执行周期</span>
+						<div class="dropdown plancycle pull-left mr20">
 							<button class="btn btn-default dropdown-toggle" type="button" id="cycle" data-toggle="dropdown" style="width:94px">
                                 <b val="week">每星期</b>
                                 <span class="caret"></span>
@@ -78,9 +76,9 @@ $def with (data)
 								</li>
 							</ul>
 						</div>
-						<div id="ptime">
-
-							<div class="dropdown planweek"> <button class="btn btn-default dropdown-toggle" type="button" id="excode" data-toggle="dropdown">                                                        <b val="1">周一</b> <span class="caret"></span>                                                  </button>
+						<div id="ptime" class="pull-left">
+							<div class="dropdown planweek pull-left mr20">
+								<button class="btn btn-default dropdown-toggle" type="button" id="excode" data-toggle="dropdown"><b val="1">周一</b> <span class="caret"></span></button>
 								<ul class="dropdown-menu" role="menu" aria-labelledby="excode">
 									<li>
 										<a role="menuitem" tabindex="-1" href="javascript:;" value="1">周一</a>
@@ -105,16 +103,16 @@ $def with (data)
 									</li>
 								</ul>
 							</div>
-							<div class="plan_hms"> <span><input type="number" name="hour" value="1" maxlength="2" max="23" min="0"></span> <span class="name">时</span> </div>
-							<div class="plan_hms"> <span><input type="number" name="minute" value="30" maxlength="2" max="59" min="0"></span> <span class="name">分</span> </div>
+							<div class="plan_hms pull-left mr20 bt-input-text"> <span><input type="number" name="hour" value="1" maxlength="2" max="23" min="0"></span> <span class="name">时</span> </div>
+							<div class="plan_hms pull-left mr20 bt-input-text"> <span><input type="number" name="minute" value="30" maxlength="2" max="59" min="0"></span> <span class="name">分</span> </div>
 						</div>
 					</div>
-					<div class="row plan">
-						<span class="typename controls">脚本内容</span>
-						<div id="implement"><textarea class="txtsjs" name="sBody"></textarea></div>
+					<div class="clearfix plan">
+						<span class="typename controls c4 pull-left f14 text-right mr20">脚本内容</span>
+						<div id="implement" style="line-height:34px"><textarea class="txtsjs bt-input-text" name="sBody"></textarea></div>
 					</div>
-					<div class="row plan">
-						<div class="plan-submit" onclick="planAdd()">添加任务</div>
+					<div class="clearfix plan">
+						<div class="bt-submit plan-submit" onclick="planAdd()">添加任务</div>
 					</div>
 				</div>
 				<form id="set-Config" action="/crontab?action=AddCrontab" enctype="multipart/form-data" method="post" style="display: none;">
@@ -134,11 +132,11 @@ $def with (data)
 					<input type="submit" />
 				</form>
 			</div>
-			<div class="setbox">
-				<div class="s-title">
-					<h3>任务列表</h3>
+			<div class="setbox bgw mtb15">
+				<div class="title c6 plr15">
+					<h3 class="f16">任务列表</h3>
 				</div>
-				<div class="setting-con divtable">
+				<div class="setting-con divtable pd15">
 					<table class="table table-hover">
 						<thead>
 							<tr>

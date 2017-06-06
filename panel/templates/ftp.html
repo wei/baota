@@ -1,19 +1,19 @@
 $def with (tData)
 <div class="main-content">
 	<div class="container-fluid">
-		<div class="pos-ser">
-			<div class="position">
-				<a href="/">首页</a>/<span>FTP管理</span>
+		<div class="pos-box bgw mtb15">
+			<div class="position f14 c9 pull-left">
+				<a class="plr10 c4" href="/">首页</a>/<span class="plr10 c4">FTP管理</span>
 			</div>
-			<div class="search">
+			<div class="search pull-right">
 				<form target="hid" onsubmit='getFtp(1,$$("#SearchValue").prop("value"))'>
-					<input type="text" id="SearchValue" class="ser-text" placeholder="搜索FTP" />
-					<button type="button" class="ser-sub"onclick='getFtp(1,$$("#SearchValue").prop("value"))'></button>
+					<input type="text" id="SearchValue" class="ser-text pull-left" placeholder="搜索FTP" />
+					<button type="button" class="ser-sub pull-left" onclick='getFtp(1,$$("#SearchValue").prop("value"))'></button>
 				</form>
 				<iframe name='hid' id="hid" style="display:none"></iframe>
 			</div>
 		</div>
-		<div class="safe">
+		<div class="safe bgw mtb15 pd15">
 			<div class="important-title">
 				<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span> 当前FTP地址为：ftp://$web.ctx.session.address:$web.ctx.session.port</p>
 			</div>
@@ -22,7 +22,7 @@ $def with (tData)
 			<div class="dlt-right" style="display:none">
 						<button onclick="ftpPortEdit($web.ctx.session.port)" class="btn btn-default btn-sm btn-title" type="button" style="position:relative;">修改FTP端口</button>
 					</div>
-				<div class="divtable">
+				<div class="divtable mtb10">
 					<table class="table table-hover" width="100%" border="0" cellpadding="0" cellspacing="0">
 						<thead>
 						<tr>

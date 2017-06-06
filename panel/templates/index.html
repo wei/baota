@@ -1,57 +1,54 @@
 $def with (data)
 <div class="main-content">
-		<div class="container-fluid">
-			<div class="pos-ser">
-				<div class="position">
-					<a href="/">首页</a>/<span>服务器状态</span>
+		<div class="container-fluid" style="padding-bottom: 66px;">
+			<div class="pos-box bgw mtb15">
+				<div class="position f14 c9 pull-left">
+					<a class="plr10 c4" href="/">首页</a>/<span class="plr10 c4">服务器状态</span>
 				</div>
 			</div>
 			<div class="danger-tips">
 				<div class="alert alert-warning" id="messageError" style="display: none;">
 				</div>
 			</div>
-			<div class="system-info">
-				<div class="tips">
+			<div class="system-info bgw clearfix mtb15">
+				<div class="title c6 f16 plr15">
 					系统: <span id="info"> 获取中</span>&#12288;&#12288;&#12288;已不间断运行: <span id="running"> 获取中</span>
 					<button onclick="ReBoot()" class="btn btn-success btn-xs" style="vertical-align:1px;margin-left:10px;">重启服务器</button>
 					<button onclick="reWeb()" style="vertical-align:1px;" class="btn btn-success btn-xs">重启面板</button>
 					<span style="position:relative;left: 50px;">
 						版本: <span id="btversion" onclick="openLog()">$web.ctx.session.version </span>
-						<span id="toUpdate"><a href="javascript:checkUpdate();">检查更新</a></span>
+						<span id="toUpdate"><a class="btn btn-btlink btn-xs" href="javascript:checkUpdate();">检查更新</a></span>
 					</span>
 				</div>
-				<div class="list-serve">
-				<ul class="row">
-					<li class="col-xs-12 col-sm-4 col-md-4 col-lg-3">
-						<div class="serve-box">
-							<h3>网站</h3>
-							<div class="server-box-right">
-								<h4>$data['siteCount'] 个</h4>
-								<p>在此添加以及管理服务器上的网站</p>
+				<div class="system-info-con mtb15">
+				<ul class="clearfix">
+					<li class="sys-i-c-box col-xs-12 col-sm-4 col-md-4 col-lg-3 plr15">
+						<div class="siteinfo-box b-shadown">
+							<h3 class="f14">网站</h3>
+							<div class="siteinfo-box-right">
+								<h4 class="c6">$data['siteCount'] 个</h4>
 								<div class="sbr-btn">
 									<a href="/site">管理</a>|<a href="javascript:;" onclick="webAdd(0)">添加</a>
 								</div>
 							</div>
 						</div>
 					</li>
-					<li class="col-xs-12 col-sm-4 col-md-4 col-lg-3">
-						<div class="serve-box">
-							<h3>FTP</h3>
-							<div class="server-box-right">
-								<h4>$data['ftpCount'] 个</h4>
-								<p>在此添加以及管理服务器上的FTP</p>
+					<li class="sys-i-c-box col-xs-12 col-sm-4 col-md-4 col-lg-3 plr15">
+						<div class="siteinfo-box b-shadown">
+							<h3 class="f14">FTP</h3>
+							<div class="siteinfo-box-right">
+								<h4 class="c6">$data['ftpCount'] 个</h4>
 								<div class="sbr-btn">
 									<a href="/ftp">管理</a>|<a href="javascript:;" onclick="ftpAdd(0)">添加</a>
 								</div>
 							</div>
 						</div>
 					</li>
-					<li class="col-xs-12 col-sm-4 col-md-4 col-lg-3">
-						<div class="serve-box">
-							<h3>数据库</h3>
-							<div class="server-box-right">
-								<h4>$data['databaseCount'] 个</h4>
-								<p>在此添加以及管理服务器上的数据库</p>
+					<li class="sys-i-c-box col-xs-12 col-sm-4 col-md-4 col-lg-3 plr15">
+						<div class="siteinfo-box b-shadown">
+							<h3 class="f14">数据库</h3>
+							<div class="siteinfo-box-right">
+								<h4 class="c6">$data['databaseCount'] 个</h4>
 								<div class="sbr-btn">
 									<a href="/database">管理</a>|<a href="javascript:;" onclick="DataAdd(0)">添加</a>
 								</div>
@@ -61,17 +58,17 @@ $def with (data)
 				</ul>
 			</div>
 			</div>
-			<div class="server">
-				<div class="s-title">
-					<h3>服务器状态</h3>
-					<a href="javascript:;" style="background:none;padding:0; margin-left:22px;display: none;" onclick="ReMemory()">内存释放</a>
-					<a href="javascript:;" style="background:none;padding:0; margin-left:22px" onclick="GetNetWorkList()">连接管理</a>
-					<a href="javascript:;" style="background:none;padding:0; margin-left:22px" onclick="GetProcessList()">进程管理</a>
+			<div class="server bgw mtb15">
+				<div class="title c6 f16 plr15">
+					<h3 class="c6 f16 pull-left">服务器状态</h3>
+					<a class="pull-left f12 btlink" href="javascript:;" style="background:none;padding:0; margin-left:22px;display: none;" onclick="ReMemory()">内存释放</a>
+					<a class="pull-left f12 btlink" href="javascript:;" style="background:none;padding:0; margin-left:22px" onclick="GetNetWorkList()">连接管理</a>
+					<a class="pull-left f12 btlink" href="javascript:;" style="background:none;padding:0; margin-left:22px" onclick="GetProcessList()">进程管理</a>
 				</div>
 				<div class="server-circle">
 					<ul class="row" id="systemInfoList">
-						<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2">
-							<h3>CPU使用率</h3>
+						<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2 mtb20 circle-box text-center">
+							<h3 class="c6 f16">CPU使用率</h3>
 							<div class="circle">
 								<div class="pie_left">
 									<div class="left"></div>
@@ -83,8 +80,8 @@ $def with (data)
 							</div>
 							<h4 id="core">获取中</h4>
 						</li> 
-						<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2">
-							<h3>内存使用率</h3>
+						<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2 mtb20 circle-box text-center">
+							<h3 class="c6 f16">内存使用率</h3>
 							<div class="circle mem-release">
 								<div class="pie_left">
 									<div class="left"></div>
@@ -102,10 +99,10 @@ $def with (data)
 					</ul>
 				</div>
 			</div>
-			<div class="span6">
-				<div class="bw">
-				<div class="bg">
-				<div class="bw-title">软件</div>
+			<div class="col-xs-12 col-sm-12 col-md-6 pull-left pd0">
+				<div class="pr8">
+				<div class="bgw">
+				<div class="title c6 f16 plr15">软件</div>
 				<div class="setting-con" style="padding:0; height:442px; margin-right: -4px; overflow: hidden;">
 					<div class="container-fluid soft-man">
 						<input name="list1SortOrder" type="hidden" value="" />
@@ -115,16 +112,16 @@ $def with (data)
 				</div>
 				</div>
 			</div>
-			<div class="span6">
-				<div class="bw zun-updata">
-					<div class="bg">
-					<div class="bw-title">网络流量</div>
+			<div class="col-xs-12 col-sm-12 col-md-6 pull-left pd0">
+				<div class="pl7">
+					<div class="bgw" style="height:491px">
+					<div class="title c6 f16 plr15">网络流量</div>
 					<div class="bw-info">
 						<ul>
-							<li class="bi-line"><span>上行速度</span><a id="upSpeed">获取中</a></li>
-							<li class="bi-line"><span>下行速度</span><a id="downSpeed">获取中</a></li>
-							<li><span>总发送</span><a id="upAll" title="">获取中</a></li>
-							<li><span>总接收</span><a id="downAll" title="">获取中</a></li>
+							<li class="bi-line col-xs-6 col-sm-6 col-md-6 pull-left c6 f14"><span class="pull-left">上行速度</span><a id="upSpeed" class="c6">获取中</a></li>
+							<li class="bi-line col-xs-6 col-sm-6 col-md-6 pull-left c6 f14"><span class="pull-left">下行速度</span><a id="downSpeed" class="c6">获取中</a></li>
+							<li class="pull-left col-xs-6 col-sm-6 col-md-6 c6 f14"><span class="pull-left">总发送</span><a id="upAll" title="" class="c6">获取中</a></li>
+							<li class="pull-left col-xs-6 col-sm-6 col-md-6 c6 f14"><span class="pull-left">总接收</span><a id="downAll" title="" class="c6">获取中</a></li>
 						</ul>
 					</div>
 					<div id="NetImg" style="width:100%;height:330px;"></div>

@@ -106,9 +106,9 @@ class files:
                     user = str(stat.st_uid)
                 size = str(stat.st_size)
                 if os.path.isdir(filePath):
-                    dirnames.append(filename+';'+size+';'+mtime+';'+accept+';'+user)
+                    dirnames.append(filename+';'+size+';'+mtime+';'+accept+';'+user);
                 else:
-                    filenames.append(filename+';'+size+';'+mtime+';'+accept+';'+user)
+                    filenames.append(filename+';'+size+';'+mtime+';'+accept+';'+user);
             except:
                 continue;
         
@@ -391,11 +391,19 @@ class files:
                 return public.returnMsg(False,'指定文件不存在!')
         
         try:
-            isConf = get.path.find('.conf')
+            isConf = get.path.find('/www/server')
             if isConf != -1:
                 os.system('\\cp -a '+get.path+' /tmp/backup.conf');
             
             data = get.data[0];
+            
+            if get.path.find('/www/server/cron') != -1:
+                    try:
+                        import crontab
+                        data = crontab.crontab().CheckScript(data);
+                    except:
+                        pass
+            
             if get.encoding == 'ascii':get.encoding = 'utf-8';
             public.writeFile(get.path,data.encode(get.encoding));
             
@@ -639,7 +647,15 @@ class files:
     
     #删除任务队列
     def RemoveTask(self,get):
+        status = public.M('tasks').where('id=?',(get.id,)).getField('status');
         public.M('tasks').delete(get.id);
+        if status != -1:
+            name = public.M('tasks').where('id=?',(get.id,)).getField('name');
+            os.system("kill `ps -ef |grep 'python panelSafe.pyc'|grep -v grep|grep -v panelExec|awk '{print $2}'`");
+            os.system("kill `ps -ef |grep 'install_soft.sh'|grep -v grep|grep -v panelExec|awk '{print $2}'`");
+            os.system("kill `ps aux | grep 'python task.pyc$'|awk '{print $2}'`");
+            os.system('rm -f ' + name.replace('扫描目录[','').replace(']','') + '/scan.pl');
+            os.system('service bt start');
         return public.returnMsg(True,'任务已删除!');
     
     #重新激活任务

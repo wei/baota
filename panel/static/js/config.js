@@ -18,7 +18,7 @@ $(function(){
 			closeBtn: 2,
 			shift: 5,
 			shadeClose: false,
-			content: "<div class='zun-form-new twoPassword'>\
+			content: "<div class='bt-form twoPassword'>\
 				<div class='tp-tit'>设置加锁模块</div>\
 				<div class='tp-con' style='margin-bottom:30px'>\
 					<label><input type='checkbox'>文件管理</label>\

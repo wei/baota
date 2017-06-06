@@ -99,8 +99,8 @@ function GetDiskInfo(){
 					$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span> 磁盘分区['+rdata[i].path+']的可用容量小于1GB，这可能会导致MySQL自动停止，面板无法访问等问题，请及时清理!</p>')
 				}
 			}
-			dBody = '<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2">'
-						+'<h3>'+rdata[i].path+'</h3>'
+			dBody = '<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2 mtb20 circle-box text-center">'
+						+'<h3 class="c6 f16">'+rdata[i].path+'</h3>'
 						+'<div class="circle">'
 							+'<div class="pie_left">'
 								+'<div class="left"></div>'
@@ -378,7 +378,7 @@ function checkUpdate(){
 	var loadT = layer.msg('正在获取版本信息...',{icon:16,time:0,shade: [0.3, '#000']});
 	$.get('/ajax?action=UpdatePanel&check=true',function(rdata){
 		layer.close(loadT);
-		layer.msg(rdata.msg,{icon:rdata.status?1:5});
+		layer.msg(rdata.msg,{icon:1});
 		if(rdata.version != undefined) updateMsg();
 	});
 }
@@ -464,7 +464,8 @@ function ReBoot(){
 		area: ['500px', '280px'],
 		closeBtn: 2,
 		shadeClose: false,
-		content:"<div class='zun-form-new webDelete' style='padding-top:15px'>\
+		content:"<div class='bt-form'>\
+			<div class='pd15'>\
 			<p style='color:red; margin-bottom:10px; font-size:15px;'>注意，若您的服务器是一个容器，请取消。</p>\
 			<div class='SafeRestart' style='line-height:26px'>\
 				<p>安全重启有利于保障文件安全，将执行以下操作：</p>\
@@ -473,7 +474,8 @@ function ReBoot(){
 				<p>3.开始重启服务器</p>\
 				<p>4.等待服务器启动</p>\
 			</div>\
-			<div class='submit-btn'>\
+			</div>\
+			<div class='bt-form-submit-btn'>\
 				<button type='button' id='web_end_time' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
 				<button type='button' id='web_del_send' class='btn btn-success btn-sm btn-title'  onclick='WSafeRestart()'>确定</button>\
 			</div>\

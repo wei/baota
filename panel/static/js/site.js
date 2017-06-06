@@ -25,22 +25,22 @@ function getWeb(page, search) {
 
 			//是否有备份
 			if (data.data[i].backup_count > 0) {
-				var backup = "<a href='javascript:;' class='link' onclick=\"getBackup(" + data.data[i].id + ",'" + data.data[i].name + "')\">有打包</a>";
+				var backup = "<a href='javascript:;' class='btlink' onclick=\"getBackup(" + data.data[i].id + ",'" + data.data[i].name + "')\">有打包</a>";
 			} else {
-				var backup = "<a href='javascript:;' class='link' onclick=\"getBackup(" + data.data[i].id + ",'" + data.data[i].name + "')\">无打包</a>";
+				var backup = "<a href='javascript:;' class='btlink' onclick=\"getBackup(" + data.data[i].id + ",'" + data.data[i].name + "')\">无打包</a>";
 			}
 			//是否设置有效期
 			var web_end_time = (data.data[i].due_date == "0000-00-00") ? '永久' : data.data[i].due_date;
 			//表格主体
 			Body += "<tr><td style='display:none'><input type='checkbox' name='id' value='" + data.data[i].id + "'></td>\
-					<td><a class='link webtips' href='javascript:;' onclick=\"webEdit(" + data.data[i].id + ",'" + data.data[i].name + "','" + data.data[i].due_date + "','" + data.data[i].addtime + "')\">" + data.data[i].name + "</td>\
+					<td><a class='btlink webtips' href='javascript:;' onclick=\"webEdit(" + data.data[i].id + ",'" + data.data[i].name + "','" + data.data[i].due_date + "','" + data.data[i].addtime + "')\">" + data.data[i].name + "</td>\
 					<td>" + status + "</td>\
 					<td>" + backup + "</td>\
-					<td><a class='link' title='打开目录' href=\"javascript:openPath('"+data.data[i].path+"');\">" + data.data[i].path + "</a></td>\
-					<td><a class='linkbed' href='javascript:;' data-id='"+data.data[i].id+"'>" + data.data[i].ps + "</a></td>\
+					<td><a class='btlink' title='打开目录' href=\"javascript:openPath('"+data.data[i].path+"');\">" + data.data[i].path + "</a></td>\
+					<td><a class='btlinkbed' href='javascript:;' data-id='"+data.data[i].id+"'>" + data.data[i].ps + "</a></td>\
 					<td style='text-align:right; color:#bbb'>\
-					<a href='javascript:;' class='link' onclick=\"webEdit(" + data.data[i].id + ",'" + data.data[i].name + "','" + data.data[i].due_date + "','" + data.data[i].addtime + "')\">设置 </a>\
-                        | <a href='javascript:;' class='link' onclick=\"webDelete('" + data.data[i].id + "','" + data.data[i].name + "')\" title='删除站点'>删除</a>\
+					<a href='javascript:;' class='btlink' onclick=\"webEdit(" + data.data[i].id + ",'" + data.data[i].name + "','" + data.data[i].due_date + "','" + data.data[i].addtime + "')\">设置 </a>\
+                        | <a href='javascript:;' class='btlink' onclick=\"webDelete('" + data.data[i].id + "','" + data.data[i].name + "')\" title='删除站点'>删除</a>\
 					</td></tr>"
 		}
 		
@@ -58,7 +58,7 @@ function getWeb(page, search) {
 		//输出分页
 		$("#webPage").html(data.page);
 		
-		$(".linkbed").click(function(){
+		$(".btlinkbed").click(function(){
 			var dataid = $(this).attr("data-id");
 			var databak = $(this).text();
 			if(databak=="空"){
@@ -154,7 +154,7 @@ function webAdd(type) {
 	
 	$.post('/site?action=GetPHPVersion',function(rdata){
 		var defaultPath = $("#defaultPath").html();
-		var php_version = "<div class='line'><label><span>PHP版本</span></label><select name='version' id='c_k3' style='width:100px'>";
+		var php_version = "<div class='line'><span class='tname'>PHP版本</span><select class='bt-input-text' name='version' id='c_k3' style='width:100px'>";
 		for(var i=rdata.length-1;i>=0;i--){
             php_version += "<option value='"+rdata[i].version+"'>"+rdata[i].name+"</option>";
         }
@@ -167,73 +167,75 @@ function webAdd(type) {
 			closeBtn: 2,
 			shift: 0,
 			shadeClose: false,
-			content: "<form class='zun-form-new' id='addweb'>\
+			content: "<form class='bt-form pd20 pb70' id='addweb'>\
 						<div class='line'>\
-		                    <label><span>域名</span></label>\
-		                    <div class='info-r'>\
-								<textarea id='mainDomain' name='webname' style='width:398px;line-height:22px' /></textarea>\
+		                    <span class='tname'>域名</span>\
+		                    <div class='info-r c4'>\
+								<textarea id='mainDomain' class='bt-input-text' name='webname' style='width:398px;height:100px;line-height:22px' /></textarea>\
 								<a href='#' class='btn btn-default btn-xs btn-zhm'>中文转码</a>\
 							</div>\
 						</div>\
 	                    <div class='line'>\
-	                    <label><span>备注</span></label>\
-	                    <div class='info-r'>\
-	                    	<input id='Wbeizhu' type='text' name='ps' placeholder='网站备注' style='width:398px' />\
+	                    <span class='tname'>备注</span>\
+	                    <div class='info-r c4'>\
+	                    	<input id='Wbeizhu' class='bt-input-text' type='text' name='ps' placeholder='网站备注' style='width:398px' />\
 	                    </div>\
 	                    </div>\
 	                    <div class='line'>\
-	                    <label><span>根目录</span></label>\
-	                    <div class='info-r'>\
-	                    	<input id='inputPath' type='text' name='path' value='"+defaultPath+"/' placeholder='网站根目录' style='width:398px' /><span class='glyphicon glyphicon-folder-open cursor' onclick='ChangePath(\"inputPath\")'></span>\
+	                    <span class='tname'>根目录</span>\
+	                    <div class='info-r c4'>\
+	                    	<input id='inputPath' class='bt-input-text mr5' type='text' name='path' value='"+defaultPath+"/' placeholder='网站根目录' style='width:398px' /><span class='glyphicon glyphicon-folder-open cursor' onclick='ChangePath(\"inputPath\")'></span>\
 	                    </div>\
 	                    </div>\
 	                    <div class='line'>\
-	                    	<label><span>FTP</span></label>\
+	                    	<span class='tname'>FTP</span>\
 	                    	<div class='info-r'>\
-	                    	<select name='ftp' id='c_k1' style='width:100px'>\
+	                    	<select class='bt-input-text' name='ftp' id='c_k1' style='width:100px'>\
 		                    	<option value='true'>创建</option>\
 		                    	<option value='false' selected>不创建</option>\
 		                    </select>\
 		                    </div>\
 	                    </div>\
 	                    <div class='line' id='ftpss'>\
-	                    <label><span>FTP设置</span></label>\
-	                    <div class='info-r'>\
-		                    <div class='userpassword'><span>用户名：<input id='ftp-user' type='text' name='ftp_username' value='' style='width:150px' /></span>\
-		                    <span class='last'>密码：<input id='ftp-password' type='text' name='ftp_password' value=''  style='width:150px' /></span></div>\
-		                    <p>创建站点的同时，为站点创建一个对应FTP帐户，并且FTP目录指向站点所在目录。</p>\
+	                    <span class='tname'>FTP设置</span>\
+	                    <div class='info-r c4'>\
+		                    <div class='userpassword'><span class='mr5'>用户名：<input id='ftp-user' class='bt-input-text' type='text' name='ftp_username' value='' style='width:150px' /></span>\
+		                    <span class='last'>密码：<input id='ftp-password' class='bt-input-text' type='text' name='ftp_password' value=''  style='width:150px' /></span></div>\
+		                    <p class='c9 mt10'>创建站点的同时，为站点创建一个对应FTP帐户，并且FTP目录指向站点所在目录。</p>\
 	                    </div>\
 	                    </div>\
 	                    <div class='line'>\
-	                    <label><span>数据库</span></label>\
-		                    <select name='sql' id='c_k2' style='width:100px'>\
-		                    	<option value='true'>MySQL</option>\
-		                    	<option value='false' selected>不创建</option>\
-		                    </select>\
-		                    <select name='codeing' id='c_codeing' style='width:100px'>\
-		                    	<option value='utf8'>utf-8</option>\
-		                    	<option value='utf8mb4'>utf8mb4</option>\
-								<option value='gbk'>gbk</option>\
-								<option value='big5'>big5</option>\
-		                    </select>\
+	                    <span class='tname'>数据库</span>\
+							<div class='info-r c4'>\
+								<select class='bt-input-text mr5' name='sql' id='c_k2' style='width:100px'>\
+									<option value='true'>MySQL</option>\
+									<option value='false' selected>不创建</option>\
+								</select>\
+								<select class='bt-input-text' name='codeing' id='c_codeing' style='width:100px'>\
+									<option value='utf8'>utf-8</option>\
+									<option value='utf8mb4'>utf8mb4</option>\
+									<option value='gbk'>gbk</option>\
+									<option value='big5'>big5</option>\
+								</select>\
+							</div>\
 	                    </div>\
 	                    <div class='line' id='datass'>\
-	                    <label><span>数据库设置</span></label>\
-	                    <div class='info-r'>\
-		                    <div class='userpassword'><span>用户名：<input id='data-user' type='text' name='datauser' value=''  style='width:150px' /></span>\
-		                    <span class='last'>密码：<input id='data-password' type='text' name='datapassword' value=''  style='width:150px' /></span></div>\
-		                    <p>创建站点的同时，为站点创建一个对应的数据库帐户，方便不同站点使用不同数据库。</p>\
+	                    <span class='tname'>数据库设置</span>\
+	                    <div class='info-r c4'>\
+		                    <div class='userpassword'><span class='mr5'>用户名：<input id='data-user' class='bt-input-text' type='text' name='datauser' value=''  style='width:150px' /></span>\
+		                    <span class='last'>密码：<input id='data-password' class='bt-input-text' type='text' name='datapassword' value=''  style='width:150px' /></span></div>\
+		                    <p class='c9 mt10'>创建站点的同时，为站点创建一个对应的数据库帐户，方便不同站点使用不同数据库。</p>\
 	                    </div>\
 	                    </div>\
 						"+php_version+"\
-	                    <div class='submit-btn'>\
+	                    <div class='bt-form-submit-btn'>\
 							<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
 							<button type='button' class='btn btn-success btn-sm btn-title' onclick=\"webAdd(1)\">提交</button>\
 						</div>\
 	                  </form>",
 		});
 		$(function() {
-			var placeholder = "<div class='placeholder' style='top:10px;left:10px'>每行填写一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88</div>";
+			var placeholder = "<div class='placeholder c9' style='top:10px;left:10px'>每行填写一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88</div>";
 			$('#mainDomain').after(placeholder);
 			$(".placeholder").click(function(){
 				$(this).hide();
@@ -344,27 +346,28 @@ function webPathEdit(id){
 				if(userini.runPath.dirs[i] == userini.runPath.runPath) selected = 'selected';
 				opt += '<option value="'+ userini.runPath.dirs[i] +'" '+selected+'>'+ userini.runPath.dirs[i] +'</option>'
 			}
-			var webPathHtml = "<div class='webEdit-box padding-10'>\
-						<div>\
-							<input type='checkbox' name='userini' id='userini'"+userinicheckeds+" /><label for='userini' style='font-weight:normal'>防跨站攻击</label>\
+			var webPathHtml = "<div class='webedit-box'>\
+						<div class='label-input-group ptb10'>\
+							<input type='checkbox' name='userini' id='userini'"+userinicheckeds+" /><label class='mr20' for='userini' style='font-weight:normal'>防跨站攻击</label>\
 							<input type='checkbox' name='logs' id='logs'"+logscheckeds+" /><label for='logs' style='font-weight:normal'>写访问日志</label>\
 						</div>\
-						<div class='line' style='margin-top:5px'>\
-							<input type='text' style='width:80%' placeholder='网站根目录' value='"+rdata+"' name='webdir' id='inputPath'>\
-							<span onclick='ChangePath(&quot;inputPath&quot;)' class='glyphicon glyphicon-folder-open cursor'></span>\
+						<div class='line mt10'>\
+							<span class='mr5'>网站目录</span>\
+							<input class='bt-input-text mr5' type='text' style='width:50%' placeholder='网站根目录' value='"+rdata+"' name='webdir' id='inputPath'>\
+							<span onclick='ChangePath(&quot;inputPath&quot;)' class='glyphicon glyphicon-folder-open cursor mr20'></span>\
+							<button class='btn btn-success btn-sm' onclick='SetSitePath("+id+")'>保存</button>\
 						</div>\
-						<button class='btn btn-success btn-sm' onclick='SetSitePath("+id+")'>保存</button>\
-						<div class='line' style='margin-top:5px'>\
-							<span>运行目录</span>\
-							<select type='text' style='width:30%;margin: 5px;' name='runPath' id='runPath'>"+opt+"</select>\
-							<button class='btn btn-success btn-sm' onclick='SetSiteRunPath("+id+")' style='margin-top: -4px;'>保存</button>\
-							<ul class='help-info-text'>\
-								<li>部分程序的运行目录不在根目录,需要指定二级目录作为运行目录,如ThinkPHP5,Laravel</li>\
-								<li>选择您的运行目录,点保存即可</li>\
-							</ul>\
+						<div class='line mtb15'>\
+							<span class='mr5'>运行目录</span>\
+							<select class='bt-input-text' type='text' style='width:50%; margin-right:41px' name='runPath' id='runPath'>"+opt+"</select>\
+							<button class='btn btn-success btn-sm' onclick='SetSiteRunPath("+id+")' style='margin-top: -1px;'>保存</button>\
 						</div>\
+						<ul class='help-info-text c7 ptb10'>\
+							<li>部分程序的运行目录不在根目录，需要指定二级目录作为运行目录，如ThinkPHP5，Laravel</li>\
+							<li>选择您的运行目录，点保存即可</li>\
+						</ul>\
 					</div>";
-			$("#webEdit-con").html(webPathHtml);
+			$("#webedit-con").html(webPathHtml);
 			
 			$("#userini").change(function(){
 				$.post('/site?action=SetDirUserINI','path='+rdata,function(userini){
@@ -415,7 +418,7 @@ function webBakEdit(id){
 					<br><br><button class='btn btn-success btn-sm' onclick='SetSitePs("+id+")'>保存</button>\
 					</div>\
 					</div>";
-		$("#webEdit-con").html(webBakHtml)
+		$("#webedit-con").html(webBakHtml)
 	});
 }
 
@@ -432,14 +435,16 @@ function SetSitePs(id){
 function SetIndexEdit(id){
 	$.post('/site?action=GetIndex','id='+id,function(rdata){
 		rdata= rdata.replace(new RegExp(/(,)/g), "\n");
-		var setIndexHtml = "<div class='webEdit-box padding-10'><form id='SetIndex'><div class='SetIndex'>\
+		var setIndexHtml = "<div id='SetIndex'><div class='SetIndex'>\
 				<div class='line'>\
-						<textarea id='Dindex' name='files' style='margin-top: 2px; margin-bottom: 0px; height: 186px; width:50%; line-height:20px'>"+rdata+"</textarea>\
-						<p style='line-height: 26px; color: #666'>默认文档，每行一个，优先级由上至下。</p>\
-						</br><button type='button' class='btn btn-success btn-sm' onclick='SetIndexList("+id+")'>保存</button>\
+						<textarea class='bt-input-text' id='Dindex' name='files' style='height: 180px; width:50%; line-height:20px'>"+rdata+"</textarea>\
+						<button type='button' class='btn btn-success btn-sm pull-right' onclick='SetIndexList("+id+")' style='margin: 70px 130px 0px 0px;'>保存</button>\
 				</div>\
-				</div></form></div>";
-		$("#webEdit-con").html(setIndexHtml);
+				<ul class='help-info-text c7 ptb10'>\
+					<li>默认文档，每行一个，优先级由上至下。</li>\
+				</ul>\
+				</div></div>";
+		$("#webedit-con").html(setIndexHtml);
 	});
 	
 }
@@ -522,25 +527,23 @@ function DomainEdit(id, name,msg,status) {
 	$.get('/data?action=getData&table=domain&list=True&search=' + id, function(domain) {
 		var echoHtml = "";
 		for (var i = 0; i < domain.length; i++) {
-			echoHtml += "<tr><td><a title='点击访问' target='_blank' href='http://" + domain[i].name + ":" + domain[i].port + "' class='linkbed'>" + domain[i].name + "</a></td><td><a class='linkbed'>" + domain[i].port + "</a></td><td class='text-center'><a class='table-btn-del' href='javascript:;' onclick=\"delDomain(" + id + ",'" + name + "','" + domain[i].name + "','" + domain[i].port + "',1)\"><span class='glyphicon glyphicon-trash'></span></a></td></tr>";
+			echoHtml += "<tr><td><a title='点击访问' target='_blank' href='http://" + domain[i].name + ":" + domain[i].port + "' class='btlinkbed'>" + domain[i].name + "</a></td><td><a class='btlinkbed'>" + domain[i].port + "</a></td><td class='text-center'><a class='table-btn-del' href='javascript:;' onclick=\"delDomain(" + id + ",'" + name + "','" + domain[i].name + "','" + domain[i].port + "',1)\"><span class='glyphicon glyphicon-trash'></span></a></td></tr>";
 		}
-		var bodyHtml = "<div class='webEdit-box padding-10' style='display:block'>\
-							<div class='divtable'>\
-								<textarea id='newdomain'></textarea>\
-								<a href='#' class='btn btn-default btn-xs btn-zhm' style='top:22px;right:154px'>中文转码</a>\
+		var bodyHtml = "<textarea id='newdomain' class='bt-input-text' style='height: 100px; width: 340px;padding:5px 10px;line-height:20px'></textarea>\
+								<a href='#' class='btn btn-default btn-xs btn-zhm' style='top:15px;right:145px'>中文转码</a>\
 								<input type='hidden' id='newport' value='80' />\
 								<button type='button' class='btn btn-success btn-sm pull-right' style='margin:30px 35px 0 0' onclick=\"DomainAdd(" + id + ",'" + name + "',1)\">添加</button>\
-								<table class='table table-hover' width='100%' style='margin-bottom:0'>\
+							<div class='divtable mtb15'>\
+								<table class='table table-hover' width='100%'>\
 								<thead><tr><th>域名</th><th width='70px'>端口</th><th width='50px' class='text-center'>操作</th></tr></thead>\
 								<tbody id='checkDomain'>" + echoHtml + "</tbody>\
 								</table>\
-							</div>\
-						</div>";
-		$("#webEdit-con").html(bodyHtml);
+							</div>";
+		$("#webedit-con").html(bodyHtml);
 		if(msg != undefined){
 			layer.msg(msg,{icon:status?1:5});
 		}
-		var placeholder = "<div class='placeholder'>每行填写一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88</div>";
+		var placeholder = "<div class='placeholder c9' style='left:28px'>每行填写一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88</div>";
 		$('#newdomain').after(placeholder);
 		$(".placeholder").click(function(){
 			$(this).hide();
@@ -568,7 +571,7 @@ function DomainRoot(id, name,msg) {
 	$.get('/data?action=getData&table=domain&list=True&search=' + id, function(domain) {
 		var echoHtml = "";
 		for (var i = 0; i < domain.length; i++) {
-			echoHtml += "<tr><td><a title='点击访问' target='_blank' href='http://" + domain[i].name + ":" + domain[i].port + "' class='linkbed'>" + domain[i].name + "</a></td><td><a class='linkbed'>" + domain[i].port + "</a></td><td class='text-center'><a class='table-btn-del' href='javascript:;' onclick=\"delDomain(" + id + ",'" + name + "','" + domain[i].name + "','" + domain[i].port + "',1)\"><span class='glyphicon glyphicon-trash'></span></a></td></tr>";
+			echoHtml += "<tr><td><a title='点击访问' target='_blank' href='http://" + domain[i].name + ":" + domain[i].port + "' class='btlinkbed'>" + domain[i].name + "</a></td><td><a class='btlinkbed'>" + domain[i].port + "</a></td><td class='text-center'><a class='table-btn-del' href='javascript:;' onclick=\"delDomain(" + id + ",'" + name + "','" + domain[i].name + "','" + domain[i].port + "',1)\"><span class='glyphicon glyphicon-trash'></span></a></td></tr>";
 		}
 		var index = layer.open({
 			type: 1,
@@ -772,14 +775,14 @@ function getBackup(id,name,page) {
 				for (var i = 0; i < frdata.data.length; i++) {
 					if(frdata.data[i].type == '1') continue;
 					if(frdata.data[i].filename.length < 15){
-						var ftpdown = "<a class='link' href='/cloud?filename="+frdata.data[i].filename+"&name="+ frdata.data[i].name+"' target='_blank'>下载</a> | ";
+						var ftpdown = "<a class='btlink' href='/cloud?filename="+frdata.data[i].filename+"&name="+ frdata.data[i].name+"' target='_blank'>下载</a> | ";
 					}else{
-						var ftpdown = "<a class='link' href='/download?filename="+frdata.data[i].filename+"&name="+frdata.data[i].name+"' target='_blank'>下载</a> | ";
+						var ftpdown = "<a class='btlink' href='/download?filename="+frdata.data[i].filename+"&name="+frdata.data[i].name+"' target='_blank'>下载</a> | ";
 					}
 					body += "<tr><td><span class='glyphicon glyphicon-file'></span>"+frdata.data[i].name+"</td>\
 							<td>" + (ToSize(frdata.data[i].size)) + "</td>\
 							<td>" + frdata.data[i].addtime + "</td>\
-							<td class='text-right' style='color:#ccc'>"+ ftpdown + "<a class='link' href='javascript:;' onclick=\"WebBackupDelete('" + frdata.data[i].id + "',"+id+")\">删除</a></td>\
+							<td class='text-right' style='color:#ccc'>"+ ftpdown + "<a class='btlink' href='javascript:;' onclick=\"WebBackupDelete('" + frdata.data[i].id + "',"+id+")\">删除</a></td>\
 						</tr>"
 				}
 			var ftpdown = '';
@@ -803,13 +806,12 @@ function getBackup(id,name,page) {
 				closeBtn: 2,
 				shift: 0,
 				shadeClose: false,
-				content: "<form class='zun-form' id='WebBackup' style='max-width:98%'>\
+				content: "<div class='bt-form ptb15 mlr15' id='WebBackup'>\
 							<button class='btn btn-default btn-sm' style='margin-right:10px' type='button' onclick=\"WebBackup('" + rdata.id + "','" + rdata.name + "')\">打包备份</button>\
-							</form>\
-							<div class='divtable' style='margin:17px'><table width='100%' id='WebBackupList' class='table table-hover'>\
+							<div class='divtable mtb15' style='margin-bottom:0'><table width='100%' id='WebBackupList' class='table table-hover'>\
 							<thead><tr><th>文件名称</th><th>文件大小</th><th>打包时间</th><th width='140px' class='text-right'>操作</th></tr></thead>\
 							<tbody id='WebBackupBody' class='list-list'>"+body+"</tbody>\
-							</table><div class='page'>"+frdata.page+"</div></div>"
+							</table><div class='page'>"+frdata.page+"</div></div></div>"
 			});
 		});
 		
@@ -858,15 +860,15 @@ function SetIndex(id){
 				closeBtn: 2,
 				shift: 5,
 				shadeClose: true,
-				content:"<form class='zun-form-new' id='SetIndex'><div class='SetIndex'>"
+				content:"<form class='bt-form' id='SetIndex'><div class='SetIndex'>"
 				+"<div class='line'>"
-				+"	<label><span style='padding-right:2px'>默认文档</span></label>"
+				+"	<span class='tname' style='padding-right:2px'>默认文档</span>"
 				+"	<div class='info-r'>"
 				+"		<textarea id='Dindex' name='files' style='line-height:20px'>"+rdata+"</textarea>"
 				+"		<p>"+quanju+"默认文档，每行一个，优先级由上至下。</p>"
 				+"	</div>"
 				+"</div>"
-				+"<div class='submit-btn' style='margin-top:15px'>"
+				+"<div class='bt-form-submit-btn'>"
 				+"	<button type='button' id='web_end_time' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>"
 			    +"    <button type='button' class='btn btn-success btn-sm btn-title' onclick='SetIndexList("+id+")'>确定</button>"
 		        +"</div>"
@@ -899,21 +901,21 @@ function GetDefaultSite(){
 		
 		layer.open({
 				type: 1,
-				area: '500px',
+				area: '430px',
 				title: '设置默认站点',
 				closeBtn: 2,
 				shift: 5,
 				shadeClose: true,
-				content:'<div class="zun-form-new bingfa">\
-							<p>\
-								<span class="span_tit">默认站点：</span>\
-								<select id="defaultSite" style="width: 300px;">'+opt+'</select>\
+				content:'<div class="bt-form ptb15 pb70">\
+							<p class="line">\
+								<span class="tname text-right mr5">默认站点：</span>\
+								<select id="defaultSite" class="bt-input-text" style="width: 300px;">'+opt+'</select>\
 							</p>\
-								<ul class="help-info-text" style="margin-left: 60px;">\
+							<ul class="help-info-text c6 plr20">\
 							    <li>设置默认站点后,所有未绑定的域名和IP都被定向到默认站点</li>\
 							    <li>可有效防止恶意解析</li>\
 						    </ul>\
-							<div class="submit-btn">\
+							<div class="bt-form-submit-btn">\
 								<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>\
 								<button class="btn btn-success btn-sm btn-title" onclick="SetDefaultSite()">保存</button>\
 							</div>\
@@ -962,12 +964,12 @@ function webEdit(id,website,endTime,addtime){
 		title: '站点修改['+website+']  --  添加时间['+addtime+']',
 		closeBtn: 2,
 		shift: 0,
-		content: "<div class='webEdit'>"
-			+"<div class='webEdit-menu'>"
-			+"	<p class='active'  onclick=\"DomainEdit(" + id + ",'" + website + "')\">域名管理</p>"
+		content: "<div class='bt-form'>"
+			+"<div class='bt-w-menu pull-left'>"
+			+"	<p class='bgw'  onclick=\"DomainEdit(" + id + ",'" + website + "')\">域名管理</p>"
 			+"	"+eMenu+""
 			+"</div>"
-			+"<div id='webEdit-con' class='webEdit-box webEdit-con'></div>"
+			+"<div id='webedit-con' class='bt-w-con webedit-con pd15'></div>"
 			+"</div>"
 	});
 	DomainEdit(id,website);
@@ -988,9 +990,9 @@ function webEdit(id,website,endTime,addtime){
 		}  
 	});
 	//切换
-	var $p = $(".webEdit-menu p");
+	var $p = $(".bt-w-menu p");
 	$p.click(function(){
-		$(this).addClass("active").siblings().removeClass("active");
+		$(this).addClass("bgw").siblings().removeClass("bgw");
 	});
 }
 
@@ -1015,12 +1017,12 @@ function CheckSafe(id,act){
 	
 	
    $.post('/site?action=GetCheckSafe','id='+id,function(rdata){
-   		var done = "<button type='button' class='btn btn-success btnStart'  onclick=\"CheckSafe("+id+",1)\" style='margin-right:16px;'>开始扫描</button>\
-   					<button type='button' class='btn btn-default btnStart'  onclick=\"UpdateRulelist()\" style='margin-right:16px;'>更新特征库</button>\
-   					<a style='margin-right:16px;font-size: 16px;color:green;'>已扫描："+rdata.count+"</a><a style='color:red;font-size: 16px;'>风险数量："+rdata.error+"</a>";
+   		var done = "<button type='button' class='btn btn-success btn-sm btnStart mr5'  onclick=\"CheckSafe("+id+",1)\">开始扫描</button>\
+   					<button type='button' class='btn btn-default btn-sm btnStart mr20'  onclick=\"UpdateRulelist()\">更新特征库</button>\
+   					<a class='f14 mr20' style='color:green;'>已扫描："+rdata.count+"</a><a class='f14' style='color:red;'>风险数量："+rdata.error+"</a>";
    		
-   		if(rdata['scan']) done = "<a style='margin-right:16px;font-size: 16px;color:green;'>已扫描："+rdata.count+"</a><a style='color:red;font-size: 16px;'>风险数量："+rdata.error+"</a>";
-		var echoHtml = "<div style='margin:16px 0;'>"
+   		if(rdata['scan']) done = "<a class='f14 mr20' style='color:green;'>已扫描："+rdata.count+"</a><a class='f14' style='color:red;'>风险数量："+rdata.error+"</a>";
+		var echoHtml = "<div class='mtb15'>"
 					   + done
 					   +"</div>"
 		for(var i=0;i<rdata.phpini.length;i++){
@@ -1040,12 +1042,12 @@ function CheckSafe(id,act){
 		}
 
 		var body = "<div>"
-					+"<div class='divtable' style='width:96%;margin:10px auto'><table class='table table-hover' width='100%' style='margin-bottom:0'>"
+					+"<div class='divtable mtb15'><table class='table table-hover' width='100%' style='margin-bottom:0'>"
 				  	+"<thead><tr><th width='100px'>行为</th><th width='70px'>风险</th><th>详情</th></tr></thead>"
 				   	+"<tbody id='checkDomain'>" + echoHtml + "</tbody>"
 				   	+"</table></div>"
 		
-		$("#webEdit-con").html(body);
+		$("#webedit-con").html(body);
 		$(".btnStart").click(function(){
 			fly('btnStart');	
 		});
@@ -1085,15 +1087,15 @@ function limitNet(id){
 						+"<option value='5'>门户</option>"
 						+"<option value='6'>企业站</option>"
 						+"<option value='7'>视频站</option>"
-		var body = "<div class='dirBinding flow'>"
-				+'<p><label style="font-weight:normal"><input type="checkbox" name="status" '+status_selected+' onclick="SaveLimitNet('+id+')" style="width:15px;height:15px;margin-right:5px" />启用流量控制</label></p>'
-				+"<p><span class='span_tit'>限制方案：</span><select name='limit' style='width:90px'>"+limitList+"</select></p>"
-			    +"<p><span class='span_tit'>并发限制：</span><input style='width: 90px;' type='number' name='perserver' value='"+rdata.perserver+"' />  *限制当前站点最大并发数</p>"
-			    +"<p><span class='span_tit'>单IP限制：</span><input style='width: 90px;' type='number' name='perip' value='"+rdata.perip+"' />  *限制单个IP访问最大并发数</p>"
-			    +"<p><span class='span_tit'>流量限制：</span><input style='width: 90px;' type='number' name='limit_rate' value='"+rdata.limit_rate+"' />   *限制每个请求的流量上限（单位：KB）</p>"
-			    +"<button class='btn btn-success btn-sm' onclick='SaveLimitNet("+id+",1)' style='margin-top:8px; margin-left:3px'>保存</button>"
+		var body = "<div class='dirBinding flow c4'>"
+				+'<p class="label-input-group ptb10"><label style="font-weight:normal"><input type="checkbox" name="status" '+status_selected+' onclick="SaveLimitNet('+id+')" style="width:15px;height:15px;margin-right:5px" />启用流量控制</label></p>'
+				+"<p class='line' style='padding:10px 0'><span class='span_tit mr5'>限制方案：</span><select class='bt-input-text mr20' name='limit' style='width:90px'>"+limitList+"</select></p>"
+			    +"<p class='line' style='padding:10px 0'><span class='span_tit mr5'>并发限制：</span><input class='bt-input-text mr20' style='width: 90px;' type='number' name='perserver' value='"+rdata.perserver+"' /><span class='c9'>*限制当前站点最大并发数</span></p>"
+			    +"<p class='line' style='padding:10px 0'><span class='span_tit mr5'>单IP限制：</span><input class='bt-input-text mr20' style='width: 90px;' type='number' name='perip' value='"+rdata.perip+"' /><span class='c9'>*限制单个IP访问最大并发数</span></p>"
+			    +"<p class='line' style='padding:10px 0'><span class='span_tit mr5'>流量限制：</span><input class='bt-input-text mr20' style='width: 90px;' type='number' name='limit_rate' value='"+rdata.limit_rate+"' /><span class='c9'>*限制每个请求的流量上限（单位：KB）</span></p>"
+			    +"<button class='btn btn-success btn-sm mt10' onclick='SaveLimitNet("+id+",1)'>保存</button>"
 			    +"</div>"
-			$("#webEdit-con").html(body);
+			$("#webedit-con").html(body);
 			
 			$("select[name='limit']").change(function(){
 				var type = $(this).val();
@@ -1173,7 +1175,7 @@ function DirBinding(id){
 	$.post('/site?action=GetDirBinding&id='+id,function(rdata){
 		var echoHtml = '';
 		for(var i=0;i<rdata.binding.length;i++){
-			echoHtml += "<tr><td>"+rdata.binding[i].domain+"</td><td>"+rdata.binding[i].port+"</td><td>"+rdata.binding[i].path+"</td><td class='text-right'><a class='link' href='javascript:SetDirRewrite("+rdata.binding[i].id+");'>伪静态</a> | <a class='link' href='javascript:DelBinding("+rdata.binding[i].id+","+id+");'>删除</a></td></tr>";
+			echoHtml += "<tr><td>"+rdata.binding[i].domain+"</td><td>"+rdata.binding[i].port+"</td><td>"+rdata.binding[i].path+"</td><td class='text-right'><a class='btlink' href='javascript:SetDirRewrite("+rdata.binding[i].id+");'>伪静态</a> | <a class='btlink' href='javascript:DelBinding("+rdata.binding[i].id+","+id+");'>删除</a></td></tr>";
 		}
 		
 		var dirList = '';
@@ -1181,17 +1183,17 @@ function DirBinding(id){
 			dirList += "<option value='"+rdata.dirs[n]+"'>"+rdata.dirs[n]+"</option>";
 		}
 		
-		var body = "<div class='dirBinding'>"
-			   +"域名：<input type='text' name='domain' />"
-			   +"子目录：<select name='dirName'>"+dirList+"</select>"
+		var body = "<div class='dirBinding c5'>"
+			   +"域名：<input class='bt-input-text mr20' type='text' name='domain' />"
+			   +"子目录：<select class='bt-input-text mr20' name='dirName'>"+dirList+"</select>"
 			   +"<button class='btn btn-success btn-sm' onclick='AddDirBinding("+id+")'>添加</button>"
 			   +"</div>"
-			   +"<div class='divtable' style='width:96%;margin:0 auto'><table class='table table-hover' width='100%' style='margin-bottom:0'>"
+			   +"<div class='divtable mtb15'><table class='table table-hover' width='100%' style='margin-bottom:0'>"
 			   +"<thead><tr><th>域名</th><th width='70'>端口</th><th width='100'>子目录</th><th width='100' class='text-right'>操作</th></tr></thead>"
 			   +"<tbody id='checkDomain'>" + echoHtml + "</tbody>"
 			   +"</table></div>"
 		
-		$("#webEdit-con").html(body);
+		$("#webedit-con").html(body);
 	})
 	
 }
@@ -1218,13 +1220,16 @@ function ShowRewrite(rdata){
 	for(var i=0;i<rdata.rlist.length;i++){
 		rList += "<option value='"+rdata.rlist[i]+"'>"+rdata.rlist[i]+"</option>";
 	}
-	var webBakHtml = "<div class='webEdit-box padding-10'>\
+	var webBakHtml = "<div class='c5'>\
 						<div class='line'>\
-						<select id='myRewrite' name='rewrite' style='width:30%;'>"+rList+"</select>\
+						<select class='bt-input-text mr20' id='myRewrite' name='rewrite' style='width:30%;'>"+rList+"</select>\
 						<span>规则转换工具：<a href='http://www.bt.cn/Tools' target='_blank' style='color:#20a53a'>Apache转Nginx</a>\</span>\
-						<textarea style='height: 260px; width: 480px; line-height:18px;margin-top:10px;padding:5px;' id='rewriteBody'>"+rdata.data+"</textarea></div>\
+						<textarea class='bt-input-text mtb15' style='height: 260px; width: 470px; line-height:18px;padding:5px;' id='rewriteBody'>"+rdata.data+"</textarea></div>\
 						<button id='SetRewriteBtn' class='btn btn-success btn-sm' onclick=\"SetRewrite('"+rdata.filename+"')\">保存</button>\
-						<p style='color:#666; margin-top:10px;'>请选择您的应用,若设置伪静态后,网站无法正常访问,请尝试设置回default<br/>您可以对伪静态规则进行修改,修改完后保存即可!</p>\
+						<ul class='help-info-text c7 ptb10'>\
+							<li>请选择您的应用，若设置伪静态后，网站无法正常访问，请尝试设置回default</li>\
+							<li>您可以对伪静态规则进行修改，修改完后保存即可。</li>\
+						</ul>\
 						</div>";
 	layer.open({
 		type: 1,
@@ -1296,20 +1301,20 @@ function Proxy(siteName,type){
 	$.post('/site?action=GetProxy','name='+siteName,function(rdata){
 		if(rdata.proxyUrl == null) rdata.proxyUrl = '';
 		var status_selected = rdata.status?'checked':'';
-		var body = "<div style='margin: 10px 15px;'>"
-			   +"<p style='margin-bottom:8px'><span>目标URL</span><input type='text' name='toUrl' value='"+rdata.proxyUrl+"' style='margin-left: 5px;width: 380px;height: 30px;margin-right:10px;' placeholder='请填写完整URL,例：http://www.test.com' /></p>"
-			   +"<p style='margin-bottom:8px'><span>发送域名</span><input type='text' name='toDomain' value='"+rdata.toDomain+"' style='margin-left: 5px;width: 380px;height: 30px;margin-right:10px;' placeholder='发送到目标服务器的域名,例：www.test.com' /></p>"
-			   +"<p style='margin-bottom:8px'><span>内容替换</span><input type='text' name='sub1' value='"+rdata.sub1+"' style='margin-left: 5px;width: 182px;height: 30px;margin-right:10px;' placeholder='被替换的文本,可留空' />"
-			   +"<input type='text' name='sub2' value='"+rdata.sub2+"' style='margin-left: 5px;width: 183px;height: 30px;margin-right:10px;' placeholder='替换为,可留空' /></p>"
-			   +'<label style="font-weight:normal"><input type="checkbox" name="status" '+status_selected+' onclick="Proxy(\''+siteName+'\',1)" style="width:15px;height:15px;" />启用反向代理</label>'
-			   +'<ul class="help-info-text">'
+		var body = "<div>"
+			   +"<p style='margin-bottom:8px'><span>目标URL</span><input class='bt-input-text' type='text' name='toUrl' value='"+rdata.proxyUrl+"' style='margin-left: 5px;width: 380px;height: 30px;margin-right:10px;' placeholder='请填写完整URL,例：http://www.test.com' /></p>"
+			   +"<p style='margin-bottom:8px'><span>发送域名</span><input class='bt-input-text' type='text' name='toDomain' value='"+rdata.toDomain+"' style='margin-left: 5px;width: 380px;height: 30px;margin-right:10px;' placeholder='发送到目标服务器的域名,例：www.test.com' /></p>"
+			   +"<p style='margin-bottom:8px'><span>内容替换</span><input class='bt-input-text' type='text' name='sub1' value='"+rdata.sub1+"' style='margin-left: 5px;width: 182px;height: 30px;margin-right:10px;' placeholder='被替换的文本,可留空' />"
+			   +"<input class='bt-input-text' type='text' name='sub2' value='"+rdata.sub2+"' style='margin-left: 5px;width: 183px;height: 30px;margin-right:10px;' placeholder='替换为,可留空' /></p>"
+			   +'<div class="label-input-group ptb10"><label style="font-weight:normal"><input type="checkbox" name="status" '+status_selected+' onclick="Proxy(\''+siteName+'\',1)" />启用反向代理</label></div>'
+			   +'<ul class="help-info-text c7 ptb10">'
 			   +'<li>目标Url必需是可以访问的，否则将直接502</li>'
 			   +'<li>默认本站点所有域名访问将被传递到目标服务器，请确保目标服务器已绑定域名</li>'
 			   +'<li>若您是被动代理，请在发送域名处填写上目标站点的域名</li>'
 			   +'<li>若您不需要内容替换功能，请直接留空</li>'
 			   +'</ul>'
 			   +"</div>";
-			$("#webEdit-con").html(body);
+			$("#webedit-con").html(body);
 	});
 }
 		
@@ -1338,16 +1343,16 @@ function To301(siteName,type){
 		
 		if(rdata.url == null) rdata.url = '';
 		var status_selected = rdata.status?'checked':'';
-		var body = "<div style='margin: 10px 15px;'>"
-			   +"<p style='margin-bottom:8px'><span>访问域名</span><select name='srcDomain' style='margin-left: 5px;width: 380px;height: 30px;margin-right:10px;'><option value='all'>整站</option>"+domains+"</select></p>"
-			   +"<p style='margin-bottom:8px'><span>目标URL</span><input type='text' name='toUrl' value='"+rdata.url+"' style='margin-left: 5px;width: 380px;height: 30px;margin-right:10px;' placeholder='请填写完整URL,例：http://www.test.com' /></p>"
-			   +'<label style="font-weight:normal"><input type="checkbox" name="status" '+status_selected+' onclick="To301(\''+siteName+'\',1)" style="width:15px;height:15px;" />启用301</label>'
-			   +'<ul class="help-info-text">'
+		var body = "<div>"
+			   +"<p style='margin-bottom:8px'><span>访问域名</span><select class='bt-input-text' name='srcDomain' style='margin-left: 5px;width: 380px;height: 30px;margin-right:10px;'><option value='all'>整站</option>"+domains+"</select></p>"
+			   +"<p style='margin-bottom:8px'><span>目标URL</span><input class='bt-input-text' type='text' name='toUrl' value='"+rdata.url+"' style='margin-left: 5px;width: 380px;height: 30px;margin-right:10px;' placeholder='请填写完整URL,例：http://www.test.com' /></p>"
+			   +'<div class="label-input-group ptb10"><label style="font-weight:normal"><input type="checkbox" name="status" '+status_selected+' onclick="To301(\''+siteName+'\',1)" />启用301</label></div>'
+			   +'<ul class="help-info-text c7 ptb10">'
 			   +'<li>选择[整站]时请不要将目标URL设为同一站点下的域名.</li>'
 			   +'<li>取消301重定向后，需清空浏览器缓存才能看到生效结果.</li>'
 			   +'</ul>'
 			   +"</div>";
-			$("#webEdit-con").html(body);
+			$("#webedit-con").html(body);
 	});
 }
 
@@ -1372,20 +1377,20 @@ function SetSSL(siteName){
 				status_selecteda = "checked='checked'";
 		}
 
-		var mBody = '<div class="ssl-con">'
-				  + '<div class="ssl-type"><label><input type="radio" name="type" value="0" '+status_selecteda+'/>关闭SSL</label><label><input type="radio" name="type" value="1" '+status_selectedb+'/>Let\'s Encrypt免费证书</label><label><input class="otherssl" name="type" type="radio" value="2" '+status_selectedc+'>使用其他证书</label></div>'
+		var mBody = '<div class="ssl-con c4">'
+				  + '<div class="ssl-type label-input-group ptb10"><label class="mr20"><input type="radio" name="type" value="0" '+status_selecteda+'/>关闭SSL</label><label class="mr20"><input type="radio" name="type" value="1" '+status_selectedb+'/>Let\'s Encrypt免费证书</label><label><input class="otherssl" name="type" type="radio" value="2" '+status_selectedc+'>使用其他证书</label></div>'
 				  + '<div class="ssl-type-con"></div>'
 				  + '</div>';
-		var mykeyhtml = '<div class="myKeyCon"><div class="ssl-con-key">密钥(KEY)<br><textarea id="key" readonly="" style="background-color:#f6f6f6">'+rdata.key+'</textarea></div>'
-					+ '<div class="ssl-con-key">证书(CRT/PEM)<br><textarea id="csr" readonly="" style="background-color:#f6f6f6">'+rdata.csr+'</textarea></div>'
-					+ '<div class="ssl-btn"><button class="btn btn-success btn-sm" onclick="ChangeSaveSSL(\''+siteName+'\')">更新证书</button></div></div>'
-					+ '<div class="ssl-info"><p>已为您自动生成Let\'s Encrypt免费证书；</p><p>如需使用其他SSL,请切换其他证书后粘贴您的KEY以及CRT内容，然后保存即可。</p></div>';
+		var mykeyhtml = '<div class="myKeyCon ptb15"><div class="ssl-con-key pull-left mr20">密钥(KEY)<br><textarea id="key" class="bt-input-text" readonly="" style="background-color:#f6f6f6">'+rdata.key+'</textarea></div>'
+					+ '<div class="ssl-con-key pull-left">证书(CRT/PEM)<br><textarea id="csr" class="bt-input-text" readonly="" style="background-color:#f6f6f6">'+rdata.csr+'</textarea></div>'
+					+ '<div class="ssl-btn pull-left mtb15" style="width:100%"><button class="btn btn-success btn-sm" onclick="ChangeSaveSSL(\''+siteName+'\')">更新证书</button></div></div>'
+					+ '<ul class="help-info-text c7 pull-left"><li>已为您自动生成Let\'s Encrypt免费证书；</li><li>如需使用其他SSL,请切换其他证书后粘贴您的KEY以及CRT内容，然后保存即可。</li></ul>';
 		
-		var othersslhtml = '<div class="myKeyCon"><div class="ssl-con-key">密钥(KEY)<br><textarea id="key">'+rdata.key+'</textarea></div>'
-					+ '<div class="ssl-con-key">证书(CRT/PEM)<br><textarea id="csr">'+rdata.csr+'</textarea></div>'
-					+ '<div class="ssl-btn"><button class="btn btn-success btn-sm" onclick="SaveSSL(\''+siteName+'\')">保存</button></div></div>'
-					+ '<div class="ssl-info"><p>粘贴您的KEY以及CRT内容，然后保存即可<a href="http://www.bt.cn/bbs/thread-704-1-1.html" target="_blank" style="color:green;">[帮助]</a>。</p></div>';
-		$("#webEdit-con").html(mBody);
+		var othersslhtml = '<div class="myKeyCon ptb15"><div class="ssl-con-key pull-left mr20">密钥(KEY)<br><textarea id="key" class="bt-input-text">'+rdata.key+'</textarea></div>'
+					+ '<div class="ssl-con-key pull-left">证书(CRT/PEM)<br><textarea id="csr" class="bt-input-text">'+rdata.csr+'</textarea></div>'
+					+ '<div class="ssl-btn pull-left mtb15" style="width:100%"><button class="btn btn-success btn-sm" onclick="SaveSSL(\''+siteName+'\')">保存</button></div></div>'
+					+ '<ul class="help-info-text c7 pull-left"><li>粘贴您的KEY以及CRT内容，然后保存即可<a href="http://www.bt.cn/bbs/thread-704-1-1.html" target="_blank" style="color:green;">[帮助]</a>。</li></ul>';
+		$("#webedit-con").html(mBody);
 		if(rdata.type == 1){
 			$(".ssl-type-con").html(mykeyhtml);
 		}
@@ -1501,11 +1506,11 @@ function ChangeSaveSSL(siteName){
 function PHPVersion(siteName){
 	$.post('/site?action=GetSitePHPVersion','siteName='+siteName,function(version){
 		$.post('/site?action=GetPHPVersion',function(rdata){
-			var versionSelect = "<div class='webEdit-box padding-10'>\
+			var versionSelect = "<div class='webEdit-box'>\
 									<div class='line'>\
-										<label>选择PHP版本</label>\
+										<span class='tname'>选择PHP版本</span>\
 										<div class='info-r'>\
-											<select id='phpVersion' name='phpVersion' style='width:110px'>";
+											<select id='phpVersion' class='bt-input-text mr5' name='phpVersion' style='width:110px'>";
 			var optionSelect = '';
 			for(var i=0;i<rdata.length;i++){
 				optionSelect = version.phpversion == rdata[i].version?'selected':'';
@@ -1515,7 +1520,7 @@ function PHPVersion(siteName){
 							<button class='btn btn-success btn-sm' onclick=\"SetPHPVersion('"+siteName+"')\">切换</button>\
 							</div>\
 						</div>\
-							<ul class='help-info-text'>\
+							<ul class='help-info-text c7 ptb10'>\
 								<li>请根据您的程序需求选择版本，切换版本可能导致您的程序无法正常使用；</li>\
 								<li>若非必要,请尽量不要使用PHP5.2,这会降低您的服务器安全性；</li>\
 								<li>PHP7不支持mysql扩展，默认安装mysqli以及mysql-pdo。</li>\
@@ -1531,14 +1536,14 @@ function PHPVersion(siteName){
 											<input type="checkbox" name="status"  onclick="Nodejs(\''+siteName+'\')" style="width:15px;height:15px;" '+nodejs_checked+' />启用Node.js\
 										</label>\
 									</div>\
-										<ul class="help-info-text">\
+									<ul class="help-info-text c7 ptb10">\
 									<li>当前版本为Node.js '+version.nodejsversion+'；</li>\
 									<li>Node.js可以与PHP共存,但无法与Tomcat共存；</li>\
 									<li>若您的Node.js应用中有php脚本,访问时请添加.php扩展名</li>\
 								</ul>\
 								</div>'
 			}
-			$("#webEdit-con").html(versionSelect);
+			$("#webedit-con").html(versionSelect);
 		});
 	});
 }
@@ -1557,7 +1562,7 @@ function toTomcat(siteName){
 											<input type="checkbox" name="status"  onclick="Tomcat(\''+siteName+'\')" style="width:15px;height:15px;" '+tomcat_checked+' />启用Tomcat\
 										</label>\
 									</div>\
-										<ul class="help-info-text">\
+									<ul class="help-info-text c7 ptb10">\
 									<li>当前版本为Tomcat '+version.tomcatversion+',若您需要其它版本,请到软件管理 - 所有软件 中切换；</li>\
 									<li>Tomcat可以与PHP共存,但无法与Node.js共存；</li>\
 									<li>若您的tomcat应用中有php脚本,访问时请添加.php扩展名</li>\
@@ -1569,7 +1574,7 @@ function toTomcat(siteName){
 				versionSelect = '<font>请先安装Tomcat!</font>'
 			}
 			
-			$("#webEdit-con").html(versionSelect);
+			$("#webedit-con").html(versionSelect);
 		});
 	});
 }
@@ -1601,12 +1606,12 @@ function ConfigFile(webSite){
 		<textarea style='height: 320px; width: 445px; margin-left: 20px;line-height:18px' id='configBody'>"+rdata.data+"</textarea>\
 			<div class='info-r'>\
 				<button id='SaveConfigFileBtn' class='btn btn-success btn-sm' style='margin-top:15px;'>保存</button>\
-				<ul class='help-info-text'>\
+				<ul class='help-info-text c7 ptb10'>\
 					<li>此处为站点主配置文件,若您不了解配置规则,请勿随意修改.</li>\
 				</ul>\
 			</div>\
 		</div>";
-		$("#webEdit-con").html(mBody);
+		$("#webedit-con").html(mBody);
 		var editor = CodeMirror.fromTextArea(document.getElementById("configBody"), {
 			extraKeys: {"Ctrl-Space": "autocomplete"},
 			lineNumbers: true,
@@ -1645,19 +1650,30 @@ function Rewrite(siteName){
 			for(var i=0;i<rdata.rewrite.length;i++){
 				rList += "<option value='"+rdata.rewrite[i]+"'>"+rdata.rewrite[i]+"</option>";
 			}
-			var webBakHtml = "<div class='webEdit-box padding-10'>\
+			var webBakHtml = "<div class='bt-form'>\
 						<div class='line'>\
-						<select id='myRewrite' name='rewrite' style='width:30%;'>"+rList+"</select>\
+						<select id='myRewrite' class='bt-input-text mr20' name='rewrite' style='width:30%;'>"+rList+"</select>\
 						<span>规则转换工具：<a href='http://www.bt.cn/Tools' target='_blank' style='color:#20a53a'>Apache转Nginx</a>\</span>\
-						<textarea style='height: 260px; width: 480px; line-height:18px;margin-top:10px;padding:5px;' id='rewriteBody'>"+fileBody.data+"</textarea></div>\
+						<textarea class='bt-input-text' style='height: 260px; width: 480px; line-height:18px;margin-top:10px;padding:5px;' id='rewriteBody'>"+fileBody.data+"</textarea></div>\
 						<button id='SetRewriteBtn' class='btn btn-success btn-sm' onclick=\"SetRewrite('"+filename+"')\">保存</button>\
-						<p style='color:#666; margin-top:10px;'>请选择您的应用,若设置伪静态后,网站无法正常访问,请尝试设置回default<br/>您可以对伪静态规则进行修改,修改完后保存即可!</p>\
+						<button id='SetRewriteBtnTel' class='btn btn-success btn-sm' onclick=\"SetRewriteTel()\">另存为模板</button>\
+						<ul class='help-info-text c7 ptb15'>\
+							<li>请选择您的应用,若设置伪静态后,网站无法正常访问,请尝试设置回default或清空规则</li>\
+							<li>您可以对伪静态规则进行修改,修改完后保存即可!</li>\
+						</ul>\
 						</div>";
-			$("#webEdit-con").html(webBakHtml);
+			$("#webedit-con").html(webBakHtml);
 			
 			$("#myRewrite").change(function(){
 				var rewriteName = $(this).val();
-				$.post('/files?action=GetFileBody','path=/www/server/panel/rewrite/'+getCookie('serverType')+'/'+rewriteName+'.conf',function(fileBody){
+				if(rewriteName == '0.当前'){
+					rpath = '/www/server/panel/vhost/rewrite/'+siteName+'.conf';
+					if(getCookie('serverType') == 'apache')	filename = rdata.sitePath+'/.htaccess';
+				}else{
+					rpath = '/www/server/panel/rewrite/' + getCookie('serverType')+'/' + rewriteName + '.conf';
+				}
+				
+				$.post('/files?action=GetFileBody','path='+rpath,function(fileBody){
 					 $("#rewriteBody").val(fileBody.data);
 				});
 			});
@@ -1679,6 +1695,46 @@ function SetRewrite(filename){
 		}
 	});
 }
+var aindex = null;
+//保存为模板
+function SetRewriteTel(act){
+	if(act != undefined){
+		name = $("#rewriteName").val();
+		if(name == ''){
+			layer.msg("模板名称不能为空!",{icon:5});
+			return;
+		}
+		var data = 'data='+encodeURIComponent($("#rewriteBody").val())+'&name='+name;
+		var loadT = layer.msg('正在保存数据...',{icon:16,time:0,shade: [0.3, '#000']});
+		$.post('/site?action=SetRewriteTel',data,function(rdata){
+			layer.close(loadT);
+			layer.close(aindex);
+			
+			layer.msg(rdata.msg,{icon:rdata.status?1:5});
+		});
+		return;
+	}
+	
+	aindex = layer.open({
+		type: 1,
+		shift: 5,
+		closeBtn: 2,
+		area: '320px', //宽高
+		title: '保存为Rewrite模板',
+		content: '<div class="bt-form pd20 pb70">\
+					<div class="line">\
+						<input type="text" class="bt-input-text" name="rewriteName" id="rewriteName" value="" placeholder="模板名称" style="width:100%" />\
+					</div>\
+					<div class="bt-form-submit-btn">\
+					<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>\
+					<button type="button" id="rewriteNameBtn" class="btn btn-success btn-sm btn-title" onclick="SetRewriteTel(1)">确定</button>\
+					</div>\
+				</div>'
+	});
+	$("#rewriteName").focus().keyup(function(e){
+		if(e.keyCode == 13) $("#rewriteNameBtn").click();
+	});
+}
 //修改默认页
 function SiteDefaultPage(){
 	stype = getCookie('serverType');
@@ -1688,11 +1744,11 @@ function SiteDefaultPage(){
 		title: '修改默认页',
 		closeBtn: 2,
 		shift: 0,
-		content: '<div class="changeDefault">\
-						<button class="btn btn-default btn-sm" onclick="changeDefault(1)">默认文档</button>\
-						<button class="btn btn-default btn-sm" onclick="changeDefault(2)">404错误页</button>\
-							<button class="btn btn-default btn-sm" onclick="changeDefault('+(stype=='nginx'?3:4)+')">'+(stype=='nginx'?'Nginx':'Apache')+'空白页</button>\
-						<button class="btn btn-default btn-sm" onclick="changeDefault(5)">默认站点停止页</button>\
+		content: '<div class="changeDefault pd20">\
+						<button class="btn btn-default btn-sm mg10" style="width:138px" onclick="changeDefault(1)">默认文档</button>\
+						<button class="btn btn-default btn-sm mg10" style="width:138px" onclick="changeDefault(2)">404错误页</button>\
+							<button class="btn btn-default btn-sm mg10" style="width:138px" onclick="changeDefault('+(stype=='nginx'?3:4)+')">'+(stype=='nginx'?'Nginx':'Apache')+'空白页</button>\
+						<button class="btn btn-default btn-sm mg10" style="width:138px" onclick="changeDefault(5)">默认站点停止页</button>\
 				</div>'
 	});
 }

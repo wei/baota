@@ -40,8 +40,8 @@ function Recycle_bin(type){
 								<td>'+ToSize(rdata.dirs[i].size)+'</td>\
 								<td>'+getLocalTime(rdata.dirs[i].time)+'</td>\
 								<td style="text-align: right;">\
-									<a class="link" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">恢复</a>\
-									 | <a class="link" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">永久删除</a>\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">恢复</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">永久删除</a>\
 								</td>\
 							</tr>'
 				}
@@ -52,8 +52,8 @@ function Recycle_bin(type){
 								<td>'+ToSize(rdata.files[i].size)+'</td>\
 								<td>'+getLocalTime(rdata.files[i].time)+'</td>\
 								<td style="text-align: right;">\
-									<a class="link" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">恢复</a>\
-									 | <a class="link" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">永久删除</a>\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">恢复</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">永久删除</a>\
 								</td>\
 							</tr>'
 				}
@@ -68,8 +68,8 @@ function Recycle_bin(type){
 								<td>'+ToSize(rdata.dirs[i].size)+'</td>\
 								<td>'+getLocalTime(rdata.dirs[i].time)+'</td>\
 								<td style="text-align: right;">\
-									<a class="link" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">恢复</a>\
-									 | <a class="link" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">永久删除</a>\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">恢复</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">永久删除</a>\
 								</td>\
 							</tr>'
 				}
@@ -84,8 +84,8 @@ function Recycle_bin(type){
 								<td>'+ToSize(rdata.files[i].size)+'</td>\
 								<td>'+getLocalTime(rdata.files[i].time)+'</td>\
 								<td style="text-align: right;">\
-									<a class="link" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">恢复</a>\
-									 | <a class="link" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">永久删除</a>\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">恢复</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">永久删除</a>\
 								</td>\
 							</tr>'
 				}
@@ -101,8 +101,8 @@ function Recycle_bin(type){
 								<td>'+ToSize(rdata.files[i].size)+'</td>\
 								<td>'+getLocalTime(rdata.files[i].time)+'</td>\
 								<td style="text-align: right;">\
-									<a class="link" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">恢复</a>\
-									 | <a class="link" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">永久删除</a>\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">恢复</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">永久删除</a>\
 								</td>\
 							</tr>'
 					}
@@ -119,8 +119,8 @@ function Recycle_bin(type){
 								<td>'+ToSize(rdata.files[i].size)+'</td>\
 								<td>'+getLocalTime(rdata.files[i].time)+'</td>\
 								<td style="text-align: right;">\
-									<a class="link" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">恢复</a>\
-									 | <a class="link" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">永久删除</a>\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">恢复</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">永久删除</a>\
 								</td>\
 							</tr>'
 					}
@@ -276,12 +276,12 @@ function GetFiles(Path) {
 						<td>"+fmp[3]+"</td>\
 						<td>"+fmp[4]+"</td>\
 						<td class='editmenu'><span>\
-						<a class='link' href='javascript:;' onclick=\"CopyFile('" + rdata.PATH +"/"+ fmp[0] + "')\">复制</a> | \
-						<a class='link' href='javascript:;' onclick=\"CutFile('" + rdata.PATH +"/"+ fmp[0]+ "')\">剪切</a> | \
-						<a class='link' href=\"javascript:ReName(0,'" + fmp[0] + "');\">重命名</a> | \
-						<a class='link' href=\"javascript:SetChmod(0,'" + rdata.PATH + "/"+fmp[0] + "');\">权限</a> | \
-						<a class='link' href=\"javascript:Zip('" + rdata.PATH +"/" +fmp[0] + "');\">压缩</a> | \
-						<a class='link' href='javascript:;' onclick=\"DeleteDir('" + rdata.PATH +"/"+ fmp[0] + "')\">删除</a></span>\
+						<a class='btlink' href='javascript:;' onclick=\"CopyFile('" + rdata.PATH +"/"+ fmp[0] + "')\">复制</a> | \
+						<a class='btlink' href='javascript:;' onclick=\"CutFile('" + rdata.PATH +"/"+ fmp[0]+ "')\">剪切</a> | \
+						<a class='btlink' href=\"javascript:ReName(0,'" + fmp[0] + "');\">重命名</a> | \
+						<a class='btlink' href=\"javascript:SetChmod(0,'" + rdata.PATH + "/"+fmp[0] + "');\">权限</a> | \
+						<a class='btlink' href=\"javascript:Zip('" + rdata.PATH +"/" +fmp[0] + "');\">压缩</a> | \
+						<a class='btlink' href='javascript:;' onclick=\"DeleteDir('" + rdata.PATH +"/"+ fmp[0] + "')\">删除</a></span>\
 					</td></tr>";
 			}
 			else{
@@ -290,7 +290,7 @@ function GetFiles(Path) {
 				Body += "<div class='file folderBox menufolder' data-path='" + rdata.PATH + "/" + fmp[0] + "' filetype='dir' title='文件名：" + fmp[0]+"&#13;大小：" + ToSize(fmp[1])+"&#13;修改时间："+getLocalTime(fmp[2])+"&#13;权限："+fmp[3]+"&#13;所有者："+fmp[4]+"'>\
 						<input type='checkbox' name='id' value='"+fmp[0]+"'>\
 						<div class='ico ico-folder' ondblclick=\"GetFiles('" + rdata.PATH + "/" + fmp[0] + "')\"></div>\
-						<div class='titleBox' onclick=\"GetFiles('" + rdata.PATH + "/" + fmp[0] + "')\"><span class='title'>" + fmp[0] + "</span></div>\
+						<div class='titleBox' onclick=\"GetFiles('" + rdata.PATH + "/" + fmp[0] + "')\"><span class='tname'>" + fmp[0] + "</span></div>\
 						</div>";
 			}
 		}
@@ -310,15 +310,15 @@ function GetFiles(Path) {
 				}
 			}
 			if(displayZip != -1){
-				bodyZip = "<a class='link' href='javascript:;' onclick=\"UnZip('" + rdata.PATH +"/" +fmp[0] + "'," + displayZip + ")\">解压</a> | ";
+				bodyZip = "<a class='btlink' href='javascript:;' onclick=\"UnZip('" + rdata.PATH +"/" +fmp[0] + "'," + displayZip + ")\">解压</a> | ";
 			}
 			if(isText(fmp[0])){
-				bodyZip = "<a class='link' href='javascript:;' onclick=\"OnlineEditFile(0,'" + rdata.PATH +"/"+ fmp[0] + "')\">编辑</a> | ";
+				bodyZip = "<a class='btlink' href='javascript:;' onclick=\"OnlineEditFile(0,'" + rdata.PATH +"/"+ fmp[0] + "')\">编辑</a> | ";
 			}
 			if(isImage(fmp[0])){
-				download = "<a class='link' href='javascript:;' onclick=\"GetImage('" + rdata.PATH +"/"+ fmp[0] + "')\">预览</a> | ";
+				download = "<a class='btlink' href='javascript:;' onclick=\"GetImage('" + rdata.PATH +"/"+ fmp[0] + "')\">预览</a> | ";
 			}else{
-				download = "<a class='link' href='javascript:;' onclick=\"GetFileBytes('" + rdata.PATH +"/"+ fmp[0] + "',"+fmp[1]+")\">下载</a> | ";
+				download = "<a class='btlink' href='javascript:;' onclick=\"GetFileBytes('" + rdata.PATH +"/"+ fmp[0] + "',"+fmp[1]+")\">下载</a> | ";
 			}
 			
 			totalSize +=  parseInt(fmp[1]);
@@ -330,24 +330,24 @@ function GetFiles(Path) {
 						<td>"+fmp[3]+"</td>\
 						<td>"+fmp[4]+"</td>\
 						<td class='editmenu'>\
-						<span><a class='link' href='javascript:;' onclick=\"CopyFile('" + rdata.PATH +"/"+ fmp[0] + "')\">复制</a> | \
-						<a class='link' href='javascript:;' onclick=\"CutFile('" + rdata.PATH +"/"+ fmp[0] + "')\">剪切</a> | \
-						<a class='link' href='javascript:;' onclick=\"ReName(0,'" + fmp[0] + "')\">重命名</a> | \
-						<a class='link' href=\"javascript:SetChmod(0,'" + rdata.PATH +"/"+ fmp[0] + "');\">权限</a> | \
-						<a class='link' href=\"javascript:Zip('" + rdata.PATH +"/" +fmp[0] + "');\">压缩</a> | \
+						<span><a class='btlink' href='javascript:;' onclick=\"CopyFile('" + rdata.PATH +"/"+ fmp[0] + "')\">复制</a> | \
+						<a class='btlink' href='javascript:;' onclick=\"CutFile('" + rdata.PATH +"/"+ fmp[0] + "')\">剪切</a> | \
+						<a class='btlink' href='javascript:;' onclick=\"ReName(0,'" + fmp[0] + "')\">重命名</a> | \
+						<a class='btlink' href=\"javascript:SetChmod(0,'" + rdata.PATH +"/"+ fmp[0] + "');\">权限</a> | \
+						<a class='btlink' href=\"javascript:Zip('" + rdata.PATH +"/" +fmp[0] + "');\">压缩</a> | \
 						"+bodyZip+download+"\
-						<a class='link' href='javascript:;' onclick=\"DeleteFile('" + rdata.PATH +"/"+ fmp[0] + "')\">删除</a>\
+						<a class='btlink' href='javascript:;' onclick=\"DeleteFile('" + rdata.PATH +"/"+ fmp[0] + "')\">删除</a>\
 						</span></td></tr>";
 			}
 			else{
 				Body += "<div class='file folderBox menufile' data-path='" + rdata.PATH +"/"+ fmp[0] + "' filetype='"+fmp[0]+"' title='文件名：" + fmp[0]+"&#13;大小：" + ToSize(fmp[1])+"&#13;修改时间："+getLocalTime(fmp[2])+"&#13;权限："+fmp[3]+"&#13;所有者："+fmp[4]+"'>\
 						<input type='checkbox' name='id' value='"+fmp[0]+"'>\
 						<div class='ico ico-"+(GetExtName(fmp[0]))+"'></div>\
-						<div class='titleBox'><span class='title'>" + fmp[0] + "</span></div>\
+						<div class='titleBox'><span class='tname'>" + fmp[0] + "</span></div>\
 						</div>";
 			}
 		}
-		var dirInfo = '(共'+rdata.DIR.length+'个目录与'+rdata.FILES.length+'个文件,大小:<font id="pathSize">'+(ToSize(totalSize))+'<a class="link" onClick="GetPathSize()">获取</a></font>)';
+		var dirInfo = '(共'+rdata.DIR.length+'个目录与'+rdata.FILES.length+'个文件,大小:<font id="pathSize">'+(ToSize(totalSize))+'<a class="btlink ml5" onClick="GetPathSize()">获取</a></font>)';
 		$("#DirInfo").html(dirInfo);
 		if(getCookie("rank")=="a"){
 			var tablehtml = '<table width="100%" border="0" cellpadding="0" cellspacing="0" class="table table-hover">\
@@ -365,9 +365,11 @@ function GetFiles(Path) {
 							<tbody id="filesBody" class="list-list">'+Body+'</tbody>\
 						</table>';
 			$("#fileCon").removeClass("fileList").html(tablehtml);
+			$("#tipTools").width($("#fileCon").width());
 		}
 		else{
 			$("#fileCon").addClass("fileList").html(Body);
+			$("#tipTools").width($("#fileCon").width());
 		}
 		$("#DirPathPlace input").val(rdata.PATH);
 		var BarTools = '<div class="btn-group">\
@@ -426,7 +428,7 @@ function GetFiles(Path) {
 			showSeclect();
 		});
 		//阻止冒泡
-		$("#filesBody .link").click(function(e){
+		$("#filesBody .btlink").click(function(e){
 			e.stopPropagation();
 		});
 		$("input[name=id]").dblclick(function(e){
@@ -534,14 +536,16 @@ $(window).scroll(function () {
 		$("#tipTools").css({"position":"absolute","top":"0","left":"0","box-shadow":"none"});
 	}
 });
-$("#tipTools").width($(".black-ip").width()-17);
-$("#PathPlaceBtn,#DirPathPlace input").width($(".black-ip").width()-460);
+$("#tipTools").width($(".file-box").width());
+$("#PathPlaceBtn").width($(".file-box").width()-460);
+$("#DirPathPlace input").width($(".file-box").width()-460);
 if($(window).width()<1160){
 	$("#PathPlaceBtn").width(290);
 }
 window.onresize = function(){
-	$("#tipTools").width($(".black-ip").width()-23);
-	$("#PathPlaceBtn,#DirPathPlace input").width($(".black-ip").width()-460);
+	$("#tipTools").width($(".file-box").width()-30);
+	$("#PathPlaceBtn").width($(".file-box").width()-460);
+	$("#DirPathPlace input").width($(".file-box").width()-460);
 	if($(window).width()<1160){
 		$("#PathPlaceBtn,#DirPathPlace input").width(290);
 	}
@@ -704,13 +708,13 @@ function CreateFile(type, path) {
 		closeBtn: 2,
 		area: '320px', //宽高
 		title: '新建空白文件',
-		content: '<div class="zun-form-new">\
-					<div class="line noborder">\
-					<input type="text" class="form-control" name="Name" id="newFileName" value="" placeholder="文件名称" />\
+		content: '<div class="bt-form pd20 pb70">\
+					<div class="line">\
+					<input type="text" class="bt-input-text" name="Name" id="newFileName" value="" placeholder="文件名称" style="width:100%" />\
 					</div>\
-					<div class="submit-btn">\
-					<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>\
-					<button id="CreateFileBtn" type="button" class="btn btn-success btn-sm btn-title" onclick="CreateFile(1,\'' + path + '\')">新建</button>\
+					<div class="bt-form-submit-btn">\
+					<button type="button" class="btn btn-danger btn-sm" onclick="layer.closeAll()">取消</button>\
+					<button id="CreateFileBtn" type="button" class="btn btn-success btn-sm" onclick="CreateFile(1,\'' + path + '\')">新建</button>\
 					</div>\
 				</div>'
 	});
@@ -741,11 +745,11 @@ function CreateDir(type, path) {
 		closeBtn: 2,
 		area: '320px', //宽高
 		title: '新建新目录',
-		content: '<div class="zun-form-new">\
-					<div class="line noborder">\
-					<input type="text" class="form-control" name="Name" id="newDirName" value="" placeholder="目录名称" />\
+		content: '<div class="bt-form pd20 pb70">\
+					<div class="line">\
+					<input type="text" class="bt-input-text" name="Name" id="newDirName" value="" placeholder="目录名称" style="width:100%" />\
 					</div>\
-					<div class="submit-btn">\
+					<div class="bt-form-submit-btn">\
 					<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>\
 					<button type="button" id="CreateDirBtn" class="btn btn-success btn-sm btn-title" onclick="CreateDir(1,\'' + path + '\')">新建</button>\
 					</div>\
@@ -828,19 +832,19 @@ function DownloadFile(action){
 		closeBtn: 2,
 		area: '500px', //宽高
 		title: '下载文件',
-		content: '<form class="zun-form-new">\
-					<div class="line noborder">\
-					<span class="name">URL地址:</span><input type="text" class="form-control-text" name="url" id="mUrl" value="" placeholder="Url地址" />\
+		content: '<form class="bt-form pd20 pb70">\
+					<div class="line">\
+					<span class="tname">URL地址:</span><input type="text" class="bt-input-text" name="url" id="mUrl" value="" placeholder="Url地址" style="width:370px" />\
 					</div>\
-					<div class="line noborder">\
-					<span class="name">下载到:</span><input type="text" class="form-control-text" name="path" id="dpath" value="'+path+'" placeholder="下载到" />\
+					<div class="line">\
+					<span class="tname ">下载到:</span><input type="text" class="bt-input-text" name="path" id="dpath" value="'+path+'" placeholder="下载到" style="width:370px" />\
 					</div>\
-					<div class="line noborder">\
-					<span class="name">文件名:</span><input type="text" class="form-control-text" name="filename" id="dfilename" value="" placeholder="保存文件名" />\
+					<div class="line">\
+					<span class="tname">文件名:</span><input type="text" class="bt-input-text" name="filename" id="dfilename" value="" placeholder="保存文件名" style="width:370px" />\
 					</div>\
-					<div class="submit-btn">\
-					<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>\
-					<button type="button" id="dlok" class="btn btn-success btn-sm btn-title dlok" onclick="DownloadFile(1)">确定</button>\
+					<div class="bt-form-submit-btn">\
+					<button type="button" class="btn btn-danger btn-sm" onclick="layer.closeAll()">取消</button>\
+					<button type="button" id="dlok" class="btn btn-success btn-sm dlok" onclick="DownloadFile(1)">确定</button>\
 					</div>\
 				</form>'
 	});
@@ -924,11 +928,11 @@ function ReName(type, fileName) {
 		closeBtn: 2,
 		area: '320px', //宽高
 		title: '重命名',
-		content: '<div class="zun-form-new">\
-					<div class="line noborder">\
-					<input type="text" class="form-control" name="Name" id="newFileName" value="' + fileName + '" placeholder="文件名称" />\
+		content: '<div class="bt-form pd20 pb70">\
+					<div class="line">\
+					<input type="text" class="bt-input-text" name="Name" id="newFileName" value="' + fileName + '" placeholder="文件名称" style="width:100%" />\
 					</div>\
-					<div class="submit-btn">\
+					<div class="bt-form-submit-btn">\
 					<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>\
 					<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title" onclick="ReName(1,\'' + fileName + '\')">保存</button>\
 					</div>\
@@ -1038,12 +1042,12 @@ function Zip(dirName,submits) {
 		closeBtn: 2,
 		area: '650px',
 		title: '压缩文件',
-		content: '<div class="zun-form-new">'
+		content: '<div class="bt-form pd20 pb70">'
 					+'<div class="line noborder">'
 					+'<input type="text" class="form-control" id="sfile" value="' +param + '" placeholder="压缩文件或目录" style="display:none" />'
-					+'<span>压缩到</span><input type="text" class="form-control" id="dfile" value="'+dirName + '.tar.gz" placeholder="压缩到" style="width: 85%; display: inline-block; margin: 0px 10px 0px 20px;" /><span class="glyphicon glyphicon-folder-open cursor" onclick="ChangePath(\'dfile\')"></span>'
+					+'<span>压缩到</span><input type="text" class="bt-input-text" id="dfile" value="'+dirName + '.tar.gz" placeholder="压缩到" style="width: 85%; display: inline-block; margin: 0px 10px 0px 20px;" /><span class="glyphicon glyphicon-folder-open cursor" onclick="ChangePath(\'dfile\')"></span>'
 					+'</div>'
-					+'<div class="submit-btn">'
+					+'<div class="bt-form-submit-btn">'
 					+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>'
 					+'<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title" onclick="Zip(\'' + param + '\',1)">压缩</button>'
 					+'</div>'
@@ -1212,7 +1216,7 @@ function SetChmod(action,fileName){
 			title:'设置权限['+fileName+']',
 			area: '400px', 
 			shadeClose:false,
-			content:'<div class="setchmod zun-form-new">\
+			content:'<div class="setchmod bt-form ptb15 pb70">\
 						<fieldset>\
 							<legend>所有者</legend>\
 							<p><input type="checkbox" id="owner_r" />读取</p>\
@@ -1231,14 +1235,14 @@ function SetChmod(action,fileName){
 							<p><input type="checkbox" id="public_w" />写入</p>\
 							<p><input type="checkbox" id="public_x" />执行</p>\
 						</fieldset>\
-						<div class="setchmodnum"><input type="text" id="access" maxlength="3" value="'+rdata.chmod+'">权限，\
+						<div class="setchmodnum"><input class="bt-input-text" type="text" id="access" maxlength="3" value="'+rdata.chmod+'">权限，\
 						<span>所有者\
-						<select id="chown">\
+						<select id="chown" class="bt-input-text">\
 							<option value="www" '+(rdata.chown=='www'?'selected="selected"':'')+'>www</option>\
 							<option value="mysql" '+(rdata.chown=='mysql'?'selected="selected"':'')+'>mysql</option>\
 							<option value="root" '+(rdata.chown=='root'?'selected="selected"':'')+'>root</option>\
 						</select></span></div>\
-						<div class="submit-btn">\
+						<div class="bt-form-submit-btn">\
 							<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>\
 					        <button type="button" class="btn btn-success btn-sm btn-title" onclick="'+toExec+'" >确定</button>\
 				        </div>\

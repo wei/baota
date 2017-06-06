@@ -8,9 +8,10 @@ $def with (content)
 		<title>$web.ctx.session.webname</title>
 		<link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon" />
 		<link href="/static/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet">
-		<link href="/static/css/reset.css?$web.ctx.session.version" rel="stylesheet">
-		<link href="/static/css/site.css?$web.ctx.session.version" rel="stylesheet">
-		<link href="/static/css/file.css?$web.ctx.session.version" rel="stylesheet">
+		<link href="/static/css/reset.css?$web.ctx.session.version&v=1.3" rel="stylesheet">
+		<link href="/static/css/site.css?$web.ctx.session.version&v=1.3" rel="stylesheet">
+		<link href="/static/css/file.css?$web.ctx.session.version&v=1.3" rel="stylesheet">
+      	<link href="/static/css/lib.css?$web.ctx.session.version&v=1.3" rel="stylesheet">
 		<link href="/static/codemirror/lib/codemirror.css" rel="stylesheet">
 		<link href="/static/codemirror/addon/hint/show-hint.css" rel="stylesheet">
 		<link href="/static/codemirror/addon/dialog/dialog.css" rel="stylesheet">
@@ -20,24 +21,26 @@ $def with (content)
 		<![endif]-->
 	</head>
 	<body>
-		<div class="bt-warp">
+		<div class="bt-warp bge6">
 			<div id="container" class="container-fluid">
 				<div class="sidebar-scroll">
-					<div id="task" class="task" onclick="task()"></div>
-					<h3 class="mypcip"><i class="icon-book"></i><span>$web.ctx.session.address</span></h3>
-					<ul class="sub">
-						<li id="memuA"> <a class="menu_home" href="/">首页</a></li>
-						<li id="memuAsite"><a class="menu_web" href="/site">网站</a></li>
-						<li id="memuAftp"><a class="menu_ftp" href="/ftp">FTP</a></li>
-						<li id="memuAdatabase"><a class="menu_data" href="/database">数据库</a></li>
-						<li id="memuAcontrol"><a class="menu_control" href="/control">监控</a></li>
-						<li id="memuAfirewall"><a class="menu_firewall" href="/firewall">安全</a></li>
-						<li id="memuAfiles"><a class="menu_folder" href="/files">文件</a></li>
-						<li id="memuAcrontab"><a class="menu_day" href="/crontab">计划任务</a></li>
-						<li id="memuAsoft"><a class="menu_soft" href="/soft">软件管理</a></li>
-						<li id="memuAconfig"><a class="menu_set" href="/config">面板设置</a></li>
-						<li><a class="menu_exit" href="javascript:;" id="dologin">退出</a></li>
-					</ul>
+					<div class="sidebar-auto">
+						<div id="task" class="task cw" onclick="task()"></div>
+						<h3 class="mypcip"><span class="f14 cw">$web.ctx.session.address</span></h3>
+						<ul class="menu">
+							<li id="memuA"> <a class="menu_home" href="/">首页</a></li>
+							<li id="memuAsite"><a class="menu_web" href="/site">网站</a></li>
+							<li id="memuAftp"><a class="menu_ftp" href="/ftp">FTP</a></li>
+							<li id="memuAdatabase"><a class="menu_data" href="/database">数据库</a></li>
+							<li id="memuAcontrol"><a class="menu_control" href="/control">监控</a></li>
+							<li id="memuAfirewall"><a class="menu_firewall" href="/firewall">安全</a></li>
+							<li id="memuAfiles"><a class="menu_folder" href="/files">文件</a></li>
+							<li id="memuAcrontab"><a class="menu_day" href="/crontab">计划任务</a></li>
+							<li id="memuAsoft"><a class="menu_soft" href="/soft">软件管理</a></li>
+							<li id="memuAconfig"><a class="menu_set" href="/config">面板设置</a></li>
+							<li><a class="menu_exit" href="javascript:;" id="dologin">退出</a></li>
+						</ul>
+					</div>
 				</div>
 				<a style="display: none;" id="defaultPath">$web.ctx.session.config['sites_path']</a>
 				<script src="/static/js/jquery-1.10.2.min.js"></script>
@@ -46,7 +49,7 @@ $def with (content)
 				<script src="/static/js/jquery.fly.min.js"></script>
 				<script src="/static/js/public.js?$web.ctx.session.version"></script>
 				$:content
-				<div class="footer">宝塔Linux面板  ©2014-2017 宝塔(bt.cn)<a style="margin-left:20px;color:#20a53a;" href="http://www.bt.cn/bbs" target="_blank">问题求助|产品建议请上宝塔论坛</a></div></div>
+				<div class="footer bgw">宝塔Linux面板  ©2014-2017 宝塔(bt.cn)<a style="margin-left:20px;color:#20a53a;" href="http://www.bt.cn/bbs" target="_blank">问题求助|产品建议请上宝塔论坛</a></div></div>
 			</div>
 		</div>
 	</body>

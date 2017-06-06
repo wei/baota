@@ -84,8 +84,7 @@ class panelSite:
         SetOutputFilter DEFLATE
         Options FollowSymLinks
         AllowOverride All
-        Order allow,deny
-        Allow from all
+        Require all granted
         DirectoryIndex index.php index.html index.htm default.php default.html default.htm
     </Directory>
 </VirtualHost>''' % (vName,self.sitePort,self.sitePath,acc,self.siteName,self.siteName,web.ctx.session.logsPath+'/'+self.siteName,web.ctx.session.logsPath+'/'+self.siteName,phpConfig,self.sitePath)
@@ -478,8 +477,7 @@ class panelSite:
         SetOutputFilter DEFLATE
         Options FollowSymLinks
         AllowOverride All
-        Order allow,deny
-        Allow from all
+        Require all granted
         DirectoryIndex %s
     </Directory>
 </VirtualHost>''' % (port,sitePath,siteName,port,newDomain,web.ctx.session.logsPath+'/'+siteName,web.ctx.session.logsPath+'/'+siteName,phpConfig,sitePath,siteIndex)
@@ -586,19 +584,20 @@ class panelSite:
     #创建Let's Encrypt免费证书
     def CreateLet(self,get):
         
-        file = self.setupPath + '/panel/vhost/nginx/'+get.siteName+'.conf';
-        if os.path.exists(file):
-            siteConf = public.readFile(file);
-            if siteConf.find('301-START') != -1: return public.returnMsg(False,'检测到您的站点做了301重定向设置，请先关闭重定向!');
-        
-        file = self.setupPath + '/panel/vhost/apache/'+get.siteName+'.conf';
-        if os.path.exists(file):
-            siteConf = public.readFile(file);
-            if siteConf.find('301-START') != -1: return public.returnMsg(False,'检测到您的站点做了301重定向设置，请先关闭重定向!');
+        #检查是否设置301
+        serverTypes = ['nginx','apache'];
+        for stype in serverTypes:
+            file = self.setupPath + '/panel/vhost/'+stype+'/'+get.siteName+'.conf';
+            if os.path.exists(file):
+                siteConf = public.readFile(file);
+                if siteConf.find('301-START') != -1: return public.returnMsg(False,'检测到您的站点做了301重定向设置，请先关闭重定向!');
         
         #定义证书存放目录       
         path =   '/etc/letsencrypt/live/'+ get.siteName;
-        if not os.path.exists(path+'/README'): 
+        
+        #检查是否自定义证书
+        if not os.path.exists(path+'/README'):
+            #清理旧的证书链
             public.ExecShell('rm -rf ' + path)
             public.ExecShell('rm -rf ' + path + '-00*')
             public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName)
@@ -678,9 +677,9 @@ class panelSite:
     ssl_certificate    /etc/letsencrypt/live/%s/fullchain.pem;
     ssl_certificate_key    /etc/letsencrypt/live/%s/privkey.pem;
     if ($server_port !~ 443){
-        rewrite ^/.*$ https://$host$uri;
+        rewrite ^/.*$ https://$host$request_uri;
     }
-    error_page 497  https://$host$uri;
+    error_page 497  https://$host$request_uri;
 """ % (siteName,siteName);
                 if(conf.find('ssl_certificate') != -1):
                     return public.returnMsg(True,'SSL开启成功!');
@@ -734,8 +733,7 @@ class panelSite:
         SetOutputFilter DEFLATE
         Options FollowSymLinks
         AllowOverride All
-        Order allow,deny
-        Allow from all
+        Require all granted
         DirectoryIndex %s
     </Directory>
 </VirtualHost>''' % (path,siteName,domains,web.ctx.session.logsPath + '/' + siteName,web.ctx.session.logsPath + '/' + siteName,siteName,siteName,version,path,index)
@@ -1048,7 +1046,7 @@ class panelSite:
             if(srcDomain == 'all'):
                 conf301 = "\t#301-START\n\t\treturn 301 "+toDomain+";\n\t#301-END";
             else:
-                conf301 = "\t#301-START\n\t\tif ($host ~ '^"+srcDomain+"'){\n\t\t\treturn 301 "+toDomain+"$uri;\n\t\t}\n\t#301-END";
+                conf301 = "\t#301-START\n\t\tif ($host ~ '^"+srcDomain+"'){\n\t\t\treturn 301 "+toDomain+"$request_uri;\n\t\t}\n\t#301-END";
             if type == '1': 
                 mconf = mconf.replace("#error_page 404/404.html;","#error_page 404/404.html;\n"+conf301)
             else:
@@ -1197,8 +1195,7 @@ server
         SetOutputFilter DEFLATE
         Options FollowSymLinks
         AllowOverride All
-        Order allow,deny
-        Allow from all
+        Require all granted
         DirectoryIndex index.php index.html index.htm default.php default.html default.htm
     </Directory>
 </VirtualHost>
@@ -1551,7 +1548,7 @@ server
         proxy_pass %s;
         proxy_set_header Host %s;
         proxy_set_header X-Forwarded-For $remote_addr;
-        #proxy_cache_key %s$uri$is_args$args;
+        #proxy_cache_key %s$request_uri$is_args$args;
         #proxy_cache_valid 200 304 12h;
         %s
         expires 2d;
@@ -1650,10 +1647,20 @@ server
             runPath = self.GetSiteRunPath(get);
             rewriteList['sitePath'] = public.M('sites').where("name=?",(get.siteName,)).getField('path') + runPath['runPath'];
             
-        rewriteList['rewrite'] = public.readFile('rewrite/' + web.ctx.session.webserver + '/list.txt').split(',');
-       
-        
+        rewriteList['rewrite'] = []
+        rewriteList['rewrite'].append('0.当前')
+        for ds in os.listdir('rewrite/' + web.ctx.session.webserver):
+            if ds == 'list.txt': continue;
+            rewriteList['rewrite'].append(ds[0:len(ds)-5]);
+        rewriteList['rewrite'] = sorted(rewriteList['rewrite']);
         return rewriteList
+    
+    #保存伪静态模板
+    def SetRewriteTel(self,get):
+        get.name = get.name.encode('utf-8');
+        filename = 'rewrite/' + web.ctx.session.webserver + '/' +get.name + '.conf';
+        public.writeFile(filename,get.data);
+        return public.returnMsg(True, '已保存到模板!');
     
     #打包
     def ToBackup(self,get):
@@ -2126,6 +2133,8 @@ server
             conf = public.readFile(path);
             rep = "listen\s+80\s*;"
             conf = re.sub(rep,'listen 80 default_server;',conf,1);
+            rep = "listen\s+443\s*ssl\s*\w*\s*;"
+            conf = re.sub(rep,'listen 443 ssl default_server;',conf,1);
             public.writeFile(path,conf);
         
         path = self.setupPath + '/panel/vhost/nginx/default.conf';

@@ -22,6 +22,17 @@ def md5(str):
     except:
         return False
 
+#取随机字符串
+def GetRandomString(length):
+    from random import Random
+    str = ''
+    chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789'
+    chrlen = len(chars) - 1
+    random = Random()
+    for i in range(length):
+        str+=chars[random.randint(0, chrlen)]
+    return str
+
 def checkCode(code,outime = 120):
     #校验验证码
     import time,web

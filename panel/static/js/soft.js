@@ -10,11 +10,11 @@ function phpSoftMain(name,key){
 		layer.close(loadT);
 		nameA = rdata.versions[key];
 		bodys = [
-				'<p class="active" data-id="0"><a href="javascript:service(\''+name+'\','+nameA.run+')">php服务</a><span class="spanmove"></span></p>',
+				'<p class="bgw" data-id="0"><a href="javascript:service(\''+name+'\','+nameA.run+')">php服务</a><span class="spanmove"></span></p>',
 				'<p data-id="1"><a href="javascript:phpUploadLimit(\''+name+'\','+nameA.max+')">上传限制</a><span class="spanmove"></span></p>',
 				'<p class="phphide" data-id="2"><a href="javascript:phpTimeLimit(\''+name+'\','+nameA.maxTime+')">超时限制</a><span class="spanmove"></span></p>',
 				'<p data-id="3"><a href="javascript:configChange(\''+name+'\')">配置修改</a><span class="spanmove"></span></p>',
-				'<p data-id="4"><a href="javascript:SetPHPConfig(\''+name+'\','+nameA.pathinfo+')">扩展配置</a><span class="spanmove"></span></p>',
+				'<p data-id="4"><a href="javascript:SetPHPConfig(\''+name+'\','+nameA.pathinfo+')">安装扩展</a><span class="spanmove"></span></p>',
 				'<p data-id="5"><a href="javascript:disFun(\''+name+'\')">禁用函数</a><span class="spanmove"></span></p>',
 				'<p class="phphide" data-id="6"><a href="javascript:SetFpmConfig(\''+name+'\')">性能调整</a><span class="spanmove"></span></p>',
 				'<p class="phphide" data-id="7"><a href="javascript:GetPHPStatus(\''+name+'\')">负载状态</a><span class="spanmove"></span></p>',
@@ -37,12 +37,12 @@ function phpSoftMain(name,key){
 			title: nametext+'管理',
 			closeBtn: 2,
 			shift: 0,
-			content: '<div class="webEdit" style="width:640px;">\
+			content: '<div class="bt-w-main" style="width:640px;">\
 				<input name="softMenuSortOrder" type="hidden" />\
-				<div class="webEdit-menu  soft-man-menu">\
+				<div class="bt-w-menu soft-man-menu">\
 					'+sdata+'\
 				</div>\
-				<div id="webEdit-con" class="webEdit-box webEdit-con">\
+				<div id="webEdit-con" class="bt-w-con pd15">\
 					<div class="soft-man-con"></div>\
 				</div>\
 			</div>'
@@ -51,9 +51,9 @@ function phpSoftMain(name,key){
 			$(".phphide").hide();
 		}
 		service(name,nameA.run);
-		$(".webEdit-menu p a").click(function(){
+		$(".bt-w-menu p a").click(function(){
 			var txt = $(this).text();
-			$(this).parent().addClass("active").siblings().removeClass("active");
+			$(this).parent().addClass("bgw").siblings().removeClass("bgw");
 			if(txt != "扩展配置") $(".soft-man-con").removeAttr("style");
 		});
 		$(".soft-man-menu").dragsort({dragSelector: ".spanmove", dragEnd: MenusaveOrder});
@@ -93,12 +93,12 @@ function updateSoftList(){
 
 //php上传限制
 function phpUploadLimit(version,max){
-	var LimitCon = '<p class="conf_p"><input class="phpUploadLimit" type="number" value="'+max+'" name="max">MB</p><button class="btn btn-success btn-sm" onclick="SetPHPMaxSize(\''+version+'\')">保存</button>';
+	var LimitCon = '<p class="conf_p"><input class="phpUploadLimit bt-input-text mr5" type="number" value="'+max+'" name="max">MB<button class="btn btn-success btn-sm" onclick="SetPHPMaxSize(\''+version+'\')" style="margin-left:20px">保存</button></p>';
 	$(".soft-man-con").html(LimitCon);
 }
 //php超时限制
 function phpTimeLimit(version,max){
-	var LimitCon = '<p class="conf_p"><input class="phpTimeLimit" type="number" value="'+max+'">秒</p><button class="btn btn-success btn-sm" onclick="SetPHPMaxTime(\''+version+'\')">保存</button>';
+	var LimitCon = '<p class="conf_p"><input class="phpTimeLimit bt-input-text mr5" type="number" value="'+max+'">秒<button class="btn btn-success btn-sm" onclick="SetPHPMaxTime(\''+version+'\')" style="margin-left:20px">保存</button></p>';
 	$(".soft-man-con").html(LimitCon);
 }
 //设置超时限制
@@ -106,6 +106,8 @@ function SetPHPMaxTime(version){
 	var max = $(".phpTimeLimit").val();
 	var loadT = layer.msg('正在保存数据...',{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/config?action=setPHPMaxTime','version='+version+'&time='+max,function(rdata){
+		$(".bt-w-menu .active").attr('onclick',"phpTimeLimit('"+version+"',"+max+")");
+		$(".bt-w-menu .active a").attr('href',"javascript:phpTimeLimit('"+version+"',"+max+");");
 		layer.close(loadT);
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
 	});
@@ -120,15 +122,17 @@ function SetPHPMaxSize(version){
 	}
 	var loadT = layer.msg('正在保存数据...',{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/config?action=setPHPMaxSize','&version='+version+'&max='+max,function(rdata){
+		$(".bt-w-menu .active").attr('onclick',"phpUploadLimit('"+version+"',"+max+")");
+		$(".bt-w-menu .active a").attr('href',"javascript:phpUploadLimit('"+version+"',"+max+");");
 		layer.close(loadT);
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
 	})
 }
 //配置修改
 function configChange(type){
-	var con = '<p style="color: #666; margin-bottom: 7px">提示：Ctrl+F 搜索关键字，Ctrl+G 查找下一个，Ctrl+S 保存，Ctrl+Shift+R 查找替换</p><textarea style="height: 320px; line-height:18px;" id="textBody"></textarea>\
+	var con = '<p style="color: #666; margin-bottom: 7px">提示：Ctrl+F 搜索关键字，Ctrl+G 查找下一个，Ctrl+S 保存，Ctrl+Shift+R 查找替换</p><textarea class="bt-input-text" style="height: 320px; line-height:18px;" id="textBody"></textarea>\
 					<button id="OnlineEditFileBtn" class="btn btn-success btn-sm" style="margin-top:10px;">保存</button>\
-					<ul class="help-info-text">\
+					<ul class="help-info-text c7 ptb15">\
 						<li>此处为'+type+'主配置文件,若您不了解配置规则,请勿随意修改。</li>\
 					</ul>';
 	$(".soft-man-con").html(con);
@@ -199,10 +203,12 @@ function SetPathInfo(version,type){
 		}
 		var pathinfo1 = '<td>PATH_INFO</td><td>扩展配置</td><td>MVC架构的程序需要开启,如typecho</td><td><span class="ico-'+(pathinfo?'start':'stop')+' glyphicon glyphicon-'+(pathinfo?'ok':'remove')+'"></span></td><td style="text-align: right;" width="50">'+pathinfoOpt+'</td>';
 		$("#pathInfo").html(pathinfo1);
-		$(".webEdit-menu .active").attr('onclick',"SetPHPConfig('71',"+pathinfo+")");
+		$(".bt-w-menu .bgw").attr('onclick',"SetPHPConfig('"+version+"',"+pathinfo+",1)");
+		$(".bt-w-menu .bgw a").attr('href',"javascript:SetPHPConfig('"+version+"',"+pathinfo+",1);");
 		layer.msg(rdata.msg,{icon:1});
 	});
 }
+
 
 //PHP扩展配置
 function SetPHPConfig(version,pathinfo,go){
@@ -219,7 +225,7 @@ function SetPHPConfig(version,pathinfo,go){
 			}else if(rdata.libs[i].status){
 				opt = '<a style="color:red;" href="javascript:UninstallPHPLib(\''+version+'\',\''+rdata.libs[i].name+'\',\''+rdata.libs[i].title+'\','+pathinfo+');">卸载</a>'
 			}else{
-				opt = '<a class="link" href="javascript:InstallPHPLib(\''+version+'\',\''+rdata.libs[i].name+'\',\''+rdata.libs[i].title+'\','+pathinfo+');">安装</a>'
+				opt = '<a class="btlink" href="javascript:InstallPHPLib(\''+version+'\',\''+rdata.libs[i].name+'\',\''+rdata.libs[i].title+'\','+pathinfo+');">安装</a>'
 			}
 			
 			body += '<tr>'
@@ -233,7 +239,7 @@ function SetPHPConfig(version,pathinfo,go){
 		
 		var pathinfoOpt = '<a style="color:red;" href="javascript:SetPathInfo(\''+version+'\',\'off\');">关闭</a>'
 		if(!pathinfo){
-			pathinfoOpt = '<a class="link" href="javascript:SetPathInfo(\''+version+'\',\'on\');">开启</a>'
+			pathinfoOpt = '<a class="btlink" href="javascript:SetPathInfo(\''+version+'\',\'on\');">开启</a>'
 		}
 		var pathinfo1 = '<tr id="pathInfo"><td>PATH_INFO</td><td>扩展配置</td><td>MVC架构的程序需要开启,如typecho</td><td><span class="ico-'+(pathinfo?'start':'stop')+' glyphicon glyphicon-'+(pathinfo?'ok':'remove')+'"></span></td><td style="text-align: right;" width="50">'+pathinfoOpt+'</td></tr>';
 		var con='<div class="divtable" style="margin-right:10px">'
@@ -310,10 +316,10 @@ function disFun(version){
 		}
 		
 		var con = "<div class='dirBinding'>"
-				   +"<input type='text' placeholder='添加要被禁止的函数名,如: exec' id='disable_function_val' style='height: 28px; border-radius: 3px;width: 410px;' />"
+				   +"<input class='bt-input-text mr5' type='text' placeholder='添加要被禁止的函数名,如: exec' id='disable_function_val' style='height: 28px; border-radius: 3px;width: 410px;' />"
 				   +"<button class='btn btn-success btn-sm' onclick=\"disable_functions('"+version+"',1,'"+rdata.disable_functions+"')\">添加</button>"
 				   +"</div>"
-				   +"<div class='divtable' style='width:96%;margin:6px auto;height:350px;overflow:auto'><table class='table table-hover' width='100%' style='margin-bottom:0'>"
+				   +"<div class='divtable mtb15' style='height:350px;overflow:auto'><table class='table table-hover' width='100%' style='margin-bottom:0'>"
 				   +"<thead><tr><th>函数名</th><th width='100' class='text-right'>操作</th></tr></thead>"
 				   +"<tbody id='blacktable'>" + dbody + "</tbody>"
 				   +"</table></div>";
@@ -414,12 +420,12 @@ function SetFpmConfig(version,action){
 						+"<option value='6' "+(rdata.max_children==500?'selected':'')+">500并发</option>"
 						+"<option value='7' "+(rdata.max_children==1000?'selected':'')+">1000并发</option>"
 		var body="<div class='bingfa'>"
-						+"<p><span class='span_tit'>并发方案：</span><select name='limit' style='width:90px; margin-left:6px;'>"+limitList+"</select></p>"
-						+"<p><span class='span_tit'>max_children：</span><input type='number' name='max_children' value='"+rdata.max_children+"' />  *允许创建的最大子进程数</p>"
-						+"<p><span class='span_tit'>start_servers：</span><input type='number' name='start_servers' value='"+rdata.start_servers+"' />  *起始进程数（服务启动后初始进程数量）</p>"
-						+"<p><span class='span_tit'>min_spare_servers：</span><input type='number' name='min_spare_servers' value='"+rdata.min_spare_servers+"' />   *最小空闲进程数（清理空闲进程后的保留进程数量）</p>"
-						+"<p><span class='span_tit'>max_spare_servers：</span><input type='number' name='max_spare_servers' value='"+rdata.max_spare_servers+"' />   *最大空闲进程数（当空闲进程达到此值时开始清理）</p>"
-						+"<div><button class='btn btn-success btn-sm' onclick='SetFpmConfig(\""+version+"\",1)'>保存</button></div>"
+						+"<p class='line'><span class='span_tit'>并发方案：</span><select class='bt-input-text' name='limit' style='width:100px;'>"+limitList+"</select></p>"
+						+"<p class='line'><span class='span_tit'>max_children：</span><input class='bt-input-text' type='number' name='max_children' value='"+rdata.max_children+"' /><span class='c9'>*允许创建的最大子进程数</span></p>"
+						+"<p class='line'><span class='span_tit'>start_servers：</span><input class='bt-input-text' type='number' name='start_servers' value='"+rdata.start_servers+"' />  <span class='c9'>*起始进程数（服务启动后初始进程数量）</span></p>"
+						+"<p class='line'><span class='span_tit'>min_spare_servers：</span><input class='bt-input-text' type='number' name='min_spare_servers' value='"+rdata.min_spare_servers+"' />   <span class='c9'>*最小空闲进程数（清理空闲进程后的保留进程数量）</span></p>"
+						+"<p class='line'><span class='span_tit'>max_spare_servers：</span><input class='bt-input-text' type='number' name='max_spare_servers' value='"+rdata.max_spare_servers+"' />   <span class='c9'>*最大空闲进程数（当空闲进程达到此值时开始清理）</span></p>"
+						+"<div class='mtb15'><button class='btn btn-success btn-sm' onclick='SetFpmConfig(\""+version+"\",1)'>保存</button></div>"
 				+"</div>"
 		
 		$(".soft-man-con").html(body);
@@ -524,24 +530,24 @@ function nginxSoftMain(name,version){
 			title: name+'管理',
 			closeBtn: 2,
 			shift: 0,
-			content: '<div class="webEdit" style="width:640px;">\
-				<div class="webEdit-menu">\
-					<p class="active" onclick="service(\''+name+'\','+nameA.status+')">Web服务</p>\
+			content: '<div class="bt-w-main" style="width:640px;">\
+				<div class="bt-w-menu">\
+					<p class="bgw" onclick="service(\''+name+'\','+nameA.status+')">Web服务</p>\
 					<p onclick="configChange(\''+name+'\')">配置修改</p>\
 					'+waf+'\
 					'+menu+'\
 					'+status+'\
 				</div>\
-				<div id="webEdit-con" class="webEdit-box webEdit-con">\
+				<div id="webEdit-con" class="bt-w-con pd15">\
 					<div class="soft-man-con"></div>\
 				</div>\
 			</div>'
-		})
+		});
 		service(name,nameA.status);
-		$(".webEdit-menu p").click(function(){
+		$(".bt-w-menu p").click(function(){
 			//var i = $(this).index();
-			$(this).addClass("active").siblings().removeClass("active");
-		})
+			$(this).addClass("bgw").siblings().removeClass("bgw");
+		});
 	});
 }
 
@@ -551,7 +557,7 @@ function waf(){
 	$.get("/waf?action=GetConfig",function(rdata){
 		layer.close(loadT);
 		if(rdata.status == -1){
-			layer.msg('您当前Nginx版本不支持waf模块,请重新安装Nginx,重装Nginx不会丢失您的网站配置!',{icon:5,time:5000});
+			layer.msg('您当前Nginx版本不支持waf模块,请安装Nginx1.12,重装Nginx不会丢失您的网站配置!',{icon:5,time:5000});
 			return;
 		}
 		
@@ -580,7 +586,7 @@ function waf(){
                     	<button class='btn btn-default btn-sm' onclick='upLimit()'>上传限制</button>\
 						</div>\
 					</div>\
-					<div class='wafConf_checkbox'>\
+					<div class='wafConf_checkbox label-input-group ptb10'>\
 					<input type='checkbox' id='waf_UrlDeny' "+(rdata['UrlDeny'] == 'on'?'checked':'')+" onclick=\"SetWafConfig('UrlDeny','"+(rdata['UrlDeny'] == 'on'?'off':'on')+"')\" /><label for='waf_UrlDeny'>URL过滤</label>\
 					<input type='checkbox' id='waf_CookieMatch' "+(rdata['CookieMatch'] == 'on'?'checked':'')+" onclick=\"SetWafConfig('CookieMatch','"+(rdata['CookieMatch'] == 'on'?'off':'on')+"')\" /><label for='waf_CookieMatch'>Cookie过滤</label>\
 					<input type='checkbox' id='waf_postMatch' "+(rdata['postMatch'] == 'on'?'checked':'')+" onclick=\"SetWafConfig('postMatch','"+(rdata['postMatch'] == 'on'?'off':'on')+"')\" /><label for='waf_postMatch'>POST过滤</label>\
@@ -588,19 +594,19 @@ function waf(){
 					<input type='checkbox' id='waf_attacklog' "+(rdata['attacklog'] == 'on'?'checked':'')+" onclick=\"SetWafConfig('attacklog','"+(rdata['attacklog'] == 'on'?'off':'on')+"')\" /><label for='waf_attacklog'>记录防御信息</label>\
 					</div>\
 					<div class='wafConf_cc'>\
-					<span>CC攻击触发频率(次)</span><input id='CCrate_1' type='number' value='" + cc[0] + "' style='width:80px;margin-right:30px'/>\
-					<span>CC攻击触发周期(秒)</span><input id='CCrate_2' type='number' value='" + cc[1] + "' style='width:80px;'/>\
+					<span>CC攻击触发频率(次)</span><input id='CCrate_1' class='bt-input-text' type='number' value='" + cc[0] + "' style='width:80px;margin-right:30px'/>\
+					<span>CC攻击触发周期(秒)</span><input id='CCrate_2' class='bt-input-text' type='number' value='" + cc[1] + "' style='width:80px;'/>\
 					<button onclick=\"SetWafConfig('CCrate','')\" class='btn btn-default btn-sm'>确定</button>\
 					</div>\
 					<div class='wafConf_ip'>\
 						<fieldset>\
 						<legend>IP白名单</legend>\
-						<input type='text' id='ipWhitelist_val' placeholder='IP地址' style='width:175px;' /><button onclick=\"addWafKey('ipWhitelist')\" class='btn btn-default btn-sm'>添加</button>\
+						<input type='text' id='ipWhitelist_val' class='bt-input-text mr5' placeholder='IP地址' style='width:175px;' /><button onclick=\"addWafKey('ipWhitelist')\" class='btn btn-default btn-sm'>添加</button>\
 						<div class='table-overflow'><table class='table table-hover'>"+whiteList+"</table></div>\
 						</fieldset>\
 						<fieldset>\
 						<legend>IP黑名单</legend>\
-						<input type='text' id='ipBlocklist_val' placeholder='IP地址' style='width:175px;' /><button onclick=\"addWafKey('ipBlocklist')\" class='btn btn-default btn-sm'>添加</button>\
+						<input type='text' id='ipBlocklist_val' class='bt-input-text mr5' placeholder='IP地址' style='width:175px;' /><button onclick=\"addWafKey('ipBlocklist')\" class='btn btn-default btn-sm'>添加</button>\
 						<div class='table-overflow'><table class='table table-hover'>"+blackList+"</table></div>\
 						</fieldset>\
 					</div>\
@@ -631,11 +637,11 @@ function upLimit(){
 			title: '文件上传后缀黑名单',
 			closeBtn: 2,
 			shift: 0,
-			content:"<div class='dirBinding'>"
-				   +"<input type='text' placeholder='添加禁止上传的扩展名,如: zip' id='black_fileExt_val' style='height: 28px; border-radius: 3px;width: 221px;' />"
+			content:"<div class='dirBinding mlr15'>"
+				   +"<input class='bt-input-text mr5' type='text' placeholder='添加禁止上传的扩展名,如: zip' id='black_fileExt_val' style='height: 28px; border-radius: 3px;width: 219px;margin-top:15px' />"
 				   +"<button class='btn btn-success btn-sm' onclick=\"addWafKey('black_fileExt')\">添加</button>"
 				   +"</div>"
-				   +"<div class='divtable' style='width:96%;margin:6px auto'><table class='table table-hover' width='100%' style='margin-bottom:0'>"
+				   +"<div class='divtable' style='margin:15px'><table class='table table-hover' width='100%' style='margin-bottom:0'>"
 				   +"<thead><tr><th>扩展名</th><th width='100' class='text-right'>操作</th></tr></thead>"
 				   +"<tbody id='blacktable'>" + black_fileExt + "</tbody>"
 				   +"</table></div>"
@@ -800,20 +806,20 @@ function SoftMan(name,version){
 			title: name+'管理',
 			closeBtn: 2,
 			shift: 0,
-			content: '<div class="webEdit" style="width:640px;">\
-				<div class="webEdit-menu">\
-					<p class="active" onclick="service(\''+name+'\',\''+nameA.status+'\')">服务</p>'
+			content: '<div class="bt-w-main" style="width:640px;">\
+				<div class="bt-w-menu">\
+					<p class="bgw" onclick="service(\''+name+'\',\''+nameA.status+'\')">服务</p>'
 					+menu+
 				'</div>\
-				<div id="webEdit-con" class="webEdit-box webEdit-con">\
+				<div id="webEdit-con" class="bt-w-con pd15">\
 					<div class="soft-man-con"></div>\
 				</div>\
 			</div>'
 		})
 		service(name,nameA.status);
-		$(".webEdit-menu p").click(function(){
+		$(".bt-w-menu p").click(function(){
 			//var i = $(this).index();
-			$(this).addClass("active").siblings().removeClass("active");
+			$(this).addClass("bgw").siblings().removeClass("bgw");
 		})
 	})
 }
@@ -835,10 +841,9 @@ function changeMySQLDataPath(act){
 	
 	$.post('/database?action=GetMySQLInfo','',function(rdata){
 		var LimitCon = '<p class="conf_p">\
-							<input id="datadir" class="phpUploadLimit" style="width:350px;" type="text" value="'+rdata.datadir+'" name="datadir">\
-							<span onclick="ChangePath(\'datadir\')" class="glyphicon glyphicon-folder-open cursor"></span>\
-						</p>\
-						<button class="btn btn-success btn-sm" onclick="changeMySQLDataPath(1)">迁移</button>';
+							<input id="datadir" class="phpUploadLimit bt-input-text mr5" style="width:350px;" type="text" value="'+rdata.datadir+'" name="datadir">\
+							<span onclick="ChangePath(\'datadir\')" class="glyphicon glyphicon-folder-open cursor mr20"></span><button class="btn btn-success btn-sm" onclick="changeMySQLDataPath(1)">迁移</button>\
+						</p>';
 		$(".soft-man-con").html(LimitCon);
 	});
 }
@@ -860,8 +865,8 @@ function changeMySQLPort(act){
 	
 	$.post('/database?action=GetMySQLInfo','',function(rdata){
 		var LimitCon = '<p class="conf_p">\
-							<input id="dataport" class="phpUploadLimit" type="number" value="'+rdata.port+'" name="dataport">\
-							<button style="margin-top: -4px;" class="btn btn-success btn-sm" onclick="changeMySQLPort(1)">修改</button>\
+							<input id="dataport" class="phpUploadLimit bt-input-text mr20" type="number" value="'+rdata.port+'" name="dataport">\
+							<button style="margin-top: -1px;" class="btn btn-success btn-sm" onclick="changeMySQLPort(1)">修改</button>\
 						</p>';
 						
 		$(".soft-man-con").html(LimitCon);
@@ -878,11 +883,11 @@ function softChangeVer(name,version){
 		SelectVersion += '<option>'+name+' '+veropt[i]+'</option>';
 	}
 	
-	var body = "<div class='ver'><span style='margin-right:10px'>选择版本</span><select id='selectVer' name='phpVersion' style='width:160px'>";
-	body += SelectVersion+'</select></div><button class="btn btn-success btn-sm" style="margin-top:10px;">切换</button>';
+	var body = "<div class='ver line'><span class='tname'>选择版本</span><select id='selectVer' class='bt-input-text mr20' name='phpVersion' style='width:160px'>";
+	body += SelectVersion+'</select><button class="btn btn-success btn-sm">切换</button></div>';
 	
 	if(name == 'mysql'){
-		body += "<br><br><li style='color:red;'>注意: 安装新的MySQL版本,会覆盖数据库数据,请先备份数据库!</li>"
+		body += "<ul class='help-info-text c7 ptb15'><li style='color:red;'>注意: 安装新的MySQL版本，会覆盖数据库数据，请先备份数据库！</li></ul>"
 	}
 	
 	$(".soft-man-con").html(body);
@@ -896,13 +901,13 @@ function softChangeVer(name,version){
 //phpmyadmin切换php版本
 function phpVer(name,version){
 	$.post('/site?action=GetPHPVersion',function(rdata){
-		var body = "<div class='ver'><span style='margin-right:10px'>选择PHP版本</span><select id='get' name='phpVersion' style='width:110px'>";
+		var body = "<div class='ver line'><span class='tname'>选择PHP版本</span><select id='get' class='bt-input-text mr20' name='phpVersion' style='width:110px'>";
 		var optionSelect = '';
 		for(var i=0;i<rdata.length;i++){
 			optionSelect = rdata[i].version == version?'selected':'';
 			body += "<option value='"+ rdata[i].version +"' "+ optionSelect +">"+ rdata[i].name +"</option>"
 		}
-		body += '</select></div><button class="btn btn-success btn-sm" style="margin-top:10px;" onclick="phpVerChange(\'phpversion\',\'get\')">保存</button>';
+		body += '</select><button class="btn btn-success btn-sm" onclick="phpVerChange(\'phpversion\',\'get\')">保存</button></div>';
 		$(".soft-man-con").html(body);
 	})
 }
@@ -921,9 +926,9 @@ function phpVerChange(type,msg){
 }
 //phpmyadmin安全设置
 function safeConf(name,port,auth){
-	var con = '<div class="ver">\
+	var con = '<div class="ver line">\
 						<span style="margin-right:10px">访问端口</span>\
-						<input class="form-control phpmyadmindk" name="Name" id="pmport" value="'+port+'" placeholder="phpmyadmin访问端口" maxlength="5" type="number">\
+						<input class="bt-input-text phpmyadmindk mr20" name="Name" id="pmport" value="'+port+'" placeholder="phpmyadmin访问端口" maxlength="5" type="number">\
 						<button class="btn btn-success btn-sm" onclick="phpmyadminport()">保存</button>\
 					</div>\
 					<div class="user_pw_tit">\
@@ -933,12 +938,12 @@ function safeConf(name,port,auth){
 						</span>\
 					</div>\
 					<div class="user_pw">\
-						<p><span>授权账号</span><input id="username_get" name="username_get" value="" type="text" placeholder="不修改请留空"></p>\
-						<p><span>授权密码</span><input id="password_get_1" name="password_get_1" value="" type="password" placeholder="不修改请留空"></p>\
-						<p><span>重复密码</span><input id="password_get_2" name="password_get_1" value="" type="password" placeholder="不修改请留空"></p>\
+						<p><span>授权账号</span><input id="username_get" class="bt-input-text" name="username_get" value="" type="text" placeholder="不修改请留空"></p>\
+						<p><span>授权密码</span><input id="password_get_1" class="bt-input-text" name="password_get_1" value="" type="password" placeholder="不修改请留空"></p>\
+						<p><span>重复密码</span><input id="password_get_2" class="bt-input-text" name="password_get_1" value="" type="password" placeholder="不修改请留空"></p>\
 						<p><button class="btn btn-success btn-sm" onclick="phpmyadmin(\'get\')">保存</button></p>\
 					</div>\
-					<ul class="help-info-text"><li>为phpmyadmin增加一道访问安全锁</li></ul>';
+					<ul class="help-info-text c7"><li>为phpmyadmin增加一道访问安全锁</li></ul>';
 	$(".soft-man-con").html(con);
 	if(auth){
 		$(".user_pw").show();
@@ -1222,15 +1227,15 @@ function GetSList(isdisplay){
              	 version_info = version_info.substring(0,version_info.length-1);
             }
 			
-			var handle = '<a class="link" onclick="AddVersion(\''+rdata[i].name+'\',\''+version_info+'\',\''+rdata[i].tip+'\',this,\''+rdata[i].title+'\')">安装</a>';
+			var handle = '<a class="btlink" onclick="AddVersion(\''+rdata[i].name+'\',\''+version_info+'\',\''+rdata[i].tip+'\',this,\''+rdata[i].title+'\')">安装</a>';
 			if(rdata[i].name != 'php'){
 				for(var n=0; n<len; n++){
 					if(rdata[i].versions[n].status == true){
 						if(rdata[i].tip == 'lib'){
-							handle = '<a class="link" onclick="PluginMan(\''+rdata[i].name+'\',\''+rdata[i].title+'\')">设置</a> | <a class="link" onclick="UninstallVersion(\''+rdata[i].name+'\',\''+rdata[i].versions[n].version+'\',\''+rdata[i].title+'\')">卸载</a>';
+							handle = '<a class="btlink" onclick="PluginMan(\''+rdata[i].name+'\',\''+rdata[i].title+'\')">设置</a> | <a class="btlink" onclick="UninstallVersion(\''+rdata[i].name+'\',\''+rdata[i].versions[n].version+'\',\''+rdata[i].title+'\')">卸载</a>';
 							titleClick = 'onclick="PluginMan(\''+rdata[i].name+'\',\''+rdata[i].title+'\')" style="cursor:pointer"';
 						}else{
-							handle = '<a class="link" onclick="SoftMan(\''+rdata[i].name+'\',\''+version_info+'\')">设置</a> | <a class="link" onclick="UninstallVersion(\''+rdata[i].name+'\',\''+rdata[i].versions[n].version+'\',\''+rdata[i].title+'\')">卸载</a>';
+							handle = '<a class="btlink" onclick="SoftMan(\''+rdata[i].name+'\',\''+version_info+'\')">设置</a> | <a class="btlink" onclick="UninstallVersion(\''+rdata[i].name+'\',\''+rdata[i].versions[n].version+'\',\''+rdata[i].title+'\')">卸载</a>';
 							titleClick = 'onclick="SoftMan(\''+rdata[i].name+'\',\''+version_info+'\')" style="cursor:pointer"';
 						}
 						
@@ -1265,7 +1270,7 @@ function GetSList(isdisplay){
 				for(var n=0; n<len; n++){
 					if(rdata[i].versions[n].status == true){
 						checked = rdata[i].versions[n]['display'] ? "checked":"";
-						handle = '<a class="link" onclick="phpSoftMain(\''+rdata[i].versions[n].version+'\','+n+')">设置</a> | <a class="link" onclick="UninstallVersion(\''+rdata[i].name+'\',\''+rdata[i].versions[n].version+'\',\''+rdata[i].title+'\')">卸载</a>';
+						handle = '<a class="btlink" onclick="phpSoftMain(\''+rdata[i].versions[n].version+'\','+n+')">设置</a> | <a class="btlink" onclick="UninstallVersion(\''+rdata[i].name+'\',\''+rdata[i].versions[n].version+'\',\''+rdata[i].title+'\')">卸载</a>';
 						softPath = '<span class="glyphicon glyphicon-folder-open" title="'+rdata[i].path+'" onclick="openPath(\''+rdata[i].path+"/"+rdata[i].versions[n].version.replace(/\./,"")+'\')"></span>';
 						titleClick = 'onclick="phpSoftMain(\''+rdata[i].versions[n].version+'\','+n+')" style="cursor:pointer"';
 						indexshow = '<div class="index-item"><input class="btswitch btswitch-ios" id="index_'+rdata[i].name+rdata[i].versions[n].version.replace(/\./,"")+'" type="checkbox" '+checked+'><label class="btswitch-btn" for="index_'+rdata[i].name+rdata[i].versions[n].version.replace(/\./,"")+'" onclick="toIndexDisplay(\''+rdata[i].name+'\',\''+rdata[i].versions[n].version+'\')"></label></div>';
@@ -1278,7 +1283,7 @@ function GetSList(isdisplay){
 						
 					}
 					else{
-						handle = '<a class="link" onclick="oneInstall(\''+rdata[i].name+'\',\''+rdata[i].versions[n].version+'\')">安装</a>';
+						handle = '<a class="btlink" onclick="oneInstall(\''+rdata[i].name+'\',\''+rdata[i].versions[n].version+'\')">安装</a>';
 						softPath ='';
 						checked = '';
 						indexshow = '';
@@ -1358,10 +1363,10 @@ function oneInstall(name,version){
 	    area: '350px',
 	    closeBtn: 2,
 	    shadeClose: true,
-	    content:"<div class='zun-form-new'>\
-			<div class='version'>安装版本：<span style='margin-left:30px'>"+name+" "+version+"</span>"+optw+"</div>\
-	    	<div class='fangshi'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></div>\
-	    	<div class='submit-btn' style='margin-top:15px'>\
+	    content:"<div class='bt-form pd20 pb70 c6'>\
+			<div class='version line'>安装版本：<span style='margin-left:30px'>"+name+" "+version+"</span>"+optw+"</div>\
+	    	<div class='fangshi line'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></div>\
+	    	<div class='bt-form-submit-btn'>\
 				<button type='button' class='btn btn-danger btn-sm btn-title one-close'>取消</button>\
 		        <button type='button' id='bi-btn' class='btn btn-success btn-sm btn-title bi-btn'>提交</button>\
 	        </div>\
@@ -1455,10 +1460,10 @@ function AddVersion(name,ver,type,obj,title){
 	    area: '350px',
 	    closeBtn: 2,
 	    shadeClose: true,
-	    content:"<div class='zun-form-new'>\
-			<div class='version'>安装版本：<select id='SelectVersion'>"+SelectVersion+"</select></div>\
-	    	<div class='fangshi'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></div>\
-	    	<div class='submit-btn' style='margin-top:15px'>\
+	    content:"<div class='bt-form pd20 pb70 c6'>\
+			<div class='version line'>安装版本：<select id='SelectVersion' class='bt-input-text' style='margin-left:30px'>"+SelectVersion+"</select></div>\
+	    	<div class='fangshi line'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></div>\
+	    	<div class='bt-form-submit-btn'>\
 				<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
 		        <button type='button' id='bi-btn' class='btn btn-success btn-sm btn-title bi-btn'>提交</button>\
 	        </div>\
@@ -1617,12 +1622,12 @@ function SetLibConfig(name,action){
 		var bucketMsg = rdata.info.bucket.split('|');
 		var domainMsg = rdata.info.domain.split('|');
 		
-		var body="<div class='zun-form-new bingfa'>"
+		var body="<div class='bt-form bingfa pd20 pb70'>"
 				+"<p><span class='span_tit'>"+keyMsg[0]+"：</span><input placeholder='"+keyMsg[1]+"' style='width: 300px;' type='text' name='access_key' value='"+rdata.AS[0]+"' />  *"+keyMsg[2]+" "+'<a href="'+rdata.info.help+'" style="color:green" target="_blank"> [帮助]</a>'+"</p>"
 				+"<p><span class='span_tit'>"+secretMsg[0]+"：</span><input placeholder='"+secretMsg[1]+"' style='width: 300px;' type='text' name='secret_key' value='"+rdata.AS[1]+"' />  *"+secretMsg[2]+"</p>"
 				+"<p><span class='span_tit'>"+bucketMsg[0]+"：</span><input placeholder='"+bucketMsg[1]+"' style='width: 300px;' type='text' name='bucket_name' value='"+rdata.AS[2]+"' />   *"+bucketMsg[2]+"</p>"
 				+"<p><span class='span_tit'>"+domainMsg[0]+"：</span><input placeholder='"+domainMsg[1]+"' style='width: 300px;' type='text' name='bucket_domain' value='"+rdata.AS[3]+"' />   *"+domainMsg[2]+"</p>"
-			+'<div class="submit-btn">'
+			+'<div class="bt-form-submit-btn">'
 				+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>'
 				+'<button type="button" class="btn btn-success btn-sm btn-title" onclick="GetQiniuFileList(\''+name+'\')" style="margin-right: 4px;">列表</button>'
 				+"<button class='btn btn-success btn-sm btn-title' onclick=\"SetLibConfig('"+name+"',1)\">保存</button>"

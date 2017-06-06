@@ -1,55 +1,53 @@
 $def with (data)
 <div class="main-content">
-		<div class="container-fluid">
-			<div class="pos-ser">
-				<div class="position">
-					<a href="/">首页</a>/<span>系统设置</span>
-				</div>
-				<div class="search">
+		<div class="container-fluid" style="padding-bottom:54px">
+			<div class="pos-box bgw mtb15">
+				<div class="position f14 c9 pull-left">
+					<a class="plr10 c4" href="/">首页</a>/<span class="plr10 c4">系统设置</span>
 				</div>
 			</div>
-			<div class="safe container-fluid btsetting" style="overflow: hidden; margin-bottom: 15px;">
+			<div class="clearfix bgw mtb15 pd15">
 				<div class="safe-port pull-left">
-					<div class="ss-text">
+					<div class="ss-text pull-left mr50">
 						<em>关闭面板</em>
 						<div class='ssh-item'>
 							<input class='btswitch btswitch-ios' id='closePl' type='checkbox'>
 							<label class='btswitch-btn' for='closePl' onclick='ClosePanel()'></label>
 						</div>
 					</div>
-					<div class="ss-text">
+					<div class="ss-text pull-left mr50">
 						<em>自动更新</em>
 						<div class='ssh-item'>
 							<input class='btswitch btswitch-ios' id='autoUpdate' type='checkbox' $data['panel']['auto'] >
 							<label class='btswitch-btn' for='autoUpdate' onclick="SetPanelAutoUpload()"></label>
 						</div>
 					</div>
-					<div class="ss-text" style="margin-right:0; display:none">
+					<div class="ss-text pull-left mr5" style="margin-right:0; display:none">
 						<button class="btn btn-success btn-sm" id="twoPassword">模块加锁</button>
 					</div>
 				</div>
 			</div>
-			<div class="setbox">
-				<div class="s-title">
-					<h3>设置</h3>
+			<div class="setbox bgw mtb15">
+				<div class="title c6 plr15">
+					<h3 class="f16">设置</h3>
 				</div>
 				<div class="important-title" style="margin: 20px 30px 0px;">
 					<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>为了提高安全，请修改别名、默认端口、面板用户和密码！</p>
 				</div>
-				<div class="setting-con">
+				<div class="setting-con pd15">
 					<form id="set-Config">
-						<p><span class="set-tit">别名</span><input id="webname" name="webname" class="inputtxt" type="text" value="$web.ctx.session.webname" ><span class="set-info">给面板取个别名，用于伪装面板</span></p>
-						<p><span class="set-tit">面板端口</span><input id="banport" name="port" class="inputtxt" type="numner" value="$data['panel']['port']" maxlength="5"><span class="set-info">建议端口范围8888 - 65535</span></p>
-						<p><span class="set-tit">域名</span><input name="domain" class="inputtxt" type="text" value="$data['panel']['domain']"><span class="set-info">为面板绑定一个访问域名;<font style="color:red;">注意：一旦绑定域名,只能通过域名访问面板!</font></span></p>
-						<p><span class="set-tit">授权IP</span><input name="limitip" class="inputtxt" type="text" value="$data['panel']['limitip']"><span class="set-info">设置访问授权IP,多个请使用逗号(,)隔开;<font style="color:red;">注意：一旦设置授权IP,只有指定IP的电脑能访问面板!</font></span></p>
-						<p><span class="set-tit">默认建站目录</span><input name="sites_path" class="inputtxt" type="text" value="$data['sites_path']"><span class="set-info">新创建的站点,默认将保存到该目录的下级目录!</span></p>
-						<p><span class="set-tit">默认备份目录</span><input name="backup_path" class="inputtxt" type="text" value="$data['backup_path']"><span class="set-info">网站和数据库的备份目录!</span></p>
-						<p><span class="set-tit">服务器IP</span><input name="address" class="inputtxt" type="text" value="$data['panel']['address']"><span class="set-info">默认为外网IP,若您在本地虚拟机测试,请填写虚拟机内网IP!</span></p>
-						<p><span class="set-tit">服务器时间</span><input id="systemdate" name="systemdate" class="inputtxt disable" type="text" value="$data['systemdate']"><span class="modify btn btn-xs btn-success" onclick="syncDate()">同步</span></p>
-						<p><span class="set-tit">面板用户</span><input name="username_" class="inputtxt disable" type="text" value="$web.ctx.session.username" disabled><span class="modify btn btn-xs btn-success" onclick="setUserName()">修改</span></p>
-						<p><span class="set-tit">面板密码</span><input name="password_" class="inputtxt disable" type="text" value="******" disabled><span class="modify btn btn-xs btn-success" onclick="setPassword()">修改</span></p>
+						<p class="mtb15"><span class="set-tit text-right">别名</span><input id="webname" name="webname" class="inputtxt bt-input-text" type="text" value="$web.ctx.session.webname" ><span class="set-info c7">给面板取个别名，用于伪装面板</span></p>
+						<p class="mtb15"><span class="set-tit text-right">面板端口</span><input id="banport" name="port" class="inputtxt bt-input-text" type="numner" value="$data['panel']['port']" maxlength="5"><span class="set-info c7">建议端口范围8888 - 65535</span></p>
+						<p class="mtb15"><span class="set-tit text-right">域名</span><input name="domain" class="inputtxt bt-input-text" type="text" value="$data['panel']['domain']"><span class="set-info c7">为面板绑定一个访问域名;<font style="color:red;">注意：一旦绑定域名,只能通过域名访问面板!</font></span></p>
+						<p class="mtb15"><span class="set-tit text-right">授权IP</span><input name="limitip" class="inputtxt bt-input-text" type="text" value="$data['panel']['limitip']"><span class="set-info c7">设置访问授权IP,多个请使用逗号(,)隔开;<font style="color:red;">注意：一旦设置授权IP,只有指定IP的电脑能访问面板!</font></span></p>
+						<p class="mtb15"><span class="set-tit text-right">默认建站目录</span><input name="sites_path" class="inputtxt bt-input-text" type="text" value="$data['sites_path']"><span class="set-info c7">新创建的站点,默认将保存到该目录的下级目录!</span></p>
+						<p class="mtb15"><span class="set-tit text-right">默认备份目录</span><input name="backup_path" class="inputtxt bt-input-text" type="text" value="$data['backup_path']"><span class="set-info c7">网站和数据库的备份目录!</span></p>
+						<p class="mtb15"><span class="set-tit text-right">服务器IP</span><input name="address" class="inputtxt bt-input-text" type="text" value="$data['panel']['address']"><span class="set-info c7">默认为外网IP,若您在本地虚拟机测试,请填写虚拟机内网IP!</span></p>
+						<p class="mtb15"><span class="set-tit text-right">服务器时间</span><input id="systemdate" name="systemdate" class="inputtxt bt-input-text disable" type="text" value="$data['systemdate']"><span class="modify btn btn-xs btn-success" onclick="syncDate()">同步</span></p>
+						<p class="mtb15"><span class="set-tit text-right">面板用户</span><input name="username_" class="inputtxt bt-input-text disable" type="text" value="$web.ctx.session.username" disabled><span class="modify btn btn-xs btn-success" onclick="setUserName()">修改</span></p>
+						<p class="mtb15"><span class="set-tit text-right">面板密码</span><input name="password_" class="inputtxt bt-input-text disable" type="text" value="******" disabled><span class="modify btn btn-xs btn-success" onclick="setPassword()">修改</span></p>
 					</form>
-					<div class="set-submit">保存</div>
+					<div class="bt-submit set-submit">保存</div>
 				</div>
 			</div>
 		</div>

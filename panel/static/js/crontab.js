@@ -15,11 +15,11 @@ function GetLogs(id){
 			area: ['60%','500px'], 
 			shadeClose:false,
 			closeBtn:2,
-			content:'<div class="setchmod zun-form-new" style="padding-top: 0px;">'
+			content:'<div class="setchmod bt-form pd20 pb70">'
 					+'<pre style="overflow: auto; border: 0px none; padding: 15px; margin: 0px; height: 410px; background-color: rgb(255, 255, 255);">'+rdata.msg+'</pre>'
-					+'<div class="submit-btn" style="margin-top: 0px;">'
-					+'<button type="button" class="btn btn-success btn-sm btn-title" onclick="CloseLogs('+id+')">清空</button>'
-					+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">关闭</button>'
+					+'<div class="bt-form-submit-btn" style="margin-top: 0px;">'
+					+'<button type="button" class="btn btn-success btn-sm" onclick="CloseLogs('+id+')">清空</button>'
+					+'<button type="button" class="btn btn-danger btn-sm" onclick="layer.closeAll()">关闭</button>'
 				    +'</div>'
 					+'</div>'
 		});
@@ -42,10 +42,10 @@ function getCronData(){
 							<td>"+rdata[i].cycle+"</td>\
 							<td>"+rdata[i].addtime+"</td>\
 							<td>\
-								<a href=\"javascript:StartTask("+rdata[i].id+");\" class='link'>执行</a> | \
-								<a href=\"javascript:OnlineEditFile(0,'/www/server/cron/"+rdata[i].echo+"');\" class='link'>脚本</a> | \
-								<a href=\"javascript:GetLogs("+rdata[i].id+");\" class='link'>日志</a> | \
-								<a href=\"javascript:planDel("+rdata[i].id+" ,'"+rdata[i].name.replace('\\','\\\\')+"');\" class='link'>删除</a>\
+								<a href=\"javascript:StartTask("+rdata[i].id+");\" class='btlink'>执行</a> | \
+								<a href=\"javascript:OnlineEditFile(0,'/www/server/cron/"+rdata[i].echo+"');\" class='btlink'>脚本</a> | \
+								<a href=\"javascript:GetLogs("+rdata[i].id+");\" class='btlink'>日志</a> | \
+								<a href=\"javascript:planDel("+rdata[i].id+" ,'"+rdata[i].name.replace('\\','\\\\')+"');\" class='btlink'>删除</a>\
 							</td>\
 						</tr>"
 			}
@@ -325,14 +325,14 @@ function toBackup(type){
 		
 		
 
-		var sBody = '<div class="dropdown">\
+		var sBody = '<div class="dropdown pull-left mr20">\
 					  <button class="btn btn-default dropdown-toggle" type="button" id="backdata" data-toggle="dropdown" style="width:auto">\
 						<b id="sName" val="'+rdata.data[0].name+'">'+rdata.data[0].name+'['+rdata.data[0].ps+']</b> <span class="caret"></span>\
 					  </button>\
 					  <ul class="dropdown-menu" role="menu" aria-labelledby="backdata">'+sOpt+'</ul>\
 					</div>\
-					<div class="textname">备份到</div>\
-					<div class="dropdown planBackupTo">\
+					<div class="textname pull-left mr20">备份到</div>\
+					<div class="dropdown planBackupTo pull-left mr20">\
 					  <button class="btn btn-default dropdown-toggle" type="button" id="excode" data-toggle="dropdown" style="width:auto;">\
 						<b val="localhost">服务器磁盘</b> <span class="caret"></span>\
 					  </button>\
@@ -341,7 +341,7 @@ function toBackup(type){
 						'+ orderOpt +'\
 					  </ul>\
 					</div>\
-					<div class="textname">保留最新</div><div class="plan_hms">\
+					<div class="textname pull-left mr20">保留最新</div><div class="plan_hms pull-left mr20 bt-input-text">\
 					<span><input type="number" name="save" id="save" value="3" maxlength="4" max="100" min="1"></span>\
 					<span class="name">份</span>\
 					</div>';
@@ -370,7 +370,7 @@ function closeOpt(){
 }
 //星期
 function toWeek(){
-	var mBody = '<div class="dropdown planweek">\
+	var mBody = '<div class="dropdown planweek pull-left mr20">\
 					  <button class="btn btn-default dropdown-toggle" type="button" id="excode" data-toggle="dropdown">\
 						<b val="1">周一</b> <span class="caret"></span>\
 					  </button>\
@@ -389,7 +389,7 @@ function toWeek(){
 }
 //指定1
 function toWhere1(ix){
-	var mBody ='<div class="plan_hms">\
+	var mBody ='<div class="plan_hms pull-left mr20 bt-input-text">\
 					<span><input type="number" name="where1" value="3" maxlength="2" max="31" min="0"></span>\
 					<span class="name">'+ix+'</span>\
 					</div>';
@@ -397,7 +397,7 @@ function toWhere1(ix){
 }
 //小时
 function toHour(){
-	var mBody = '<div class="plan_hms">\
+	var mBody = '<div class="plan_hms pull-left mr20 bt-input-text">\
 					<span><input type="number" name="hour" value="1" maxlength="2" max="23" min="0"></span>\
 					<span class="name">时</span>\
 					</div>';
@@ -406,7 +406,7 @@ function toHour(){
 
 //分钟
 function toMinute(){
-	var mBody = '<div class="plan_hms">\
+	var mBody = '<div class="plan_hms pull-left mr20 bt-input-text">\
 					<span><input type="number" name="minute" value="30" maxlength="2" max="59" min="0"></span>\
 					<span class="name">分</span>\
 					</div>';
@@ -424,14 +424,14 @@ function toFile(){
 
 //从脚本
 function toShell(){
-	var tBody = "<textarea class='txtsjs' name='sBody'></textarea>";
+	var tBody = "<textarea class='txtsjs bt-input-text' name='sBody'></textarea>";
 	$("#implement").html(tBody);
 	$(".planname input[name='name']").removeAttr('readonly style').val("");
 }
 
 //从脚本
 function toUrl(){
-	var tBody = "<input type='text' style='width:400px;' class='form-control' name='urladdress' id='urladdress' placeholder='URL地址' value='http://' />";
+	var tBody = "<input type='text' style='width:400px; height:34px' class='bt-input-text' name='urladdress' id='urladdress' placeholder='URL地址' value='http://' />";
 	$("#implement").html(tBody);
 	$(".planname input[name='name']").removeAttr('readonly style').val("");
 }

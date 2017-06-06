@@ -870,7 +870,6 @@
 	border: 1px solid #ccc;
     height: 28px;
     line-height: 26px;
-    margin: 7px 0 0;
     padding: 0;
     width: 290px;
 	cursor:text;
@@ -884,7 +883,8 @@
 }
 #PathPlaceBtn li {
 	background: url("../img/ico/ico-ltr.png") no-repeat right center;
-	padding-right:8px;
+	padding-left: 10px;
+    padding-right: 18px;
     float:left;
 	height:26px;
 	line-height:26px;
@@ -901,11 +901,13 @@
     height: 28px;
     line-height: 8px;
     margin-right: -1px;
-    margin-top: 6px;
-	margin-left:-1px;
+    margin-top: -1px;
 }
 #tipTools{
 	background: #fff url(../img/ico_line.png) repeat-x 0 55px;
+	height:110px;
+	border-bottom:#ccc 1px solid;
+	position: absolute; top: 0px; left: 0px;
 }
 /*回收站*/
 .re-head {

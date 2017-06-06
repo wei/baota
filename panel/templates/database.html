@@ -1,23 +1,23 @@
 $def with (tData)
 <div class="main-content">
 		<div class="container-fluid">
-			<div class="pos-ser">
-				<div class="position">
-					<a href="/">首页</a>/<span>数据库管理</span>
+			<div class="pos-box bgw mtb15">
+				<div class="position f14 c9 pull-left">
+					<a class="plr10 c4" href="/">首页</a>/<span class="plr10 c4">数据库管理</span>
 				</div>
-				<div class="search">
+				<div class="search pull-right">
 					<form target="hid" onsubmit='getData(1,$$("#SearchValue").prop("value"))'>
-						<input type="text" id="SearchValue" class="ser-text" placeholder="搜索数据库" />
-						<button type="button" class="ser-sub"onclick='getData(1,$$("#SearchValue").prop("value"))'></button>
+						<input type="text" id="SearchValue" class="ser-text pull-left" placeholder="搜索数据库" />
+						<button type="button" class="ser-sub pull-left" onclick='getData(1,$$("#SearchValue").prop("value"))'></button>
 					</form>
 					<iframe name='hid' id="hid" style="display:none"></iframe>
 				</div>
 			</div>
-			<div class="safe">
+			<div class="safe bgw mtb15 pd15">
 					<button onclick="DataAdd(0)" title="添加数据库" class="btn btn-success btn-sm" type="button" style="margin-right: 5px;">添加数据库</button>
 					<button onclick="DataSetuppwd(0)" title="设置管理员密码" class="btn btn-default btn-sm" type="button" style="margin-right: 5px;">root密码</button>
 					<button onclick="AdminDatabase('','root','$tData['mysql_root']')" title="打开phpMyadmin" class="btn btn-default btn-sm" type="button" style="margin-right: 5px;">phpMyAdmin</button>
-					<div class="divtable">
+					<div class="divtable mtb10">
 						<table class="table table-hover" width="100%" border="0" cellpadding="0" cellspacing="0">
 							<thead>
 							<tr>
@@ -33,10 +33,10 @@ $def with (tData)
 							<tbody id="DataBody"></tbody>
 						</table>
 						<div class="dataTables_paginate paging_bootstrap pagination">
-							<span class="sync" onclick="SyncToDatabases(1)" title="将选中数据库同步到服务器">同步选中</span>
-							<span class="sync" onclick="SyncToDatabases(0)" title="将所有数据库同步到服务器">同步所有</span>
-							<span class="sync" onclick="SyncGetDatabases()">从服务器获取</span>
-							<ul id="DataPage" class="page"></ul>
+							<span class="sync btn btn-default btn-sm" style="margin-right:5px" onclick="SyncToDatabases(1)" title="将选中数据库同步到服务器">同步选中</span>
+							<span class="sync btn btn-default btn-sm" style="margin-right:5px" onclick="SyncToDatabases(0)" title="将所有数据库同步到服务器">同步所有</span>
+							<span class="sync btn btn-default btn-sm" onclick="SyncGetDatabases()">从服务器获取</span>
+							<ul id="DataPage" class="page pull-right"></ul>
 						</div>
 					</div>
 			</div>

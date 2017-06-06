@@ -1,19 +1,19 @@
 $def with (tData)
 <div class="main-content">
 			<div class="container-fluid">
-				<div class="pos-ser">
-					<div class="position">
-						<a href="/">首页</a>/<span>网站管理</span>
-					</div>
-					<div class="search">
+				<div class="pos-box bgw mtb15">
+					<div class="position f14 c9 pull-left">
+							<a class="plr10 c4" href="/">首页</a>/<span class="plr10 c4">网站管理</span>
+						</div>
+					<div class="search pull-right">
 						<form target="hid" onsubmit='getWeb(1,$$("#SearchValue").prop("value"))'>
-							<input type="text" id="SearchValue" class="ser-text" placeholder="搜索网站"/>
-							<button type="button" class="ser-sub"onclick='getWeb(1,$$("#SearchValue").prop("value"))'></button>
+							<input type="text" id="SearchValue" class="ser-text pull-left" placeholder="搜索网站"/>
+							<button type="button" class="ser-sub pull-left" onclick='getWeb(1,$$("#SearchValue").prop("value"))'></button>
 						</form>
 						<iframe name='hid' id="hid" style="display:none"></iframe>
 					</div>
 				</div>
-				<div class="safe">
+				<div class="safe bgw mtb15 pd15">
 					<div class="important-title">
 						<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span> 使用$web.ctx.session.brand$web.ctx.session.product创建站点时会自动创建权限配置，统一使用www用户。</p>
 					</div>
@@ -21,7 +21,7 @@ $def with (tData)
 					<button onclick="webAdd(0)" class="btn btn-success btn-sm btn-title" type="button">添加站点</button>&nbsp;
 					<button onclick="SiteDefaultPage()" class="btn btn-default btn-sm btn-title" type="button">修改默认页</button>
 					<button onclick="GetDefaultSite()" class="btn btn-default btn-sm btn-title" type="button">默认站点</button>
-					<div class="divtable">
+					<div class="divtable mtb10">
 						<table class="table table-hover" width="100%" border="0" cellpadding="0" cellspacing="0">
 							<thead>
 								<tr>

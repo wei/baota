@@ -18,23 +18,23 @@ $def with (data)
 	}
 </style>
 <div class="main-content">
-		<div class="container-fluid">
-			<div class="pos-ser">
-				<div class="position">
-					<a href="/">首页</a>/<span>系统安全</span>
+		<div class="container-fluid" style="padding-bottom: 50px;">
+			<div class="pos-box bgw mtb15">
+				<div class="position f14 c9 pull-left">
+					<a class="plr10 c4" href="/">首页</a>/<span class="plr10 c4">系统安全</span>
 				</div>
-				<div class="search">
+				<div class="search pull-right">
 					<form target="hid" onsubmit='getLogs(1,$$("#SearchValue").prop("value"))'>
-						<input type="text" id="SearchValue" class="ser-text" placeholder="搜索日志" />
-						<button type="button" class="ser-sub"onclick='getLogs(1,$$("#SearchValue").prop("value"))'></button>
+						<input type="text" id="SearchValue" class="ser-text pull-left" placeholder="搜索日志" />
+						<button type="button" class="ser-sub pull-left" onclick='getLogs(1,$$("#SearchValue").prop("value"))'></button>
 					</form>
 					<iframe name='hid' id="hid" style="display:none"></iframe>
 				</div>
 			</div>
-			<div class="safe container-fluid" style="overflow: hidden; margin-bottom: 15px;">
-				<div class="safe-screen pull-left">
+			<div class="safe container-fluid bgw mtb15 pd15">
+				<div class="mr50 pull-left">
 					<form>
-						<div class="ss-text">
+						<div class="ss-text pull-left">
 							<em>启用SSH</em>
 							<div class='ssh-item' id="in_safe">
 								
@@ -42,17 +42,17 @@ $def with (data)
 						</div>
 					</form>
 				</div>
-				<div class="safe-port pull-left">
-					<div class="ss-text">
+				<div class="mr50 pull-left">
+					<div class="ss-text pull-left mr5">
 						<em>SSH端口：</em>
-						<input type="text" class="sp-text" id="mstscPort" value=""  />
+						<input type="text" class="bt-input-text" id="mstscPort" value=""  />
 					</div>
-					<div class="ss-text">
+					<div class="ss-text pull-left">
 						<button id="mstscSubmit" onclick='mstsc($$("#mstscPort").prop("value"))' class="btn btn-default btn-sm" type="button">更改</button>
 					</div>
 				</div>
-				<div class="safe-port pull-left" style="border-right: 1px solid #ccc; padding-right: 40px;">
-					<div class="ss-text">
+				<div class="mr50 pull-left" style="border-right: 1px solid #ccc; padding-right: 40px;">
+					<div class="ss-text pull-left">
 						<em>启用禁ping</em>
 						<div class='ssh-item' id="isPing">
 						</div>
@@ -63,21 +63,20 @@ $def with (data)
 					<button class="btn btn-default btn-sm" onclick="CloseLogs();">清空</button>
 				</div>
 			</div>
-			<div class="white-black-ip">
+			<div class="white-black-ip bgw mtb15">
 				<div class="black-ip">
 					<div class="def-log">
-						<div class="def-log-title">
-							<h3 class="dlt-h3">
-								防火墙</h3>
-							<select id="firewalldType" class="dlt-text" name="type" style="width:95px;">
+						<div class="title c6 plr15">
+							<h3 class="f16">防火墙</h3>
+							<select id="firewalldType" class="bt-input-text" name="type" style="width:95px;">
 								<option value="port">放行端口</option>
 								<option value="address">屏蔽IP</option>
 							</select>
-							<input type="text" class="dlt-text" style="width: 60px;" id="AcceptPort" placeholder="端口">
-							<input type="text" class="dlt-text" id="Ps" placeholder="备注/说明">
-							<button id="toAccept" onclick="AddAcceptPort()" class="btn btn-default btn-sm" type="button">放行</button>
+							<input type="text" class="bt-input-text" style="width: 60px;" id="AcceptPort" placeholder="端口">
+							<input type="text" class="bt-input-text" id="Ps" placeholder="备注/说明">
+							<button id="toAccept" onclick="AddAcceptPort()" class="btn btn-default btn-sm va0" type="button">放行</button>
 						</div>
-						<div class="divtable">
+						<div class="divtable pd15">
 							<table width="100%" border="0" cellpadding="0" cellspacing="0" class="table table-hover">
 								<thead>
 								<tr>
@@ -97,15 +96,14 @@ $def with (data)
 					</div>
 				</div>
 			</div>
-			<div class="white-black-ip">
+			<div class="white-black-ip bgw mtb15">
 				<div class="black-ip">
 					<div class="def-log">
-						<div class="def-log-title">
-							<h3 class="dlt-h3">
-								面板操作日志</h3>
+						<div class="title c6 plr15">
+							<h3 class="f16">面板操作日志</h3>
 							<a class="btn btn-default btn-sm" onclick="delLogs();" style="margin-top: 1px;">清空</a>
 						</div>
-						<div class="divtable">
+						<div class="divtable pd15">
 							<table width="100%" border="0" cellpadding="0" cellspacing="0" class="table table-hover">
 								<thead>
 								<tr>

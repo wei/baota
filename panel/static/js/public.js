@@ -154,7 +154,7 @@ function UsersSetup(a) {
 			closeBtn: 2,
 			shift: 5,
 			shadeClose: false,
-			content: '<div class="user-shezhi">						  <ul class="nav nav-tabs" role="tablist">						    <li role="presentation" class="active"><a href="#home" aria-controls="home" role="tab" data-toggle="tab">基本</a></li>						    <li role="presentation"><a href="#binding" aria-controls="binding" role="tab" data-toggle="tab">绑定</a></li>						    <li role="presentation"><a href="#messages" aria-controls="messages" role="tab" data-toggle="tab">通知</a></li>						  </ul>						  <div class="tab-content">						    <div role="tabpanel" class="tab-pane active" id="home">						    	<form id="tabHome" class="zun-form-new">						    		<div class="line">									    <label><span>新密码</span></label>									    <div class="info-r">									      <input type="password" name="password1" id="password1" placeholder="请输入新密码">									    </div>									</div>						    		<div class="line">									    <label><span>重复密码</span></label>									    <div class="info-r">									      <input type="password" name="password2" id="password2" placeholder="再输一遍">									    </div>									</div>						    		<div class="submit-btn">							    			<button type="button" onclick="layer.closeAll()" class="btn btn-danger btn-sm btn-title">取消</button>										    <button type="button" class="btn btn-success btn-sm btn-title">提交</button>									</div>						    	</form>						    </div>						    <div role="tabpanel" class="tab-pane" id="binding">								<form id="tabBinding" class="zun-form-new">									<div class="line">									    <label><span>手机</span></label>									    <div class="info-r">									      <input type="number" name="phone" id="phone" placeholder="11位手机号码">									    </div>									</div>						    		<div class="line">									    <label><span>邮箱</span></label>									    <div class="info-r">									      <input type="email" name="email" id="email" placeholder="abc@qq.com">									    </div>									</div>						    	</form>							</div>						    <div role="tabpanel" class="tab-pane" id="messages">						    	<form id="tabMessage" class="zun-form-new">						    		<div class="line">						    		<select name="body" style="width:40%">						    			<option value="异地登陆通知">异地登陆通知</option>						    			<option value="站点异常通知">站点异常通知</option>						    			<option value="备份通知">备份通知</option>						    			<option value="服务器异常通知">服务器异常通知</option>						    		</select>						    		<select name="type"  style="width:20%">						    			<option value="邮件">邮件</option>						    			<option value="短信">短信</option>						    		</select>						    		<a class="btn btn-default">添加</a>						    		</div>						    	</form>						    </div>						  </div>						</div>'
+			content: '<div class="user-shezhi"><ul class="nav nav-tabs" role="tablist"><li role="presentation" class="active"><a href="#home" aria-controls="home" role="tab" data-toggle="tab">基本</a></li><li role="presentation"><a href="#binding" aria-controls="binding" role="tab" data-toggle="tab">绑定</a></li><li role="presentation"><a href="#messages" aria-controls="messages" role="tab" data-toggle="tab">通知</a></li></ul><div class="tab-content"><div role="tabpanel" class="tab-pane active" id="home"><form id="tabHome" class="zun-form-new"><div class="line"><label><span>新密码</span></label><div class="info-r"><input type="password" name="password1" id="password1" placeholder="请输入新密码"></div></div><div class="line"><label><span>重复密码</span></label><div class="info-r"><input type="password" name="password2" id="password2" placeholder="再输一遍"></div></div><div class="submit-btn"><button type="button" onclick="layer.closeAll()" class="btn btn-danger btn-sm btn-title">取消</button><button type="button" class="btn btn-success btn-sm btn-title">提交</button></div></form></div><div role="tabpanel" class="tab-pane" id="binding"><form id="tabBinding" class="zun-form-new"><div class="line"><label><span>手机</span></label><div class="info-r"><input type="number" name="phone" id="phone" placeholder="11位手机号码"></div></div><div class="line"><label><span>邮箱</span></label><div class="info-r"><input type="email" name="email" id="email" placeholder="abc@qq.com"></div></div></form></div><div role="tabpanel" class="tab-pane" id="messages"><form id="tabMessage" class="zun-form-new"><div class="line"><select name="body" style="width:40%"><option value="异地登陆通知">异地登陆通知</option><option value="站点异常通知">站点异常通知</option><option value="备份通知">备份通知</option><option value="服务器异常通知">服务器异常通知</option></select><select name="type"  style="width:20%"><option value="邮件">邮件</option><option value="短信">短信</option></select><a class="btn btn-default">添加</a></div></form></div></div></div>'
 		})
 	})
 }
@@ -221,7 +221,7 @@ function ChangePath(d) {
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
-		content: "<div class='changepath'>			<div class='path-top'>				<button type='button' class='btn btn-default btn-sm' onclick='BackFile()'><span class='glyphicon glyphicon-share-alt'></span> 返回</button>				<div class='place' id='PathPlace'>当前路径：<span></span></div>			</div>			<div class='path-con'>				<div class='path-con-left'>					<dl>						<dt id='changecomlist' onclick='BackMyComputer()'>计算机</dt>					</dl>				</div>				<div class='path-con-right'>					<ul class='default' id='computerDefautl'></ul>					<div class='file-list'>						<table class='table table-hover'>							<thead>								<tr class='file-list-head'>									<th width='40%'>文件名</th>									<th width='20%'>修改时间</th>									<th width='10%'>权限</th>									<th width='10%'>所有者</th>									<th width='10%'></th>								</tr>							</thead>							<tbody id='tbody' class='list-list'>							</tbody>						</table>					</div>				</div>			</div>		</div>		<div class='getfile-btn' style='margin-top:0'>				<button type='button' class='btn btn-default btn-sm pull-left' onclick='CreateFolder()'>新建文件夹</button>				<button type='button' class='btn btn-danger btn-sm btn-title' onclick=\"layer.close(getCookie('ChangePath'))\">关闭</button>				<button type='button' class='btn btn-success btn-sm btn-title' onclick='GetfilePath()'>选择</button>			</div>"
+		content: "<div class='changepath'><div class='path-top'><button type='button' class='btn btn-default btn-sm' onclick='BackFile()'><span class='glyphicon glyphicon-share-alt'></span> 返回</button><div class='place' id='PathPlace'>当前路径：<span></span></div></div><div class='path-con'><div class='path-con-left'><dl><dt id='changecomlist' onclick='BackMyComputer()'>计算机</dt></dl></div><div class='path-con-right'><ul class='default' id='computerDefautl'></ul><div class='file-list divtable'><table class='table table-hover' style='border:0 none'><thead><tr class='file-list-head'><th width='40%'>文件名</th><th width='20%'>修改时间</th><th width='10%'>权限</th><th width='10%'>所有者</th><th width='10%'></th></tr></thead><tbody id='tbody' class='list-list'></tbody></table></div></div></div></div><div class='getfile-btn' style='margin-top:0'><button type='button' class='btn btn-default btn-sm pull-left' onclick='CreateFolder()'>新建文件夹</button><button type='button' class='btn btn-danger btn-sm mr5' onclick=\"layer.close(getCookie('ChangePath'))\">关闭</button> <button type='button' class='btn btn-success btn-sm' onclick='GetfilePath()'>选择</button></div>"
 	});
 	setCookie("ChangePath", c);
 	var b = $("#" + d).val();
@@ -599,7 +599,7 @@ function OnlineEditFile(k, f) {
 			closeBtn: 2,
 			area: ["90%", "90%"],
 			title: "在线编辑[" + f + "]",
-			content: '<form class="zun-form-new" style="padding-top:10px">			<div class="line noborder">			<p style="color:red;margin-bottom:10px">提示：Ctrl+F 搜索关键字，Ctrl+G 查找下一个，Ctrl+S 保存，Ctrl+Shift+R 查找替换!			<select name="encoding" style="width: 74px;position: absolute;top: 11px;right: 14px;height: 22px;z-index: 9999;border-radius: 0;">' + n + '</select></p>			<textarea class="mCustomScrollbar" id="textBody" style="width:100%;margin:0 auto;line-height: 1.8;position: relative;top: 10px;" value="" />			</div>			<div class="submit-btn" style="position:absolute; bottom:0; width:100%">			<button type="button" class="btn btn-danger btn-sm btn-title btn-editor-close">关闭</button>			<button id="OnlineEditFileBtn" type="button" class="btn btn-success btn-sm btn-title">保存</button>			</div>			</form>'
+			content: '<form class="bt-form pd20 pb70"><div class="line"><p style="color:red;margin-bottom:10px">提示：Ctrl+F 搜索关键字，Ctrl+G 查找下一个，Ctrl+S 保存，Ctrl+Shift+R 查找替换!			<select class="bt-input-text" name="encoding" style="width: 74px;position: absolute;top: 31px;right: 19px;height: 22px;z-index: 9999;border-radius: 0;">' + n + '</select></p><textarea class="mCustomScrollbar bt-input-text" id="textBody" style="width:100%;margin:0 auto;line-height: 1.8;position: relative;top: 10px;" value="" />			</div>			<div class="bt-form-submit-btn" style="position:absolute; bottom:0; width:100%">			<button type="button" class="btn btn-danger btn-sm btn-editor-close">关闭</button>			<button id="OnlineEditFileBtn" type="button" class="btn btn-success btn-sm">保存</button>			</div>			</form>'
 		});
 		$("#textBody").text(s.data);
 		var q = $(window).height() * 0.9;
@@ -888,7 +888,7 @@ function SafeMessage(j, h, g, f) {
 		area: "350px",
 		closeBtn: 2,
 		shadeClose: true,
-		content: "<div class='zun-form-new webDelete'>	    	<p>" + h + "</p>	    	" + f + "			<div class='vcode'>计算结果：<span class='text'>" + sumtext + "</span>=<input type='number' id='vcodeResult' value=''></div>	    	<div class='submit-btn' style='margin-top:15px'>				<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>		        <button type='button' id='toSubmit' class='btn btn-success btn-sm btn-title' >提交</button>	        </div>	    </div>"
+		content: "<div class='bt-form webDelete pd20 pb70'><p>" + h + "</p>" + f + "<div class='vcode'>计算结果：<span class='text'>" + sumtext + "</span>=<input type='number' id='vcodeResult' value=''></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button> <button type='button' id='toSubmit' class='btn btn-success btn-sm btn-title' >提交</button></div></div>"
 	});
 	$("#vcodeResult").focus().keyup(function(a) {
 		if(a.keyCode == 13) {
@@ -1006,7 +1006,7 @@ function setPassword(a) {
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
-		content: "<div class='zun-form-new'>				<div class='line'>				<label><span>密码</span></label>				<div class='info-r'><input type='password' name='password1' id='p1' value='' placeholder='新的密码'/></div></div>				<div class='line'>				<label><span>重复</span></label>				<div class='info-r'><input type='password' name='password2' id='p2' value='' placeholder='再输一次'/></div></div>				<div class='submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button>				<button type='button' class='btn btn-success btn-sm' onclick=\"setPassword(1)\">修改</button></div>			</div>"
+		content: "<div class='bt-form pd20 pb70'><div class='line'><span class='tname'>密码</span><div class='info-r'><input class='bt-input-text' type='password' name='password1' id='p1' value='' placeholder='新的密码' style='width:100%'/></div></div><div class='line'><span class='tname'>重复</span><div class='info-r'><input class='bt-input-text' type='password' name='password2' id='p2' value='' placeholder='再输一次' style='width:100%' /></div></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button> <button type='button' class='btn btn-success btn-sm' onclick=\"setPassword(1)\">修改</button></div></div>"
 	})
 }
 
@@ -1048,7 +1048,7 @@ function setUserName(a) {
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
-		content: "<div class='zun-form-new'>					<div class='line'>					<label><span>用户名</span></label>					<div class='info-r'><input type='text' name='password1' id='p1' value='' placeholder='新的用户名'/></div></div>					<div class='line'>					<label><span>重复</span></label>					<div class='info-r'><input type='text' name='password2' id='p2' value='' placeholder='再输一次'/></div></div>					<div class='submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button>					<button type='button' class='btn btn-success btn-sm' onclick=\"setUserName(1)\">修改</button></div>				</div>"
+		content: "<div class='bt-form pd20 pb70'><div class='line'><span class='tname'>用户名</span><div class='info-r'><input class='bt-input-text' type='text' name='password1' id='p1' value='' placeholder='新的用户名' style='width:100%'/></div></div><div class='line'><span class='tname'>重复</span><div class='info-r'><input class='bt-input-text' type='text' name='password2' id='p2' value='' placeholder='再输一次' style='width:100%'/></div></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button> <button type='button' class='btn btn-success btn-sm' onclick=\"setUserName(1)\">修改</button></div></div>"
 	})
 }
 var openWindow = null;
@@ -1081,12 +1081,12 @@ function GetReloads() {
 							c += f[e] + "<br>"
 						}
 						if(h.task[g].name.indexOf("扫描") != -1) {
-							b = "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>正在扫描 <img src='/static/img/ing.gif'></span><span class='opencmd'></span><div class='cmd'>" + c + "</div></li>"
+							b = "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>正在扫描 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + h.task[g].id + ")\">删除</a></span><span class='opencmd'></span><div class='cmd'>" + c + "</div></li>"
 						} else {
-							b = "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>正在安装 <img src='/static/img/ing.gif'></span><span class='opencmd'></span><div class='cmd'>" + c + "</div></li>"
+							b = "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>正在安装 <img src='/static/img/ing.gif'></span><div class='cmd'>" + c + "</div></li>"
 						}
 					} else {
-						b = "<li><div class='line-progress' style='width:" + h.msg.pre + "%'></div><span class='titlename'>" + h.task[g].name + "<a style='margin-left:130px;'>" + (ToSize(h.msg.used) + "/" + ToSize(h.msg.total)) + "</a></span><span class='com-progress'>" + h.msg.pre + "%</span><span class='state'>下载中 <img src='/static/img/ing.gif'></span></li>"
+						b = "<li><div class='line-progress' style='width:" + h.msg.pre + "%'></div><span class='titlename'>" + h.task[g].name + "<a style='margin-left:130px;'>" + (ToSize(h.msg.used) + "/" + ToSize(h.msg.total)) + "</a></span><span class='com-progress'>" + h.msg.pre + "%</span><span class='state'>下载中 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + h.task[g].id + ")\">删除</a></span></li>"
 					}
 				} else {
 					d += "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>等待 | <a style='color:green' href=\"javascript:RemoveTask(" + h.task[g].id + ')">删除</a></span></li>'
@@ -1161,11 +1161,11 @@ function GetTaskList(a) {
 					if(g.data[d].type != "download") {
 						b = "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state'>正在安装 <img src='/static/img/ing.gif'></span><span class='opencmd'></span><pre class='cmd'></pre></li>"
 					} else {
-						b = "<li><div class='line-progress' style='width:0%'></div><span class='titlename'>" + g.data[d].name + "<a id='speed' style='margin-left:130px;'>0.0M/12.5M</a></span><span class='com-progress'>0%</span><span class='state'>下载中 <img src='/static/img/ing.gif'></span></li>"
+						b = "<li><div class='line-progress' style='width:0%'></div><span class='titlename'>" + g.data[d].name + "<a id='speed' style='margin-left:130px;'>0.0M/12.5M</a></span><span class='com-progress'>0%</span><span class='state'>下载中 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ")\">删除</a></span></li>"
 					}
 					break;
 				case "0":
-					c += "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state'>等待</span> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ')">删除</a></li>';
+					c += "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state'>等待</span> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ")\">删除</a></li>";
 					break;
 				case "1":
 					e += "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state'>" + g.data[d].addtime + "  已完成  耗时" + (g.data[d].end - g.data[d].start) + "秒</span></li>"
@@ -1205,7 +1205,6 @@ function ShowSoftList() {
 	});
 	GetSoftList()
 }
-
 function RecInstall() {
 	$.post("/ajax?action=GetSoftList", "", function(l) {
 		var c = "";

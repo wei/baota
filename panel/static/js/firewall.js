@@ -165,7 +165,7 @@ function ShowAccept(page,search) {
 							<td>" + (data.data[i].port.indexOf('.') == -1?'放行端口:['+data.data[i].port+']':'屏蔽IP:['+data.data[i].port+']') + "</td>\
 							<td>" + data.data[i].addtime + "</td>\
 							<td>" + data.data[i].ps + "</td>\
-							<td class='text-right'><a href='javascript:;' class='link' onclick=\"DelAcceptPort(" + data.data[i].id + ",'" + data.data[i].port + "')\">删除</a></td>\
+							<td class='text-right'><a href='javascript:;' class='btlink' onclick=\"DelAcceptPort(" + data.data[i].id + ",'" + data.data[i].port + "')\">删除</a></td>\
 						</tr>";
 		}
 		$("#firewallBody").html(Body);

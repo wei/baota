@@ -1,44 +1,40 @@
 $def with (tData)
 <div class="main-content">
-	<div class="container-fluid">
-		<div class="white-black-ip" style="margin-top:16px">
-			<div class="black-ip">
-				<div class="def-log" style="padding-top:116px; position:relative">
-					<div id="tipTools" style="position: fixed;top:16px;left:195px;padding: 0 8px 14px 15px; border-bottom:#ccc 1px solid">
-						<div class="pos-ser" style="margin-top: 6px; margin-bottom: 20px;">
-							<div class="position" style="background:none; padding-left:2px">
-								<div class="pull-left" style="display:none"><a href="/index.php">首页</a>/<span>文件管理</span>/</div>
-								<div class="pull-left">
-									<button id="backBtn" class="backBtn btn btn-default btn-sm glyphicon glyphicon-arrow-left pull-left" title="后退" onClick="BackDir()"></button>
-									<button class="backBtn refreshBtn btn btn-default btn-sm glyphicon glyphicon-refresh pull-right" title="刷新"></button>
-									<span id='DirPathPlace' class="pull-left"><input id="fileInputPath" type="text"></span>
-									<span id='PathPlaceBtn' class="pull-left"></span>
-								</div>
-								<div class="pull-left"><span id='DirInfo'></span></div>
-							</div>
+	<div class="container-fluid" style="padding-bottom:50px">
+		<div class="file-box bgw mtb15" style="position:relative; padding-top:110px">
+			<div id="tipTools" class="plr15">
+				<div class="ptb15">
+					<div class="clearfix">
+						<div class="pull-left">
+							<button id="backBtn" class="backBtn btn btn-default btn-sm glyphicon glyphicon-arrow-left pull-left" title="后退" onClick="BackDir()"></button>
+							<button class="backBtn refreshBtn btn btn-default btn-sm glyphicon glyphicon-refresh pull-right" title="刷新" style="margin-left:-1px;"></button>
+							<span id='DirPathPlace' class="pull-left"><input id="fileInputPath" type="text"></span>
+							<span id='PathPlaceBtn' class="pull-left"></span>
 						</div>
-						<button class="btn btn-default btn-sm pull-left" onclick="UploadFiles()">上传</button>
-						<button class="btn btn-default btn-sm pull-left" onclick="DownloadFile()" title='下载文件到服务器' style="margin:0 5px">下载</button>
-						<span id='BarTools'></span>
-						<span id='Batch'></span>
-						<span id='comlist' class="comlist"></span>
-						<div class="btn-group btn-group-sm pull-right" style="margin-right:5px;">
-							<button id="recycle_bin" onclick="Recycle_bin('open')" title="收回站" type="button" class="btn btn-default">
-								<i class="glyphicon glyphicon-trash"></i>
-								回收站
-							</button>
-							<button id="set_icon" title="图标排列" type="button" class="btn btn-default">
-								<i class="glyphicon glyphicon-th"></i>
-							</button>
-							<button id="set_list" title="列表排列" type="button" class="btn btn-default active">
-								<i class="glyphicon glyphicon-th-list"></i>
-							</button>
-						  
-						</div>
+						<div class="pull-left mlr15" style="line-height:26px"><span id='DirInfo'></span></div>
 					</div>
-					<div class="divtable" id="fileCon"></div>
+				</div>
+				<div class="clearfix ptb10">
+					<button class="btn btn-default btn-sm pull-left" onclick="UploadFiles()">上传</button>
+					<button class="btn btn-default btn-sm pull-left" onclick="DownloadFile()" title='下载文件到服务器' style="margin:0 5px">下载</button>
+					<span id='BarTools'></span>
+					<span id='Batch'></span>
+					<span id='comlist' class="comlist"></span>
+					<div class="btn-group btn-group-sm pull-right" style="margin-right:5px;">
+						<button id="recycle_bin" onclick="Recycle_bin('open')" title="收回站" type="button" class="btn btn-default">
+							<i class="glyphicon glyphicon-trash"></i>
+							回收站
+						</button>
+						<button id="set_icon" title="图标排列" type="button" class="btn btn-default">
+							<i class="glyphicon glyphicon-th"></i>
+						</button>
+						<button id="set_list" title="列表排列" type="button" class="btn btn-default active">
+							<i class="glyphicon glyphicon-th-list"></i>
+						</button>
+					</div>
 				</div>
 			</div>
+			<div class="divtable pd15" id="fileCon"></div>
 		</div>
 	</div>
 </div>

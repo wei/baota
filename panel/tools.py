@@ -291,12 +291,22 @@ def PackagePanel():
     os.system('rm -f /www/server/panel/data/iplist.txt')
     os.system('rm -f /www/server/panel/data/address.pl')
     os.system('rm -f /www/server/panel/data/*.login')
+    os.system('rm -f /www/server/panel/data/domain.conf')
     print '\t\033[1;32m[done]\033[0m'
     public.writeFile('/www/server/panel/install.pl',"True");
     port = public.readFile('data/port.pl').strip();
     print '========================================================'
     print '\033[1;32m|-面板封装成功,请不要再登陆面板做任何其它操作!\033[0m'
     print '\033[1;41m|-面板初始化地址: http://{SERVERIP}:'+port+'/install\033[0m'
+
+#清空正在执行的任务
+def CloseTask():
+    ncount = public.M('tasks').where('status!=?',(1,)).delete();
+    os.system("kill `ps -ef |grep 'python panelSafe.pyc'|grep -v grep|grep -v panelExec|awk '{print $2}'`");
+    os.system("kill `ps -ef |grep 'install_soft.sh'|grep -v grep|grep -v panelExec|awk '{print $2}'`");
+    os.system('/etc/init.d/bt restart');
+    print "成功清理 " + int(ncount) + " 个任务!"
+    
         
 
 if __name__ == "__main__":
