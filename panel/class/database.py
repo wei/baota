@@ -19,13 +19,13 @@ class database:
     def AddDatabase(self,get):
         try:
             data_name = get['name'].strip()
-            if data_name == 'root' or data_name == 'mysql' or data_name == 'test' or len(data_name) < 3:
-                return public.returnMsg(False,'数据库名称不合法,或少于3个字符!')
+            if data_name == 'root' or data_name == 'mysql' or data_name == 'test' or data_name == 'sys' or len(data_name) < 1:
+                return public.returnMsg(False,'数据库名称不合法!')
             
             if len(data_name) > 16: return public.returnMsg(False, '数据库名不能大于16位')
             
-            reg = "^[a-zA-Z]{1}\w+$"
-            if not re.match(reg, data_name): return public.returnMsg(False,'数据库名不能带有特殊符号，且首位必需为字母')
+            reg = "^\w+$"
+            if not re.match(reg, data_name): return public.returnMsg(False,'数据库名不能带有特殊符号!')
             
             data_pwd = get['password']
             if len(data_pwd)<1:
@@ -84,7 +84,7 @@ class database:
         try:
             id=get['id']
             name = get['name']
-            if name == 'bt_default': return public.returnMsg(False,'不能删除宝塔默认数据库!')
+            #if name == 'bt_default': return public.returnMsg(False,'不能删除宝塔默认数据库!')
             accept = public.M('databases').where("id=?",(id,)).getField('accept')
             #删除MYSQL
             result = panelMysql.panelMysql().execute("drop database " + name)
@@ -219,25 +219,16 @@ echo "The root password set ${pwd}  successuful"''';
         #try:
         id = get['id']
         name = public.M('databases').where("id=?",(id,)).getField('name')
-        root = web.ctx.session.config['mysql_root']
+        root = public.M('config').where('id=?',(1,)).getField('mysql_root');
         if not os.path.exists(web.ctx.session.config['backup_path'] + '/database'): os.system('mkdir -p ' + web.ctx.session.config['backup_path'] + '/database');
-        mycnf = public.readFile('/etc/my.cnf');
-        rep = "\[mysqldump\]\nuser=root"
-        sea = '[mysqldump]\n'
-        subStr = sea + "user=root\npassword=" + root+"\n";
-        mycnf = mycnf.replace(sea,subStr)
-        if len(mycnf) > 100:
-            public.writeFile('/etc/my.cnf',mycnf);
+        self.mypass(True, root);
         
         fileName = name + '_' + time.strftime('%Y%m%d_%H%M%S',time.localtime()) + '.sql.gz'
         backupName = web.ctx.session.config['backup_path'] + '/database/' + fileName
-        public.ExecShell("/www/server/mysql/bin/mysqldump --opt --default-character-set=utf8 " + name + " | gzip > " + backupName)
+        public.ExecShell("/www/server/mysql/bin/mysqldump --opt " + name + " | gzip > " + backupName)
         if not os.path.exists(backupName): return public.returnMsg(False,'备份失败!');
         
-        mycnf = public.readFile('/etc/my.cnf');
-        mycnf = mycnf.replace(subStr,sea)
-        if len(mycnf) > 100:
-            public.writeFile('/etc/my.cnf',mycnf);
+        self.mypass(False, root);
         
         sql = public.M('backup')
         addTime = time.strftime('%Y-%m-%d %X',time.localtime())
@@ -272,7 +263,7 @@ echo "The root password set ${pwd}  successuful"''';
         try:
             name = get['name']
             file = get['file']
-            root = web.ctx.session.config['mysql_root']
+            root = public.M('config').where('id=?',(1,)).getField('mysql_root');
             tmp = file.split('.')
             exts = ['sql','gz','zip']
             ext = tmp[len(tmp) -1]
@@ -294,9 +285,13 @@ echo "The root password set ${pwd}  successuful"''';
                     if not os.path.exists(backupPath  +  "/"  +  tmpFile): public.ExecShell("cd "  +  backupPath  +  " && gunzip -q " +  file)
                  
                 if not os.path.exists(backupPath + '/' + tmpFile) or tmpFile == '': return public.returnMsg(False, '文件[' + tmpFile + ']不存在!')
-                public.ExecShell("cd "  +  backupPath  +  " && "  +  web.ctx.session.setupPath + "/mysql/bin/mysql -uroot -p" + root + " --default-character-set=utf-8 " + name + " < " + tmpFile + " && rm -f " +  tmpFile)
+                self.mypass(True, root);
+                public.ExecShell(web.ctx.session.setupPath + "/mysql/bin/mysql -uroot -p" + root + " " + name + " < " + backupPath + '/' +tmpFile + " && rm -f " +  backupPath + '/' +tmpFile)
+                self.mypass(False, root);
             else:
+                self.mypass(True, root);
                 public.ExecShell(web.ctx.session.setupPath + "/mysql/bin/mysql -uroot -p" + root + " " + name + " < " +  file)
+                self.mypass(False, root);
             
             public.WriteLog("数据库管理", "导入数据库[" + name + "]成功!")
             return public.returnMsg(True, '导入数据库成功!');
@@ -323,6 +318,20 @@ echo "The root password set ${pwd}  successuful"''';
                 if result == 1: n +=1
         
         return public.returnMsg(True,"本次共同步了:" + str(n) + "数据库")
+    
+    #配置
+    def mypass(self,act,root):
+        os.system("sed -i '/user=root/d' /etc/my.cnf")
+        os.system("sed -i '/password=/d' /etc/my.cnf")
+        if act:
+            mycnf = public.readFile('/etc/my.cnf');
+            rep = "\[mysqldump\]\nuser=root"
+            sea = '[mysqldump]\n'
+            subStr = sea + "user=root\npassword=" + root + "\n";
+            mycnf = mycnf.replace(sea,subStr)
+            if len(mycnf) > 100:
+                    public.writeFile('/etc/my.cnf',mycnf);
+        
     
     
     #添加到服务器
@@ -355,7 +364,7 @@ echo "The root password set ${pwd}  successuful"''';
         if isError != None: return isError
         users = panelMysql.panelMysql().query("select User,Host from mysql.user where User!='root' AND Host!='localhost' AND Host!=''")
         sql = public.M('databases')
-        nameArr = ['information_schema','performance_schema','mysql']
+        nameArr = ['information_schema','performance_schema','mysql','sys']
         n = 0
         for  value in data:
             b = False

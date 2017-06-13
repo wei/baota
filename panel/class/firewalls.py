@@ -68,7 +68,7 @@ class firewalls:
             if self.__isFirewalld:
                 public.ExecShell('firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv4 source address="'+ address +'" drop\'')
             else:
-                public.ExecShell('iptables -t filte -D INPUT -s '+address+' -j DROP')
+                public.ExecShell('iptables -D INPUT -s '+address+' -j DROP')
         
         public.WriteLog("防火墙管理", '解除屏蔽IP['+address+']成功!')
         public.M('firewall').where("id=?",(id,)).delete()

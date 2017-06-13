@@ -219,7 +219,7 @@ function DelAcceptPort(id, port) {
 		action = "DelAcceptPort";
 	}
 	
-	layer.confirm("您真的要删除"+port+"吗？", {title: '删除防火墙规则'}, function(index) {
+	layer.confirm("您真的要删除"+port+"吗？", {title: '删除防火墙规则',closeBtn:2}, function(index) {
 		var loadT = layer.msg('正在删除...',{icon:16,time:0,shade: [0.3, '#000']})
 		$.post("/firewall?action="+action,"id=" + id + "&port=" + port, function(ret) {
 			layer.close(loadT);

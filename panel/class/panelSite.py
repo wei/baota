@@ -59,15 +59,19 @@ class panelSite:
             httpdVersion = public.readFile(self.setupPath+'/apache/version.pl').strip();
         except:
             httpdVersion = "";
-        if httpdVersion == '2.2.31':
-            vName = "NameVirtualHost  *:"+port+"\n";
+        if httpdVersion == '2.2':
+            vName = "NameVirtualHost  *:"+self.sitePort+"\n";
             phpConfig = "";
+            apaOpt = "Order allow,deny\n\t\tAllow from all";
         else:
             vName = "";
-            phpConfig ='''#PHP
+            phpConfig ='''
+    #PHP
     <FilesMatch \\.php$>
             SetHandler "proxy:unix:/tmp/php-cgi-%s.sock|fcgi://localhost"
-    </FilesMatch>''' % (self.phpVersion,)
+    </FilesMatch>
+    ''' % (self.phpVersion,)
+            apaOpt = 'Require all granted';
         
         conf='''%s<VirtualHost *:%s>
     ServerAdmin webmaster@example.com
@@ -76,18 +80,16 @@ class panelSite:
     ServerAlias %s
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
-    
     %s
-    
     #PATH
     <Directory "%s">
         SetOutputFilter DEFLATE
         Options FollowSymLinks
         AllowOverride All
-        Require all granted
+        %s
         DirectoryIndex index.php index.html index.htm default.php default.html default.htm
     </Directory>
-</VirtualHost>''' % (vName,self.sitePort,self.sitePath,acc,self.siteName,self.siteName,web.ctx.session.logsPath+'/'+self.siteName,web.ctx.session.logsPath+'/'+self.siteName,phpConfig,self.sitePath)
+</VirtualHost>''' % (vName,self.sitePort,self.sitePath,acc,self.siteName,self.siteName,web.ctx.session.logsPath+'/'+self.siteName,web.ctx.session.logsPath+'/'+self.siteName,phpConfig,self.sitePath,apaOpt)
     
         if not os.path.exists(self.sitePath+'/.htaccess'): public.writeFile(self.sitePath+'/.htaccess', ' ');
         filename = self.setupPath+'/panel/vhost/apache/'+self.siteName+'.conf'
@@ -166,6 +168,7 @@ class panelSite:
         
         #是否重复
         sql = public.M('sites');
+        
         if sql.where("name=?",(self.siteName,)).count(): return public.returnMsg(False,'您添加的站点已存在!');
         if public.M('domain').where("name=?",(self.siteName,)).count(): return public.returnMsg(False,'您添加的域名已存在!');
         
@@ -366,8 +369,7 @@ class panelSite:
             if not public.checkPort(get.port): return public.returnMsg(False,'端口范围不合法!');
             #检查域名是否存在
             sql = public.M('domain');
-            if sql.where("name=?",(get.domain,)).count() > 0: return public.returnMsg(False,'指定域名已绑定过!');
-            
+            if sql.where("name=? AND (port=? OR pid=?)",(get.domain,get.port,get.id)).count() > 0: return public.returnMsg(False,'指定域名已绑定过!');
             
             #写配置文件
             self.NginxDomain(get)
@@ -451,16 +453,22 @@ class panelSite:
                 httpdVersion = public.readFile(self.setupPath+'/apache/version.pl').strip();
             except:
                 httpdVersion = "";
-            if httpdVersion == '2.2.31':
+            if httpdVersion == '2.2':
+                vName = "NameVirtualHost  *:"+port+"\n";
                 phpConfig = "";
+                apaOpt = "Order allow,deny\n\t\tAllow from all";
             else:
+                vName = "";
                 rep = "php-cgi-([0-9]{2,3})\.sock";
                 version = re.search(rep,conf).groups()[0]
                 if len(version) < 2: return public.returnMsg(False,'PHP版本获取失败!')
-                phpConfig ='''#PHP
+                phpConfig ='''
+    #PHP
     <FilesMatch \\.php$>
             SetHandler "proxy:unix:/tmp/php-cgi-%s.sock|fcgi://localhost"
-    </FilesMatch>''' % (version,)
+    </FilesMatch>
+    ''' % (version,);
+                apaOpt = 'Require all granted';
             
             newconf='''<VirtualHost *:%s>
     ServerAdmin webmaster@example.com
@@ -469,18 +477,16 @@ class panelSite:
     ServerAlias %s
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
-    
     %s
-    
     #PATH
     <Directory "%s">
         SetOutputFilter DEFLATE
         Options FollowSymLinks
         AllowOverride All
-        Require all granted
+        %s
         DirectoryIndex %s
     </Directory>
-</VirtualHost>''' % (port,sitePath,siteName,port,newDomain,web.ctx.session.logsPath+'/'+siteName,web.ctx.session.logsPath+'/'+siteName,phpConfig,sitePath,siteIndex)
+</VirtualHost>''' % (port,sitePath,siteName,port,newDomain,web.ctx.session.logsPath+'/'+siteName,web.ctx.session.logsPath+'/'+siteName,phpConfig,sitePath,apaOpt,siteIndex)
             conf += "\n\n"+newconf;
         
         #添加端口
@@ -534,6 +540,8 @@ class panelSite:
             tmp1 = re.findall(rep1,tmp);
             tmp2 = tmp1[0].split(' ')
             if len(tmp2) < 2:
+                conf = re.sub(rep,'',conf);
+                rep = "NameVirtualHost.+\:" + port + "\n";
                 conf = re.sub(rep,'',conf);
             else:
                 newServerName = tmp.replace(' '+get['domain']+"\n","\n");
@@ -677,7 +685,7 @@ class panelSite:
     ssl_certificate    /etc/letsencrypt/live/%s/fullchain.pem;
     ssl_certificate_key    /etc/letsencrypt/live/%s/privkey.pem;
     if ($server_port !~ 443){
-        rewrite ^/.*$ https://$host$request_uri;
+        rewrite ^/.*$ https://$host$request_uri permanent;
     }
     error_page 497  https://$host$request_uri;
 """ % (siteName,siteName);
@@ -707,10 +715,30 @@ class panelSite:
                     domains += key['name'] + ' '
                 path = find['path']
                 index = 'index.php index.html index.htm default.php default.html default.htm'
-                rep = "php-cgi-([0-9]{2,3})\.sock";
-                tmp = re.search(rep,conf).groups()
-                version = tmp[0];
-                sslStr = '''<VirtualHost *:443>
+                
+                try:
+                    httpdVersion = public.readFile(self.setupPath+'/apache/version.pl').strip();
+                except:
+                    httpdVersion = "";
+                if httpdVersion == '2.2':
+                    vName = "";
+                    phpConfig = "";
+                    apaOpt = "Order allow,deny\n\t\tAllow from all";
+                else:
+                    vName = "";
+                    rep = "php-cgi-([0-9]{2,3})\.sock";
+                    version = re.search(rep,conf).groups()[0]
+                    if len(version) < 2: return public.returnMsg(False,'PHP版本获取失败!')
+                    phpConfig ='''
+    #PHP
+    <FilesMatch \\.php$>
+            SetHandler "proxy:unix:/tmp/php-cgi-%s.sock|fcgi://localhost"
+    </FilesMatch>
+    ''' % (version,);
+                    apaOpt = 'Require all granted';
+                
+                
+                sslStr = '''%s<VirtualHost *:443>
     ServerAdmin webmasterexample.com
     DocumentRoot "%s"
     ServerName SSL.%s
@@ -722,21 +750,16 @@ class panelSite:
     SSLEngine On
     SSLCertificateFile /etc/letsencrypt/live/%s/fullchain.pem
     SSLCertificateKeyFile /etc/letsencrypt/live/%s/privkey.pem
-    
-    #PHP
-    <FilesMatch \\.php>
-            SetHandler "proxy:unix:/tmp/php-cgi-%s.sock|fcgi://localhost"
-    </FilesMatch>
-    
+    %s
     #PATH
     <Directory "%s">
         SetOutputFilter DEFLATE
         Options FollowSymLinks
         AllowOverride All
-        Require all granted
+        %s
         DirectoryIndex %s
     </Directory>
-</VirtualHost>''' % (path,siteName,domains,web.ctx.session.logsPath + '/' + siteName,web.ctx.session.logsPath + '/' + siteName,siteName,siteName,version,path,index)
+</VirtualHost>''' % (vName,path,siteName,domains,web.ctx.session.logsPath + '/' + siteName,web.ctx.session.logsPath + '/' + siteName,siteName,siteName,phpConfig,path,apaOpt,index)
                     
             
                 conf = conf+"\n"+sslStr;
@@ -786,6 +809,8 @@ class panelSite:
         if conf:
             rep = "\n<VirtualHost \*\:443>(.|\n)*<\/VirtualHost>";
             conf = re.sub(rep,'',conf);
+            rep = "NameVirtualHost  *:443\n";
+            conf = conf.replace(rep,'');
             public.writeFile(file,conf)
         
         public.WriteLog('网站管理', '网站['+siteName+']关闭SSL成功!');
@@ -1084,7 +1109,15 @@ class panelSite:
     #取子目录绑定
     def GetDirBinding(self,get):
         path = public.M('sites').where('id=?',(get.id,)).getField('path')
-        if not os.path.exists(path): return public.returnMsg(False,'目录不存在!')
+        if not os.path.exists(path): 
+            checks = ['/','/usr','/etc']
+            if path in checks: 
+                data = {}
+                data['dirs'] = []
+                data['binding'] = []
+                return data;
+            os.system('mkdir -p ' + path);
+            os.system('chown 755 ' + path);
         dirnames = []
         for filename in os.listdir(path):
             try:
@@ -1165,48 +1198,48 @@ server
                 httpdVersion = public.readFile(self.setupPath+'/apache/version.pl').strip();
             except:
                 httpdVersion = "";
-            if httpdVersion == '2.2.31':
+            if httpdVersion == '2.2':
                 phpConfig = "";
+                apaOpt = "Order allow,deny\n\t\tAllow from all";
             else:
-                try:
-                    rep = "php-cgi-([0-9]{2,3})\.sock";
-                    tmp = re.search(rep,conf).groups()
-                    version = tmp[0];
-                    phpConfig ='''#PHP
+                rep = "php-cgi-([0-9]{2,3})\.sock";
+                tmp = re.search(rep,conf).groups()
+                version = tmp[0];
+                phpConfig ='''
+    #PHP     
     <FilesMatch \\.php>
         SetHandler "proxy:unix:/tmp/php-cgi-%s.sock|fcgi://localhost"
-    </FilesMatch>''' % (version,)
+    </FilesMatch>
+    ''' % (version,)
+                apaOpt = 'Require all granted';
+            try:
             
-            
-                    bindingConf ='''
+                bindingConf ='''
 \n#BINDING-%s-START
 <VirtualHost *:%s>
     ServerAdmin webmaster@example.com
     DocumentRoot "%s"
     ServerName %s
-    
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
-    
-    %s
-        
+    %s  
     #PATH
     <Directory "%s">
         SetOutputFilter DEFLATE
         Options FollowSymLinks
         AllowOverride All
-        Require all granted
+        %s
         DirectoryIndex index.php index.html index.htm default.php default.html default.htm
     </Directory>
 </VirtualHost>
-#BINDING-%s-END''' % (domain,port,webdir,domain,web.ctx.session.logsPath+'/'+siteInfo['name'],web.ctx.session.logsPath+'/'+siteInfo['name'],phpConfig,webdir,domain)
+#BINDING-%s-END''' % (domain,port,webdir,domain,web.ctx.session.logsPath+'/'+siteInfo['name'],web.ctx.session.logsPath+'/'+siteInfo['name'],phpConfig,webdir,apaOpt,domain)
                 
-                    conf += bindingConf;
-                    if web.ctx.session.webserver == 'apache':
-                        shutil.copyfile(filename, '/tmp/backup.conf')
-                    public.writeFile(filename,conf)
-                except:
-                    pass
+                conf += bindingConf;
+                if web.ctx.session.webserver == 'apache':
+                    shutil.copyfile(filename, '/tmp/backup.conf')
+                public.writeFile(filename,conf)
+            except:
+                pass
         
         #检查配置是否有误
         isError = public.checkWebConfig()
@@ -1376,11 +1409,15 @@ server
         filename = self.setupPath+'/apache/version.pl';
         if os.path.exists(filename): httpdVersion = public.readFile(filename).strip()
         
+        if httpdVersion == '2.2': phpVersions = ('52','53','54')
+        if httpdVersion == '2.4': phpVersions = ('53','54','55','56','70','71')
+        
         data = []
         for val in phpVersions:
             tmp = {}
-            if os.path.exists(self.setupPath+'/php/'+val+'/bin/php'):
-                if web.ctx.session.webserver != 'nginx' and val == '52' and httpdVersion != '2.2.31': continue;
+            checkPath = self.setupPath+'/php/'+val+'/bin/php';
+            if httpdVersion == '2.2': checkPath = self.setupPath+'/php/'+val+'/libphp5.so';
+            if os.path.exists(checkPath):
                 tmp['version'] = val;
                 tmp['name'] = 'PHP-'+val;
                 data.append(tmp)
@@ -1390,20 +1427,23 @@ server
     
     #取指定站点的PHP版本
     def GetSitePHPVersion(self,get):
-        siteName = get.siteName;
-        conf = public.readFile(self.setupPath + '/panel/vhost/'+web.ctx.session.webserver+'/'+siteName+'.conf');
-        if web.ctx.session.webserver == 'nginx':
-            rep = "enable-php-([0-9]{2,3})\.conf"
-        else:
-            rep = "php-cgi-([0-9]{2,3})\.sock";
-        tmp = re.search(rep,conf).groups()
-        data = {}
-        data['phpversion'] = tmp[0];
-        data['tomcat'] = conf.find('#TOMCAT-START');
-        data['tomcatversion'] = public.readFile(self.setupPath + '/tomcat/version.pl');
-        data['nodejs'] = conf.find('#NODE.JS-START');
-        data['nodejsversion'] = public.readFile(self.setupPath + '/node.js/version.pl');
-        return data;
+        try:
+            siteName = get.siteName;
+            conf = public.readFile(self.setupPath + '/panel/vhost/'+web.ctx.session.webserver+'/'+siteName+'.conf');
+            if web.ctx.session.webserver == 'nginx':
+                rep = "enable-php-([0-9]{2,3})\.conf"
+            else:
+                rep = "php-cgi-([0-9]{2,3})\.sock";
+            tmp = re.search(rep,conf).groups()
+            data = {}
+            data['phpversion'] = tmp[0];
+            data['tomcat'] = conf.find('#TOMCAT-START');
+            data['tomcatversion'] = public.readFile(self.setupPath + '/tomcat/version.pl');
+            data['nodejs'] = conf.find('#NODE.JS-START');
+            data['nodejsversion'] = public.readFile(self.setupPath + '/node.js/version.pl');
+            return data;
+        except:
+            return public.returnMsg(False,'apache2.2不支持多PHP版本共存!');
     
     #设置指定站点的PHP版本
     def SetPHPVersion(self,get):

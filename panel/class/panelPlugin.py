@@ -86,8 +86,16 @@ class panelPlugin:
     
     #取插件列表
     def getPluginList(self,get):
-        import json
+        import json    
         arr = public.M('plugin_list').dbfile('plugin').field('pid,title,tip,name,type,status,versions,ps,checks,author,home,shell,addtime,ssort').order('ssort asc').select();
+        apacheVersion = ""
+        try:
+            apavFile = '/www/server/apache/version.pl';
+            if os.path.exists(apavFile):
+                apacheVersion = public.readFile(apavFile).strip();
+        except:
+            pass;
+            
         n = 0;
         for dirinfo in os.listdir(self.__install_path):
             path = self.__install_path + '/' + dirinfo
@@ -109,6 +117,13 @@ class panelPlugin:
                     except:
                         pass
         for i in range(len(arr)):
+            if arr[i]['name'] == 'php':
+                if apacheVersion == '2.2':
+                    arr[i]['versions'] = '5.2,5.3,5.4';
+                elif apacheVersion == '2.4':
+                    arr[i]['versions'] = '5.3,5.4,5.5,5.6,7.0,7.1';
+                arr[i]['apache'] = apacheVersion;
+                    
             arr[i]['versions'] = self.checksSetup(arr[i]['name'],arr[i]['checks'],arr[i]['versions'])
             if arr[i]['tip'] == 'lib': 
                 arr[i]['path'] = self.__install_path + '/' + arr[i]['name']
@@ -184,11 +199,13 @@ class panelPlugin:
                 if versions[i]['status']:
                     v4 = versions[i]['version'].replace('.','')
                     versions[i]['run'] = os.path.exists('/tmp/php-cgi-' + v4 + '.sock');
+                    versions[i]['fpm'] = versions[i]['run'];
                     phpConfig = self.GetPHPConfig(v4);
                     versions[i]['max'] = phpConfig['max']
                     versions[i]['maxTime'] = phpConfig['maxTime']
                     versions[i]['pathinfo'] = phpConfig['pathinfo']
                     versions[i]['display'] = os.path.exists(path + '/' + v4 + '/display.pl');
+                    if len(versions) < 5: versions[i]['run'] = True;
                 
         elif name == 'nginx':
             status = False
@@ -383,6 +400,19 @@ class panelPlugin:
     def getPluginInfo(self,get):
         try:
             pluginInfo = public.M('plugin_list').dbfile('plugin').where('name=?',(get.name,)).field('pid,name,type,status,versions,ps,checks,author,home,shell,addtime').find();
+            apacheVersion = ""
+            try:
+                apavFile = '/www/server/apache/version.pl';
+                if os.path.exists(apavFile):
+                    apacheVersion = public.readFile(apavFile).strip();
+            except:
+                pass;
+            if pluginInfo['name'] == 'php':
+                if apacheVersion == '2.2':
+                    pluginInfo['versions'] = '5.2,5.3,5.4';
+                elif apacheVersion == '2.4':
+                    pluginInfo['versions'] = '5.3,5.4,5.5,5.6,7.0,7.1';
+            
             pluginInfo['versions'] = self.checksSetup(pluginInfo['name'],pluginInfo['checks'],pluginInfo['versions'])
             if get.name == 'php':
                 pluginInfo['phpSort'] = public.readFile('/www/server/php/sort.pl');
@@ -431,7 +461,7 @@ class panelPlugin:
         import json
         if not hasattr(web.ctx.session,'downloadUrl'): web.ctx.session.downloadUrl = 'http://download.bt.cn';
         
-        downloadUrl = web.ctx.session.downloadUrl + '/install/lib/list.json'
+        downloadUrl = web.ctx.session.downloadUrl + '/install/lib/listTest.json'
         data = json.loads(public.httpGet(downloadUrl))
         
         n = i = j = 0;

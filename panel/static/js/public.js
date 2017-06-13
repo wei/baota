@@ -973,12 +973,35 @@ function setPassword(a) {
 	if(a == 1) {
 		p1 = $("#p1").val();
 		p2 = $("#p2").val();
-		if(p1 == "" || p1.length < 5) {
-			layer.msg("新密码为空或少于5位!", {
+		if(p1 == "" || p1.length < 8) {
+			layer.msg("面板密码不能少于8位!", {
 				icon: 2
 			});
 			return
 		}
+		
+		//准备弱口令匹配元素
+		var checks = ['admin','root','123','456','789','123456','456789','654321','qweasd','asdfghjkl','zxcvbnm','user','password','passwd','panel','linux','centos','ubuntu','abc','xyz'];
+		pchecks = 'abcdefghijklmnopqrstuvwxyz1234567890';
+		for(var i=0;i<pchecks.length;i++){
+			checks.push(pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]);
+		}
+		
+		//检查弱口令
+		cps = p1.toLowerCase();
+		var isError = "";
+		for(var i=0;i<checks.length;i++){
+			if(cps.indexOf(checks[i]) != -1){
+				isError += '['+checks[i]+'] ';
+			}
+		}
+		
+		if(isError != ""){
+			layer.msg('面板密码中不能包括弱口令'+isError,{icon:5});
+			return;
+		}
+		
+		
 		if(p1 != p2) {
 			layer.msg("两次输入的密码不一致", {
 				icon: 2
@@ -1006,8 +1029,16 @@ function setPassword(a) {
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
-		content: "<div class='bt-form pd20 pb70'><div class='line'><span class='tname'>密码</span><div class='info-r'><input class='bt-input-text' type='password' name='password1' id='p1' value='' placeholder='新的密码' style='width:100%'/></div></div><div class='line'><span class='tname'>重复</span><div class='info-r'><input class='bt-input-text' type='password' name='password2' id='p2' value='' placeholder='再输一次' style='width:100%' /></div></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button> <button type='button' class='btn btn-success btn-sm' onclick=\"setPassword(1)\">修改</button></div></div>"
-	})
+		content: "<div class='bt-form pd20 pb70'><div class='line'><span class='tname' style='width: 25px;'>密码</span><div class='info-r' style='margin-left: 44px;'><input class='bt-input-text' type='text' name='password1' id='p1' value='' placeholder='新的密码' style='width:100%'/></div></div><div class='line'><span class='tname' style='width: 25px;'>重复</span><div class='info-r' style='margin-left: 44px;'><input class='bt-input-text' type='text' name='password2' id='p2' value='' placeholder='再输一次' style='width:100%' /></div></div><div class='bt-form-submit-btn'><span style='float: left;' title='随机密码' class='btn btn-default btn-sm' onclick='randPwd(10)'>随机</span><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button> <button type='button' class='btn btn-success btn-sm' onclick=\"setPassword(1)\">修改</button></div></div>"
+	});
+}
+
+
+function randPwd(){
+	var pwd = RandomStrPwd(12);
+	$("#p1").val(pwd);
+	$("#p2").val(pwd);
+	layer.msg('请在修改前记录好您的新密码!',{time:2000})
 }
 
 function setUserName(a) {
@@ -1194,7 +1225,7 @@ function setSelectChecked(c, d) {
 }
 GetTaskCount();
 
-function ShowSoftList() {
+function ShowSoftList(){
 	layer.open({
 		type: 1,
 		title: "软件管家",
@@ -1205,6 +1236,7 @@ function ShowSoftList() {
 	});
 	GetSoftList()
 }
+
 function RecInstall() {
 	$.post("/ajax?action=GetSoftList", "", function(l) {
 		var c = "";
@@ -1244,7 +1276,7 @@ function RecInstall() {
 			area: ["658px", "423px"],
 			closeBtn: 2,
 			shadeClose: false,
-			content: "<div class='rec-install'><div class='important-title'><p><span class='glyphicon glyphicon-alert' style='color: #f39c12; margin-right: 10px;'></span>我们为您推荐以下一键套件，请按需选择或在 <a href='javascript:jump()' style='color:#20a53a'>所有软件</a> 栏自行选择，如你不懂，请安装LNMP。</p></div><div class='rec-box'><h3>LNMP(推荐)</h3><div class='rec-box-con'><ul class='rec-list'>" + c + "</ul><p class='fangshi'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></p><div class='onekey'>一键安装</div></div></div><div class='rec-box' style='margin-left:16px'><h3>LAMP</h3><div class='rec-box-con'><ul class='rec-list'>" + g + "</ul><p class='fangshi'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></p><div class='onekey'>一键安装</div></div></div></div>"
+			content: "<div class='rec-install'><div class='important-title'><p><span class='glyphicon glyphicon-alert' style='color: #f39c12; margin-right: 10px;'></span>我们为您推荐以下一键套件，请按需选择或在 <a href='javascript:jump()' style='color:#20a53a'>所有软件</a> 栏自行选择，如你不懂，请安装LNMP。</p></div><div class='rec-box'><h3>LNMP(推荐)</h3><div class='rec-box-con'><ul class='rec-list'>" + c + "</ul><p class='fangshi'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装' style='margin-right:0'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></p><div class='onekey'>一键安装</div></div></div><div class='rec-box' style='margin-left:16px'><h3>LAMP</h3><div class='rec-box-con'><ul class='rec-list'>" + g + "</ul><p class='fangshi'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装' style='margin-right:0'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></p><div class='onekey'>一键安装</div></div></div></div>"
 		});
 		$(".fangshi input").click(function() {
 			$(this).attr("checked", "checked").parent().siblings().find("input").removeAttr("checked")
@@ -1285,6 +1317,35 @@ function RecInstall() {
 		$("#select_MySQL,#apache_select_MySQL").change(function() {
 			var n = $(this).val();
 			a(n)
+		});
+		
+		$("#apache_select_Apache").change(function(){
+			var apacheVersion = $(this).val();
+			if(apacheVersion == '2.2'){
+				layer.msg('您选择的是Apache2.2,PHP将会以php5_module模式运行!');
+			}else{
+				layer.msg('您选择的是Apache2.4,PHP将会以php-fpm模式运行!');
+			}
+		});
+		
+		$("#apache_select_PHP").change(function(){
+			var apacheVersion = $("#apache_select_Apache").val();
+			var phpVersion = $(this).val();
+			if(apacheVersion == '2.2'){
+				if(phpVersion != '5.2' && phpVersion != '5.3' && phpVersion != '5.4'){
+					layer.msg('Apache2.2不支持PHP-' + phpVersion,{icon:5});
+					$(this).val("5.4");
+					$("#apache_PHP").attr('data-info','php 5.4');
+					return false;
+				}
+			}else{
+				if(phpVersion == '5.2'){
+					layer.msg('Apache2.4不支持PHP-' + phpVersion,{icon:5});
+					$(this).val("5.4");
+					$("#apache_PHP").attr('data-info','php 5.4');
+					return false;
+				}
+			}
 		});
 
 		function a(n) {

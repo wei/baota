@@ -163,7 +163,7 @@ class config:
                 conf = re.sub(rep,'fastcgi_send_timeout '+time+';',conf);
                 rep = "fastcgi_read_timeout\s+([0-9]+);";
                 conf = re.sub(rep,'fastcgi_read_timeout '+time+';',conf);
-                public.writeFile(path,conf)
+                public.writeFile(path,conf);
                 
         public.WriteLog("PHP配置", "设置PHP-"+version+"最大脚本超时时间为["+time+"秒]!");
         public.serviceReload()

@@ -10,7 +10,7 @@ function phpSoftMain(name,key){
 		layer.close(loadT);
 		nameA = rdata.versions[key];
 		bodys = [
-				'<p class="bgw" data-id="0"><a href="javascript:service(\''+name+'\','+nameA.run+')">php服务</a><span class="spanmove"></span></p>',
+				'<p class="bgw pstate" data-id="0"><a href="javascript:service(\''+name+'\','+nameA.run+')">php服务</a><span class="spanmove"></span></p>',
 				'<p data-id="1"><a href="javascript:phpUploadLimit(\''+name+'\','+nameA.max+')">上传限制</a><span class="spanmove"></span></p>',
 				'<p class="phphide" data-id="2"><a href="javascript:phpTimeLimit(\''+name+'\','+nameA.maxTime+')">超时限制</a><span class="spanmove"></span></p>',
 				'<p data-id="3"><a href="javascript:configChange(\''+name+'\')">配置修改</a><span class="spanmove"></span></p>',
@@ -50,7 +50,16 @@ function phpSoftMain(name,key){
 		if(name== "52"){
 			$(".phphide").hide();
 		}
-		service(name,nameA.run);
+		
+		if(rdata.versions.length < 5){
+			$(".phphide").hide();
+			$(".pstate").hide();
+			SetPHPConfig(name,nameA.pathinfo);
+			$("p[data-id='4']").addClass('bgw');
+		}else{
+			service(name,nameA.run);
+		}
+		
 		$(".bt-w-menu p a").click(function(){
 			var txt = $(this).text();
 			$(this).parent().addClass("bgw").siblings().removeClass("bgw");
@@ -247,7 +256,7 @@ function SetPHPConfig(version,pathinfo,go){
 						+'<thead>'
 							+'<tr>'
 								+'<th>名称</th>'
-								+'<th>类型</th>'
+								+'<th width="64">类型</th>'
 								+'<th>说明</th>'
 								+'<th width="40">状态</th>'
 								+'<th style="text-align: right;" width="50">操作</th>'
@@ -261,7 +270,7 @@ function SetPHPConfig(version,pathinfo,go){
 	
 	if(go == undefined){
 		setTimeout(function(){
-			if($(".active a").html() != '扩展配置'){
+			if($(".bgw a").html() != '扩展配置'){
 				return;
 			}
 			SetPHPConfig(version,pathinfo);
@@ -1106,7 +1115,7 @@ function indexsoft(){
 			$("input[name=list1SortOrder]").val(ssort);
 			$.post("/plugin?action=savePluginSort",'ssort=' + ssort,function(rdata){});
 		};
-	})
+	});
 }
 
 //插件设置菜单
@@ -1267,6 +1276,7 @@ function GetSList(isdisplay){
 					+'</tr>'
 			}
 			else{
+				var pnum = 0;
 				for(var n=0; n<len; n++){
 					if(rdata[i].versions[n].status == true){
 						checked = rdata[i].versions[n]['display'] ? "checked":"";
@@ -1280,7 +1290,6 @@ function GetSList(isdisplay){
 						else{
 							state='<span style="color:red" class="glyphicon glyphicon-pause"></span>'
 						}
-						
 					}
 					else{
 						handle = '<a class="btlink" onclick="oneInstall(\''+rdata[i].name+'\',\''+rdata[i].versions[n].version+'\')">安装</a>';
@@ -1290,21 +1299,43 @@ function GetSList(isdisplay){
 						titleClick ='';
 						state = '';
 					}
+					var pps = rdata[i].ps;
+					if(rdata[i].apache == '2.2' && rdata[i].versions[n].fpm == true){
+						pps += "<a style='color:red;'>, 警告:当前为php-fpm模式,将不被Apache2.2支持,请重新安装此PHP版本!</a>";
+					}
+					
+					if(rdata[i].apache == '2.2' && rdata[i].versions[n].fpm == false) pnum++;
+					
+					if(rdata[i].apache != '2.2' && rdata[i].versions[n].fpm == false){
+						pps += "<a style='color:red;'>, 警告:当前为php5_module模式,将不被nginx/apache2.4支持,请重新安装此PHP版本!</a>";
+					}
+					
 					var isTask = rdata[i].versions[n].task;
 					if(isTask == '-1'){
+						if(rdata[i].apache == '2.2') pnum++;
+
 						handle = '<a style="color:green;" href="javascript:task();">正在安装..</a>'
 					}else if(isTask == '0'){
+						if(rdata[i].apache == '2.2') pnum++;
 						handle = '<a style="color:#C0C0C0;" href="javascript:task();">等待安装..</a>'
 					}
 					pBody += '<tr>'
 							+'<td><span '+titleClick+'><img src="/static/img/soft_ico/ico-'+rdata[i].name+'.png">'+rdata[i].title+'-'+rdata[i].versions[n].version+'</span></td>'
 							+'<td>'+rdata[i].type+'</td>'
-							+'<td>'+rdata[i].ps+'</td>'
+							+'<td>'+pps+'</td>'
 							+'<td>'+softPath+'</td>'
 							+'<td>'+state+'</td>'
 							+'<td>'+indexshow+'</td>'
 							+'<td style="text-align: right;">'+handle+'</td>'
 						+'</tr>'
+				}
+				
+				if(pnum > 0){
+					setCookie('apacheVersion','2.2');
+					setCookie('phpVersion',1);
+				}else{
+					setCookie('apacheVersion','');
+					setCookie('phpVersion',0);
 				}
 			}
 		}
@@ -1334,10 +1365,13 @@ function oneInstall(name,version){
 		});
 	}
 	
-	if(getCookie('serverType') == 'apache' && name == 'php' && version == '5.2'){
-		layer.msg("抱歉,Apache2.4不支持PHP-5.2!",{icon:5});
-		return;
+	if(name == 'php'){
+		if(getCookie('apacheVersion') == '2.2' && getCookie('phpVersion') == 1){
+			layer.msg('Apache2.2不支持多PHP版本共存,请先卸载已安装PHP版本,再安装此版本!',{icon:5});
+			return;
+		}
 	}
+	
 	
 	var optw = '';
 	if(name == 'mysql'){

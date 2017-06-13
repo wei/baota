@@ -100,7 +100,7 @@ function GetDiskInfo(){
 				}
 			}
 			dBody = '<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2 mtb20 circle-box text-center">'
-						+'<h3 class="c6 f16">'+rdata[i].path+'</h3>'
+						+'<h3 class="c5 f15">'+rdata[i].path+'</h3>'
 						+'<div class="circle">'
 							+'<div class="pie_left">'
 								+'<div class="left"></div>'
@@ -110,7 +110,7 @@ function GetDiskInfo(){
 							+'</div>'
 							+'<div class="mask"><span>'+rdata[i].size[3].replace('%','')+'</span>%</div>'
 						+'</div>'
-						+'<h4>'+rdata[i].size[1]+'/'+rdata[i].size[0]+'</h4>'
+						+'<h4 class="c5 f15">'+rdata[i].size[1]+'/'+rdata[i].size[0]+'</h4>'
 					+'</li>'
 			$("#systemInfoList").append(dBody)
 			setImg();
@@ -130,7 +130,7 @@ function checkConfig(){
 			area: '600px', 
 			shadeClose:false,
 			closeBtn:2,
-			content:'<div class="setchmod zun-form-new">'
+			content:'<div class="setchmod bt-form pd20 pb70">'
 					+'<p style="padding: 0 20px 10px;line-height: 24px;">'+rdata.msg+'</p>'
 					+'<p style="font-weight:bold;margin-left: 24px;margin-top: 20px;">注意：</p><ul style="padding: 0 20px 10px;margin-top: 3px;" class="help-info-text">'
 					+'============================================================================'
@@ -139,7 +139,7 @@ function checkConfig(){
 					+'<li>排除配置错误之前请不要重启服务器或apache/nginx，这会导致您的Web服务无法启动！</li>'
 					+'<li>若您无法排除错误，请附上错误信息到我们官方论坛发贴求助;<a href="http://www.bt.cn/bbs" target="_blank" style="color:#20a53a"> >>点击求助</a></li>'
 					+'</ul>'
-					+'<div class="submit-btn">'
+					+'<div class="bt-form-submit-btn">'
 					+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">知道了</button>'
 				    +'</div>'
 					+'</div>'
@@ -164,6 +164,11 @@ function getInfo() {
 		if(memFree < 64){
 			$("#messageError").show();
 			$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span> 当前可用物理内存小于64M，这可能导致MySQL自动停止，站点502等错误，请尝试释放内存!</p>')
+		}
+		
+		if(info.isuser > 0){
+			$("#messageError").show();
+			$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span> 当前面板用户为admin,这可能为面板安全带来风险!<a style="color:green;" href="javascript:setUserName();"> [修改]</a></p>')
 		}
 		setImg();
 	});
@@ -356,7 +361,7 @@ setTimeout(function(){
 	$.get('/ajax?action=UpdatePanel',function(rdata){
 		if(rdata.status == false) return;
 		if(rdata.version != undefined){
-			$("#toUpdate").html('<a href="javascript:updateMsg();">立即更新</a>');
+			$("#toUpdate").html('<a class="btlink" href="javascript:updateMsg();">立即更新</a>');
 			return;
 		}
 		$.get('/system?action=ReWeb',function(){});
@@ -393,9 +398,9 @@ function updateMsg(){
 			area: '400px', 
 			shadeClose:false,
 			closeBtn:2,
-			content:'<div class="setchmod zun-form-new">'
-					+'<p style="padding: 0 20px 10px;line-height: 24px;">'+rdata.updateMsg+'</p>'
-					+'<div class="submit-btn">'
+			content:'<div class="setchmod bt-form pd20 pb70">'
+					+'<p style="padding: 0 0 10px;line-height: 24px;">'+rdata.updateMsg+'</p>'
+					+'<div class="bt-form-submit-btn">'
 					+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>'
 					+'<button type="button" class="btn btn-success btn-sm btn-title" onclick="updateVersion(\''+rdata.version+'\')" >立即升级</button>'
 				    +'</div>'
@@ -433,7 +438,7 @@ function updateVersion(version){
 function openLog(){
 	layer.open({
 	type: 1,
-	area: ['682px','462px'],
+	area: '640px',
 	title: '版本更新',
 	closeBtn: 2,
 	shift: 5,
@@ -464,7 +469,7 @@ function ReBoot(){
 		area: ['500px', '280px'],
 		closeBtn: 2,
 		shadeClose: false,
-		content:"<div class='bt-form'>\
+		content:"<div class='bt-form bt-window-restart'>\
 			<div class='pd15'>\
 			<p style='color:red; margin-bottom:10px; font-size:15px;'>注意，若您的服务器是一个容器，请取消。</p>\
 			<div class='SafeRestart' style='line-height:26px'>\
@@ -485,21 +490,21 @@ function ReBoot(){
 
 //重启服务器
 function WSafeRestart(){
-	var body = '<div class="SafeRestartCode" style="line-height:26px"></div>';
-	$(".webDelete").html(body);
+	var body = '<div class="SafeRestartCode pd15" style="line-height:26px"></div>';
+	$(".bt-window-restart").html(body);
 	var data = "name="+serverType+"&type=stop";
 	$(".SafeRestartCode").html("<p>正在停止"+serverType+"服务...</p>");
 	$.post('/system?action=ServiceAdmin',data,function(r1){
 		data = "name=mysqld&type=stop";
-		$(".SafeRestartCode").html("<p style='color:999'>正在停止"+serverType+"服务</p><p>正在停止MySQL服务...</p>");
+		$(".SafeRestartCode").html("<p class='c9'>正在停止"+serverType+"服务</p><p>正在停止MySQL服务...</p>");
 		$.post('/system?action=ServiceAdmin',data,function(r2){
-			$(".SafeRestartCode").html("<p style='color:999'>正在停止"+serverType+"服务</p><p style='color:#999'>正在停止MySQL服务</p><p>开始重启服务器...</p>");
+			$(".SafeRestartCode").html("<p class='c9'>正在停止"+serverType+"服务</p><p class='c9'>正在停止MySQL服务</p><p>开始重启服务器...</p>");
 			$.post('/system?action=RestartServer','',function(rdata){
-				$(".SafeRestartCode").html("<p style='color:#999'>正在停止"+serverType+"服务</p><p style='color:#999'>正在停止MySQL服务</p><p style='color:#999'>开始重启服务器</p><p>等待服务器启动...</p>");
+				$(".SafeRestartCode").html("<p class='c9'>正在停止"+serverType+"服务</p><p class='c9'>正在停止MySQL服务</p><p class='c9'>开始重启服务器</p><p>等待服务器启动...</p>");
 				var sEver = setInterval(function(){
 					$.get("/system?action=GetSystemTotal", function(info) {
 						clearInterval(sEver);
-						$(".SafeRestartCode").html("<p style='color:#999'>正在停止"+serverType+"服务</p><p style='color:#999'>正在停止MySQL服务</p><p style='color:#999'>开始重启服务器</p><p style='color:#999'>等待服务器启动</p><p>服务器重启成功!</p>");
+						$(".SafeRestartCode").html("<p class='c9'>正在停止"+serverType+"服务</p><p class='c9'>正在停止MySQL服务</p><p class='c9'>开始重启服务器</p><p class='c9'>等待服务器启动</p><p>服务器重启成功!</p>");
 						setTimeout(function(){
 							layer.closeAll();
 						},3000);
@@ -508,11 +513,11 @@ function WSafeRestart(){
 					});
 				},3000);
 			}).error(function(){
-				$(".SafeRestartCode").html("<p style='color:#999'>正在停止"+serverType+"服务</p><p style='color:#999'>正在停止MySQL服务</p><p style='color:#999'>开始重启服务器</p><p>等待服务器启动...</p>");
+				$(".SafeRestartCode").html("<p class='c9'>正在停止"+serverType+"服务</p><p class='c9'>正在停止MySQL服务</p><p class='c9'>开始重启服务器</p><p>等待服务器启动...</p>");
 				var sEver = setInterval(function(){
 					$.get("/system?action=GetSystemTotal", function(info) {
 						clearInterval(sEver);
-						$(".SafeRestartCode").html("<p style='color:#999'>正在停止"+serverType+"服务</p><p style='color:#999'>正在停止MySQL服务</p><p style='color:#999'>开始重启服务器</p><p style='color:#999'>等待服务器启动</p><p>服务器重启成功!</p>");
+						$(".SafeRestartCode").html("<p class='c9'>正在停止"+serverType+"服务</p><p class='c9'>正在停止MySQL服务</p><p class='c9'>开始重启服务器</p><p class='c9'>等待服务器启动</p><p>服务器重启成功!</p>");
 						setTimeout(function(){
 							layer.closeAll();
 							window.location.reload();
@@ -574,9 +579,10 @@ function GetNetWorkList(rflush){
 			closeBtn:2,
 			shift:5,
 			shadeClose:true,
-			content:"<div style='margin:15px;'>\
-					<button style='float: right;margin: 5px;' class='btn btn-default btn-sm' onclick='GetNetWorkList(true);'>刷新</button>\
+			content:"<div class='divtable' style='margin:15px;'>\
+					<button class='btn btn-default btn-sm pull-right' onclick='GetNetWorkList(true);' style='margin-bottom:5px;'>刷新</button>\
 					<table class='table table-hover table-bordered'>\
+						<thead>\
 						<tr>\
 							<th>协议</th>\
 							<th>本地地址</th>\
@@ -585,6 +591,7 @@ function GetNetWorkList(rflush){
 							<th>进程</th>\
 							<th>PID</th>\
 						</tr>\
+						</thead>\
 						<tbody id='networkList'>"+tbody+"</tbody>\
 					 </table></div>"
 		});
@@ -623,9 +630,10 @@ function GetProcessList(rflush){
 			closeBtn:2,
 			shift:5,
 			shadeClose:true,
-			content:"<div style='margin:15px;'>\
-					<button style='float: right;margin: 5px;' class='btn btn-default btn-sm' onclick='GetProcessList(true);'>刷新</button>\
+			content:"<div class='divtable' style='margin:15px;'>\
+					<button class='btn btn-default btn-sm pull-right' onclick='GetProcessList(true);' style='margin-bottom:5px;'>刷新</button>\
 					<table class='table table-hover table-bordered'>\
+						<thead>\
 						<tr>\
 							<th>PID</th>\
 							<th>名称</th>\
@@ -637,6 +645,7 @@ function GetProcessList(rflush){
 							<th>用户</th>\
 							<th>操作</th>\
 						</tr>\
+						</thead>\
 						<tbody id='processList'>"+tbody+"</tbody>\
 					 </table></div>"
 		});

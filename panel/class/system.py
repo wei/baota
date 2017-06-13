@@ -193,11 +193,8 @@ class system:
         data['cpuNum'] = cpu[1]
         data['cpuRealUsed'] = cpu[0]
         data['time'] = self.GetBootTime()
-        data['system'] = self.GetSystemVersion()
-        try:
-            data['who'] = public.ExecShell("who|awk '{print $1}'")[0].strip();
-        except:
-            data['who'] = "";
+        data['system'] = self.GetSystemVersion();
+        data['isuser'] = public.M('users').where('username=?',('admin',)).count();
         return data
     
     def GetSystemVersion(self):

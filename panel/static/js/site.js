@@ -25,9 +25,9 @@ function getWeb(page, search) {
 
 			//是否有备份
 			if (data.data[i].backup_count > 0) {
-				var backup = "<a href='javascript:;' class='btlink' onclick=\"getBackup(" + data.data[i].id + ",'" + data.data[i].name + "')\">有打包</a>";
+				var backup = "<a href='javascript:;' class='btlink' onclick=\"getBackup(" + data.data[i].id + ",'" + data.data[i].name + "')\">有备份</a>";
 			} else {
-				var backup = "<a href='javascript:;' class='btlink' onclick=\"getBackup(" + data.data[i].id + ",'" + data.data[i].name + "')\">无打包</a>";
+				var backup = "<a href='javascript:;' class='btlink' onclick=\"getBackup(" + data.data[i].id + ",'" + data.data[i].name + "')\">无备份</a>";
 			}
 			//是否设置有效期
 			var web_end_time = (data.data[i].due_date == "0000-00-00") ? '永久' : data.data[i].due_date;
@@ -1505,6 +1505,10 @@ function ChangeSaveSSL(siteName){
 //PHP版本
 function PHPVersion(siteName){
 	$.post('/site?action=GetSitePHPVersion','siteName='+siteName,function(version){
+		if(version.status === false){
+			layer.msg(version.msg,{icon:5});
+			return;
+		}
 		$.post('/site?action=GetPHPVersion',function(rdata){
 			var versionSelect = "<div class='webEdit-box'>\
 									<div class='line'>\
@@ -1551,6 +1555,10 @@ function PHPVersion(siteName){
 //tomcat
 function toTomcat(siteName){
 	$.post('/site?action=GetSitePHPVersion','siteName='+siteName,function(version){
+		if(version.status === false){
+			layer.msg('apache2.2暂不支持Tomcat!',{icon:5});
+			return;
+		}
 		$.post('/site?action=GetPHPVersion',function(rdata){
 			var versionSelect ='';
 			if(version.tomcatversion){
@@ -1726,10 +1734,13 @@ function SetRewriteTel(act){
 						<input type="text" class="bt-input-text" name="rewriteName" id="rewriteName" value="" placeholder="模板名称" style="width:100%" />\
 					</div>\
 					<div class="bt-form-submit-btn">\
-					<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>\
-					<button type="button" id="rewriteNameBtn" class="btn btn-success btn-sm btn-title" onclick="SetRewriteTel(1)">确定</button>\
+					<button type="button" class="btn btn-danger btn-sm">取消</button>\
+					<button type="button" id="rewriteNameBtn" class="btn btn-success btn-sm" onclick="SetRewriteTel(1)">确定</button>\
 					</div>\
 				</div>'
+	});
+	$(".btn-danger").click(function(){
+		layer.close(aindex);
 	});
 	$("#rewriteName").focus().keyup(function(e){
 		if(e.keyCode == 13) $("#rewriteNameBtn").click();

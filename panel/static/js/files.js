@@ -201,7 +201,7 @@ function ReisImage(fileName){
 function ReRecycleBin(path,obj){
 	layer.confirm('若您的原位置已有同名文件或目录，将被覆盖，继续吗？',{title:'恢复文件',closeBtn:2,icon:3},function(){
 		var loadT = layer.msg('正在恢复,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
-		$.post('/files?action=Re_Recycle_bin','path='+path,function(rdata){
+		$.post('/files?action=Re_Recycle_bin','path='+encodeURIComponent(path),function(rdata){
 			layer.close(loadT);
 			layer.msg(rdata.msg,{icon:rdata.status?1:5});
 			$(obj).parents('tr').remove();
@@ -213,7 +213,7 @@ function ReRecycleBin(path,obj){
 function DelRecycleBin(path,obj){
 	layer.confirm('删除操作不可逆，继续吗？',{title:'删除文件',closeBtn:2,icon:3},function(){
 		var loadT = layer.msg('正在删除,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
-		$.post('/files?action=Del_Recycle_bin','path='+path,function(rdata){
+		$.post('/files?action=Del_Recycle_bin','path='+encodeURIComponent(path),function(rdata){
 			layer.close(loadT);
 			layer.msg(rdata.msg,{icon:rdata.status?1:5});
 			$(obj).parents('tr').remove();
@@ -247,7 +247,7 @@ function Set_Recycle_bin(){
 //取数据
 function GetFiles(Path) {
 	var Body = '';
-	var data = 'path=' + Path;
+	var data = 'path=' + encodeURIComponent(Path);
 	var loadT = layer.load();
 	var totalSize = 0;
 	$.post('/files?action=GetDir', data, function(rdata) {
@@ -435,7 +435,7 @@ function GetFiles(Path) {
 			e.stopPropagation();
 		});
 		//禁用右键
-		$(".black-ip").bind("contextmenu",function(e){
+		$("#fileCon").bind("contextmenu",function(e){
 			return false;
 		});
 		bindselect();
@@ -561,7 +561,7 @@ function Batch(type,access){
 	var name = 'data';
 	for(var i=0;i<len;i++){
 		if(el[i].checked == true && el[i].value != 'on'){
-			data += '&'+name+'='+el[i].value;
+			data += '&'+name+'='+encodeURIComponent(el[i].value);
 		}
 	}
 	
@@ -693,7 +693,7 @@ function CreateFile(type, path) {
 			icon: 16,
 			time: 10000
 		});
-		$.post('/files?action=CreateFile', 'path=' + path + '/' + fileName, function(rdata) {
+		$.post('/files?action=CreateFile', 'path=' + encodeURIComponent(path + '/' + fileName), function(rdata) {
 			layer.closeAll();
 			layer.msg(rdata.msg, {
 				icon: rdata.status ? 1 : 2
@@ -730,7 +730,7 @@ function CreateDir(type, path) {
 			icon: 16,
 			time: 10000
 		});
-		$.post('/files?action=CreateDir', 'path=' + path + '/' + dirName, function(rdata) {
+		$.post('/files?action=CreateDir', 'path=' + encodeURIComponent(path + '/' + dirName), function(rdata) {
 			layer.closeAll();
 			layer.msg(rdata.msg, {
 				icon: rdata.status ? 1 : 2
@@ -764,7 +764,7 @@ function CreateDir(type, path) {
 function DeleteFile(fileName){
 	layer.confirm("您真的要删除["+fileName+"]吗?",{title:'删除文件',closeBtn:2,icon:3},function(){
 		layer.msg('正在执行,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
-		$.post('/files?action=DeleteFile', 'path=' + fileName, function(rdata) {
+		$.post('/files?action=DeleteFile', 'path=' + encodeURIComponent(fileName), function(rdata) {
 			layer.closeAll();
 			layer.msg(rdata.msg, {
 				icon: rdata.status ? 1 : 2
@@ -778,7 +778,7 @@ function DeleteFile(fileName){
 function DeleteDir(dirName){
 	layer.confirm("您真的要删除["+dirName+"]吗?",{title:'删除目录',closeBtn:2,icon:3},function(){
 		layer.msg('正在执行,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
-		$.post('/files?action=DeleteDir', 'path=' + dirName, function(rdata) {
+		$.post('/files?action=DeleteDir', 'path=' + encodeURIComponent(dirName), function(rdata) {
 			layer.closeAll();
 			layer.msg(rdata.msg, {
 				icon: rdata.status ? 1 : 2
@@ -814,7 +814,7 @@ function DownloadFile(action){
 		var fUrl = $("#mUrl").val();
 		fUrl = encodeURI(fUrl);
 		fpath = $("#dpath").val();
-		fname = $("#dfilename").val();
+		fname = encodeURIComponent($("#dfilename").val());
 		layer.closeAll();
 		layer.msg('正在添加队列，请稍候..',{time:0,icon:16});
 		$.post('/files?action=DownloadFile','path='+fpath+'&url='+fUrl+'&filename='+fname,function(rdata){
@@ -881,7 +881,7 @@ function ExecShell(action){
 		closeBtn: 2,
 		area: '70%', //宽高
 		title: '执行SHELL',
-		content: '<div class="zun-form-new">\
+		content: '<div class="bt-form">\
 					<div class="shellcode"><pre id="Result"></pre></div>\
 					<div class="line noborder">\
 					<input type="text" class="form-control" name="exec" id="mExec" value="" placeholder="SHELL命令" onkeydown="if(event.keyCode==13)ExecShell(1);" /><span class="shellbutton" onclick="ExecShell(1)">发送</span>\
@@ -907,8 +907,8 @@ function GetShellEcho(){
 function ReName(type, fileName) {
 	if (type == 1) {
 		var path = $("#DirPathPlace input").val();
-		var newFileName = path + '/' + $("#newFileName").val();
-		var oldFileName = path + '/' + fileName;
+		var newFileName = encodeURIComponent(path + '/' + $("#newFileName").val());
+		var oldFileName = encodeURIComponent(path + '/' + fileName);
 		layer.msg('正在处理...', {
 			icon: 16,
 			time: 10000
@@ -973,7 +973,7 @@ function PasteFile(fileName) {
 			icon: 16,
 			time: 10000
 		});
-		$.post('/files?action=CopyFile', 'sfile=' + copyName + '&dfile=' + path +'/'+ fileName, function(rdata) {
+		$.post('/files?action=CopyFile', 'sfile=' + encodeURIComponent(copyName) + '&dfile=' + encodeURIComponent(path +'/'+ fileName), function(rdata) {
 			layer.closeAll();
 			layer.msg(rdata.msg, {
 				icon: rdata.status ? 1 : 2
@@ -990,7 +990,7 @@ function PasteFile(fileName) {
 			icon: 16,
 			time: 10000
 		});
-		$.post('/files?action=MvFile', 'sfile=' + cutName + '&dfile=' + path + '/'+fileName, function(rdata) {
+		$.post('/files?action=MvFile', 'sfile=' + encodeURIComponent(cutName) + '&dfile=' + encodeURIComponent(path + '/'+fileName), function(rdata) {
 			layer.closeAll();
 			layer.msg(rdata.msg, {
 				icon: rdata.status ? 1 : 2
@@ -1008,15 +1008,15 @@ function Zip(dirName,submits) {
 	var path = $("#DirPathPlace input").val();
 	if(submits != undefined){
 		if(dirName.indexOf(',') == -1){
-			tmp = $("#sfile").val().split('/')
-			sfile = tmp[tmp.length-1]
+			tmp = $("#sfile").val().split('/');
+			sfile = encodeURIComponent(tmp[tmp.length-1]);
 		}else{
-			sfile = dirName;
+			sfile = encodeURIComponent(dirName);
 		}
 		
-		dfile = $("#dfile").val()
+		dfile = encodeURIComponent($("#dfile").val());
 		layer.msg('正在压缩...', {icon: 16,time: 0});
-		$.post('/files?action=Zip', 'sfile=' + sfile + '&dfile=' + dfile + '&type=tar&path='+path, function(rdata) {
+		$.post('/files?action=Zip', 'sfile=' + sfile + '&dfile=' + dfile + '&type=tar&path='+encodeURIComponent(path), function(rdata) {
 			layer.closeAll();
 			if(rdata == null || rdata == undefined){
 				layer.msg('服务器正在后台压缩文件,请稍候检查进度!',{icon:1});
@@ -1074,8 +1074,8 @@ function Zip(dirName,submits) {
 function UnZip(fileName,type) {
 	var path = $("#DirPathPlace input").val();
 	if(type.length ==3){
-		sfile = $("#sfile").val()
-		dfile = $("#dfile").val()
+		sfile = encodeURIComponent($("#sfile").val());
+		dfile = encodeURIComponent($("#dfile").val());
 		coding = $("select[name='coding']").val();
 		layer.msg('正在解压...', {icon: 16,time: 0});
 		$.post('/files?action=UnZip', 'sfile=' + sfile + '&dfile=' + dfile +'&type=' + type + '&coding=' + coding, function(rdata) {
@@ -1093,16 +1093,16 @@ function UnZip(fileName,type) {
 		closeBtn: 2,
 		area: '460px',
 		title: '压缩文件',
-		content: '<div class="zun-form-new">'
-					+'<div class="line noborder unzipdiv">'
-					+'<span class="tit">文件名</span><input type="text" class="form-control" id="sfile" value="' +fileName + '" placeholder="压缩文件名" />'
-					+'<span class="tit">解压到</span><input type="text" class="form-control" id="dfile" value="'+path + '" placeholder="解压到" />'
-					+'<span class="tit">编码</span><select name="coding">'
+		content: '<div class="bt-form pd20 pb70">'
+					+'<div class="line unzipdiv">'
+					+'<span class="tname">文件名</span><input type="text" class="bt-input-text" id="sfile" value="' +fileName + '" placeholder="压缩文件名" style="width:330px" /></div>'
+					+'<div class="line"><span class="tname">解压到</span><input type="text" class="bt-input-text" id="dfile" value="'+path + '" placeholder="解压到" style="width:330px" /></div>'
+					+'<div class="line"><span class="tname">编码</span><select class="bt-input-text" name="coding">'
 						+'<option value="UTF-8">UTF-8</option>'
 						+'<option value="gb18030">GBK</option>'
 					+'</select>'
 					+'</div>'
-					+'<div class="submit-btn">'
+					+'<div class="bt-form-submit-btn">'
 					+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>'
 					+'<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title" onclick="UnZip(\'' + fileName + '\',\''+type+'\')">解压</button>'
 					+'</div>'
@@ -1158,7 +1158,7 @@ function GetImage(fileName){
 
 //获取文件数据
 function GetFileBytes(fileName, fileSize){
-	window.open('/download?filename='+fileName);
+	window.open('/download?filename='+encodeURIComponent(fileName));
 }
 
 
@@ -1195,7 +1195,7 @@ function SetChmod(action,fileName){
 	if(action == 1){
 		var chmod = $("#access").val();
 		var chown = $("#chown").val();
-		var data = 'filename='+fileName+'&user='+chown+'&access='+chmod;
+		var data = 'filename='+ encodeURIComponent(fileName)+'&user='+chown+'&access='+chmod;
 		var loadT = layer.msg('正在设置..',{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('files?action=SetFileAccess',data,function(rdata){
 			layer.close(loadT);
@@ -1209,7 +1209,7 @@ function SetChmod(action,fileName){
 	
 	var toExec = fileName == '批量'?'Batch(3,1)':'SetChmod(1,\''+fileName+'\')';
 	
-	$.post('/files?action=GetFileAccess','filename='+fileName,function(rdata){
+	$.post('/files?action=GetFileAccess','filename='+encodeURIComponent(fileName),function(rdata){
 		layer.open({
 			type:1,
 			closeBtn: 2,
@@ -1359,7 +1359,7 @@ function RClickAll(e){
 }
 //取目录大小
 function GetPathSize(){
-	var path = $("#DirPathPlace input").val();
+	var path = encodeURIComponent($("#DirPathPlace input").val());
 	layer.msg("正在计算，请稍候",{icon:16,time:0,shade: [0.3, '#000']})
 	$.post("/files?action=GetDirSize","path="+path,function(rdata){
 		layer.closeAll();

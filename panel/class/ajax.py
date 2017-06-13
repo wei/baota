@@ -571,6 +571,13 @@ class ajax:
     SetHandler "proxy:unix:/tmp/php-cgi-%s.sock|fcgi://localhost"
 </Location>""" % (version,version);
             
+            try:
+                apacheVersion = public.readFile('/www/server/apache/version.pl').strip();
+                if apacheVersion == '2.2': opt = "";
+            except:
+                pass;
+            
+            
             phpinfoBody = '''
 <VirtualHost *:80>
 DocumentRoot "/www/server/phpinfo"
@@ -588,7 +595,6 @@ ServerName 127.0.0.2
 </VirtualHost>
 ''' % (opt,);
             public.writeFile(path,phpinfoBody);
-            
         public.serviceReload();
             
     

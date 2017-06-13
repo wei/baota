@@ -159,7 +159,10 @@ def serviceReload():
 
 def phpReload(version):
     #重载PHP配置
-    ExecShell('/etc/init.d/php-fpm-'+version+' reload')
+    if os.path.exists('/www/server/php/' + version + '/libphp5.so'):
+        ExecShell('/etc/init.d/httpd reload');
+    else:
+        ExecShell('/etc/init.d/php-fpm-'+version+' reload');
         
 def downloadFile(url,filename):
     import urllib

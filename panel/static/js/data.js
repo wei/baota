@@ -20,9 +20,9 @@ function getData(page,search) {
 			$("#DataPage").show();
 			for (var i = 0; i < data.data.length; i++) {
 				if(data.data[i].backup_count==0){
-					var isback = "<a href='javascript:;' class='btlink' onclick=\"DataDetails('"+data.data[i].id+"','"+data.data[i].name+"')\">无打包</a>"
+					var isback = "<a href='javascript:;' class='btlink' onclick=\"DataDetails('"+data.data[i].id+"','"+data.data[i].name+"')\">无备份</a>"
 				}else{
-					var isback = "<a href='javascript:;' class='btlink' onclick=\"DataDetails('"+data.data[i].id+"','"+data.data[i].name+"')\">有打包</a>"
+					var isback = "<a href='javascript:;' class='btlink' onclick=\"DataDetails('"+data.data[i].id+"','"+data.data[i].name+"')\">有备份</a>"
 				}
 				Body += "<tr><td><input type='checkbox' name='id' value='"+data.data[i].id+"'>\
 						<td>" + data.data[i].name + "</td>\
@@ -280,10 +280,10 @@ function DataDetails(id,dataname,page){
 					closeBtn: 2,
 					shift: 5,
 					shadeClose: false,
-					content:"<form class='zun-form' id='DataBackup' style='max-width:98%'>\
+					content:"<form class='bt-form pd15' id='DataBackup' style='padding-bottom: 0'>\
 							<button class='btn btn-success btn-sm' style='margin-right:10px' type='button' onclick=\"DataBackup(" + rdata.id + ",'" + dataname + "')\">打包</button>\
 							</form>\
-							<div class='divtable' style='margin:10px 17px 17px'><table width='100%' id='DataBackupList' class='table table-hover' style='margin-bottom:0'>\
+							<div class='divtable pd15'><table width='100%' id='DataBackupList' class='table table-hover' style='margin-bottom:0'>\
 							<thead><tr><th>备份名称</th><th>文件大小</th><th>备份时间</th><th class='text-right'>操作</th></tr></thead>\
 							<tbody id='DataBackupBody' class='list-list'>"+body+"</tbody>\
 							</table><div class='page'>"+frdata.page+"</div></div>"
@@ -504,9 +504,9 @@ function InputDatabase(name){
 				closeBtn: 2,
 				shift: 5,
 				shadeClose: false,
-				content: '<div style="padding:10px">'
+				content: '<div class="pd15">'
 							+'<button class="btn btn-default btn-sm" onclick="UploadFiles(\''+name+'\')">从本地上传</button>'
-							+'<div class="divtable" style="max-height:300px; overflow:auto">'
+							+'<div class="divtable mtb15" style="max-height:300px; overflow:auto">'
 								+'<table class="table table-hover">'
 									+'<thead>'
 										+'<tr>'
@@ -519,7 +519,7 @@ function InputDatabase(name){
 									+'<tbody>'+Body+'</tbody>'
 								+'</table>'
 							+'</div>'
-							+'<ul class="help-info-text">'
+							+'<ul class="help-info-text c7">'
 							   +'<li>仅支持sql、zip、(tar.gz|gz|tgz)</li>'
 							   +'<li>zip、tar.gz压缩包结构：test.zip或test.tar.gz压缩包内，必需包含test.sql</li>'
 							   +'<li>若文件过大，您还可以使用SFTP工具，将数据库文件上传到'+getCookie('backup_path')+'/database</li>'
@@ -599,7 +599,7 @@ function SetDatabaseAccess(dataName,action){
 								<option value='%' "+(rdata.msg[1] == '%'?'selected':'')+">所有人</option>\
 								<option value='ip' "+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'selected':'')+">指定IP</option>\
 							</select>\
-							<input class='bt-input-text' type='text' name='address' placeholder='请输入允许访问的IP地址' value='"+rdata.msg[1]+"' style='width:230px;"+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'':'display:none;')+"' />\
+							<input class='bt-input-text' type='text' name='address' placeholder='请输入允许访问的IP地址' value='"+rdata.msg[1]+"' style='width:218px;"+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'':'display:none;')+"' />\
 							</div>\
 							</div>\
 	                        <div class='bt-form-submit-btn'>\
