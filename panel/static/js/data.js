@@ -673,11 +673,12 @@ function AdminDatabase(name,username,password){
 		setTimeout(function(){ window.location.href = '/soft'; },3000);
 		return;
 	}
-	
-	$("#db").val(name);
-	$("#pma_username").val(username);
-	$("#pma_password").val(password);
-	$("#toPHPMyAdmin").submit();
+	var murl = $("#toPHPMyAdmin").attr('action');
+	layer.msg('正在打开phpMyAdmin...',{icon:16,shade: [0.3, '#000'],time:1000});
+	$.post(murl,'pma_username=' + username + '&pma_password=' + password,function(){},'jsonp');
+	setTimeout(function(){
+		window.open(murl);
+	},500);
 }
 
 $(".safe .tipstitle").mouseover(function(){

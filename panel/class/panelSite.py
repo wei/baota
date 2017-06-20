@@ -1921,6 +1921,7 @@ server
             
     #设置目录加密
     def SetHasPwd(self,get):
+        self.CloseHasPwd(get);
         if web.ctx.session.webserver == 'nginx':
             if get.siteName == 'phpmyadmin': 
                 get.configFile = self.setupPath + '/nginx/conf/nginx.conf';
@@ -1948,7 +1949,8 @@ server
         #处理Apache配置
         rep = 'SetOutputFilter'
         if conf.find(rep) != -1:
-            data = '''#AUTH_START
+            data = '''
+    #AUTH_START
     AuthType basic
     AuthName "Authorization "
     AuthUserFile %s
@@ -1978,7 +1980,7 @@ server
             else:
                 get.configFile = self.setupPath + '/panel/vhost/' + get.siteName + '.conf';
         conf = public.readFile(get.configFile);
-        rep = "#AUTH_START(.|\n)+#AUTH_END";
+        rep = "\n\s*#AUTH_START(.|\n)+#AUTH_END";
         conf = re.sub(rep,'',conf);
         public.writeFile(get.configFile,conf);
         public.serviceReload();

@@ -124,12 +124,12 @@ class panelPlugin:
                     arr[i]['versions'] = '5.3,5.4,5.5,5.6,7.0,7.1';
                 arr[i]['apache'] = apacheVersion;
                     
-            arr[i]['versions'] = self.checksSetup(arr[i]['name'],arr[i]['checks'],arr[i]['versions'])
+            arr[i]['versions'] = self.checksSetup(arr[i]['name'].replace('_soft',''),arr[i]['checks'],arr[i]['versions'])
             if arr[i]['tip'] == 'lib': 
-                arr[i]['path'] = self.__install_path + '/' + arr[i]['name']
+                arr[i]['path'] = self.__install_path + '/' + arr[i]['name'].replace('_soft','');
                 arr[i]['config'] = os.path.exists(arr[i]['path'] + '/index.html');
             else:
-                arr[i]['path'] = '/www/server/' + arr[i]['name'];
+                arr[i]['path'] = '/www/server/' + arr[i]['name'].replace('_soft','');
         arr.append(public.M('tasks').where("status!=?",('1',)).count());
         return arr;
     
@@ -164,7 +164,7 @@ class panelPlugin:
                 if name == 'php':
                     if os.path.exists(tm.replace('VERSION',v2)): status = True;
                 else:
-                    if os.path.exists(tm) and isStatus == 0: 
+                    if os.path.exists(tm) and isStatus == 0:
                         if len(versArr) > 1:
                             if v1.find(v) != -1:
                                 status = True
@@ -199,7 +199,7 @@ class panelPlugin:
                 if versions[i]['status']:
                     v4 = versions[i]['version'].replace('.','')
                     versions[i]['run'] = os.path.exists('/tmp/php-cgi-' + v4 + '.sock');
-                    versions[i]['fpm'] = versions[i]['run'];
+                    versions[i]['fpm'] = os.path.exists('/etc/init.d/php-fpm-'+v4);
                     phpConfig = self.GetPHPConfig(v4);
                     versions[i]['max'] = phpConfig['max']
                     versions[i]['maxTime'] = phpConfig['maxTime']
@@ -253,6 +253,12 @@ class panelPlugin:
         elif name == 'phpmyadmin':
             for i in range(len(versions)):
                 if versions[i]['status']: versions[i] = self.getPHPMyAdminStatus();
+        elif name == 'redis':
+            for i in range(len(versions)):
+                versions[i]['run'] = os.path.exists('/var/run/redis_6379.pid')
+        elif name == 'memcached':
+            for i in range(len(versions)):
+                versions[i]['run'] = os.path.exists('/var/run/memcached.pid')
         else:
             for i in range(len(versions)):
                 if versions[i]['status']: versions[i]['run'] = True;
@@ -267,6 +273,7 @@ class panelPlugin:
         configFile = setupPath + '/nginx/conf/nginx.conf';
         pauth = False
         pstatus = False
+        phpversion = "54";
         if os.path.exists(configFile):
             conf = public.readFile(configFile);
             rep = "listen\s+([0-9]+)\s*;";
@@ -315,8 +322,9 @@ class panelPlugin:
             tmp['phpversion'] = phpversion;
             tmp['port'] = phpport;
             tmp['auth'] = pauth;
-        except:
+        except Exception,ex:
             tmp['status'] = False;
+            tmp['error'] = str(ex);
         return tmp;
         
     #取PHP配置

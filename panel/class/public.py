@@ -6,7 +6,7 @@
 # +-------------------------------------------------------------------
 # | Author: 黄文良 <2879625666@qq.com>
 # +-------------------------------------------------------------------
-
+import os, sys, time
 def M(table):
     import db
     sql = db.Sql()
@@ -21,6 +21,19 @@ def md5(str):
         return m.hexdigest()
     except:
         return False
+
+#文件的MD5值
+def GetFileMd5(filename):
+    if not os.path.isfile(filename): return False;
+    myhash = hashlib.md5()
+    f = file(filename,'rb')
+    while True:
+        b = f.read(8096)
+        if not b :
+            break
+        myhash.update(b)
+    f.close()
+    return myhash.hexdigest();
 
 #取随机字符串
 def GetRandomString(length):
@@ -159,6 +172,7 @@ def serviceReload():
 
 def phpReload(version):
     #重载PHP配置
+    import os
     if os.path.exists('/www/server/php/' + version + '/libphp5.so'):
         ExecShell('/etc/init.d/httpd reload');
     else:
@@ -399,8 +413,91 @@ MySQL_Opt
     os.system(shellStr);
     WriteLog('守护程序', '检测到MySQL配置文件异常,可能导致mysqld服务无法正常启动,已自动修复!');
     return True;
+
+
+def checksum(source_string):
+    sum = 0
+    countTo = (len(source_string)/2)*2
+    count = 0
+    while count<countTo:
+        thisVal = ord(source_string[count + 1])*256 + ord(source_string[count])
+        sum = sum + thisVal
+        sum = sum & 0xffffffff
+        count = count + 2
+    if countTo<len(source_string):
+        sum = sum + ord(source_string[len(source_string) - 1])
+        sum = sum & 0xffffffff
+    sum = (sum >> 16) + (sum & 0xffff)
+    sum = sum + (sum >> 16)
+    answer = ~sum
+    answer = answer & 0xffff
+    answer = answer >> 8 | (answer << 8 & 0xff00)
+    return answer
+
+def receive_one_ping(my_socket, ID, timeout):
+    import struct,select
+    timeLeft = timeout
+    while True:
+        startedSelect = time.time()
+        whatReady = select.select([my_socket], [], [], timeLeft)
+        howLongInSelect = (time.time() - startedSelect)
+        if whatReady[0] == []: return
+        timeReceived = time.time()
+        recPacket, addr = my_socket.recvfrom(1024)
+        icmpHeader = recPacket[20:28]
+        type, code, checksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
+        if packetID == ID:
+            bytesInDouble = struct.calcsize("d")
+            timeSent = struct.unpack("d", recPacket[28:28 + bytesInDouble])[0]
+            return timeReceived - timeSent
+        timeLeft = timeLeft - howLongInSelect
+        if timeLeft <= 0: return
+
+def send_one_ping(my_socket, dest_addr, ID):
+    import socket,struct
+    dest_addr = socket.gethostbyname(dest_addr)
+    my_checksum = 0
+    ICMP_ECHO_REQUEST = 8
+    header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, my_checksum, ID, 1) #压包
+    bytesInDouble = struct.calcsize("d")
+    data = (192 - bytesInDouble) * "Q"
+    data = struct.pack("d", time.time()) + data
+    my_checksum = checksum(header + data)
+    header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, socket.htons(my_checksum), ID, 1)
+    packet = header + data
+    my_socket.sendto(packet, (dest_addr, 1)) # Don't know about the 1
+
+def do_one(dest_addr, timeout):
+    import socket
+    icmp = socket.getprotobyname("icmp")
+    try:
+        my_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
+    except socket.error, (errno, msg):
+        if errno == 1:
+            msg = msg + (
+            " - Note that ICMP messages can only be sent from processes"
+            " running as root."
+          )
+            raise socket.error(msg)
+        raise # raise the original error
     
-    
-    
-    
-        
+    my_ID = os.getpid() & 0xFFFF
+    send_one_ping(my_socket, dest_addr, my_ID)
+    delay = receive_one_ping(my_socket, my_ID, timeout)
+    my_socket.close()
+    return delay
+
+def get_url(timeout = 0.5):
+    import json
+    try:
+        nodeFile = '/www/server/panel/data/node.json';
+        node_list = json.loads(readFile(nodeFile));
+        mnode = None
+        for node in node_list:
+            node['ping'] = do_one(node['address'], timeout)
+            if not node['ping']: continue;
+            if not mnode: mnode = node;
+            if node['ping'] < mnode['ping']: mnode = node;
+        return mnode['protocol'] + mnode['address'] + ':' + mnode['port'];
+    except:
+        return False

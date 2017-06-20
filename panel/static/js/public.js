@@ -5,35 +5,35 @@ function PageData(c, h, j) {
 	var g = "";
 	if(h <= 1) {
 		b = "disabled";
-		a = 1
+		a = 1;
 	}
 	if(h >= c.page) {
 		g = "disabled";
-		e = c.page
+		e = c.page;
 	}
 	if(h < 4) {
-		var d = 1
+		var d = 1;
 	} else {
-		var d = h - 1
+		var d = h - 1;
 	}
 	var f = d + 3;
 	if((c.page - h) < 2) {
-		f = c.page + 1
+		f = c.page + 1;
 	}
 	var k = "<li class='" + b + "'><a href='javascript:;' onclick='" + j + "(1)'>&lt;&lt;</a></li><li class='prev " + b + "'><a href='javascript:;' onclick='" + j + "(" + a + ")'>&lt;</a></li>";
 	for(d; d < f; d++) {
 		if(d == h) {
-			k += "<li class='active'><a href='javascript:;' onclick='" + j + "(" + d + ")'>" + d + "</a></li>"
+			k += "<li class='active'><a href='javascript:;' onclick='" + j + "(" + d + ")'>" + d + "</a></li>";
 		} else {
-			k += "<li><a href='javascript:;' onclick='" + j + "(" + d + ")'>" + d + "</a></li>"
+			k += "<li><a href='javascript:;' onclick='" + j + "(" + d + ")'>" + d + "</a></li>";
 		}
 	}
 	k += "<li class='next " + g + "'><a href='javascript:;' onclick='" + j + "(" + e + ")'>&gt;</a></li>	<li class='" + g + "'><a href='javascript:;' onclick='" + j + "(" + c.page + ")'>&gt;&gt;</a></li>	<li class='disabled'><a href='javascript:;'>共 " + c.page + " 页  " + c.count + " 条记录</a></li>";
-	return k
+	return k;
 }
 $(document).ready(function() {
 	$(".sub-menu a.sub-menu-a").click(function() {
-		$(this).next(".sub").slideToggle("slow").siblings(".sub:visible").slideUp("slow")
+		$(this).next(".sub").slideToggle("slow").siblings(".sub:visible").slideUp("slow");
 	})
 });
 
@@ -53,16 +53,16 @@ function thenew(b, d, a, c) {
 						layer.msg("初始化成功", {
 							icon: 1
 						});
-						location.reload()
+						location.reload();
 					} else {
 						layer.msg("初始化失败，没有安装服务", {
 							icon: 2
 						});
-						layer.close(f)
+						layer.close(f);
 					}
-				})
+				});
 			}
-		})
+		});
 	} else {
 		window.location.href = "/Server?ssid=" + a
 	}
@@ -188,7 +188,7 @@ function getLocalTime(a) {
 }
 
 function ToSize(a) {
-	var d = [" B", " KB", " MB", " GB"];
+	var d = [" B", " KB", " MB", " GB", " TB", " PB"];
 	var e = 1024;
 	for(var b = 0; b < d.length; b++) {
 		if(a < e) {
@@ -498,7 +498,7 @@ function OnlineEditFile(k, f) {
 			icon: 16,
 			time: 0
 		});
-		$.post("/files?action=SaveFileBody", "data=" + h + "&path=" + f + "&encoding=" + a, function(m) {
+		$.post("/files?action=SaveFileBody", "data=" + h + "&path=" + encodeURIComponent(f) + "&encoding=" + a, function(m) {
 			if(k == 1) {
 				layer.closeAll()
 			}
@@ -583,7 +583,7 @@ function OnlineEditFile(k, f) {
 			};
 			d = j
 	}
-	$.post("/files?action=GetFileBody", "path=" + f, function(s) {
+	$.post("/files?action=GetFileBody", "path=" + encodeURIComponent(f), function(s) {
 		layer.close(e);
 		var u = ["utf-8", "GBK", "GB2312", "BIG5"];
 		var n = "";
@@ -635,8 +635,10 @@ function ServiceAdmin(a, b) {
 	if(!isNaN(a)) {
 		a = "php-fpm-" + a
 	}
+	a = a.replace('_soft','');
 	var c = "name=" + a + "&type=" + b;
 	var d = "";
+	
 	switch(b) {
 		case "stop":
 			d = "停止";
@@ -1112,12 +1114,12 @@ function GetReloads() {
 							c += f[e] + "<br>"
 						}
 						if(h.task[g].name.indexOf("扫描") != -1) {
-							b = "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>正在扫描 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + h.task[g].id + ")\">删除</a></span><span class='opencmd'></span><div class='cmd'>" + c + "</div></li>"
+							b = "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>正在扫描 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + h.task[g].id + ")\">取消</a></span><span class='opencmd'></span><div class='cmd'>" + c + "</div></li>"
 						} else {
-							b = "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>正在安装 <img src='/static/img/ing.gif'></span><div class='cmd'>" + c + "</div></li>"
+							b = "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>正在安装 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + h.task[g].id + ")\">取消</a></span><div class='cmd'>" + c + "</div></li>"
 						}
 					} else {
-						b = "<li><div class='line-progress' style='width:" + h.msg.pre + "%'></div><span class='titlename'>" + h.task[g].name + "<a style='margin-left:130px;'>" + (ToSize(h.msg.used) + "/" + ToSize(h.msg.total)) + "</a></span><span class='com-progress'>" + h.msg.pre + "%</span><span class='state'>下载中 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + h.task[g].id + ")\">删除</a></span></li>"
+						b = "<li><div class='line-progress' style='width:" + h.msg.pre + "%'></div><span class='titlename'>" + h.task[g].name + "<a style='margin-left:130px;'>" + (ToSize(h.msg.used) + "/" + ToSize(h.msg.total)) + "</a></span><span class='com-progress'>" + h.msg.pre + "%</span><span class='state'>下载中 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + h.task[g].id + ")\">取消</a></span></li>"
 					}
 				} else {
 					d += "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>等待 | <a style='color:green' href=\"javascript:RemoveTask(" + h.task[g].id + ')">删除</a></span></li>'
@@ -1174,8 +1176,10 @@ function RemoveTask(b) {
 		layer.close(a);
 		layer.msg(c.msg, {
 			icon: c.status ? 1 : 5
-		})
-	})
+		});
+	}).error(function(){
+		layer.msg('任务已取消!',{icon:1});
+	});
 }
 
 function GetTaskList(a) {
@@ -1190,9 +1194,9 @@ function GetTaskList(a) {
 				case "-1":
 					f = true;
 					if(g.data[d].type != "download") {
-						b = "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state'>正在安装 <img src='/static/img/ing.gif'></span><span class='opencmd'></span><pre class='cmd'></pre></li>"
+						b = "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state'>正在安装 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ")\">取消</a></span><span class='opencmd'></span><pre class='cmd'></pre></li>"
 					} else {
-						b = "<li><div class='line-progress' style='width:0%'></div><span class='titlename'>" + g.data[d].name + "<a id='speed' style='margin-left:130px;'>0.0M/12.5M</a></span><span class='com-progress'>0%</span><span class='state'>下载中 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ")\">删除</a></span></li>"
+						b = "<li><div class='line-progress' style='width:0%'></div><span class='titlename'>" + g.data[d].name + "<a id='speed' style='margin-left:130px;'>0.0M/12.5M</a></span><span class='com-progress'>0%</span><span class='state'>下载中 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ")\">取消</a></span></li>"
 					}
 					break;
 				case "0":

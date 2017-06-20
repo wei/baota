@@ -446,16 +446,29 @@ class ajax:
             #是否执行升级程序 
             if(updateInfo['force'] == True or hasattr(get,'toUpdate') == True or os.path.exists('data/autoUpdate.pl') == True):
                 setupPath = web.ctx.session.setupPath;
+                uptype = 'update';
+                betaIs = 'plugin/beta/config.conf';
+                betaStr = public.readFile(betaIs);
+                if betaStr:
+                    if betaStr.strip() != 'False': uptype = 'updateTest';
+                betaIs = 'data/beta.pl';
+                betaStr = public.readFile(betaIs);
+                if betaStr:
+                    if betaStr.strip() != 'False': uptype = 'updateTest';
+                httpUrl = public.get_url();
+                if httpUrl: updateInfo['downUrl'] =  + '/install/' + uptype + '/LinuxPanel-' + updateInfo['version'] + '.zip';
+                
                 public.downloadFile(updateInfo['downUrl'],'panel.zip');
+                if os.path.getsize('panel.zip') < 1048576: return public.returnMsg(False,"文件下载失败，请重试或在命令行手动升级!"+updateInfo['downUrl']);
                 public.ExecShell('unzip -o panel.zip -d ' + setupPath + '/');
                 import compileall
                 if os.path.exists(setupPath + '/panel/main.py'): public.ExecShell('rm -f ' + setupPath + '/panel/*.pyc');
                 if os.path.exists(setupPath + '/panel/class/common.py'): public.ExecShell('rm -f ' + setupPath + '/panel/class/*.pyc');
                 compileall.compile_dir(setupPath + '/panel');
                 compileall.compile_dir(setupPath + '/panel/class');
-                if os.path.exists(setupPath + '/panel/main.pyc'):
-                    public.ExecShell('rm -f ' + setupPath + '/panel/class/*.py');
-                    public.ExecShell('rm -f ' + setupPath + '/panel/*.py');
+                #if os.path.exists(setupPath + '/panel/main.pyc'):
+                    #public.ExecShell('rm -f ' + setupPath + '/panel/class/*.py');
+                    #public.ExecShell('rm -f ' + setupPath + '/panel/*.py');
                 public.ExecShell('rm -f panel.zip');
                 web.ctx.session.version = updateInfo['version']
                 return public.returnMsg(True,'成功升级到'+updateInfo['version']);

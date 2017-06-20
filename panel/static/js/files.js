@@ -463,8 +463,8 @@ function GetFiles(Path) {
 				}
 			}
 		});
+		PathPlaceBtn(rdata.PATH);
 	});
-	setTimeout('PathPlaceBtn(getCookie("Path"));',200);
 }
 //统计选择数量
 function totalFile(){
@@ -699,6 +699,7 @@ function CreateFile(type, path) {
 				icon: rdata.status ? 1 : 2
 			});
 			GetFiles($("#DirPathPlace input").val());
+			OnlineEditFile(0,path + '/' + fileName);
 		});
 		return;
 	}

@@ -17,7 +17,7 @@ class panelWaf:
         data = {}
         try:
             conf = public.readFile(self.__ConfigFile);
-            configs = ["attacklog","UrlDeny","Redirect","CookieMatch","postMatch","whiteModule","CCDeny","CCrate"]
+            configs = ["attacklog","UrlDeny","Redirect","CookieMatch","postMatch","whiteModule","CCDeny","CCrate"];
             #遍历单一配置
             for key in configs:
                 rep = key + "\s*=\s*\"([\w\/]+)\"\s*\n"
@@ -77,7 +77,7 @@ class panelWaf:
     def SetConfigString(self,get):
         conf = public.readFile(self.__ConfigFile);
         rep = get.name + "\s*=\s*\"[\w\/]+\"\s*\n"
-        conf = re.sub(rep,get.name + '="' + get.value + '"\n',conf)
+        conf = re.sub(rep,get.name + '="' + get.value.strip() + '"\n',conf)
         public.writeFile(self.__ConfigFile,conf);
         public.serviceReload();
         return public.returnMsg(True,"设置成功!");
@@ -96,7 +96,7 @@ class panelWaf:
             keyList = tmp;
         else:
             if get.value in keyList:return public.returnMsg(False,"失败，指定配置值已存在!");
-            keyList.append(get.value);
+            keyList.append(get.value.strip());
         keyStr = json.dumps(keyList).replace("[","{").replace("]","}");
         conf = re.sub(rep,get.name + "=" + keyStr + "\n",conf);
         public.writeFile(self.__ConfigFile,conf);

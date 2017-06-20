@@ -533,7 +533,7 @@ function DomainEdit(id, name,msg,status) {
 								<a href='#' class='btn btn-default btn-xs btn-zhm' style='top:15px;right:145px'>中文转码</a>\
 								<input type='hidden' id='newport' value='80' />\
 								<button type='button' class='btn btn-success btn-sm pull-right' style='margin:30px 35px 0 0' onclick=\"DomainAdd(" + id + ",'" + name + "',1)\">添加</button>\
-							<div class='divtable mtb15'>\
+							<div class='divtable mtb15' style='height:350px;overflow:auto'>\
 								<table class='table table-hover' width='100%'>\
 								<thead><tr><th>域名</th><th width='70px'>端口</th><th width='50px' class='text-center'>操作</th></tr></thead>\
 								<tbody id='checkDomain'>" + echoHtml + "</tbody>\

@@ -124,12 +124,23 @@ class system:
         data['mysql'] = tmp
         
         tmp = {}
+        tmp['setup'] = os.path.exists(self.setupPath +'/redis/runtest');
+        tmp['status'] = os.path.exists('/var/run/redis_6379.pid');
+        data['redis'] = tmp;
+        
+        tmp = {}
+        tmp['setup'] = os.path.exists('/usr/local/memcached/bin/memcached');
+        tmp['status'] = os.path.exists('/var/run/memcached.pid');
+        data['memcached'] = tmp;
+        
+        tmp = {}
         tmp['setup'] = os.path.exists(self.setupPath +'/pure-ftpd/bin/pure-pw');
         tmp['version'] = public.readFile(self.setupPath + '/pure-ftpd/version.pl')
         tmp['status'] = os.path.exists('/var/run/pure-ftpd.pid')
         data['pure-ftpd'] = tmp
         data['panel'] = self.GetPanelInfo()
         data['systemdate'] = public.ExecShell('date +"%Y-%m-%d %H:%M:%S %Z %z"')[0];
+        
         return data
     
     def GetPanelInfo(self):

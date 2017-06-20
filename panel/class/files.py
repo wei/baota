@@ -14,6 +14,7 @@ class files:
     #检查敏感目录
     def CheckDir(self,path):
         import web
+        path = path.replace('//','/');
         if path[-1:] == '/':
             path = path[:-1]
         
@@ -493,6 +494,7 @@ class files:
     def SetFileAccess(self,get,all = '-R'):
         get.filename = get.filename.encode('utf-8');
         try:
+            if not self.CheckDir(get.filename): return public.returnMsg(False,'请不要花样作死!');
             if not os.path.exists(get.filename):
                 return public.returnMsg(False,'指定文件或目录不存在!')
             os.system('chmod '+all+' '+get.access+" '"+get.filename+"'")
@@ -647,15 +649,30 @@ class files:
     
     #删除任务队列
     def RemoveTask(self,get):
-        status = public.M('tasks').where('id=?',(get.id,)).getField('status');
-        public.M('tasks').delete(get.id);
-        if status != -1:
+        try:
             name = public.M('tasks').where('id=?',(get.id,)).getField('name');
-            os.system("kill `ps -ef |grep 'python panelSafe.pyc'|grep -v grep|grep -v panelExec|awk '{print $2}'`");
-            os.system("kill `ps -ef |grep 'install_soft.sh'|grep -v grep|grep -v panelExec|awk '{print $2}'`");
-            os.system("kill `ps aux | grep 'python task.pyc$'|awk '{print $2}'`");
-            os.system('rm -f ' + name.replace('扫描目录[','').replace(']','') + '/scan.pl');
-            os.system('service bt start');
+            status = public.M('tasks').where('id=?',(get.id,)).getField('status');
+            public.M('tasks').delete(get.id);
+            if status == '-1':
+                os.system("kill `ps -ef |grep 'python panelSafe.pyc'|grep -v grep|grep -v panelExec|awk '{print $2}'`");
+                os.system("kill `ps -ef |grep 'install_soft.sh'|grep -v grep|grep -v panelExec|awk '{print $2}'`");
+                os.system("kill `ps aux | grep 'python task.pyc$'|awk '{print $2}'`");
+                os.system('''
+pids=`ps aux | grep 'sh'|grep -v grep|grep install|awk '{print $2}'`
+arr=($pids)
+
+for p in ${arr[@]}
+do
+    kill -9 $p
+done
+            ''');
+            
+                os.system('rm -f ' + name.replace('扫描目录[','').replace(']','') + '/scan.pl');
+                isTask = '/tmp/panelTask.pl';
+                public.writeFile(isTask,'True');
+                os.system('/etc/init.d/bt start');
+        except:
+            os.system('/etc/init.d/bt start');
         return public.returnMsg(True,'任务已删除!');
     
     #重新激活任务

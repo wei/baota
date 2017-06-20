@@ -96,7 +96,7 @@ function GetDiskInfo(){
 			if(rdata[i].path == '/' || rdata[i].path == '/www'){
 				if(rdata[i].size[2].indexOf('M') != -1){
 					$("#messageError").show();
-					$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span> 磁盘分区['+rdata[i].path+']的可用容量小于1GB，这可能会导致MySQL自动停止，面板无法访问等问题，请及时清理!</p>')
+					$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #ff4040; margin-right: 10px;"></span> 磁盘分区['+rdata[i].path+']的可用容量小于1GB，这可能会导致MySQL自动停止，面板无法访问等问题，请及时清理！</p>')
 				}
 			}
 			dBody = '<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2 mtb20 circle-box text-center">'
@@ -163,12 +163,12 @@ function getInfo() {
 		
 		if(memFree < 64){
 			$("#messageError").show();
-			$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span> 当前可用物理内存小于64M，这可能导致MySQL自动停止，站点502等错误，请尝试释放内存!</p>')
+			$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #ff4040; margin-right: 10px;"></span> 当前可用物理内存小于64M，这可能导致MySQL自动停止，站点502等错误，请尝试释放内存！</p>')
 		}
 		
 		if(info.isuser > 0){
 			$("#messageError").show();
-			$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span> 当前面板用户为admin,这可能为面板安全带来风险!<a style="color:green;" href="javascript:setUserName();"> [修改]</a></p>')
+			$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #ff4040; margin-right: 10px;"></span> 当前面板用户为admin,这可能为面板安全带来风险！<a class="btlink" href="javascript:setUserName();"> [修改]</a></p>')
 		}
 		setImg();
 	});
@@ -383,6 +383,10 @@ function checkUpdate(){
 	var loadT = layer.msg('正在获取版本信息...',{icon:16,time:0,shade: [0.3, '#000']});
 	$.get('/ajax?action=UpdatePanel&check=true',function(rdata){
 		layer.close(loadT);
+		if(rdata.status === false){
+			layer.msg(rdata.msg,{icon:1});
+			return;
+		}
 		layer.msg(rdata.msg,{icon:1});
 		if(rdata.version != undefined) updateMsg();
 	});
@@ -414,6 +418,10 @@ function updateVersion(version){
 	var loadT = layer.msg('正在升级面板..',{icon:16,time:0,shade: [0.3, '#000']});
 	$.get('/ajax?action=UpdatePanel','toUpdate=yes',function(rdata){
 		layer.closeAll();
+		if(rdata.status === false){
+			layer.msg(rdata.msg,{icon:5,time:5000});
+			return;
+		}
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
 		if(rdata.status){
 			$("#btversion").html(version);

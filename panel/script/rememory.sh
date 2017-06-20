@@ -53,9 +53,11 @@ fi
 if [ -f "/etc/init.d/pure-ftpd" ];then
 	pkill -9 pure-ftpd
 	sleep 0.3
-	/etc/init.d/pure-ftpd start
+	/etc/init.d/pure-ftpd start 2>/dev/null
 fi
 
+sync
+sleep 2
 sync
 echo 3 > /proc/sys/vm/drop_caches
 

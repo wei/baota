@@ -162,6 +162,12 @@ function configChange(type){
 		case 'tomcat':
 			fileName = '/www/server/tomcat/conf/server.xml';
 			break;
+		case 'memcached':
+			fileName = '/etc/init.d/memcached';
+			break;
+		case 'redis':
+			fileName = '/www/server/redis/redis.conf';
+			break;
 		default:
 			fileName = '/www/server/php/'+type+'/etc/php.ini';
 			break;
@@ -1135,6 +1141,7 @@ function PluginMan(name,title){
 		layer.open({
 			type: 1,
 			shift: 5,
+			offset: '20%',
 			closeBtn: 2,
 			area: '700px', //宽高
 			title: ''+ title,
