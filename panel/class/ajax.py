@@ -456,7 +456,7 @@ class ajax:
                 if betaStr:
                     if betaStr.strip() != 'False': uptype = 'updateTest';
                 httpUrl = public.get_url();
-                if httpUrl: updateInfo['downUrl'] =  + '/install/' + uptype + '/LinuxPanel-' + updateInfo['version'] + '.zip';
+                if httpUrl: updateInfo['downUrl'] =  httpUrl + '/install/' + uptype + '/LinuxPanel-' + updateInfo['version'] + '.zip';
                 
                 public.downloadFile(updateInfo['downUrl'],'panel.zip');
                 if os.path.getsize('panel.zip') < 1048576: return public.returnMsg(False,"文件下载失败，请重试或在命令行手动升级!"+updateInfo['downUrl']);

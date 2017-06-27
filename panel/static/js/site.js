@@ -1663,14 +1663,32 @@ function Rewrite(siteName){
 						<select id='myRewrite' class='bt-input-text mr20' name='rewrite' style='width:30%;'>"+rList+"</select>\
 						<span>规则转换工具：<a href='http://www.bt.cn/Tools' target='_blank' style='color:#20a53a'>Apache转Nginx</a>\</span>\
 						<textarea class='bt-input-text' style='height: 260px; width: 480px; line-height:18px;margin-top:10px;padding:5px;' id='rewriteBody'>"+fileBody.data+"</textarea></div>\
-						<button id='SetRewriteBtn' class='btn btn-success btn-sm' onclick=\"SetRewrite('"+filename+"')\">保存</button>\
-						<button id='SetRewriteBtnTel' class='btn btn-success btn-sm' onclick=\"SetRewriteTel()\">另存为模板</button>\
+						<button id='SetRewriteBtn' class='btn btn-success btn-sm'>保存</button>\
+						<button id='SetRewriteBtnTel' class='btn btn-success btn-sm'>另存为模板</button>\
 						<ul class='help-info-text c7 ptb15'>\
 							<li>请选择您的应用,若设置伪静态后,网站无法正常访问,请尝试设置回default或清空规则</li>\
 							<li>您可以对伪静态规则进行修改,修改完后保存即可!</li>\
 						</ul>\
 						</div>";
 			$("#webedit-con").html(webBakHtml);
+			
+			var editor = CodeMirror.fromTextArea(document.getElementById("rewriteBody"), {
+	            extraKeys: {"Ctrl-Space": "autocomplete"},
+				lineNumbers: true,
+				matchBrackets:true,
+			});
+			
+			$(".CodeMirror-scroll").css({"height":"300px","margin":0,"padding":0});
+			$("#SetRewriteBtn").click(function(){
+				$("#rewriteBody").empty();
+				$("#rewriteBody").text(editor.getValue());
+				SetRewrite(filename);
+			});
+			$("#SetRewriteBtnTel").click(function(){
+				$("#rewriteBody").empty();
+				$("#rewriteBody").text(editor.getValue());
+				SetRewriteTel();
+			});
 			
 			$("#myRewrite").change(function(){
 				var rewriteName = $(this).val();
@@ -1683,6 +1701,7 @@ function Rewrite(siteName){
 				
 				$.post('/files?action=GetFileBody','path='+rpath,function(fileBody){
 					 $("#rewriteBody").val(fileBody.data);
+					 editor.setValue(fileBody.data);
 				});
 			});
 		});
