@@ -92,12 +92,7 @@ function service(name,status){
 
 //更新软件列表
 function updateSoftList(){
-	loadT = layer.msg('正在从云端获取数据，请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
-	$.get('/plugin?action=getCloudPlugin',function(rdata){
-		layer.close(loadT);
-		GetSList();
-		layer.msg(rdata.msg,{icon:rdata.status?1:1});
-	});
+	$.get('/plugin?action=getCloudPlugin',function(rdata){ });
 }
 
 //php上传限制
@@ -1737,3 +1732,5 @@ $(function(){
 		setInterval(function(){GetSList(true);},5000);
 	}
 });
+
+updateSoftList();

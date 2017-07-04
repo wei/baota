@@ -10,6 +10,7 @@ $(function(){
 			$(this).val(65535);
 		}
 	});
+	
 	$("#twoPassword").click(function(){
 		layer.open({
 			type: 1,
@@ -96,4 +97,72 @@ function Set502(){
 		layer.close(loadT);
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
 	});	
+}
+
+//绑定修改宝塔账号
+function bindBTName(a,type){
+	var titleName = "绑定宝塔账号";
+	if(type == "b"){
+		btn = "<button type='button' class='btn btn-success btn-sm' onclick=\"bindBTName(1,'b')\">绑定</button>";
+	}
+	else{
+		titleName = "修改绑定宝塔账号";
+		btn = "<button type='button' class='btn btn-success btn-sm' onclick=\"bindBTName(1,'c')\">修改</button>";
+	}
+	if(a == 1) {
+		p1 = $("#p1").val();
+		p2 = $("#p2").val();
+		$.post(" /ssl?action=GetToken", "username=" + p1 + "&password=" + p2, function(b) {
+			if(b.status) {
+				layer.closeAll();
+				layer.msg(b.msg, {
+					icon: 1
+				});
+			} else {
+				layer.msg(b.msg, {
+					icon: 2
+				})
+			}
+		});
+		return
+	}
+	layer.open({
+		type: 1,
+		area: "290px",
+		title: titleName,
+		closeBtn: 2,
+		shift: 5,
+		shadeClose: false,
+		content: "<div class='bt-form pd20 pb70'><div class='line'><span class='tname'>账号</span><div class='info-r'><input class='bt-input-text' type='text' name='username' id='p1' value='' placeholder='宝塔官网账户' style='width:100%'/></div></div><div class='line'><span class='tname'>密码</span><div class='info-r'><input class='bt-input-text' type='password' name='password' id='p2' value='' placeholder='宝塔官网密码' style='width:100%'/></div></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button> "+btn+"</div></div>"
+	})
+}
+//解除绑定宝塔账号
+function UnboundBt(){
+	var name = $("input[name='btusername']").val();
+	layer.confirm("您确定要解除绑定："+name+" ？",{closeBtn:2,title:"解除绑定"},function(){
+		$.get("/ssl?action=DelToken",function(b){
+			layer.msg(b.msg,{icon:b.status? 1:2})
+		})
+	})
+}
+$.get("/ssl?action=GetUserInfo",function(b){
+	if(b.status){
+		$("input[name='btusername']").val(b.data.username);
+		$("input[name='btusername']").next().text("修改").attr("onclick","bindBTName(2,'c')").css({"margin-left":"-82px"});
+		$("input[name='btusername']").next().after('<span class="btn btn-xs btn-success" onclick="UnboundBt()" style="vertical-align: 0px;">解绑</span>');
+	}
+	else{
+		$("input[name='btusername']").next().text("绑定").attr("onclick","bindBTName(2,'b')").removeAttr("style");
+	}
+});
+
+
+
+//设置API
+function apiSetup(){
+	var loadT = layer.msg('正在获取Token...',{icon:16,time:0,shade: [0.3, '#000']});
+	$.get('/api?action=GetToken',function(rdata){
+		layer.close(loadT);
+		
+	});
 }

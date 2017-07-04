@@ -32,5 +32,8 @@ for i in range(count):
 
 newFileName=oldFileName+'_'+time.strftime("%Y-%m-%d_%I%M%S")+'.log'
 shutil.move(oldFileName,newFileName)
-os.system("kill -USR1 `cat /www/server/nginx/logs/nginx.pid`");
+if os.path.exists('/www/server/nginx/logs/nginx.pid'):
+    os.system("kill -USR1 `cat /www/server/nginx/logs/nginx.pid`");
+else:
+    os.system('/etc/init.d/httpd reload');
 print '|---已切割日志到:'+newFileName

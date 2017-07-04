@@ -584,6 +584,10 @@ function OnlineEditFile(k, f) {
 			d = j
 	}
 	$.post("/files?action=GetFileBody", "path=" + encodeURIComponent(f), function(s) {
+		if(s.status === false){
+			layer.msg(s.msg,{icon:5});
+			return;
+		}
 		layer.close(e);
 		var u = ["utf-8", "GBK", "GB2312", "BIG5"];
 		var n = "";
@@ -983,17 +987,17 @@ function setPassword(a) {
 		}
 		
 		//准备弱口令匹配元素
-		var checks = ['admin','root','123','456','789','123456','456789','654321','qweasd','asdfghjkl','zxcvbnm','user','password','passwd','panel','linux','centos','ubuntu','abc','xyz'];
+		var checks = ['admin','root','123123123','12345678','45678910','87654321','qweasd','asdfghjkl','zxcvbnm','user','password','passwd','panel','linux','centos','ubuntu','abc','xyz'];
 		pchecks = 'abcdefghijklmnopqrstuvwxyz1234567890';
 		for(var i=0;i<pchecks.length;i++){
-			checks.push(pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]);
+			checks.push(pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]);
 		}
 		
 		//检查弱口令
 		cps = p1.toLowerCase();
 		var isError = "";
 		for(var i=0;i<checks.length;i++){
-			if(cps.indexOf(checks[i]) != -1){
+			if(cps == checks[i]){
 				isError += '['+checks[i]+'] ';
 			}
 		}

@@ -19,7 +19,7 @@ class panelAdmin(panelSetup):
         if not hasattr(web.ctx.session,'brand'):
             web.ctx.session.brand = '宝塔'
             web.ctx.session.product = 'Linux面板'
-            web.ctx.session.version = "4.7.0"
+            web.ctx.session.version = "4.8.0"
             web.ctx.session.rootPath = '/www'
             web.ctx.session.webname = '宝塔Linux面板'
             web.ctx.session.downloadUrl = 'http://download.bt.cn';

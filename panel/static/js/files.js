@@ -465,6 +465,7 @@ function GetFiles(Path) {
 		});
 		PathPlaceBtn(rdata.PATH);
 	});
+	setTimeout(getCookie('path'),200);
 }
 //统计选择数量
 function totalFile(){
@@ -817,7 +818,7 @@ function DownloadFile(action){
 		fpath = $("#dpath").val();
 		fname = encodeURIComponent($("#dfilename").val());
 		layer.closeAll();
-		layer.msg('正在添加队列，请稍候..',{time:0,icon:16});
+		layer.msg('正在添加队列，请稍候..',{time:0,icon:16,shade: [0.3, '#000']});
 		$.post('/files?action=DownloadFile','path='+fpath+'&url='+fUrl+'&filename='+fname,function(rdata){
 			layer.closeAll();
 			GetFiles(fpath);
@@ -972,7 +973,7 @@ function PasteFile(fileName) {
 	if (copyName != 'null' && copyName != undefined) {
 		layer.msg('正在复制...', {
 			icon: 16,
-			time: 10000
+			time: 0,shade: [0.3, '#000']
 		});
 		$.post('/files?action=CopyFile', 'sfile=' + encodeURIComponent(copyName) + '&dfile=' + encodeURIComponent(path +'/'+ fileName), function(rdata) {
 			layer.closeAll();
@@ -989,7 +990,7 @@ function PasteFile(fileName) {
 	if (cutName != 'null' && cutName != undefined) {
 		layer.msg('正在移动...', {
 			icon: 16,
-			time: 10000
+			time: 0,shade: [0.3, '#000']
 		});
 		$.post('/files?action=MvFile', 'sfile=' + encodeURIComponent(cutName) + '&dfile=' + encodeURIComponent(path + '/'+fileName), function(rdata) {
 			layer.closeAll();
@@ -1016,7 +1017,8 @@ function Zip(dirName,submits) {
 		}
 		
 		dfile = encodeURIComponent($("#dfile").val());
-		layer.msg('正在压缩...', {icon: 16,time: 0});
+		layer.closeAll();
+		layer.msg('正在压缩...', {icon: 16,time: 0,shade: [0.3, '#000']});
 		$.post('/files?action=Zip', 'sfile=' + sfile + '&dfile=' + dfile + '&type=tar&path='+encodeURIComponent(path), function(rdata) {
 			layer.closeAll();
 			if(rdata == null || rdata == undefined){
@@ -1078,7 +1080,8 @@ function UnZip(fileName,type) {
 		sfile = encodeURIComponent($("#sfile").val());
 		dfile = encodeURIComponent($("#dfile").val());
 		coding = $("select[name='coding']").val();
-		layer.msg('正在解压...', {icon: 16,time: 0});
+		layer.closeAll();
+		layer.msg('正在解压...', {icon: 16,time: 0,shade: [0.3, '#000']});
 		$.post('/files?action=UnZip', 'sfile=' + sfile + '&dfile=' + dfile +'&type=' + type + '&coding=' + coding, function(rdata) {
 			layer.closeAll();
 			layer.msg(rdata.msg, {icon: rdata.status ? 1 : 2});

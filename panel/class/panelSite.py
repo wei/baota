@@ -373,7 +373,10 @@ class panelSite:
             
             #写配置文件
             self.NginxDomain(get)
-            self.ApacheDomain(get)
+            try:
+                self.ApacheDomain(get)
+            except:
+                pass;
             
             #检查配置文件
             isError = public.checkWebConfig()
@@ -556,6 +559,19 @@ class panelSite:
         public.serviceReload();
         return public.returnMsg(True,'删除成功!')
     
+    #检查域名是否解析
+    def CheckDomainPing(self,get):
+        try:
+            epass = public.GetRandomString(32);
+            spath = get.path + '/.well-known/pki-validation';
+            if not os.path.exists(spath): os.system("mkdir -p '" + spath + "'");
+            public.writeFile(spath + '/fileauth.txt',epass);
+            result = public.httpGet('http://' + get.domain + '/.well-known/pki-validation/fileauth.txt');
+            if result == epass: return True
+            return False
+        except:
+            return False
+    
     #保存第三方证书
     def SetSSL(self,get):
         type = get.type;
@@ -585,7 +601,19 @@ class panelSite:
         #写入配置文件
         self.SetSSLConf(get);
         public.serviceReload();
-        public.ExecShell('rm -f ' + path + '/README');
+        
+        #清理旧的证书链
+        if os.path.exists(path+'/README'):
+            public.ExecShell('rm -rf ' + path)
+            public.ExecShell('rm -rf ' + path + '-00*')
+            public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName)
+            public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName + '-00*')
+            public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '.conf')
+            public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '-00*.conf')
+            public.ExecShell('rm -f ' + path + '/README');
+            
+        if os.path.exists(path + '/partnerOrderId'): os.system('rm -f ' + path + '/partnerOrderId');
+        
         return public.returnMsg(True,'证书已保存!');
         
     
@@ -602,35 +630,45 @@ class panelSite:
         
         #定义证书存放目录       
         path =   '/etc/letsencrypt/live/'+ get.siteName;
-        
-        #检查是否自定义证书
-        if not os.path.exists(path+'/README'):
-            #清理旧的证书链
-            public.ExecShell('rm -rf ' + path)
-            public.ExecShell('rm -rf ' + path + '-00*')
-            public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName)
-            public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName + '-00*')
-            public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '.conf')
-            public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '-00*.conf')
-            
         csrpath = path+"/fullchain.pem";                    #生成证书路径
         keypath = path+"/privkey.pem";                      #密钥文件路径
                 
         #准备基础信息
         actionstr = get.updateOf
         siteInfo = public.M('sites').where('name=?',(get.siteName,)).field('id,name,path').find();
-        domains = public.M('domain').where("pid=?",(siteInfo['id'],)).field('name').select()
+        get.path = siteInfo['path'];
+        #domains = public.M('domain').where("pid=?",(siteInfo['id'],)).field('name').select()
+        import json
+        domains = json.loads(get.domains)
         execStr = 'echo ' + actionstr + '|' + self.setupPath + "/panel/certbot-auto certonly -n --email 287962566@qq.com --agree-tos --webroot -w "+siteInfo['path'];
+        
+        #确定主域名顺序
+        domainsTmp = []
+        domainsTmp.append(get.siteName);
+        for domainTmp in domains:
+            if domainTmp == get.siteName: continue;
+            domainsTmp.append(domainTmp);
+        domains = domainsTmp;
+        
         #构造参数
         domainCount = 0
+        errorDomain = "";
         for domain in domains:
-            if public.checkIp(domain['name']): continue;
-            if domain['name'].find('*') != -1: continue;
-            execStr += ' -d ' + domain['name']
+            if public.checkIp(domain): continue;
+            if domain.find('*') != -1: continue;
+            get.domain = domain;
+            if not self.CheckDomainPing(get): errorDomain += '<li>' + domain + '</li>';
+            execStr += ' -d ' + domain
             domainCount += 1
         
+        if errorDomain: return public.returnMsg(False,'以下域名解析错误，或解析未生效!<span style="color:red;"><br>'+errorDomain+'</span>');
         #获取域名数据
-        if domainCount == 0: return public.returnMsg(False,'请至少为您的站点绑定一个常规域名(不包括IP地址与泛域名)')
+        if domainCount == 0: return public.returnMsg(False,'请选择域名(不包括IP地址与泛域名)')
+        
+        #检查是否自定义证书
+        partnerOrderId =   path + '/partnerOrderId';
+        if os.path.exists(partnerOrderId): public.ExecShell('rm -rf ' + partnerOrderId);
+        self.CloseSSLConf(get);
         
         result = public.ExecShell(execStr);
         
@@ -725,20 +763,21 @@ class panelSite:
                     phpConfig = "";
                     apaOpt = "Order allow,deny\n\t\tAllow from all";
                 else:
-                    vName = "";
-                    rep = "php-cgi-([0-9]{2,3})\.sock";
-                    version = re.search(rep,conf).groups()[0]
-                    if len(version) < 2: return public.returnMsg(False,'PHP版本获取失败!')
-                    phpConfig ='''
+                    try:
+                        vName = "";
+                        rep = "php-cgi-([0-9]{2,3})\.sock";
+                        version = re.search(rep,conf).groups()[0]
+                        if len(version) < 2: return public.returnMsg(False,'PHP版本获取失败!')
+                        phpConfig ='''
     #PHP
     <FilesMatch \\.php$>
             SetHandler "proxy:unix:/tmp/php-cgi-%s.sock|fcgi://localhost"
     </FilesMatch>
     ''' % (version,);
-                    apaOpt = 'Require all granted';
+                        apaOpt = 'Require all granted';
                 
                 
-                sslStr = '''%s<VirtualHost *:443>
+                        sslStr = '''%s<VirtualHost *:443>
     ServerAdmin webmasterexample.com
     DocumentRoot "%s"
     ServerName SSL.%s
@@ -761,12 +800,12 @@ class panelSite:
     </Directory>
 </VirtualHost>''' % (vName,path,siteName,domains,web.ctx.session.logsPath + '/' + siteName,web.ctx.session.logsPath + '/' + siteName,siteName,siteName,phpConfig,path,apaOpt,index)
                     
-            
-                conf = conf+"\n"+sslStr;
-                self.apacheAddPort('443');
-                if web.ctx.session.webserver == 'apache': shutil.copyfile(file, '/tmp/backup.conf')
-                public.writeFile(file,conf)
-    
+                        conf = conf+"\n"+sslStr;
+                        self.apacheAddPort('443');
+                        if web.ctx.session.webserver == 'apache': shutil.copyfile(file, '/tmp/backup.conf')
+                        public.writeFile(file,conf)
+                    except:
+                        pass
         isError = public.checkWebConfig();
         if(isError != True):
             shutil.copyfile('/tmp/backup.conf',file)
@@ -813,6 +852,15 @@ class panelSite:
             conf = conf.replace(rep,'');
             public.writeFile(file,conf)
         
+        #清理证书链
+        path =   '/etc/letsencrypt/live/'+ get.siteName;
+        public.ExecShell('rm -rf ' + path)
+        public.ExecShell('rm -rf ' + path + '-00*')
+        public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName)
+        public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName + '-00*')
+        public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '.conf')
+        public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '-00*.conf')
+        
         public.WriteLog('网站管理', '网站['+siteName+']关闭SSL成功!');
         return public.returnMsg(True,'SSL已关闭!');
     
@@ -825,7 +873,8 @@ class panelSite:
         siteName = get.siteName
         path =   '/etc/letsencrypt/live/'+ siteName;
         type = 0;
-        if os.path.exists(path+'/README'):  type = 1;       
+        if os.path.exists(path+'/README'):  type = 1;
+        if os.path.exists(path+'/partnerOrderId'):  type = 2;
         csrpath = path+"/fullchain.pem";                    #生成证书路径  
         keypath = path+"/privkey.pem";                      #密钥文件路径
         key = public.readFile(keypath);

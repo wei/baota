@@ -13,7 +13,7 @@ class system:
     def __init__(self):
         self.setupPath = web.ctx.session.setupPath;
     
-    def GetConcifInfo(self):
+    def GetConcifInfo(self,get=None):
         #取环境配置信息
         if not hasattr(web.ctx.session, 'config'):
             web.ctx.session.config = public.M('config').where("id=?",('1',)).field('webserver,sites_path,backup_path,status,mysql_root').find();
@@ -143,7 +143,7 @@ class system:
         
         return data
     
-    def GetPanelInfo(self):
+    def GetPanelInfo(self,get=None):
         #取面板配置
         address = public.GetLocalIp()
         try:
@@ -197,7 +197,7 @@ class system:
         return data
 
     
-    def GetSystemTotal(self):
+    def GetSystemTotal(self,get):
         #取系统统计信息
         data = self.GetMemInfo()
         cpu = self.GetCpuInfo()
@@ -247,7 +247,7 @@ class system:
         memInfo['memRealUsed'] = memInfo['memTotal'] - memInfo['memFree'] - memInfo['memBuffers'] - memInfo['memCached']
         return memInfo
     
-    def GetDiskInfo(self):
+    def GetDiskInfo(self,get):
         return self.GetDiskInfo2();
         #取磁盘分区信息
         diskIo = psutil.disk_partitions()
@@ -280,29 +280,65 @@ class system:
             diskInfo.append(arr);
         return diskInfo
     
-    def GetNetWork(self):
+    def GetNetWork(self,get):
         #取网络流量信息
         networkIo = psutil.net_io_counters()[:4]
-        if not hasattr(web.ctx.session,'up'):
+        if not hasattr(web.ctx.session,'otime'):
             web.ctx.session.up   =  networkIo[0]
             web.ctx.session.down =  networkIo[1]
+            web.ctx.session.otime = time.time();
+        
+        ntime = time.time();
         networkInfo = {}
         networkInfo['upTotal']   = networkIo[0]
         networkInfo['downTotal'] = networkIo[1]
-        networkInfo['up']        = round(float(networkIo[0] - web.ctx.session.up) / 1024 / 3,2)
-        networkInfo['down']      = round(float(networkIo[1] - web.ctx.session.down) / 1024 / 3,2)
+        networkInfo['up']        = round(float(networkIo[0] - web.ctx.session.up) / 1024 / (ntime - web.ctx.session.otime),2)
+        networkInfo['down']      = round(float(networkIo[1] - web.ctx.session.down) / 1024 / (ntime - web.ctx.session.otime),2)
         networkInfo['downPackets'] =networkIo[3]
         networkInfo['upPackets']   =networkIo[2]
         
         web.ctx.session.up   =  networkIo[0]
         web.ctx.session.down =  networkIo[1]
+        web.ctx.session.otime = ntime;
         
         networkInfo['cpu'] = self.GetCpuInfo()
         return networkInfo
     
-    def ServiceAdmin(self):
+    def GetNetWorkOld(self):
+        #取网络流量信息
+        import time;
+        pnet = public.readFile('/proc/net/dev');
+        rep = '([^\s]+):[\s]{0,}(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)';
+        pnetall = re.findall(rep,pnet);
+        networkInfo = {}
+        networkInfo['upTotal'] = networkInfo['downTotal'] = networkInfo['up'] = networkInfo['down'] = networkInfo['downPackets'] = networkInfo['upPackets'] = 0;
+        for pnetInfo in pnetall:
+            if pnetInfo[0] == 'io': continue;
+            networkInfo['downTotal'] += int(pnetInfo[1]);
+            networkInfo['downPackets'] += int(pnetInfo[2]);
+            networkInfo['upTotal'] += int(pnetInfo[9]);
+            networkInfo['upPackets'] += int(pnetInfo[10]);
+        
+        if not hasattr(web.ctx.session,'otime'):
+            web.ctx.session.up   =  networkInfo['upTotal']
+            web.ctx.session.down =  networkInfo['downTotal']
+            web.ctx.session.otime = time.time();
+        ntime = time.time();
+        tmpDown = networkInfo['downTotal'] - web.ctx.session.down;
+        tmpUp = networkInfo['upTotal'] - web.ctx.session.up;
+        networkInfo['down'] = str(round(float(tmpDown) / 1024 / (ntime - web.ctx.session.otime),2));
+        networkInfo['up']   = str(round(float(tmpUp) / 1024 / (ntime - web.ctx.session.otime),2));
+        if networkInfo['down'] < 0: networkInfo['down'] = 0;
+        if networkInfo['up'] < 0: networkInfo['up'] = 0;
+        
+        web.ctx.session.up   =  networkInfo['upTotal'];
+        web.ctx.session.down =  networkInfo['downTotal'];
+        web.ctx.session.otime = ntime;
+        networkInfo['cpu'] = self.GetCpuInfo()
+        return networkInfo;
+    
+    def ServiceAdmin(self,get):
         #服务管理
-        get = web.input()
         
         if get.name == 'mysqld': public.CheckMyCnf();
         
@@ -371,13 +407,13 @@ class system:
             public.WriteLog("环境设置", execStr+"执行成功!");
         return public.returnMsg(True,'执行成功');
     
-    def RestartServer(self):
+    def RestartServer(self,get):
         if not public.IsRestart(): return public.returnMsg(False,'请等待所有安装任务完成再执行!');
         public.ExecShell("sync && /etc/init.d/bt stop && init 6 &");
         return public.returnMsg(True,'命令发送成功!');
     
     #释放内存
-    def ReMemory(self):
+    def ReMemory(self,get):
         os.system('sync');
         scriptFile = 'script/rememory.sh'
         if not os.path.exists(scriptFile):
@@ -386,7 +422,7 @@ class system:
         return self.GetMemInfo();
     
     #重启面板     
-    def ReWeb(self):
+    def ReWeb(self,get):
         if not public.IsRestart(): return public.returnMsg(False,'请等待所有安装任务完成再执行!');
         public.ExecShell('/etc/init.d/bt restart &')
         return True

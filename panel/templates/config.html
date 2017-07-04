@@ -30,6 +30,7 @@ $def with (data)
 			<div class="setbox bgw mtb15">
 				<div class="title c6 plr15">
 					<h3 class="f16">设置</h3>
+					<button class="btn btn-default btn-sm" style="float: right;margin-top: 10px;" onclick="apiSetup()">API设置</button>
 				</div>
 				<div class="important-title" style="margin: 20px 30px 0px;">
 					<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>为了提高安全，请修改别名、默认端口、面板用户和密码！</p>
@@ -46,6 +47,7 @@ $def with (data)
 						<p class="mtb15"><span class="set-tit text-right">服务器时间</span><input id="systemdate" name="systemdate" class="inputtxt bt-input-text disable" type="text" value="$data['systemdate']"><span class="modify btn btn-xs btn-success" onclick="syncDate()">同步</span></p>
 						<p class="mtb15"><span class="set-tit text-right">面板用户</span><input name="username_" class="inputtxt bt-input-text disable" type="text" value="$web.ctx.session.username" disabled><span class="modify btn btn-xs btn-success" onclick="setUserName()">修改</span></p>
 						<p class="mtb15"><span class="set-tit text-right">面板密码</span><input name="password_" class="inputtxt bt-input-text disable" type="text" value="******" disabled><span class="modify btn btn-xs btn-success" onclick="setPassword()">修改</span></p>
+						<p class="mtb15"><span class="set-tit text-right">绑定宝塔账号</span><input name="btusername" class="inputtxt bt-input-text disable" type="text" value="" disabled><span class="modify btn btn-xs btn-success mr5" onclick="bindBTName(2,'b')">绑定</span></p>
 					</form>
 					<div class="bt-submit set-submit">保存</div>
 				</div>

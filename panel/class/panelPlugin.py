@@ -466,11 +466,16 @@ class panelPlugin:
     
     #从云端获取插件列表
     def getCloudPlugin(self,get):
+        if hasattr(web.ctx.session,'getCloudPlugin'): return public.returnMsg(True,'您的插件列表已经是最新版本-1!');
         import json
         if not hasattr(web.ctx.session,'downloadUrl'): web.ctx.session.downloadUrl = 'http://download.bt.cn';
         
-        downloadUrl = web.ctx.session.downloadUrl + '/install/lib/listTest.json'
-        data = json.loads(public.httpGet(downloadUrl))
+        try:
+            downloadUrl = public.get_url() + '/install/lib/listTest.json'
+            data = json.loads(public.httpGet(downloadUrl))
+        except:
+            downloadUrl = web.ctx.session.downloadUrl + '/install/lib/listTest.json'
+            data = json.loads(public.httpGet(downloadUrl))
         
         n = i = j = 0;
         for pluginInfo in data:
@@ -488,6 +493,7 @@ class panelPlugin:
                 get.name = pluginInfo['name'];
                 self.install(get);
         
+        web.ctx.session.getCloudPlugin = True;
         if not n and not j: return public.returnMsg(False,'您的插件列表已经是最新版本!');
         return public.returnMsg(True,'成功从云端获取['+str(n)+']个新插件,['+str(j)+']个插件更新!');
     

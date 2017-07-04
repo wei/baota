@@ -24,6 +24,9 @@ class database:
             
             if len(data_name) > 16: return public.returnMsg(False, '数据库名不能大于16位')
             
+            #reg = "\w*[a-zA-Z]+\w*";
+            #if not re.match(reg, data_name): return public.returnMsg(False,'数据库名称不能为纯数字组成!')
+            
             reg = "^\w+$"
             if not re.match(reg, data_name): return public.returnMsg(False,'数据库名不能带有特殊符号!')
             
@@ -48,13 +51,13 @@ class database:
                     }
             codeStr=wheres[codeing]
             #添加MYSQL
-            result = panelMysql.panelMysql().execute("create database " + data_name + " DEFAULT CHARACTER SET " + codeing + " COLLATE " + codeStr)
+            result = panelMysql.panelMysql().execute("create database `" + data_name + "` DEFAULT CHARACTER SET " + codeing + " COLLATE " + codeStr)
             isError=self.IsSqlError(result)
             if  isError != None: return isError
             panelMysql.panelMysql().execute("drop user '" + username + "'@'localhost'")
             panelMysql.panelMysql().execute("drop user '" + username + "'@'" + address + "'")
-            panelMysql.panelMysql().execute("grant all privileges on " + data_name + ".* to '" + username + "'@'localhost' identified by '" + data_pwd + "'")
-            panelMysql.panelMysql().execute("grant all privileges on " + data_name + ".* to '" + username + "'@'" + address + "' identified by '" + data_pwd + "'")
+            panelMysql.panelMysql().execute("grant all privileges on `" + data_name + "`.* to '" + username + "'@'localhost' identified by '" + data_pwd + "'")
+            panelMysql.panelMysql().execute("grant all privileges on `" + data_name + "`.* to '" + username + "'@'" + address + "' identified by '" + data_pwd + "'")
             panelMysql.panelMysql().execute("flush privileges")
             
             
@@ -87,7 +90,7 @@ class database:
             #if name == 'bt_default': return public.returnMsg(False,'不能删除宝塔默认数据库!')
             accept = public.M('databases').where("id=?",(id,)).getField('accept')
             #删除MYSQL
-            result = panelMysql.panelMysql().execute("drop database " + name)
+            result = panelMysql.panelMysql().execute("drop database `" + name + "`")
             isError=self.IsSqlError(result)
             if  isError != None: return isError
             panelMysql.panelMysql().execute("drop user '" + name + "'@'localhost'")

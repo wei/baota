@@ -13,9 +13,8 @@
 #------------------------------
 import sys,web,io,os
 global panelPath
-panelPath = '/www/server/panel/';
-os.chdir(panelPath)
-sys.path.append(panelPath + "class/")
+
+sys.path.append("class/")
 import common,public,data,page,db
 
 from collections import OrderedDict
@@ -50,7 +49,10 @@ urls = (
     '/test'    , 'panelTest',
     '/close'   , 'panelClose',
     '/plugin'  , 'panelPlugin',
-    '/waf'     , 'panelWaf'
+    '/waf'     , 'panelWaf',
+    '/ssl'     , 'panelSSL',
+    '/api'     , 'panelApi',
+    '/hook'    , 'panelHook'
 )
 
 
@@ -64,11 +66,10 @@ web.config.session_parameters['ignore_expiry'] = True
 web.config.session_parameters['ignore_change_ip'] = True
 web.config.session_parameters['secret_key'] = 'www.bt.cn'
 web.config.session_parameters['expired_message'] = 'Session expired'
-dbfile = '/dev/shm/session.db';
-src_sessiondb = '/www/server/panel/data/session.db';
+dbfile = 'data/session.db';
+src_sessiondb = 'data/session.db';
 if not os.path.exists(src_sessiondb): 
     print db.Sql().dbfile('session').create('session');
-if not os.path.exists('/dev/shm'): os.system('mkdir -p /dev/shm');
 if not os.path.exists(dbfile): os.system("\\cp -a -r "+src_sessiondb+" " + dbfile);
 sessionDB = web.database(dbn='sqlite', db=dbfile)
 session = web.session.Session(app, web.session.DBStore(sessionDB,'sessions'), initializer={'login': False});
@@ -78,7 +79,7 @@ def session_hook():
 app.add_processor(web.loadhook(session_hook))
 
 #初始化模板引擎
-render = web.template.render(panelPath + 'templates/',base='template',globals={'session': session,'web':web})
+render = web.template.render('templates/',base='template',globals={'session': session,'web':web})
 
 class panelIndex(common.panelAdmin):
     def GET(self):
@@ -147,7 +148,7 @@ class panelLogin(common.panelSetup):
             session.code = False
             
         data = sql.table('users').getField('username')
-        render = web.template.render(panelPath + 'templates/',globals={'session': session})
+        render = web.template.render('templates/',globals={'session': session})
         return render.login(data)
         
     
@@ -486,10 +487,10 @@ class panelSystem(common.panelAdmin):
         import system,json
         get = web.input()
         sysObject = system.system()
-        defs = ('GetNetWork','GetDiskInfo','GetCpuInfo','GetBootTime','GetSystemVersion','GetMemInfo','GetSystemTotal','GetConcifInfo','ServiceAdmin','ReWeb','RestartServer','ReMemory')
+        defs = ('GetNetWorkOld','GetNetWork','GetDiskInfo','GetCpuInfo','GetBootTime','GetSystemVersion','GetMemInfo','GetSystemTotal','GetConcifInfo','ServiceAdmin','ReWeb','RestartServer','ReMemory')
         for key in defs:
             if key == get.action:
-                fun = 'sysObject.'+key+'()'
+                fun = 'sysObject.'+key+'(get)'
                 return public.getJson(eval(fun))
         return public.returnJson(False,'指定参数无效!')
 
@@ -518,7 +519,7 @@ class panelInstall:
         data = {}
         data['status'] = os.path.exists('install.pl');
         data['username'] = public.M('users').where('id=?',(1,)).getField('username');
-        render = web.template.render(panelPath + 'templates/',globals={'session': session})
+        render = web.template.render('templates/',globals={'session': session})
         return render.install(data);
     
     def POST(self):
@@ -534,7 +535,7 @@ class panelInstall:
         data = {}
         data['status'] = os.path.exists('install.pl');
         data['username'] = get.bt_username
-        render = web.template.render(panelPath + 'templates/',globals={'session': session})
+        render = web.template.render( 'templates/',globals={'session': session})
         return render.install(data);
     
 
@@ -626,12 +627,51 @@ class panelWaf(common.panelAdmin):
         defs = ('GetConfig','SetConfigString','SetConfigList','GetWafConf','SetWafConf','SetStatus','updateWaf')
         return publicObject(toObject,defs);
     
+class panelSSL(common.panelAdmin):
+    def GET(self):
+        return self.funObj()
+        
+    def POST(self):
+        return self.funObj()
+    
+    def funObj(self):
+        import panelSSL
+        toObject = panelSSL.panelSSL()
+        defs = ('DelToken','GetToken','GetUserInfo','GetOrderList','GetDVSSL','Completed','SyncOrder','GetSSLInfo','downloadCRT','GetSSLProduct')
+        result = publicObject(toObject,defs);
+        return result;
+    
+class panelApi(common.panelAdmin):
+    def GET(self):
+        return self.funObj()
+        
+    def POST(self):
+        return self.funObj()
+    
+    def funObj(self):
+        import panelApi
+        toObject = panelApi.panelApi()
+        defs = ('GetToken','SetToken','CreateToken','SetTokenStatus')
+        result = publicObject(toObject,defs);
+        return result;
 
+class panelHook:
+    def GET(self):
+        return self.pobject();
+    def POST(self):
+        return self.pobject();
+    
+    def pobject(self):
+        get = web.input()
+        if not os.path.exists('/www/server/panel/plugin/webhook'): return public.getJson(public.returnMsg(False,'请先安装WebHook组件!'));
+        sys.path.append('/www/server/panel/plugin/webhook');
+        import webhook_main
+        return public.getJson(webhook_main.webhook_main().RunHook(get));
 
 class panelClose:
     def GET(self):
         if not os.path.exists('data/close.pl'): raise web.seeother('/');
-        render = web.template.render(panelPath + 'templates/',globals={'session': session})
+        render = web.template.render('templates/',globals={'session': session})
         return render.close(web.ctx.session.version)
 
 
