@@ -255,7 +255,7 @@ function GetFiles(Path) {
 		if(rdata.DIR == null) rdata.DIR = [];
 		for (var i = 0; i < rdata.DIR.length; i++) {
 			var fmp = rdata.DIR[i].split(";");
-			var cnametext =fmp[0];
+			var cnametext =fmp[0] + fmp[5];
 			if(cnametext.length>20){
 				cnametext = cnametext.substring(0,20)+'...'
 			}
@@ -270,7 +270,7 @@ function GetFiles(Path) {
 					$("#set_icon").removeClass("active");
 					Body += "<tr class='folderBoxTr' data-path='" + rdata.PATH + "/" + fmp[0] + "' filetype='dir'>\
 						<td><input type='checkbox' name='id' value='"+fmp[0]+"'></td>\
-						<td class='column-name'><span class='cursor' onclick=\"GetFiles('" + rdata.PATH + "/" + fmp[0] + "')\"><span class='ico ico-folder'></span><a class='text' title='" + fmp[0] + "'>" + cnametext + "</a></span></td>\
+						<td class='column-name'><span class='cursor' onclick=\"GetFiles('" + rdata.PATH + "/" + fmp[0] + "')\"><span class='ico ico-folder'></span><a class='text' title='" + fmp[0] + fmp[5] + "'>" + cnametext + "</a></span></td>\
 						<td>"+ToSize(fmp[1])+"</td>\
 						<td>"+getLocalTime(fmp[2])+"</td>\
 						<td>"+fmp[3]+"</td>\
@@ -300,7 +300,7 @@ function GetFiles(Path) {
 			var displayZip = isZip(fmp[0]);
 			var bodyZip = '';
 			var download = '';
-			var cnametext =fmp[0];
+			var cnametext =fmp[0] + fmp[5];
 			if(cnametext.length>48){
 				cnametext = cnametext.substring(0,48)+'...'
 			}
@@ -324,7 +324,7 @@ function GetFiles(Path) {
 			totalSize +=  parseInt(fmp[1]);
 			if(getCookie("rank")=="a"){
 				Body += "<tr class='folderBoxTr' data-path='" + rdata.PATH +"/"+ fmp[0] + "' filetype='" + fmp[0] + "'><td><input type='checkbox' name='id' value='"+fmp[0]+"'></td>\
-						<td class='column-name'><span class='ico ico-"+(GetExtName(fmp[0]))+"'></span><a class='text' title='" + fmp[0] + "'>" + cnametext + "</a></td>\
+						<td class='column-name'><span class='ico ico-"+(GetExtName(fmp[0]))+"'></span><a class='text' title='" + fmp[0] + fmp[5] + "'>" + cnametext + "</a></td>\
 						<td>" + (ToSize(fmp[1])) + "</td>\
 						<td>" + ((fmp[2].length > 11)?fmp[2]:getLocalTime(fmp[2])) + "</td>\
 						<td>"+fmp[3]+"</td>\

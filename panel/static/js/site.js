@@ -1220,7 +1220,7 @@ function ShowRewrite(rdata){
 	for(var i=0;i<rdata.rlist.length;i++){
 		rList += "<option value='"+rdata.rlist[i]+"'>"+rdata.rlist[i]+"</option>";
 	}
-	var webBakHtml = "<div class='c5'>\
+	var webBakHtml = "<div class='c5 plr15'>\
 						<div class='line'>\
 						<select class='bt-input-text mr20' id='myRewrite' name='rewrite' style='width:30%;'>"+rList+"</select>\
 						<span>规则转换工具：<a href='http://www.bt.cn/Tools' target='_blank' style='color:#20a53a'>Apache转Nginx</a>\</span>\
@@ -1431,11 +1431,11 @@ function closeSSLHTML(txt,siteName){
 
 //宝塔SSL
 function BTssl(type,id,siteName){
-	var a = '<div class="btssl"><div class="alert alert-warning" style="padding:10px">未绑定宝塔账号，请注册绑定，绑定宝塔账号可实现一键部署SSL</div>'
-			+ '<div class="line mtb10"><span class="tname text-right mr20">宝塔账号</span><input id="btusername" class="bt-input-text" type="text" name="bt_panel_username" style="width:200px" ></div>'
+	var a = '<div class="btssl"><div class="alert alert-warning" style="padding:10px">未绑定宝塔账号，请注册绑定，绑定宝塔账号(非论坛账号)可实现一键部署SSL</div>'
+			+ '<div class="line mtb10"><span class="tname text-right mr20">宝塔账号</span><input id="btusername" class="bt-input-text" type="text" name="bt_panel_username" maxlength="11" style="width:200px" ><i style="font-style:normal;margin-left:10px;color:#999"></i></div>'
 			+ '<div class="line mtb10"><span class="tname text-right mr20">密码</span><input id="btpassword" class="bt-input-text" type="password" name="bt_panel_password" style="width:200px" ></div>'
 			+ '<div class="line mtb15" style="margin-left:100px"><button class="btn btn-success btn-sm mr20 btlogin">登录</button><button class="btn btn-success btn-sm" onclick="javascript:window.open(\'http://new.bt.cn/register.html\')">注册宝塔账号</button></div>'
-			+ '<ul class="help-info-text c7 ptb15"><li>宝塔SSL需要注册宝塔账号并通过实名认证方可使用</li><li>已有宝塔账号请登录绑定</li><li>宝塔SSL申请的是免费版TrustAsia DV SSL CA - G5(1年)</li></ul>'
+			+ '<ul class="help-info-text c7 ptb15"><li>证书申请需要注册宝塔账号并通过实名认证方可使用</li><li>已有宝塔账号请登录绑定</li><li>宝塔SSL申请的是TrustAsia DV SSL CA - G5 原价：1900元/1年，宝塔用户免费！</li><li>一年满期后免费重新颁发</li></ul>'
 			+ '</div>';
 	var b = '<div class="btssl"><div class="line mtb15"><span class="tname text-center">域名</span><select id="domainlist" class="bt-input-text" style="width:220px"></select></div>'
 		  + '<div class="line mtb15" style="margin-left:80px"><button class="btn btn-success btn-sm btsslApply">申请</button></div>'
@@ -1461,15 +1461,25 @@ function BTssl(type,id,siteName){
 				}
 				else{
 					$(".tab-con").html(a);
+					$("#btusername").blur(function(){
+						if(!(/^1(3|4|5|7|8)\d{9}$/.test($(this).val()))){ 
+							$("#btusername").css("border","1px solid #e53451");
+							$("#btusername").next("i").html("请输入手机号码");
+						}
+						else{
+							$("#btusername").removeAttr("style").css("width","200px");
+							$("#btusername").next("i").empty();
+						}
+					});
 					$(".btlogin").click(function(){
 						var data = "username="+$("#btusername").val()+"&password="+$("#btpassword").val();
-						$.post("/ssl?action=GetToken",data,function(rdata){
-							if(rdata.status){
-								layer.msg(rdata.msg,{icon:1});
+						$.post("/ssl?action=GetToken",data,function(tdata){
+							if(tdata.status){
+								layer.msg(tdata.msg,{icon:1});
 								BTssl('b',id,siteName);
 							}
 							else{
-								layer.msg(rdata.msg,{icon:2})
+								layer.msg(tdata.msg,{icon:2})
 							}
 						})
 					})
@@ -1528,53 +1538,83 @@ function BTssl(type,id,siteName){
 			});
 			break;
 		case 'lets':
-			if(getCookie('letssl') == 1){
-				$.post('site?action=GetSSL','siteName='+siteName,function(rdata){
-					var lets = '<div class="myKeyCon ptb15"><div class="ssl-con-key pull-left mr20">密钥(KEY)<br><textarea id="key" class="bt-input-text" readonly="" style="background-color:#f6f6f6">'+rdata.key+'</textarea></div>'
-						+ '<div class="ssl-con-key pull-left">证书(CRT/PEM)<br><textarea id="csr" class="bt-input-text" readonly="" style="background-color:#f6f6f6">'+rdata.csr+'</textarea></div>'
-						+ '</div>'
-						+ '<ul class="help-info-text c7 pull-left"><li>已为您自动生成Let\'s Encrypt免费证书；</li><li>如需使用其他SSL,请切换其他证书后粘贴您的KEY以及CRT内容，然后保存即可。</li></ul>';
-					$(".tab-con").html(lets);
-				});
-				return;
-			}
-			$(".tab-con").html(lets);
-			var opt='';
-			$.get('/data?action=getData&table=domain&list=True&search=' + id, function(rdata) {
-				for(var i=0;i<rdata.length;i++){
-					var isIP = isValidIP(rdata[i].name);
-					var x = isContains(rdata[i].name, '*');
-					if(!isIP && !x){
-						opt+='<li style="line-height:26px"><input type="checkbox" style="margin-right:5px; vertical-align:-2px" value="'+rdata[i].name+'">'+rdata[i].name+'</li>'
-					}
-				}
-				$("#ymlist").html(opt);
-				$("#ymlist li input").click(function(e){
-					e.stopPropagation();
-				})
-				$("#ymlist li").click(function(){
-					var o = $(this).find("input");
-					if(o.prop("checked")){
-						o.prop("checked",false)
-					}
-					else{
-						o.prop("checked",true);
-					}
-				})
-				$(".letsApply").click(function(){
-					var c = $("#ymlist input[type='checkbox']");
-					var str = [];
-					var domains = '';
-					for(var i=0; i<c.length; i++){
-						if(c[i].checked){
-							str.push(c[i].value);
+			$.get("/ssl?action=GetUserInfo",function(sdata){
+				if(!sdata.status){
+					$(".tab-con").html(a);
+					$("#btusername").blur(function(){
+						if(!(/^1(3|4|5|7|8)\d{9}$/.test($(this).val()))){ 
+							$("#btusername").css("border","1px solid #e53451");
+							$("#btusername").next("i").html("请输入手机号码");
 						}
+						else{
+							$("#btusername").removeAttr("style").css("width","200px");
+							$("#btusername").next("i").empty();
+						}
+					});
+					$(".btlogin").click(function(){
+						var data = "username="+$("#btusername").val()+"&password="+$("#btpassword").val();
+						$.post("/ssl?action=GetToken",data,function(tdata){
+							if(tdata.status){
+								layer.msg(tdata.msg,{icon:1});
+								BTssl('lets',id,siteName);
+							}
+							else{
+								layer.msg(tdata.msg,{icon:2})
+							}
+						})
+					})
+				}
+				else{
+					if(getCookie('letssl') == 1){
+						$.post('site?action=GetSSL','siteName='+siteName,function(rdata){
+							var lets = '<div class="myKeyCon ptb15"><div class="ssl-con-key pull-left mr20">密钥(KEY)<br><textarea id="key" class="bt-input-text" readonly="" style="background-color:#f6f6f6">'+rdata.key+'</textarea></div>'
+								+ '<div class="ssl-con-key pull-left">证书(CRT/PEM)<br><textarea id="csr" class="bt-input-text" readonly="" style="background-color:#f6f6f6">'+rdata.csr+'</textarea></div>'
+								+ '</div>'
+								+ '<ul class="help-info-text c7 pull-left"><li>已为您自动生成Let\'s Encrypt免费证书；</li><li>如需使用其他SSL,请切换其他证书后粘贴您的KEY以及CRT内容，然后保存即可。</li></ul>';
+							$(".tab-con").html(lets);
+						});
+						return;
 					}
-					domains = JSON.stringify(str);
-					newSSL(siteName,domains);
-					
-				})
-			})
+					$(".tab-con").html(lets);
+					var opt='';
+					$.get('/data?action=getData&table=domain&list=True&search=' + id, function(rdata) {
+						for(var i=0;i<rdata.length;i++){
+							var isIP = isValidIP(rdata[i].name);
+							var x = isContains(rdata[i].name, '*');
+							if(!isIP && !x){
+								opt+='<li style="line-height:26px"><input type="checkbox" style="margin-right:5px; vertical-align:-2px" value="'+rdata[i].name+'">'+rdata[i].name+'</li>'
+							}
+						}
+						$("#ymlist").html(opt);
+						$("#ymlist li input").click(function(e){
+							e.stopPropagation();
+						})
+						$("#ymlist li").click(function(){
+							var o = $(this).find("input");
+							if(o.prop("checked")){
+								o.prop("checked",false)
+							}
+							else{
+								o.prop("checked",true);
+							}
+						})
+						$(".letsApply").click(function(){
+							var c = $("#ymlist input[type='checkbox']");
+							var str = [];
+							var domains = '';
+							for(var i=0; i<c.length; i++){
+								if(c[i].checked){
+									str.push(c[i].value);
+								}
+							}
+							domains = JSON.stringify(str);
+							newSSL(siteName,domains);
+							
+						})
+					});
+				}
+			});
+			
 			break;
 		case 'other':
 			$(".tab-con").html(other);
@@ -1729,7 +1769,7 @@ function OcSSL(action,siteName){
 			return;
 		}
 		
-		
+		setCookie('letssl',0);
 		$.post('/system?action=ServiceAdmin','name='+getCookie('serverType')+'&type=reload',function(result){
 			//SetSSL(siteName);
 			if(!result.status) layer.msg(result.msg,{icon:2});
@@ -1767,7 +1807,9 @@ function newSSL(siteName,domains){
 				  + "<p>详情:"+rdata.out[i].Detail+"</p>"
 				  + "<hr />"
 		}
-		
+		if(rdata.err[0].length > 10) data += '<p style="color:red;">' + rdata.err[0].replace(/\n/g,'<br>') + '</p>';
+		if(rdata.err[1].length > 10) data += '<p style="color:red;">' + rdata.err[1].replace(/\n/g,'<br>') + '</p>';
+		setCookie('letssl',1);
 		layer.msg(data,{icon:2,time:0,shade:0.3,shadeClose:true});
 		
 	});

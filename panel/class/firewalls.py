@@ -210,7 +210,7 @@ class firewalls:
             if version.find(' 7.') != -1:
                 status = public.ExecShell("systemctl status sshd.service | grep 'dead'")
             else:
-                status = public.ExecShell("/etc/init.d/sshd status | grep 'stopped'")
+                status = public.ExecShell("/etc/init.d/sshd status | grep -e 'stopped' -e '已停'")
             
 #       return status;
         if len(status[0]) > 3:

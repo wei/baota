@@ -37,7 +37,6 @@ class data:
         try:
             table = get.table;
             data = self.GetSql(get);
-            
             SQL = public.M(table);
             
             if table == 'backup':
@@ -54,15 +53,11 @@ class data:
                 if table == 'sites':
                     for i in range(len(data['data'])):
                         data['data'][i]['domain'] = SQL.table('domain').where("pid=?",(data['data'][i]['id'],)).count()
-                
-            #返回
+                    
+                #返回
             return data;
-        except:
-            if(self.__ERROR_COUNT > 3): return [];
-            import time
-            time.sleep(1);
-            self.__ERROR_COUNT += 1
-            self.getData(get);
+        except Exception,ex:
+            return str(ex);
     
     '''
      * 取数据库行
@@ -144,7 +139,8 @@ class data:
         #实例化分页类
         page = page.Page();
         
-        
+        del(get.data)
+        del(get.zunfile)
         info = {}
         info['count'] = count
         info['row']   = limit
@@ -158,6 +154,7 @@ class data:
             info['return_js']   = get.tojs
         
         data['where'] = where;
+        
         #获取分页数据
         data['page'] = page.GetPage(info)
         #取出数据

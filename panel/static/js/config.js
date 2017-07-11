@@ -166,3 +166,39 @@ function apiSetup(){
 		
 	});
 }
+
+
+//设置模板
+function setTemplate(){
+	var template = $("select[name='template']").val();
+	var loadT = layer.msg('正在处理,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	$.post('/config?action=SetTemplates','templates='+template,function(rdata){
+		layer.close(loadT);
+		layer.msg(rdata.msg,{icon:rdata.status?1:5});
+		if(rdata.status === true){
+			$.get('/system?action=ReWeb',function(){});
+			setTimeout(function(){
+				window.location.reload();
+			},3000);
+		}
+	});
+}
+
+//设置面板SSL
+function setPanelSSL(){
+	var loadT = layer.msg('正在安装并设置SSL组件,这可能需要几分钟时间...',{icon:16,time:0,shade: [0.3, '#000']});
+	$.post('/config?action=SetPanelSSL','',function(rdata){
+		layer.close(loadT);
+		layer.msg(rdata.msg,{icon:rdata.status?1:5});
+		if(rdata.status === true){
+			$.get('/system?action=ReWeb',function(){});
+			setTimeout(function(){
+				window.location.href = ((window.location.protocol.indexOf('https') != -1)?'http://':'https://') + window.location.host + window.location.pathname;
+			},3000);
+		}
+	});
+}
+
+if(window.location.protocol.indexOf('https') != -1){
+	$("#panelSSL").attr('checked',true);
+}

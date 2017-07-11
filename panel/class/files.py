@@ -89,29 +89,34 @@ class files:
         get.path = get.path.encode('utf-8');
         #if get.path.find('/www/wwwroot') == -1: get.path = '/www/wwwroot';
         if not os.path.exists(get.path): get.path = '/www'
+        #return get.path;
         
         import pwd 
         dirnames = []
         filenames = []
         for filename in os.listdir(get.path):
+            filePath = (get.path+'/'+filename).encode('utf8')
+            link = '';
+            if os.path.islink(filePath): 
+                filePath = os.readlink(filePath);
+                link = ' -> ' + filePath;
+                if not os.path.exists(filePath): filePath = get.path + '/' + filePath;
+                if not os.path.exists(filePath): continue;
+            
+            stat = os.stat(filePath)
+            accept = str(oct(stat.st_mode)[-3:])
+            mtime = str(int(stat.st_mtime))
+            user = ''
             try:
-                filePath = (get.path+'/'+filename).encode('utf8')
-                if os.path.islink(filePath): continue
-                stat = os.stat(filePath)
-                accept = str(oct(stat.st_mode)[-3:])
-                mtime = str(int(stat.st_mtime))
-                user = ''
-                try:
-                    user = pwd.getpwuid(stat.st_uid).pw_name
-                except:
-                    user = str(stat.st_uid)
-                size = str(stat.st_size)
-                if os.path.isdir(filePath):
-                    dirnames.append(filename+';'+size+';'+mtime+';'+accept+';'+user);
-                else:
-                    filenames.append(filename+';'+size+';'+mtime+';'+accept+';'+user);
+                user = pwd.getpwuid(stat.st_uid).pw_name
             except:
-                continue;
+                user = str(stat.st_uid)
+            size = str(stat.st_size)
+            if os.path.isdir(filePath):
+                dirnames.append(filename+';'+size+';'+mtime+';'+accept+';'+user+';'+link);
+            else:
+                filenames.append(filename+';'+size+';'+mtime+';'+accept+';'+user+';'+link);
+            
         
         data = {}
         data['DIR'] = sorted(dirnames);
@@ -324,7 +329,7 @@ class files:
         if not os.path.exists(get.sfile):
             return public.returnMsg(False,'指定目录不存在!')
         
-        if not self.CheckDir(get.sfile):
+        if not self.CheckDir(get.dfile):
             return public.returnMsg(False,'请不要花样作死!');
         
         import shutil
@@ -541,6 +546,7 @@ class files:
             for key in get.data:
                 try:
                     filename = get.path+'/'+key.encode('utf-8');
+                    if not self.CheckDir(filename): return public.returnMsg(False,'请不要花样作死!');
                     os.system('chmod -R '+get.access+" '"+filename+"'")
                     os.system('chown -R '+get.user+':'+get.user+" '"+filename+"'")
                 except:
@@ -548,7 +554,6 @@ class files:
             public.WriteLog('文件管理','批量设置权限成功!')
             return public.returnMsg(True,'批量设置权限成功!')
         else:
-            
             import shutil
             isRecyle = os.path.exists('data/recycle_bin.pl')
             path = get.path
@@ -558,6 +563,7 @@ class files:
                     get.path = filename;
                     if not os.path.exists(filename): continue
                     if os.path.isdir(filename):
+                        if not self.CheckDir(filename): return public.returnMsg(False,'请不要花样作死!');
                         if isRecyle:
                             self.Mv_Recycle_bin(get)
                         else:
@@ -581,7 +587,7 @@ class files:
         import shutil,web
         i = 0;
         get.path = get.path.encode('utf-8');
-        
+        if not self.CheckDir(get.path): return public.returnMsg(False,'请不要花样作死!');
         if get.type == '1':
             for key in web.ctx.session.selected.data:
                 i += 1

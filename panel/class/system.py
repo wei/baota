@@ -159,9 +159,14 @@ class system:
         limitip = ''
         if os.path.exists('data/limitip.conf'): limitip = public.readFile('data/limitip.conf');
         
+        templates = []
+        for template in os.listdir('templates/'):
+            if os.path.isdir('templates/' + template): templates.append(template);
+        template = public.readFile('data/templates.pl');
+        
         check502 = '';
         if os.path.exists('data/502Task.pl'): check502 = 'checked';
-        return {'port':port,'address':address,'domain':domain,'auto':autoUpdate,'502':check502,'limitip':limitip}
+        return {'port':port,'address':address,'domain':domain,'auto':autoUpdate,'502':check502,'limitip':limitip,'templates':templates,'template':template}
     
     def GetPHPConfig(self,version):
         #取PHP配置
@@ -247,7 +252,7 @@ class system:
         memInfo['memRealUsed'] = memInfo['memTotal'] - memInfo['memFree'] - memInfo['memBuffers'] - memInfo['memCached']
         return memInfo
     
-    def GetDiskInfo(self,get):
+    def GetDiskInfo(self,get=None):
         return self.GetDiskInfo2();
         #取磁盘分区信息
         diskIo = psutil.disk_partitions()
@@ -280,7 +285,7 @@ class system:
             diskInfo.append(arr);
         return diskInfo
     
-    def GetNetWork(self,get):
+    def GetNetWork(self,get=None):
         #取网络流量信息
         networkIo = psutil.net_io_counters()[:4]
         if not hasattr(web.ctx.session,'otime'):
@@ -337,7 +342,7 @@ class system:
         networkInfo['cpu'] = self.GetCpuInfo()
         return networkInfo;
     
-    def ServiceAdmin(self,get):
+    def ServiceAdmin(self,get=None):
         #服务管理
         
         if get.name == 'mysqld': public.CheckMyCnf();

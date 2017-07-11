@@ -1143,7 +1143,7 @@ function task() {
 		area: "600px",
 		closeBtn: 2,
 		shadeClose: false,
-		content: "<div class='tasklist'><div class='tab-nav'><span class='on'>正在处理</span><span>已完成</span><a href='javascript:ActionTask();' class='btn btn-default btn-sm' style='float: right;margin-top: -3px;' title='若您的任务长时间没有继续，请尝试点此按钮!'>激活队列</a></div><div class='tab-con'><ul id='srunning'></ul><ul id='sbody' style='display:none'></ul></div></div>"
+		content: "<div class='tasklist'><div class='tab-nav'><span class='on'>正在处理</span><span>已完成</span><a href='javascript:ActionTask();' class='btn btn-default btn-sm' style='float: right;margin-top: -3px;' title='若您的任务长时间没有继续，请尝试点此按钮!'>激活队列</a></div><div class='tab-con'><ul id='srunning' class='cmdlist'></ul><ul id='sbody' style='display:none' class='cmdlist'></ul></div></div>"
 	});
 	GetTaskList();
 	GetReloads();

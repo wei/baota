@@ -12,19 +12,21 @@
 # Panel 入口
 #------------------------------
 import sys,web,io,os
-global panelPath
-
 sys.path.append("class/")
 import common,public,data,page,db
 
-from collections import OrderedDict
 #关闭调试模式
 web.config.debug = False
 
 #启用SSL
-'''from web.wsgiserver import CherryPyWSGIServer
-CherryPyWSGIServer.ssl_certificate = "ssl/certificate.pem"
-CherryPyWSGIServer.ssl_private_key = "ssl/privateKey.pem"'''
+if os.path.exists('data/ssl.pl'):
+    try:
+        from web.wsgiserver import CherryPyWSGIServer
+        CherryPyWSGIServer.ssl_certificate = "ssl/certificate.pem"
+        CherryPyWSGIServer.ssl_private_key = "ssl/privateKey.pem"
+    except Exception,ex:
+        print ex;
+
 
 #URL配置
 urls = (
@@ -66,7 +68,7 @@ web.config.session_parameters['ignore_expiry'] = True
 web.config.session_parameters['ignore_change_ip'] = True
 web.config.session_parameters['secret_key'] = 'www.bt.cn'
 web.config.session_parameters['expired_message'] = 'Session expired'
-dbfile = 'data/session.db';
+dbfile = '/dev/shm/session.db';
 src_sessiondb = 'data/session.db';
 if not os.path.exists(src_sessiondb): 
     print db.Sql().dbfile('session').create('session');
@@ -78,8 +80,14 @@ def session_hook():
     web.ctx.session = session
 app.add_processor(web.loadhook(session_hook))
 
+#获取当前模板
+templatesConf = 'data/templates.pl';
+if os.path.exists('templates/index.html'): os.system('rm -f templates/*.html');
+if not os.path.exists(templatesConf): public.writeFile(templatesConf,'default');
+templateName = public.readFile(templatesConf);
+
 #初始化模板引擎
-render = web.template.render('templates/',base='template',globals={'session': session,'web':web})
+render = web.template.render('templates/' + templateName + '/',base='template',globals={'session': session,'web':web})
 
 class panelIndex(common.panelAdmin):
     def GET(self):
@@ -98,16 +106,16 @@ class panelLogin(common.panelSetup):
         if domain:
             if(tmp[0].strip() != domain.strip()): 
                 errorStr = '''
-    <meta charset="utf-8">
-    <title>拒绝访问</title>
-    </head><body>
-    <h1>抱歉,您没有访问权限</h1>
-        <p>请使用正确的域名访问!</p>
-        <p>查看许可域名: cat /www/server/panel/data/domain.conf</p>
-        <p>关闭访问限制: rm -f /www/server/panel/data/domain.conf</p>
-    <hr>
-    <address>宝塔Linux面板 4.x <a href="http://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
-    </body></html>
+<meta charset="utf-8">
+<title>拒绝访问</title>
+</head><body>
+<h1>抱歉,您没有访问权限</h1>
+    <p>请使用正确的域名访问!</p>
+    <p>查看许可域名: cat /www/server/panel/data/domain.conf</p>
+    <p>关闭访问限制: rm -f /www/server/panel/data/domain.conf</p>
+<hr>
+<address>宝塔Linux面板 5.x <a href="http://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
+</body></html>
     '''
                 web.header('Content-Type','text/html; charset=utf-8', unique=True)
                 return errorStr
@@ -124,7 +132,7 @@ class panelLogin(common.panelSetup):
     <p>查看授权IP: cat /www/server/panel/data/limitip.conf</p>
     <p>关闭访问限制: rm -f /www/server/panel/data/limitip.conf</p>
 <hr>
-<address>宝塔Linux面板 4.x <a href="http://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
+<address>宝塔Linux面板 5.x <a href="http://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
 </body></html>
 ''' % (web.ctx.ip,)
                     web.header('Content-Type','text/html; charset=utf-8', unique=True)
@@ -148,7 +156,7 @@ class panelLogin(common.panelSetup):
             session.code = False
             
         data = sql.table('users').getField('username')
-        render = web.template.render('templates/',globals={'session': session})
+        render = web.template.render('templates/' + templateName + '/',globals={'session': session})
         return render.login(data)
         
     
@@ -158,7 +166,8 @@ class panelLogin(common.panelSetup):
             return public.returnJson(False,'用户名或密码不能为空');
         
         if self.limitAddress('?') < 1: return public.returnJson(False,'您多次登陆失败,暂时禁止登陆!');
-        password = public.md5(post.password)
+        post.username = post.username.strip();
+        password = public.md5(post.password.strip());
         if session.code:
             if not public.checkCode(post.code):
                 public.WriteLog('登陆','<a style="color:red;">验证码错误</a>,帐号:'+post.username+',验证码:'+post.code+',登陆IP:'+ web.ctx.ip);
@@ -240,12 +249,7 @@ class panelSite(common.panelAdmin):
         defs = ('SetRewriteTel','GetCheckSafe','CheckSafe','GetDefaultSite','SetDefaultSite','CloseTomcat','SetTomcat','apacheAddPort','AddSite','GetPHPVersion','SetPHPVersion','DeleteSite','AddDomain','DelDomain','GetDirBinding','AddDirBinding','GetDirRewrite','DelDirBinding'
                 ,'UpdateRulelist','SetSiteRunPath','GetSiteRunPath','SetPath','SetIndex','GetIndex','GetDirUserINI','SetDirUserINI','GetRewriteList','SetSSL','SetSSLConf','CreateLet','CloseSSLConf','GetSSL','SiteStart','SiteStop'
                 ,'Set301Status','Get301Status','CloseLimitNet','SetLimitNet','GetLimitNet','SetProxy','GetProxy','ToBackup','DelBackup','GetSitePHPVersion','logsOpen','GetLogsStatus','CloseHasPwd','SetHasPwd','GetHasPwd')
-        for key in defs:
-            if key == get.action:
-                fun = 'siteObject.'+key+'(get)'
-                return public.getJson(eval(fun))
-        
-        return public.returnJson(False,'指定参数无效!')
+        return publicObject(siteObject,defs);
 
 class panelConfig(common.panelAdmin):
     def GET(self):
@@ -254,16 +258,10 @@ class panelConfig(common.panelAdmin):
         return render.config(data)
     
     def POST(self):
-        get = web.input()
         import config
         configObject = config.config()
-        defs = ('Set502','setPassword','setUsername','setPanel','setPathInfo','setPHPMaxSize','getFpmConfig','setFpmConfig','setPHPMaxTime','syncDate','setPHPDisable','SetControl','ClosePanel','AutoUpdatePanel','SetPanelLock')
-        for key in defs:
-            if key == get.action:
-                fun = 'configObject.'+key+'(get)'
-                return public.getJson(eval(fun))
-        
-        return public.returnJson(False,'指定参数无效!')
+        defs = ('SetPanelSSL','SetTemplates','Set502','setPassword','setUsername','setPanel','setPathInfo','setPHPMaxSize','getFpmConfig','setFpmConfig','setPHPMaxTime','syncDate','setPHPDisable','SetControl','ClosePanel','AutoUpdatePanel','SetPanelLock')
+        return publicObject(configObject,defs);
     
 class panelDownload(common.panelAdmin):
     def GET(self):
@@ -305,10 +303,6 @@ class panelFiles(common.panelAdmin):
         return render.files('test')
 
     def POST(self):
-        get = web.input(zunfile = {},data = [])
-        if hasattr(get,'path'):
-            get.path = get.path.replace('//','/').replace('\\','/');
-        
         import files
         filesObject = files.files()
         defs = ('UploadFile','GetDir','CreateFile','CreateDir','DeleteDir','DeleteFile',
@@ -316,12 +310,7 @@ class panelFiles(common.panelAdmin):
                 'GetFileAccess','SetFileAccess','GetDirSize','SetBatchData','BatchPaste',
                 'DownloadFile','GetTaskSpeed','CloseLogs','InstallSoft','UninstallSoft',
                 'RemoveTask','ActionTask','Re_Recycle_bin','Get_Recycle_bin','Del_Recycle_bin','Close_Recycle_bin','Recycle_bin')
-        for key in defs:
-            if key == get.action:
-                fun = 'filesObject.'+key+'(get)'
-                return public.getJson(eval(fun))
-        
-        return public.returnJson(False,'指定参数无效!')
+        return publicObject(filesObject,defs);
 
 class panelDatabase(common.panelAdmin):
     def GET(self):
@@ -337,16 +326,10 @@ class panelDatabase(common.panelAdmin):
         return render.database(data)
     
     def POST(self):
-        import json
         import database
-        get = web.input(data = [])
         databaseObject = database.database()
-        defs = ('GetMySQLInfo','SetDataDir','SetMySQLPort','AddDatabase','DeleteDatabase','SetupPassword','ResDatabasePassword','ToBackup','DelBackup','InputSql','SyncToDatabases','SyncGetDatabases','GetDatabaseAccess','SetDatabaseAccess')
-        for key in defs:
-            if key == get.action:
-                fun = 'databaseObject.'+key+'(get)'
-                return public.getJson(eval(fun))
-        return public.returnJson(False,'指定参数无效!')
+        defs = ('BinLog','GetErrorLog','GetMySQLInfo','SetDataDir','SetMySQLPort','AddDatabase','DeleteDatabase','SetupPassword','ResDatabasePassword','ToBackup','DelBackup','InputSql','SyncToDatabases','SyncGetDatabases','GetDatabaseAccess','SetDatabaseAccess')
+        return publicObject(databaseObject,defs);
     
     def get_phpmyadmin_dir(self):
         path = web.ctx.session.setupPath + '/phpmyadmin'
@@ -372,9 +355,6 @@ class panelDatabase(common.panelAdmin):
         except:
             pass
             
-        
-        
-        
         for filename in os.listdir(path):
             print filename
             filepath = path + '/' + filename
@@ -394,16 +374,10 @@ class panelFtp(common.panelAdmin):
         return render.ftp(data)
         
     def POST(self):
-        import json
         import ftp
-        get = web.input()
         ftpObject = ftp.ftp()
         defs = ('AddUser','DeleteUser','SetUserPassword','SetStatus','setPort')
-        for key in defs:
-            if key == get.action:
-                fun = 'ftpObject.'+key+'(get)'
-                return public.getJson(eval(fun))
-        return public.returnJson(False,'指定参数无效!')
+        return publicObject(ftpObject,defs);
     
     #取端口
     def FtpPort(self):
@@ -423,16 +397,10 @@ class panelFirewall(common.panelAdmin):
         return render.firewall("test")
     
     def POST(self):
-        import json
         import firewalls
-        get = web.input()
         firewallObject = firewalls.firewalls()
         defs = ('AddDropAddress','DelDropAddress','FirewallReload','SetFirewallStatus','AddAcceptPort','DelAcceptPort','SetSshStatus','SetPing','SetSshPort','GetSshInfo')
-        for key in defs:
-            if key == get.action:
-                fun = 'firewallObject.'+key+'(get)'
-                return public.getJson(eval(fun))
-        return public.returnJson(False,'指定参数无效!')
+        return publicObject(firewallObject,defs);
         
     
 class panelCrontab(common.panelAdmin):
@@ -442,18 +410,11 @@ class panelCrontab(common.panelAdmin):
         data = crontab.crontab().GetCrontab(get)
         return render.crontab(data)
     
-    def POST(self):
-        get = web.input()
-        
+    def POST(self):       
         import crontab
         crontabObject = crontab.crontab()
         defs = ('GetCrontab','AddCrontab','GetDataList','GetLogs','DelLogs','DelCrontab','StartTask')
-        for key in defs:
-            if key == get.action:
-                fun = 'crontabObject.'+key+'(get)'
-                return public.getJson(eval(fun))
-        
-        return public.returnJson(False,'指定参数无效!')
+        return publicObject(crontabObject,defs);
 
 class panelCode:
     def GET(self):
@@ -484,15 +445,10 @@ class panelSystem(common.panelAdmin):
         return self.funObj()
     
     def funObj(self):
-        import system,json
-        get = web.input()
+        import system
         sysObject = system.system()
         defs = ('GetNetWorkOld','GetNetWork','GetDiskInfo','GetCpuInfo','GetBootTime','GetSystemVersion','GetMemInfo','GetSystemTotal','GetConcifInfo','ServiceAdmin','ReWeb','RestartServer','ReMemory')
-        for key in defs:
-            if key == get.action:
-                fun = 'sysObject.'+key+'(get)'
-                return public.getJson(eval(fun))
-        return public.returnJson(False,'指定参数无效!')
+        return publicObject(sysObject,defs);
 
 class panelAjax(common.panelAdmin):
     def GET(self):
@@ -502,16 +458,10 @@ class panelAjax(common.panelAdmin):
         return self.funObj()
         
     def funObj(self):
-        import ajax,json
-        get = web.input()
+        import ajax
         ajaxObject = ajax.ajax()
         defs = ('GetAd','phpSort','ToPunycode','GetBetaStatus','SetBeta','setPHPMyAdmin','delClose','KillProcess','GetPHPInfo','GetQiniuFileList','UninstallLib','InstallLib','SetQiniuAS','GetQiniuAS','GetLibList','GetProcessList','GetNetWorkList','GetNginxStatus','GetPHPStatus','GetTaskCount','GetSoftList','GetNetWorkIo','GetDiskIo','GetCpuIo','CheckInstalled','UpdatePanel','GetInstalled','GetPHPConfig','SetPHPConfig')
-        for key in defs:
-            if key == get.action:
-                fun = 'ajaxObject.'+key+'(get)'
-                return public.getJson(eval(fun))
-        
-        return public.returnJson(False,'指定参数无效!')
+        return publicObject(ajaxObject,defs);
 
 class panelInstall:
     def GET(self):
@@ -519,7 +469,7 @@ class panelInstall:
         data = {}
         data['status'] = os.path.exists('install.pl');
         data['username'] = public.M('users').where('id=?',(1,)).getField('username');
-        render = web.template.render('templates/',globals={'session': session})
+        render = web.template.render('templates/' + templateName + '/',globals={'session': session})
         return render.install(data);
     
     def POST(self):
@@ -535,34 +485,21 @@ class panelInstall:
         data = {}
         data['status'] = os.path.exists('install.pl');
         data['username'] = get.bt_username
-        render = web.template.render( 'templates/',globals={'session': session})
+        render = web.template.render( 'templates/' + templateName + '/',globals={'session': session})
         return render.install(data);
     
 
 class panelData(common.panelAdmin):
-    
     def GET(self):
         return self.funObj()
         
     def POST(self):
         return self.funObj()
     
-    
     def funObj(self):
-        try:
-            get = web.input()
-            dataObject = data.data()
-            defs = ('setPs','getData','getFind','getKey')
-            for key in defs:
-                if key == get.action:
-                    fun = 'dataObject.'+key+'(get)'
-                    return public.getJson(eval(fun))
-        except:
-            import time
-            time.sleep(1)
-            return self.funObj()
-        
-        return public.returnJson(False,'指定参数无效!')
+        dataObject = data.data()
+        defs = ('setPs','getData','getFind','getKey')
+        return publicObject(dataObject,defs);
 
 class panelControl(common.panelAdmin):
     def GET(self):
@@ -584,16 +521,10 @@ class panelTest(common.panelAdmin):
         return self.funObj()
     
     def funObj(self):
-        get = web.input()
         import servertest;
         testObject = servertest.serverTest()
         defs = ('testCpu','testInt','testFloat','testBubble','testTree','testMem','testDisk','testWorkNet')
-        for key in defs:
-            if key == get.action:
-                fun = 'testObject.'+key+'()'
-                return public.getJson(eval(fun))
-        
-        return public.returnJson(False,'指定参数无效!')
+        return publicObject(testObject,defs);
 
 class panelPlugin(common.panelAdmin):
     def GET(self):
@@ -603,16 +534,10 @@ class panelPlugin(common.panelAdmin):
         return self.funObj()
     
     def funObj(self):
-        get = web.input()
         import panelPlugin
         pluginObject = panelPlugin.panelPlugin()
         defs = ('install','unInstall','getPluginList','getPluginInfo','getPluginStatus','setPluginStatus','a','getCloudPlugin','getConfigHtml','savePluginSort')
-        for key in defs:
-            if key == get.action:
-                fun = 'pluginObject.'+key+'(get)'
-                return public.getJson(eval(fun))
-        
-        return public.returnJson(False,'指定参数无效!')
+        return publicObject(pluginObject,defs);
     
 class panelWaf(common.panelAdmin):
     def GET(self):
@@ -671,17 +596,20 @@ class panelHook:
 class panelClose:
     def GET(self):
         if not os.path.exists('data/close.pl'): raise web.seeother('/');
-        render = web.template.render('templates/',globals={'session': session})
+        render = web.template.render('templates/' + templateName + '/',globals={'session': session})
         return render.close(web.ctx.session.version)
 
 
 def publicObject(toObject,defs):
-    get = web.input();
+    get = web.input(zunfile = {},data = []);
+    if hasattr(get,'path'):
+            get.path = get.path.replace('//','/').replace('\\','/');
+            if get.path.find('->') != -1:
+                get.path = get.path.split('->')[0].strip();
     for key in defs:
         if key == get.action:
             fun = 'toObject.'+key+'(get)'
             return public.getJson(eval(fun))
-    
     return public.returnJson(False,'指定参数无效!')
 
 #定义404错误
@@ -693,7 +621,7 @@ def notfound():
     <h1>抱歉,页面不存在</h1>
         <p>您请求的页面不存在,请检查URL地址是否正确!</p>
     <hr>
-    <address>宝塔Linux面板 4.x <a href="http://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
+    <address>宝塔Linux面板 5.x <a href="https://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
     </body></html>
     '''
     return web.notfound(errorStr);
@@ -707,7 +635,7 @@ def internalerror():
     <h1>抱歉,程序异常</h1>
         <p>您请求的页面因发生异常而中断!</p>
     <hr>
-    <address>宝塔Linux面板 4.x <a href="http://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
+    <address>宝塔Linux面板 5.x <a href="https://www.bt.cn/bbs" target="_blank">请求帮助</a></address>
     </body></html>
     '''
     return web.internalerror(errorStr)

@@ -16,7 +16,7 @@ class config:
         #return public.returnMsg(False,'体验服务器，禁止修改!')
         if get.password1 != get.password2: return public.returnMsg(False,'两次输入的密码不一致，请重新输入!')
         if len(get.password1) < 5: return public.returnMsg(False,'用户密码不能小于5位!')
-        public.M('users').where("username=?",(web.ctx.session.username,)).setField('password',public.md5(get.password1))
+        public.M('users').where("username=?",(web.ctx.session.username,)).setField('password',public.md5(get.password1.strip()))
         public.WriteLog('面板配置','修改用户['+web.ctx.session.username+']密码成功!')
         return public.returnMsg(True,'密码修改成功!')
     
@@ -24,7 +24,7 @@ class config:
         #return public.returnMsg(False,'体验服务器，禁止修改!')
         if get.username1 != get.username2: return public.returnMsg(False,'两次输入的用户名不一致，请重新输入!')
         if len(get.username1) < 3: return public.returnMsg(False,'用户名不能小于3位!')
-        public.M('users').where("username=?",(web.ctx.session.username,)).setField('username',get.username1)
+        public.M('users').where("username=?",(web.ctx.session.username,)).setField('username',get.username1.strip())
         web.ctx.session.username = get.username1
         public.WriteLog('面板配置','修改用户['+get.username2+']的用户名为['+get.username1+']!')
         return public.returnMsg(True,'用户名修改成功!')
@@ -332,6 +332,34 @@ class config:
             return public.returnMsg(True,'设置成功!');
         except:
             return public.returnMsg(True,'失败,磁盘不可写!');
+    
+    #设置模板
+    def SetTemplates(self,get):
+        public.writeFile('data/templates.pl',get.templates);
+        return public.returnMsg(True,'模板设置成功!');
+    
+    #设置面板SSL
+    def SetPanelSSL(self,get):
+        sslConf = '/www/server/panel/data/ssl.pl';
+        if os.path.exists(sslConf):
+            os.system('rm -f ' + sslConf);
+            return public.returnMsg(True,'SSL已关闭，请使用http协议访问面板!');
+        else:
+            os.system('pip install pyOpenSSL');
+            try:
+                from web.wsgiserver import CherryPyWSGIServer
+                public.writeFile(sslConf,'True')
+            except:
+                return public.returnMsg(False,'开启失败，无法自动安装pyOpenSSL组件!');
+            return public.returnMsg(True,'开启成功，请使用https协议访问面板!');
+        
+    #生成Token
+    def SetToken(self,get):
+        data = {}
+        data[''] = public.GetRandomString(24);       
+            
+        
+    
         
         
         

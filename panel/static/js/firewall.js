@@ -25,17 +25,20 @@ $(function(){
 
 $("#firewalldType").change(function(){
 	var type = $(this).val();
-	var w = '60px';
+	var w = '120px';
 	var p = '端口';
-	var t = '放行'
+	var t = '放行';
+	var m = '说明: 支持放行端口范围，如: 3000:3500';
 	if(type == 'address'){
 		w = '150px';
 		p = '欲屏蔽的IP地址';
 		t = '屏蔽';
+		m = '说明: 支持放行IP段，如: 192.168.0.0/24';
 	}
 	$("#AcceptPort").css("width",w);
 	$("#AcceptPort").attr('placeholder',p);
 	$("#toAccept").html(t);
+	$("#f-ps").html(m);
 	 
 });
 
@@ -180,10 +183,12 @@ function AddAcceptPort(){
 	var ps = $("#Ps").val();
 	var action = "AddDropAddress";
 	if(type == 'port'){
-		if(isNaN(port) == true || port < 1 || port >= 65535){
-			layer.msg("请填写正确的端口!",{icon:2});
-			$("#AcceptPort").focus();
-			return;
+		ports = port.split(':');
+		for(var i=0;i<ports.length;i++){
+			if(isNaN(ports[i]) || ports[i] < 1 || ports[i] > 65535 ){
+				layer.msg('端口范围不合法!',{icon:5});
+				return;
+			}
 		}
 		action = "AddAcceptPort";
 	}

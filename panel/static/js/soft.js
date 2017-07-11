@@ -807,7 +807,7 @@ function SoftMan(name,version){
 		}
 		
 		if(name == 'mysqld'){
-			menu += '<p onclick="changeMySQLDataPath()">存储位置</p><p onclick="changeMySQLPort()">端口</p>';
+			menu += '<p onclick="changeMySQLDataPath()">存储位置</p><p onclick="changeMySQLPort()">端口</p><p onclick="mysqlLog()">日志</p>';
 		}
 		
 		layer.open({
@@ -855,6 +855,50 @@ function changeMySQLDataPath(act){
 							<span onclick="ChangePath(\'datadir\')" class="glyphicon glyphicon-folder-open cursor mr20"></span><button class="btn btn-success btn-sm" onclick="changeMySQLDataPath(1)">迁移</button>\
 						</p>';
 		$(".soft-man-con").html(LimitCon);
+	});
+}
+
+//数据库日志
+function mysqlLog(act){
+	//获取二进制日志相关信息
+	$.post('/database?action=BinLog',"status=1",function(rdata){
+		var limitCon = '<p class="conf_p">\
+							<span class="f14 c6 mr20">二进制日志 </span><span class="f14 c6 mr20">'+ToSize(rdata.msg)+'</span>\
+							<button class="btn btn-success btn-xs va0" onclick="SetBinLog();">'+(rdata.status?"关闭":"开启")+'</button>\
+							<p class="f14 c6 mtb10" style="border-top:#ddd 1px solid; padding:10px 0">错误日志<button class="btn btn-default btn-xs" style="float:right;" onclick="closeMySqlLog();">清空</button></p>\
+							<textarea readonly style="margin: 0px;width: 515px;height: 375px;background-color: #333;color:#fff; padding:0 5px" id="error_log"></textarea>\
+						</p>'
+		
+		$(".soft-man-con").html(limitCon);
+		//获取错误日志
+		$.post('/database?action=GetErrorLog',"",function(error_body){
+			if(error_body.status === false){
+				layer.msg(error_body.msg,{icon:5});
+				error_body = "当前没有日志内容!";
+			}
+			if(error_body == "") error_body = "当前没有日志内容!";
+			$("#error_log").text(error_body);
+		});
+	});
+}
+
+//设置二进制日志
+function SetBinLog(){
+	var loadT = layer.msg('正在处理,请稍候...',{icon:16,time:0,shade:0.3});
+	$.post('/database?action=BinLog',"",function(rdata){
+		layer.close(loadT);
+		layer.msg(rdata.msg,{icon:rdata.status?1:5});
+		mysqlLog();
+	});
+}
+
+//清空日志
+function closeMySqlLog(){
+	var loadT = layer.msg('正在处理,请稍候...',{icon:16,time:0,shade:0.3});
+	$.post('/database?action=GetErrorLog',"close=1",function(rdata){
+		layer.close(loadT);
+		layer.msg(rdata.msg,{icon:rdata.status?1:5});
+		mysqlLog();
 	});
 }
 

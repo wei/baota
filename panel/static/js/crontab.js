@@ -1,5 +1,5 @@
 var num = 0;
-	//查看任务日志
+//查看任务日志
 function GetLogs(id){
 	layer.msg('正在获取...',{icon:16,time:0,shade: [0.3, '#000']});
 	var data='&id='+id

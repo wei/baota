@@ -475,5 +475,49 @@ echo "The root password set ${pwd}  successuful"''';
         public.writeFile(myfile,mycnf);
         os.system('/etc/init.d/mysqld restart');
         return public.returnMsg(True,'修改成功!');
+    
+    #获取错误日志
+    def GetErrorLog(self,get):
+        path = self.GetMySQLInfo(get)['datadir'];
+        filename = '';
+        for n in os.listdir(path):
+            if len(n) < 5: continue;
+            if n[-3:] == 'err': 
+                filename = path + '/' + n;
+                break;
+        if not os.path.exists(filename): return public.returnMsg(False,'日志文件不存在!');
+        if hasattr(get,'close'): 
+            public.writeFile(filename,'')
+            return public.returnMsg(True,'日志已清空');
+        return public.readFile(filename);
+    
+    #二进制日志开关
+    def BinLog(self,get):
+        myfile = '/etc/my.cnf';
+        mycnf = public.readFile(myfile);
+        if mycnf.find('#log-bin=mysql-bin') != -1:
+            if hasattr(get,'status'): return public.returnMsg(False,'0');
+            mycnf = mycnf.replace('#log-bin=mysql-bin','log-bin=mysql-bin')
+            mycnf = mycnf.replace('#binlog_format=mixed','binlog_format=mixed')
+            os.system('sync')
+            os.system('/etc/init.d/mysqld restart');
+        else:
+            path = self.GetMySQLInfo(get)['datadir'];
+            if hasattr(get,'status'): 
+                dsize = 0;
+                for n in os.listdir(path):
+                    if len(n) < 9: continue;
+                    if n[0:9] == 'mysql-bin':
+                        dsize += os.path.getsize(path + '/' + n);
+                return public.returnMsg(True,dsize);
+            
+            mycnf = mycnf.replace('log-bin=mysql-bin','#log-bin=mysql-bin')
+            mycnf = mycnf.replace('binlog_format=mixed','#binlog_format=mixed')
+            os.system('sync')
+            os.system('/etc/init.d/mysqld restart');
+            os.system('rm -f ' + path + '/mysql-bin.*')
+        
+        public.writeFile(myfile,mycnf);
+        return public.returnMsg(True,'操作成功');
         
         

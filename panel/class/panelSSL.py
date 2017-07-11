@@ -15,7 +15,7 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 class panelSSL:
     
-    __APIURL = 'https://new.bt.cn/api/Auth';
+    __APIURL = 'https://www.bt.cn/api/Auth';
     __UPATH = 'data/userInfo.json';
     __userInfo = None;
     __PDATA = None;
@@ -58,7 +58,7 @@ class panelSSL:
         result = {}
         if self.__userInfo:
             userTmp = {}
-            userTmp['username'] = self.__userInfo['username']
+            userTmp['username'] = self.__userInfo['username'][0:3]+'****'+self.__userInfo['username'][-4:];
             result['status'] = True;
             result['msg'] = '获取成功!';
             result['data'] = userTmp;

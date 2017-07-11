@@ -396,7 +396,7 @@ class ajax:
             if not public.IsRestart(): return public.returnMsg(False,'请等待所有安装任务完成再执行!');
             import web,json
             if int(web.ctx.session.config['status']) == 0:
-                public.httpGet('http://www.bt.cn/Api/SetupCount?type=Linux');
+                public.httpGet('http://new.bt.cn/Api/SetupCount?type=Linux');
                 public.M('config').where("id=?",('1',)).setField('status',1);
             
             #取回远程版本信息
@@ -421,19 +421,19 @@ class ajax:
                 data['system'] += '||'+self.GetInstalleds(mplugin.getPluginList(None));
                 data['logs'] = logs
                 
-                sUrl = 'http://www.bt.cn/Api/updateLinux';
+                sUrl = 'https://www.bt.cn/Api/updateLinux';
                 betaIs = 'data/beta.pl';
                 betaStr = public.readFile(betaIs);
                 if betaStr:
                     if betaStr.strip() != 'False':
-                        sUrl = 'http://www.bt.cn/Api/updateLinuxBeta';
+                        sUrl = 'https://www.bt.cn/Api/updateLinuxBeta';
                 
                 betaIs = 'plugin/beta/config.conf';
                 betaStr = public.readFile(betaIs);
                 if betaStr:
                     if betaStr.strip() != 'False':
-                        sUrl = 'http://www.bt.cn/Api/updateLinuxBeta';
-                    
+                        sUrl = 'https://www.bt.cn/Api/updateLinuxBeta';
+                
                 updateInfo = json.loads(public.httpPost(sUrl,data));
                 if not updateInfo: return public.returnMsg(False,"连接云端服务器失败!");
                 web.ctx.session.updateInfo = updateInfo;
@@ -464,6 +464,7 @@ class ajax:
                 import compileall
                 if os.path.exists(setupPath + '/panel/main.py'): public.ExecShell('rm -f ' + setupPath + '/panel/*.pyc');
                 if os.path.exists(setupPath + '/panel/class/common.py'): public.ExecShell('rm -f ' + setupPath + '/panel/class/*.pyc');
+                
                 compileall.compile_dir(setupPath + '/panel');
                 compileall.compile_dir(setupPath + '/panel/class');
                 #if os.path.exists(setupPath + '/panel/main.pyc'):
@@ -480,7 +481,7 @@ class ajax:
                 'updateMsg' : updateInfo['updateMsg']
             };
             return data;
-        except:
+        except Exception,ex:
             return public.returnMsg(False,"连接云端服务器失败!");
          
     #检查是否安装任何
@@ -716,9 +717,10 @@ ServerName 127.0.0.2
     #获取广告代码
     def GetAd(self,get):
         try:
-            return public.httpGet('http://www.bt.cn/Api/GetAD?name='+get.name + '&soc=' + get.soc);
+            return public.httpGet('https://www.bt.cn/Api/GetAD?name='+get.name + '&soc=' + get.soc);
         except:
             return '';
+    
         
         
         

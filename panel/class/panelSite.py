@@ -679,6 +679,7 @@ class panelSite:
              data['err'] = result;
              data['status'] = False
              data['msg'] = 'Let\'s Encrypt证书获取失败，认证服务器无法访问您的站点!'
+             if result[1].find('Certificate not yet due for renewal') != -1: data['msg'] = "索引到当前域名组件的证书尚未到期，不能重复申请，请尝试其它域名组合!";
              if result[0].find('Too many invalid authorizations recently') != -1: data['msg'] = "授权错误: 您的服务器最近提交了过多无效申请!";
              return data
         
@@ -686,7 +687,10 @@ class panelSite:
         if(actionstr == '2'): return public.returnMsg(True,'证书已更新!');
         
         #写入配置文件
-        return self.SetSSLConf(get)
+        result =  self.SetSSLConf(get)
+        result['csr'] = public.readFile(csrpath);
+        result['key'] = public.readFile(keypath);
+        return result;
         
     
     def GetFormatSSLResult(self,result):
@@ -821,9 +825,6 @@ class panelSite:
         public.WriteLog('网站管理', '网站['+siteName+']开启SSL成功!');
         return public.returnMsg(True,'SSL开启成功!');    
         
-    
-    
-    
     #清理SSL配置
     def CloseSSLConf(self,get):
         siteName = get.siteName
@@ -1124,7 +1125,7 @@ class panelSite:
             if type == '1': 
                 mconf = mconf.replace("#error_page 404/404.html;","#error_page 404/404.html;\n"+conf301)
             else:
-                rep = "\s+#301-START(.|\n)+#301-END";
+                rep = "\s+#301-START(.|\n){1,300}#301-END";
                 mconf = re.sub(rep, '', mconf);
             
             public.writeFile(filename,mconf)
@@ -1141,8 +1142,9 @@ class panelSite:
             rep = "combined"
             mconf = mconf.replace(rep,rep + "\n\t" + conf301);
         else:
-            rep = "\n\s+#301-START(.|\n)+#301-END\n*";
-            mconf = re.sub(rep, '\n\n', mconf);
+            rep = "\n\s+#301-START(.|\n){1,300}#301-END\n*";
+            mconf = re.sub(rep, '\n\n', mconf,1);
+            mconf = re.sub(rep, '\n\n', mconf,1);
         
         public.writeFile(filename,mconf)
         
@@ -1244,24 +1246,24 @@ server
         conf = public.readFile(filename);
         if conf:
             try:
-                httpdVersion = public.readFile(self.setupPath+'/apache/version.pl').strip();
-            except:
-                httpdVersion = "";
-            if httpdVersion == '2.2':
-                phpConfig = "";
-                apaOpt = "Order allow,deny\n\t\tAllow from all";
-            else:
-                rep = "php-cgi-([0-9]{2,3})\.sock";
-                tmp = re.search(rep,conf).groups()
-                version = tmp[0];
-                phpConfig ='''
+                try:
+                    httpdVersion = public.readFile(self.setupPath+'/apache/version.pl').strip();
+                except:
+                    httpdVersion = "";
+                if httpdVersion == '2.2':
+                    phpConfig = "";
+                    apaOpt = "Order allow,deny\n\t\tAllow from all";
+                else:
+                    rep = "php-cgi-([0-9]{2,3})\.sock";
+                    tmp = re.search(rep,conf).groups()
+                    version = tmp[0];
+                    phpConfig ='''
     #PHP     
     <FilesMatch \\.php>
         SetHandler "proxy:unix:/tmp/php-cgi-%s.sock|fcgi://localhost"
     </FilesMatch>
     ''' % (version,)
-                apaOpt = 'Require all granted';
-            try:
+                    apaOpt = 'Require all granted';
             
                 bindingConf ='''
 \n#BINDING-%s-START
@@ -1655,7 +1657,7 @@ server
                 conf = re.sub(rep, 'access_log  /', conf)
                 conf = conf.replace("include enable-php-", proxy+"\n\n\tinclude enable-php-")
             else:
-                rep = "\n\s+#PROXY-START(.|\n)+#PROXY-END"
+                rep = "\n\s+#PROXY-START(.|\n){1,800}#PROXY-END"
                 oldconf = '''location ~ .*\\.(gif|jpg|jpeg|png|bmp|swf)$
     {
         expires      30d;
@@ -1692,7 +1694,7 @@ server
                 rep = "combined"
                 conf = conf.replace(rep,rep + "\n\n\t" + proxy);
             else:
-                rep = "\n\s+#PROXY-START(.|\n)+#PROXY-END"
+                rep = "\n\s+#PROXY-START(.|\n){1,300}#PROXY-END"
                 conf = re.sub(rep, '', conf)
             public.writeFile(file,conf)
         
