@@ -307,7 +307,27 @@ def CloseTask():
     os.system('/etc/init.d/bt restart');
     print "成功清理 " + int(ncount) + " 个任务!"
     
-        
+#自签证书
+def CreateSSL():
+    import OpenSSL
+    key = OpenSSL.crypto.PKey()
+    key.generate_key( OpenSSL.crypto.TYPE_RSA, 2048 )
+    cert = OpenSSL.crypto.X509()
+    cert.set_serial_number(0)
+    cert.get_subject().CN = public.GetLocalIp();
+    cert.set_issuer(cert.get_subject())
+    cert.gmtime_adj_notBefore( 0 )
+    cert.gmtime_adj_notAfter( 10*365*24*60*60 )
+    cert.set_pubkey( key )
+    cert.sign( key, 'md5' )
+    cert_ca = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+    private_key = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
+    if len(cert_ca) > 100 and len(private_key) > 100:
+        public.writeFile('ssl/certificate.pem',cert_ca)
+        public.writeFile('ssl/privateKey.pem',private_key)
+        print 'success';
+        return;
+    print 'error';
 
 if __name__ == "__main__":
     type = sys.argv[1];
@@ -321,5 +341,9 @@ if __name__ == "__main__":
         panel2To3()
     elif type == 'package':
         PackagePanel();
+    elif type == 'ssl':
+        CreateSSL();
+    elif type == 'port':
+        CheckPort();
     else:
         print 'ERROR: Parameter error'

@@ -23,15 +23,14 @@ class panelSite:
     isWriteLogs = None #是否写日志
     
     def __init__(self):
-        self.setupPath = web.ctx.session.setupPath;
+        self.setupPath = '/www/server';
         path = self.setupPath + '/panel/vhost/nginx'
         if not os.path.exists(path): public.ExecShell("mkdir -p " + path + " && chmod -R 644 " + path)
         path = self.setupPath + '/panel/vhost/apache'
         if not os.path.exists(path): public.ExecShell("mkdir -p " + path + " && chmod -R 644 " + path)
         path = self.setupPath + '/panel/vhost/rewrite'
         if not os.path.exists(path): public.ExecShell("mkdir -p " + path + " && chmod -R 644 " + path)
-        self.OldConfigFile();
-    
+        self.OldConfigFile();      
     
     #添加apache端口
     def apacheAddPort(self,port):
@@ -78,6 +77,7 @@ class panelSite:
     DocumentRoot "%s"
     ServerName %s.%s
     ServerAlias %s
+    errorDocument 404 /404.html
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
     %s
@@ -304,7 +304,7 @@ class panelSite:
         public.WriteLog('网站管理', "删除网站["+siteName+']成功!');
         
         #是否删除关联数据库
-        if hasattr(get,'data'):
+        if hasattr(get,'database'):
             find = public.M('databases').where("pid=?",(id,)).field('id,name').find()
             if find:
                 import database
@@ -336,7 +336,6 @@ class panelSite:
                     newdomain += dkey + '.';
                 else:
                     newdomain += 'xn--' + dkey.decode('utf-8').encode('punycode') + '.'
-
         return newdomain[0:-1];
     
     #中文路径处理
@@ -478,6 +477,7 @@ class panelSite:
     DocumentRoot "%s"
     ServerName %s.%s
     ServerAlias %s
+    errorDocument 404 /404.html
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
     %s
@@ -687,9 +687,10 @@ class panelSite:
         if(actionstr == '2'): return public.returnMsg(True,'证书已更新!');
         
         #写入配置文件
-        result =  self.SetSSLConf(get)
+        result =  self.SetSSLConf(get);
         result['csr'] = public.readFile(csrpath);
         result['key'] = public.readFile(keypath);
+        public.serviceReload();
         return result;
         
     
@@ -721,6 +722,12 @@ class panelSite:
         #Nginx配置
         file = self.setupPath + '/panel/vhost/nginx/'+siteName+'.conf';
         conf = public.readFile(file);
+        
+        #是否为子目录设置SSL
+        #if hasattr(get,'binding'):
+        #    allconf = conf;
+        #    conf = re.search("#BINDING-"+get.binding+"-START(.|\n)*#BINDING-"+get.binding+"-END",conf).group();
+            
         if conf:
             if conf.find('ssl_certificate') == -1: 
                 sslStr = """#error_page 404/404.html;
@@ -786,6 +793,7 @@ class panelSite:
     DocumentRoot "%s"
     ServerName SSL.%s
     ServerAlias %s
+    errorDocument 404 /404.html
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
     
@@ -807,8 +815,19 @@ class panelSite:
                         conf = conf+"\n"+sslStr;
                         self.apacheAddPort('443');
                         if web.ctx.session.webserver == 'apache': shutil.copyfile(file, '/tmp/backup.conf')
+                        httpTohttos = '''combined
+    
+    #HTTP_TO_HTTPS_START
+    <IfModule mod_rewrite.c>
+        RewriteEngine on
+        RewriteCond %{SERVER_PORT} !^443$
+        RewriteRule (.*) https://%{SERVER_NAME}$1 [L,R=301]
+    </IfModule>
+    #HTTP_TO_HTTPS_END'''
+                        conf = re.sub('combined',httpTohttos,conf,1);           
                         public.writeFile(file,conf)
-                    except:
+                    except Exception,ex:
+                        return str(ex);
                         pass
         isError = public.checkWebConfig();
         if(isError != True):
@@ -849,24 +868,16 @@ class panelSite:
         if conf:
             rep = "\n<VirtualHost \*\:443>(.|\n)*<\/VirtualHost>";
             conf = re.sub(rep,'',conf);
+            rep = "\n\s*#HTTP_TO_HTTPS_START(.|\n){1,300}#HTTP_TO_HTTPS_END";
+            conf = re.sub(rep,'',conf);
             rep = "NameVirtualHost  *:443\n";
             conf = conf.replace(rep,'');
             public.writeFile(file,conf)
         
-        #清理证书链
-        path =   '/etc/letsencrypt/live/'+ get.siteName;
-        public.ExecShell('rm -rf ' + path)
-        public.ExecShell('rm -rf ' + path + '-00*')
-        public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName)
-        public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName + '-00*')
-        public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '.conf')
-        public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '-00*.conf')
-        
+        partnerOrderId =   '/etc/letsencrypt/live/'+ siteName + '/partnerOrderId';
+        if os.path.exists(partnerOrderId): public.ExecShell('rm -f ' + partnerOrderId);
         public.WriteLog('网站管理', '网站['+siteName+']关闭SSL成功!');
         return public.returnMsg(True,'SSL已关闭!');
-    
-    
-
     
     
     #取SSL状态
@@ -901,19 +912,19 @@ class panelSite:
         sitePath = public.M('sites').where("id=?",(id,)).getField('path');
         
         #nginx
-        file = self.setupPath + '/panel/vhost/nginx/'+get['name']+'.conf';
+        file = self.setupPath + '/panel/vhost/nginx/'+get.name+'.conf';
         conf = public.readFile(file);
         if conf:
             conf = conf.replace(Path, sitePath);
             public.writeFile(file,conf)
         #apaceh
-        file = self.setupPath + '/panel/vhost/apache/'+get['name']+'.conf';
+        file = self.setupPath + '/panel/vhost/apache/'+get.name+'.conf';
         conf = public.readFile(file);
         if conf:
             conf = conf.replace(Path, sitePath);
             public.writeFile(file,conf)
         
-        public.M('sites').where("id=?",(id,)).setField('status','正在运行');
+        public.M('sites').where("id=?",(id,)).setField('status','1');
         public.serviceReload();
         return public.returnMsg(True,'站点已启用')
     
@@ -930,19 +941,19 @@ class panelSite:
         sitePath = public.M('sites').where("id=?",(id,)).getField('path');
         
         #nginx
-        file = self.setupPath + '/panel/vhost/nginx/'+get['name']+'.conf';
+        file = self.setupPath + '/panel/vhost/nginx/'+get.name+'.conf';
         conf = public.readFile(file);
         if conf:
             conf = conf.replace(sitePath,path);
             public.writeFile(file,conf)
         #apache
-        file = self.setupPath + '/panel/vhost/apache/'+get['name']+'.conf';
+        file = self.setupPath + '/panel/vhost/apache/'+get.name+'.conf';
         conf = public.readFile(file);
         if conf:
             conf = conf.replace(sitePath,path);
             public.writeFile(file,conf)
         
-        public.M('sites').where("id=?",(id,)).setField('status','已停止');
+        public.M('sites').where("id=?",(id,)).setField('status','0');
         public.serviceReload();
         return public.returnMsg(True,'站点已停用')
 
@@ -1271,6 +1282,7 @@ server
     ServerAdmin webmaster@example.com
     DocumentRoot "%s"
     ServerName %s
+    errorDocument 404 /404.html
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
     %s  
@@ -2282,6 +2294,13 @@ server
             return public.returnMsg(False,'连接服务器失败!');
         except:
             return public.returnMsg(False,'连接服务器失败!');
+    
+    #设置到期时间
+    def SetEdate(self,get):
+        result = public.M('sites').where('id=?',(get.id,)).setField('edate',get.edate);
+        siteName = public.M('sites').where('id=?',(get.id,)).getField('name');
+        public.WriteLog('网站管理','设置站点['+siteName+']到期日期为['+get.edate+']！');
+        return public.returnMsg(True,'设置成功,站点到期后将自动停止!');
         
             
 

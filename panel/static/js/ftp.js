@@ -6,15 +6,21 @@ function getFtp(page,search) {
 	if(page == undefined) page = 1
 	search = search == undefined ? '':search;
 	search = $("#SearchValue").prop("value");
+	order = getCookie('order');
+	if(order){
+		order = '&order=' + order;
+	}else{
+		order = '';
+	}
 	var sUrl = '/data?action=getData'
-	var data = 'tojs=getFtp&table=ftps&limit=15&p='+page+'&search='+search;
+	var data = 'tojs=getFtp&table=ftps&limit=15&p='+page+'&search='+search + order;
 	var loadT = layer.load();
 	$.post(sUrl,data, function(data){
 		layer.close(loadT);
 		//构造数据列表
 		var Body = '';
 		if(data.data == ""){
-			Body="<tr><td colspan='6'>当前没有FTP数据</td></tr>";
+			Body="<tr><td colspan='7'>当前没有FTP数据</td></tr>";
 			$(".dataTables_paginate").hide()
 		}
 		for (var i = 0; i < data.data.length; i++) {
@@ -23,7 +29,7 @@ function getFtp(page,search) {
 			}else{
 				var ftp_status = "<a href='javascript:;' title='启用这个帐号' onclick=\"ftpStart("+data.data[i].id+",'"+data.data[i].name+"')\"><span style='color:red'>已停用 </span> <span style='color:red;' class='glyphicon glyphicon-pause'></span></a>";;
 			}
-			Body +="<tr><td style='display:none'><input type='checkbox' name='id' value='"+data.data[i].id+"'></td>\
+			Body +="<tr><td><input type='checkbox' onclick='checkSelect();' title='"+data.data[i].name+"' name='id' value='"+data.data[i].id+"'></td>\
 					<td>"+data.data[i].name+"</td>\
 					<td class='relative'><span class='password' data-pw='"+data.data[i].password+"'>**********</span><span class='glyphicon glyphicon-eye-open cursor pw-ico' style='margin-left:10px'></span><span class='ico-copy cursor btcopy' style='margin-left:10px' title='复制密码' data-pw='"+data.data[i].password+"'></span></td>\
 					<td>"+ftp_status+"</td>\
@@ -147,6 +153,54 @@ function ftpDelete(id,ftp_username){
 	});
 }
 
+
+//批量删除
+function allDeleteFtp(){
+	var checkList = $("input[name=id]");
+	var dataList = new Array();
+	for(var i=0;i<checkList.length;i++){
+		if(!checkList[i].checked) continue;
+		var tmp = new Object();
+		tmp.name = checkList[i].title;
+		tmp.id = checkList[i].value;
+		dataList.push(tmp);
+	}
+	SafeMessage("批量删除FTP","<a style='color:red;'>您共选择了["+dataList.length+"]个FTP,删除后将无法恢复,真的要删除吗?</a>",function(){
+		layer.closeAll();
+		syncDeleteFtp(dataList,0,'');
+	});
+}
+
+//模拟同步开始批量删除
+function syncDeleteFtp(dataList,successCount,errorMsg){
+	if(dataList.length < 1) {
+		layer.msg("成功删除["+successCount+"]个FTP帐户!",{icon:1});
+		return;
+	}
+	var loadT = layer.msg('正在删除['+dataList[0].name+'],请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	$.ajax({
+			type:'POST',
+			url:'/ftp?action=DeleteUser',
+			data:'id='+dataList[0].id+'&username='+dataList[0].name,
+			async: true,
+			success:function(frdata){
+				layer.close(loadT);
+				if(frdata.status){
+					successCount++;
+					$("input[title='"+dataList[0].name+"']").parents("tr").remove();
+				}else{
+					if(!errorMsg){
+						errorMsg = '<br><p>以下FTP帐户删除失败:</p>';
+					}
+					errorMsg += '<li>'+dataList[0].name+' -> '+frdata.msg+'</li>'
+				}
+				
+				dataList.splice(0,1);
+				syncDeleteFtp(dataList,successCount,errorMsg);
+			}
+	});
+}
+
 //同步
 function SyncTo()
 {
@@ -167,7 +221,7 @@ function SyncTo()
 //同步到服务器
 function FtpToLocal(){
 	layer.confirm('将FTP列表同步到服务器？', {
-		title:false,
+		title:false,icon:3,
 		closeBtn:2,
 	    time: 0, 
 	    btn: ['确定', '取消']  
@@ -185,7 +239,7 @@ function FtpToLocal(){
 //从服务器上获取
 function FtpToCloud(){
 	layer.confirm('您确定要获取么？', {
-		title:false,
+		title:false,icon:3,
 		closeBtn:2,
         time: 0, 
         btn: ['确定', '取消']   
@@ -241,7 +295,7 @@ function reAdd(data,type){
 	}else{
 		var str = '即将把您选定的FTP帐户进行重新添加，若FTP帐户在服务器上已存在，此操作将会失败！您真的要同步吗？';
 	}
-	layer.confirm(str,{closeBtn:2},function(index) {
+	layer.confirm(str,{icon:3,closeBtn:2},function(index) {
 		if(index <= 0){
 			layer.closeAll();
 			return;
@@ -267,7 +321,7 @@ function reAdd(data,type){
  */
 function ftpStop(id, username) {
 	layer.confirm("您真的要停止" + username + "的FTP吗?", {
-		title: 'FTP服务',
+		title: 'FTP服务',icon:3,
 		closeBtn:2
 	}, function(index) {
 		if (index > 0) {
@@ -341,7 +395,7 @@ function ftpEditSet(id, username, passwd) {
 		});
 	} else {
 		layer.confirm("您确定要修改该FTP帐户密码吗?", {
-			title: 'FTP服务',
+			title: 'FTP服务',icon:3,
 			closeBtn:2
 		}, function(index) {
 			if (index > 0) {

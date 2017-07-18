@@ -71,8 +71,8 @@ $(".set-submit").click(function(){
 		if(rdata.status){
 			if(rdata.isReWeb) $.get('/system?action=ReWeb',function(){});
 			setTimeout(function(){
-				window.location.href = 'http://'+rdata.host+rdata.uri;
-			},3000);
+				window.location.href = ((window.location.protocol.indexOf('https') != -1)?'https://':'http://') + rdata.host + window.location.pathname;
+			},1500);
 		}
 	});
 	
@@ -86,7 +86,7 @@ function syncDate(){
 		layer.msg(rdata.msg,{icon:1});
 		setTimeout(function(){
 				window.location.reload();
-			},3000);
+			},1500);
 	});
 }
 
@@ -112,16 +112,13 @@ function bindBTName(a,type){
 	if(a == 1) {
 		p1 = $("#p1").val();
 		p2 = $("#p2").val();
-		$.post(" /ssl?action=GetToken", "username=" + p1 + "&password=" + p2, function(b) {
+		var loadT = layer.msg('正在获取密钥...',{icon:16,time:0,shade: [0.3, '#000']});
+		$.post(" /ssl?action=GetToken", "username=" + p1 + "&password=" + p2, function(b){
+			layer.close(loadT);
+			layer.msg(b.msg, {icon: b.status?1:2});
 			if(b.status) {
-				layer.closeAll();
-				layer.msg(b.msg, {
-					icon: 1
-				});
-			} else {
-				layer.msg(b.msg, {
-					icon: 2
-				})
+				window.location.reload();
+				$("input[name='btusername']").val(p1);
 			}
 		});
 		return
@@ -139,9 +136,10 @@ function bindBTName(a,type){
 //解除绑定宝塔账号
 function UnboundBt(){
 	var name = $("input[name='btusername']").val();
-	layer.confirm("您确定要解除绑定："+name+" ？",{closeBtn:2,title:"解除绑定"},function(){
+	layer.confirm("您确定要解除绑定："+name+" ？",{closeBtn:2,icon:3,title:"解除绑定"},function(){
 		$.get("/ssl?action=DelToken",function(b){
 			layer.msg(b.msg,{icon:b.status? 1:2})
+			$("input[name='btusername']").val('');
 		})
 	})
 }
@@ -155,8 +153,6 @@ $.get("/ssl?action=GetUserInfo",function(b){
 		$("input[name='btusername']").next().text("绑定").attr("onclick","bindBTName(2,'b')").removeAttr("style");
 	}
 });
-
-
 
 //设置API
 function apiSetup(){
@@ -186,16 +182,25 @@ function setTemplate(){
 
 //设置面板SSL
 function setPanelSSL(){
-	var loadT = layer.msg('正在安装并设置SSL组件,这可能需要几分钟时间...',{icon:16,time:0,shade: [0.3, '#000']});
-	$.post('/config?action=SetPanelSSL','',function(rdata){
-		layer.close(loadT);
-		layer.msg(rdata.msg,{icon:rdata.status?1:5});
-		if(rdata.status === true){
-			$.get('/system?action=ReWeb',function(){});
-			setTimeout(function(){
-				window.location.href = ((window.location.protocol.indexOf('https') != -1)?'http://':'https://') + window.location.host + window.location.pathname;
-			},3000);
+	msg = $("#panelSSL").attr('checked')?'关闭SSL后,必需使用http协议访问面板,继续吗?':'<a style="font-weight: bolder;font-size: 16px;">危险！此功能不懂别开启!</a><li style="margin-top: 12px;color:red;">必须要用到且了解此功能才决定自己是否要开启!</li><li>面板SSL是自签证书，不被浏览器信任，显示不安全是正常现象</li><li>开启后导致面板不能访问，可以点击下面链接了解解决方法</li><p style="margin-top: 10px;"><input type="checkbox" id="checkSSL" /><label style="font-weight: 400;margin: 3px 5px 0px;" for="checkSSL">我已了经解详情,并愿意承担风险</label><a target="_blank" class="btlink" href="https://www.bt.cn/bbs/thread-4689-1-1.html" style="float: right;">了解详情</a></p>';
+	layer.confirm(msg,{title:'设置面板SSL',icon:3,area:'550px'},function(){
+		if(window.location.protocol.indexOf('https') == -1){
+			if(!$("#checkSSL").prop('checked')){
+				layer.msg('请先确认风险!',{icon:2});
+				return false;
+			}
 		}
+		var loadT = layer.msg('正在安装并设置SSL组件,这需要几分钟时间...',{icon:16,time:0,shade: [0.3, '#000']});
+		$.post('/config?action=SetPanelSSL','',function(rdata){
+			layer.close(loadT);
+			layer.msg(rdata.msg,{icon:rdata.status?1:5});
+			if(rdata.status === true){
+				$.get('/system?action=ReWeb',function(){});
+				setTimeout(function(){
+					window.location.href = ((window.location.protocol.indexOf('https') != -1)?'http://':'https://') + window.location.host + window.location.pathname;
+				},1500);
+			}
+		});
 	});
 }
 

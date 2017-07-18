@@ -8,14 +8,8 @@ $def with (content)
 		<title>$web.ctx.session.webname</title>
 		<link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon" />
 		<link href="/static/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet">
-		<link href="/static/css/reset.css?$web.ctx.session.version&v=1.5" rel="stylesheet">
 		<link href="/static/css/site.css?$web.ctx.session.version&v=1.5" rel="stylesheet">
-		<link href="/static/css/file.css?$web.ctx.session.version&v=1.5" rel="stylesheet">
-      	<link href="/static/css/lib.css?$web.ctx.session.version&v=1.5" rel="stylesheet">
 		<link href="/static/codemirror/lib/codemirror.css" rel="stylesheet">
-		<link href="/static/codemirror/addon/hint/show-hint.css" rel="stylesheet">
-		<link href="/static/codemirror/addon/dialog/dialog.css" rel="stylesheet">
-		<link href="/static/codemirror/addon/search/matchesonscrollbar.css" rel="stylesheet">
 		<!--[if lte IE 9]>
 		<script src="/static/js/requestAnimationFrame.js"></script>
 		<![endif]-->
@@ -47,7 +41,7 @@ $def with (content)
 				<script src="/static/js/bootstrap.min.js"></script>
 				<script src="/static/layer/layer.js"></script>
 				<script src="/static/js/jquery.fly.min.js"></script>
-				<script src="/static/js/public.js?$web.ctx.session.version"></script>
+				<script src="/static/js/public.js?1.5"></script>
 				$:content
 				<div class="footer bgw">宝塔Linux面板  ©2014-2017 宝塔(bt.cn)<a style="margin-left:20px;color:#20a53a;" href="http://www.bt.cn/bbs" target="_blank">问题求助|产品建议请上宝塔论坛</a></div></div>
 			</div>
@@ -60,4 +54,14 @@ $def with (content)
 	<script src="/static/codemirror/addon/dialog/dialog.js"></script>
 	<script src="/static/codemirror/addon/search/search.js"></script>
 	<script src="/static/codemirror/addon/scroll/annotatescrollbar.js"></script>
+	<script type="text/javascript">
+		$$("#setBox").click(function() {
+			if($$(this).prop("checked")){
+				$$("input[name=id]").prop("checked", true)
+			}else{
+				$$("input[name=id]").prop("checked", false)
+			}
+		});
+		setCookie('order','id desc');
+	</script>
 </html>

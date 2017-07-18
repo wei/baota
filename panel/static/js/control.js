@@ -144,10 +144,11 @@ function SetControl(act){
 
 //清理记录
 function CloseControl(){
-	layer.confirm('您真的清空所有监控记录吗？',{title:'清空记录',closeBtn:2}, function() {
+	layer.confirm('您真的清空所有监控记录吗？',{title:'清空记录',icon:3,closeBtn:2}, function() {
 		loadT = layer.msg('正在处理...',{icon:16,time:0})
 		$.post('/config?action=SetControl','type=del',function(rdata){
 			layer.close(loadT);
+			$.get('/system?action=ReWeb',function(){});
 			layer.msg(rdata.msg,{icon:rdata.status?1:2});
 		});
 	});

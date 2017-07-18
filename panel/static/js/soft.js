@@ -282,7 +282,7 @@ function SetPHPConfig(version,pathinfo,go){
 
 //安装扩展
 function InstallPHPLib(version,name,title,pathinfo){
-	layer.confirm('您真的要安装['+name+']吗?',{closeBtn:2},function(){
+	layer.confirm('您真的要安装['+name+']吗?',{icon:3,closeBtn:2},function(){
 		name = name.toLowerCase();
 		var data = "name="+name+"&version="+version+"&type=1";
 		var loadT = layer.msg('正在添加到安装器...',{icon:16,time:0,shade: [0.3, '#000']});
@@ -305,7 +305,7 @@ function InstallPHPLib(version,name,title,pathinfo){
 
 //卸载扩展
 function UninstallPHPLib(version,name,title,pathinfo){
-	layer.confirm('您真的要卸载['+name+']吗?',{closeBtn:2},function(){
+	layer.confirm('您真的要卸载['+name+']吗?',{icon:3,closeBtn:2},function(){
 		name = name.toLowerCase();
 		var data = 'name='+name+'&version='+version;
 		var loadT = layer.msg('正在处理,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
@@ -382,6 +382,7 @@ function SetFpmConfig(version,action){
 		var start_servers = Number($("input[name='start_servers']").val());
 		var min_spare_servers = Number($("input[name='min_spare_servers']").val());
 		var max_spare_servers = Number($("input[name='max_spare_servers']").val());
+		var pm = $("select[name='pm']").val();
 		if(max_children < max_spare_servers){
 			layer.msg('max_spare_servers 不能大于 max_children',{icon:2});
 			return;
@@ -407,7 +408,8 @@ function SetFpmConfig(version,action){
 			return;
 		}
 		
-		var data = 'version='+version+'&max_children='+max_children+'&start_servers='+start_servers+'&min_spare_servers='+min_spare_servers+'&max_spare_servers='+max_spare_servers;
+		
+		var data = 'version='+version+'&max_children='+max_children+'&start_servers='+start_servers+'&min_spare_servers='+min_spare_servers+'&max_spare_servers='+max_spare_servers + '&pm='+pm;
 		var loadT = layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/config?action=setFpmConfig',data,function(rdata){
 			layer.close(loadT);
@@ -429,8 +431,14 @@ function SetFpmConfig(version,action){
 						+"<option value='5' "+(rdata.max_children==300?'selected':'')+">300并发</option>"
 						+"<option value='6' "+(rdata.max_children==500?'selected':'')+">500并发</option>"
 						+"<option value='7' "+(rdata.max_children==1000?'selected':'')+">1000并发</option>"
+		var pms = [{'name':'static','title':'静态'},{'name':'dynamic','title':'动态'}];
+		var pmList = '';
+		for(var i=0;i<pms.length;i++){
+			pmList += '<option value="'+pms[i].name+'" '+((pms[i].name == rdata.pm)?'selected':'')+'>'+pms[i].title+'</option>';
+		}
 		var body="<div class='bingfa'>"
 						+"<p class='line'><span class='span_tit'>并发方案：</span><select class='bt-input-text' name='limit' style='width:100px;'>"+limitList+"</select></p>"
+						+"<p class='line'><span class='span_tit'>运行模式：</span><select class='bt-input-text' name='pm' style='width:100px;'>"+pmList+"</select><span class='c9'>*PHP-FPM运行模式</span></p>"
 						+"<p class='line'><span class='span_tit'>max_children：</span><input class='bt-input-text' type='number' name='max_children' value='"+rdata.max_children+"' /><span class='c9'>*允许创建的最大子进程数</span></p>"
 						+"<p class='line'><span class='span_tit'>start_servers：</span><input class='bt-input-text' type='number' name='start_servers' value='"+rdata.start_servers+"' />  <span class='c9'>*起始进程数（服务启动后初始进程数量）</span></p>"
 						+"<p class='line'><span class='span_tit'>min_spare_servers：</span><input class='bt-input-text' type='number' name='min_spare_servers' value='"+rdata.min_spare_servers+"' />   <span class='c9'>*最小空闲进程数（清理空闲进程后的保留进程数量）</span></p>"
@@ -1475,7 +1483,7 @@ function oneInstall(name,version){
 
 function AddVersion(name,ver,type,obj,title){
 	if(type == "lib"){
-		layer.confirm('您真的要安装['+title+'-'+ver+']吗?',{closeBtn:2},function(){
+		layer.confirm('您真的要安装['+title+'-'+ver+']吗?',{icon:3,closeBtn:2},function(){
 			$(obj).text("安装中..");
 			var data = "name="+name;
 			var loadT = layer.msg('正在安装，请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
@@ -1632,7 +1640,7 @@ function UninstallVersion(name,version,title){
 		});
 	}
 	if(isError) return;
-	layer.confirm('您真的要卸载['+title+'-'+version+']吗?',{closeBtn:2},function(){
+	layer.confirm('您真的要卸载['+title+'-'+version+']吗?',{icon:3,closeBtn:2},function(){
 		var data = 'name='+name+'&version='+version;
 		var loadT = layer.msg('正在处理,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/plugin?action=unInstall',data,function(rdata){
@@ -1728,7 +1736,7 @@ function SetLibConfig(name,action){
 
 //安装插件
 function InstallLib(name){
-	layer.confirm('您真的要安装['+name+']插件吗？',{title:'安装插件',closeBtn:2}, function() {
+	layer.confirm('您真的要安装['+name+']插件吗？',{title:'安装插件',icon:3,closeBtn:2}, function() {
 		var loadT = layer.msg('正在安装,请稍候...',{icon:16,time:0,shade:[0.3,'#000']});
 		$.post('/ajax?action=InstallLib','name='+name,function(rdata){
 			layer.close(loadT);
@@ -1743,7 +1751,7 @@ function InstallLib(name){
 
 //卸载插件
 function UninstallLib(name){
-	layer.confirm('您真的要卸载['+name+']插件吗？',{title:'卸载插件',closeBtn:2}, function() {
+	layer.confirm('您真的要卸载['+name+']插件吗？',{title:'卸载插件',icon:3,closeBtn:2}, function() {
 		var loadT = layer.msg('正在卸载...',{icon:16,time:0,shade:[0.3,'#000']});
 		$.post('/ajax?action=UninstallLib','name='+name,function(rdata){
 			layer.close(loadT);

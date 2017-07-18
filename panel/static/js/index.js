@@ -662,7 +662,7 @@ function GetProcessList(rflush){
 //结束指定进程
 function killProcess(pid,name,obj){
 	var that= $(obj).parents('tr');
-	layer.confirm('结束进程['+pid+']['+name+']后可能会影响服务器的正常运行，继续吗？',{closeBtn:2},function(){
+	layer.confirm('结束进程['+pid+']['+name+']后可能会影响服务器的正常运行，继续吗？',{icon:3,closeBtn:2},function(){
 		loadT = layer.msg('正在结束进程...',{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/ajax?action=KillProcess','pid='+pid,function(rdata){
 			that.remove();
@@ -674,7 +674,7 @@ function killProcess(pid,name,obj){
 
 //屏蔽指定IP
 function dropAddress(address){
-	layer.confirm('屏蔽此IP后，对方将无法访问本服务器，你可以在【安全】中删除，继续吗？',{closeBtn:2},function(){
+	layer.confirm('屏蔽此IP后，对方将无法访问本服务器，你可以在【安全】中删除，继续吗？',{icon:3,closeBtn:2},function(){
 		loadT = layer.msg('正在屏蔽IP...',{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/firewall?action=AddDropAddress','port='+address+'&ps=手动屏蔽',function(rdata){
 			layer.close(loadT);

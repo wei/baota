@@ -24,7 +24,35 @@ class data:
         id = get.id;
         if public.M(get.table).where("id=?",(id,)).setField('ps',get.ps):
             return public.returnMsg(True,'修改成功');    
-        return public.returnMsg(False,'修改失败');    
+        return public.returnMsg(False,'修改失败');
+    
+    #端口扫描
+    def CheckPort(self,port):
+        import socket
+        IP = public.GetLocalIp();
+        localIP = '127.0.0.1';
+        temp = {}
+        temp['port'] = port;
+        temp['local'] = True;
+        try:
+            s = socket.socket()
+            s.settimeout(0.15)
+            s.connect((IP,port))
+            temp['status'] = True;
+            s.close()
+        except Exception,ex:
+            temp['status'] = False;
+            try:
+                s = socket.socket()
+                s.connect((localIP,port))
+                s.close()
+            except:
+                temp['local'] = False;
+        
+        result = 0;
+        if temp['local']: result +=1;
+        if temp['status']: result +=1;
+        return result;
     
     '''
      * 取数据列表
@@ -53,6 +81,12 @@ class data:
                 if table == 'sites':
                     for i in range(len(data['data'])):
                         data['data'][i]['domain'] = SQL.table('domain').where("pid=?",(data['data'][i]['id'],)).count()
+            elif table == 'firewall':
+                for i in range(len(data['data'])):
+                    if data['data'][i]['port'].find(':') != -1 or data['data'][i]['port'].find('.') != -1:
+                        data['data'][i]['status'] = -1;
+                    else:
+                        data['data'][i]['status'] = self.CheckPort(int(data['data'][i]['port']));
                     
                 #返回
             return data;
@@ -183,7 +217,7 @@ class data:
         
     def GetField(self,tableName):
         fields = {
-            'sites'     :   "id,name,path,status,ps,addtime",
+            'sites'     :   "id,name,path,status,ps,addtime,edate",
             'ftps'      :   "id,pid,name,password,status,ps,addtime,path",
             'databases' :   "id,pid,name,password,ps,addtime",
             'logs'      :   "id,type,log,addtime",

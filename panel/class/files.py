@@ -87,36 +87,35 @@ class files:
     #取文件/目录列表
     def GetDir(self,get):
         get.path = get.path.encode('utf-8');
-        #if get.path.find('/www/wwwroot') == -1: get.path = '/www/wwwroot';
-        if not os.path.exists(get.path): get.path = '/www'
-        #return get.path;
-        
+        if not os.path.exists(get.path): get.path = '/www';
         import pwd 
         dirnames = []
         filenames = []
         for filename in os.listdir(get.path):
-            filePath = (get.path+'/'+filename).encode('utf8')
-            link = '';
-            if os.path.islink(filePath): 
-                filePath = os.readlink(filePath);
-                link = ' -> ' + filePath;
-                if not os.path.exists(filePath): filePath = get.path + '/' + filePath;
-                if not os.path.exists(filePath): continue;
-            
-            stat = os.stat(filePath)
-            accept = str(oct(stat.st_mode)[-3:])
-            mtime = str(int(stat.st_mtime))
-            user = ''
             try:
-                user = pwd.getpwuid(stat.st_uid).pw_name
+                filePath = (get.path+'/'+filename).encode('utf8')
+                link = '';
+                if os.path.islink(filePath): 
+                    filePath = os.readlink(filePath);
+                    link = ' -> ' + filePath;
+                    if not os.path.exists(filePath): filePath = get.path + '/' + filePath;
+                    if not os.path.exists(filePath): continue;
+                
+                stat = os.stat(filePath)
+                accept = str(oct(stat.st_mode)[-3:])
+                mtime = str(int(stat.st_mtime))
+                user = ''
+                try:
+                    user = pwd.getpwuid(stat.st_uid).pw_name
+                except:
+                    user = str(stat.st_uid)
+                size = str(stat.st_size)
+                if os.path.isdir(filePath):
+                    dirnames.append(filename+';'+size+';'+mtime+';'+accept+';'+user+';'+link);
+                else:
+                    filenames.append(filename+';'+size+';'+mtime+';'+accept+';'+user+';'+link);
             except:
-                user = str(stat.st_uid)
-            size = str(stat.st_size)
-            if os.path.isdir(filePath):
-                dirnames.append(filename+';'+size+';'+mtime+';'+accept+';'+user+';'+link);
-            else:
-                filenames.append(filename+';'+size+';'+mtime+';'+accept+';'+user+';'+link);
-            
+                continue;
         
         data = {}
         data['DIR'] = sorted(dirnames);
@@ -245,24 +244,24 @@ class files:
     def Get_Recycle_bin(self,get):
         rPath = '/www/Recycle_bin/'
         if not os.path.exists(rPath): os.system('mkdir -p ' + rPath);
-        data = {}
-        data['dirs'] = []
-        data['files'] = []
-        data['status'] = os.path.exists('data/recycle_bin.pl')
+        data = {};
+        data['dirs'] = [];
+        data['files'] = [];
+        data['status'] = os.path.exists('data/recycle_bin.pl');
         for file in os.listdir(rPath):
-            tmp = {}
-            fname = rPath + file
-            tmp1 = file.split('_bt_')
-            tmp2 = tmp1[len(tmp1)-1].split('_t_')
+            tmp = {};
+            fname = rPath + file;
+            tmp1 = file.split('_bt_');
+            tmp2 = tmp1[len(tmp1)-1].split('_t_');
             tmp['rname'] = file;
-            tmp['dname'] = file.replace('_bt_','/').split('_t_')[0]
+            tmp['dname'] = file.replace('_bt_','/').split('_t_')[0];
             tmp['name'] = tmp2[0];
-            tmp['time'] = int(float(tmp2[1]))
-            tmp['size'] = os.path.getsize(fname)
+            tmp['time'] = int(float(tmp2[1]));
+            tmp['size'] = os.path.getsize(fname);
             if os.path.isdir(fname):
-                data['dirs'].append(tmp)
+                data['dirs'].append(tmp);
             else:
-                data['files'].append(tmp)
+                data['files'].append(tmp);
         return data;
     
     #彻底删除
@@ -275,13 +274,13 @@ class files:
         os.system('chattr -R -i ' + rPath + get.path)
         if os.path.isdir(rPath + get.path):
             import shutil
-            shutil.rmtree(rPath + get.path)
+            shutil.rmtree(rPath + get.path);
         else:
-            os.remove(rPath + get.path)
+            os.remove(rPath + get.path);
         
-        tfile = get.path.replace('_bt_','/').split('_t_')[0]
-        public.WriteLog('文件管理','已彻底从回收站删除['+tfile+']')
-        return public.returnMsg(True,'已彻底从回收站删除['+tfile+']')
+        tfile = get.path.replace('_bt_','/').split('_t_')[0];
+        public.WriteLog('文件管理','已彻底从回收站删除['+tfile+']');
+        return public.returnMsg(True,'已彻底从回收站删除['+tfile+']');
     
     #清空回收站
     def Close_Recycle_bin(self,get):
@@ -369,24 +368,24 @@ class files:
         get.path = get.path.encode('utf-8');
         if not os.path.exists(get.path):
             return public.returnMsg(False,'指定文件不存在!')
-        #try:
-        srcBody = public.readFile(get.path)
-        
-        data = {}
-        if srcBody:
-            import chardet
-            char=chardet.detect(srcBody)
-            data['encoding'] = char['encoding']
-            if char['encoding'] == 'ascii':data['encoding'] = 'utf-8'
-            data['data'] = srcBody.decode(char['encoding']).encode('utf-8')
-        else:
-            data['data'] = srcBody
-            data['encoding'] = 'utf-8'
-        
-        data['status'] = True
-        return data
-        #except:
-        #    return public.returnMsg(False,'文件内容获取失败,请检查是否安装chardet组件!')
+        try:
+            srcBody = public.readFile(get.path)
+            
+            data = {}
+            if srcBody:
+                import chardet
+                char=chardet.detect(srcBody)
+                data['encoding'] = char['encoding']
+                if char['encoding'] == 'ascii':data['encoding'] = 'utf-8'
+                data['data'] = srcBody.decode(char['encoding']).encode('utf-8')
+            else:
+                data['data'] = srcBody
+                data['encoding'] = 'utf-8'
+            
+            data['status'] = True
+            return data
+        except:
+            return public.returnMsg(False,'文件内容获取失败,格式不被支持!')
     
     
     #保存文件

@@ -40,7 +40,7 @@ $(document).ready(function() {
 function thenew(b, d, a, c) {
 	if(b == null) {
 		layer.confirm("初始化数据可能需要几分钟时间，继续吗？", {
-			title: "初始化",
+			title: "初始化",icon:3,
 			closeBtn: 2
 		}, function(e) {
 			if(e > 0) {
@@ -128,13 +128,7 @@ function setWebPs(b, e, a) {
 		}
 	})
 }
-$("#setBox").click(function() {
-	if($(this).prop("checked")) {
-		$("input[name=id]").prop("checked", true)
-	} else {
-		$("input[name=id]").prop("checked", false)
-	}
-});
+
 $(".menu-icon").click(function() {
 	$(".sidebar-scroll").toggleClass("sidebar-close");
 	$(".main-content").toggleClass("main-content-open");
@@ -657,7 +651,7 @@ function ServiceAdmin(a, b) {
 			d = "重载";
 			break
 	}
-	layer.confirm("您真的要" + d + a + "服务吗？", {
+	layer.confirm("您真的要" + d + a + "服务吗？", {icon:3,
 		closeBtn: 2
 	}, function() {
 		var e = layer.msg("正在" + d + a + "服务...", {
@@ -800,7 +794,7 @@ function GetProcessList() {
 }
 
 function killProcess(a, b) {
-	layer.confirm("结束进程[" + a + "][" + b + "]后可能会影响服务器的正常运行，继续吗？", {
+	layer.confirm("结束进程[" + a + "][" + b + "]后可能会影响服务器的正常运行，继续吗？", {icon:3,
 		closeBtn: 2
 	}, function() {
 		loadT = layer.msg("正在结束进程...", {
@@ -818,7 +812,7 @@ function killProcess(a, b) {
 }
 
 function dropAddress(a) {
-	layer.confirm("屏蔽此IP后，对方将无法访问本服务器，你可以在【安全】中删除，继续吗？", {
+	layer.confirm("屏蔽此IP后，对方将无法访问本服务器，你可以在【安全】中删除，继续吗？", {icon:3,
 		closeBtn: 2
 	}, function() {
 		loadT = layer.msg("正在屏蔽IP...", {
@@ -888,7 +882,7 @@ function SafeMessage(j, h, g, f) {
 	e = d + c;
 	sumtext = d + " + " + c;
 	setCookie("vcodesum", e);
-	layer.open({
+	var mess = layer.open({
 		type: 1,
 		title: j,
 		area: "350px",
@@ -911,7 +905,8 @@ function SafeMessage(j, h, g, f) {
 			layer.msg("计算错误，请重新计算");
 			return
 		}
-		g()
+		layer.close(mess);
+		g();
 	})
 }
 isAction();
@@ -967,7 +962,7 @@ $(function() {
 	})
 });
 $("#dologin").click(function() {
-	layer.confirm("您真的要退出面板吗?", {
+	layer.confirm("您真的要退出面板吗?", {icon:3,
 		closeBtn: 2
 	}, function() {
 		window.location.href = "/login?dologin=True"
@@ -987,7 +982,7 @@ function setPassword(a) {
 		}
 		
 		//准备弱口令匹配元素
-		var checks = ['admin','root','123123123','12345678','45678910','87654321','qweasd','asdfghjkl','zxcvbnm','user','password','passwd','panel','linux','centos','ubuntu','abc','xyz'];
+		var checks = ['admin888','123123123','12345678','45678910','87654321','asdfghjkl','password'];
 		pchecks = 'abcdefghijklmnopqrstuvwxyz1234567890';
 		for(var i=0;i<pchecks.length;i++){
 			checks.push(pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]);
@@ -1003,7 +998,7 @@ function setPassword(a) {
 		}
 		
 		if(isError != ""){
-			layer.msg('面板密码中不能包括弱口令'+isError,{icon:5});
+			layer.msg('面板密码不能为弱口令'+isError,{icon:5});
 			return;
 		}
 		
@@ -1035,7 +1030,7 @@ function setPassword(a) {
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
-		content: "<div class='bt-form pd20 pb70'><div class='line'><span class='tname' style='width: 25px;'>密码</span><div class='info-r' style='margin-left: 44px;'><input class='bt-input-text' type='text' name='password1' id='p1' value='' placeholder='新的密码' style='width:100%'/></div></div><div class='line'><span class='tname' style='width: 25px;'>重复</span><div class='info-r' style='margin-left: 44px;'><input class='bt-input-text' type='text' name='password2' id='p2' value='' placeholder='再输一次' style='width:100%' /></div></div><div class='bt-form-submit-btn'><span style='float: left;' title='随机密码' class='btn btn-default btn-sm' onclick='randPwd(10)'>随机</span><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button> <button type='button' class='btn btn-success btn-sm' onclick=\"setPassword(1)\">修改</button></div></div>"
+		content: "<div class='bt-form pd20 pb70'><div class='line'><span class='tname'>密码</span><div class='info-r'><input class='bt-input-text' type='text' name='password1' id='p1' value='' placeholder='新的密码' style='width:100%'/></div></div><div class='line'><span class='tname'>重复</span><div class='info-r'><input class='bt-input-text' type='text' name='password2' id='p2' value='' placeholder='再输一次' style='width:100%' /></div></div><div class='bt-form-submit-btn'><span style='float: left;' title='随机密码' class='btn btn-default btn-sm' onclick='randPwd(10)'>随机</span><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button> <button type='button' class='btn btn-success btn-sm' onclick=\"setPassword(1)\">修改</button></div></div>"
 	});
 }
 
@@ -1482,6 +1477,55 @@ function fly(a) {
 				});
 				GetTaskCount()
 			}
-		})
-	})
+		});
+	});
 };
+
+
+//检查选中项
+function checkSelect(){
+	setTimeout(function(){
+		var checkList = $("input[name=id]");
+		var count = 0;
+		for(var i=0;i<checkList.length;i++){
+			if(checkList[i].checked) count++;
+		}
+		if(count > 0){
+			$("#allDelete").show();
+		}else{
+			$("#allDelete").hide();
+		}
+	},5);
+}
+
+//处理排序
+function listOrder(skey,type,obj){
+	or = getCookie('order');
+	orderType = 'desc';
+	if(or){
+		if(or.split(' ')[1] == 'desc'){
+			orderType = 'asc';
+		}
+	}
+	
+	setCookie('order',skey + ' ' + orderType);
+	
+	switch(type){
+		case 'site':
+			getWeb(1);
+			break;
+		case 'database':
+			getData(1);
+			break;
+		case 'ftp':
+			getFtp(1);
+			break;
+	}
+	$(obj).find(".glyphicon-triangle-bottom").remove();
+	$(obj).find(".glyphicon-triangle-top").remove();
+	if(orderType == 'asc'){
+		$(obj).append("<span class='glyphicon glyphicon-triangle-bottom' style='margin-left:5px;color:#bbb'></span>");
+	}else{
+		$(obj).append("<span class='glyphicon glyphicon-triangle-top' style='margin-left:5px;color:#bbb'></span>");
+	}
+}

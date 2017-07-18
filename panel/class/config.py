@@ -193,6 +193,10 @@ class config:
         tmp = re.search(rep, conf).groups();
         data['max_spare_servers'] = tmp[0];
         
+        rep = "\s*pm\s*=\s*(\w+)\s*";
+        tmp = re.search(rep, conf).groups();
+        data['pm'] = tmp[0];
+        
         return data
 
 
@@ -203,6 +207,7 @@ class config:
         start_servers = get.start_servers
         min_spare_servers = get.min_spare_servers
         max_spare_servers = get.max_spare_servers
+        pm = get.pm
         
         file = web.ctx.session.setupPath+"/php/"+version+"/etc/php-fpm.conf";
         conf = public.readFile(file);
@@ -218,6 +223,10 @@ class config:
         
         rep = "\s*pm.max_spare_servers \s*=\s*([0-9]+)\s*";
         conf = re.sub(rep, "\npm.max_spare_servers = "+max_spare_servers+"\n", conf);
+        
+        rep = "\s*pm\s*=\s*(\w+)\s*";
+        conf = re.sub(rep, "\npm = "+pm+"\n", conf);
+        
         public.writeFile(file,conf)
         public.phpReload(version);
         public.WriteLog("PHP配置", "设置PHP-"+version+"并发设置,max_children="+max_children+",start_servers="+start_servers+",min_spare_servers="+min_spare_servers+",max_spare_servers="+max_spare_servers);
@@ -347,11 +356,31 @@ class config:
         else:
             os.system('pip install pyOpenSSL');
             try:
-                from web.wsgiserver import CherryPyWSGIServer
+                if not self.CreateSSL(): return public.returnMsg(False,'开启失败，无法自动安装pyOpenSSL组件-1!');
                 public.writeFile(sslConf,'True')
-            except:
-                return public.returnMsg(False,'开启失败，无法自动安装pyOpenSSL组件!');
+            except Exception,ex:
+                return public.returnMsg(False,'开启失败，无法自动安装pyOpenSSL组件!<p>请尝试手动安装: pip install pyOpenSSL</p>');
             return public.returnMsg(True,'开启成功，请使用https协议访问面板!');
+    #自签证书
+    def CreateSSL(self):
+        import OpenSSL
+        key = OpenSSL.crypto.PKey()
+        key.generate_key(OpenSSL.crypto.TYPE_RSA, 2048)
+        cert = OpenSSL.crypto.X509()
+        cert.set_serial_number(0)
+        cert.get_subject().CN = public.GetLocalIp();
+        cert.set_issuer(cert.get_subject())
+        cert.gmtime_adj_notBefore( 0 )
+        cert.gmtime_adj_notAfter(86400 * 3650)
+        cert.set_pubkey( key )
+        cert.sign( key, 'md5' )
+        cert_ca = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+        private_key = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
+        if len(cert_ca) > 100 and len(private_key) > 100:
+            public.writeFile('ssl/certificate.pem',cert_ca)
+            public.writeFile('ssl/privateKey.pem',private_key)
+            return True
+        return False
         
     #生成Token
     def SetToken(self,get):

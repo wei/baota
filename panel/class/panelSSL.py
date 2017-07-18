@@ -160,6 +160,8 @@ class panelSSL:
                 keypath = path+"/privkey.pem";
                 pidpath = path+"/partnerOrderId";
                 #清理旧的证书链
+                public.ExecShell('rm -f ' + keypath)
+                public.ExecShell('rm -f ' + csrpath)
                 public.ExecShell('rm -rf ' + path + '-00*')
                 public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName)
                 public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName + '-00*')

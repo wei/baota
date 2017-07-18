@@ -471,8 +471,10 @@ class panelPlugin:
         if not hasattr(web.ctx.session,'downloadUrl'): web.ctx.session.downloadUrl = 'http://download.bt.cn';
         
         try:
-            downloadUrl = public.get_url() + '/install/lib/listTest.json'
+            newUrl = public.get_url();
+            downloadUrl = newUrl + '/install/lib/listTest.json'
             data = json.loads(public.httpGet(downloadUrl))
+            web.ctx.session.downloadUrl = newUrl;
         except:
             downloadUrl = web.ctx.session.downloadUrl + '/install/lib/listTest.json'
             data = json.loads(public.httpGet(downloadUrl))
@@ -486,16 +488,33 @@ class panelPlugin:
                     j += 1
             else:
                 public.M('plugin_list').dbfile('plugin').add('ssort,title,tip,name,type,status,versions,ps,checks,author,home,shell,addtime',(i,pluginInfo['title'],pluginInfo['tip'],pluginInfo['name'],pluginInfo['type'],pluginInfo['display'],pluginInfo['versions'],pluginInfo['ps'],pluginInfo['checks'],pluginInfo['author'],pluginInfo['home'],pluginInfo['shell'],pluginInfo['date']));
-                
+                iconFile = 'static/img/soft_ico/ico-'+pluginInfo['name']+'.png';
+                iconUrl = web.ctx.session.downloadUrl + '/install/lib/plugin/'+pluginInfo['name']+'/icon.png';
+                if not os.path.exists(iconFile): public.downloadFile(iconUrl,iconFile);
                 n += 1
             i += 1;
             if pluginInfo['default']: 
                 get.name = pluginInfo['name'];
                 self.install(get);
         
+        self.getCloudPHPExt(get);
         web.ctx.session.getCloudPlugin = True;
         if not n and not j: return public.returnMsg(False,'您的插件列表已经是最新版本!');
         return public.returnMsg(True,'成功从云端获取['+str(n)+']个新插件,['+str(j)+']个插件更新!');
+    
+    #获取PHP扩展
+    def getCloudPHPExt(self,get):
+        import json
+        try:
+            if not hasattr(web.ctx.session,'downloadUrl'): web.ctx.session.downloadUrl = 'http://download.bt.cn';
+            downloadUrl = web.ctx.session.downloadUrl + '/install/lib/phplib.json'
+            tstr = public.httpGet(downloadUrl)
+            data = json.loads(tstr);
+            if not data: return False;
+            public.writeFile('data/phplib.conf',json.dumps(data));
+            return True;
+        except:
+            pass
     
     #请求插件事件
     def a(self,get):

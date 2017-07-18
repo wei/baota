@@ -19,28 +19,28 @@ $def with (tData)
 			</div>
 			<button onclick="ftpAdd()" class="btn btn-success btn-sm" type="button">添加FTP</button>
 			<button onclick="ftpPortEdit($web.ctx.session.port)" class="btn btn-default btn-sm" type="button" style="margin-left:5px">修改FTP端口</button>
-			<div class="dlt-right" style="display:none">
-						<button onclick="ftpPortEdit($web.ctx.session.port)" class="btn btn-default btn-sm btn-title" type="button" style="position:relative;">修改FTP端口</button>
-					</div>
-				<div class="divtable mtb10">
-					<table class="table table-hover" width="100%" border="0" cellpadding="0" cellspacing="0">
-						<thead>
-						<tr>
-							<th width='30' style="display:none"><input type="checkbox" id="setBox"></th>
-                            <th>用户名</th>
-                            <th width="15%">密码</th>
-                            <th>状态</th>
-                            <th>根目录</th>
-                            <th width="15%">备注</th>
-                            <th width="100" class="text-right">操作</th>
-						</tr>
-						</thead>
-						<tbody id="ftpBody"></tbody>
-					</table>
-					<div class="dataTables_paginate paging_bootstrap pagination">
-						<ul id="ftpPage" class="page"></ul>
-					</div>
+			<span id="allDelete" style="float: right;display: none;">
+				<button onclick="allDeleteFtp();" class="btn btn-default btn-sm">删除选中</button>
+			</span>
+			<div class="divtable mtb10">
+				<table class="table table-hover" width="100%" border="0" cellpadding="0" cellspacing="0">
+					<thead>
+					<tr>
+						<th width='30'><input type="checkbox" onclick="checkSelect();" id="setBox"></th>
+                        <th onclick="listOrder('name','ftp',this)" style="cursor: pointer;">用户名<span class="glyphicon glyphicon-triangle-top" style="margin-left:5px;color:#bbb"></span></th>
+                        <th width="15%">密码</th>
+                        <th onclick="listOrder('status','ftp',this)" style="cursor: pointer;">状态<span class="glyphicon glyphicon-triangle-top" style="margin-left:5px;color:#bbb"></span></th>
+                        <th>根目录</th>
+                        <th width="15%">备注</th>
+                        <th width="100" class="text-right">操作</th>
+					</tr>
+					</thead>
+					<tbody id="ftpBody"></tbody>
+				</table>
+				<div class="dataTables_paginate paging_bootstrap pagination">
+					<ul id="ftpPage" class="page"></ul>
 				</div>
+			</div>
 		</div>
 	</div>
 </div>

@@ -4,11 +4,16 @@
  * @param {String} search 搜索条件
  */
 function getWeb(page, search) {
-	//search = search == undefined ? '':search;
 	search = $("#SearchValue").prop("value");
 	page = page == undefined ? '1':page;
+	order = getCookie('order');
+	if(order){
+		order = '&order=' + order;
+	}else{
+		order = '';
+	}
 	var sUrl = '/data?action=getData'
-	var pdata = 'tojs=getWeb&table=sites&limit=15&p=' + page + '&search=' + search;
+	var pdata = 'tojs=getWeb&table=sites&limit=15&p=' + page + '&search=' + search + order;
 	var loadT = layer.load();
 	//取回数据
 	$.post(sUrl,pdata, function(data) {
@@ -30,22 +35,23 @@ function getWeb(page, search) {
 				var backup = "<a href='javascript:;' class='btlink' onclick=\"getBackup(" + data.data[i].id + ",'" + data.data[i].name + "')\">无备份</a>";
 			}
 			//是否设置有效期
-			var web_end_time = (data.data[i].due_date == "0000-00-00") ? '永久' : data.data[i].due_date;
+			var web_end_time = (data.data[i].edate == "0000-00-00") ? '永久' : data.data[i].edate;
 			//表格主体
-			Body += "<tr><td style='display:none'><input type='checkbox' name='id' value='" + data.data[i].id + "'></td>\
-					<td><a class='btlink webtips' href='javascript:;' onclick=\"webEdit(" + data.data[i].id + ",'" + data.data[i].name + "','" + data.data[i].due_date + "','" + data.data[i].addtime + "')\">" + data.data[i].name + "</td>\
+			Body += "<tr><td><input type='checkbox' name='id' title='"+data.data[i].name+"' onclick='checkSelect();' value='" + data.data[i].id + "'></td>\
+					<td><a class='btlink webtips' href='javascript:;' onclick=\"webEdit(" + data.data[i].id + ",'" + data.data[i].name + "','" + data.data[i].edate + "','" + data.data[i].addtime + "')\">" + data.data[i].name + "</td>\
 					<td>" + status + "</td>\
 					<td>" + backup + "</td>\
 					<td><a class='btlink' title='打开目录' href=\"javascript:openPath('"+data.data[i].path+"');\">" + data.data[i].path + "</a></td>\
+					<td><a class='btlink' id='site_"+data.data[i].id+"' onclick=\"setEdate(" + data.data[i].id + ",'" + data.data[i].edate + "')\">" + web_end_time + "</a></td>\
 					<td><a class='btlinkbed' href='javascript:;' data-id='"+data.data[i].id+"'>" + data.data[i].ps + "</a></td>\
 					<td style='text-align:right; color:#bbb'>\
-					<a href='javascript:;' class='btlink' onclick=\"webEdit(" + data.data[i].id + ",'" + data.data[i].name + "','" + data.data[i].due_date + "','" + data.data[i].addtime + "')\">设置 </a>\
+					<a href='javascript:;' class='btlink' onclick=\"webEdit(" + data.data[i].id + ",'" + data.data[i].name + "','" + data.data[i].edate + "','" + data.data[i].addtime + "')\">设置 </a>\
                         | <a href='javascript:;' class='btlink' onclick=\"webDelete('" + data.data[i].id + "','" + data.data[i].name + "')\" title='删除站点'>删除</a>\
 					</td></tr>"
 		}
 		
 		if(Body.length < 10){
-			Body = "<tr><td colspan='6'>当前没有站点数据</td></tr>";
+			Body = "<tr><td colspan='8'>当前没有站点数据</td></tr>";
 			$(".dataTables_paginate").hide()
 		}
 		//输出数据列表
@@ -67,6 +73,38 @@ function getWeb(page, search) {
 			$(this).hide().after("<input class='baktext' type='text' data-id='"+dataid+"' name='bak' value='" + databak + "' placeholder='备注信息' onblur='GetBakPost(\"sites\")' />");
 			$(".baktext").focus();
 		});
+	});
+}
+
+//设置到期日期
+function setEdate(id,edate){
+	if(edate == '0000-00-00') edate = laydate.now(+365);	
+	laydate({
+		elem: '#site_'+id,
+		event: 'click',
+		format: 'YYYY-MM-DD',
+		istime: false,
+		isclear: false,
+		istoday: true,
+		issure: true, 
+		festival: true,
+		min: laydate.now(+1),
+		max: '2099-12-31',
+		start: edate,
+		fixed: false,
+		zIndex: 99999999,
+		choose: function(dates){
+			if(dates == laydate.now()){
+				dates = '0000-00-00';
+				$("#site_"+id).text('永久');
+			}
+			
+			var loadT = layer.msg("正在保存...", { icon: 16, time: 0, shade: [0.3, "#000"]});
+		 	$.post('/site?action=SetEdate','id='+id+'&edate='+dates,function(rdata){
+		 		layer.close(loadT);
+		 		layer.msg(rdata.msg,{icon:rdata.status?1:5});
+		 	});
+		}
 	});
 }
 
@@ -92,7 +130,7 @@ function webAdd(type) {
 		}
 		domainlist = domainlist.substring(0,domainlist.length-1);//子域名json
 		domain ='{"domain":"'+domain[0]+'","domainlist":['+domainlist+'],"count":'+domain.length+'}';//拼接joson
-		var loadT = layer.msg('正在处理...',{icon:16,time:0})
+		var loadT = layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, "#000"]})
 		var data = $("#addweb").serialize()+"&port="+Webport+"&webname="+domain;
 		$.post('/site?action=AddSite', data, function(ret) {
 			if(ret.status === false){
@@ -456,7 +494,7 @@ function SetIndexEdit(id){
  * @param {String} wname 网站名称
  */
 function webStop(wid, wname) {
-	layer.confirm('站点停用后将无法访问，您真的要停用这个站点吗？', {closeBtn:2},function(index) {
+	layer.confirm('站点停用后将无法访问，您真的要停用这个站点吗？', {icon:3,closeBtn:2},function(index) {
 		if (index > 0) {
 			var loadT = layer.load()
 			$.post("/site?action=SiteStop","id=" + wid + "&name=" + wname, function(ret) {
@@ -475,7 +513,7 @@ function webStop(wid, wname) {
  * @param {String} wname 网站名称
  */
 function webStart(wid, wname) {
-	layer.confirm('即将启动站点，您真的要启用这个站点吗？',{closeBtn:2}, function(index) {
+	layer.confirm('即将启动站点，您真的要启用这个站点吗？',{icon:3,closeBtn:2}, function(index) {
 		if (index > 0) {
 			var loadT = layer.load()
 			$.post("/site?action=SiteStart","id=" + wid + "&name=" + wname, function(ret) {
@@ -516,6 +554,61 @@ function webDelete(wid, wname){
 			getWeb(1);
 		});
 	},thtml);
+}
+
+
+//批量删除
+function allDeleteSite(){
+	var checkList = $("input[name=id]");
+	var dataList = new Array();
+	for(var i=0;i<checkList.length;i++){
+		if(!checkList[i].checked) continue;
+		var tmp = new Object();
+		tmp.name = checkList[i].title;
+		tmp.id = checkList[i].value;
+		dataList.push(tmp);
+	}
+	
+	var thtml = "<div class='options'>\
+	    	<label style=\"width:100%;\"><input type='checkbox' id='delpath' name='path'><span>同时删除站点根目录</span></label>\
+	    	</div>";
+	SafeMessage("批量删除站点","<a style='color:red;'>您共选择了["+dataList.length+"]个站点,删除后将无法恢复,真的要删除吗?</a>",function(){
+		layer.closeAll();
+		if($("#delpath").is(":checked")){
+			path='&path=1';
+		}
+		syncDeleteSite(dataList,0,'',path);
+	},thtml);
+}
+
+//模拟同步开始批量删除
+function syncDeleteSite(dataList,successCount,errorMsg,path){
+	if(dataList.length < 1) {
+		layer.msg("成功删除["+successCount+"]个站点!",{icon:1});
+		return;
+	}
+	var loadT = layer.msg('正在删除['+dataList[0].name+'],请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	$.ajax({
+			type:'POST',
+			url:'/site?action=DeleteSite',
+			data:'id='+dataList[0].id+'&webname='+dataList[0].name+path,
+			async: true,
+			success:function(frdata){
+				layer.close(loadT);
+				if(frdata.status){
+					successCount++;
+					$("input[title='"+dataList[0].name+"']").parents("tr").remove();
+				}else{
+					if(!errorMsg){
+						errorMsg = '<br><p>以下站点删除失败:</p>';
+					}
+					errorMsg += '<li>'+dataList[0].name+' -> '+frdata.msg+'</li>'
+				}
+				
+				dataList.splice(0,1);
+				syncDeleteSite(dataList,successCount,errorMsg,path);
+			}
+	});
 }
 
 
@@ -695,7 +788,7 @@ function delDomain(wid, wname, domain, port,type) {
 	if(num==1){
 		layer.msg('最后一个域名不能删除！');
 	}
-	layer.confirm('您真的要从站点中删除这个域名吗？',{closeBtn:2}, function(index) {
+	layer.confirm('您真的要从站点中删除这个域名吗？',{icon:3,closeBtn:2}, function(index) {
 			var url = "/site?action=DelDomain"
 			var data = "id=" + wid + "&webname=" + wname + "&domain=" + domain + "&port=" + port;
 			var loadT = layer.msg('正在删除...',{time:0,icon:16});
@@ -754,7 +847,7 @@ function WebBackup(id, name) {
  * @param {String} name	主域名
  */
 function WebBackupDelete(id,pid){
-	layer.confirm('真的要删除备份包吗?',{title:'删除备份文件',closeBtn:2},function(index){
+	layer.confirm('真的要删除备份包吗?',{title:'删除备份文件',icon:3,closeBtn:2},function(index){
 		var loadT =layer.msg('正在删除，请稍候...', {icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/site?action=DelBackup','id='+id, function(rdata){
 			layer.closeAll();
@@ -908,7 +1001,7 @@ function GetDefaultSite(){
 				shadeClose: true,
 				content:'<div class="bt-form ptb15 pb70">\
 							<p class="line">\
-								<span class="tname text-right mr5">默认站点：</span>\
+								<span class="tname text-right" style="width:90px">默认站点</span>\
 								<select id="defaultSite" class="bt-input-text" style="width: 300px;">'+opt+'</select>\
 							</p>\
 							<ul class="help-info-text c6 plr20">\
@@ -1202,7 +1295,7 @@ function DirBinding(id){
 function SetDirRewrite(id){
 	$.post('/site?action=GetDirRewrite&id='+id,function(rdata){
 		if(!rdata.status){
-			var confirmObj = layer.confirm('你真的要为这个子目录创建独立的伪静态规则吗？',{closeBtn:2},function(){
+			var confirmObj = layer.confirm('你真的要为这个子目录创建独立的伪静态规则吗？',{icon:3,closeBtn:2},function(){
 				$.post('/site?action=GetDirRewrite&id='+id+'&add=1',function(rdata){
 					layer.close(confirmObj);
 					ShowRewrite(rdata);
@@ -1268,7 +1361,7 @@ function AddDirBinding(id){
 
 //删除子目录绑定
 function DelBinding(id,siteId){
-	layer.confirm('您真的要删除这个子目录绑定吗？',{closeBtn:2},function(){
+	layer.confirm('您真的要删除这个子目录绑定吗？',{icon:3,closeBtn:2},function(){
 		$.post('site?action=DelDirBinding','id='+id,function(rdata){
 			DirBinding(siteId);
 			layer.msg(rdata.msg,{icon:rdata.status?1:2});
@@ -1435,7 +1528,7 @@ function BTssl(type,id,siteName){
 			+ '<div class="line mtb10"><span class="tname text-right mr20">宝塔账号</span><input id="btusername" class="bt-input-text" type="text" name="bt_panel_username" maxlength="11" style="width:200px" ><i style="font-style:normal;margin-left:10px;color:#999"></i></div>'
 			+ '<div class="line mtb10"><span class="tname text-right mr20">密码</span><input id="btpassword" class="bt-input-text" type="password" name="bt_panel_password" style="width:200px" ></div>'
 			+ '<div class="line mtb15" style="margin-left:100px"><button class="btn btn-success btn-sm mr20 btlogin">登录</button><button class="btn btn-success btn-sm" onclick="javascript:window.open(\'http://new.bt.cn/register.html\')">注册宝塔账号</button></div>'
-			+ '<ul class="help-info-text c7 ptb15"><li>证书申请需要注册宝塔账号并通过实名认证方可使用</li><li>已有宝塔账号请登录绑定</li><li>宝塔SSL申请的是TrustAsia DV SSL CA - G5 原价：1900元/1年，宝塔用户免费！</li><li>一年满期后免费重新颁发</li></ul>'
+			+ '<ul class="help-info-text c7 ptb15"><li style="color:red">宝塔SSL证书为亚洲诚信证书，需要实名认证才能申请使用</li><li>已有宝塔账号请登录绑定</li><li>宝塔SSL申请的是TrustAsia DV SSL CA - G5 原价：1900元/1年，宝塔用户免费！</li><li>一年满期后免费颁发。</li></ul>'
 			+ '</div>';
 	var b = '<div class="btssl"><div class="line mtb15"><span class="tname text-center">域名</span><select id="domainlist" class="bt-input-text" style="width:220px"></select></div>'
 		  + '<div class="line mtb15" style="margin-left:80px"><button class="btn btn-success btn-sm btsslApply">申请</button></div>'
@@ -1445,7 +1538,7 @@ function BTssl(type,id,siteName){
 	
 	var lets =  '<div class="btssl"><div class="line mtb15"><span class="tname text-center">域名</span><ul id="ymlist" style="padding: 5px 10px;max-height:200px;overflow:auto; width:240px;border:#ccc 1px solid;border-radius:3px"></ul></div>'
 			  + '<div class="line mtb15" style="margin-left:80px"><button class="btn btn-success btn-sm letsApply">申请</button></div>'
-			  + '<ul class="help-info-text c7 ptb15"><li>申请之前，请确保域名已解析，如未解析会导致审核失败。</li><li>本证书国内服务器或国内dns存在一定失败率，如多次还失败请使用其他证书</li><li>Let\'s Encrypt免费证书，有效期3个月，支持多域名。默认会自动续签</li></ul>'
+			  + '<ul class="help-info-text c7 ptb15"><li>申请之前，请确保域名已解析，如未解析会导致审核失败。</li><li>本证书申请失败率较高，如多次失败请使用其他SSL</li><li>Let\'s Encrypt免费证书，有效期3个月，支持多域名。默认会自动续签</li></ul>'
 			  + '</div>';
 	
 	var other = '<div class="myKeyCon ptb15"><div class="ssl-con-key pull-left mr20">密钥(KEY)<br><textarea id="key" class="bt-input-text"></textarea></div>'
@@ -1538,9 +1631,11 @@ function BTssl(type,id,siteName){
 			});
 			break;
 		case 'lets':
+			/*
 			$.get("/ssl?action=GetUserInfo",function(sdata){
 				if(!sdata.status){
 					$(".tab-con").html(a);
+					$(".help-info-text").html("<li>不用实名认证，浏览器兼容较低，申请存在一定失败率</li><li>let's Encrypt证书有效期为3个月</li><li>3个月有效期后自动续签</li>");
 					$("#btusername").blur(function(){
 						if(!(/^1(3|4|5|7|8)\d{9}$/.test($(this).val()))){ 
 							$("#btusername").css("border","1px solid #e53451");
@@ -1564,57 +1659,55 @@ function BTssl(type,id,siteName){
 						})
 					})
 				}
-				else{
-					if(getCookie('letssl') == 1){
-						$.post('site?action=GetSSL','siteName='+siteName,function(rdata){
-							var lets = '<div class="myKeyCon ptb15"><div class="ssl-con-key pull-left mr20">密钥(KEY)<br><textarea id="key" class="bt-input-text" readonly="" style="background-color:#f6f6f6">'+rdata.key+'</textarea></div>'
-								+ '<div class="ssl-con-key pull-left">证书(CRT/PEM)<br><textarea id="csr" class="bt-input-text" readonly="" style="background-color:#f6f6f6">'+rdata.csr+'</textarea></div>'
-								+ '</div>'
-								+ '<ul class="help-info-text c7 pull-left"><li>已为您自动生成Let\'s Encrypt免费证书；</li><li>如需使用其他SSL,请切换其他证书后粘贴您的KEY以及CRT内容，然后保存即可。</li></ul>';
-							$(".tab-con").html(lets);
-						});
-						return;
-					}
+				else{}
+			});*/
+			if(getCookie('letssl') == 1){
+				$.post('site?action=GetSSL','siteName='+siteName,function(rdata){
+					var lets = '<div class="myKeyCon ptb15"><div class="ssl-con-key pull-left mr20">密钥(KEY)<br><textarea id="key" class="bt-input-text" readonly="" style="background-color:#f6f6f6">'+rdata.key+'</textarea></div>'
+						+ '<div class="ssl-con-key pull-left">证书(CRT/PEM)<br><textarea id="csr" class="bt-input-text" readonly="" style="background-color:#f6f6f6">'+rdata.csr+'</textarea></div>'
+						+ '</div>'
+						+ '<ul class="help-info-text c7 pull-left"><li>已为您自动生成Let\'s Encrypt免费证书；</li><li>如需使用其他SSL,请切换其他证书后粘贴您的KEY以及CRT内容，然后保存即可。</li></ul>';
 					$(".tab-con").html(lets);
-					var opt='';
-					$.get('/data?action=getData&table=domain&list=True&search=' + id, function(rdata) {
-						for(var i=0;i<rdata.length;i++){
-							var isIP = isValidIP(rdata[i].name);
-							var x = isContains(rdata[i].name, '*');
-							if(!isIP && !x){
-								opt+='<li style="line-height:26px"><input type="checkbox" style="margin-right:5px; vertical-align:-2px" value="'+rdata[i].name+'">'+rdata[i].name+'</li>'
-							}
-						}
-						$("#ymlist").html(opt);
-						$("#ymlist li input").click(function(e){
-							e.stopPropagation();
-						})
-						$("#ymlist li").click(function(){
-							var o = $(this).find("input");
-							if(o.prop("checked")){
-								o.prop("checked",false)
-							}
-							else{
-								o.prop("checked",true);
-							}
-						})
-						$(".letsApply").click(function(){
-							var c = $("#ymlist input[type='checkbox']");
-							var str = [];
-							var domains = '';
-							for(var i=0; i<c.length; i++){
-								if(c[i].checked){
-									str.push(c[i].value);
-								}
-							}
-							domains = JSON.stringify(str);
-							newSSL(siteName,domains);
-							
-						})
-					});
+				});
+				return;
+			}
+			$(".tab-con").html(lets);
+			var opt='';
+			$.get('/data?action=getData&table=domain&list=True&search=' + id, function(rdata) {
+				for(var i=0;i<rdata.length;i++){
+					var isIP = isValidIP(rdata[i].name);
+					var x = isContains(rdata[i].name, '*');
+					if(!isIP && !x){
+						opt+='<li style="line-height:26px"><input type="checkbox" style="margin-right:5px; vertical-align:-2px" value="'+rdata[i].name+'">'+rdata[i].name+'</li>'
+					}
 				}
+				$("#ymlist").html(opt);
+				$("#ymlist li input").click(function(e){
+					e.stopPropagation();
+				})
+				$("#ymlist li").click(function(){
+					var o = $(this).find("input");
+					if(o.prop("checked")){
+						o.prop("checked",false)
+					}
+					else{
+						o.prop("checked",true);
+					}
+				})
+				$(".letsApply").click(function(){
+					var c = $("#ymlist input[type='checkbox']");
+					var str = [];
+					var domains = '';
+					for(var i=0; i<c.length; i++){
+						if(c[i].checked){
+							str.push(c[i].value);
+						}
+					}
+					domains = JSON.stringify(str);
+					newSSL(siteName,domains);
+					
+				})
 			});
-			
 			break;
 		case 'other':
 			$(".tab-con").html(other);
@@ -1848,7 +1941,7 @@ function PHPVersion(siteName){
 		$.post('/site?action=GetPHPVersion',function(rdata){
 			var versionSelect = "<div class='webEdit-box'>\
 									<div class='line'>\
-										<span class='tname'>选择PHP版本</span>\
+										<span class='tname' style='width:100px'>选择PHP版本</span>\
 										<div class='info-r'>\
 											<select id='phpVersion' class='bt-input-text mr5' name='phpVersion' style='width:110px'>";
 			var optionSelect = '';
@@ -1903,7 +1996,7 @@ function toTomcat(siteName){
 				versionSelect += '<div class="webEdit-box padding-10">\
 									<div class="linex">\
 										<label style="font-weight:normal">\
-											<input type="checkbox" name="status"  onclick="Tomcat(\''+siteName+'\')" style="width:15px;height:15px;" '+tomcat_checked+' />启用Tomcat\
+											<input type="checkbox" name="status"  onclick="Tomcat(\''+siteName+'\')" style="width: 15px; height: 15px; vertical-align: -2px; margin: 0px 3px 0px 0px;" '+tomcat_checked+' />启用Tomcat\
 										</label>\
 									</div>\
 									<ul class="help-info-text c7 ptb10">\
@@ -1997,7 +2090,7 @@ function Rewrite(siteName){
 			var webBakHtml = "<div class='bt-form'>\
 						<div class='line'>\
 						<select id='myRewrite' class='bt-input-text mr20' name='rewrite' style='width:30%;'>"+rList+"</select>\
-						<span>规则转换工具：<a href='http://www.bt.cn/Tools' target='_blank' style='color:#20a53a'>Apache转Nginx</a>\</span>\
+						<span>规则转换工具：<a href='http://www.bt.cn/Tools' target='_blank' style='color:#20a53a'>Apache转Nginx</a>\</span></div><div class='line'>\
 						<textarea class='bt-input-text' style='height: 260px; width: 480px; line-height:18px;margin-top:10px;padding:5px;' id='rewriteBody'>"+fileBody.data+"</textarea></div>\
 						<button id='SetRewriteBtn' class='btn btn-success btn-sm'>保存</button>\
 						<button id='SetRewriteBtnTel' class='btn btn-success btn-sm'>另存为模板</button>\

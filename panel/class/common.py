@@ -31,7 +31,7 @@ class MyBad():
 class panelSetup:
     def __init__(self):
         web.ctx.session.webname = '宝塔Linux面板'
-        web.ctx.session.version = "4.9.0"
+        web.ctx.session.version = "5.0.0"
         if os.path.exists('data/title.pl'):
             web.ctx.session.webname = public.readFile('data/title.pl');
         
@@ -40,11 +40,12 @@ class panelSetup:
 class panelAdmin(panelSetup):
     setupPath = '/www/server'
     def __init__(self):
-        get = web.input();
-        if hasattr(get,'btauth_key'):
-            self.auth();
-        else:
-            self.local();
+        self.local();
+        #get = web.input();
+        #if hasattr(get,'btauth_key'):
+        #    self.auth();
+        #else:
+        #    self.local();
     
     #api请求 
     def auth(self):

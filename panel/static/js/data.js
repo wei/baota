@@ -3,10 +3,15 @@
  * @param {Number} page	页码
  */
 function getData(page,search) {
-	//search = search == undefined ? '':search;
 	search = $("#SearchValue").prop("value");
+	order = getCookie('order');
+	if(order){
+		order = '&order=' + order;
+	}else{
+		order = '';
+	}
 	var sUrl = '/data?action=getData';
-	var sUrlData='tojs=getData&table=databases&limit=15&p='+page+'&search='+search;
+	var sUrlData='tojs=getData&table=databases&limit=15&p='+page+'&search='+search + order;
 	var loadT = layer.load();
 	$.post(sUrl, sUrlData,function(data) {
 		layer.close(loadT);
@@ -24,7 +29,7 @@ function getData(page,search) {
 				}else{
 					var isback = "<a href='javascript:;' class='btlink' onclick=\"DataDetails('"+data.data[i].id+"','"+data.data[i].name+"')\">有备份</a>"
 				}
-				Body += "<tr><td><input type='checkbox' name='id' value='"+data.data[i].id+"'>\
+				Body += "<tr><td><input type='checkbox' title='"+data.data[i].name+"' onclick='checkSelect();' name='id' value='"+data.data[i].id+"'>\
 						<td>" + data.data[i].name + "</td>\
 						<td>" + data.data[i].name + "</td>\
 						<td class='relative'><span class='password' data-pw='"+data.data[i].password+"'>**********</span><span class='glyphicon glyphicon-eye-open cursor pw-ico' style='margin-left:10px'></span><span class='ico-copy cursor btcopy' style='margin-left:10px' title='复制密码' data-pw='"+data.data[i].password+"'></span></td>\
@@ -213,7 +218,7 @@ function DataRespwd(sign,id,username){
 		});
 		return;
 	}
-	layer.confirm("您确定要修改数据库的密码吗?",{title:'数据库管理',closeBtn:2},function(index){
+	layer.confirm("您确定要修改数据库的密码吗?",{title:'数据库管理',icon:3,closeBtn:2},function(index){
 			if(index>0){
 				var loadT=layer.load({shade:true,shadeClose:false});
 				var data = $("#DataRespwd").serialize();
@@ -293,7 +298,7 @@ function DataDetails(id,dataname,page){
 }
 //恢复数据库备份
 function RecoveryData(fileName,dataName){
-	layer.confirm("数据库将被覆盖,继续吗?",{title:'导入数据',closeBtn:2},function(index){
+	layer.confirm("数据库将被覆盖,继续吗?",{title:'导入数据',icon:3,closeBtn:2},function(index){
 		var loadT =layer.msg('正在导入，请稍候...', {icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/database?action=InputSql','file='+fileName+'&name='+dataName,function(rdata){
 			layer.close(loadT);
@@ -331,7 +336,7 @@ function DataBackup(id,dataname){
  * @param {String} dataname	数据库名称
  */
 function DataBackupDelete(typeid,id,dataname){
-	layer.confirm("真的要删除备份文件吗?",{title:'删除备份',closeBtn:2},function(index){
+	layer.confirm("真的要删除备份文件吗?",{title:'删除备份',icon:3,closeBtn:2},function(index){
 		var loadT=layer.load({shade:true,shadeClose:false});
 		$.post('/database?action=DelBackup','id='+id,function(frdata){
 			layer.closeAll();
@@ -346,58 +351,70 @@ function DataBackupDelete(typeid,id,dataname){
  */
 
 function DataDelete(id,name){
-	layer.open({
-		type: 1,
-	    title: "删除数据库["+name+"]",
-	    area: '350px',
-	    closeBtn: 2,
-	    shadeClose: true,
-	    content:"<div class='bt-form webDelete pd20' style='padding-bottom:60px'>\
-	    	<p>一旦删除将无法恢复！您确定要删除该数据库吗？</p>\
-			<div class='vcode'>计算结果：<span class='text'></span>=<input class='bt-input-text' type='text' id='vcodeResult' value=''></div>\
-	    	<div class='bt-form-submit-btn'>\
-				<button type='button' id='web_end_time' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
-		        <button type='button' id='web_del_send' class='btn btn-success btn-sm btn-title'  onclick=\"ftpall('"+id+"','"+name+"')\">提交</button>\
-	        </div>\
-	    </div>"
-	})
-	randomSum();
-}
-//随机生成验证计算
-function randomSum(){
-	var a = Math.round(Math.random()*9+1);
-	var b = Math.round(Math.random()*9+1);
-	var sum = '';
-	sum = a + b;
-	$(".vcode .text").text(a+' + '+b);
-	setCookie("vcodesum",sum);
-	$("#vcodeResult").focus().keyup(function(e){
-		if(e.keyCode == 13) $("#web_del_send").click();
+	SafeMessage("删除["+name+"]","您真的要删除["+name+"]吗?",function(){
+		deleteDatabase(id,name);
 	});
+
 }
 //删除操作
-function ftpall(id,name){
-	var sum = $("#vcodeResult").val();
-	if(sum == undefined || sum ==''){
-		layer.msg("输入计算结果，否则无法删除");
+function deleteDatabase(id,name){
+	var loadT = layer.msg('正在删除['+name+'],请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	$.post('/database?action=DeleteDatabase','id='+id+'&name='+name,function(frdata){
+		getData(1);
+		layer.close(loadT);
+		layer.msg(frdata.msg,{icon:frdata.status?1:2});
+	});
+}
+
+
+//批量删除
+function allDeleteDatabase(){
+	var checkList = $("input[name=id]");
+	var dataList = new Array();
+	for(var i=0;i<checkList.length;i++){
+		if(!checkList[i].checked) continue;
+		var tmp = new Object();
+		tmp.name = checkList[i].title;
+		tmp.id = checkList[i].value;
+		dataList.push(tmp);
+	}
+	SafeMessage("批量删除数据库","<a style='color:red;'>您共选择了["+dataList.length+"]个数据库,删除后将无法恢复,真的要删除吗?</a>",function(){
+		layer.closeAll();
+		syncDelete(dataList,0,'');
+	});
+}
+
+//模拟同步开始批量删除数据库
+function syncDelete(dataList,successCount,errorMsg){
+	if(dataList.length < 1) {
+		layer.msg("成功删除["+successCount+"]个数据库!",{icon:1});
 		return;
 	}
-	else{
-		if(sum == getCookie("vcodesum")){
-			var loadT = layer.load();
-			//'/database?action=DelLiteTable','table=databases'
-			$.post('/database?action=DeleteDatabase','id='+id+'&name='+name,function(frdata){
-				getData(1);
-				layer.closeAll();
-				layer.msg(frdata.msg,{icon:frdata.status?1:2});
-			});
-		}
-		else{
-			layer.msg("计算错误，请重新计算");
-			return;
-		}
-	}
+	var loadT = layer.msg('正在删除['+dataList[0].name+'],请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	$.ajax({
+			type:'POST',
+			url:'/database?action=DeleteDatabase',
+			data:'id='+dataList[0].id+'&name='+dataList[0].name,
+			async: true,
+			success:function(frdata){
+				layer.close(loadT);
+				if(frdata.status){
+					successCount++;
+					$("input[title='"+dataList[0].name+"']").parents("tr").remove();
+				}else{
+					if(!errorMsg){
+						errorMsg = '<br><p>以下数据库删除失败:</p>';
+					}
+					errorMsg += '<li>'+dataList[0].name+' -> '+frdata.msg+'</li>'
+				}
+				
+				dataList.splice(0,1);
+				syncDelete(dataList,successCount,errorMsg);
+			}
+	});
 }
+
+
 
 /**
  * 选中项操作
@@ -653,17 +670,6 @@ function SyncGetDatabases(){
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
 	});
 }
-
-/**
- * 全选/反选
- */
-$("#setBox").click(function() {
-	if ($(this).prop("checked")) {
-		$("input[name=id]").prop("checked", true);
-	} else {
-		$("input[name=id]").prop("checked", false);
-	}
-});
 
 
 //管理数据库

@@ -163,13 +163,26 @@ function ShowAccept(page,search) {
 		layer.close(loadT);
 		var Body = '';
 		for (var i = 0; i < data.data.length; i++) {
+			var status = '';
+			switch(data.data[i].status){
+				case 0:
+					status = '未使用';
+					break;
+				case 1:
+					status = '外网不通';
+					break;
+				default:
+					status = '正常';
+					break;
+			}
 			Body += "<tr>\
-							<td><em class='dlt-num'>" + data.data[i].id + "</em></td>\
-							<td>" + (data.data[i].port.indexOf('.') == -1?'放行端口:['+data.data[i].port+']':'屏蔽IP:['+data.data[i].port+']') + "</td>\
-							<td>" + data.data[i].addtime + "</td>\
-							<td>" + data.data[i].ps + "</td>\
-							<td class='text-right'><a href='javascript:;' class='btlink' onclick=\"DelAcceptPort(" + data.data[i].id + ",'" + data.data[i].port + "')\">删除</a></td>\
-						</tr>";
+						<td><em class='dlt-num'>" + data.data[i].id + "</em></td>\
+						<td>" + (data.data[i].port.indexOf('.') == -1?'放行端口:['+data.data[i].port+']':'屏蔽IP:['+data.data[i].port+']') + "</td>\
+						<td>" + status + "</td>\
+						<td>" + data.data[i].addtime + "</td>\
+						<td>" + data.data[i].ps + "</td>\
+						<td class='text-right'><a href='javascript:;' class='btlink' onclick=\"DelAcceptPort(" + data.data[i].id + ",'" + data.data[i].port + "')\">删除</a></td>\
+					</tr>";
 		}
 		$("#firewallBody").html(Body);
 		$("#firewallPage").html(data.page);

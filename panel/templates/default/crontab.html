@@ -135,11 +135,15 @@ $def with (data)
 			<div class="setbox bgw mtb15">
 				<div class="title c6 plr15">
 					<h3 class="f16">任务列表</h3>
+					<span id="allDelete" style="float: right;display: none;">
+						<button onclick="allDeleteCron();" class="btn btn-default btn-sm">删除选中</button>
+					</span>
 				</div>
 				<div class="setting-con divtable pd15">
 					<table class="table table-hover">
 						<thead>
 							<tr>
+								<th width='30px'><input onclick="checkSelect();" type="checkbox" id="setBox"></th>
 								<th>任务名称</th>
 								<th>周期</th>
 								<th>执行时机</th>

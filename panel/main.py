@@ -21,10 +21,12 @@ web.config.debug = False
 #启用SSL
 if os.path.exists('data/ssl.pl'):
     try:
+        import OpenSSL
         from web.wsgiserver import CherryPyWSGIServer
         CherryPyWSGIServer.ssl_certificate = "ssl/certificate.pem"
         CherryPyWSGIServer.ssl_private_key = "ssl/privateKey.pem"
     except Exception,ex:
+        #os.system('nohup pip install pyOpenSSL > /tmp/pyOpenSSL.log 2>&1 &');
         print ex;
 
 
@@ -246,7 +248,7 @@ class panelSite(common.panelAdmin):
         import panelSite
         siteObject = panelSite.panelSite()
         
-        defs = ('SetRewriteTel','GetCheckSafe','CheckSafe','GetDefaultSite','SetDefaultSite','CloseTomcat','SetTomcat','apacheAddPort','AddSite','GetPHPVersion','SetPHPVersion','DeleteSite','AddDomain','DelDomain','GetDirBinding','AddDirBinding','GetDirRewrite','DelDirBinding'
+        defs = ('SetEdate','SetRewriteTel','GetCheckSafe','CheckSafe','GetDefaultSite','SetDefaultSite','CloseTomcat','SetTomcat','apacheAddPort','AddSite','GetPHPVersion','SetPHPVersion','DeleteSite','AddDomain','DelDomain','GetDirBinding','AddDirBinding','GetDirRewrite','DelDirBinding'
                 ,'UpdateRulelist','SetSiteRunPath','GetSiteRunPath','SetPath','SetIndex','GetIndex','GetDirUserINI','SetDirUserINI','GetRewriteList','SetSSL','SetSSLConf','CreateLet','CloseSSLConf','GetSSL','SiteStart','SiteStop'
                 ,'Set301Status','Get301Status','CloseLimitNet','SetLimitNet','GetLimitNet','SetProxy','GetProxy','ToBackup','DelBackup','GetSitePHPVersion','logsOpen','GetLogsStatus','CloseHasPwd','SetHasPwd','GetHasPwd')
         return publicObject(siteObject,defs);
@@ -640,7 +642,13 @@ def internalerror():
     '''
     return web.internalerror(errorStr)
 
+#检查环境
+def check_system():
+    sql = db.Sql();
+    sql.execute("alter TABLE sites add edate integer DEFAULT '0000-00-00'",());
+
 if __name__ == "__main__":
+    check_system();
     app.notfound = notfound  
     app.internalerror = internalerror
     reload(sys)

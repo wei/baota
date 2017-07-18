@@ -621,21 +621,15 @@ function BatchPaste(){
 
 //取扩展名
 function GetExtName(fileName){
-	var extArr = fileName.split(".");
-	var exts = ['conf','sh','cnf','pl','so','passwd','cshrc','deny','cache','init','po','ext2','ext3','ext4','i686','img','gz','efi','old','pid','lock','frm','opt','err','MYI','MYD','CSM','ini','eps','exe'];
+	var extArr = fileName.split(".");	
+	var exts = ['folder','folder-unempty','sql','c','cpp','cs','flv','css','js','htm','html','java','log','mht','php','url','xml','ai','bmp','cdr','gif','ico','jpeg','jpg','JPG','png','psd','webp','ape','avi','flv','mkv','mov','mp3','mp4','mpeg','mpg','rm','rmvb','swf','wav','webm','wma','wmv','rtf','docx','fdf','potm','pptx','txt','xlsb','xlsx','7z','cab','iso','rar','zip','gz','bt','file','apk','bookfolder','folder','folder-empty','folder-unempty','fromchromefolder','documentfolder','fromphonefolder','mix','musicfolder','picturefolder','videofolder','sefolder','access','mdb','accdb','sql','c','cpp','cs','js','fla','flv','htm','html','java','log','mht','php','url','xml','ai','bmp','cdr','gif','ico','jpeg','jpg','JPG','png','psd','webp','ape','avi','flv','mkv','mov','mp3','mp4','mpeg','mpg','rm','rmvb','swf','wav','webm','wma','wmv','doc','docm','dotx','dotm','dot','rtf','docx','pdf','fdf','ppt','pptm','pot','potm','pptx','txt','xls','csv','xlsm','xlsb','xlsx','7z','gz','cab','iso','rar','zip','bt','file','apk','css'];
 	var extLastName = extArr[extArr.length - 1];
-	if(extArr.length<2 || extLastName.length>4 || extLastName.length < 2){
-		return "file";
-	}
-	if(extLastName == "gz"){
-		return "gz";
-	}
 	for(var i=0; i<exts.length; i++){
 		if(exts[i]==extLastName){
-			return "file";
+			return exts[i];
 		}
 	}
-	return extLastName;
+	return 'file';
 }
 //操作显示
 function ShowEditMenu(){

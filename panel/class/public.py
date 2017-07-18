@@ -159,9 +159,8 @@ def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):
 
 
 def serviceReload():
-    import web
     #重载Web服务配置
-    if web.ctx.session.webserver == 'nginx':
+    if os.path.exists('/www/server/nginx/sbin/nginx'):
         result = ExecShell('/etc/init.d/nginx reload')
         if result[1].find('nginx.pid') != -1:
             ExecShell('pkill -9 nginx && sleep 1');

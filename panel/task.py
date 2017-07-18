@@ -12,12 +12,23 @@
 #------------------------------
 import sys,os,json
 sys.path.append("class/")
+reload(sys)
+sys.setdefaultencoding('utf-8')
 import db,public,time
-global pre,timeoutCount,logPath,isTask
+global pre,timeoutCount,logPath,isTask,oldEdate
 pre = 0
 timeoutCount = 0
+oldEdate = None
 logPath = '/tmp/panelExec.log'
 isTask = '/tmp/panelTask.pl'
+
+class MyBad():
+    _msg = None
+    def __init__(self,msg):
+        self._msg = msg
+    def __repr__(self):
+        return self._msg
+        
 
 def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):
     global logPath
@@ -70,7 +81,7 @@ def WriteLogs(logMsg):
     fp.write(logMsg)
     fp.close()
 
-#计划任务  
+#任务队列 
 def startTask():
     global isTask
     import time,public
@@ -96,7 +107,31 @@ def startTask():
                     if(sql.table('tasks').where("status=?",('0')).count() < 1): public.writeFile(isTask,'False')
         except:
             pass
+        siteEdate();
         time.sleep(2)
+
+#网站到期处理
+def siteEdate():
+    global oldEdate
+    try:
+        if not oldEdate: oldEdate = public.readFile('data/edate.pl');
+        if not oldEdate: oldEdate = '0000-00-00';
+        mEdate = time.strftime('%Y-%m-%d',time.localtime())
+        if oldEdate == mEdate: return False;
+        edateSites = public.M('sites').where('edate>? AND edate<? AND (status=? OR status=?)',('0000-00-00',mEdate,1,u'正在运行')).field('id,name').select();
+        import panelSite;
+        siteObject = panelSite.panelSite();
+        for site in edateSites:
+            get = MyBad('');
+            get.id = site['id'];
+            get.name = site['name'];
+            siteObject.SiteStop(get);
+        oldEdate = mEdate;
+        public.writeFile('data/edate.pl',mEdate);
+    except:
+         pass;
+     
+         
 
 #系统监控任务
 def systemTask():

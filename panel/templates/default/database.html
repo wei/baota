@@ -17,13 +17,16 @@ $def with (tData)
 					<button onclick="DataAdd(0)" title="添加数据库" class="btn btn-success btn-sm" type="button" style="margin-right: 5px;">添加数据库</button>
 					<button onclick="DataSetuppwd(0)" title="设置管理员密码" class="btn btn-default btn-sm" type="button" style="margin-right: 5px;">root密码</button>
 					<button onclick="AdminDatabase('','root','$tData['mysql_root']')" title="打开phpMyadmin" class="btn btn-default btn-sm" type="button" style="margin-right: 5px;">phpMyAdmin</button>
+					<span id="allDelete" style="float: right;display: none;">
+						<button onclick="allDeleteDatabase();" class="btn btn-default btn-sm">删除选中</button>
+					</span>
 					<div class="divtable mtb10">
 						<table class="table table-hover" width="100%" border="0" cellpadding="0" cellspacing="0">
 							<thead>
 							<tr>
-								<th width='30px'><input type="checkbox" id="setBox"></th>
-                                <th>数据库名</th>
-                                <th>用户名</th>
+								<th width='30px'><input onclick="checkSelect();" type="checkbox" id="setBox"></th>
+                                <th onclick="listOrder('name','database',this)" style="cursor: pointer;">数据库名<span class="glyphicon glyphicon-triangle-top" style="margin-left:5px;color:#bbb"></span></th>
+                                <th onclick="listOrder('name','database',this)" style="cursor: pointer;">用户名<span class="glyphicon glyphicon-triangle-top" style="margin-left:5px;color:#bbb"></span></th>
                                 <th width="15%">密码</th>
                                 <th>打包文件</th>
                                 <th width="15%">备注</th>

@@ -37,6 +37,7 @@ function getCronData(){
 		else{
 			for(var i=0;i<rdata.length;i++){
 				cbody += "<tr>\
+							<td><input type='checkbox' onclick='checkSelect();' title='"+rdata[i].name+"' name='id' value='"+rdata[i].id+"'></td>\
 							<td>"+rdata[i].name+"</td>\
 							<td>"+rdata[i].type+"</td>\
 							<td>"+rdata[i].cycle+"</td>\
@@ -86,6 +87,54 @@ function planDel(id,name){
 				layer.msg(rdata.msg,{icon:rdata.status?1:2});
 				getCronData();
 			});
+	});
+}
+
+
+//批量删除
+function allDeleteCron(){
+	var checkList = $("input[name=id]");
+	var dataList = new Array();
+	for(var i=0;i<checkList.length;i++){
+		if(!checkList[i].checked) continue;
+		var tmp = new Object();
+		tmp.name = checkList[i].title;
+		tmp.id = checkList[i].value;
+		dataList.push(tmp);
+	}
+	SafeMessage("批量删除任务","<a style='color:red;'>您共选择了["+dataList.length+"]个任务,删除后将无法恢复,真的要删除吗?</a>",function(){
+		layer.closeAll();
+		syncDeleteCron(dataList,0,'');
+	});
+}
+
+//模拟同步开始批量删除数据库
+function syncDeleteCron(dataList,successCount,errorMsg){
+	if(dataList.length < 1) {
+		layer.msg("成功删除["+successCount+"]个任务!",{icon:1});
+		return;
+	}
+	var loadT = layer.msg('正在删除['+dataList[0].name+'],请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	$.ajax({
+			type:'POST',
+			url:'/crontab?action=DelCrontab',
+			data:'id='+dataList[0].id+'&name='+dataList[0].name,
+			async: true,
+			success:function(frdata){
+				layer.close(loadT);
+				if(frdata.status){
+					successCount++;
+					$("input[title='"+dataList[0].name+"']").parents("tr").remove();
+				}else{
+					if(!errorMsg){
+						errorMsg = '<br><p>以下任务删除失败:</p>';
+					}
+					errorMsg += '<li>'+dataList[0].name+' -> '+frdata.msg+'</li>'
+				}
+				
+				dataList.splice(0,1);
+				syncDeleteCron(dataList,successCount,errorMsg);
+			}
 	});
 }
 
@@ -196,21 +245,80 @@ function planAdd(){
 	$("#set-Config input[name='sType']").val(sType);
 	$("#set-Config textarea[name='sBody']").val(decodeURIComponent(sBody));
 	
-	var sName = $("#sName").attr("val");
-	
 	if(sType == 'site' || sType == 'database'){
 		var backupTo = $(".planBackupTo").find("b").attr("val");
 		$("#backupTo").val(backupTo);
 	}
 	
-	$("#set-Config input[name='sName']").val(sName);
 	
+	var sName = $("#sName").attr("val");
+	
+	if(sName == 'backupAll'){
+		var alist = $("ul[aria-labelledby='backdata'] li a");
+		var dataList = new Array();
+		for(var i=1;i<alist.length;i++){
+			var tmp = alist[i].getAttribute('value');
+			dataList.push(tmp);
+		}
+		if(dataList.length < 1){
+			layer.msg('对象列表为空,无法继续!',{icon:5});
+			return;
+		}
+		
+		allAddCrontab(dataList,0,'');
+		return;
+	}
+	
+	$("#set-Config input[name='sName']").val(sName);
 	layer.msg('正在添加...',{icon:16,time:0,shade: [0.3, '#000']});
 	var data= $("#set-Config").serialize() + '&sBody='+sBody + '&urladdress=' + urladdress;
 	$.post('/crontab?action=AddCrontab',data,function(rdata){
 		layer.closeAll();
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
 		getCronData();
+	});
+}
+
+//批量添加任务
+function allAddCrontab(dataList,successCount,errorMsg){
+	if(dataList.length < 1) {
+		layer.msg("成功添加["+successCount+"]个计划任务!",{icon:1});
+		return;
+	}
+	var loadT = layer.msg('正在添加['+dataList[0]+'],请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	var sType = $(".planjs").find("b").attr("val");
+	var minute = parseInt($("#set-Config input[name='minute']").val());
+	var hour = parseInt($("#set-Config input[name='hour']").val());
+	var sTitle = (sType == 'site')?'备份网站':'备份数据库';
+	minute += 10;
+	if(hour != '' && minute > 60){
+		$("#set-Config input[name='hour']").val(hour+1);
+		minute = 10;
+	}
+	$("#set-Config input[name='minute']").val(minute);
+	$("#set-Config input[name='name']").val(sTitle + '['+dataList[0]+']');
+	$("#set-Config input[name='sName']").val(dataList[0]);
+	var pdata = $("#set-Config").serialize() + '&sBody=&urladdress=';
+	$.ajax({
+			type:'POST',
+			url:'/crontab?action=AddCrontab',
+			data:pdata,
+			async: true,
+			success:function(frdata){
+				layer.close(loadT);
+				if(frdata.status){
+					successCount++;
+					getCronData();
+				}else{
+					if(!errorMsg){
+						errorMsg = '<br><p>以下对象添加任务失败:</p>';
+					}
+					errorMsg += '<li>'+dataList[0]+' -> '+frdata.msg+'</li>'
+				}
+				
+				dataList.splice(0,1);
+				allAddCrontab(dataList,successCount,errorMsg);
+			}
 	});
 }
 
@@ -329,7 +437,10 @@ function toBackup(type){
 					  <button class="btn btn-default dropdown-toggle" type="button" id="backdata" data-toggle="dropdown" style="width:auto">\
 						<b id="sName" val="'+rdata.data[0].name+'">'+rdata.data[0].name+'['+rdata.data[0].ps+']</b> <span class="caret"></span>\
 					  </button>\
-					  <ul class="dropdown-menu" role="menu" aria-labelledby="backdata">'+sOpt+'</ul>\
+					  <ul class="dropdown-menu" role="menu" aria-labelledby="backdata">\
+					  	<li><a role="menuitem" tabindex="-1" href="javascript:;" value="backupAll">所有</a></li>\
+					  	'+sOpt+'\
+					  </ul>\
 					</div>\
 					<div class="textname pull-left mr20">备份到</div>\
 					<div class="dropdown planBackupTo pull-left mr20">\
