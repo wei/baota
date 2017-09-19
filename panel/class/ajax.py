@@ -179,41 +179,13 @@ class ajax:
             return public.returnMsg(True, '设置成功!');
         return public.returnMsg(False, 'ERROR: 无法连接到'+info['name']+'服务器,请检查[AK/SK/存储空间]设置是否正确!');
     
-
-    #安装插件
-    def InstallLib(self,get):
-        info = self.GetLibInfo(get.name);
-        if not info: return public.returnMsg(False, '插件信息获取失败!');
-        url = 'http://download.bt.cn/install/lib/script/'+get.name+'.sh';
-        filename = web.ctx.session.setupPath + '/panel/script/'+get.name+'_install.sh';
-        pdata = public.httpGet(url);
-        public.writeFile(filename,pdata);    
-        public.ExecShell("/bin/bash "+filename+" install > /tmp/panel_lib.pl");
-        public.WriteLog("插件管理", "安装"+info['name']+"插件成功!");
-        return public.returnMsg(True, '安装成功!');
-
-    #卸载插件
-    def UninstallLib(self,get):
-        info = self.GetLibInfo(get.name);
-        filename = web.ctx.session.setupPath + '/panel/script/'+get.name+'_install.sh';
-        if not os.path.exists(filename):
-            url = 'http://download.bt.cn/install/lib/script/'+get.name+'.sh';
-            filename = web.ctx.session.setupPath + '/panel/script/'+get.name+'_install.sh';
-            pdata = public.httpGet(url);
-            public.writeFile(filename,pdata);
-            
-        public.ExecShell("/bin/bash "+filename+" uninstall ");
-        public.WriteLog("插件管理", "卸载"+info['name']+"成功!");
-        return public.returnMsg(True, '卸载成功!');
-    
-    
     #设置内测
     def SetBeta(self,get):
         data = {}
         data['username'] = get.bbs_name
         data['qq'] = get.qq
         data['email'] = get.email
-        result = public.httpPost('http://www.bt.cn/Api/LinuxBeta',data);
+        result = public.httpPost(web.ctx.session.home + '/Api/LinuxBeta',data);
         import json;
         data = json.loads(result);
         if data['status']:
@@ -291,7 +263,7 @@ class ajax:
                 tmp['status'] = p.status();                         #进程状态
                 tmp['user'] = p.username();                         #执行用户
                 cputimes = p.cpu_times()    
-                if cputimes.user > 1:
+                if cputimes.user > 100:
                     tmp['cpu_percent'] = p.cpu_percent(interval = 0.5);
                 else:
                     tmp['cpu_percent'] = 0.0
@@ -318,11 +290,11 @@ class ajax:
         import psutil
         p = psutil.Process(int(get.pid));
         name = p.name();
-        if name == 'python': return public.returnMsg(False,'失败，无法结束此进程!');
+        if name == 'python': return public.returnMsg(False,'KILL_PROCESS_ERR');
         
         p.kill();
-        public.WriteLog('进程管理','结束进程['+get.pid+']['+name+']成功!');
-        return public.returnMsg(True,'进程['+get.pid+']['+name+']已结束!');
+        public.WriteLog('TYPE_PROCESS','KILL_PROCESS',(get.pid,name));
+        return public.returnMsg(True,'KILL_PROCESS',(get.pid,name));
     
     def GoToProcess(self,name):
         ps = ['sftp-server','login','nm-dispatcher','irqbalance','qmgr','wpa_supplicant','lvmetad','auditd','master','dbus-daemon','tapdisk','sshd','init','ksoftirqd','kworker','kmpathd','kmpath_handlerd','python','kdmflush','bioset','crond','kthreadd','migration','rcu_sched','kjournald','iptables','systemd','network','dhclient','systemd-journald','NetworkManager','systemd-logind','systemd-udevd','polkitd','tuned','rsyslogd']
@@ -393,10 +365,10 @@ class ajax:
     def UpdatePanel(self,get):
         #return public.returnMsg(False,'演示服务器，禁止此操作!');
         try:
-            if not public.IsRestart(): return public.returnMsg(False,'请等待所有安装任务完成再执行!');
+            if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK');
             import web,json
             if int(web.ctx.session.config['status']) == 0:
-                public.httpGet('http://new.bt.cn/Api/SetupCount?type=Linux');
+                public.httpGet(web.ctx.session.home+'/Api/SetupCount?type=Linux');
                 public.M('config').where("id=?",('1',)).setField('status',1);
             
             #取回远程版本信息
@@ -420,27 +392,33 @@ class ajax:
                 data['system'] = panelsys.GetSystemVersion() + '|' + str(mem.total / 1024 / 1024) + 'MB|' + public.getCpuType() + '*' + str(psutil.cpu_count()) + '|' + web.ctx.session.webserver + '|' + web.ctx.session.version;
                 data['system'] += '||'+self.GetInstalleds(mplugin.getPluginList(None));
                 data['logs'] = logs
-                
-                sUrl = 'https://www.bt.cn/Api/updateLinux';
+                msg = public.getMsg('PANEL_UPDATE_MSG');
+                sUrl = web.ctx.session.home + '/Api/updateLinux';
                 betaIs = 'data/beta.pl';
                 betaStr = public.readFile(betaIs);
                 if betaStr:
                     if betaStr.strip() != 'False':
-                        sUrl = 'https://www.bt.cn/Api/updateLinuxBeta';
+                        sUrl = web.ctx.session.home + '/Api/updateLinuxBeta';
+                        msg = public.getMsg('PANEL_UPDATE_MSG_TEST');
                 
                 betaIs = 'plugin/beta/config.conf';
                 betaStr = public.readFile(betaIs);
                 if betaStr:
                     if betaStr.strip() != 'False':
-                        sUrl = 'https://www.bt.cn/Api/updateLinuxBeta';
+                        sUrl = web.ctx.session.home + '/Api/updateLinuxBeta';
+                        msg = public.getMsg('PANEL_UPDATE_MSG_TEST');
                 
                 updateInfo = json.loads(public.httpPost(sUrl,data));
-                if not updateInfo: return public.returnMsg(False,"连接云端服务器失败!");
+                if not updateInfo: return public.returnMsg(False,"CONNECT_ERR");
+                updateInfo['msg'] = msg;
                 web.ctx.session.updateInfo = updateInfo;
                 
             #检查是否需要升级
             if updateInfo['version'] == web.ctx.session.version:
-                return public.returnMsg(False,"当前已经是最新版本!");
+                try:
+                    return public.returnMsg(False,updateInfo['msg']);
+                except:
+                    return public.returnMsg(False,'PANEL_UPDATE_ERR_NEW');
             
             
             #是否执行升级程序 
@@ -459,7 +437,7 @@ class ajax:
                 if httpUrl: updateInfo['downUrl'] =  httpUrl + '/install/' + uptype + '/LinuxPanel-' + updateInfo['version'] + '.zip';
                 
                 public.downloadFile(updateInfo['downUrl'],'panel.zip');
-                if os.path.getsize('panel.zip') < 1048576: return public.returnMsg(False,"文件下载失败，请重试或在命令行手动升级!"+updateInfo['downUrl']);
+                if os.path.getsize('panel.zip') < 1048576: return public.returnMsg(False,"PANEL_UPDATE_ERR_DOWN");
                 public.ExecShell('unzip -o panel.zip -d ' + setupPath + '/');
                 import compileall
                 if os.path.exists(setupPath + '/panel/main.py'): public.ExecShell('rm -f ' + setupPath + '/panel/*.pyc');
@@ -472,7 +450,7 @@ class ajax:
                     #public.ExecShell('rm -f ' + setupPath + '/panel/*.py');
                 public.ExecShell('rm -f panel.zip');
                 web.ctx.session.version = updateInfo['version']
-                return public.returnMsg(True,'成功升级到'+updateInfo['version']);
+                return public.returnMsg(True,'PANEL_UPDATE',(updateInfo['version'],));
             
             #输出新版本信息
             data = {
@@ -482,7 +460,7 @@ class ajax:
             };
             return data;
         except Exception,ex:
-            return public.returnMsg(False,"连接云端服务器失败!");
+            return public.returnMsg(False,"CONNECT_ERR");
          
     #检查是否安装任何
     def CheckInstalled(self,get):
@@ -504,10 +482,10 @@ class ajax:
     def GetPHPConfig(self,get):
         import web,re,json
         filename = web.ctx.session.setupPath + '/php/' + get.version + '/etc/php.ini'
-        if not os.path.exists(filename): return public.returnMsg(False,'指定PHP版本不存在!');
+        if not os.path.exists(filename): return public.returnMsg(False,'PHP_NOT_EXISTS');
         phpini = public.readFile(filename);
         data = {}
-        rep = "disable_functions\s*=\s*(.+)\n"
+        rep = "disable_functions\s*=\s{0,1}(.*)\n"
         tmp = re.search(rep,phpini).groups();
         data['disable_functions'] = tmp[0];
         
@@ -616,83 +594,84 @@ ServerName 127.0.0.2
     def delClose(self,get):
         #return public.returnMsg(False,'演示服务器，禁止此操作!');
         public.M('logs').where('id>?',(0,)).delete();
-        public.WriteLog('面板设置','面板日志已清空!');
-        return public.returnMsg(True,'已清空!');
+        public.WriteLog('TYPE_CONFIG','LOG_CLOSE');
+        return public.returnMsg(True,'LOG_CLOSE');
     
     #设置PHPMyAdmin
     def setPHPMyAdmin(self,get):
         import re;
-        #try:
-        if web.ctx.session.webserver == 'nginx':
-            filename = web.ctx.session.setupPath + '/nginx/conf/nginx.conf';
-        else:
-            filename = web.ctx.session.setupPath + '/apache/conf/extra/httpd-vhosts.conf';
-        
-        conf = public.readFile(filename);
-        if hasattr(get,'port'):
-            mainPort = public.readFile('data/port.pl').strip();
-            if mainPort == get.port:
-                return public.returnMsg(False,'不能和面板设为同一端口!');
+        try:
             if web.ctx.session.webserver == 'nginx':
-                rep = "listen\s+([0-9]+)\s*;"
-                oldPort = re.search(rep,conf).groups()[0];
-                conf = re.sub(rep,'listen ' + get.port + ';\n',conf);
+                filename = web.ctx.session.setupPath + '/nginx/conf/nginx.conf';
             else:
-                rep = "Listen\s+([0-9]+)\s*\n";
-                oldPort = re.search(rep,conf).groups()[0];
-                conf = re.sub(rep,"Listen " + get.port + "\n",conf,1);
-                rep = "VirtualHost\s+\*:[0-9]+"
-                conf = re.sub(rep,"VirtualHost *:" + get.port,conf,1);
+                filename = web.ctx.session.setupPath + '/apache/conf/extra/httpd-vhosts.conf';
             
-            
-            public.writeFile(filename,conf);
-            import firewalls
-            get.ps = '新的phpMyAdmin端口';
-            fw = firewalls.firewalls();
-            fw.AddAcceptPort(get);           
-            public.serviceReload();
-            public.WriteLog('软件管理','修改phpMyAdmin运行端口为'+get.port+'!')
-            get.id = public.M('firewall').where('port=?',(oldPort,)).getField('id');
-            get.port = oldPort;
-            fw.DelAcceptPort(get);
-            return public.returnMsg(True,'端口修改成功!');
-        
-        if hasattr(get,'phpversion'):
-            if web.ctx.session.webserver == 'nginx':
-                filename = web.ctx.session.setupPath + '/nginx/conf/enable-php.conf';
-                conf = public.readFile(filename);
-                rep = "php-cgi.*\.sock"
-                conf = re.sub(rep,'php-cgi-' + get.phpversion + '.sock',conf);
-            else:
-                rep = "php-cgi.*\.sock"
-                conf = re.sub(rep,'php-cgi-' + get.phpversion + '.sock',conf);
+            conf = public.readFile(filename);
+            if hasattr(get,'port'):
+                mainPort = public.readFile('data/port.pl').strip();
+                if mainPort == get.port:
+                    return public.returnMsg(False,'SOFT_PHPVERSION_ERR_PORT_RE');
+                if web.ctx.session.webserver == 'nginx':
+                    rep = "listen\s+([0-9]+)\s*;"
+                    oldPort = re.search(rep,conf).groups()[0];
+                    conf = re.sub(rep,'listen ' + get.port + ';\n',conf);
+                else:
+                    rep = "Listen\s+([0-9]+)\s*\n";
+                    oldPort = re.search(rep,conf).groups()[0];
+                    conf = re.sub(rep,"Listen " + get.port + "\n",conf,1);
+                    rep = "VirtualHost\s+\*:[0-9]+"
+                    conf = re.sub(rep,"VirtualHost *:" + get.port,conf,1);
                 
-            public.writeFile(filename,conf);
-            public.serviceReload();
-            public.WriteLog('软件管理','修改phpMyAdmin运行PHP版本为'+get.phpversion+'!')
-            return public.returnMsg(True,'PHP版本修改成功!');
-        
-        if hasattr(get,'password'):
-            import panelSite;
-            if(get.password == 'close'):
-                return panelSite.panelSite().CloseHasPwd(get);
-            else:
-                return panelSite.panelSite().SetHasPwd(get);
-        
-        if hasattr(get,'status'):
-            if conf.find(web.ctx.session.setupPath + '/stop') != -1:
-                conf = conf.replace(web.ctx.session.setupPath + '/stop',web.ctx.session.setupPath + '/phpmyadmin');
-                msg = '启用'
-            else:
-                conf = conf.replace(web.ctx.session.setupPath + '/phpmyadmin',web.ctx.session.setupPath + '/stop');
-                msg = '停用'
+                if oldPort == get.port: return public.returnMsg(False,'SOFT_PHPVERSION_ERR_PORT');
+                
+                public.writeFile(filename,conf);
+                import firewalls
+                get.ps = public.getMsg('SOFT_PHPVERSION_PS');
+                fw = firewalls.firewalls();
+                fw.AddAcceptPort(get);           
+                public.serviceReload();
+                public.WriteLog('TYPE_SOFT','SOFT_PHPMYADMIN_PORT',(get.port,))
+                get.id = public.M('firewall').where('port=?',(oldPort,)).getField('id');
+                get.port = oldPort;
+                fw.DelAcceptPort(get);
+                return public.returnMsg(True,'SET_PORT_SUCCESS');
             
-            public.writeFile(filename,conf);
-            public.serviceReload();
-            public.WriteLog('软件管理','phpMyAdmin已'+msg+'!')
-            return public.returnMsg(True,'phpMyAdmin已'+msg+'!');
-        #except:
-            #return public.returnMsg(False,'操作失败!');
+            if hasattr(get,'phpversion'):
+                if web.ctx.session.webserver == 'nginx':
+                    filename = web.ctx.session.setupPath + '/nginx/conf/enable-php.conf';
+                    conf = public.readFile(filename);
+                    rep = "php-cgi.*\.sock"
+                    conf = re.sub(rep,'php-cgi-' + get.phpversion + '.sock',conf);
+                else:
+                    rep = "php-cgi.*\.sock"
+                    conf = re.sub(rep,'php-cgi-' + get.phpversion + '.sock',conf);
+                    
+                public.writeFile(filename,conf);
+                public.serviceReload();
+                public.WriteLog('TYPE_SOFT','SOFT_PHPMYADMIN_PHP',(get.phpversion,))
+                return public.returnMsg(True,'SOFT_PHPVERSION_SET');
+            
+            if hasattr(get,'password'):
+                import panelSite;
+                if(get.password == 'close'):
+                    return panelSite.panelSite().CloseHasPwd(get);
+                else:
+                    return panelSite.panelSite().SetHasPwd(get);
+            
+            if hasattr(get,'status'):
+                if conf.find(web.ctx.session.setupPath + '/stop') != -1:
+                    conf = conf.replace(web.ctx.session.setupPath + '/stop',web.ctx.session.setupPath + '/phpmyadmin');
+                    msg = public.getMsg('START')
+                else:
+                    conf = conf.replace(web.ctx.session.setupPath + '/phpmyadmin',web.ctx.session.setupPath + '/stop');
+                    msg = public.getMsg('STOP')
+                
+                public.writeFile(filename,conf);
+                public.serviceReload();
+                public.WriteLog('TYPE_SOFT','SOFT_PHPMYADMIN_STATUS',(msg,))
+                return public.returnMsg(True,'SOFT_PHPMYADMIN_STATUS',(msg,));
+        except:
+            return public.returnMsg(False,'ERROR');
             
     def ToPunycode(self,get):
         import re;
@@ -711,15 +690,19 @@ ServerName 127.0.0.2
     
     #保存PHP排序
     def phpSort(self,get):
-        if public.writeFile('/www/server/php/sort.pl',get.ssort): return public.returnMsg(True,'保存排序成功!');
-        return public.returnMsg(False,'保存失败!');
+        if public.writeFile('/www/server/php/sort.pl',get.ssort): return public.returnMsg(True,'SUCCESS');
+        return public.returnMsg(False,'ERROR');
     
     #获取广告代码
     def GetAd(self,get):
         try:
-            return public.httpGet('https://www.bt.cn/Api/GetAD?name='+get.name + '&soc=' + get.soc);
+            return public.httpGet(web.ctx.session.home + '/Api/GetAD?name='+get.name + '&soc=' + get.soc);
         except:
             return '';
+        
+    #获取进度
+    def GetSpeed(self,get):
+        return public.getSpeed();
     
         
         

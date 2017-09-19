@@ -38,7 +38,7 @@ class panelWaf:
     #取状态
     def GetStatus(self):
         path = "/www/server/nginx/conf/nginx.conf";
-        if not os.path.exists(path): return public.returnMsg(False,'当前只支持Nginx');
+        if not os.path.exists(path): return public.returnMsg(False,'WAF_NOT_NGINX');
         conf = public.readFile(path);
         status = 1;
         if conf.find("#include luawaf.conf;") != -1: status = 0;
@@ -53,15 +53,15 @@ class panelWaf:
         for name in names:
             public.downloadFile(furl + '/' + name,fpath + '/' + name);
         public.serviceReload();
-        return public.returnMsg(True,'更新成功!')
+        return public.returnMsg(True,'WAF_UPDATE')
     
     #设置状态
     def SetStatus(self,get):
         path = "/www/server/nginx/conf/nginx.conf";
-        if not os.path.exists(path): return public.returnMsg(False,'当前只支持Nginx');
+        if not os.path.exists(path): return public.returnMsg(False,'WAF_NOT_NGINX');
         conf = public.readFile(path);
         status = self.GetStatus()
-        if status == -1: return public.returnMsg(False,'您当前的Nginx未安装WAF支持，请重新安装Nginx!');
+        if status == -1: return public.returnMsg(False,'WAF_NOT_NGINX_VERSION');
         if status == 0:
             conf = conf.replace('#include luawaf.conf;',"include luawaf.conf;");
         else:
@@ -69,7 +69,7 @@ class panelWaf:
         
         public.writeFile(path,conf);
         public.serviceReload();
-        return public.returnMsg(True,"设置成功!");
+        return public.returnMsg(True,"SET_SUCCESS");
             
         
     
@@ -80,50 +80,53 @@ class panelWaf:
         conf = re.sub(rep,get.name + '="' + get.value.strip() + '"\n',conf)
         public.writeFile(self.__ConfigFile,conf);
         public.serviceReload();
-        return public.returnMsg(True,"设置成功!");
+        return public.returnMsg(True,"SET_SUCCESS");
     
     #设置配置项列表
     def SetConfigList(self,get):
         conf = public.readFile(self.__ConfigFile);
         rep = get.name + "\s*=\s*(.+)\n";
         keyList = json.loads(re.search(rep,conf).groups()[0].replace("{","[").replace("}","]"));
+        if get.name != 'black_fileExt':
+            rep2 = "\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}";
+            if not re.search(rep2,get.value): return public.returnMsg(False,"WAF_CONF_ERR");
         if get.act == 'del':
-            if not get.value in keyList: return public.returnMsg(False,"失败，指定配置值不存在!");
+            if not get.value in keyList: return public.returnMsg(False,"WAF_CONF_NOT_EXISTS");
             tmp = []
             for t in keyList:
                 if t == get.value: continue;
                 tmp.append(t);
             keyList = tmp;
         else:
-            if get.value in keyList:return public.returnMsg(False,"失败，指定配置值已存在!");
+            if get.value in keyList:return public.returnMsg(False,"WAF_CONF_EXISTS");
             keyList.append(get.value.strip());
         keyStr = json.dumps(keyList).replace("[","{").replace("]","}");
         conf = re.sub(rep,get.name + "=" + keyStr + "\n",conf);
         public.writeFile(self.__ConfigFile,conf);
         public.serviceReload();
-        return public.returnMsg(True,"操作成功!");
+        return public.returnMsg(True,"SUCCESS");
         
     #获取指定规则列表
     def GetWafConf(self,get):
         path = self.__WafConfigPath + '/' + get.name;
-        if not os.path.exists(path): return public.returnMsg(False,"指定规则不存在!");
+        if not os.path.exists(path): return public.returnMsg(False,"WAF_CONF_NOT_EXISTS");
         data = public.readFile(path).split("\n")
         return data;
     
     #设置指定规则列表
     def SetWafConf(self,get):
         path = self.__WafConfigPath + '/' + get.name;
-        if not os.path.exists(path): return public.returnMsg(False,"指定规则不存在!");
+        if not os.path.exists(path): return public.returnMsg(False,"WAF_CONF_NOT_EXISTS");
         data = public.readFile(path).split("\n")
         if get.act == "del":
-            if not get.value in data: return public.returnMsg(False,"失败, 指定规则不存在!");
+            if not get.value in data: return public.returnMsg(False,"WAF_CONF_NOT_EXISTS");
             tmp = []
             for t in data:
                 if get.value == t: continue;
                 tmp.append(t);
             data = tmp;
         else:
-            if get.value in data: return public.returnMsg(False,"失败, 指定规则已存在!");
+            if get.value in data: return public.returnMsg(False,"WAF_CONF_EXISTS");
             data.append(get.value);
         conf = ""
         
@@ -132,7 +135,7 @@ class panelWaf:
             
         public.writeFile(path,conf[:-1]);
         public.serviceReload();
-        return public.returnMsg(True,"操作成功!");
+        return public.returnMsg(True,"SUCCESS");
     
     #取日志
                 

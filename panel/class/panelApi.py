@@ -4,18 +4,18 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2017 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 阿良 <2879625666@qq.com>
+# | Author: 阿良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 #
 #             ┏┓      ┏┓
 #            ┏┛┻━━━━━━┛┻┓
-#            ┃                ☃             ┃
+#            ┃                ☃         ┃
 #            ┃  ┳┛   ┗┳ ┃
 #            ┃     ┻    ┃
 #            ┗━┓      ┏━┛
 #              ┃      ┗━━━┓
-#              ┃  神兽保佑        ┣┓
-#              ┃　  永无BUG！   ┏┛
+#              ┃  神兽保佑 ┣┓
+#              ┃　  永无BUG！┏┛
 #              ┗┓┓┏━┳┓┏┛
 #               ┃┫┫ ┃┫┫
 #               ┗┻┛ ┗┻┛
@@ -31,6 +31,7 @@ class panelApi:
     #获取Token
     def GetToken(self,get):
         if not os.path.exists(self.tokenFile): return public.returnMsg(False,'错误：当前未开启API接口服务!')
+        if os.path.exists(self.tokenFile): self.CreateToken(get);
         token = loads(public.readFile(self.tokenFile))
         return token;
     

@@ -1,72 +1,9 @@
-function PageData(c, h, j) {
-	var e = h + 1;
-	var a = h - 1;
-	var b = "";
-	var g = "";
-	if(h <= 1) {
-		b = "disabled";
-		a = 1;
-	}
-	if(h >= c.page) {
-		g = "disabled";
-		e = c.page;
-	}
-	if(h < 4) {
-		var d = 1;
-	} else {
-		var d = h - 1;
-	}
-	var f = d + 3;
-	if((c.page - h) < 2) {
-		f = c.page + 1;
-	}
-	var k = "<li class='" + b + "'><a href='javascript:;' onclick='" + j + "(1)'>&lt;&lt;</a></li><li class='prev " + b + "'><a href='javascript:;' onclick='" + j + "(" + a + ")'>&lt;</a></li>";
-	for(d; d < f; d++) {
-		if(d == h) {
-			k += "<li class='active'><a href='javascript:;' onclick='" + j + "(" + d + ")'>" + d + "</a></li>";
-		} else {
-			k += "<li><a href='javascript:;' onclick='" + j + "(" + d + ")'>" + d + "</a></li>";
-		}
-	}
-	k += "<li class='next " + g + "'><a href='javascript:;' onclick='" + j + "(" + e + ")'>&gt;</a></li>	<li class='" + g + "'><a href='javascript:;' onclick='" + j + "(" + c.page + ")'>&gt;&gt;</a></li>	<li class='disabled'><a href='javascript:;'>共 " + c.page + " 页  " + c.count + " 条记录</a></li>";
-	return k;
-}
+
 $(document).ready(function() {
 	$(".sub-menu a.sub-menu-a").click(function() {
 		$(this).next(".sub").slideToggle("slow").siblings(".sub:visible").slideUp("slow");
-	})
+	});
 });
-
-function thenew(b, d, a, c) {
-	if(b == null) {
-		layer.confirm("初始化数据可能需要几分钟时间，继续吗？", {
-			title: "初始化",icon:3,
-			closeBtn: 2
-		}, function(e) {
-			if(e > 0) {
-				var f = layer.load({
-					shade: true,
-					shadeClose: false
-				});
-				$.get("/Server/there?id=" + d + "&ssid=" + a + "&ip=" + c, function(g) {
-					if(g == true) {
-						layer.msg("初始化成功", {
-							icon: 1
-						});
-						location.reload();
-					} else {
-						layer.msg("初始化失败，没有安装服务", {
-							icon: 2
-						});
-						layer.close(f);
-					}
-				});
-			}
-		});
-	} else {
-		window.location.href = "/Server?ssid=" + a
-	}
-}
 
 function RandomStrPwd(b) {
 	b = b || 32;
@@ -92,7 +29,7 @@ function GetBakPost(b) {
 	var c = $(".baktext").attr("data-id");
 	var a = $(".baktext").val();
 	if(a == "") {
-		a = "空"
+		a = lan.bt.empty;
 	}
 	setWebPs(b, c, a);
 	$("a[data-id='" + c + "']").html(a);
@@ -117,11 +54,11 @@ function setWebPs(b, e, a) {
 				}
 			}
 			layer.closeAll();
-			layer.msg("修改成功", {
+			layer.msg(lan.public.edit_ok, {
 				icon: 1
 			})
 		} else {
-			layer.msg("失败，没有权限", {
+			layer.msg(lan.public.edit_err, {
 				icon: 2
 			});
 			layer.closeAll()
@@ -138,20 +75,6 @@ $(".menu-icon").click(function() {
 });
 var Upload, percentage;
 
-function UsersSetup(a) {
-	$.get("/Client/GetClient?id=" + a, function(c) {
-		var b = layer.open({
-			type: 1,
-			skin: "demo-class",
-			area: "540px",
-			title: "用户设置",
-			closeBtn: 2,
-			shift: 5,
-			shadeClose: false,
-			content: '<div class="user-shezhi"><ul class="nav nav-tabs" role="tablist"><li role="presentation" class="active"><a href="#home" aria-controls="home" role="tab" data-toggle="tab">基本</a></li><li role="presentation"><a href="#binding" aria-controls="binding" role="tab" data-toggle="tab">绑定</a></li><li role="presentation"><a href="#messages" aria-controls="messages" role="tab" data-toggle="tab">通知</a></li></ul><div class="tab-content"><div role="tabpanel" class="tab-pane active" id="home"><form id="tabHome" class="zun-form-new"><div class="line"><label><span>新密码</span></label><div class="info-r"><input type="password" name="password1" id="password1" placeholder="请输入新密码"></div></div><div class="line"><label><span>重复密码</span></label><div class="info-r"><input type="password" name="password2" id="password2" placeholder="再输一遍"></div></div><div class="submit-btn"><button type="button" onclick="layer.closeAll()" class="btn btn-danger btn-sm btn-title">取消</button><button type="button" class="btn btn-success btn-sm btn-title">提交</button></div></form></div><div role="tabpanel" class="tab-pane" id="binding"><form id="tabBinding" class="zun-form-new"><div class="line"><label><span>手机</span></label><div class="info-r"><input type="number" name="phone" id="phone" placeholder="11位手机号码"></div></div><div class="line"><label><span>邮箱</span></label><div class="info-r"><input type="email" name="email" id="email" placeholder="abc@qq.com"></div></div></form></div><div role="tabpanel" class="tab-pane" id="messages"><form id="tabMessage" class="zun-form-new"><div class="line"><select name="body" style="width:40%"><option value="异地登陆通知">异地登陆通知</option><option value="站点异常通知">站点异常通知</option><option value="备份通知">备份通知</option><option value="服务器异常通知">服务器异常通知</option></select><select name="type"  style="width:20%"><option value="邮件">邮件</option><option value="短信">短信</option></select><a class="btn btn-default">添加</a></div></form></div></div></div>'
-		})
-	})
-}
 Date.prototype.format = function(b) {
 	var c = {
 		"M+": this.getMonth() + 1,
@@ -192,18 +115,6 @@ function ToSize(a) {
 	}
 }
 
-function getHelp(a) {
-	layer.open({
-		type: 2,
-		area: ["60%", "95%"],
-		skin: "demo-class",
-		title: "帮助信息",
-		closeBtn: 2,
-		shift: 5,
-		shadeClose: false,
-		content: "/Help/helpFind?id=" + a
-	})
-}
 
 function ChangePath(d) {
 	setCookie("SetId", d);
@@ -211,11 +122,11 @@ function ChangePath(d) {
 	var c = layer.open({
 		type: 1,
 		area: "650px",
-		title: "选择目录",
+		title: lan.bt.dir,
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
-		content: "<div class='changepath'><div class='path-top'><button type='button' class='btn btn-default btn-sm' onclick='BackFile()'><span class='glyphicon glyphicon-share-alt'></span> 返回</button><div class='place' id='PathPlace'>当前路径：<span></span></div></div><div class='path-con'><div class='path-con-left'><dl><dt id='changecomlist' onclick='BackMyComputer()'>计算机</dt></dl></div><div class='path-con-right'><ul class='default' id='computerDefautl'></ul><div class='file-list divtable'><table class='table table-hover' style='border:0 none'><thead><tr class='file-list-head'><th width='40%'>文件名</th><th width='20%'>修改时间</th><th width='10%'>权限</th><th width='10%'>所有者</th><th width='10%'></th></tr></thead><tbody id='tbody' class='list-list'></tbody></table></div></div></div></div><div class='getfile-btn' style='margin-top:0'><button type='button' class='btn btn-default btn-sm pull-left' onclick='CreateFolder()'>新建文件夹</button><button type='button' class='btn btn-danger btn-sm mr5' onclick=\"layer.close(getCookie('ChangePath'))\">关闭</button> <button type='button' class='btn btn-success btn-sm' onclick='GetfilePath()'>选择</button></div>"
+		content: "<div class='changepath'><div class='path-top'><button type='button' class='btn btn-default btn-sm' onclick='BackFile()'><span class='glyphicon glyphicon-share-alt'></span> "+lan.public.return+"</button><div class='place' id='PathPlace'>"+lan.bt.path+"：<span></span></div></div><div class='path-con'><div class='path-con-left'><dl><dt id='changecomlist' onclick='BackMyComputer()'>"+lan.bt.comp+"</dt></dl></div><div class='path-con-right'><ul class='default' id='computerDefautl'></ul><div class='file-list divtable'><table class='table table-hover' style='border:0 none'><thead><tr class='file-list-head'><th width='40%'>"+lan.bt.filename+"</th><th width='20%'>"+lan.bt.etime+"</th><th width='10%'>"+lan.bt.access+"</th><th width='10%'>"+lan.bt.own+"</th><th width='10%'></th></tr></thead><tbody id='tbody' class='list-list'></tbody></table></div></div></div></div><div class='getfile-btn' style='margin-top:0'><button type='button' class='btn btn-default btn-sm pull-left' onclick='CreateFolder()'>"+lan.bt.adddir+"</button><button type='button' class='btn btn-danger btn-sm mr5' onclick=\"layer.close(getCookie('ChangePath'))\">"+lan.public.close+"</button> <button type='button' class='btn btn-success btn-sm' onclick='GetfilePath()'>"+lan.bt.path_ok+"</button></div>"
 	});
 	setCookie("ChangePath", c);
 	var b = $("#" + d).val();
@@ -285,7 +196,7 @@ function GetDiskList(b) {
 }
 
 function CreateFolder() {
-	var a = "<tr><td colspan='2'><span class='glyphicon glyphicon-folder-open'></span> <input id='newFolderName' class='newFolderName' type='text' value=''></td><td colspan='3'><button id='nameOk' type='button' class='btn btn-success btn-sm'>确定</button>&nbsp;&nbsp;<button id='nameNOk' type='button' class='btn btn-default btn-sm'>取消</button></td></tr>";
+	var a = "<tr><td colspan='2'><span class='glyphicon glyphicon-folder-open'></span> <input id='newFolderName' class='newFolderName' type='text' value=''></td><td colspan='3'><button id='nameOk' type='button' class='btn btn-success btn-sm'>"+lan.public.ok+"</button>&nbsp;&nbsp;<button id='nameNOk' type='button' class='btn btn-default btn-sm'>"+lan.public.cancel+"</button></td></tr>";
 	if($("#tbody tr").length == 0) {
 		$("#tbody").append(a)
 	} else {
@@ -392,41 +303,6 @@ function GetfilePath() {
 	layer.close(getCookie("ChangePath"))
 }
 
-function VirtualDirectories(b, a) {
-	layer.open({
-		type: 1,
-		area: "620px",
-		title: "查看目录",
-		closeBtn: 2,
-		shift: 5,
-		shadeClose: false,
-		content: "<div class='changepath'>			<div class='path-top'>				<button id='backPath' type='button' class='btn btn-default btn-sm' ><span class='glyphicon glyphicon-share-alt'></span> 返回</button>				<div class='place' id='xuniPathPlace'>当前路径：<span></span></div>			</div>			<div class='path-con'>				<div class='path-con-right' style='width:100%'>					<table class='table table-hover'>						<thead>							<tr class='file-list-head'>								<th width='60%'>名称</th>								<th width='15%'>大小</th>								<th width='25%'>修改时间</th>							</tr>						</thead>						<tbody id='xunitbody' class='list-list'>						</tbody>					</table>				</div>			</div>		</div>"
-	});
-	GetVirtualDirectories(b, a);
-	$("#backPath").click(function() {
-		var c = $("#xuniPathPlace").find("span").text();
-		GetVirtualDirectories(-1, c)
-	})
-}
-
-function GetVirtualDirectories(d, c) {
-	if(c == undefined) {
-		c = ""
-	}
-	var b = "";
-	var a = "id=" + d + "&path=" + c;
-	$.get("/Api/GetDirFormat", a, function(f) {
-		for(var e = 0; e < f.DIR.length; e++) {
-			b += '<tr><td onclick="GetVirtualDirectories(' + f.DIR[e].id + ",'" + f.PATH + "')\"><span class='glyphicon glyphicon-folder-open'></span>" + f.DIR[e].name + "</td><td>--</td><td>" + f.DIR[e].addtime + "</td></tr>"
-		}
-		for(var e = 0; e < f.FILES.length; e++) {
-			b += "<tr><td><span class='glyphicon glyphicon-file'></span>" + f.FILES[e].filename + "</td><td>" + (ToSize(f.FILES[e].filesize)) + "</td><td>" + f.FILES[e].uptime + "</td></tr>"
-		}
-		$("#xunitbody").html(b);
-		$("#xuniPathPlace").find("span").text(f.PATH)
-	})
-}
-
 function setCookie(a, c) {
 	var b = 30;
 	var d = new Date();
@@ -488,30 +364,26 @@ function OnlineEditFile(k, f) {
 		var l = $("#PathPlace input").val();
 		var h = encodeURIComponent($("#textBody").val());
 		var a = $("select[name=encoding]").val();
-		layer.msg("正在保存...", {
+		var loadT = layer.msg(lan.bt.save_file, {
 			icon: 16,
 			time: 0
 		});
 		$.post("/files?action=SaveFileBody", "data=" + h + "&path=" + encodeURIComponent(f) + "&encoding=" + a, function(m) {
 			if(k == 1) {
-				layer.closeAll()
+				layer.close(loadT);
 			}
 			layer.msg(m.msg, {
 				icon: m.status ? 1 : 2
-			})
+			});
 		});
 		return
 	}
-	var e = layer.msg("正在读取文件...", {
+	var e = layer.msg(lan.bt.read_file, {
 		icon: 16,
 		time: 0
 	});
 	var g = f.split(".");
 	var b = g[g.length - 1];
-	var c = "在线编辑只支持文本与脚本文件，默认UTF8编码，是否尝试打开？";
-	if(b == "conf" || b == "cnf" || b == "ini") {
-		c = "您正在打开的是一个配置文件，若您不了解配置规则可能导致该配置的程序无法正常使用，继续吗？"
-	}
 	var d;
 	switch(b) {
 		case "html":
@@ -596,8 +468,8 @@ function OnlineEditFile(k, f) {
 			shift: 5,
 			closeBtn: 2,
 			area: ["90%", "90%"],
-			title: "在线编辑[" + f + "]",
-			content: '<form class="bt-form pd20 pb70"><div class="line"><p style="color:red;margin-bottom:10px">提示：Ctrl+F 搜索关键字，Ctrl+G 查找下一个，Ctrl+S 保存，Ctrl+Shift+R 查找替换!			<select class="bt-input-text" name="encoding" style="width: 74px;position: absolute;top: 31px;right: 19px;height: 22px;z-index: 9999;border-radius: 0;">' + n + '</select></p><textarea class="mCustomScrollbar bt-input-text" id="textBody" style="width:100%;margin:0 auto;line-height: 1.8;position: relative;top: 10px;" value="" />			</div>			<div class="bt-form-submit-btn" style="position:absolute; bottom:0; width:100%">			<button type="button" class="btn btn-danger btn-sm btn-editor-close">关闭</button>			<button id="OnlineEditFileBtn" type="button" class="btn btn-success btn-sm">保存</button>			</div>			</form>'
+			title: lan.bt.edit_title+"[" + f + "]",
+			content: '<form class="bt-form pd20 pb70"><div class="line"><p style="color:red;margin-bottom:10px">'+lan.bt.edit_ps+'			<select class="bt-input-text" name="encoding" style="width: 74px;position: absolute;top: 31px;right: 19px;height: 22px;z-index: 9999;border-radius: 0;">' + n + '</select></p><textarea class="mCustomScrollbar bt-input-text" id="textBody" style="width:100%;margin:0 auto;line-height: 1.8;position: relative;top: 10px;" value="" />			</div>			<div class="bt-form-submit-btn" style="position:absolute; bottom:0; width:100%">			<button type="button" class="btn btn-danger btn-sm btn-editor-close">'+lan.public.close+'</button>			<button id="OnlineEditFileBtn" type="button" class="btn btn-success btn-sm">'+lan.public.save+'</button>			</div>			</form>'
 		});
 		$("#textBody").text(s.data);
 		var q = $(window).height() * 0.9;
@@ -621,12 +493,12 @@ function OnlineEditFile(k, f) {
 		t.setSize("auto", q - 150);
 		$("#OnlineEditFileBtn").click(function() {
 			$("#textBody").text(t.getValue());
-			OnlineEditFile(1, f)
+			OnlineEditFile(1, f);
 		});
 		$(".btn-editor-close").click(function() {
-			layer.close(r)
-		})
-	})
+			layer.close(r);
+		});
+	});
 }
 
 function ServiceAdmin(a, b) {
@@ -639,28 +511,29 @@ function ServiceAdmin(a, b) {
 	
 	switch(b) {
 		case "stop":
-			d = "停止";
+			d = lan.bt.stop;
 			break;
 		case "start":
-			d = "启动";
+			d = lan.bt.start;
 			break;
 		case "restart":
-			d = "重启";
+			d = lan.bt.restart;
 			break;
 		case "reload":
-			d = "重载";
+			d = lan.bt.reload;
 			break
 	}
-	layer.confirm("您真的要" + d + a + "服务吗？", {icon:3,
+	layer.confirm( lan.get('service_confirm',[d,a]), {icon:3,
 		closeBtn: 2
 	}, function() {
-		var e = layer.msg("正在" + d + a + "服务...", {
+		var e = layer.msg(lan.get('service_the',[d,a]), {
 			icon: 16,
 			time: 0
 		});
 		$.post("/system?action=ServiceAdmin", c, function(g) {
 			layer.close(e);
-			var f = g.status ? a + "服务已" + d : a + "服务" + d + "失败!";
+			
+			var f = g.status ? lan.get('service_ok',[a,d]):lan.get('service_err',[a,d]);
 			layer.msg(f, {
 				icon: g.status ? 1 : 2
 			});
@@ -679,7 +552,7 @@ function ServiceAdmin(a, b) {
 			}
 		}).error(function() {
 			layer.close(e);
-			layer.msg("操作成功!", {
+			layer.msg(lan.public.success, {
 				icon: 1
 			})
 		})
@@ -713,7 +586,7 @@ function GetConfigFile(a) {
 
 function GetPHPStatus(a) {
 	if(a == "52") {
-		layer.msg("抱歉,不支持PHP5.2", {
+		layer.msg(lan.bt.php_status_err, {
 			icon: 2
 		});
 		return
@@ -722,11 +595,11 @@ function GetPHPStatus(a) {
 		layer.open({
 			type: 1,
 			area: "400",
-			title: "PHP负载状态",
+			title: lan.bt.php_status_title,
 			closeBtn: 2,
 			shift: 5,
 			shadeClose: true,
-			content: "<div style='margin:15px;'><table class='table table-hover table-bordered'>						<tr><th>应用池(pool)</th><td>" + b.pool + "</td></tr>						<tr><th>进程管理方式(process manager)</th><td>" + ((b["process manager"] == "dynamic") ? "活动" : "静态") + "</td></tr>						<tr><th>启动日期(start time)</th><td>" + b["start time"] + "</td></tr>						<tr><th>请求数(accepted conn)</th><td>" + b["accepted conn"] + "</td></tr>						<tr><th>请求队列(listen queue)</th><td>" + b["listen queue"] + "</td></tr>						<tr><th>最大等待队列(max listen queue)</th><td>" + b["max listen queue"] + "</td></tr>						<tr><th>socket队列长度(listen queue len)</th><td>" + b["listen queue len"] + "</td></tr>						<tr><th>空闲进程数量(idle processes)</th><td>" + b["idle processes"] + "</td></tr>						<tr><th>活跃进程数量(active processes)</th><td>" + b["active processes"] + "</td></tr>						<tr><th>总进程数量(total processes)</th><td>" + b["total processes"] + "</td></tr>						<tr><th>最大活跃进程数量(max active processes)</th><td>" + b["max active processes"] + "</td></tr>						<tr><th>到达进程上限次数(max children reached)</th><td>" + b["max children reached"] + "</td></tr>						<tr><th>慢请求数量(slow requests)</th><td>" + b["slow requests"] + "</td></tr>					 </table></div>"
+			content: "<div style='margin:15px;'><table class='table table-hover table-bordered'>						<tr><th>"+lan.bt.php_pool+"</th><td>" + b.pool + "</td></tr>						<tr><th>"+lan.bt.php_manager+"</th><td>" + ((b["process manager"] == "dynamic") ? lan.bt.dynamic : lan.bt.static) + "</td></tr>						<tr><th>"+lan.bt.php_start+"</th><td>" + b["start time"] + "</td></tr>						<tr><th>"+lan.bt.php_accepted+"</th><td>" + b["accepted conn"] + "</td></tr>						<tr><th>"+lan.bt.php_queue+"</th><td>" + b["listen queue"] + "</td></tr>						<tr><th>"+lan.bt.php_max_queue+"</th><td>" + b["max listen queue"] + "</td></tr>						<tr><th>"+lan.bt.php_len_queue+"</th><td>" + b["listen queue len"] + "</td></tr>						<tr><th>"+lan.bt.php_idle+"</th><td>" + b["idle processes"] + "</td></tr>						<tr><th>"+lan.bt.php_active+"</th><td>" + b["active processes"] + "</td></tr>						<tr><th>"+lan.bt.php_total+"</th><td>" + b["total processes"] + "</td></tr>						<tr><th>"+lan.bt.php_max_active+"</th><td>" + b["max active processes"] + "</td></tr>						<tr><th>"+lan.bt.php_max_children+"</th><td>" + b["max children reached"] + "</td></tr>						<tr><th>"+lan.bt.php_slow+"</th><td>" + b["slow requests"] + "</td></tr>					 </table></div>"
 		})
 	})
 }
@@ -736,95 +609,11 @@ function GetNginxStatus() {
 		layer.open({
 			type: 1,
 			area: "400",
-			title: "Nginx负载状态",
+			title: lan.bt.nginx_title,
 			closeBtn: 2,
 			shift: 5,
 			shadeClose: true,
-			content: "<div style='margin:15px;'><table class='table table-hover table-bordered'>						<tr><th>活动连接(Active connections)</th><td>" + a.active + "</td></tr>						<tr><th>总连接次数(accepts)</th><td>" + a.accepts + "</td></tr>						<tr><th>总握手次数(handled)</th><td>" + a.handled + "</td></tr>						<tr><th>总请求数(requests)</th><td>" + a.requests + "</td></tr>						<tr><th>请求数(Reading)</th><td>" + a.Reading + "</td></tr>						<tr><th>响应数(Writing)</th><td>" + a.Writing + "</td></tr>						<tr><th>驻留进程(Waiting)</th><td>" + a.Waiting + "</td></tr>					 </table></div>"
-		})
-	})
-}
-
-function GetNetWorkList() {
-	var a = layer.msg("正在获取...", {
-		icon: 16,
-		time: 0,
-		shade: [0.3, "#000"]
-	});
-	$.post("/ajax?action=GetNetWorkList", "", function(d) {
-		layer.close(a);
-		var b = "";
-		for(var c = 0; c < d.length; c++) {
-			b += "<tr><td>" + d[c].type + "</td><td>" + d[c].laddr[0] + ":" + d[c].laddr[1] + "</td><td>" + (d[c].raddr.length > 1 ? "<a style='color:blue;' title='屏蔽此IP' href=\"javascript:dropAddress('" + d[c].raddr[0] + "');\">" + d[c].raddr[0] + "</a>:" + d[c].raddr[1] : "NONE") + "</td><td>" + d[c].status + "</td><td>" + d[c].process + "</td><td>" + d[c].pid + "</td></tr>"
-		}
-		layer.open({
-			type: 1,
-			area: ["650px", "600px"],
-			title: "网络状态",
-			closeBtn: 2,
-			shift: 5,
-			shadeClose: true,
-			content: "<div style='margin:15px;'><table class='table table-hover table-bordered'>						<tr>							<th>协议</th>							<th>本地地址</th>							<th>远程地址</th>							<th>状态</th>							<th>进程</th>							<th>PID</th>						</tr>						<tbody>" + b + "</tbody>					 </table></div>"
-		})
-	})
-}
-
-function GetProcessList() {
-	var a = layer.msg("正在分析...", {
-		icon: 16,
-		time: 0,
-		shade: [0.3, "#000"]
-	});
-	$.post("/ajax?action=GetProcessList", "", function(d) {
-		layer.close(a);
-		var b = "";
-		for(var c = 0; c < d.length; c++) {
-			b += "<tr><td>" + d[c].pid + "</td><td>" + d[c].name + "</td><td>" + d[c].cpu_percent + "%</td><td>" + d[c].memory_percent + "%</td><td>" + ToSize(d[c].io_read_bytes) + "/" + ToSize(d[c].io_write_bytes) + "</td><td>" + d[c].status + "</td><td>" + d[c].threads + "</td><td>" + d[c].user + "</td><td><a title='结束此进程' style='color:red;' href=\"javascript:killProcess(" + d[c].pid + ",'" + d[c].name + "');\">结束</a></td></tr>"
-		}
-		layer.open({
-			type: 1,
-			area: ["70%", "600px"],
-			title: "进程管理",
-			closeBtn: 2,
-			shift: 5,
-			shadeClose: true,
-			content: "<div style='margin:15px;'><table class='table table-hover table-bordered'>						<tr>							<th>PID</th>							<th>名称</th>							<th>CPU</th>							<th>内存</th>							<th>读/写</th>							<th>状态</th>							<th>线程</th>							<th>用户</th>							<th>操作</th>						</tr>						<tbody>" + b + "</tbody>					 </table></div>"
-		})
-	})
-}
-
-function killProcess(a, b) {
-	layer.confirm("结束进程[" + a + "][" + b + "]后可能会影响服务器的正常运行，继续吗？", {icon:3,
-		closeBtn: 2
-	}, function() {
-		loadT = layer.msg("正在结束进程...", {
-			icon: 16,
-			time: 0,
-			shade: [0.3, "#000"]
-		});
-		$.post("/ajax?action=KillProcess", "pid=" + a, function(c) {
-			layer.close(loadT);
-			layer.msg(c.msg, {
-				icon: c.status ? 1 : 2
-			})
-		})
-	})
-}
-
-function dropAddress(a) {
-	layer.confirm("屏蔽此IP后，对方将无法访问本服务器，你可以在【安全】中删除，继续吗？", {icon:3,
-		closeBtn: 2
-	}, function() {
-		loadT = layer.msg("正在屏蔽IP...", {
-			icon: 16,
-			time: 0,
-			shade: [0.3, "#000"]
-		});
-		$.post("/firewall?action=AddDropAddress", "port=" + a + "&ps=手动屏蔽", function(b) {
-			layer.close(loadT);
-			layer.msg(b.msg, {
-				icon: b.status ? 1 : 2
-			})
+			content: "<div style='margin:15px;'><table class='table table-hover table-bordered'>						<tr><th>"+lan.bt.nginx_active+"</th><td>" + a.active + "</td></tr>						<tr><th>"+lan.bt.nginx_accepts+"</th><td>" + a.accepts + "</td></tr>						<tr><th>"+lan.bt.nginx_handled+"</th><td>" + a.handled + "</td></tr>						<tr><th>"+lan.bt.nginx_requests+"</th><td>" + a.requests + "</td></tr>						<tr><th>"+lan.bt.nginx_reading+"</th><td>" + a.Reading + "</td></tr>						<tr><th>"+lan.bt.nginx_writing+"</th><td>" + a.Writing + "</td></tr>						<tr><th>"+lan.bt.nginx_waiting+"</th><td>" + a.Waiting + "</td></tr>					 </table></div>"
 		})
 	})
 }
@@ -853,12 +642,12 @@ function btcopy() {
 		},
 		afterCopy: function() {
 			if($(this).attr("data-pw") == "") {
-				layer.msg("密码为空", {
+				layer.msg(lan.bt.copy_empty, {
 					icon: 7,
 					time: 1500
 				})
 			} else {
-				layer.msg("复制成功", {
+				layer.msg(lan.bt.copy_ok, {
 					icon: 1,
 					time: 1500
 				})
@@ -888,21 +677,24 @@ function SafeMessage(j, h, g, f) {
 		area: "350px",
 		closeBtn: 2,
 		shadeClose: true,
-		content: "<div class='bt-form webDelete pd20 pb70'><p>" + h + "</p>" + f + "<div class='vcode'>计算结果：<span class='text'>" + sumtext + "</span>=<input type='number' id='vcodeResult' value=''></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button> <button type='button' id='toSubmit' class='btn btn-success btn-sm btn-title' >提交</button></div></div>"
+		content: "<div class='bt-form webDelete pd20 pb70'><p>" + h + "</p>" + f + "<div class='vcode'>"+lan.bt.cal_msg+"<span class='text'>" + sumtext + "</span>=<input type='number' id='vcodeResult' value=''></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm bt-cancel'>"+lan.public.cancel+"</button> <button type='button' id='toSubmit' class='btn btn-success btn-sm' >"+lan.public.submit+"</button></div></div>"
 	});
 	$("#vcodeResult").focus().keyup(function(a) {
 		if(a.keyCode == 13) {
 			$("#toSubmit").click()
 		}
 	});
+	$(".bt-cancel").click(function(){
+		layer.close(mess);
+	});
 	$("#toSubmit").click(function() {
 		var a = $("#vcodeResult").val().replace(/ /g, "");
 		if(a == undefined || a == "") {
-			layer.msg("输入计算结果，否则无法删除");
+			layer.msg(lan.bt.cal_empty);
 			return
 		}
 		if(a != getCookie("vcodesum")) {
-			layer.msg("计算错误，请重新计算");
+			layer.msg(lan.bt.cal_err);
 			return
 		}
 		layer.close(mess);
@@ -962,7 +754,7 @@ $(function() {
 	})
 });
 $("#dologin").click(function() {
-	layer.confirm("您真的要退出面板吗?", {icon:3,
+	layer.confirm(lan.bt.loginout, {icon:3,
 		closeBtn: 2
 	}, function() {
 		window.location.href = "/login?dologin=True"
@@ -975,7 +767,7 @@ function setPassword(a) {
 		p1 = $("#p1").val();
 		p2 = $("#p2").val();
 		if(p1 == "" || p1.length < 8) {
-			layer.msg("面板密码不能少于8位!", {
+			layer.msg(lan.bt.pass_err_len, {
 				icon: 2
 			});
 			return
@@ -998,18 +790,18 @@ function setPassword(a) {
 		}
 		
 		if(isError != ""){
-			layer.msg('面板密码不能为弱口令'+isError,{icon:5});
+			layer.msg(lan.bt.pass_err+isError,{icon:5});
 			return;
 		}
 		
 		
 		if(p1 != p2) {
-			layer.msg("两次输入的密码不一致", {
+			layer.msg(lan.bt.pass_err_re, {
 				icon: 2
 			});
 			return
 		}
-		$.post("/config?action=setPassword", "password1=" + p1 + "&password2=" + p2, function(b) {
+		$.post("/config?action=setPassword", "password1=" + encodeURIComponent(p1) + "&password2=" + encodeURIComponent(p2), function(b) {
 			if(b.status) {
 				layer.closeAll();
 				layer.msg(b.msg, {
@@ -1026,11 +818,11 @@ function setPassword(a) {
 	layer.open({
 		type: 1,
 		area: "290px",
-		title: "修改密码",
+		title: lan.bt.pass_title,
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
-		content: "<div class='bt-form pd20 pb70'><div class='line'><span class='tname'>密码</span><div class='info-r'><input class='bt-input-text' type='text' name='password1' id='p1' value='' placeholder='新的密码' style='width:100%'/></div></div><div class='line'><span class='tname'>重复</span><div class='info-r'><input class='bt-input-text' type='text' name='password2' id='p2' value='' placeholder='再输一次' style='width:100%' /></div></div><div class='bt-form-submit-btn'><span style='float: left;' title='随机密码' class='btn btn-default btn-sm' onclick='randPwd(10)'>随机</span><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button> <button type='button' class='btn btn-success btn-sm' onclick=\"setPassword(1)\">修改</button></div></div>"
+		content: "<div class='bt-form pd20 pb70'><div class='line'><span class='tname'>"+lan.public.pass+"</span><div class='info-r'><input class='bt-input-text' type='text' name='password1' id='p1' value='' placeholder='"+lan.bt.pass_new_title+"' style='width:100%'/></div></div><div class='line'><span class='tname'>"+lan.bt.pass_re+"</span><div class='info-r'><input class='bt-input-text' type='text' name='password2' id='p2' value='' placeholder='"+lan.bt.pass_re_title+"' style='width:100%' /></div></div><div class='bt-form-submit-btn'><span style='float: left;' title='"+lan.bt.pass_rep+"' class='btn btn-default btn-sm' onclick='randPwd(10)'>"+lan.bt.pass_rep_btn+"</span><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">"+lan.public.close+"</button> <button type='button' class='btn btn-success btn-sm' onclick=\"setPassword(1)\">"+lan.public.edit+"</button></div></div>"
 	});
 }
 
@@ -1039,7 +831,7 @@ function randPwd(){
 	var pwd = RandomStrPwd(12);
 	$("#p1").val(pwd);
 	$("#p2").val(pwd);
-	layer.msg('请在修改前记录好您的新密码!',{time:2000})
+	layer.msg(lan.bt.pass_rep_ps,{time:2000})
 }
 
 function setUserName(a) {
@@ -1047,18 +839,18 @@ function setUserName(a) {
 		p1 = $("#p1").val();
 		p2 = $("#p2").val();
 		if(p1 == "" || p1.length < 3) {
-			layer.msg("用户名为空或少于3位!", {
+			layer.msg(lan.bt.user_len, {
 				icon: 2
 			});
 			return
 		}
 		if(p1 != p2) {
-			layer.msg("两次输入的用户名不一致", {
+			layer.msg(lan.bt.user_err_re, {
 				icon: 2
 			});
 			return
 		}
-		$.post("/config?action=setUsername", "username1=" + p1 + "&username2=" + p2, function(b) {
+		$.post("/config?action=setUsername", "username1=" + encodeURIComponent(p1) + "&username2=" + encodeURIComponent(p2), function(b) {
 			if(b.status) {
 				layer.closeAll();
 				layer.msg(b.msg, {
@@ -1076,83 +868,23 @@ function setUserName(a) {
 	layer.open({
 		type: 1,
 		area: "290px",
-		title: "修改面板用户名",
+		title: lan.bt.user_title,
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
-		content: "<div class='bt-form pd20 pb70'><div class='line'><span class='tname'>用户名</span><div class='info-r'><input class='bt-input-text' type='text' name='password1' id='p1' value='' placeholder='新的用户名' style='width:100%'/></div></div><div class='line'><span class='tname'>重复</span><div class='info-r'><input class='bt-input-text' type='text' name='password2' id='p2' value='' placeholder='再输一次' style='width:100%'/></div></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button> <button type='button' class='btn btn-success btn-sm' onclick=\"setUserName(1)\">修改</button></div></div>"
+		content: "<div class='bt-form pd20 pb70'><div class='line'><span class='tname'>"+lan.bt.user+"</span><div class='info-r'><input class='bt-input-text' type='text' name='password1' id='p1' value='' placeholder='"+lan.bt.user_new+"' style='width:100%'/></div></div><div class='line'><span class='tname'>"+lan.bt.pass_re+"</span><div class='info-r'><input class='bt-input-text' type='text' name='password2' id='p2' value='' placeholder='"+lan.bt.pass_re_title+"' style='width:100%'/></div></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">"+lan.public.close+"</button> <button type='button' class='btn btn-success btn-sm' onclick=\"setUserName(1)\">"+lan.public.edit+"</button></div></div>"
 	})
 }
 var openWindow = null;
 var downLoad = null;
 var speed = null;
 
-function GetReloads() {
-	var a = 0;
-	speed = setInterval(function() {
-		if($("#taskList").html() != "任务列表") {
-			clearInterval(speed);
-			a = 0;
-			return
-		}
-		a++;
-		$.post("/files?action=GetTaskSpeed", "", function(h) {
-			if(h.task == undefined) {
-				$("#srunning").html("当前没有任务!");
-				divcenter();
-				return
-			}
-			var b = "";
-			var d = "";
-			for(var g = 0; g < h.task.length; g++) {
-				if(h.task[g].status == "-1") {
-					if(h.task[g].type != "download") {
-						var c = "";
-						var f = h.msg.split("\n");
-						for(var e = 0; e < f.length; e++) {
-							c += f[e] + "<br>"
-						}
-						if(h.task[g].name.indexOf("扫描") != -1) {
-							b = "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>正在扫描 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + h.task[g].id + ")\">取消</a></span><span class='opencmd'></span><div class='cmd'>" + c + "</div></li>"
-						} else {
-							b = "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>正在安装 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + h.task[g].id + ")\">取消</a></span><div class='cmd'>" + c + "</div></li>"
-						}
-					} else {
-						b = "<li><div class='line-progress' style='width:" + h.msg.pre + "%'></div><span class='titlename'>" + h.task[g].name + "<a style='margin-left:130px;'>" + (ToSize(h.msg.used) + "/" + ToSize(h.msg.total)) + "</a></span><span class='com-progress'>" + h.msg.pre + "%</span><span class='state'>下载中 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + h.task[g].id + ")\">取消</a></span></li>"
-					}
-				} else {
-					d += "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>等待 | <a style='color:green' href=\"javascript:RemoveTask(" + h.task[g].id + ')">删除</a></span></li>'
-				}
-			}
-			$("#srunning").html(b + d);
-			divcenter();
-			$(".cmd").scrollTop($(".cmd")[0].scrollHeight)
-		}).error(function() {})
-	}, 1000)
-}
-
 function task() {
-	layer.open({
-		type: 1,
-		title: "<a id='taskList'>任务列表</a>",
-		area: "600px",
-		closeBtn: 2,
-		shadeClose: false,
-		content: "<div class='tasklist'><div class='tab-nav'><span class='on'>正在处理</span><span>已完成</span><a href='javascript:ActionTask();' class='btn btn-default btn-sm' style='float: right;margin-top: -3px;' title='若您的任务长时间没有继续，请尝试点此按钮!'>激活队列</a></div><div class='tab-con'><ul id='srunning' class='cmdlist'></ul><ul id='sbody' style='display:none' class='cmdlist'></ul></div></div>"
-	});
-	GetTaskList();
-	GetReloads();
-	$(".tab-nav span").click(function() {
-		var a = $(this).index();
-		$(this).addClass("on").siblings().removeClass("on");
-		$(".tab-con ul").hide().eq(a).show();
-		GetTaskList();
-		divcenter()
-	})
+	messagebox();
 }
 
 function ActionTask() {
-	var a = layer.msg("正在删除...", {
+	var a = layer.msg(lan.public.the_del, {
 		icon: 16,
 		time: 0,
 		shade: [0.3, "#000"]
@@ -1166,7 +898,7 @@ function ActionTask() {
 }
 
 function RemoveTask(b) {
-	var a = layer.msg("正在删除...", {
+	var a = layer.msg(lan.public.the_del, {
 		icon: 16,
 		time: 0,
 		shade: [0.3, "#000"]
@@ -1177,7 +909,7 @@ function RemoveTask(b) {
 			icon: c.status ? 1 : 5
 		});
 	}).error(function(){
-		layer.msg('任务已取消!',{icon:1});
+		layer.msg(lan.bt.task_close,{icon:1});
 	});
 }
 
@@ -1193,16 +925,16 @@ function GetTaskList(a) {
 				case "-1":
 					f = true;
 					if(g.data[d].type != "download") {
-						b = "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state'>正在安装 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ")\">取消</a></span><span class='opencmd'></span><pre class='cmd'></pre></li>"
+						b = "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state'>"+lan.bt.task_install+" <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ")\">"+lan.public.close+"</a></span><span class='opencmd'></span><pre class='cmd'></pre></li>"
 					} else {
-						b = "<li><div class='line-progress' style='width:0%'></div><span class='titlename'>" + g.data[d].name + "<a id='speed' style='margin-left:130px;'>0.0M/12.5M</a></span><span class='com-progress'>0%</span><span class='state'>下载中 <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ")\">取消</a></span></li>"
+						b = "<li><div class='line-progress' style='width:0%'></div><span class='titlename'>" + g.data[d].name + "<a id='speed' style='margin-left:130px;'>0.0M/12.5M</a></span><span class='com-progress'>0%</span><span class='state'>"+lan.bt.task_downloading+" <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ")\">"+lan.public.close+"</a></span></li>"
 					}
 					break;
 				case "0":
-					c += "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state'>等待</span> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ")\">删除</a></li>";
+					c += "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state'>"+lan.bt.task_sleep+"</span> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ")\">"+lan.public.del+"</a></li>";
 					break;
 				case "1":
-					e += "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state'>" + g.data[d].addtime + "  已完成  耗时" + (g.data[d].end - g.data[d].start) + "秒</span></li>"
+					e += "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state'>" + g.data[d].addtime + "  "+lan.bt.task_ok+"  "+ lan.bt.time + (g.data[d].end - g.data[d].start) + lan.bt.s+"</span></li>"
 			}
 		}
 		$("#srunning").html(b + c);
@@ -1228,20 +960,9 @@ function setSelectChecked(c, d) {
 }
 GetTaskCount();
 
-function ShowSoftList(){
-	layer.open({
-		type: 1,
-		title: "软件管家",
-		area: "70%",
-		offset: "100px",
-		shadeClose: false,
-		content: '<div class="divtable" style="margin: 10px;"><table width="100%" cellspacing="0" cellpadding="0" border="0" class="table table-hover"><thead><tr><th>软件名称</th><th>类型</th><th>版本</th><th>状态</th><th width="90" style="text-align: right;">操作</th></tr></thead><tbody id="softList"></tbody></table></div>'
-	});
-	GetSoftList()
-}
 
 function RecInstall() {
-	$.post("/ajax?action=GetSoftList", "", function(l) {
+	$.post("/ajax?action=GetSoftList", "", function(l){
 		var c = "";
 		var g = "";
 		var e = "";
@@ -1275,11 +996,11 @@ function RecInstall() {
 		g = g.replace(new RegExp(/(data_)/g), "apache_").replace(new RegExp(/(select_)/g), "apache_select_");
 		var k = layer.open({
 			type: 1,
-			title: "推荐安装套件",
+			title: lan.bt.install_title,
 			area: ["658px", "423px"],
 			closeBtn: 2,
 			shadeClose: false,
-			content: "<div class='rec-install'><div class='important-title'><p><span class='glyphicon glyphicon-alert' style='color: #f39c12; margin-right: 10px;'></span>我们为您推荐以下一键套件，请按需选择或在 <a href='javascript:jump()' style='color:#20a53a'>所有软件</a> 栏自行选择，如你不懂，请安装LNMP。</p></div><div class='rec-box'><h3>LNMP(推荐)</h3><div class='rec-box-con'><ul class='rec-list'>" + c + "</ul><p class='fangshi'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装' style='margin-right:0'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></p><div class='onekey'>一键安装</div></div></div><div class='rec-box' style='margin-left:16px'><h3>LAMP</h3><div class='rec-box-con'><ul class='rec-list'>" + g + "</ul><p class='fangshi'>安装方式：<label data-title='即rpm，安装时间极快（5~10分钟），性能与稳定性略低于编译安装' style='margin-right:0'>极速安装<input type='checkbox' checked></label><label data-title='安装时间长（30分钟到3小时），适合高并发高性能应用'>编译安装<input type='checkbox'></label></p><div class='onekey'>一键安装</div></div></div></div>"
+			content: "<div class='rec-install'><div class='important-title'><p><span class='glyphicon glyphicon-alert' style='color: #f39c12; margin-right: 10px;'></span>"+lan.bt.install_ps+" <a href='javascript:jump()' style='color:#20a53a'>"+lan.bt.install_s+"</a> "+lan.bt.install_s1+"</p></div><div class='rec-box'><h3>"+lan.bt.install_lnmp+"</h3><div class='rec-box-con'><ul class='rec-list'>" + c + "</ul><p class='fangshi'>"+lan.bt.install_type+"：<label data-title='"+lan.bt.install_rpm_title+"' style='margin-right:0'>"+lan.bt.install_rpm+"<input type='checkbox' checked></label><label data-title='"+lan.bt.install_src_title+"'>"+lan.bt.install_src+"<input type='checkbox'></label></p><div class='onekey'>"+lan.bt.install_key+"</div></div></div><div class='rec-box' style='margin-left:16px'><h3>LAMP</h3><div class='rec-box-con'><ul class='rec-list'>" + g + "</ul><p class='fangshi'>"+lan.bt.install_type+"：<label data-title='"+lan.bt.install_rpm_title+"' style='margin-right:0'>"+lan.bt.install_rpm+"<input type='checkbox' checked></label><label data-title='"+lan.bt.install_src_title+"'>"+lan.bt.install_src+"<input type='checkbox'></label></p><div class='onekey'>一键安装</div></div></div></div>"
 		});
 		$(".fangshi input").click(function() {
 			$(this).attr("checked", "checked").parent().siblings().find("input").removeAttr("checked")
@@ -1325,9 +1046,9 @@ function RecInstall() {
 		$("#apache_select_Apache").change(function(){
 			var apacheVersion = $(this).val();
 			if(apacheVersion == '2.2'){
-				layer.msg('您选择的是Apache2.2,PHP将会以php5_module模式运行!');
+				layer.msg(lan.bt.install_apache22);
 			}else{
-				layer.msg('您选择的是Apache2.4,PHP将会以php-fpm模式运行!');
+				layer.msg(lan.bt.install_apache24);
 			}
 		});
 		
@@ -1336,14 +1057,14 @@ function RecInstall() {
 			var phpVersion = $(this).val();
 			if(apacheVersion == '2.2'){
 				if(phpVersion != '5.2' && phpVersion != '5.3' && phpVersion != '5.4'){
-					layer.msg('Apache2.2不支持PHP-' + phpVersion,{icon:5});
+					layer.msg(lan.bt.insatll_s22+'PHP-' + phpVersion,{icon:5});
 					$(this).val("5.4");
 					$("#apache_PHP").attr('data-info','php 5.4');
 					return false;
 				}
 			}else{
 				if(phpVersion == '5.2'){
-					layer.msg('Apache2.4不支持PHP-' + phpVersion,{icon:5});
+					layer.msg(lan.bt.insatll_s24+'PHP-' + phpVersion,{icon:5});
 					$(this).val("5.4");
 					$("#apache_PHP").attr('data-info','php 5.4');
 					return false;
@@ -1382,7 +1103,7 @@ function RecInstall() {
 					break
 			}
 			if(memSize < max) {
-				layer.msg("您 的内存小于" + msg + "，不建议安装MySQL-" + n, {
+				layer.msg( lan.bt.insatll_mem.replace("{1}",msg).replace("{2}",n), {
 					icon: 5
 				})
 			}
@@ -1403,7 +1124,7 @@ function RecInstall() {
 				}
 			}
 			q = n.split(",");
-			loadT = layer.msg("正在添加到安装器...", {
+			loadT = layer.msg(lan.bt.install_to, {
 				icon: 16,
 				time: 0,
 				shade: [0.3, "#000"]
@@ -1425,7 +1146,7 @@ function RecInstall() {
 			setTimeout(function() {
 				GetTaskCount()
 			}, 2000);
-			layer.msg("已将安装请求添加到安装器..", {
+			layer.msg(lan.bt.install_ok, {
 				icon: 1
 			});
 			setTimeout(function() {
@@ -1472,7 +1193,7 @@ function fly(a) {
 			},
 			onEnd: function() {
 				layer.closeAll();
-				layer.msg("已添加到队列", {
+				layer.msg(lan.bt.task_add, {
 					icon: 1
 				});
 				GetTaskCount()
@@ -1528,4 +1249,324 @@ function listOrder(skey,type,obj){
 	}else{
 		$(obj).append("<span class='glyphicon glyphicon-triangle-top' style='margin-left:5px;color:#bbb'></span>");
 	}
+}
+
+//去关联列表
+function GetBtpanelList(){
+	var con ='';
+	$.post("/config?action=GetPanelList",function(rdata){
+		for(var i=0; i<rdata.length; i++){
+			con +='<h3 class="mypcip mypcipnew" style="opacity:.6" data-url="'+rdata[i].url+'" data-user="'+rdata[i].username+'" data-pw="'+rdata[i].password+'"><span class="f14 cw">'+rdata[i].title+'</span><em class="btedit" onclick="bindBTPanel(0,\'c\',\''+rdata[i].title+'\',\''+rdata[i].id+'\',\''+rdata[i].url+'\',\''+rdata[i].username+'\',\''+rdata[i].password+'\')"></em></h3>'
+		}
+		$("#newbtpc").html(con);
+		$(".mypcipnew").hover(function(){
+			$(this).css("opacity","1");
+		},function(){
+			$(this).css("opacity",".6");
+		}).click(function(){
+		$("#btpanelform").remove();
+		var murl = $(this).attr("data-url");
+		var user = $(this).attr("data-user");
+		var pw = $(this).attr("data-pw");
+		layer.open({
+		  type: 2,
+		  title: false,
+		  closeBtn: 0, //不显示关闭按钮
+		  shade: [0],
+		  area: ['340px', '215px'],
+		  offset: 'rb', //右下角弹出
+		  time: 5, //2秒后自动关闭
+		  anim: 2,
+		  content: [murl+'/login', 'no']
+		});
+			var loginForm ='<div id="btpanelform" style="display:none"><form id="toBtpanel" action="'+murl+'/login" method="post" target="btpfrom">\
+				<input name="username" id="btp_username" value="'+user+'" type="text">\
+				<input name="password" id="btp_password" value="'+pw+'" type="password">\
+				<input name="code" id="bt_code" value="12345" type="text">\
+			</form><iframe name="btpfrom" src=""></iframe></div>';
+			$("body").append(loginForm);
+			layer.msg(lan.bt.panel_open,{icon:16,shade: [0.3, '#000'],time:1000});
+			setTimeout(function(){
+				$("#toBtpanel").submit();
+			},500);
+			setTimeout(function(){
+				window.open(murl);
+			},1000);
+		});
+		$(".btedit").click(function(e){
+			e.stopPropagation();
+		});
+	})
+	
+}
+GetBtpanelList();
+//添加面板快捷登录
+function bindBTPanel(a,type,ip,btid,url,user,pw){
+	var titleName = lan.bt.panel_add;
+	if(type == "b"){
+		btn = "<button type='button' class='btn btn-success btn-sm' onclick=\"bindBTPanel(1,'b')\">"+lan.public.add+"</button>";
+	}
+	else{
+		titleName = lan.bt.panel_edit+ip;
+		btn = "<button type='button' class='btn btn-default btn-sm' onclick=\"bindBTPaneldel('"+btid+"')\">"+lan.public.del+"</button><button type='button' class='btn btn-success btn-sm' onclick=\"bindBTPanel(1,'c','"+ip+"','"+btid+"')\" style='margin-left:7px'>"+lan.public.edit+"</button>";
+	}
+	if(url == undefined) url="http://";
+	if(user == undefined) user="";
+	if(pw == undefined) pw="";
+	if(ip == undefined) ip="";
+	if(a == 1) {
+		var gurl = "/config?action=AddPanelInfo";
+		var btaddress = $("#btaddress").val();
+		if(!btaddress.match(/^(http|https)+:\/\/(\w+\.)+\w+:\d+/)){
+			layer.msg(lan.bt.panel_err_format+'<p>http://192.168.0.1:8888</p>',{icon:5,time:5000});
+			return;
+		}
+		var btuser = encodeURIComponent($("#btuser").val());
+		var btpassword = encodeURIComponent($("#btpassword").val());
+		var bttitle = $("#bttitle").val();
+		var data = "title="+bttitle+"&url="+encodeURIComponent(btaddress)+"&username="+btuser+"&password="+btpassword;
+		if(btaddress =="" || btuser=="" || btpassword=="" || bttitle==""){
+			layer.msg(lan.bt.panel_err_empty,{icon:8});
+			return;
+		}
+		if(type=="c"){
+			gurl = "/config?action=SetPanelInfo";
+			data = data+"&id="+btid;
+		}
+		$.post(gurl, data, function(b) {
+			if(b.status) {
+				layer.closeAll();
+				layer.msg(b.msg, {icon: 1});
+				GetBtpanelList();
+			} else {
+				layer.msg(b.msg, {icon: 2})
+			}
+		});
+		return
+	}
+	layer.open({
+		type: 1,
+		area: "400px",
+		title: titleName,
+		closeBtn: 2,
+		shift: 5,
+		shadeClose: false,
+		content: "<div class='bt-form pd20 pb70'>\
+		<div class='line'><span class='tname'>"+lan.bt.panel_address+"</span>\
+		<div class='info-r'><input class='bt-input-text' type='text' name='btaddress' id='btaddress' value='"+url+"' placeholder='"+lan.bt.panel_address+"' style='width:100%'/></div>\
+		</div>\
+		<div class='line'><span class='tname'>"+lan.bt.panel_user+"</span>\
+		<div class='info-r'><input class='bt-input-text' type='text' name='btuser' id='btuser' value='"+user+"' placeholder='"+lan.bt.panel_user+"' style='width:100%'/></div>\
+		</div>\
+		<div class='line'><span class='tname'>"+lan.bt.panel_pass+"</span>\
+		<div class='info-r'><input class='bt-input-text' type='password' name='btpassword' id='btpassword' value='"+pw+"' placeholder='"+lan.bt.panel_pass+"' style='width:100%'/></div>\
+		</div>\
+		<div class='line'><span class='tname'>"+lan.bt.panel_ps+"</span>\
+		<div class='info-r'><input class='bt-input-text' type='text' name='bttitle' id='bttitle' value='"+ip+"' placeholder='"+lan.bt.panel_ps+"' style='width:100%'/></div>\
+		</div>\
+		<div class='line'><ul class='help-info-text c7'><li>"+lan.bt.panel_ps_1+"</li><li>"+lan.bt.panel_ps_2+"</li><li>"+lan.bt.panel_ps_3+"</li></ul></div>\
+		<div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">"+lan.public.close+"</button> "+btn+"</div></div>"
+	});
+	$("#btaddress").on("input",function(){
+		var str =$(this).val();
+		var isip = /([\w-]+\.){2,6}\w+/;
+		var iptext = str.match(isip);
+		if(iptext) $("#bttitle").val(iptext[0]);
+	}).blur(function(){
+		var str =$(this).val();
+		var isip = /([\w-]+\.){2,6}\w+/;
+		var iptext = str.match(isip);
+		if(iptext) $("#bttitle").val(iptext[0]);
+	});
+}
+//删除快捷登录
+function bindBTPaneldel(id){
+	$.post("/config?action=DelPanelInfo","id="+id,function(rdata){
+		layer.closeAll();
+		layer.msg(rdata.msg,{icon:rdata.status?1:2});
+		GetBtpanelList();
+	})
+}
+
+function getSpeed(sele){
+	if(!$(sele)) return;
+	$.get('/ajax?action=GetSpeed',function(speed){
+		if(speed.title === null) return;
+		mspeed = '';
+		if(speed.speed > 0){
+			mspeed = '<span class="pull-right">'+ToSize(speed.speed)+'/s</span>';
+		}
+		body = '<p>'+speed.title+' <img src="/static/img/ing.gif"></p>\
+		<div class="bt-progress"><div class="bt-progress-bar" style="width:'+speed.progress+'%"><span class="bt-progress-text">'+speed.progress+'%</span></div></div>\
+		<p class="f12 c9"><span class="pull-left">'+speed.used+'/'+speed.total+'</span>'+mspeed+'</p>';
+		$(sele).prev().hide();
+		$(sele).css({"margin-left":"-37px","width":"380px"});
+		$(sele).parents(".layui-layer").css({"margin-left":"-100px"});
+		
+		$(sele).html(body);
+		setTimeout(function(){
+			getSpeed(sele);
+		},1000);
+	});
+}
+//消息盒子
+function messagebox() {
+	layer.open({
+		type: 1,
+		title: lan.bt.task_title,
+		area: "640px",
+		closeBtn: 2,
+		shadeClose: false,
+		content: '<div class="bt-form">\
+					<div class="bt-w-main">\
+						<div class="bt-w-menu">\
+							<p class="bgw" id="taskList" onclick="tasklist()">'+lan.bt.task_list+'(<span class="task_count">0</span>)</p>\
+							<p onclick="remind()">'+lan.bt.task_msg+'(<span class="msg_count">0</span>)</p>\
+						</div>\
+						<div class="bt-w-con pd15">\
+							<div class="taskcon"></div>\
+						</div>\
+					</div>\
+				</div>'
+	});
+	$(".bt-w-menu p").click(function(){
+		$(this).addClass("bgw").siblings().removeClass("bgw");
+	});
+	tasklist();
+}
+
+function remind(a){
+	a = a == undefined ? 1 : a;
+	$.post("/data?action=getData", "tojs=remind&table=tasks&result=2,4,6,8&limit=8&p=" + a, function(g) {
+		var e = "";
+		var f = false;
+		var task_count = 0;
+		for(var d = 0; d < g.data.length; d++) {
+			if(g.data[d].status != '1'){
+				task_count++;
+				continue;
+			}
+			e += '<tr><td><input type="checkbox"></td><td><div class="titlename c3">'+g.data[d].name+'</span><span class="rs-status">【'+lan.bt.task_ok+'】<span><span class="rs-time">'+ lan.bt.time + (g.data[d].end - g.data[d].start) + lan.bt.s+'</span></div></td><td class="text-right c3">'+g.data[d].addtime+'</td></tr>'
+		}
+		var con = '<div class="divtable"><table class="table table-hover">\
+					<thead><tr><th width="20"><input id="Rs-checkAll" type="checkbox" onclick="RscheckSelect()"></th><th>'+lan.bt.task_name+'</th><th class="text-right">'+lan.bt.task_time+'</th></tr></thead>\
+					<tbody id="remind">'+e+'</tbody>\
+					</table></div>\
+					<div class="mtb15" style="height:32px">\
+						<div class="pull-left buttongroup" style="display:none;"><button class="btn btn-default btn-sm mr5 rs-del" disabled="disabled">'+lan.public.del+'</button><button class="btn btn-default btn-sm mr5 rs-read" disabled="disabled">'+lan.bt.task_tip_read+'</button><button class="btn btn-default btn-sm">'+lan.bt.task_tip_all+'</button></div>\
+						<div id="taskPage" class="page"></div>\
+					</div>';
+		
+		$(".task_count").text(task_count);
+		$(".msg_count").text(g.data.length);
+		$(".taskcon").html(con);
+		$("#taskPage").html(g.page);
+		$("#Rs-checkAll").click(function(){
+			if($(this).prop("checked")){
+				$("#remind").find("input").prop("checked",true)
+			}
+			else{
+				$("#remind").find("input").prop("checked",false)
+			}
+		});
+
+	})
+}
+
+
+function GetReloads() {
+	var a = 0;
+	speed = setInterval(function() {
+		var mm = $(".bt-w-menu .bgw").html()
+		if(mm == undefined || mm.indexOf(lan.bt.task_list) == -1) {
+			clearInterval(speed);
+			a = 0;
+			return
+		}
+		a++;
+		$.post("/files?action=GetTaskSpeed", "", function(h) {
+			if(h.task == undefined) {
+				$(".cmdlist").html(lan.bt.task_not_list);
+				return
+			}
+			var b = "";
+			var d = "";
+			$("#task").text(h.task.length);
+			$(".task_count").text(h.task.length);
+			for(var g = 0; g < h.task.length; g++) {
+				if(h.task[g].status == "-1") {
+					if(h.task[g].type != "download") {
+						var c = "";
+						var f = h.msg.split("\n");
+						for(var e = 0; e < f.length; e++) {
+							c += f[e] + "<br>"
+						}
+						if(h.task[g].name.indexOf("扫描") != -1) {
+							b = "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>"+lan.bt.task_scan+" <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + h.task[g].id + ")\">"+lan.public.close+"</a></span><span class='opencmd'></span><div class='cmd'>" + c + "</div></li>"
+						} else {
+							b = "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>"+lan.bt.task_install+" <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + h.task[g].id + ")\">"+lan.public.close+"</a></span><div class='cmd'>" + c + "</div></li>"
+						}
+					} else {
+						b = "<li><div class='line-progress' style='width:" + h.msg.pre + "%'></div><span class='titlename'>" + h.task[g].name + "<a style='margin-left:130px;'>" + (ToSize(h.msg.used) + "/" + ToSize(h.msg.total)) + "</a></span><span class='com-progress'>" + h.msg.pre + "%</span><span class='state'>"+lan.bt.task_downloading+" <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + h.task[g].id + ")\">"+lan.public.close+"</a></span></li>"
+					}
+				} else {
+					d += "<li><span class='titlename'>" + h.task[g].name + "</span><span class='state'>"+lan.bt.task_sleep+" | <a style='color:green' href=\"javascript:RemoveTask(" + h.task[g].id + ')">'+lan.public.del+'</a></span></li>'
+				}
+			}
+			$(".cmdlist").html(b + d);
+			$(".cmd").html(c);
+			if($(".cmd")[0].scrollHeight) $(".cmd").scrollTop($(".cmd")[0].scrollHeight);
+		}).error(function() {})
+	}, 1000)
+}
+
+//检查选中项
+function RscheckSelect(){
+	setTimeout(function(){
+		var checkList = $("#remind").find("input");
+		var count = 0;
+		for(var i=0;i<checkList.length;i++){
+			if(checkList[i].checked) count++;
+		}
+		if(count > 0){
+			$(".buttongroup .btn").removeAttr("disabled");
+		}else{
+			$(".rs-del,.rs-read").attr("disabled","disabled");
+		}
+	},5);
+}
+
+
+function tasklist(a){
+	var con='<ul class="cmdlist"></ul>';
+	$(".taskcon").html(con);
+	a = a == undefined ? 1 : a;
+	$.post("/data?action=getData", "tojs=GetTaskList&table=tasks&limit=10&p=" + a, function(g) {
+		var e = "";
+		var b = "";
+		var c = "";
+		var f = false;
+		var task_count =0;
+		for(var d = 0; d < g.data.length; d++) {
+			switch(g.data[d].status) {
+				case "-1":
+					f = true;
+					if(g.data[d].type != "download") {
+						b = "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state pull-right c6'>"+lan.bt.task_install+" <img src='/static/img/ing.gif'> | <a class='btlink' href=\"javascript:RemoveTask(" + g.data[d].id + ")\">"+lan.public.close+"</a></span><span class='opencmd'></span><pre class='cmd'></pre></li>"
+					} else {
+						b = "<li><div class='line-progress' style='width:0%'></div><span class='titlename'>" + g.data[d].name + "<a id='speed' style='margin-left:130px;'>0.0M/12.5M</a></span><span class='com-progress'>0%</span><span class='state'>"+lan.bt.task_downloading+" <img src='/static/img/ing.gif'> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ")\">"+lan.public.close+"</a></span></li>"
+					}
+					task_count++;
+					break;
+				case "0":
+					c += "<li><span class='titlename'>" + g.data[d].name + "</span><span class='state pull-right c6'>"+lan.bt.task_sleep+"</span> | <a href=\"javascript:RemoveTask(" + g.data[d].id + ")\" class='btlink'>"+lan.public.del+"</a></li>";
+					task_count++;
+					break;
+			}
+		}
+		$(".task_count").text(task_count);
+		$(".cmdlist").html(b + c);
+		GetReloads();
+		return f
+	})
 }

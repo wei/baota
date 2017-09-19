@@ -107,7 +107,7 @@ function GetToday(){
 
 //取监控状态
 function GetStatus(){
-	loadT = layer.msg('正在读取...',{icon:16,time:0})
+	loadT = layer.msg(lan.public.read,{icon:16,time:0})
 	$.post('/config?action=SetControl','type=-1',function(rdata){
 		layer.close(loadT);
 		if(rdata.status){
@@ -126,7 +126,7 @@ GetStatus()
 function SetControl(act){
 	var day = $("#saveDay").val()
 	if(day < 1){
-		layer.msg('保存天数不合法!',{icon:2});
+		layer.msg(lan.control.save_day_err,{icon:2});
 		return;
 	}
 	if(act){
@@ -135,7 +135,7 @@ function SetControl(act){
 		var type = $("#ctswitch").prop('checked')?'0':'1';
 	}
 	
-	loadT = layer.msg('正在处理...',{icon:16,time:0})
+	loadT = layer.msg(lan.public.the,{icon:16,time:0})
 	$.post('/config?action=SetControl','type='+type+'&day='+day,function(rdata){
 		layer.close(loadT);
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
@@ -144,8 +144,8 @@ function SetControl(act){
 
 //清理记录
 function CloseControl(){
-	layer.confirm('您真的清空所有监控记录吗？',{title:'清空记录',icon:3,closeBtn:2}, function() {
-		loadT = layer.msg('正在处理...',{icon:16,time:0})
+	layer.confirm(lan.control.close_log_msg,{title:lan.control.close_log,icon:3,closeBtn:2}, function() {
+		loadT = layer.msg(lan.public.the,{icon:16,time:0})
 		$.post('/config?action=SetControl','type=del',function(rdata){
 			layer.close(loadT);
 			$.get('/system?action=ReWeb',function(){});
@@ -218,7 +218,7 @@ $.get('/ajax?action=GetCpuIo&start='+b+'&end='+e,function(rdata){
 		},
 		yAxis: {
 			type: 'value',
-			name: '百分比',
+			name: lan.public.pre,
 			boundaryGap: [0, '100%'],
 			min:0,
 			max: 100,
@@ -304,7 +304,7 @@ $.get('/ajax?action=GetCpuIo&start='+b+'&end='+e,function(rdata){
 		},
 		yAxis: {
 			type: 'value',
-			name: '百分比',
+			name: lan.public.pre,
 			boundaryGap: [0, '100%'],
 			min:0,
 			max: 100,
@@ -339,7 +339,7 @@ $.get('/ajax?action=GetCpuIo&start='+b+'&end='+e,function(rdata){
 		}],
 		series: [
 			{
-				name:'内存',
+				name:lan.index.process_mem,
 				type:'line',
 				smooth:true,
 				symbol: 'none',
@@ -382,7 +382,7 @@ $.get('/ajax?action=GetDiskIo&start='+b+'&end='+e,function(rdata){
 			trigger: 'axis'
 		},
 		legend: {
-			data:['读取次数','写入次数','读取字节数','写入字节数']
+			data:[lan.control.disk_read_num,lan.control.disk_write_num,lan.control.disk_read_bytes,lan.control.disk_write_bytes]
 		},
 		xAxis: {
 			type: 'category',
@@ -397,7 +397,7 @@ $.get('/ajax?action=GetDiskIo&start='+b+'&end='+e,function(rdata){
 		yAxis: [
 			{
 				type: 'value',
-				name: '次数',
+				name: lan.public.num,
 				splitLine:{
 					lineStyle:{
 						color:"#ddd"
@@ -411,7 +411,7 @@ $.get('/ajax?action=GetDiskIo&start='+b+'&end='+e,function(rdata){
 			},
 			{
 				type: 'value',
-				name: '字节',
+				name: lan.public.byte,
 				axisLabel: {
 					formatter: '{value}'
 				},
@@ -447,7 +447,7 @@ $.get('/ajax?action=GetDiskIo&start='+b+'&end='+e,function(rdata){
 		}],
 		series: [
 			{
-				name:'读取次数',
+				name:lan.control.disk_read_num,
 				type:'line',
 				smooth:true,
 				symbol: 'none',
@@ -460,7 +460,7 @@ $.get('/ajax?action=GetDiskIo&start='+b+'&end='+e,function(rdata){
 				data: yData
 			},
 			{
-				name:'写入次数',
+				name:lan.control.disk_write_num,
 				type:'line',
 				smooth:true,
 				symbol: 'none',
@@ -473,13 +473,13 @@ $.get('/ajax?action=GetDiskIo&start='+b+'&end='+e,function(rdata){
 				data: zData
 			},
 			{
-				name:'读取字节数',
+				name:lan.control.disk_read_bytes,
 				type:'line',
 				yAxisIndex: 1,
 				data: rData
 			},
 			{
-				name:'写入字节数',
+				name:lan.control.disk_write_bytes,
 				type:'line',
 				yAxisIndex: 1,
 				data: wData
@@ -519,7 +519,7 @@ $.get('/ajax?action=GetNetWorkIo&start='+b+'&end='+e,function(rdata){
 			trigger: 'axis'
 		},
 		legend: {
-			data:['上行','下行']
+			data:[lan.index.net_up,lan.index.net_down]
 		},
 		xAxis: {
 			type: 'category',
@@ -533,7 +533,7 @@ $.get('/ajax?action=GetNetWorkIo&start='+b+'&end='+e,function(rdata){
 		},
 		yAxis: {
 			type: 'value',
-			name: '带宽KB/s',
+			name: lan.index.unit+':KB/s',
 			boundaryGap: [0, '100%'],
 			splitLine:{
 				lineStyle:{
@@ -566,7 +566,7 @@ $.get('/ajax?action=GetNetWorkIo&start='+b+'&end='+e,function(rdata){
 		}],
 		series: [
 			{
-				name:'上行',
+				name:lan.index.net_up,
 				type:'line',
 				smooth:true,
 				symbol: 'none',
@@ -579,7 +579,7 @@ $.get('/ajax?action=GetNetWorkIo&start='+b+'&end='+e,function(rdata){
 				data: yData
 			},
 			{
-				name:'下行',
+				name:lan.index.net_down,
 				type:'line',
 				smooth:true,
 				symbol: 'none',

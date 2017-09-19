@@ -233,11 +233,7 @@ class system:
         days = math.floor(hours / 24);
         hours = math.floor(hours - (days * 24));
         min = math.floor(min - (days * 60 * 24) - (hours * 60));
-        data = ""
-        data = str(int(days))+"天"
-        data += str(int(hours))+"小时"
-        data += str(int(min))+"分钟"
-        return (data,)
+        return public.getMsg('SYS_BOOT_TIME',(str(int(days)),str(int(hours)),str(int(min))))
     
     def GetCpuInfo(self):
         #取CPU信息
@@ -272,11 +268,12 @@ class system:
         temp = public.ExecShell("df -h -P|grep '/'|grep -v tmpfs")[0];
         temp1 = temp.split('\n');
         diskInfo = [];
-        cuts = ['/mnt/cdrom','/boot','boot/efi','/dev','/dev/shm'];
+        cuts = ['/mnt/cdrom','/boot','/boot/efi','/dev','/dev/shm'];
         for tmp in temp1:
             disk = tmp.split();
             if len(disk) < 5: continue;
-            if len(disk[5]) > 24: continue;
+            if disk[1].find('M') != -1: continue;
+            if len(disk[5].split('/')) > 4: continue;
             if disk[5] in cuts: continue;
             arr = {}
             arr['path'] = disk[5];
@@ -287,27 +284,30 @@ class system:
     
     def GetNetWork(self,get=None):
         #取网络流量信息
-        networkIo = psutil.net_io_counters()[:4]
-        if not hasattr(web.ctx.session,'otime'):
+        try:
+            networkIo = psutil.net_io_counters()[:4]
+            if not hasattr(web.ctx.session,'otime'):
+                web.ctx.session.up   =  networkIo[0]
+                web.ctx.session.down =  networkIo[1]
+                web.ctx.session.otime = time.time();
+            
+            ntime = time.time();
+            networkInfo = {}
+            networkInfo['upTotal']   = networkIo[0]
+            networkInfo['downTotal'] = networkIo[1]
+            networkInfo['up']        = round(float(networkIo[0] - web.ctx.session.up) / 1024 / (ntime - web.ctx.session.otime),2)
+            networkInfo['down']      = round(float(networkIo[1] - web.ctx.session.down) / 1024 / (ntime - web.ctx.session.otime),2)
+            networkInfo['downPackets'] =networkIo[3]
+            networkInfo['upPackets']   =networkIo[2]
+            
             web.ctx.session.up   =  networkIo[0]
             web.ctx.session.down =  networkIo[1]
-            web.ctx.session.otime = time.time();
-        
-        ntime = time.time();
-        networkInfo = {}
-        networkInfo['upTotal']   = networkIo[0]
-        networkInfo['downTotal'] = networkIo[1]
-        networkInfo['up']        = round(float(networkIo[0] - web.ctx.session.up) / 1024 / (ntime - web.ctx.session.otime),2)
-        networkInfo['down']      = round(float(networkIo[1] - web.ctx.session.down) / 1024 / (ntime - web.ctx.session.otime),2)
-        networkInfo['downPackets'] =networkIo[3]
-        networkInfo['upPackets']   =networkIo[2]
-        
-        web.ctx.session.up   =  networkIo[0]
-        web.ctx.session.down =  networkIo[1]
-        web.ctx.session.otime = ntime;
-        
-        networkInfo['cpu'] = self.GetCpuInfo()
-        return networkInfo
+            web.ctx.session.otime = ntime;
+            
+            networkInfo['cpu'] = self.GetCpuInfo()
+            return networkInfo
+        except:
+            return None
     
     def GetNetWorkOld(self):
         #取网络流量信息
@@ -355,15 +355,15 @@ class system:
         #检查httpd配置文件
         if get.name == 'apache' or get.name == 'httpd':
             get.name = 'httpd';
-            if not os.path.exists(self.setupPath+'/apache/bin/apachectl'): return public.returnMsg(True,'执行失败,请检查是否安装Apache');
+            if not os.path.exists(self.setupPath+'/apache/bin/apachectl'): return public.returnMsg(True,'SYS_NOT_INSTALL_APACHE');
             vhostPath = self.setupPath + '/panel/vhost/apache'
             if not os.path.exists(vhostPath):
                 public.ExecShell('mkdir ' + vhostPath);
                 public.ExecShell('/etc/init.d/httpd start');
             result = public.ExecShell(self.setupPath+'/apache/bin/apachectl -t');
             if result[1].find('Syntax OK') == -1:
-                public.WriteLog("环境设置", "执行失败: "+str(result));
-                return public.returnMsg(False,'Apache配置规则错误: <br><a style="color:red;">'+result[1].replace("\n",'<br>')+'</a>');
+                public.WriteLog("TYPE_SOFT",'SYS_EXEC_ERR', (str(result),));
+                return public.returnMsg(False,'SYS_CONF_APACHE_ERR',(result[1].replace("\n",'<br>'),));
         #检查nginx配置文件
         elif get.name == 'nginx':
             vhostPath = self.setupPath + '/panel/vhost/rewrite'
@@ -381,18 +381,18 @@ class system:
                 nginxConf = nginxConf.replace("#limit_conn_zone $binary_remote_addr zone=perip:10m;",limitConf);
                 public.writeFile(limit,nginxConf)
                 public.ExecShell('/etc/init.d/nginx start');
-                return public.returnMsg(True,'因重装Nginx导致的配置文件不匹配已修正!');
+                return public.returnMsg(True,'SYS_CONF_NGINX_REP');
             
             if result[1].find('proxy') != -1:
                 import panelSite
                 panelSite.panelSite().CheckProxy(get);
                 public.ExecShell('/etc/init.d/nginx start');
-                return public.returnMsg(True,'因重装Nginx导致的配置文件不匹配已修正!');
+                return public.returnMsg(True,'SYS_CONF_NGINX_REP');
             
             #return result
             if result[1].find('successful') == -1:
-                public.WriteLog("环境设置", "执行失败: "+str(result));
-                return public.returnMsg(False,'Nginx配置规则错误: <br><a style="color:red;">'+result[1].replace("\n",'<br>')+'</a>');
+                public.WriteLog("TYPE_SOFT",'SYS_EXEC_ERR', (str(result),));
+                return public.returnMsg(False,'SYS_CONF_NGINX_ERR',(result[1].replace("\n",'<br>'),));
         
         #执行
         execStr = "/etc/init.d/"+get.name+" "+get.type
@@ -403,34 +403,39 @@ class system:
         
         if get.name != 'nginx':
             os.system(execStr);
-            return public.returnMsg(True,'执行成功');
+            return public.returnMsg(True,'SYS_EXEC_SUCCESS');
         result = public.ExecShell(execStr)
         if result[1].find('nginx.pid') != -1:
             public.ExecShell('pkill -9 nginx && sleep 1');
             public.ExecShell('/etc/init.d/nginx start');
         if get.type != 'test':
-            public.WriteLog("环境设置", execStr+"执行成功!");
-        return public.returnMsg(True,'执行成功');
+            public.WriteLog("TYPE_SOFT", 'SYS_EXEC_SUCCESS',(execStr,));
+        return public.returnMsg(True,'SYS_EXEC_SUCCESS');
     
     def RestartServer(self,get):
-        if not public.IsRestart(): return public.returnMsg(False,'请等待所有安装任务完成再执行!');
+        if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK');
         public.ExecShell("sync && /etc/init.d/bt stop && init 6 &");
-        return public.returnMsg(True,'命令发送成功!');
+        return public.returnMsg(True,'SYS_REBOOT');
     
     #释放内存
     def ReMemory(self,get):
         os.system('sync');
         scriptFile = 'script/rememory.sh'
         if not os.path.exists(scriptFile):
-            public.downloadFile('http://www.bt.cn/script/rememory.sh',scriptFile);
+            public.downloadFile(web.ctx.session.home + '/script/rememory.sh',scriptFile);
         public.ExecShell("/bin/bash " + self.setupPath + '/panel/' + scriptFile);
         return self.GetMemInfo();
     
     #重启面板     
     def ReWeb(self,get):
-        if not public.IsRestart(): return public.returnMsg(False,'请等待所有安装任务完成再执行!');
+        #if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK');
         public.ExecShell('/etc/init.d/bt restart &')
         return True
+    
+    #修复面板
+    def RepPanel(self,get):
+        public.ExecShell("wget -O update.sh http://download.bt.cn/install/update.sh && sh update.sh " + web.ctx.session.version);
+        return True;
         
         
         

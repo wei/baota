@@ -13,8 +13,7 @@ $(function(){
 			$(this).find(".mask").css({"color":"#d2edd8"});
 			$(this).find(".mem-re-con").css({"display":"block"});
 			$(this).find(".mem-re-con").animate({"top":"0",opacity:1});
-			//$(this).prev().text("内存释放");
-			$("#memory").text("内存释放");
+			$("#memory").text(lan.index.memre);
 		}
 	},function(){
 		if(!($(this).hasClass("mem-action"))){
@@ -26,7 +25,6 @@ $(function(){
 		$(this).removeClass("shine_green");
 		$(this).find(".mask").css({"color":"#20a53a"});
 		$(this).find(".mem-re-con").css({"top":"15px",opacity:1,"display":"none"});
-		//$(this).prev().text("内存使用率");
 		$("#memory").text(getCookie("mem-before"));
 	}).click(function(){
 		$(this).find(".mem-re-min").hide();
@@ -41,7 +39,6 @@ $(function(){
 				setTimeout("rocket("+btlen+","+i+")",i*30);
 			}
 		}
-		//setTimeout("location.reload()",2000);
 	})
 })
 
@@ -51,27 +48,24 @@ function rocket(sum,m){
 }
 //释放内存
 function ReMemory(){
-	//var loadT = layer.msg('正在处理,请稍候..',{icon:16,time:0,shade: [0.3, '#000']});
 	setTimeout(function(){
-		$(".mem-release").find('.mask').css({'color':'#20a53a','font-size':'14px'}).html('<span style="display:none">1</span>释放中 <img src="/static/img/ings.gif">');
+		$(".mem-release").find('.mask').css({'color':'#20a53a','font-size':'14px'}).html('<span style="display:none">1</span>'+lan.index.memre_ok_0+' <img src="/static/img/ings.gif">');
 		$.post('/system?action=ReMemory','',function(rdata){
-			//layer.msg(rdata.msg,{icon:rdata.status?1:5});
 			var percent = GetPercent(rdata.memRealUsed,rdata.memTotal);
 			var memText = rdata.memRealUsed+"/"+rdata.memTotal + " (MB)";
 			percent = Math.round(percent);
-			$(".mem-release").find('.mask').css({'color':'#20a53a','font-size':'14px'}).html("<span style='display:none'>"+percent+"</span>释放完成");
+			$(".mem-release").find('.mask').css({'color':'#20a53a','font-size':'14px'}).html("<span style='display:none'>"+percent+"</span>"+lan.index.memre_ok);
 			setCookie("mem-before",memText);
 			var memNull = getCookie("memRealUsed") - rdata.memRealUsed;
 			setTimeout(function(){
 				if(memNull > 0){
-					$(".mem-release").find('.mask').css({'color':'#20a53a','font-size':'14px','line-height':'22px','padding-top':'22px'}).html("<span style='display:none'>"+percent+"</span>已释放<br>"+memNull+"MB");
+					$(".mem-release").find('.mask').css({'color':'#20a53a','font-size':'14px','line-height':'22px','padding-top':'22px'}).html("<span style='display:none'>"+percent+"</span>"+lan.index.memre_ok_1+"<br>"+memNull+"MB");
 				}
 				else{
-					$(".mem-release").find('.mask').css({'color':'#20a53a','font-size':'14px'}).html("<span style='display:none'>"+percent+"</span>状态最佳");
+					$(".mem-release").find('.mask').css({'color':'#20a53a','font-size':'14px'}).html("<span style='display:none'>"+percent+"</span>"+lan.index.memre_ok_2);
 				}
 				$(".mem-release").removeClass("mem-action");
 				$("#memory").text(memText);
-				//layer.msg("已释放"+memNull+"MB，可用"+rdata.memFree+"MB",{icon:1});
 				setCookie("memRealUsed",rdata.memRealUsed);
 			},1000);
 			setTimeout(function(){
@@ -96,7 +90,7 @@ function GetDiskInfo(){
 			if(rdata[i].path == '/' || rdata[i].path == '/www'){
 				if(rdata[i].size[2].indexOf('M') != -1){
 					$("#messageError").show();
-					$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #ff4040; margin-right: 10px;"></span> 磁盘分区['+rdata[i].path+']的可用容量小于1GB，这可能会导致MySQL自动停止，面板无法访问等问题，请及时清理！</p>')
+					$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #ff4040; margin-right: 10px;"></span> '+lan.get('diskinfo_span_1',[rdata[i].path])+'</p>');
 				}
 			}
 			dBody = '<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2 mtb20 circle-box text-center">'
@@ -120,34 +114,6 @@ function GetDiskInfo(){
 
 }
 
-//检查配置
-function checkConfig(){
-	$.get('/system?action=ServiceAdmin&name='+getCookie('serverType')+'&type=test',function(rdata){
-		if(rdata.status) return;
-		layer.open({
-			type:1,
-			title:'检测到配置文件错误!',
-			area: '600px', 
-			shadeClose:false,
-			closeBtn:2,
-			content:'<div class="setchmod bt-form pd20 pb70">'
-					+'<p style="padding: 0 20px 10px;line-height: 24px;">'+rdata.msg+'</p>'
-					+'<p style="font-weight:bold;margin-left: 24px;margin-top: 20px;">注意：</p><ul style="padding: 0 20px 10px;margin-top: 3px;" class="help-info-text">'
-					+'============================================================================'
-					+'<li>请根据以上错误信息排除配置文件错误！</li>'
-					+'<li>配置文件有错误的情况下，您添加的站点、域名将无法生效！</li>'
-					+'<li>排除配置错误之前请不要重启服务器或apache/nginx，这会导致您的Web服务无法启动！</li>'
-					+'<li>若您无法排除错误，请附上错误信息到我们官方论坛发贴求助;<a href="http://www.bt.cn/bbs" target="_blank" style="color:#20a53a"> >>点击求助</a></li>'
-					+'</ul>'
-					+'<div class="bt-form-submit-btn">'
-					+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">知道了</button>'
-				    +'</div>'
-					+'</div>'
-		});
-	});
-}
-
-
 function getInfo() {
 	$.get("/system?action=GetSystemTotal", function(info) {
 		setCookie("memRealUsed",parseInt((info.memRealUsed)));
@@ -157,18 +123,18 @@ function getInfo() {
 		$("#left").html(Math.floor(info.memRealUsed / (info.memTotal / 100)));
 		$("#info").html(info.system);
 		$("#running").html(info.time);
-		$("#core").html(info.cpuNum + " 核心");
+		$("#core").html(info.cpuNum + " "+lan.index.cpu_core);
 		$("#state").html(info.cpuRealUsed);
 		var memFree = info.memTotal - info.memRealUsed;
 		
 		if(memFree < 64){
 			$("#messageError").show();
-			$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #ff4040; margin-right: 10px;"></span> 当前可用物理内存小于64M，这可能导致MySQL自动停止，站点502等错误，请尝试释放内存！</p>')
+			$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #ff4040; margin-right: 10px;">'+lan.index.mem_warning+'</span> </p>')
 		}
 		
 		if(info.isuser > 0){
 			$("#messageError").show();
-			$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #ff4040; margin-right: 10px;"></span> 当前面板用户为admin,这可能为面板安全带来风险！<a class="btlink" href="javascript:setUserName();"> [修改]</a></p>')
+			$("#messageError").append('<p><span class="glyphicon glyphicon-alert" style="color: #ff4040; margin-right: 10px;"></span> '+lan.index.user_warning+'<a class="btlink" href="javascript:setUserName();"> ['+lan.public.edit+']</a></p>')
 		}
 		setImg();
 	});
@@ -183,14 +149,14 @@ function getNet(){
 		url:"/system?action=GetNetWork",
 		async:true,
 		success:function(net){
-			$("#InterfaceSpeed").html("接口速率： 1.0Gbps");
+			$("#InterfaceSpeed").html(lan.index.interfacespeed+"： 1.0Gbps");
 			$("#upSpeed").html(net.up+' KB');
 			$("#downSpeed").html(net.down+' KB');
 			$("#downAll").html(ToSize(net.downTotal));
-			$("#downAll").attr('title','报文数量:'+net.downPackets)
+			$("#downAll").attr('title',lan.index.package+':'+net.downPackets)
 			$("#upAll").html(ToSize(net.upTotal));
-			$("#upAll").attr('title','报文数量:'+net.upPackets)
-			$("#core").html(net.cpu[1] + " 核心");
+			$("#upAll").attr('title',lan.index.package+':'+net.upPackets)
+			$("#core").html(net.cpu[1] + " "+lan.index.cpu_core);
 			$("#state").html(net.cpu[0]);
 			setCookie("upNet",net.up);
 			setCookie("downNet",net.down);
@@ -247,12 +213,12 @@ function NetImg(){
 	// 指定图表的配置项和数据
 	var option = {
 		title: {
-			text: '接口流量实时',
+			text: lan.index.interface_net,
 			left: 'center',
 			textStyle:{
 				color:'#888888',
 				fontStyle: 'normal',
-				fontFamily: '宋体',
+				fontFamily: lan.index.net_font,
 				fontSize: 16,
 			}
 		},
@@ -260,7 +226,7 @@ function NetImg(){
 			trigger: 'axis'
 		},
 		legend: {
-			data:['上行','下行'],
+			data:[lan.index.net_up,lan.index.net_down],
 			bottom:'2%'
 		},
 		xAxis: {
@@ -274,7 +240,7 @@ function NetImg(){
 			}
 		},
 		yAxis: {
-			name: '单位KB/s',
+			name: lan.index.unit+'KB/s',
 			splitLine:{
 				lineStyle:{
 					color:"#eee"
@@ -287,7 +253,7 @@ function NetImg(){
 			}
 		},
 		series: [{
-			name: '上行',
+			name: lan.index.net_up,
 			type: 'line',
 			data: yData,
 			smooth:true,
@@ -302,7 +268,7 @@ function NetImg(){
 				}
 			}
 		},{
-			name: '下行',
+			name: lan.index.net_down,
 			type: 'line',
 			data: zData,
 			smooth:true,
@@ -326,10 +292,10 @@ function NetImg(){
 				data: xData
 			},
 			series: [{
-				name:'上行',
+				name:lan.index.net_up,
 				data: yData
 			},{
-				name:'下行',
+				name:lan.index.net_down,
 				data: zData
 			}]
 		});
@@ -361,7 +327,7 @@ setTimeout(function(){
 	$.get('/ajax?action=UpdatePanel',function(rdata){
 		if(rdata.status == false) return;
 		if(rdata.version != undefined){
-			$("#toUpdate").html('<a class="btlink" href="javascript:updateMsg();">立即更新</a>');
+			$("#toUpdate").html('<a class="btlink" href="javascript:updateMsg();">'+lan.index.update_go+'</a>');
 			return;
 		}
 		$.get('/system?action=ReWeb',function(){});
@@ -380,11 +346,11 @@ setTimeout(function(){
 
 //检查更新
 function checkUpdate(){
-	var loadT = layer.msg('正在获取版本信息...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.index.update_get,{icon:16,time:0,shade: [0.3, '#000']});
 	$.get('/ajax?action=UpdatePanel&check=true',function(rdata){
 		layer.close(loadT);
 		if(rdata.status === false){
-			layer.msg(rdata.msg,{icon:1});
+			layer.confirm(rdata.msg,{title:lan.index.update_check,icon:1,closeBtn: 2,btn: [lan.public.know,lan.public.close]});
 			return;
 		}
 		layer.msg(rdata.msg,{icon:1});
@@ -398,15 +364,15 @@ function updateMsg(){
 	$.get('/ajax?action=UpdatePanel',function(rdata){
 		layer.open({
 			type:1,
-			title:'升级到['+rdata.version+']',
+			title:lan.index.update_to+'['+rdata.version+']',
 			area: '400px', 
 			shadeClose:false,
 			closeBtn:2,
 			content:'<div class="setchmod bt-form pd20 pb70">'
 					+'<p style="padding: 0 0 10px;line-height: 24px;">'+rdata.updateMsg+'</p>'
 					+'<div class="bt-form-submit-btn">'
-					+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>'
-					+'<button type="button" class="btn btn-success btn-sm btn-title" onclick="updateVersion(\''+rdata.version+'\')" >立即升级</button>'
+					+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">'+lan.public.cancel+'</button>'
+					+'<button type="button" class="btn btn-success btn-sm btn-title" onclick="updateVersion(\''+rdata.version+'\')" >'+lan.index.update_go+'</button>'
 				    +'</div>'
 					+'</div>'
 		});
@@ -415,7 +381,7 @@ function updateMsg(){
 
 //开始升级
 function updateVersion(version){
-	var loadT = layer.msg('正在升级面板..',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.index.update_the,{icon:16,time:0,shade: [0.3, '#000']});
 	$.get('/ajax?action=UpdatePanel','toUpdate=yes',function(rdata){
 		layer.closeAll();
 		if(rdata.status === false){
@@ -428,13 +394,13 @@ function updateVersion(version){
 			$("#toUpdate").html('');
 		}
 		
-		layer.msg('升级成功!',{icon:1});
+		layer.msg(lan.index.update_ok,{icon:1});
 		$.get('/system?action=ReWeb',function(){});
 		setTimeout(function(){
 			window.location.reload();
 		},3000);
 	}).error(function(){
-		layer.msg('升级成功!',{icon:1});
+		layer.msg(lan.index.update_ok,{icon:1});
 		$.get('/system?action=ReWeb',function(){});
 		setTimeout(function(){
 			window.location.reload();
@@ -445,15 +411,15 @@ function updateVersion(version){
 //更新日志
 function openLog(){
 	layer.open({
-	type: 1,
-	area: '640px',
-	title: '版本更新',
-	closeBtn: 2,
-	shift: 5,
-	shadeClose: false,
-	content: '<div class="DrawRecordCon"></div>'	
-	})
-	$.get('http://www.bt.cn/Api/getUpdateLogs',function(rdata){
+		type: 1,
+		area: '640px',
+		title: lan.index.update_log,
+		closeBtn: 2,
+		shift: 5,
+		shadeClose: false,
+		content: '<div class="DrawRecordCon"></div>'	
+	});
+	$.get('https://www.bt.cn/Api/getUpdateLogs',function(rdata){
 		var body = '';
 		for(var i=0;i<rdata.length;i++){
 			body += '<div class="DrawRecord DrawRecordlist">\
@@ -473,24 +439,24 @@ function openLog(){
 function ReBoot(){
 	layer.open({
 		type: 1,
-		title: "安全重启服务器",
+		title: lan.index.reboot_title,
 		area: ['500px', '280px'],
 		closeBtn: 2,
 		shadeClose: false,
 		content:"<div class='bt-form bt-window-restart'>\
 			<div class='pd15'>\
-			<p style='color:red; margin-bottom:10px; font-size:15px;'>注意，若您的服务器是一个容器，请取消。</p>\
+			<p style='color:red; margin-bottom:10px; font-size:15px;'>"+lan.index.reboot_warning+"</p>\
 			<div class='SafeRestart' style='line-height:26px'>\
-				<p>安全重启有利于保障文件安全，将执行以下操作：</p>\
-				<p>1.停止"+serverType+"服务</p>\
-				<p>2.停止MySQL服务</p>\
-				<p>3.开始重启服务器</p>\
-				<p>4.等待服务器启动</p>\
+				<p>"+lan.index.reboot_ps+"</p>\
+				<p>"+lan.index.reboot_ps_1+"</p>\
+				<p>"+lan.index.reboot_ps_2+"</p>\
+				<p>"+lan.index.reboot_ps_3+"</p>\
+				<p>"+lan.index.reboot_ps_4+"</p>\
 			</div>\
 			</div>\
 			<div class='bt-form-submit-btn'>\
-				<button type='button' id='web_end_time' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
-				<button type='button' id='web_del_send' class='btn btn-success btn-sm btn-title'  onclick='WSafeRestart()'>确定</button>\
+				<button type='button' id='web_end_time' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>"+lan.public.cancel+"</button>\
+				<button type='button' id='web_del_send' class='btn btn-success btn-sm btn-title'  onclick='WSafeRestart()'>"+lan.public.ok+"</button>\
 			</div>\
 		</div>"
 	})
@@ -501,18 +467,18 @@ function WSafeRestart(){
 	var body = '<div class="SafeRestartCode pd15" style="line-height:26px"></div>';
 	$(".bt-window-restart").html(body);
 	var data = "name="+serverType+"&type=stop";
-	$(".SafeRestartCode").html("<p>正在停止"+serverType+"服务...</p>");
+	$(".SafeRestartCode").html("<p>"+lan.index.reboot_msg_1+"</p>");
 	$.post('/system?action=ServiceAdmin',data,function(r1){
 		data = "name=mysqld&type=stop";
-		$(".SafeRestartCode").html("<p class='c9'>正在停止"+serverType+"服务</p><p>正在停止MySQL服务...</p>");
+		$(".SafeRestartCode").html("<p class='c9'>"+lan.index.reboot_msg_1+"</p><p>"+lan.index.reboot_msg_2+"...</p>");
 		$.post('/system?action=ServiceAdmin',data,function(r2){
-			$(".SafeRestartCode").html("<p class='c9'>正在停止"+serverType+"服务</p><p class='c9'>正在停止MySQL服务</p><p>开始重启服务器...</p>");
+			$(".SafeRestartCode").html("<p class='c9'>正在停止"+serverType+"服务</p><p class='c9'>"+lan.index.reboot_msg_2+"</p><p>"+lan.index.reboot_msg_3+"...</p>");
 			$.post('/system?action=RestartServer','',function(rdata){
-				$(".SafeRestartCode").html("<p class='c9'>正在停止"+serverType+"服务</p><p class='c9'>正在停止MySQL服务</p><p class='c9'>开始重启服务器</p><p>等待服务器启动...</p>");
+				$(".SafeRestartCode").html("<p class='c9'>"+lan.index.reboot_msg_1+"</p><p class='c9'>"+lan.index.reboot_msg_2+"</p><p class='c9'>"+lan.index.reboot_msg_3+"</p><p>"+lan.index.reboot_msg_4+"...</p>");
 				var sEver = setInterval(function(){
 					$.get("/system?action=GetSystemTotal", function(info) {
 						clearInterval(sEver);
-						$(".SafeRestartCode").html("<p class='c9'>正在停止"+serverType+"服务</p><p class='c9'>正在停止MySQL服务</p><p class='c9'>开始重启服务器</p><p class='c9'>等待服务器启动</p><p>服务器重启成功!</p>");
+						$(".SafeRestartCode").html("<p class='c9'>"+lan.index.reboot_msg_1+"</p><p class='c9'>"+lan.index.reboot_msg_2+"</p><p class='c9'>"+lan.index.reboot_msg_3+"</p><p class='c9'>"+lan.index.reboot_msg_4+"</p><p>"+lan.index.reboot_msg_5+"</p>");
 						setTimeout(function(){
 							layer.closeAll();
 						},3000);
@@ -521,11 +487,11 @@ function WSafeRestart(){
 					});
 				},3000);
 			}).error(function(){
-				$(".SafeRestartCode").html("<p class='c9'>正在停止"+serverType+"服务</p><p class='c9'>正在停止MySQL服务</p><p class='c9'>开始重启服务器</p><p>等待服务器启动...</p>");
+				$(".SafeRestartCode").html("<p class='c9'>"+lan.index.reboot_msg_1+"</p><p class='c9'>"+lan.index.reboot_msg_2+"</p><p class='c9'>"+lan.index.reboot_msg_3+"</p><p>"+lan.index.reboot_msg_4+"...</p>");
 				var sEver = setInterval(function(){
 					$.get("/system?action=GetSystemTotal", function(info) {
 						clearInterval(sEver);
-						$(".SafeRestartCode").html("<p class='c9'>正在停止"+serverType+"服务</p><p class='c9'>正在停止MySQL服务</p><p class='c9'>开始重启服务器</p><p class='c9'>等待服务器启动</p><p>服务器重启成功!</p>");
+						$(".SafeRestartCode").html("<p class='c9'>"+lan.index.reboot_msg_1+"</p><p class='c9'>"+lan.index.reboot_msg_2+"</p><p class='c9'>"+lan.index.reboot_msg_3+"</p><p class='c9'>"+lan.index.reboot_msg_4+"</p><p>"+lan.index.reboot_msg_5+"</p>");
 						setTimeout(function(){
 							layer.closeAll();
 							window.location.reload();
@@ -542,14 +508,14 @@ function WSafeRestart(){
 }
 
 function reWeb(){
-	layer.confirm('即将重启面板服务，继续吗？',{title:'重启面板服务',closeBtn:2,icon:3},function(){
-		var loadT = layer.msg('正在重启面板服务,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	layer.confirm(lan.index.panel_reboot_msg,{title:lan.index.panel_reboot_title,closeBtn:2,icon:3},function(){
+		var loadT = layer.msg(lan.index.panel_reboot_to,{icon:16,time:0,shade: [0.3, '#000']});
 		$.get('/system?action=ReWeb',function(rdata){
 			layer.close(loadT);
 			layer.msg(rdata.msg,{icon:5});
 		}).error(function(){
 			layer.close(loadT);
-			layer.msg('面板服务重启成功!',{icon:1});
+			layer.msg(lan.index.panel_reboot_ok,{icon:1});
 			setTimeout(function(){
 				window.location.reload();
 			},3000)
@@ -560,7 +526,7 @@ function reWeb(){
 
 //查看网络状态
 function GetNetWorkList(rflush){
-	var loadT = layer.msg('正在获取...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.public.the_get,{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/ajax?action=GetNetWorkList','',function(rdata){
 		layer.close(loadT);
 		var tbody = ""
@@ -568,7 +534,7 @@ function GetNetWorkList(rflush){
 			tbody += "<tr>"
 						+"<td>" + rdata[i].type + "</td>"
 						+"<td>" + rdata[i].laddr[0]+ ":" + rdata[i].laddr[1] + "</td>"
-						+"<td>" + (rdata[i].raddr.length > 1?"<a style='color:blue;' title='屏蔽此IP' href=\"javascript:dropAddress('" + rdata[i].raddr[0] + "');\">"+rdata[i].raddr[0]+"</a>:" + rdata[i].raddr[1]:'NONE') + "</td>"
+						+"<td>" + (rdata[i].raddr.length > 1?"<a style='color:blue;' title='"+lan.index.net_dorp_ip+"' href=\"javascript:dropAddress('" + rdata[i].raddr[0] + "');\">"+rdata[i].raddr[0]+"</a>:" + rdata[i].raddr[1]:'NONE') + "</td>"
 						+"<td>" + rdata[i].status + "</td>"
 						+"<td>" + rdata[i].process + "</td>"
 						+"<td>" + rdata[i].pid + "</td>"
@@ -583,21 +549,21 @@ function GetNetWorkList(rflush){
 		layer.open({
 			type:1,
 			area:['650px','600px'],
-			title:'网络状态',
+			title:lan.index.net_status_title,
 			closeBtn:2,
 			shift:5,
 			shadeClose:true,
 			content:"<div class='divtable' style='margin:15px;'>\
-					<button class='btn btn-default btn-sm pull-right' onclick='GetNetWorkList(true);' style='margin-bottom:5px;'>刷新</button>\
+					<button class='btn btn-default btn-sm pull-right' onclick='GetNetWorkList(true);' style='margin-bottom:5px;'>"+lan.public.fresh+"</button>\
 					<table class='table table-hover table-bordered'>\
 						<thead>\
 						<tr>\
-							<th>协议</th>\
-							<th>本地地址</th>\
-							<th>远程地址</th>\
-							<th>状态</th>\
-							<th>进程</th>\
-							<th>PID</th>\
+							<th>"+lan.index.net_protocol+"</th>\
+							<th>"+lan.index.net_address_dst+"</th>\
+							<th>"+lan.index.net_address_src+"</th>\
+							<th>"+lan.index.net_address_status+"</th>\
+							<th>"+lan.index.net_process+"</th>\
+							<th>"+lan.index.net_process_pid+"</th>\
 						</tr>\
 						</thead>\
 						<tbody id='networkList'>"+tbody+"</tbody>\
@@ -608,7 +574,7 @@ function GetNetWorkList(rflush){
 
 //进程管理
 function GetProcessList(rflush){
-	var loadT = layer.msg('正在分析...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.index.process_check,{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/ajax?action=GetProcessList','',function(rdata){
 		layer.close(loadT);
 		var tbody = "";
@@ -622,7 +588,7 @@ function GetProcessList(rflush){
 						+"<td>" + rdata[i].status + "</td>"
 						+"<td>" + rdata[i].threads + "</td>"
 						+"<td>" + rdata[i].user + "</td>"
-						+"<td><a title='结束此进程' style='color:red;' href=\"javascript:;\" onclick=\"killProcess(" + rdata[i].pid + ",'"+rdata[i].name+"',this)\">结束</a></td>"
+						+"<td><a title='"+lan.index.process_kill_title+"' style='color:red;' href=\"javascript:;\" onclick=\"killProcess(" + rdata[i].pid + ",'"+rdata[i].name+"',this)\">"+lan.index.process_kill+"</a></td>"
 					+"</tr>";
 		}
 		
@@ -634,24 +600,24 @@ function GetProcessList(rflush){
 		layer.open({
 			type:1,
 			area:['70%','600px'],
-			title:'进程管理',
+			title:lan.index.process_title,
 			closeBtn:2,
 			shift:5,
 			shadeClose:true,
 			content:"<div class='divtable' style='margin:15px;'>\
-					<button class='btn btn-default btn-sm pull-right' onclick='GetProcessList(true);' style='margin-bottom:5px;'>刷新</button>\
+					<button class='btn btn-default btn-sm pull-right' onclick='GetProcessList(true);' style='margin-bottom:5px;'>"+lan.public.fresh+"</button>\
 					<table class='table table-hover table-bordered'>\
 						<thead>\
 						<tr>\
-							<th>PID</th>\
-							<th>名称</th>\
-							<th>CPU</th>\
-							<th>内存</th>\
-							<th>读/写</th>\
-							<th>状态</th>\
-							<th>线程</th>\
-							<th>用户</th>\
-							<th>操作</th>\
+							<th>"+lan.index.process_pid+"</th>\
+							<th>"+lan.index.process_name+"</th>\
+							<th>"+lan.index.process_cpu+"</th>\
+							<th>"+lan.index.process_mem+"</th>\
+							<th>"+lan.index.process_disk+"</th>\
+							<th>"+lan.index.process_status+"</th>\
+							<th>"+lan.index.process_thread+"</th>\
+							<th>"+lan.index.process_user+"</th>\
+							<th>"+lan.index.process_act+"</th>\
 						</tr>\
 						</thead>\
 						<tbody id='processList'>"+tbody+"</tbody>\
@@ -662,8 +628,8 @@ function GetProcessList(rflush){
 //结束指定进程
 function killProcess(pid,name,obj){
 	var that= $(obj).parents('tr');
-	layer.confirm('结束进程['+pid+']['+name+']后可能会影响服务器的正常运行，继续吗？',{icon:3,closeBtn:2},function(){
-		loadT = layer.msg('正在结束进程...',{icon:16,time:0,shade: [0.3, '#000']});
+	layer.confirm(lan.get('process_kill_confirm',[name,pid]),{icon:3,closeBtn:2},function(){
+		loadT = layer.msg(lan.index.kill_msg,{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/ajax?action=KillProcess','pid='+pid,function(rdata){
 			that.remove();
 			layer.close(loadT);
@@ -674,11 +640,25 @@ function killProcess(pid,name,obj){
 
 //屏蔽指定IP
 function dropAddress(address){
-	layer.confirm('屏蔽此IP后，对方将无法访问本服务器，你可以在【安全】中删除，继续吗？',{icon:3,closeBtn:2},function(){
-		loadT = layer.msg('正在屏蔽IP...',{icon:16,time:0,shade: [0.3, '#000']});
-		$.post('/firewall?action=AddDropAddress','port='+address+'&ps=手动屏蔽',function(rdata){
+	layer.confirm(lan.index.net_doup_ip_msg,{icon:3,closeBtn:2},function(){
+		loadT = layer.msg(lan.index.net_doup_ip_to,{icon:16,time:0,shade: [0.3, '#000']});
+		$.post('/firewall?action=AddDropAddress','port='+address+'&ps='+lan.index.net_doup_ip_ps,function(rdata){
 			layer.close(loadT);
 			layer.msg(rdata.msg,{icon:rdata.status?1:2});
+		});
+	});
+}
+
+//修复面板
+function repPanel(){
+	layer.confirm(lan.index.rep_panel_msg,{title:lan.index.rep_panel_title,closeBtn:2,icon:3},function(){
+		var loadT = layer.msg(lan.index.rep_panel_the,{icon:16,time:0,shade: [0.3, '#000']});
+		$.get('/system?action=RepPanel',function(rdata){
+			layer.close(loadT);
+			layer.msg(lan.index.rep_panel_ok,{icon:1});
+		}).error(function(){
+			layer.close(loadT);
+			layer.msg(lan.index.rep_panel_ok,{icon:1});
 		});
 	});
 }

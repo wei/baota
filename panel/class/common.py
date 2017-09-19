@@ -9,14 +9,14 @@
 #
 #             ┏┓      ┏┓
 #            ┏┛┻━━━━━━┛┻┓
-#            ┃             ☃          ┃
+#            ┃               ☃          ┃
 #            ┃  ┳┛   ┗┳ ┃
 #            ┃     ┻    ┃
 #            ┗━┓      ┏━┛
-#              ┃      ┗━━━┓
+#              ┃      ┗━━━━━┓
 #              ┃  神兽保佑     ┣┓
-#              ┃　 永无BUG！ ┏┛
-#              ┗┓┓┏━┳┓┏┛
+#              ┃ 永无BUG！     ┏┛
+#              ┗┓┓┏━┳┓┏━━━━━┛
 #               ┃┫┫ ┃┫┫
 #               ┗┻┛ ┗┻┛
 
@@ -29,9 +29,8 @@ class MyBad():
         return self._msg
 
 class panelSetup:
-    def __init__(self):
-        web.ctx.session.webname = '宝塔Linux面板'
-        web.ctx.session.version = "5.0.0"
+    def __init__(self): 
+        web.ctx.session.version = "5.2.0"
         if os.path.exists('data/title.pl'):
             web.ctx.session.webname = public.readFile('data/title.pl');
         
@@ -40,12 +39,11 @@ class panelSetup:
 class panelAdmin(panelSetup):
     setupPath = '/www/server'
     def __init__(self):
-        self.local();
-        #get = web.input();
-        #if hasattr(get,'btauth_key'):
-        #    self.auth();
-        #else:
-        #    self.local();
+        get = web.input();
+        if hasattr(get,'btauth_key'):
+            self.auth();
+        else:
+            self.local();
     
     #api请求 
     def auth(self):
@@ -66,19 +64,10 @@ class panelAdmin(panelSetup):
         self.checkConfig();
         self.GetOS();
     
+    #检查Token合法性
     def checkToken(self):
-        self._decode();
+        data = public.auth_decode(web.input());
         
-    #获取Token
-    def GetToken(self):
-        try:
-            from json import loads
-            tokenFile = 'data/token.json';
-            if not os.path.exists(tokenFile): return False;
-            token = loads(public.readFile(tokenFile));
-            return token;
-        except:
-            return False
     
     #检查api管理权限
     def checkRule(self):
@@ -106,15 +95,22 @@ class panelAdmin(panelSetup):
     #设置基础Session
     def setSession(self):
         if not hasattr(web.ctx.session,'brand'):
-            web.ctx.session.brand = '宝塔'
-            web.ctx.session.product = 'Linux面板'
+            web.ctx.session.brand = public.getMsg('BRAND');
+            web.ctx.session.product = public.getMsg('PRODUCT');
             web.ctx.session.rootPath = '/www'
-            web.ctx.session.webname = '宝塔Linux面板'
+            web.ctx.session.webname = public.getMsg('NAME');
             web.ctx.session.downloadUrl = 'http://download.bt.cn';
             if os.path.exists('data/title.pl'):
                 web.ctx.session.webname = public.readFile('data/title.pl'); 
             web.ctx.session.setupPath = self.setupPath;
             web.ctx.session.logsPath = '/www/wwwlogs';
+        if not hasattr(web.ctx.session,'menu'):
+            web.ctx.session.menu = public.getLan('menu')
+        if not hasattr(web.ctx.session,'lan'):
+            web.ctx.session.lan = public.get_language();
+        if not hasattr(web.ctx.session,'home'):
+            web.ctx.session.home = 'https://www.bt.cn';
+            
     
     #检查Web服务器类型
     def checkWebType(self):

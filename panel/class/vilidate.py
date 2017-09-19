@@ -3,9 +3,9 @@
 # +-------------------------------------------------------------------
 # | 宝塔Linux面板
 # +-------------------------------------------------------------------
-# | Copyright (c) 2015-2016 宝塔软件(http://bt.cn) All rights reserved.
+# | Copyright (c) 2015-2017 宝塔(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 
 import random, math
@@ -40,14 +40,11 @@ class vieCode:
         self.__createCode()
         self.__createImage()
         self.__createNoise()
-        self.__printString()
         self.__createCurve()
+        self.__printString()
         
         return self.__img,self.__code
         
-        
-        
-    
     def __createCode(self):
         '''创建验证码字符'''
         #是否自定义字符集合
@@ -100,7 +97,7 @@ class vieCode:
         w = (2 * math.pi) / t
         
         #画曲线
-        color = (random.randint(1, 100), random.randint(50, 150), random.randint(50, 150))
+        color = (random.randint(100, 150), random.randint(100, 150), random.randint(100, 150))
         for x in xrange(xend):
             if w!=0:
                 for k in xrange(int(self.__heigth / 10)):
@@ -122,6 +119,6 @@ class vieCode:
             color = (random.randint(30, 150), random.randint(30, 150), random.randint(30, 150))
             #计算座标
             x = random.uniform(self.__fontSize*i*0.95,self.__fontSize*i*1.1);
-            y = self.__fontSize*random.uniform(-0.2,0.5);
+            y = self.__fontSize * random.uniform(0.3,0.5);
             #打印字符
             self.__draw.text((x, y),self.__code[i], font=font, fill=color)

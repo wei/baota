@@ -1,48 +1,8 @@
-//校验端口格式
-$(function(){
-	$("#banport").keyup(function(){
-		var text = $(this).val();
-		if(isNaN(text)){
-			text = text.substring(0,text.length-1);
-			$(this).val(text);
-		}
-		if($(this).val()>65535){
-			$(this).val(65535);
-		}
-	});
-	
-	$("#twoPassword").click(function(){
-		layer.open({
-			type: 1,
-			area: '500px',
-			title: '模块加锁设置',
-			closeBtn: 2,
-			shift: 5,
-			shadeClose: false,
-			content: "<div class='bt-form twoPassword'>\
-				<div class='tp-tit'>设置加锁模块</div>\
-				<div class='tp-con' style='margin-bottom:30px'>\
-					<label><input type='checkbox'>文件管理</label>\
-					<label><input type='checkbox'>计划任务</label>\
-					<label><input type='checkbox'>面板设置</label>\
-				</div>\
-				<div class='tp-tit'>设置加锁密码</div>\
-				<div class='tp-con'>\
-					<div class='line'><label><span>校验面板密码</span></label><div class='info-r'><input type='password' name='btpw' value=''></div></div>\
-					<div class='line'><label><span>设置二级密码</span></label><div class='info-r'><input type='password' name='bttpw' value=''></div></div>\
-					<div class='line'><label><span>重复输入</span></label><div class='info-r'><input type='password' name='bttpw' value=''></div></div>\
-				</div>\
-				<div class='submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button>\
-				<button type='button' class='btn btn-success btn-sm' onclick=\"setPassword(1)\">提交</button></div>\
-			</div>"
-		});
-	});
-});
-
-
 //关闭面板
 function ClosePanel(){
-	layer.confirm('关闭面板会导致您无法访问面板 ,您真的要关闭宝塔Linux面板吗？',{title:'关闭面板',closeBtn:2,icon:13}, function() {
+	layer.confirm(lan.config.close_panel_msg,{title:lan.config.close_panel_title,closeBtn:2,icon:13,cancel:function(){
+		$("#closePl").prop("checked",false);
+	}}, function() {
 		$.post('/config?action=ClosePanel','',function(rdata){
 			layer.msg(rdata.msg,{icon:rdata.status?1:2});
 			setTimeout(function(){window.location.reload();},1000);
@@ -54,7 +14,7 @@ function ClosePanel(){
 
 //设置自动更新
 function SetPanelAutoUpload(){
-	loadT = layer.msg('正在设置...',{icon:16,time:0});
+	loadT = layer.msg(lan.public.config,{icon:16,time:0});
 	$.post('/config?action=AutoUpdatePanel','',function(rdata){
 		layer.close(loadT);
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
@@ -64,7 +24,7 @@ function SetPanelAutoUpload(){
 
 $(".set-submit").click(function(){
 	var data = $("#set-Config").serialize();
-	layer.msg('正在保存数据...',{icon:16,time:0,shade: [0.3, '#000']});
+	layer.msg(lan.config.config_save,{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/config?action=setPanel',data,function(rdata){
 		layer.closeAll();
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
@@ -80,7 +40,7 @@ $(".set-submit").click(function(){
 
 
 function syncDate(){
-	var loadT = layer.msg('正在同步时间...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.config.config_sync,{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/config?action=syncDate','',function(rdata){
 		layer.close(loadT);
 		layer.msg(rdata.msg,{icon:1});
@@ -92,7 +52,7 @@ function syncDate(){
 
 //PHP守护程序
 function Set502(){
-	var loadT = layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/config?action=Set502','',function(rdata){
 		layer.close(loadT);
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
@@ -101,18 +61,18 @@ function Set502(){
 
 //绑定修改宝塔账号
 function bindBTName(a,type){
-	var titleName = "绑定宝塔账号";
+	var titleName = lan.config.config_user_binding;
 	if(type == "b"){
-		btn = "<button type='button' class='btn btn-success btn-sm' onclick=\"bindBTName(1,'b')\">绑定</button>";
+		btn = "<button type='button' class='btn btn-success btn-sm' onclick=\"bindBTName(1,'b')\">"+lan.config.binding+"</button>";
 	}
 	else{
-		titleName = "修改绑定宝塔账号";
-		btn = "<button type='button' class='btn btn-success btn-sm' onclick=\"bindBTName(1,'c')\">修改</button>";
+		titleName = lan.config.config_user_edit;
+		btn = "<button type='button' class='btn btn-success btn-sm' onclick=\"bindBTName(1,'c')\">"+lan.public.edit+"</button>";
 	}
 	if(a == 1) {
 		p1 = $("#p1").val();
 		p2 = $("#p2").val();
-		var loadT = layer.msg('正在获取密钥...',{icon:16,time:0,shade: [0.3, '#000']});
+		var loadT = layer.msg(lan.config.token_get,{icon:16,time:0,shade: [0.3, '#000']});
 		$.post(" /ssl?action=GetToken", "username=" + p1 + "&password=" + p2, function(b){
 			layer.close(loadT);
 			layer.msg(b.msg, {icon: b.status?1:2});
@@ -130,13 +90,13 @@ function bindBTName(a,type){
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
-		content: "<div class='bt-form pd20 pb70'><div class='line'><span class='tname'>账号</span><div class='info-r'><input class='bt-input-text' type='text' name='username' id='p1' value='' placeholder='宝塔官网账户' style='width:100%'/></div></div><div class='line'><span class='tname'>密码</span><div class='info-r'><input class='bt-input-text' type='password' name='password' id='p2' value='' placeholder='宝塔官网密码' style='width:100%'/></div></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">取消</button> "+btn+"</div></div>"
+		content: "<div class='bt-form pd20 pb70'><div class='line'><span class='tname'>"+lan.public.user+"</span><div class='info-r'><input class='bt-input-text' type='text' name='username' id='p1' value='' placeholder='"+lan.config.user_bt+"' style='width:100%'/></div></div><div class='line'><span class='tname'>"+lan.public.pass+"</span><div class='info-r'><input class='bt-input-text' type='password' name='password' id='p2' value='' placeholder='"+lan.config.pass_bt+"' style='width:100%'/></div></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">"+lan.public.cancel+"</button> "+btn+"</div></div>"
 	})
 }
 //解除绑定宝塔账号
 function UnboundBt(){
 	var name = $("input[name='btusername']").val();
-	layer.confirm("您确定要解除绑定："+name+" ？",{closeBtn:2,icon:3,title:"解除绑定"},function(){
+	layer.confirm(lan.config.binding_un_msg,{closeBtn:2,icon:3,title:lan.config.binding_un},function(){
 		$.get("/ssl?action=DelToken",function(b){
 			layer.msg(b.msg,{icon:b.status? 1:2})
 			$("input[name='btusername']").val('');
@@ -146,17 +106,17 @@ function UnboundBt(){
 $.get("/ssl?action=GetUserInfo",function(b){
 	if(b.status){
 		$("input[name='btusername']").val(b.data.username);
-		$("input[name='btusername']").next().text("修改").attr("onclick","bindBTName(2,'c')").css({"margin-left":"-82px"});
-		$("input[name='btusername']").next().after('<span class="btn btn-xs btn-success" onclick="UnboundBt()" style="vertical-align: 0px;">解绑</span>');
+		$("input[name='btusername']").next().text(lan.public.edit).attr("onclick","bindBTName(2,'c')").css({"margin-left":"-82px"});
+		$("input[name='btusername']").next().after('<span class="btn btn-xs btn-success" onclick="UnboundBt()" style="vertical-align: 0px;">'+lan.config.binding_un+'</span>');
 	}
 	else{
-		$("input[name='btusername']").next().text("绑定").attr("onclick","bindBTName(2,'b')").removeAttr("style");
+		$("input[name='btusername']").next().text(lan.config.binding).attr("onclick","bindBTName(2,'b')").removeAttr("style");
 	}
 });
 
 //设置API
 function apiSetup(){
-	var loadT = layer.msg('正在获取Token...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.config.token_get,{icon:16,time:0,shade: [0.3, '#000']});
 	$.get('/api?action=GetToken',function(rdata){
 		layer.close(loadT);
 		
@@ -167,7 +127,7 @@ function apiSetup(){
 //设置模板
 function setTemplate(){
 	var template = $("select[name='template']").val();
-	var loadT = layer.msg('正在处理,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/config?action=SetTemplates','templates='+template,function(rdata){
 		layer.close(loadT);
 		layer.msg(rdata.msg,{icon:rdata.status?1:5});
@@ -182,15 +142,23 @@ function setTemplate(){
 
 //设置面板SSL
 function setPanelSSL(){
-	msg = $("#panelSSL").attr('checked')?'关闭SSL后,必需使用http协议访问面板,继续吗?':'<a style="font-weight: bolder;font-size: 16px;">危险！此功能不懂别开启!</a><li style="margin-top: 12px;color:red;">必须要用到且了解此功能才决定自己是否要开启!</li><li>面板SSL是自签证书，不被浏览器信任，显示不安全是正常现象</li><li>开启后导致面板不能访问，可以点击下面链接了解解决方法</li><p style="margin-top: 10px;"><input type="checkbox" id="checkSSL" /><label style="font-weight: 400;margin: 3px 5px 0px;" for="checkSSL">我已了经解详情,并愿意承担风险</label><a target="_blank" class="btlink" href="https://www.bt.cn/bbs/thread-4689-1-1.html" style="float: right;">了解详情</a></p>';
-	layer.confirm(msg,{title:'设置面板SSL',icon:3,area:'550px'},function(){
+	var status = $("#sshswitch").prop("checked")==true?1:0;
+	var msg = $("#panelSSL").attr('checked')?lan.config.ssl_close_msg:'<a style="font-weight: bolder;font-size: 16px;">'+lan.config.ssl_open_ps+'</a><li style="margin-top: 12px;color:red;">'+lan.config.ssl_open_ps_1+'</li><li>'+lan.config.ssl_open_ps_2+'</li><li>'+lan.config.ssl_open_ps_3+'</li><p style="margin-top: 10px;"><input type="checkbox" id="checkSSL" /><label style="font-weight: 400;margin: 3px 5px 0px;" for="checkSSL">'+lan.config.ssl_open_ps_4+'</label><a target="_blank" class="btlink" href="https://www.bt.cn/bbs/thread-4689-1-1.html" style="float: right;">'+lan.config.ssl_open_ps_5+'</a></p>';
+	layer.confirm(msg,{title:lan.config.ssl_title,closeBtn:2,icon:3,area:'550px',cancel:function(){
+		if(status == 0){
+			$("#panelSSL").prop("checked",false);
+		}
+		else{
+			$("#panelSSL").prop("checked",true);
+		}
+	}},function(){
 		if(window.location.protocol.indexOf('https') == -1){
 			if(!$("#checkSSL").prop('checked')){
-				layer.msg('请先确认风险!',{icon:2});
+				layer.msg(lan.config.ssl_ps,{icon:2});
 				return false;
 			}
 		}
-		var loadT = layer.msg('正在安装并设置SSL组件,这需要几分钟时间...',{icon:16,time:0,shade: [0.3, '#000']});
+		var loadT = layer.msg(lan.config.ssl_msg,{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/config?action=SetPanelSSL','',function(rdata){
 			layer.close(loadT);
 			layer.msg(rdata.msg,{icon:rdata.status?1:5});
@@ -201,6 +169,13 @@ function setPanelSSL(){
 				},1500);
 			}
 		});
+	},function(){
+		if(status == 0){
+			$("#panelSSL").prop("checked",false);
+		}
+		else{
+			$("#panelSSL").prop("checked",true);
+		}
 	});
 }
 

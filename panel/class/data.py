@@ -23,8 +23,8 @@ class data:
     def setPs(self,get):
         id = get.id;
         if public.M(get.table).where("id=?",(id,)).setField('ps',get.ps):
-            return public.returnMsg(True,'修改成功');    
-        return public.returnMsg(False,'修改失败');
+            return public.returnMsg(True,'EDIT_SUCCESS');    
+        return public.returnMsg(False,'EDIT_ERROR');
     
     #端口扫描
     def CheckPort(self,port):
@@ -62,36 +62,36 @@ class data:
      * @return Json  page.分页数 , count.总行数   data.取回的数据
     '''
     def getData(self,get):
-        try:
-            table = get.table;
-            data = self.GetSql(get);
-            SQL = public.M(table);
-            
-            if table == 'backup':
-                import os
+        #try:
+        table = get.table;
+        data = self.GetSql(get);
+        SQL = public.M(table);
+        
+        if table == 'backup':
+            import os
+            for i in range(len(data['data'])):
+                if data['data'][i]['size'] == 0:
+                    if os.path.exists(data['data'][i]['filename']): data['data'][i]['size'] = os.path.getsize(data['data'][i]['filename'])
+        
+        elif table == 'sites' or table == 'databases':
+            type = '0'
+            if table == 'databases': type = '1'
+            for i in range(len(data['data'])):
+                data['data'][i]['backup_count'] = SQL.table('backup').where("pid=? AND type=?",(data['data'][i]['id'],type)).count()
+            if table == 'sites':
                 for i in range(len(data['data'])):
-                    if data['data'][i]['size'] == 0:
-                        if os.path.exists(data['data'][i]['filename']): data['data'][i]['size'] = os.path.getsize(data['data'][i]['filename'])
-            
-            elif table == 'sites' or table == 'databases':
-                type = '0'
-                if table == 'databases': type = '1'
-                for i in range(len(data['data'])):
-                    data['data'][i]['backup_count'] = SQL.table('backup').where("pid=? AND type=?",(data['data'][i]['id'],type)).count()
-                if table == 'sites':
-                    for i in range(len(data['data'])):
-                        data['data'][i]['domain'] = SQL.table('domain').where("pid=?",(data['data'][i]['id'],)).count()
-            elif table == 'firewall':
-                for i in range(len(data['data'])):
-                    if data['data'][i]['port'].find(':') != -1 or data['data'][i]['port'].find('.') != -1:
-                        data['data'][i]['status'] = -1;
-                    else:
-                        data['data'][i]['status'] = self.CheckPort(int(data['data'][i]['port']));
-                    
-                #返回
-            return data;
-        except Exception,ex:
-            return str(ex);
+                    data['data'][i]['domain'] = SQL.table('domain').where("pid=?",(data['data'][i]['id'],)).count()
+        elif table == 'firewall':
+            for i in range(len(data['data'])):
+                if data['data'][i]['port'].find(':') != -1 or data['data'][i]['port'].find('.') != -1 or data['data'][i]['port'].find('-') != -1:
+                    data['data'][i]['status'] = -1;
+                else:
+                    data['data'][i]['status'] = self.CheckPort(int(data['data'][i]['port']));
+                
+            #返回
+        return data;
+        #except Exception,ex:
+            #return str(ex);
     
     '''
      * 取数据库行
@@ -190,7 +190,7 @@ class data:
         data['where'] = where;
         
         #获取分页数据
-        data['page'] = page.GetPage(info)
+        data['page'] = page.GetPage(info,result)
         #取出数据
         data['data'] = SQL.table(get.table).where(where,()).order(order).field(field).limit(bytes(page.SHIFT)+','+bytes(page.ROW)).select()
         return data;

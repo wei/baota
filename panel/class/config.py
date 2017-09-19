@@ -14,37 +14,37 @@ class config:
     
     def setPassword(self,get):
         #return public.returnMsg(False,'体验服务器，禁止修改!')
-        if get.password1 != get.password2: return public.returnMsg(False,'两次输入的密码不一致，请重新输入!')
-        if len(get.password1) < 5: return public.returnMsg(False,'用户密码不能小于5位!')
+        if get.password1 != get.password2: return public.returnMsg(False,'USER_PASSWORD_CHECK')
+        if len(get.password1) < 5: return public.returnMsg(False,'USER_PASSWORD_LEN')
         public.M('users').where("username=?",(web.ctx.session.username,)).setField('password',public.md5(get.password1.strip()))
-        public.WriteLog('面板配置','修改用户['+web.ctx.session.username+']密码成功!')
-        return public.returnMsg(True,'密码修改成功!')
+        public.WriteLog('TYPE_PANEL','USER_PASSWORD_SUCCESS',(web.ctx.session.username,))
+        return public.returnMsg(True,'USER_PASSWORD_SUCCESS')
     
     def setUsername(self,get):
         #return public.returnMsg(False,'体验服务器，禁止修改!')
-        if get.username1 != get.username2: return public.returnMsg(False,'两次输入的用户名不一致，请重新输入!')
-        if len(get.username1) < 3: return public.returnMsg(False,'用户名不能小于3位!')
+        if get.username1 != get.username2: return public.returnMsg(False,'USER_USERNAME_CHECK')
+        if len(get.username1) < 3: return public.returnMsg(False,'USER_USERNAME_LEN')
         public.M('users').where("username=?",(web.ctx.session.username,)).setField('username',get.username1.strip())
         web.ctx.session.username = get.username1
-        public.WriteLog('面板配置','修改用户['+get.username2+']的用户名为['+get.username1+']!')
-        return public.returnMsg(True,'用户名修改成功!')
+        public.WriteLog('TYPE_PANEL','USER_USERNAME_SUCCESS',(get.username1,get.username2))
+        return public.returnMsg(True,'USER_USERNAME_SUCCESS')
     
     def setPanel(self,get):
         #return public.returnMsg(False,'体验服务器，禁止修改!')
-        if not public.IsRestart(): return public.returnMsg(False,'请等待所有安装任务完成再执行!');
+        if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK');
         if get.domain:
             reg = "^([\w\-\*]{1,100}\.){1,4}(\w{1,10}|\w{1,10}\.\w{1,10})$";
-            if not re.match(reg, get.domain): return public.returnMsg(False,'域名格式不正确!');
+            if not re.match(reg, get.domain): return public.returnMsg(False,'SITE_ADD_ERR_DOMAIN');
         isReWeb = False
         oldPort = web.ctx.host.split(':')[1];
         newPort = get.port;
         if oldPort != get.port:
             if self.IsOpen(get.port):
-                return public.returnMsg(False,'端口['+get.port+']已被占用!')
-            if int(get.port) >= 65535 or  int(get.port) < 100: return public.returnMsg(False,'端口范围不正确!');
+                return public.returnMsg(False,'PORT_CHECK_EXISTS',(get,port,))
+            if int(get.port) >= 65535 or  int(get.port) < 100: return public.returnMsg(False,'PORT_CHECK_RANGE');
             public.writeFile('data/port.pl',get.port)
             import firewalls
-            get.ps = '新的面板端口';
+            get.ps = public.getMsg('PORT_CHECK_PS');
             fw = firewalls.firewalls();
             fw.AddAcceptPort(get);
             get.port = oldPort;
@@ -66,8 +66,8 @@ class config:
         web.ctx.session.config['backup_path'] = get.backup_path
         web.ctx.session.config['sites_path'] = get.sites_path
         
-        data = {'uri':web.ctx.fullpath,'host':web.ctx.host.split(':')[0]+':'+newPort,'status':True,'isReWeb':isReWeb,'msg':'配置已保存!'}
-        public.WriteLog('面板配置','设置面板端口['+newPort+'],域名['+get.domain+'],默认备份路径['+get.backup_path+'],默认网站路径['+get.sites_path+'],服务器IP['+get.address+'],授权IP['+get.limitip+']!')
+        data = {'uri':web.ctx.fullpath,'host':web.ctx.host.split(':')[0]+':'+newPort,'status':True,'isReWeb':isReWeb,'msg':public.getMsg('PANEL_SAVE')}
+        public.WriteLog('TYPE_PANEL','PANEL_SAVE',(newPort,get.domain,get.backup_path,get.sites_path,get.address,get.limitip))
         return data
     
     def setPathInfo(self,get):
@@ -92,9 +92,9 @@ class config:
         if type == 'on':status = '1'
         conf = re.sub(rep,"\ncgi.fix_pathinfo = "+status+"\n",conf)
         public.writeFile(path,conf)
-        public.WriteLog("PHP配置", "设置PHP-"+version+" PATH_INFO模块为["+type+"]!");
+        public.WriteLog("TYPE_PHP", "PHP_PATHINFO_SUCCESS",(version,type));
         public.phpReload(version);
-        return public.returnMsg(True,type+'设置成功!');
+        return public.returnMsg(True,'SET_SUCCESS');
     
     
     #设置文件上传大小限制
@@ -102,7 +102,7 @@ class config:
         version = get.version
         max = get.max
         
-        if int(max) < 2: return public.returnMsg(False,'上传大小限制不能小于2M!')
+        if int(max) < 2: return public.returnMsg(False,'PHP_UPLOAD_MAX_ERR')
         
         #设置PHP
         path = web.ctx.session.setupPath+'/php/'+version+'/etc/php.ini'
@@ -125,31 +125,39 @@ class config:
             
         public.serviceReload()
         public.phpReload(version);
-        public.WriteLog("PHP配置", "设置PHP-"+version+"最大上传大小为["+max+"MB]!")
-        return public.returnMsg(True,'设置成功!')
+        public.WriteLog("TYPE_PHP", "PHP_UPLOAD_MAX",(version,max))
+        return public.returnMsg(True,'SET_SUCCESS')
     
     #设置禁用函数
     def setPHPDisable(self,get):
         filename = web.ctx.session.setupPath + '/php/' + get.version + '/etc/php.ini'
-        if not os.path.exists(filename): return public.returnMsg(False,'指定PHP版本不存在!');
+        if not os.path.exists(filename): return public.returnMsg(False,'PHP_NOT_EXISTS');
         phpini = public.readFile(filename);
         rep = "disable_functions\s*=\s*.*\n"
         phpini = re.sub(rep, 'disable_functions = ' + get.disable_functions + "\n", phpini);
-        public.WriteLog('PHP配置','修改PHP-'+get.version+'的禁用函数为['+get.disable_functions+']')
+        public.WriteLog('TYPE_PHP','PHP_DISABLE_FUNCTION',(get.version,get.disable_functions))
         public.writeFile(filename,phpini);
         public.phpReload(get.version);
-        return public.returnMsg(True,'修改成功!');
+        return public.returnMsg(True,'SET_SUCCESS');
     
     #设置PHP超时时间
     def setPHPMaxTime(self,get):
         time = get.time
         version = get.version;
-        if int(time) < 30 or int(time) > 86400: return public.returnMsg(False,'请填写30-86400间的值!');
+        if int(time) < 30 or int(time) > 86400: return public.returnMsg(False,'PHP_TIMEOUT_ERR');
         file = web.ctx.session.setupPath+'/php/'+version+'/etc/php-fpm.conf';
         conf = public.readFile(file);
         rep = "request_terminate_timeout\s*=\s*([0-9]+)\n";
         conf = re.sub(rep,"request_terminate_timeout = "+time+"\n",conf);    
         public.writeFile(file,conf)
+        
+        file = '/www/server/php/'+version+'/etc/php.ini';
+        phpini = public.readFile(file);
+        rep = "max_execution_time\s*=\s*([0-9]+)\r?\n";
+        phpini = re.sub(rep,"max_execution_time = "+time+"\n",phpini);
+        rep = "max_input_time\s*=\s*([0-9]+)\r?\n";
+        phpini = re.sub(rep,"max_input_time = "+time+"\n",phpini);
+        public.writeFile(file,phpini)
         
         if web.ctx.session.webserver == 'nginx':
             #设置Nginx
@@ -165,10 +173,10 @@ class config:
                 conf = re.sub(rep,'fastcgi_read_timeout '+time+';',conf);
                 public.writeFile(path,conf);
                 
-        public.WriteLog("PHP配置", "设置PHP-"+version+"最大脚本超时时间为["+time+"秒]!");
+        public.WriteLog("TYPE_PHP", "PHP_TIMEOUT",(version,time));
         public.serviceReload()
         public.phpReload(version);
-        return public.returnMsg(True, '保存成功!');
+        return public.returnMsg(True, 'SET_SUCCESS');
     
     
     #取FPM设置
@@ -229,14 +237,14 @@ class config:
         
         public.writeFile(file,conf)
         public.phpReload(version);
-        public.WriteLog("PHP配置", "设置PHP-"+version+"并发设置,max_children="+max_children+",start_servers="+start_servers+",min_spare_servers="+min_spare_servers+",max_spare_servers="+max_spare_servers);
-        return public.returnMsg(True, '设置成功');
+        public.WriteLog("TYPE_PHP",'PHP_CHILDREN', (version,max_children,start_servers,min_spare_servers,max_spare_servers));
+        return public.returnMsg(True, 'SET_SUCCESS');
     
     #同步时间
     def syncDate(self,get):
         result = public.ExecShell("ntpdate 0.asia.pool.ntp.org");
-        public.WriteLog("环境设置", "同步服务器时间成功!");
-        return public.returnMsg(True,"同步成功!");
+        public.WriteLog("TYPE_PANEL", "DATE_SUCCESS");
+        return public.returnMsg(True,"DATE_SUCCESS");
         
     def IsOpen(self,port):
         #检查端口是否占用
@@ -255,25 +263,25 @@ class config:
             if hasattr(get,'day'): 
                 get.day = int(get.day);
                 get.day = str(get.day);
-                if(get.day < 1): return public.returnMsg(False,"保存天数不合法!");
+                if(get.day < 1): return public.returnMsg(False,"CONTROL_ERR");
         except:
             pass
         
         filename = 'data/control.conf';
         if get.type == '1':
             public.writeFile(filename,get.day);
-            public.WriteLog("监控设置", "开启监控服务,记录保存["+get.day+"]天!");
+            public.WriteLog("TYPE_PANEL",'CONTROL_OPEN',(get.day,));
         elif get.type == '0':
             public.ExecShell("rm -f " + filename);
-            public.WriteLog("监控设置", "关闭监控服务!");
+            public.WriteLog("TYPE_PANEL", "CONTROL_CLOSE");
         elif get.type == 'del':
-            if not public.IsRestart(): return public.returnMsg(False,'请等待所有安装任务完成再执行!');
+            if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK');
             os.remove("data/system.db")
             import db;
             sql = db.Sql()
             result = sql.dbfile('system').create('system');
-            public.WriteLog("监控设置", "监控记录已清空!");
-            return public.returnMsg(True,"清理成功!");
+            public.WriteLog("TYPE_PANEL", "CONTROL_CLOSE");
+            return public.returnMsg(True,"CONTROL_CLOSE");
             
         else:
             data = {}
@@ -288,8 +296,7 @@ class config:
                 data['status'] = False
             return data
         
-        
-        return public.returnMsg(True,"设置成功!");
+        return public.returnMsg(True,"SET_SUCCESS");
     
     #关闭面板
     def ClosePanel(self,get):
@@ -298,7 +305,7 @@ class config:
         public.writeFile(filename,'True');
         public.ExecShell("chmod 600 " + filename);
         public.ExecShell("chown root.root " + filename);
-        return public.returnMsg(True,'面板已关闭!');
+        return public.returnMsg(True,'PANEL_CLOSE');
     
     
     #设置自动更新
@@ -311,7 +318,7 @@ class config:
             public.writeFile(filename,'True');
             public.ExecShell("chmod 600 " + filename);
             public.ExecShell("chown root.root " + filename);
-        return public.returnMsg(True,'设置成功!');
+        return public.returnMsg(True,'SET_SUCCESS');
     
     #设置二级密码
     def SetPanelLock(self,get):
@@ -331,36 +338,33 @@ class config:
                 
     #设置PHP守护程序
     def Set502(self,get):
-        try:
-            filename = 'data/502Task.pl';
-            if os.path.exists(filename):
-                os.system('rm -f ' + filename)
-            else:
-                public.writeFile(filename,'True')
-            
-            return public.returnMsg(True,'设置成功!');
-        except:
-            return public.returnMsg(True,'失败,磁盘不可写!');
+        filename = 'data/502Task.pl';
+        if os.path.exists(filename):
+            os.system('rm -f ' + filename)
+        else:
+            public.writeFile(filename,'True')
+        
+        return public.returnMsg(True,'SET_SUCCESS');
     
     #设置模板
     def SetTemplates(self,get):
         public.writeFile('data/templates.pl',get.templates);
-        return public.returnMsg(True,'模板设置成功!');
+        return public.returnMsg(True,'SET_SUCCESS');
     
     #设置面板SSL
     def SetPanelSSL(self,get):
         sslConf = '/www/server/panel/data/ssl.pl';
         if os.path.exists(sslConf):
             os.system('rm -f ' + sslConf);
-            return public.returnMsg(True,'SSL已关闭，请使用http协议访问面板!');
+            return public.returnMsg(True,'PANEL_SSL_CLOSE');
         else:
             os.system('pip install pyOpenSSL');
             try:
-                if not self.CreateSSL(): return public.returnMsg(False,'开启失败，无法自动安装pyOpenSSL组件-1!');
+                if not self.CreateSSL(): return public.returnMsg(False,'PANEL_SSL_ERR');
                 public.writeFile(sslConf,'True')
             except Exception,ex:
-                return public.returnMsg(False,'开启失败，无法自动安装pyOpenSSL组件!<p>请尝试手动安装: pip install pyOpenSSL</p>');
-            return public.returnMsg(True,'开启成功，请使用https协议访问面板!');
+                return public.returnMsg(False,'PANEL_SSL_ERR');
+            return public.returnMsg(True,'PANEL_SSL_OPEN');
     #自签证书
     def CreateSSL(self):
         import OpenSSL
@@ -385,12 +389,110 @@ class config:
     #生成Token
     def SetToken(self,get):
         data = {}
-        data[''] = public.GetRandomString(24);       
-            
-        
+        data[''] = public.GetRandomString(24);
     
+    #取面板列表
+    def GetPanelList(self,get):
+        try:
+            data = public.M('panel').field('id,title,url,username,password,click,addtime').order('click desc').select();
+            if type(data) == str: data[111111];
+            return data;
+        except:
+            sql = '''CREATE TABLE IF NOT EXISTS `panel` (
+  `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+  `title` TEXT,
+  `url` TEXT,
+  `username` TEXT,
+  `password` TEXT,
+  `click` INTEGER,
+  `addtime` INTEGER
+);'''
+            public.M('sites').execute(sql,());
+            return [];
+    
+    #添加面板资料
+    def AddPanelInfo(self,get):
         
+        #校验是还是重复
+        isAdd = public.M('panel').where('title=? OR url=?',(get.title,get.url)).count();
+        if isAdd: return public.returnMsg(False,'PANEL_SSL_ADD_EXISTS');
+        import time,json;
+        isRe = public.M('panel').add('title,url,username,password,click,addtime',(get.title,get.url,get.username,get.password,0,int(time.time())));
+        if isRe: return public.returnMsg(True,'ADD_SUCCESS');
+        return public.returnMsg(False,'ADD_ERROR');
+    
+    #修改面板资料
+    def SetPanelInfo(self,get):
+        #校验是还是重复
+        isSave = public.M('panel').where('(title=? OR url=?) AND id!=?',(get.title,get.url,get.id)).count();
+        if isSave: return public.returnMsg(False,'PANEL_SSL_ADD_EXISTS');
+        import time,json;
         
+        #更新到数据库
+        isRe = public.M('panel').where('id=?',(get.id,)).save('title,url,username,password',(get.title,get.url,get.username,get.password));
+        if isRe: return public.returnMsg(True,'EDIT_SUCCESS');
+        return public.returnMsg(False,'EDIT_ERROR');
+        pass
+    
+    #删除面板资料
+    def DelPanelInfo(self,get):
+        isExists = public.M('panel').where('id=?',(get.id,)).count();
+        if not isExists: return public.returnMsg(False,'PANEL_SSL_ADD_NOT_EXISTS');
+        public.M('panel').where('id=?',(get.id,)).delete();
+        return public.returnMsg(True,'DEL_SUCCESS');
+        pass 
+    
+    #点击计数
+    def ClickPanelInfo(self,get):
+        click = public.M('panel').where('id=?',(get.id,)).getField('click');
+        public.M('panel').where('id=?',(get.id,)).setField('click',click+1);
+        return True;
+    
+    #获取PHP配置参数
+    def GetPHPConf(self,get):
+        gets = [
+                {'name':'short_open_tag','type':1,'ps':public.getMsg('PHP_CONF_1')},
+                {'name':'asp_tags','type':1,'ps':public.getMsg('PHP_CONF_2')},
+                {'name':'safe_mode','type':1,'ps':public.getMsg('PHP_CONF_3')},
+                {'name':'max_execution_time','type':2,'ps':public.getMsg('PHP_CONF_4')},
+                {'name':'max_input_time','type':2,'ps':public.getMsg('PHP_CONF_5')},
+                {'name':'memory_limit','type':2,'ps':public.getMsg('PHP_CONF_6')},
+                {'name':'post_max_size','type':2,'ps':public.getMsg('PHP_CONF_7')},
+                {'name':'file_uploads','type':1,'ps':public.getMsg('PHP_CONF_8')},
+                {'name':'upload_max_filesize','type':2,'ps':public.getMsg('PHP_CONF_9')},
+                {'name':'max_file_uploads','type':2,'ps':public.getMsg('PHP_CONF_10')},
+                {'name':'default_socket_timeout','type':2,'ps':public.getMsg('PHP_CONF_11')},
+                {'name':'error_reporting','type':3,'ps':public.getMsg('PHP_CONF_12')},
+                {'name':'display_errors','type':1,'ps':public.getMsg('PHP_CONF_13')},
+                {'name':'cgi.fix_pathinfo','type':0,'ps':public.getMsg('PHP_CONF_14')},
+                {'name':'date.timezone','type':3,'ps':public.getMsg('PHP_CONF_15')}
+                ]
+        phpini = public.readFile('/www/server/php/' + get.version + '/etc/php.ini');
+        
+        result = []
+        for g in gets:
+            rep = g['name'] + '\s*=\s*([0-9A-Za-z_& ~]+)(\s*;?|\r?\n)';
+            tmp = re.search(rep,phpini)
+            if not tmp: continue;
+            g['value'] = tmp.groups()[0];
+            result.append(g);
+        
+        return result;
+    
+    #提交PHP配置参数
+    def SetPHPConf(self,get):
+        gets = ['display_errors','cgi.fix_pathinfo','date.timezone','short_open_tag','asp_tags','safe_mode','max_execution_time','max_input_time','memory_limit','post_max_size','file_uploads','upload_max_filesize','max_file_uploads','default_socket_timeout','error_reporting']
+        
+        filename = '/www/server/php/' + get.version + '/etc/php.ini';
+        phpini = public.readFile(filename);
+        for g in gets:
+            rep = g + '\s*=\s*(.+)\r?\n';
+            val = g+' = ' + get[g] + '\n';
+            phpini = re.sub(rep,val,phpini);
+        
+        public.writeFile(filename,phpini);
+        os.system('/etc/init.d/php-fpm-' + get.version + ' reload');
+        return public.returnMsg(True,'SET_SUCCESS');
         
         
             

@@ -7,7 +7,7 @@
 # | Author: 黄文良 <2879625666@qq.com>
 # +-------------------------------------------------------------------
 
-import MySQLdb,re
+import re,os
 
 class panelMysql:
     __DB_PASS = None
@@ -17,22 +17,40 @@ class panelMysql:
     __DB_CONN = None
     __DB_CUR  = None
     __DB_ERR  = None
+    __DB_HOST_CONF = 'data/mysqlHost.pl';
     #连接MYSQL数据库
     def __Conn(self):
         try:
             import public
+            try:
+                import MySQLdb
+            except Exception,ex:
+                self.__DB_ERR = ex
+                return False;
             try:
                 myconf = public.readFile('/etc/my.cnf');
                 rep = "port\s*=\s*([0-9]+)"
                 self.__DB_PORT = int(re.search(rep,myconf).groups()[0]);
             except:
                 self.__DB_PORT = 3306;
-            self.__DB_PASS = public.M('config').where('id=?',(1,)).getField('mysql_root')
-            self.__DB_CONN = MySQLdb.connect(host = self.__DB_HOST,user = self.__DB_USER,passwd = self.__DB_PASS,port = self.__DB_PORT,charset="utf8")
+            self.__DB_PASS = public.M('config').where('id=?',(1,)).getField('mysql_root');
+            try:
+                if os.path.exists(self.__DB_HOST_CONF): self.__DB_HOST = public.readFile(self.__DB_HOST_CONF);
+                self.__DB_CONN = MySQLdb.connect(host = self.__DB_HOST,user = self.__DB_USER,passwd = self.__DB_PASS,port = self.__DB_PORT,charset="utf8",connect_timeout=1)
+            except MySQLdb.Error,e:
+                if e[0] != 2003: 
+                    self.__DB_ERR = e
+                    return False
+                if self.__DB_HOST == 'localhost':
+                    self.__DB_HOST = '127.0.0.1';
+                else:
+                    self.__DB_HOST = 'localhost';
+                public.writeFile(self.__DB_HOST_CONF,self.__DB_HOST);
+                self.__DB_CONN = MySQLdb.connect(host = self.__DB_HOST,user = self.__DB_USER,passwd = self.__DB_PASS,port = self.__DB_PORT,charset="utf8",connect_timeout=1)
             self.__DB_CUR  = self.__DB_CONN.cursor()
             return True
         except MySQLdb.Error,e:
-            self.__DB_ERR = str(e)
+            self.__DB_ERR = e
             return False
           
     def execute(self,sql):
@@ -44,7 +62,7 @@ class panelMysql:
             self.__Close()
             return result
         except Exception,ex:
-            return "error: " + str(ex)
+            return ex
     
     
     def query(self,sql):
@@ -58,7 +76,7 @@ class panelMysql:
             self.__Close()
             return data
         except Exception,ex:
-            return "error: " + str(ex) 
+            return ex
         
      
     #关闭连接        

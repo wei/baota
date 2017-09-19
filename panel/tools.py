@@ -14,7 +14,7 @@ import sys,os
 panelPath = '/www/server/panel/';
 os.chdir(panelPath)
 sys.path.append(panelPath + "class/")
-import public
+import public,time
 
 #设置MySQL密码
 def set_mysql_root(password):
@@ -329,6 +329,133 @@ def CreateSSL():
         return;
     print 'error';
 
+#创建文件
+def CreateFiles(path,num):
+    if not os.path.exists(path): os.system('mkdir -p ' + path);
+    import time;
+    for i in range(num):
+        filename = path + '/' + str(time.time()) + '__' + str(i)
+        open(path,'w+').close()
+
+#计算文件数量
+def GetFilesCount(path):
+    i=0;
+    for name in os.listdir(path): i += 1;
+    return i;
+
+
+#清理系统垃圾
+def ClearSystem():
+    count = total = 0;
+    tmp_total,tmp_count = ClearMail();
+    count += tmp_count;
+    total += tmp_total;
+    print '======================================================================='
+    tmp_total,tmp_count = ClearSession();
+    count += tmp_count;
+    total += tmp_total;
+    print '======================================================================='
+    tmp_total,tmp_count = ClearOther();
+    count += tmp_count;
+    total += tmp_total;
+    print '======================================================================='
+    print '\033[1;32m|-系统垃圾清理完成，共删除['+str(count)+']个文件,释放磁盘空间['+ToSize(total)+']\033[0m';
+
+#清理邮件日志
+def ClearMail():
+    rpath = '/var/spool';
+    total = count = 0;
+    import shutil
+    con = ['cron','anacron','mail'];
+    for d in os.listdir(rpath):
+        if d in con: continue;
+        dpath = rpath + '/' + d
+        print '|-正在清理' + dpath + ' ...';
+        time.sleep(0.2);
+        num = size = 0;
+        for n in os.listdir(dpath):
+            filename = dpath + '/' + n
+            fsize = os.path.getsize(filename);
+            print '|---['+ToSize(fsize)+'] del ' + filename,
+            size += fsize
+            if os.path.isdir(filename):
+                shutil.rmtree(filename)
+            else:
+                os.remove(filename)
+            print '\t\033[1;32m[OK]\033[0m'
+            num += 1
+        print '|-已清理['+dpath+'],删除['+str(num)+']个文件,共释放磁盘空间['+ToSize(size)+']';
+        total += size;
+        count += num;
+    print '======================================================================='
+    print '|-已完成spool的清理，删除['+str(count)+']个文件,共释放磁盘空间['+ToSize(total)+']';
+    return total,count
+
+#清理php_session文件
+def ClearSession():
+    spath = '/tmp'
+    total = count = 0;
+    import shutil
+    print '|-正在清理PHP_SESSION ...';
+    for d in os.listdir(spath):
+        if d.find('sess_') == -1: continue;
+        filename = spath + '/' + d;
+        fsize = os.path.getsize(filename);
+        print '|---['+ToSize(fsize)+'] del ' + filename,
+        total += fsize
+        if os.path.isdir(filename):
+            shutil.rmtree(filename)
+        else:
+            os.remove(filename)
+        print '\t\033[1;32m[OK]\033[0m'
+        count += 1;
+    print '|-已完成php_session的清理，删除['+str(count)+']个文件,共释放磁盘空间['+ToSize(total)+']';
+    return total,count
+
+#清空回收站
+def ClearRecycle_Bin():
+    import files
+    f = files.files();
+    f.Close_Recycle_bin(None);
+    
+#清理其它
+def ClearOther():
+    clearPath = [
+                 {'path':'/www/server/panel','find':'testDisk_'},
+                 {'path':'/www/wwwlogs','find':'log'},
+                 {'path':'/tmp','find':'panelBoot.pl'},
+                 {'path':'/www/server/panel/install','find':'.rpm'}
+                 ]
+    
+    total = count = 0;
+    print '|-正在清理临时文件及网站日志 ...';
+    for c in clearPath:
+        for d in os.listdir(c['path']):
+            if d.find(c['find']) == -1: continue;
+            filename = c['path'] + '/' + d;
+            fsize = os.path.getsize(filename);
+            print '|---['+ToSize(fsize)+'] del ' + filename,
+            total += fsize
+            if os.path.isdir(filename):
+                shutil.rmtree(filename)
+            else:
+                os.remove(filename)
+            print '\t\033[1;32m[OK]\033[0m'
+            count += 1;
+    public.serviceReload();
+    os.system('/etc/init.d/bt restart > /dev/null');
+    print '|-已完成临时文件及网站日志的清理，删除['+str(count)+']个文件,共释放磁盘空间['+ToSize(total)+']';
+    return total,count
+
+#字节单位转换
+def ToSize(size):
+    ds = ['b','KB','MB','GB','TB']
+    for d in ds:
+        if size < 1024: return str(size)+d;
+        size = size / 1024;
+    return '0b';
+            
+
 if __name__ == "__main__":
     type = sys.argv[1];
     if type == 'root':
@@ -345,5 +472,7 @@ if __name__ == "__main__":
         CreateSSL();
     elif type == 'port':
         CheckPort();
+    elif type == 'clear':
+        ClearSystem();
     else:
         print 'ERROR: Parameter error'

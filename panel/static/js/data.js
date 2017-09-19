@@ -18,28 +18,28 @@ function getData(page,search) {
 		//构造数据列表
 		var Body = '';
 		if(data.data == ""){
-			Body="<tr><td colspan='7'>当前没有数据库数据</td></tr>";
+			Body="<tr><td colspan='7'>"+lan.database.empty+"</td></tr>";
 			$("#DataPage").hide()
 		}
 		else{
 			$("#DataPage").show();
 			for (var i = 0; i < data.data.length; i++) {
 				if(data.data[i].backup_count==0){
-					var isback = "<a href='javascript:;' class='btlink' onclick=\"DataDetails('"+data.data[i].id+"','"+data.data[i].name+"')\">无备份</a>"
+					var isback = "<a href='javascript:;' class='btlink' onclick=\"DataDetails('"+data.data[i].id+"','"+data.data[i].name+"')\">"+lan.database.backup_empty+"</a>"
 				}else{
-					var isback = "<a href='javascript:;' class='btlink' onclick=\"DataDetails('"+data.data[i].id+"','"+data.data[i].name+"')\">有备份</a>"
+					var isback = "<a href='javascript:;' class='btlink' onclick=\"DataDetails('"+data.data[i].id+"','"+data.data[i].name+"')\">"+lan.database.backup_ok+"</a>"
 				}
 				Body += "<tr><td><input type='checkbox' title='"+data.data[i].name+"' onclick='checkSelect();' name='id' value='"+data.data[i].id+"'>\
 						<td>" + data.data[i].name + "</td>\
 						<td>" + data.data[i].name + "</td>\
-						<td class='relative'><span class='password' data-pw='"+data.data[i].password+"'>**********</span><span class='glyphicon glyphicon-eye-open cursor pw-ico' style='margin-left:10px'></span><span class='ico-copy cursor btcopy' style='margin-left:10px' title='复制密码' data-pw='"+data.data[i].password+"'></span></td>\
-						<td>"+isback+" | <a class='btlink' href=\"javascript:InputDatabase('"+data.data[i].name+"');\" title='导入数据库'>导入</a></td>\
+						<td class='relative'><span class='password' data-pw='"+data.data[i].password+"'>**********</span><span class='glyphicon glyphicon-eye-open cursor pw-ico' style='margin-left:10px'></span><span class='ico-copy cursor btcopy' style='margin-left:10px' title='"+lan.database.copy_pass+"' data-pw='"+data.data[i].password+"'></span></td>\
+						<td>"+isback+" | <a class='btlink' href=\"javascript:InputDatabase('"+data.data[i].name+"');\" title='"+lan.database.input_title+"'>"+lan.database.input+"</a></td>\
 						<td><a class='btlinkbed' href='javascript:;' data-id='"+data.data[i].id+"'>" + data.data[i].ps + "</a></td>\
 						<td style='text-align:right;'>\
-						<a href='javascript:;' class='btlink' onclick=\"AdminDatabase('"+data.data[i].name+"','"+data.data[i].name+"','"+data.data[i].password+"')\" title='管理数据库'>管理</a> | \
-						<a href='javascript:;' class='btlink' onclick=\"SetDatabaseAccess('"+data.data[i].name+"')\" title='设置访问权限'>权限</a> | \
-						<a href='javascript:;' class='btlink' onclick=\"DataRespwd(0,'"+data.data[i].id+"','"+data.data[i].name+"')\" title='修改数据库密码'>改密</a> | \
-						<a href='javascript:;' class='btlink' onclick=\"DataDelete("+data.data[i].id+",'"+data.data[i].name+"')\" title='删除数据库'>删除</a>\
+						<a href='javascript:;' class='btlink' onclick=\"AdminDatabase('"+data.data[i].name+"','"+data.data[i].name+"','"+data.data[i].password+"')\" title='"+lan.database.admin_title+"'>"+lan.database.admin+"</a> | \
+						<a href='javascript:;' class='btlink' onclick=\"SetDatabaseAccess('"+data.data[i].name+"')\" title='"+lan.database.auth_title+"'>"+lan.database.auth+"</a> | \
+						<a href='javascript:;' class='btlink' onclick=\"DataRespwd(0,'"+data.data[i].id+"','"+data.data[i].name+"')\" title='"+lan.database.edit_pass_title+"'>"+lan.database.edit_pass+"</a> | \
+						<a href='javascript:;' class='btlink' onclick=\"DataDelete("+data.data[i].id+",'"+data.data[i].name+"')\" title='"+lan.database.del_title+"'>"+lan.public.del+"</a>\
 						</td></tr>"
 			}
 		}
@@ -51,7 +51,7 @@ function getData(page,search) {
 		$(".btlinkbed").click(function(){
 			var dataid = $(this).attr("data-id");
 			var databak = $(this).text();
-			$(this).hide().after("<input class='baktext' type='text' data-id='"+dataid+"' name='bak' value='" + databak + "' placeholder='备注信息' onblur='GetBakPost(\"databases\")' />");
+			$(this).hide().after("<input class='baktext' type='text' data-id='"+dataid+"' name='bak' value='" + databak + "' placeholder='"+lan.database.ps+"' onblur='GetBakPost(\"databases\")' />");
 			$(".baktext").focus();
 		});
 		//复制密码
@@ -74,13 +74,13 @@ function DataAdd(sign){
 		type: 1,
 		skin: 'demo-class',
 		area: '480px',
-		title: '添加数据库',
+		title: lan.database.add_title,
 		closeBtn: 2,
 		shift: 5,
 		shadeClose: false,
 		content: "<form class='bt-form pd20 pb70' id='DataAdd'>\
 						<div class='line'>\
-							<span class='tname'>数据库名</span><div class='info-r'><input class='bt-input-text mr5' type='text' name='name' placeholder='新的数据库名' style='width:70%' />\
+							<span class='tname'>"+lan.database.add_name+"</span><div class='info-r'><input class='bt-input-text mr5' type='text' name='name' placeholder='"+lan.database.add_name_title+"' style='width:70%' />\
 							<select class='bt-input-text' name='codeing' style='width:22%'>\
 								<option value='utf8'>utf-8</option>\
 								<option value='utf8mb4'>utf8mb4</option>\
@@ -90,25 +90,25 @@ function DataAdd(sign){
 							</div>\
 						</div>\
 						<div class='line'>\
-						<span class='tname'>密码</span><div class='info-r'><input class='bt-input-text mr5' type='text' name='password' id='MyPassword' style='width:340px' placeholder='数据库密码' value='"+(RandomStrPwd(10))+"' /><span title='随机密码' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(10)'></span></div>\
+						<span class='tname'>"+lan.database.add_pass+"</span><div class='info-r'><input class='bt-input-text mr5' type='text' name='password' id='MyPassword' style='width:311px' placeholder='"+lan.database.add_pass_title+"' value='"+(RandomStrPwd(10))+"' /><span title='"+lan.database.add_pass_rep+"' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(10)'></span></div>\
 						</div>\
                         <div class='line'>\
-						<span class='tname'>访问权限</span>\
+						<span class='tname'>"+lan.database.add_auth+"</span>\
 						<div class='info-r'>\
 						<select id='dataAccess' class='bt-input-text mr5' style='width:100px;'>\
-							<option value='127.0.0.1'>本地服务器</option>\
-							<option value='%'>所有人</option>\
-							<option value='ip'>指定IP</option>\
+							<option value='127.0.0.1'>"+lan.database.add_auth_local+"</option>\
+							<option value='%'>"+lan.database.add_auth_all+"</option>\
+							<option value='ip'>"+lan.database.add_auth_ip+"</option>\
 						</select>\
-						<input class='bt-input-text' type='text' name='address' placeholder='请输入允许访问的IP地址' style='width:230px;display:none;' />\
+						<input class='bt-input-text' type='text' name='address' placeholder='"+lan.database.add_auth_ip_title+"' style='width:203px;display:none;' />\
 						</div>\
 						</div>\
 						<div class='line' style='display:none'>\
-						<span class='tname'>备注</span><div class='info-r'><input class='bt-input-text' type='text' name='ps' placeholder='数据库备注' /></div>\
+						<span class='tname'>"+lan.database.add_ps+"</span><div class='info-r'><input class='bt-input-text' type='text' name='ps' placeholder='"+lan.database.ps+"' /></div>\
 						</div>\
                         <div class='bt-form-submit-btn'>\
-							<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
-					        <button type='button' class='btn btn-success btn-sm btn-title' onclick=\"DataAdd(1)\" >提交</button>\
+							<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>"+lan.public.close+"</button>\
+					        <button type='button' class='btn btn-success btn-sm btn-title' onclick=\"DataAdd(1)\" >"+lan.public.submit+"</button>\
 				        </div>\
 				      </form>"
 		});
@@ -151,17 +151,17 @@ function DataSetuppwd(sign, passwd) {
 				type: 1,
 				skin: 'demo-class',
 				area: '500px',
-				title: '设置数据库密码',
+				title: lan.database.edit_pass_title,
 				closeBtn: 2,
 				shift: 5,
 				shadeClose: false,
 				content: "<div class='bt-form pd20 pb70' id='DataSetuppwd'>\
 						<div class='line'>\
-						<span class='tname'>root密码:</span><div class='info-r'><input id='MyPassword' class='bt-input-text mr5' type='text' name='password' value='"+mypasswd+"' style='width:350px' /><span title='随机密码' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(16)'></span>\
+						<span class='tname'>"+lan.database.edit_root+":</span><div class='info-r'><input id='MyPassword' class='bt-input-text mr5' type='text' name='password' value='"+mypasswd+"' style='width:320px' /><span title='"+lan.database.add_pass_rep+"' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(16)'></span>\
 						</div></div>\
 				        <div class='bt-form-submit-btn'>\
-							<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
-					        <button type='button' id='PostPwBtn' class='btn btn-success btn-sm btn-title' onclick='DataSetuppwd(1)' >提交</button>\
+							<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>"+lan.public.close+"</button>\
+					        <button type='button' id='PostPwBtn' class='btn btn-success btn-sm btn-title' onclick='DataSetuppwd(1)' >"+lan.public.submit+"</button>\
 				        </div>\
 				      </div>"
 			});
@@ -171,9 +171,9 @@ function DataSetuppwd(sign, passwd) {
 			});
 		});			
 		} else {
-			var loadT=layer.msg('正在处理,请稍候...',{icon:16,time:0});
+			var loadT=layer.msg(lan.public.the,{icon:16,time:0});
 			var newPassword = $("#MyPassword").val();
-			var data = 'password='+newPassword;
+			var data = 'password='+encodeURIComponent(newPassword);
 			$.post('/database?action=SetupPassword',data,function(rdata){
 				if(rdata.status){
 					getData(1);
@@ -198,30 +198,30 @@ function DataRespwd(sign,id,username){
 			type:1,
 			skin:'demo-class',
 			area:'450px',
-			title:'修改数据库密码',
+			title:lan.database.edit_pass_title,
 			closeBtn:2,
 			shift:5,
 			shadeClose:false,
 			content:"<form class='bt-form pd20 pb70' id='DataRespwd'>\
 						<div class='line'>\
 						<input type='text' name='id' value='"+id+"' hidden />\
-						<span class='tname'>用户名:</span><div class='info-r'><input class='bt-input-text' type='text' name='username' value='"+username+"' readonly='readonly' style='width:100%' />\
+						<span class='tname'>"+lan.database.user+":</span><div class='info-r'><input class='bt-input-text' type='text' name='username' value='"+username+"' readonly='readonly' style='width:100%' />\
 						</div></div>\
 						<div class='line'>\
-						<span class='tname'>新密码:</span><div class='info-r'><input class='bt-input-text' type='text' name='password' placeholder='新的数据库密码' style='width:100%' />\
+						<span class='tname'>"+lan.database.edit_pass_new+":</span><div class='info-r'><input class='bt-input-text' type='text' name='password' placeholder='"+lan.database.edit_pass_new_title+"' style='width:100%' />\
 						</div></div>\
 				        <div class='bt-form-submit-btn'>\
-							<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
-					        <button type='button' class='btn btn-success btn-sm btn-title' onclick='DataRespwd(1)' >提交</button>\
+							<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>"+lan.public.close+"</button>\
+					        <button type='button' class='btn btn-success btn-sm btn-title' onclick='DataRespwd(1)' >"+lan.public.submit+"</button>\
 				        </div>\
 				      </form>"
 		});
 		return;
 	}
-	layer.confirm("您确定要修改数据库的密码吗?",{title:'数据库管理',icon:3,closeBtn:2},function(index){
+	layer.confirm(lan.database.edit_pass_confirm,{title:lan.database.edit_pass_title,icon:3,closeBtn:2},function(index){
 			if(index>0){
 				var loadT=layer.load({shade:true,shadeClose:false});
-				var data = $("#DataRespwd").serialize();
+				var data = 'username='+encodeURIComponent($("#DataRespwd input[name='username']").val()) + '&password=' + encodeURIComponent($("#DataRespwd input[name='password']").val()) + '&id=' + $("#DataRespwd input[name='id']").val();
 				$.post('/database?action=ResDatabasePassword',data,function(rdata){
 					getData(1);
 					layer.closeAll();
@@ -240,7 +240,7 @@ function DataDetails(id,dataname,page){
 	if(page == undefined){
 		page = '1';
 	}
-	var loadT = layer.msg('获取中...',{icon:16,time:0});
+	var loadT = layer.msg(lan.public.the_get,{icon:16,time:0});
 	$.post('/data?action=getFind','table=databases&id='+id,function(rdata){
 		$.post('/data?action=getData','table=backup&search='+id+'&limit=5&p=1&type=1&tojs=DataDetails&p='+page,function(frdata){
 			layer.close(loadT);
@@ -252,16 +252,16 @@ function DataDetails(id,dataname,page){
 			for(var i=0;i<frdata.data.length;i++){
 				if(frdata.data[i].type == '0') continue;
 				if(frdata.data[i].filename.length < 12){
-					var ftpdown = "<a class='btlink' href='/cloud?filename="+frdata.data[i].filename+"&name="+ frdata.data[i].name+"' target='_blank'>下载</a>";
+					var ftpdown = "<a class='btlink' href='/cloud?filename="+frdata.data[i].filename+"&name="+ frdata.data[i].name+"' target='_blank'>"+lan.public.download+"</a>";
 				}else{
-					var ftpdown = "<a class='btlink' herf='javascrpit:;' onclick=\"RecoveryData('"+frdata.data[i].filename+"','"+dataname+"')\">恢复</a> | <a class='btlink' href='/download?filename="+frdata.data[i].filename+"&name="+ frdata.data[i].name+"' target='_blank'>下载</a>";
+					var ftpdown = "<a class='btlink' herf='javascrpit:;' onclick=\"RecoveryData('"+frdata.data[i].filename+"','"+dataname+"')\">"+lan.database.backup_re+"</a> | <a class='btlink' href='/download?filename="+frdata.data[i].filename+"&name="+ frdata.data[i].name+"' target='_blank'>"+lan.public.download+"</a>";
 				}
 				
 				 body += "<tr><td><span class='glyphicon glyphicon-file'></span>"+frdata.data[i].name+"</td>\
 								<td>"+(ToSize(frdata.data[i].size))+"</td>\
 								<td>"+frdata.data[i].addtime+"</td>\
 								<td style='color:#bbb;text-align:right'>\
-								"+ftpdown+" | <a class='btlink' herf='javascrpit:;' onclick=\"DataBackupDelete('"+id+"','"+frdata.data[i].id+"')\">删除</a>\
+								"+ftpdown+" | <a class='btlink' herf='javascrpit:;' onclick=\"DataBackupDelete('"+id+"','"+frdata.data[i].id+"')\">"+lan.public.del+"</a>\
 								</td>\
 							</tr>"
 			}
@@ -269,7 +269,7 @@ function DataDetails(id,dataname,page){
 			
 			if(dataname == 0){
 				var sBody = "<table width='100%' id='DataBackupList' class='table table-hover'>\
-							<thead><tr><th>文件名称</th><th>文件大小</th><th>打包时间</th><th width='140px' class='text-right'>操作</th></tr></thead>\
+							<thead><tr><th>"+lan.database.backup_name+"</th><th>"+lan.database.backup_size+"</th><th>"+lan.database.backup_time+"</th><th width='140px' class='text-right'>"+lan.public.action+"</th></tr></thead>\
 							<tbody id='DataBackupBody' class='list-list'>"+body+"</tbody>\
 							</table>"
 				$("#DataBackupList").html(sBody);
@@ -281,15 +281,15 @@ function DataDetails(id,dataname,page){
 					type: 1,
 					skin: 'demo-class',
 					area: '700px',
-					title: '数据库备份详情',
+					title: lan.database.backup_title,
 					closeBtn: 2,
 					shift: 5,
 					shadeClose: false,
 					content:"<form class='bt-form pd15' id='DataBackup' style='padding-bottom: 0'>\
-							<button class='btn btn-success btn-sm' style='margin-right:10px' type='button' onclick=\"DataBackup(" + rdata.id + ",'" + dataname + "')\">打包</button>\
+							<button class='btn btn-success btn-sm' style='margin-right:10px' type='button' onclick=\"DataBackup(" + rdata.id + ",'" + dataname + "')\">"+lan.database.backup+"</button>\
 							</form>\
 							<div class='divtable pd15'><table width='100%' id='DataBackupList' class='table table-hover' style='margin-bottom:0'>\
-							<thead><tr><th>备份名称</th><th>文件大小</th><th>备份时间</th><th class='text-right'>操作</th></tr></thead>\
+							<thead><tr><th>"+lan.database.backup_name+"</th><th>"+lan.database.backup_size+"</th><th>"+lan.database.backup_time+"</th><th class='text-right'>"+lan.public.action+"</th></tr></thead>\
 							<tbody id='DataBackupBody' class='list-list'>"+body+"</tbody>\
 							</table><div class='page'>"+frdata.page+"</div></div>"
 			});
@@ -298,8 +298,8 @@ function DataDetails(id,dataname,page){
 }
 //恢复数据库备份
 function RecoveryData(fileName,dataName){
-	layer.confirm("数据库将被覆盖,继续吗?",{title:'导入数据',icon:3,closeBtn:2},function(index){
-		var loadT =layer.msg('正在导入，请稍候...', {icon:16,time:0,shade: [0.3, '#000']});
+	layer.confirm(lan.database.input_confirm,{title:lan.database.input_title,icon:3,closeBtn:2},function(index){
+		var loadT =layer.msg(lan.database.input_the, {icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/database?action=InputSql','file='+fileName+'&name='+dataName,function(rdata){
 			layer.close(loadT);
 			layer.msg(rdata.msg,{icon:rdata.status?1:2});
@@ -312,21 +312,11 @@ function RecoveryData(fileName,dataName){
  * @param {String} dataname	数据库名称
  */
 function DataBackup(id,dataname){
-	var loadT =layer.msg('正在备份，请稍候...', {icon:16,time:0,shade: [0.3, '#000']});
+	var loadT =layer.msg(lan.database.backup_the, {icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/database?action=ToBackup', "id="+id, function(rdata) {
-		if (rdata.status == true) {
-			layer.closeAll();
-			DataDetails(id,dataname);
-			layer.msg('操作成功', {
-				icon: 1
-			});
-		} else {
-			layer.closeAll();
-			DataDetails(id,dataname);
-			layer.msg('操作失败', {
-				icon:2
-			});
-		}
+		layer.closeAll();
+		layer.msg(rdata.msg,{icon:rdata.status?1:2});
+		DataDetails(id,dataname);
 	});
 }
 
@@ -336,7 +326,7 @@ function DataBackup(id,dataname){
  * @param {String} dataname	数据库名称
  */
 function DataBackupDelete(typeid,id,dataname){
-	layer.confirm("真的要删除备份文件吗?",{title:'删除备份',icon:3,closeBtn:2},function(index){
+	layer.confirm(lan.database.backup_del_confirm,{title:lan.database.backup_del_title,icon:3,closeBtn:2},function(index){
 		var loadT=layer.load({shade:true,shadeClose:false});
 		$.post('/database?action=DelBackup','id='+id,function(frdata){
 			layer.closeAll();
@@ -351,14 +341,14 @@ function DataBackupDelete(typeid,id,dataname){
  */
 
 function DataDelete(id,name){
-	SafeMessage("删除["+name+"]","您真的要删除["+name+"]吗?",function(){
+	SafeMessage(lan.get('del',[name]),lan.get('confirm_del',[name]),function(){
 		deleteDatabase(id,name);
 	});
 
 }
 //删除操作
 function deleteDatabase(id,name){
-	var loadT = layer.msg('正在删除['+name+'],请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.get('del_all_task_the',[name]),{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/database?action=DeleteDatabase','id='+id+'&name='+name,function(frdata){
 		getData(1);
 		layer.close(loadT);
@@ -378,7 +368,7 @@ function allDeleteDatabase(){
 		tmp.id = checkList[i].value;
 		dataList.push(tmp);
 	}
-	SafeMessage("批量删除数据库","<a style='color:red;'>您共选择了["+dataList.length+"]个数据库,删除后将无法恢复,真的要删除吗?</a>",function(){
+	SafeMessage(lan.database.del_all_title,"<a style='color:red;'>"+lan.get('del_all_database',[dataList.length])+"</a>",function(){
 		layer.closeAll();
 		syncDelete(dataList,0,'');
 	});
@@ -387,10 +377,10 @@ function allDeleteDatabase(){
 //模拟同步开始批量删除数据库
 function syncDelete(dataList,successCount,errorMsg){
 	if(dataList.length < 1) {
-		layer.msg("成功删除["+successCount+"]个数据库!",{icon:1});
+		layer.msg(lan.get('del_all_database',[successCount]),{icon:1});
 		return;
 	}
-	var loadT = layer.msg('正在删除['+dataList[0].name+'],请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.get('del_all_task_the',[dataList[0].name]),{icon:16,time:0,shade: [0.3, '#000']});
 	$.ajax({
 			type:'POST',
 			url:'/database?action=DeleteDatabase',
@@ -403,7 +393,7 @@ function syncDelete(dataList,successCount,errorMsg){
 					$("input[title='"+dataList[0].name+"']").parents("tr").remove();
 				}else{
 					if(!errorMsg){
-						errorMsg = '<br><p>以下数据库删除失败:</p>';
+						errorMsg = '<br><p>'+lan.database.del_all_err+'</p>';
 					}
 					errorMsg += '<li>'+dataList[0].name+' -> '+frdata.msg+'</li>'
 				}
@@ -443,13 +433,6 @@ function goSet(num){
 	}
 }
 
-
-
-//重载MySQL配置
-function ReloadMySQL(){
-	layer.msg('已重载MySQL配置!',{icon:1});
-	$.post('/database?action=ReloadMySQL','',function(rdata){});
-}
 
 Date.prototype.format = function(format)
 {
@@ -509,7 +492,7 @@ function InputDatabase(name){
 						<td>" + ((fmp[2].length > 11)?fmp[2]:getLocalTime(fmp[2])) + "</td>\
 						<td>" + (ToSize(fmp[1])) + "</td>\
 						<td class='editmenu'>\
-							<a class='btlink' href='javascript:;' onclick=\"RecoveryData('" + rdata.PATH +"/"+ fmp[0] + "','"+name+"')\">导入</a>\
+							<a class='btlink' href='javascript:;' onclick=\"RecoveryData('" + rdata.PATH +"/"+ fmp[0] + "','"+name+"')\">"+lan.database.input+"</a>\
 						</span></td>\
 					</tr>";
 		}
@@ -517,29 +500,29 @@ function InputDatabase(name){
 				type: 1,
 				skin: 'demo-class',
 				area: '600px',
-				title: '从文件导入数据',
+				title: lan.database.input_title_file,
 				closeBtn: 2,
 				shift: 5,
 				shadeClose: false,
 				content: '<div class="pd15">'
-							+'<button class="btn btn-default btn-sm" onclick="UploadFiles(\''+name+'\')">从本地上传</button>'
+							+'<button class="btn btn-default btn-sm" onclick="UploadFiles(\''+name+'\')">'+lan.database.input_local_up+'</button>'
 							+'<div class="divtable mtb15" style="max-height:300px; overflow:auto">'
 								+'<table class="table table-hover">'
 									+'<thead>'
 										+'<tr>'
-											+'<th>文件名</th>'
-											+'<th>修改时间</th>'
-											+'<th>大小</th>'
-											+'<th>操作</th>'
+											+'<th>'+lan.files.file_name+'</th>'
+											+'<th>'+lan.files.file_etime+'</th>'
+											+'<th>'+lan.files.file_size+'</th>'
+											+'<th>'+lan.public.action+'</th>'
 										+'</tr>'
 									+'</thead>'
 									+'<tbody>'+Body+'</tbody>'
 								+'</table>'
 							+'</div>'
 							+'<ul class="help-info-text c7">'
-							   +'<li>仅支持sql、zip、(tar.gz|gz|tgz)</li>'
-							   +'<li>zip、tar.gz压缩包结构：test.zip或test.tar.gz压缩包内，必需包含test.sql</li>'
-							   +'<li>若文件过大，您还可以使用SFTP工具，将数据库文件上传到'+getCookie('backup_path')+'/database</li>'
+							   +'<li>'+lan.database.input_ps1+'</li>'
+							   +'<li>'+lan.database.input_ps2+'</li>'
+							   +'<li>'+lan.database.input_ps3+'</li>'
 							+'</ul>'
 						+'</div>'
 		});
@@ -553,23 +536,23 @@ function UploadFiles(name){
 	var index = layer.open({
 		type:1,
 		closeBtn: 2,
-		title:'上传文件 --- <span style="color:red;">请上传sql或zip或tar.gz压缩包</span>',
+		title:lan.files.up_title+' --- <span style="color:red;">'+lan.database.input_up_type+'</span>',
 		area: ['500px','500px'], 
 		shadeClose:false,
 		content:'<div class="fileUploadDiv"><input type="hidden" id="input-val" value="'+path+'" />\
 				<input type="file" id="file_input"  multiple="true" autocomplete="off" />\
-				<button type="button"  id="opt" autocomplete="off">添加文件</button>\
-				<button type="button" id="up" autocomplete="off" >开始上传</button>\
+				<button type="button"  id="opt" autocomplete="off">'+lan.files.up_add+'</button>\
+				<button type="button" id="up" autocomplete="off" >'+lan.files.up_start+'</button>\
 				<span id="totalProgress" style="position: absolute;top: 7px;right: 147px;"></span>\
 				<span style="float:right;margin-top: 9px;">\
-				<font>文件编码:</font>\
+				<font>'+lan.files.up_coding+':</font>\
 				<select id="fileCodeing" >\
-					<option value="byte">二进制</option>\
+					<option value="byte">'+lan.files.up_bin+'</option>\
 					<option value="utf-8">UTF-8</option>\
 					<option value="gb18030">GB2312</option>\
 				</select>\
 				</span>\
-				<button type="button" id="filesClose" autocomplete="off">关闭</button>\
+				<button type="button" id="filesClose" autocomplete="off">'+lan.public.close+'</button>\
 				<ul id="up_box"></ul></div>'
 	});
 	$("#filesClose").click(function(){
@@ -585,7 +568,7 @@ function SetDatabaseAccess(dataName,action){
 	if(action == 1){
 		var access = $("#dataAccess").val();
 		if(access == 'ip') access = $("input[name=address]").val();
-		layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
+		layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/database?action=SetDatabaseAccess','name='+dataName+'&access='+access,function(rdata){
 			layer.closeAll();
 			layer.msg(rdata.msg,{icon:rdata.status?1:2});
@@ -596,32 +579,32 @@ function SetDatabaseAccess(dataName,action){
 	
 	$.post('/database?action=GetDatabaseAccess','name='+dataName,function(rdata){
 		if(rdata == null){
-			layer.msg('此数据库不能修改访问权限!',{icon:2});
+			layer.msg(lan.database.auth_err,{icon:2});
 			return;
 		}
 		layer.open({
 			type: 1,
 			skin: 'demo-class',
 			area: '450px',
-			title: '设置数据库权限['+dataName+']',
+			title: lan.database.auth_title+'['+dataName+']',
 			closeBtn: 2,
 			shift: 5,
 			shadeClose: false,
 			content: "<form class='bt-form pd20 pb70' id='DatabaseAccess'>\
 	                        <div class='line'>\
-							<span class='tname'>访问权限</span>\
+							<span class='tname'>"+lan.database.auth_name+"</span>\
 							<div class='info-r'>\
 							<select id='dataAccess' class='bt-input-text mr5' style='width:100px;'>\
-								<option value='127.0.0.1' "+(rdata.msg[1] == '127.0.0.1'?'selected':'')+">本地服务器</option>\
-								<option value='%' "+(rdata.msg[1] == '%'?'selected':'')+">所有人</option>\
-								<option value='ip' "+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'selected':'')+">指定IP</option>\
+								<option value='127.0.0.1' "+(rdata.msg[1] == '127.0.0.1'?'selected':'')+">"+lan.database.add_auth_local+"</option>\
+								<option value='%' "+(rdata.msg[1] == '%'?'selected':'')+">"+lan.database.add_auth_all+"</option>\
+								<option value='ip' "+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'selected':'')+">"+lan.database.add_auth_ip+"</option>\
 							</select>\
-							<input class='bt-input-text' type='text' name='address' placeholder='请输入允许访问的IP地址' value='"+rdata.msg[1]+"' style='width:218px;"+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'':'display:none;')+"' />\
+							<input class='bt-input-text' type='text' name='address' placeholder='"+lan.database.add_auth_ip_title+"' value='"+rdata.msg[1]+"' style='width:218px;"+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'':'display:none;')+"' />\
 							</div>\
 							</div>\
 	                        <div class='bt-form-submit-btn'>\
-								<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>取消</button>\
-						        <button type='button' class='btn btn-success btn-sm btn-title' onclick=\"SetDatabaseAccess('"+dataName+"',1)\" >确定</button>\
+								<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>"+lan.public.close+"</button>\
+						        <button type='button' class='btn btn-success btn-sm btn-title' onclick=\"SetDatabaseAccess('"+dataName+"',1)\" >"+lan.public.ok+"</button>\
 					        </div>\
 					      </form>"
 		});
@@ -654,7 +637,7 @@ function SyncToDatabases(type){
 		}
 	}
 	
-	var loadT = layer.msg('正在同步...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.database.sync_the,{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/database?action=SyncToDatabases&type='+type,data,function(rdata){
 		layer.close(loadT);
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
@@ -663,7 +646,7 @@ function SyncToDatabases(type){
 
 //从数据库中获取
 function SyncGetDatabases(){
-	var loadT = layer.msg('正在同步...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.database.sync_the,{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/database?action=SyncGetDatabases',function(rdata){
 		layer.close(loadT);
 		getData(1);
@@ -675,16 +658,19 @@ function SyncGetDatabases(){
 //管理数据库
 function AdminDatabase(name,username,password){
 	if($("#toPHPMyAdmin").attr('action').indexOf('phpmyadmin') == -1){
-		layer.msg('请选安装phpMyAdmin',{icon:2,shade: [0.3, '#000']})
+		layer.msg(lan.database.phpmyadmin_err,{icon:2,shade: [0.3, '#000']})
 		setTimeout(function(){ window.location.href = '/soft'; },3000);
 		return;
 	}
 	var murl = $("#toPHPMyAdmin").attr('action');
-	layer.msg('正在打开phpMyAdmin...',{icon:16,shade: [0.3, '#000'],time:1000});
-	$.post(murl,'pma_username=' + username + '&pma_password=' + password,function(){},'jsonp');
+	$("#pma_username").attr('value',username);
+	$("#pma_password").attr('value',password);
+	$("#db").attr('value',name);
+	layer.msg(lan.database.phpmyadmin,{icon:16,shade: [0.3, '#000'],time:1000});		
+	//$.post(murl,'',function(){},'jsonp');
 	setTimeout(function(){
-		window.open(murl);
-	},500);
+		$("#toPHPMyAdmin").submit();
+	},200);
 }
 
 $(".safe .tipstitle").mouseover(function(){

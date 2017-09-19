@@ -7,6 +7,7 @@
 # | Author: 黄文良 <2879625666@qq.com>
 # +-------------------------------------------------------------------
 import os, sys, time
+
 def M(table):
     import db
     sql = db.Sql()
@@ -25,6 +26,7 @@ def md5(str):
 #文件的MD5值
 def GetFileMd5(filename):
     if not os.path.isfile(filename): return False;
+    import hashlib;
     myhash = hashlib.md5()
     f = file(filename,'rb')
     while True:
@@ -51,23 +53,54 @@ def checkCode(code,outime = 120):
     import time,web
     try:
         if md5(code.lower()) != web.ctx.session.codeStr:
-            web.ctx.session.login_error = '验证码错误,请重新输入!'
+            web.ctx.session.login_error = getMsg('CODE_ERR')
             return False
         if time.time() - web.ctx.session.codeTime > outime:
-            web.ctx.session.login_error = '验证码已过期,请点验证码图片重新获取!'
+            web.ctx.session.login_error = getMsg('CODE_TIMEOUT')
             return False
         return True
     except:
-        web.ctx.session.login_error = '验证码不存在!'
+        web.ctx.session.login_error = getMsg('CODE_NOT_EXISTS')
         return False
 
-def returnJson(status,msg):
+def returnJson(status,msg,args = ()):
     #取通用Json返回
-    return getJson({'status':status,'msg':msg})
+    return getJson(returnMsg(status,msg,args));
 
-def returnMsg(status,msg):
+def returnMsg(status,msg,args = ()):
+    import json
     #取通用字曲返回
+    logMessage = json.loads(readFile('static/language/' + get_language() + '/public.json'));
+    keys = logMessage.keys();
+    if msg in keys:
+        msg = logMessage[msg];
+        for i in range(len(args)):
+            rep = '{'+str(i+1)+'}'
+            msg = msg.replace(rep,args[i]);
     return {'status':status,'msg':msg}
+
+#取提示消息
+def getMsg(key,args = ()):
+    import json
+    logMessage = json.loads(readFile('static/language/' + get_language() + '/public.json'));
+    keys = logMessage.keys();
+    msg = None;
+    if key in keys:
+        msg = logMessage[key];
+        for i in range(len(args)):
+            rep = '{'+str(i+1)+'}'
+            msg = msg.replace(rep,args[i]);
+    return msg;
+
+#取提示消息
+def getLan(key):
+    import json
+    logMessage = json.loads(readFile('static/language/' + get_language() + '/template.json'));
+    keys = logMessage.keys();
+    msg = None;
+    if key in keys:
+        msg = logMessage[key];
+    return msg;
 
 def getJson(data):
     import json,web
@@ -89,16 +122,27 @@ def getDate():
     import time
     return time.strftime('%Y-%m-%d %X',time.localtime())
 
-def WriteLog(type,logMsg):
+def get_language():
+    path = 'data/language.pl';
+    if not os.path.exists(path): return 'Simplified_Chinese';
+    return readFile(path).strip();
+
+def WriteLog(type,logMsg,args=()):
     #写日志
     try:
-        import time
-        import db
+        import time,db,json
+        logMessage = json.loads(readFile('static/language/' + get_language() + '/log.json'));
+        keys = logMessage.keys();
+        if logMsg in keys:
+            logMsg = logMessage[logMsg];
+            for i in range(len(args)):
+                rep = '{'+str(i+1)+'}'
+                logMsg = logMsg.replace(rep,args[i]);
+        if type in keys: type = logMessage[type];
         sql = db.Sql()
-        mDate = time.strftime('%Y-%m-%d %X',time.localtime())
-        data = (type,logMsg,mDate)
-        result = sql.table('logs').add('type,log,addtime',data)
-        writeFile('/tmp/test.pl', str(data))
+        mDate = time.strftime('%Y-%m-%d %X',time.localtime());
+        data = (type,logMsg,mDate);
+        result = sql.table('logs').add('type,log,addtime',data);
     except:
         pass
     
@@ -132,6 +176,26 @@ def httpPost(url,data):
         return response.read()
     except Exception,ex:
         return str(ex);
+    
+#写进度
+def writeSpeed(title,used,total,speed = 0):
+    import json
+    if not title:
+        data = {'title':None,'progress':0,'total':0,'used':0,'speed':0}
+    else:
+        progress = int((100.0 * used / total));
+        data = {'title':title,'progress':progress,'total':total,'used':used,'speed':speed}
+    writeFile('/tmp/panelSpeed.pl',json.dumps(data));
+    return True;
+
+#取进度
+def getSpeed():
+    import json;
+    data = readFile('/tmp/panelSpeed.pl');
+    if not data: 
+        data = json.dumps({'title':None,'progress':0,'total':0,'used':0,'speed':0})
+        writeFile('/tmp/panelSpeed.pl',data);
+    return json.loads(data);
 
 
 def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):
@@ -184,8 +248,7 @@ def downloadFile(url,filename):
 def downloadHook(count, blockSize, totalSize):
     speed = {'total':totalSize,'block':blockSize,'count':count}
     print speed
-    print '%02d%%'%(100.0 * count * blockSize / totalSize)
-    
+    print '%02d%%'%(100.0 * count * blockSize / totalSize)    
     
 def GetLocalIp():
     #取本地外网IP
@@ -205,7 +268,7 @@ def GetLocalIp():
         return ipaddress
     except:
         try:
-            url = 'http://www.bt.cn/Api/getIpAddress';
+            url = web.ctx.session.home + '/Api/getIpAddress';
             opener = urllib2.urlopen(url)
             return opener.read()
         except:
@@ -230,7 +293,7 @@ def checkWebConfig():
         searchStr = 'Syntax OK'
     
     if result[1].find(searchStr) == -1:
-        WriteLog("检查配置", "配置文件错误: "+result[1]);
+        WriteLog("TYPE_SOFT", 'CONF_CHECK_ERR',(result[1],));
         return result[1];
     return True;
 
@@ -410,7 +473,7 @@ MySQL_Opt
         public.writeFile('/etc/my.cnf',mycnf);
         
     os.system(shellStr);
-    WriteLog('守护程序', '检测到MySQL配置文件异常,可能导致mysqld服务无法正常启动,已自动修复!');
+    WriteLog('TYPE_SOFE', 'MYSQL_CHECK_ERR');
     return True;
 
 
@@ -440,7 +503,7 @@ def receive_one_ping(my_socket, ID, timeout):
         startedSelect = time.time()
         whatReady = select.select([my_socket], [], [], timeLeft)
         howLongInSelect = (time.time() - startedSelect)
-        if whatReady[0] == []: return
+        if whatReady[0] == []: return;
         timeReceived = time.time()
         recPacket, addr = my_socket.recvfrom(1024)
         icmpHeader = recPacket[20:28]
@@ -450,7 +513,7 @@ def receive_one_ping(my_socket, ID, timeout):
             timeSent = struct.unpack("d", recPacket[28:28 + bytesInDouble])[0]
             return timeReceived - timeSent
         timeLeft = timeLeft - howLongInSelect
-        if timeLeft <= 0: return
+        if timeLeft <= 0: return;
 
 def send_one_ping(my_socket, dest_addr, ID):
     import socket,struct
@@ -477,8 +540,8 @@ def do_one(dest_addr, timeout):
             " - Note that ICMP messages can only be sent from processes"
             " running as root."
           )
-            raise socket.error(msg)
-        raise # raise the original error
+            return socket.error(msg)
+        return timeout*1000; # raise the original error
     
     my_ID = os.getpid() & 0xFFFF
     send_one_ping(my_socket, dest_addr, my_ID)
@@ -499,4 +562,68 @@ def get_url(timeout = 0.5):
             if node['ping'] < mnode['ping']: mnode = node;
         return mnode['protocol'] + mnode['address'] + ':' + mnode['port'];
     except:
+        return 'http://download.bt.cn:5880';
+
+#获取Token
+def GetToken():
+    try:
+        from json import loads
+        tokenFile = 'data/token.json';
+        if not os.path.exists(tokenFile): return False;
+        token = loads(public.readFile(tokenFile));
+        return token;
+    except:
         return False
+
+#解密数据
+def auth_decode(data):
+    token = GetToken()
+    #是否有生成Token
+    if not token: return returnMsg(False,'REQUEST_ERR')
+    
+    #校验access_key是否正确
+    if token['access_key'] != data['btauth_key']: return returnMsg(False,'REQUEST_ERR')
+    
+    #解码数据
+    import binascii,hashlib,urllib,hmac,json
+    tdata = binascii.unhexlify(data['data']);
+    
+    #校验signature是否正确
+    signature = binascii.hexlify(hmac.new(token['secret_key'], tdata, digestmod=hashlib.sha256).digest());
+    if signature != data['signature']: return returnMsg(False,'REQUEST_ERR');
+    
+    #返回
+    return json.loads(urllib.unquote(tdata));
+    
+
+#数据加密
+def auth_encode(data):
+    token = GetToken()
+    pdata = {}
+    
+    #是否有生成Token
+    if not token: return returnMsg(False,'REQUEST_ERR')
+    
+    #生成signature
+    import binascii,hashlib,urllib,hmac,json
+    tdata = urllib.quote(json.dumps(data));
+    #公式  hex(hmac_sha256(data))
+    pdata['signature'] = binascii.hexlify(hmac.new(token['secret_key'], tdata, digestmod=hashlib.sha256).digest());
+    
+    #加密数据
+    pdata['btauth_key'] = token['access_key'];
+    pdata['data'] = binascii.hexlify(tdata);
+    pdata['timestamp'] = time.time()
+    
+    #返回
+    return pdata;
+
+#检查Token
+def checkToken(get):
+    tempFile = 'data/tempToken.json'
+    if not os.path.exists(tempFile): return False
+    import json,time
+    tempToken = json.loads(readFile(tempFile))
+    if time.time() > tempToken['timeout']: return False
+    if get.token != tempToken['token']: return False
+    return True;

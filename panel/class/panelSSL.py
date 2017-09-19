@@ -14,7 +14,6 @@ import public,os,web,sys,binascii,urllib,json,time,datetime
 reload(sys)
 sys.setdefaultencoding('utf-8')
 class panelSSL:
-    
     __APIURL = 'https://www.bt.cn/api/Auth';
     __UPATH = 'data/userInfo.json';
     __userInfo = None;
@@ -51,7 +50,7 @@ class panelSSL:
     #删除Token
     def DelToken(self,get):
         os.system("rm -f " + self.__UPATH);
-        return public.returnMsg(True,"已解除绑定!");
+        return public.returnMsg(True,"SSL_BTUSER_UN");
     
     #获取用户信息
     def GetUserInfo(self,get):
@@ -60,13 +59,13 @@ class panelSSL:
             userTmp = {}
             userTmp['username'] = self.__userInfo['username'][0:3]+'****'+self.__userInfo['username'][-4:];
             result['status'] = True;
-            result['msg'] = '获取成功!';
+            result['msg'] = public.getMsg('SSL_GET_SUCCESS');
             result['data'] = userTmp;
         else:
             userTmp = {}
-            userTmp['username'] = '未绑定宝塔帐号';
+            userTmp['username'] = public.getMsg('SSL_NOT_BTUSER');
             result['status'] = False;
-            result['msg'] = '请绑定宝塔帐户!';
+            result['msg'] = public.getMsg('SSL_NOT_BTUSER');
             result['data'] = userTmp;
         return result;
     
@@ -96,7 +95,9 @@ class panelSSL:
     
     #申请证书
     def GetDVSSL(self,get):
-        if not self.CheckDomain(get): return public.returnMsg(False,'以下域名解析不正确，或解析未生效!<li style="color:red;">'+get.domain+'</li>');
+        runPath = self.GetRunPath(get);
+        if runPath != False and runPath != '/': get.path +=  runPath;
+        if not self.CheckDomain(get): return public.returnMsg(False,'SSL_CHECK_DNS_ERR',(get.domain,));
         self.__PDATA['data']['domain'] = get.domain;
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data']);
         result = json.loads(public.httpPost(self.__APIURL + '/GetDVSSL',self.__PDATA));
@@ -104,6 +105,17 @@ class panelSSL:
         if hasattr(result['data'],'authValue'):
             public.writeFile(get.path + '/.well-known/pki-validation/fileauth.txt',result['data']['authValue']);
         return result;
+    
+    #获取运行目录
+    def GetRunPath(self,get):
+        if hasattr(get,'siteName'):
+            get.id = public.M('sites').where('name=?',(get.siteName,)).getField('id');
+        else:
+            get.id = public.M('sites').where('path=?',(get.path,)).getField('id');
+        if not get.id: return False;
+        import panelSite
+        result = panelSite.panelSite().GetSiteRunPath(get);
+        return result['runPath'];
     
     #检查域名是否解析
     def CheckDomain(self,get):
@@ -124,12 +136,14 @@ class panelSSL:
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data']);
         if hasattr(get,'siteName'):
             get.path = public.M('sites').where('name=?',(get.siteName,)).getField('path');
+            runPath = self.GetRunPath(get);
+            if runPath != False and runPath != '/': get.path +=  runPath;
             sslInfo = json.loads(public.httpPost(self.__APIURL + '/SyncOrder',self.__PDATA));
             sslInfo['data'] = self.En_Code(sslInfo['data']);
             try:
                 public.writeFile(get.path + '/.well-known/pki-validation/fileauth.txt',sslInfo['data']['authValue']);
             except:
-                return public.returnMsg(False,'验证信息写入失败!');
+                return public.returnMsg(False,'SSL_CHECK_WRITE_ERR');
         result = json.loads(public.httpPost(self.__APIURL + '/Completed',self.__PDATA));
         result['data'] = self.En_Code(result['data']);
         return result;
@@ -175,9 +189,9 @@ class panelSSL:
                 import panelSite
                 panelSite.panelSite().SetSSLConf(get);
                 public.serviceReload();
-                return public.returnMsg(True,'设置成功!');
+                return public.returnMsg(True,'SET_SUCCESS');
             except Exception,ex:
-                return public.returnMsg(False,'设置失败!,' + str(ex));
+                return public.returnMsg(False,'SET_ERROR,' + str(ex));
         result['data'] = self.En_Code(result['data']);
         return result;
     

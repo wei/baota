@@ -16,39 +16,39 @@ class crontab:
         for i in range(len(cront)):
             tmp=cront[i]
             if cront[i]['type']=="day":
-                tmp['type']="每天"
-                tmp['cycle']='每天, '+str(cront[i]['where_hour'])+'点'+str(cront[i]['where_minute'])+'分 执行'
+                tmp['type']=public.getMsg('CRONTAB_TODAY')
+                tmp['cycle']= public.getMsg('CRONTAB_TODAY_CYCLE',(str(cront[i]['where_hour']),str(cront[i]['where_minute'])))
             elif cront[i]['type']=="day-n":
-                tmp['type']="每"+str(cront[i]['where1'])+'天'
-                tmp['cycle']='每隔'+str(cront[i]['where1'])+'天 '+str(cront[i]['where_hour'])+'点'+str(cront[i]['where_minute'])+'分 执行'
+                tmp['type']=public.getMsg('CRONTAB_N_TODAY',(str(cront[i]['where1']),))
+                tmp['cycle']=public.getMsg('CRONTAB_N_TODAY_CYCLE',(str(cront[i]['where1']),str(cront[i]['where_hour']),str(cront[i]['where_minute'])))
             elif cront[i]['type']=="hour":
-                tmp['type']="每小时"
-                tmp['cycle']='每小时, 第'+str(cront[i]['where_minute'])+'分钟 执行'
+                tmp['type']=public.getMsg('CRONTAB_HOUR')
+                tmp['cycle']=public.getMsg('CRONTAB_HOUR_CYCLE',(str(cront[i]['where_minute']),))
             elif cront[i]['type']=="hour-n":
-                tmp['type']="每"+str(cront[i]['where1'])+'小时'
-                tmp['cycle']='每隔'+str(cront[i]['where1'])+'小时 第'+str(cront[i]['where_minute'])+'分钟 执行'
+                tmp['type']=public.getMsg('CRONTAB_N_HOUR',(str(cront[i]['where1']),))
+                tmp['cycle']=public.getMsg('CRONTAB_HOUR_CYCLE',(str(cront[i]['where1']),str(cront[i]['where_minute'])))
             elif cront[i]['type']=="minute-n":
-                tmp['type']="每"+str(cront[i]['where1'])+'分钟'
-                tmp['cycle']='每隔'+str(cront[i]['where1'])+'分钟执行'
+                tmp['type']=public.getMsg('CRONTAB_N_MINUTE',(str(cront[i]['where1']),))
+                tmp['cycle']=public.getMsg('CRONTAB_N_MINUTE_CYCLE',(str(cront[i]['where1']),))
             elif cront[i]['type']=="week":
-                tmp['type']="每周"
-                tmp['cycle']= '每周'+self.toWeek(int(cront[i]['where1']))+', '+str(cront[i]['where_hour'])+'点'+str(cront[i]['where_minute'])+'分执行'
+                tmp['type']=public.getMsg('CRONTAB_WEEK')
+                tmp['cycle']= public.getMsg('CRONTAB_WEEK_CYCLE',(self.toWeek(int(cront[i]['where1'])),str(cront[i]['where_hour']),str(cront[i]['where_minute'])))
             elif cront[i]['type']=="month":
-                tmp['type']="每月"
-                tmp['cycle']='每月, '+str(cront[i]['where1'])+'日 '+str(cront[i]['where_hour'])+'点'+str(cront[i]['where_minute'])+'分执行'
+                tmp['type']=public.getMsg('CRONTAB_MONTH')
+                tmp['cycle']=public.getMsg('CRONTAB_MONTH_CYCLE',(str(cront[i]['where1']),str(cront[i]['where_hour']),str(cront[i]['where_minute'])))
             data.append(tmp)
         return data
     
     #转换大写星期
     def toWeek(self,num):
         wheres={
-                0   :   '日',
-                1   :   '一',
-                2   :   '二',
-                3   :   '三',
-                4   :   '四',
-                5   :   '五',
-                6   :   '六'
+                0   :   public.getMsg('CRONTAB_SUNDAY'),
+                1   :   public.getMsg('CRONTAB_MONDAY'),
+                2   :   public.getMsg('CRONTAB_TUESDAY'),
+                3   :   public.getMsg('CRONTAB_WEDNESDAY'),
+                4   :   public.getMsg('CRONTAB_THURSDAY'),
+                5   :   public.getMsg('CRONTAB_FRIDAY'),
+                6   :   public.getMsg('CRONTAB_SATURDAY')
                 }
         try:
             return wheres[num]
@@ -60,11 +60,11 @@ class crontab:
         #检查备份脚本是否存在
         filePath=web.ctx.session.setupPath+'/panel/script/backup'
         if not os.path.exists(filePath):
-            public.downloadFile('http://www.bt.cn/linux/backup.sh',filePath)
+            public.downloadFile(web.ctx.session.home + '/linux/backup.sh',filePath)
         #检查日志切割脚本是否存在
         filePath=web.ctx.session.setupPath+'/panel/script/logsBackup'
         if not os.path.exists(filePath):
-            public.downloadFile('http://www.bt.cn/linux/logsBackup.py',filePath)
+            public.downloadFile(web.ctx.session.home + '/linux/logsBackup.py',filePath)
         #检查计划任务服务状态
         
         if os.path.exists('/etc/init.d/crond'): 
@@ -78,20 +78,20 @@ class crontab:
     #添加计划任务
     def AddCrontab(self,get):
         if len(get['name'])<1:
-             return public.returnMsg(False,'任务名称不能为空!')
+             return public.returnMsg(False,'CRONTAB_TASKNAME_EMPTY')
         cuonConfig=""
         if get['type']=="day":
             cuonConfig = self.GetDay(get)
-            name = "每天"
+            name = public.getMsg('CRONTAB_TODAY')
         elif get['type']=="day-n":
             cuonConfig = self.GetDay_N(get)
-            name = "每"+get['where1']+'天'
+            name = public.getMsg('CRONTAB_N_TODAY',(get['where1'],))
         elif get['type']=="hour":
             cuonConfig = self.GetHour(get)
-            name = "每小时"
+            name = public.getMsg('CRONTAB_HOUR')
         elif get['type']=="hour-n":
             cuonConfig = self.GetHour_N(get)
-            name = "每小时"
+            name = public.getMsg('CRONTAB_HOUR')
         elif get['type']=="minute-n":
             cuonConfig = self.Minute_N(get)
         elif get['type']=="week":
@@ -107,8 +107,8 @@ class crontab:
         self.CrondReload()
         addData=public.M('crontab').add('name,type,where1,where_hour,where_minute,echo,addtime',(get['name'],get['type'],get['where1'],get['hour'],get['minute'],cronName,time.strftime('%Y-%m-%d %X',time.localtime())))
         if addData>0:
-             return public.returnMsg(True,'添加成功!')
-        return public.returnMsg(False,'添加失败!')
+             return public.returnMsg(True,'ADD_SUCCESS')
+        return public.returnMsg(False,'ADD_ERROR')
         
     #取任务构造Day
     def GetDay(self,param):
@@ -162,7 +162,6 @@ class crontab:
                 data['orderOpt'].append(tmp);
             except:
                 continue;
-        
         return data
     
     #取任务日志
@@ -170,7 +169,7 @@ class crontab:
         id = get['id']
         echo = public.M('crontab').where("id=?",(id,)).field('echo').find()
         logFile = web.ctx.session.setupPath+'/cron/'+echo['echo']+'.log'
-        if not os.path.exists(logFile):return public.returnMsg(False, '当前任务日志为空!')
+        if not os.path.exists(logFile):return public.returnMsg(False, 'CRONTAB_TASKLOG_EMPTY')
         log = public.readFile(logFile)
         where = "Warning: Using a password on the command line interface can be insecure.\n"
         if  log.find(where)>-1:
@@ -185,9 +184,9 @@ class crontab:
             echo = public.M('crontab').where("id=?",(id,)).getField('echo')
             logFile = web.ctx.session.setupPath+'/cron/'+echo+'.log'
             os.remove(logFile)
-            return public.returnMsg(True, '日志已清空!')
+            return public.returnMsg(True, 'CRONTAB_TASKLOG_CLOSE')
         except:
-            return public.returnMsg(False, '清空日志失败!')
+            return public.returnMsg(False, 'CRONTAB_TASKLOG_CLOSE_ERR')
     
     #删除计划任务
     def DelCrontab(self,get):
@@ -212,10 +211,10 @@ class crontab:
             
             self.CrondReload()
             public.M('crontab').where("id=?",(id,)).delete()
-            public.WriteLog('计划任务', '删除计划任务[' + find['name'] + ']成功!')
-            return public.returnMsg(True, '删除成功!')
+            public.WriteLog('TYPE_CRON', 'CRONTAB_DEL',(find['name'],))
+            return public.returnMsg(True, 'DEL_SUCCESS')
         except:
-            return public.returnMsg(False, '写入配置到计划任务失败!')
+            return public.returnMsg(False, 'DEL_ERROR')
     
     #取执行脚本
     def GetShell(self,param):
@@ -257,7 +256,7 @@ class crontab:
                     shell += '''
 echo "----------------------------------------------------------------------------"
 endDate=`date +"%Y-%m-%d %H:%M:%S"`
-echo "★[$endDate] 任务执行成功"
+echo "★[$endDate] Successful"
 echo "----------------------------------------------------------------------------"
 '''
             cronPath=web.ctx.session.setupPath+'/cron'
@@ -268,7 +267,7 @@ echo "--------------------------------------------------------------------------
             public.ExecShell('chmod 750 ' + file)
             return cronName
         except Exception,ex:
-            return public.returnMsg(False, '文件写入失败!')
+            return public.returnMsg(False, 'FILE_WRITE_ERR')
         
     #检查脚本
     def CheckScript(self,shell):
@@ -303,7 +302,7 @@ echo "--------------------------------------------------------------------------
             else:
                 public.ExecShell("chmod 600 '" + file + "' && chown root.crontab " + file)
             return True
-        return public.returnMsg(False,'写入配置到计划任务失败!')
+        return public.returnMsg(False,'FILE_WRITE_ERR')
     
     #立即执行任务
     def StartTask(self,get):
@@ -311,7 +310,7 @@ echo "--------------------------------------------------------------------------
         execstr = web.ctx.session.setupPath + '/cron/' + echo;
         os.system('chmod +x ' + execstr)
         os.system('nohup ' + execstr + ' >> ' + execstr + '.log 2>&1 &');
-        return public.returnMsg(True,'任务已执行!')
+        return public.returnMsg(True,'CRONTAB_TASK_EXEC')
         
     
         

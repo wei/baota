@@ -15,9 +15,10 @@ sys.path.append("class/")
 reload(sys)
 sys.setdefaultencoding('utf-8')
 import db,public,time
-global pre,timeoutCount,logPath,isTask,oldEdate
+global pre,timeoutCount,logPath,isTask,oldEdate,isCheck
 pre = 0
 timeoutCount = 0
+isCheck = 0
 oldEdate = None
 logPath = '/tmp/panelExec.log'
 isTask = '/tmp/panelTask.pl'
@@ -53,6 +54,7 @@ def DownloadFile(url,filename):
         import urllib,socket
         socket.setdefaulttimeout(10)
         urllib.urlretrieve(url,filename=filename ,reporthook= DownloadHook)
+        os.system('chown www.www ' + filename);
         WriteLogs('done')
     except:
         global timeoutCount
@@ -87,9 +89,7 @@ def startTask():
     import time,public
     while True:
         try:
-            taskTo = 'False';
-            if os.path.exists(isTask): taskTo = public.readFile(isTask);
-            if taskTo.strip() == 'True':
+            if os.path.exists(isTask):
                 sql = db.Sql()
                 sql.table('tasks').where("status=?",('-1',)).setField('status','0')
                 taskArr = sql.table('tasks').where("status=?",('0',)).field('id,type,execstr').order("id asc").select();
@@ -104,11 +104,24 @@ def startTask():
                         ExecShell(value['execstr'])
                     end = int(time.time())
                     sql.table('tasks').where("id=?",(value['id'],)).save('status,end',('1',end))
-                    if(sql.table('tasks').where("status=?",('0')).count() < 1): public.writeFile(isTask,'False')
+                    if(sql.table('tasks').where("status=?",('0')).count() < 1): os.system('rm -f ' + isTask);
         except:
             pass
         siteEdate();
+        mainSafe();
         time.sleep(2)
+        
+def mainSafe():
+    global isCheck
+    if isCheck < 100:
+        isCheck += 1;
+        return True;
+    isCheck = 0;
+    isStart = public.ExecShell("ps aux |grep 'python main.pyc'|grep -v grep|awk '{print $2}'")[0];
+    if not isStart: 
+        os.system('/etc/init.d/bt start');
+        isStart = public.ExecShell("ps aux |grep 'python main.pyc'|grep -v grep|awk '{print $2}'")[0];
+        public.WriteLog('守护程序','面板服务程序启动成功 -> PID: ' + isStart);
 
 #网站到期处理
 def siteEdate():
@@ -130,7 +143,7 @@ def siteEdate():
         public.writeFile('data/edate.pl',mEdate);
     except:
          pass;
-     
+    
          
 
 #系统监控任务
@@ -266,8 +279,6 @@ def check502():
         if checkPHPVersion(version): continue;
         if startPHPVersion(version):
             public.WriteLog('PHP守护程序','检测到PHP-' + version + '处理异常,已自动修复!')
-        else:
-            public.WriteLog('PHP守护程序','检测到PHP-' + version + '处理异常,无法完成自动修复，请手动检查!')
             
 #处理指定PHP版本   
 def startPHPVersion(version):
@@ -280,9 +291,11 @@ def startPHPVersion(version):
     
     #尝试重启服务
     cgi = '/tmp/php-cgi-'+version
+    pid = '/www/server/php'+version+'/php-fpm.pid';
     os.system('pkill -9 php-fpm-'+version)
     time.sleep(0.5);
-    os.system('rm -f ' + cgi);
+    if not os.path.exists(cgi): os.system('rm -f ' + cgi);
+    if not os.path.exists(pid): os.system('rm -f ' + pid);
     os.system(fpm + ' start');
     if checkPHPVersion(version): return True;
     
@@ -373,7 +386,7 @@ ServerName 127.0.0.2
 def check502Task():
     while True:
         if os.path.exists('/www/server/panel/data/502Task.pl'): check502();
-        time.sleep(60);
+        time.sleep(600);
 
 if __name__ == "__main__":
     import threading

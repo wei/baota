@@ -3,27 +3,27 @@ $def with (data)
 		<div class="container-fluid" style="padding-bottom:54px">
 			<div class="pos-box bgw mtb15">
 				<div class="position f14 c9 pull-left">
-					<a class="plr10 c4" href="/">首页</a>/<span class="plr10 c4">系统设置</span>
+					<a class="plr10 c4" href="/">$data['lan']['H1']</a>/<span class="plr10 c4">$data['lan']['H2']</span>
 				</div>
 			</div>
 			<div class="clearfix bgw mtb15 pd15">
 				<div class="safe-port pull-left">
 					<div class="ss-text pull-left mr50">
-						<em>关闭面板</em>
+						<em>$data['lan']['I1']</em>
 						<div class='ssh-item'>
 							<input class='btswitch btswitch-ios' id='closePl' type='checkbox'>
 							<label class='btswitch-btn' for='closePl' onclick='ClosePanel()'></label>
 						</div>
 					</div>
 					<div class="ss-text pull-left mr50">
-						<em>自动更新</em>
+						<em>$data['lan']['I2']</em>
 						<div class='ssh-item'>
 							<input class='btswitch btswitch-ios' id='autoUpdate' type='checkbox' $data['panel']['auto'] >
 							<label class='btswitch-btn' for='autoUpdate' onclick="SetPanelAutoUpload()"></label>
 						</div>
 					</div>
 					<div class="ss-text pull-left mr50">
-						<em>面板SSL</em>
+						<em>$data['lan']['I3']</em>
 						<div class='ssh-item'>
 							<input class='btswitch btswitch-ios' id='panelSSL' type='checkbox'>
 							<label class='btswitch-btn' for='panelSSL' onclick="setPanelSSL()"></label>
@@ -33,26 +33,26 @@ $def with (data)
 			</div>
 			<div class="setbox bgw mtb15">
 				<div class="title c6 plr15">
-					<h3 class="f16">设置</h3>
-					<button class="btn btn-default btn-sm" style="float: right;margin-top: 10px;display: none;" onclick="apiSetup()">API设置</button>
+					<h3 class="f16">$data['lan']['C1']</h3>
+					<button class="btn btn-default btn-sm" style="float: right;margin-top: 10px;display: none;" onclick="apiSetup()">$data['lan']['C2']</button>
 				</div>
 				<div class="important-title" style="margin: 20px 30px 0px;">
-					<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>为了提高安全，请修改别名、默认端口、面板用户和密码！</p>
+					<p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>$data['lan']['C3']</p>
 				</div>
 				<div class="setting-con pd15">
 					<form id="set-Config">
-						<p class="mtb15"><span class="set-tit text-right">别名</span><input id="webname" name="webname" class="inputtxt bt-input-text" type="text" value="$web.ctx.session.webname" ><span class="set-info c7">给面板取个别名，用于伪装面板</span></p>
-						<p class="mtb15"><span class="set-tit text-right">面板端口</span><input id="banport" name="port" class="inputtxt bt-input-text" type="numner" value="$data['panel']['port']" maxlength="5"><span class="set-info c7">建议端口范围8888 - 65535</span></p>
-						<p class="mtb15"><span class="set-tit text-right">域名</span><input name="domain" class="inputtxt bt-input-text" type="text" value="$data['panel']['domain']"><span class="set-info c7">为面板绑定一个访问域名;<font style="color:red;">注意：一旦绑定域名,只能通过域名访问面板!</font></span></p>
-						<p class="mtb15"><span class="set-tit text-right">授权IP</span><input name="limitip" class="inputtxt bt-input-text" type="text" value="$data['panel']['limitip']"><span class="set-info c7">设置访问授权IP,多个请使用逗号(,)隔开;<font style="color:red;">注意：一旦设置授权IP,只有指定IP的电脑能访问面板!</font></span></p>
-						<p class="mtb15"><span class="set-tit text-right">默认建站目录</span><input name="sites_path" class="inputtxt bt-input-text" type="text" value="$data['sites_path']"><span class="set-info c7">新创建的站点,默认将保存到该目录的下级目录!</span></p>
-						<p class="mtb15"><span class="set-tit text-right">默认备份目录</span><input name="backup_path" class="inputtxt bt-input-text" type="text" value="$data['backup_path']"><span class="set-info c7">网站和数据库的备份目录!</span></p>
-						<p class="mtb15"><span class="set-tit text-right">服务器IP</span><input name="address" class="inputtxt bt-input-text" type="text" value="$data['panel']['address']"><span class="set-info c7">默认为外网IP,若您在本地虚拟机测试,请填写虚拟机内网IP!</span></p>
-						<p class="mtb15"><span class="set-tit text-right">服务器时间</span><input id="systemdate" name="systemdate" class="inputtxt bt-input-text disable" type="text" value="$data['systemdate']"><span class="modify btn btn-xs btn-success" onclick="syncDate()">同步</span></p>
-						<p class="mtb15"><span class="set-tit text-right">面板用户</span><input name="username_" class="inputtxt bt-input-text disable" type="text" value="$web.ctx.session.username" disabled><span class="modify btn btn-xs btn-success" onclick="setUserName()">修改</span></p>
-						<p class="mtb15"><span class="set-tit text-right">面板密码</span><input name="password_" class="inputtxt bt-input-text disable" type="text" value="******" disabled><span class="modify btn btn-xs btn-success" onclick="setPassword()">修改</span></p>
-						<p class="mtb15"><span class="set-tit text-right">绑定宝塔账号</span><input name="btusername" class="inputtxt bt-input-text disable" type="text" value="" disabled><span class="modify btn btn-xs btn-success mr5" onclick="bindBTName(2,'b')">绑定</span></p>
-						<p class="mtb15" style="display: none;"><span class="set-tit text-right">面板模板</span>
+						<p class="mtb15"><span class="set-tit text-right" title="$data['lan']['CT1']">$data['lan']['CT1']</span><input id="webname" name="webname" class="inputtxt bt-input-text" type="text" value="$web.ctx.session.webname" ><span class="set-info c7">$data['lan']['CY1']</span></p>
+						<p class="mtb15"><span class="set-tit text-right" title="$data['lan']['CT2']">$data['lan']['CT2']</span><input id="banport" name="port" class="inputtxt bt-input-text" type="numner" value="$data['panel']['port']" maxlength="5"><span class="set-info c7">$data['lan']['CY2']</span></p>
+						<p class="mtb15"><span class="set-tit text-right" title="$data['lan']['CT3']">$data['lan']['CT3']</span><input name="domain" class="inputtxt bt-input-text" type="text" value="$data['panel']['domain']"><span class="set-info c7">$:data['lan']['CY3']</span></p>
+						<p class="mtb15"><span class="set-tit text-right" title="$data['lan']['CT4']">$data['lan']['CT4']</span><input name="limitip" class="inputtxt bt-input-text" type="text" value="$data['panel']['limitip']"><span class="set-info c7">$:data['lan']['CY4']</span></p>
+						<p class="mtb15"><span class="set-tit text-right" title="$data['lan']['CT5']">$data['lan']['CT5']</span><input name="sites_path" class="inputtxt bt-input-text" type="text" value="$data['sites_path']"><span class="set-info c7">$data['lan']['CY5']</span></p>
+						<p class="mtb15"><span class="set-tit text-right" title="$data['lan']['CT6']">$data['lan']['CT6']</span><input name="backup_path" class="inputtxt bt-input-text" type="text" value="$data['backup_path']"><span class="set-info c7">$data['lan']['CY6']</span></p>
+						<p class="mtb15"><span class="set-tit text-right" title="$data['lan']['CT7']">$data['lan']['CT7']</span><input name="address" class="inputtxt bt-input-text" type="text" value="$data['panel']['address']"><span class="set-info c7">$data['lan']['CY7']</span></p>
+						<p class="mtb15"><span class="set-tit text-right" title="$data['lan']['CT8']">$data['lan']['CT8']</span><input id="systemdate" name="systemdate" class="inputtxt bt-input-text disable" type="text" value="$data['systemdate']"><span class="modify btn btn-xs btn-success" onclick="syncDate()">$data['lan']['CY8']</span></p>
+						<p class="mtb15"><span class="set-tit text-right" title="$data['lan']['CT9']">$data['lan']['CT9']</span><input name="username_" class="inputtxt bt-input-text disable" type="text" value="$web.ctx.session.username" disabled><span class="modify btn btn-xs btn-success" onclick="setUserName()">$data['lan']['CY9']</span></p>
+						<p class="mtb15"><span class="set-tit text-right" title="$data['lan']['CT10']">$data['lan']['CT10']</span><input name="password_" class="inputtxt bt-input-text disable" type="text" value="******" disabled><span class="modify btn btn-xs btn-success" onclick="setPassword()">$data['lan']['CY10']</span></p>
+						<p class="mtb15"><span class="set-tit text-right" title="$data['lan']['CT11']">$data['lan']['CT11']</span><input name="btusername" class="inputtxt bt-input-text disable" type="text" value="" disabled><span class="modify btn btn-xs btn-success mr5" onclick="bindBTName(2,'b')">$data['lan']['CY11']</span></p>
+						<p class="mtb15" style="display: none;"><span class="set-tit text-right" title="$data['lan']['CT12']">$data['lan']['CT12']</span>
 							<select class="inputtxt bt-input-text disable" style="margin-left: -4px;width: 211px;" name="template">
 							$for template in data['panel']['templates']:
 								$if template == data['panel']['template']:
@@ -60,9 +60,9 @@ $def with (data)
 								$else:
 									<option value="$template">$template</option>
 							</select>
-						<span class="modify btn btn-xs btn-success mr5" style="margin-left: 5px;" onclick="setTemplate()">确定</span></p>
+						<span class="modify btn btn-xs btn-success mr5" style="margin-left: 5px;" onclick="setTemplate()">$data['lan']['CY12']</span></p>
 					</form>
-					<div class="bt-submit set-submit">保存</div>
+					<div class="bt-submit set-submit">$data['lan']['C4']</div>
 				</div>
 			</div>
 		</div>

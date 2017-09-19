@@ -1,31 +1,14 @@
-setTimeout(function(){
-	GetDisk();
-},500);
-var xPath = getCookie('Path');
-setTimeout(function(){
-	GetFiles((xPath!=undefined?xPath:'/www/wwwroot'));
-},800);
-
-PathPlaceBtn((xPath!=undefined?xPath:'/www/wwwroot'));
-setCookie('uploadSize',1024 * 1024 * 1024);
-if(getCookie('rank') == undefined || getCookie('rank') == null){
-	setCookie('rank','a');
+//判断磁盘数量超出宽度
+function IsDiskWidth(){
+	var comlistWidth = $("#comlist").width();
+	var bodyWidth = $(".file-box").width();
+	if(comlistWidth + 530 > bodyWidth){
+		$("#comlist").css({"width":bodyWidth-530+"px","height":"34px","overflow":"auto"});
+	}
+	else{
+		$("#comlist").removeAttr("style");
+	}
 }
-$("#set_icon").click(function(){
-	setCookie('rank','b');
-	$(this).addClass("active");
-	$("#set_list").removeClass("active");
-	GetFiles(getCookie('Path'));
-});
-$("#set_list").click(function(){
-	setCookie('rank','a');
-	$(this).addClass("active");
-	$("#set_icon").removeClass("active");
-	GetFiles(getCookie('Path'));
-})
-$(".refreshBtn").click(function(){
-	GetFiles(getCookie('Path'));
-})
 
 //打开回收站
 function Recycle_bin(type){
@@ -34,26 +17,52 @@ function Recycle_bin(type){
 		switch(type){
 			case 1:
 				for(var i=0;i<rdata.dirs.length;i++){
+					var shortwebname = rdata.dirs[i].name;
+					var shortpath = rdata.dirs[i].dname;
+					if(shortwebname.length > 20) shortwebname = shortwebname.substring(0, 20) + "...";
+					if(shortpath.length > 20) shortpath = shortpath.substring(0, 20) + "...";
 					body += '<tr>\
-								<td><span class=\'ico ico-folder\'></span>'+rdata.dirs[i].name+'</td>\
-								<td>'+rdata.dirs[i].dname+'</td>\
+								<td><span class=\'ico ico-folder\'></span><span class="tname" title="'+rdata.dirs[i].name+'">'+shortwebname+'</span></td>\
+								<td><span title="'+rdata.dirs[i].dname+'">'+shortpath+'</span></td>\
 								<td>'+ToSize(rdata.dirs[i].size)+'</td>\
 								<td>'+getLocalTime(rdata.dirs[i].time)+'</td>\
 								<td style="text-align: right;">\
-									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">恢复</a>\
-									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">永久删除</a>\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">'+lan.files.recycle_bin_re+'</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">'+lan.files.recycle_bin_del+'</a>\
 								</td>\
 							</tr>'
 				}
 				for(var i=0;i<rdata.files.length;i++){
+					if(rdata.files[i].name.indexOf('BTDB_') != -1){
+						var shortwebname = rdata.files[i].name;
+						var shortpath = rdata.files[i].dname;
+						if(shortwebname.length > 20) shortwebname = shortwebname.substring(0, 20) + "...";
+						if(shortpath.length > 20) shortpath = shortpath.substring(0, 20) + "...";
+						body += '<tr>\
+								<td><span class="ico ico-'+(GetExtName(rdata.files[i].name))+'"></span><span class="tname" title="'+rdata.files[i].name+'">'+shortwebname.replace('BTDB_','')+'</span></td>\
+								<td><span title="'+rdata.files[i].dname+'">mysql://'+shortpath.replace('BTDB_','')+'</span></td>\
+								<td>-</td>\
+								<td>'+getLocalTime(rdata.files[i].time)+'</td>\
+								<td style="text-align: right;">\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">'+lan.files.recycle_bin_re+'</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">'+lan.files.recycle_bin_del+'</a>\
+								</td>\
+							</tr>'
+							
+						continue;
+					}
+					var shortwebname = rdata.files[i].name;
+					var shortpath = rdata.files[i].dname;
+					if(shortwebname.length > 20) shortwebname = shortwebname.substring(0, 20) + "...";
+					if(shortpath.length > 20) shortpath = shortpath.substring(0, 20) + "...";
 					body += '<tr>\
-								<td><span class="ico ico-'+(GetExtName(rdata.files[i].name))+'"></span>'+rdata.files[i].name+'</td>\
-								<td>'+rdata.files[i].dname+'</td>\
+								<td><span class="ico ico-'+(GetExtName(rdata.files[i].name))+'"></span><span class="tname" title="'+rdata.files[i].name+'">'+shortwebname+'</span></td>\
+								<td><span title="'+rdata.files[i].dname+'">'+shortpath+'</span></td>\
 								<td>'+ToSize(rdata.files[i].size)+'</td>\
 								<td>'+getLocalTime(rdata.files[i].time)+'</td>\
 								<td style="text-align: right;">\
-									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">恢复</a>\
-									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">永久删除</a>\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">'+lan.files.recycle_bin_re+'</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">'+lan.files.recycle_bin_del+'</a>\
 								</td>\
 							</tr>'
 				}
@@ -62,14 +71,18 @@ function Recycle_bin(type){
 				break;
 			case 2:
 				for(var i=0;i<rdata.dirs.length;i++){
+					var shortwebname = rdata.dirs[i].name;
+					var shortpath = rdata.dirs[i].dname;
+					if(shortwebname.length > 20) shortwebname = shortwebname.substring(0, 20) + "...";
+					if(shortpath.length > 20) shortpath = shortpath.substring(0, 20) + "...";
 					body += '<tr>\
-								<td><span class=\'ico ico-folder\'></span>'+rdata.dirs[i].name+'</td>\
-								<td>'+rdata.dirs[i].dname+'</td>\
+								<td><span class=\'ico ico-folder\'></span><span class="tname" title="'+rdata.dirs[i].name+'">'+shortwebname+'</span></td>\
+								<td><span title="'+rdata.dirs[i].dname+'">'+shortpath+'</span></td>\
 								<td>'+ToSize(rdata.dirs[i].size)+'</td>\
 								<td>'+getLocalTime(rdata.dirs[i].time)+'</td>\
 								<td style="text-align: right;">\
-									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">恢复</a>\
-									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">永久删除</a>\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">'+lan.files.recycle_bin_re+'</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.dirs[i].rname + '\',this)">'+lan.files.recycle_bin_del+'</a>\
 								</td>\
 							</tr>'
 				}
@@ -78,14 +91,19 @@ function Recycle_bin(type){
 				break;
 			case 3:
 				for(var i=0;i<rdata.files.length;i++){
+					if(rdata.files[i].name.indexOf('BTDB_') != -1) continue;
+					var shortwebname = rdata.files[i].name;
+					var shortpath = rdata.files[i].dname;
+					if(shortwebname.length > 20) shortwebname = shortwebname.substring(0, 20) + "...";
+					if(shortpath.length > 20) shortpath = shortpath.substring(0, 20) + "...";
 					body += '<tr>\
-								<td><span class="ico ico-'+(GetExtName(rdata.files[i].name))+'"></span>'+rdata.files[i].name+'</td>\
-								<td>'+rdata.files[i].dname+'</td>\
+								<td><span class="ico ico-'+(GetExtName(rdata.files[i].name))+'"></span><span class="tname" title="'+rdata.files[i].name+'">'+shortwebname+'</span></td>\
+								<td><span title="'+rdata.files[i].dname+'">'+shortpath+'</span></td>\
 								<td>'+ToSize(rdata.files[i].size)+'</td>\
 								<td>'+getLocalTime(rdata.files[i].time)+'</td>\
 								<td style="text-align: right;">\
-									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">恢复</a>\
-									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">永久删除</a>\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">'+lan.files.recycle_bin_re+'</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">'+lan.files.recycle_bin_del+'</a>\
 								</td>\
 							</tr>'
 				}
@@ -95,14 +113,18 @@ function Recycle_bin(type){
 			case 4:
 				for(var i=0;i<rdata.files.length;i++){
 					if(ReisImage(getFileName(rdata.files[i].name))){
+						var shortwebname = rdata.files[i].name;
+						var shortpath = rdata.files[i].dname;
+						if(shortwebname.length > 20) shortwebname = shortwebname.substring(0, 20) + "...";
+						if(shortpath.length > 20) shortpath = shortpath.substring(0, 20) + "...";
 						body += '<tr>\
-								<td><span class="ico ico-'+(GetExtName(rdata.files[i].name))+'"></span>'+rdata.files[i].name+'</td>\
-								<td>'+rdata.files[i].dname+'</td>\
+								<td><span class="ico ico-'+(GetExtName(rdata.files[i].name))+'"></span><span class="tname" title="'+rdata.files[i].name+'">'+shortwebname+'</span></td>\
+								<td><span title="'+rdata.files[i].dname+'">'+shortpath+'</span></td>\
 								<td>'+ToSize(rdata.files[i].size)+'</td>\
 								<td>'+getLocalTime(rdata.files[i].time)+'</td>\
 								<td style="text-align: right;">\
-									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">恢复</a>\
-									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">永久删除</a>\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">'+lan.files.recycle_bin_re+'</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">'+lan.files.recycle_bin_del+'</a>\
 								</td>\
 							</tr>'
 					}
@@ -112,15 +134,41 @@ function Recycle_bin(type){
 				break;
 			case 5:
 				for(var i=0;i<rdata.files.length;i++){
+					if(rdata.files[i].name.indexOf('BTDB_') != -1) continue;
 					if(!(ReisImage(getFileName(rdata.files[i].name)))){
+						var shortwebname = rdata.files[i].name;
+						var shortpath = rdata.files[i].dname;
+						if(shortwebname.length > 20) shortwebname = shortwebname.substring(0, 20) + "...";
+						if(shortpath.length > 20) shortpath = shortpath.substring(0, 20) + "...";
 						body += '<tr>\
-								<td><span class="ico ico-'+(GetExtName(rdata.files[i].name))+'"></span>'+rdata.files[i].name+'</td>\
-								<td>'+rdata.files[i].dname+'</td>\
+								<td><span class="ico ico-'+(GetExtName(rdata.files[i].name))+'"></span><span class="tname" title="'+rdata.files[i].name+'">'+shortwebname+'</span></td>\
+								<td><span title="'+rdata.files[i].dname+'">'+shortpath+'</span></td>\
 								<td>'+ToSize(rdata.files[i].size)+'</td>\
 								<td>'+getLocalTime(rdata.files[i].time)+'</td>\
 								<td style="text-align: right;">\
-									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">恢复</a>\
-									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">永久删除</a>\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">'+lan.files.recycle_bin_re+'</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">'+lan.files.recycle_bin_del+'</a>\
+								</td>\
+							</tr>'
+					}
+				}
+				$("#RecycleBody").html(body);
+				return;
+			case 6:
+				for(var i=0;i<rdata.files.length;i++){
+					if(rdata.files[i].name.indexOf('BTDB_') != -1){
+						var shortwebname = rdata.files[i].name;
+						var shortpath = rdata.files[i].dname;
+						if(shortwebname.length > 20) shortwebname = shortwebname.substring(0, 20) + "...";
+						if(shortpath.length > 20) shortpath = shortpath.substring(0, 20) + "...";
+						body += '<tr>\
+								<td><span class="ico ico-'+(GetExtName(rdata.files[i].name))+'"></span><span class="tname" title="'+rdata.files[i].name+'">'+shortwebname.replace('BTDB_','')+'</span></td>\
+								<td><span title="'+rdata.files[i].dname+'">mysql://'+shortpath.replace('BTDB_','')+'</span></td>\
+								<td>-</td>\
+								<td>'+getLocalTime(rdata.files[i].time)+'</td>\
+								<td style="text-align: right;">\
+									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.files[i].rname + '\',this)">'+lan.files.recycle_bin_re+'</a>\
+									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.files[i].rname + '\',this)">'+lan.files.recycle_bin_del+'</a>\
 								</td>\
 							</tr>'
 					}
@@ -133,33 +181,34 @@ function Recycle_bin(type){
 		
 		var tablehtml = '<div class="re-head">\
 				<div style="margin-left: 3px;" class="ss-text">\
-                        <em>启用回收站</em>\
+                        <em>'+lan.files.recycle_bin_on+'</em>\
                         <div class="ssh-item">\
                                 <input class="btswitch btswitch-ios" id="Set_Recycle_bin" type="checkbox" '+(rdata.status?'checked':'')+'>\
                                 <label class="btswitch-btn" for="Set_Recycle_bin" onclick="Set_Recycle_bin()"></label>\
                         </div>\
                 </div>\
-				<span style="line-height: 32px; margin-left: 30px;">注意：关闭回收站，删除的文件无法恢复！</span>\
-                <button style="float: right" class="btn btn-default btn-sm" onclick="CloseRecycleBin();">清空回收站</button>\
+				<span style="line-height: 32px; margin-left: 30px;">'+lan.files.recycle_bin_ps+'</span>\
+                <button style="float: right" class="btn btn-default btn-sm" onclick="CloseRecycleBin();">'+lan.files.recycle_bin_close+'</button>\
 				</div>\
 				<div class="re-con">\
 					<div class="re-con-menu">\
-						<p class="on" onclick="Recycle_bin(1)">全部</p>\
-						<p onclick="Recycle_bin(2)">文件夹</p>\
-						<p onclick="Recycle_bin(3)">文件</p>\
-						<p onclick="Recycle_bin(4)">图片</p>\
-						<p onclick="Recycle_bin(5)">文档</p>\
+						<p class="on" onclick="Recycle_bin(1)">'+lan.files.recycle_bin_type1+'</p>\
+						<p onclick="Recycle_bin(2)">'+lan.files.recycle_bin_type2+'</p>\
+						<p onclick="Recycle_bin(3)">'+lan.files.recycle_bin_type3+'</p>\
+						<p onclick="Recycle_bin(4)">'+lan.files.recycle_bin_type4+'</p>\
+						<p onclick="Recycle_bin(5)">'+lan.files.recycle_bin_type5+'</p>\
+						<p onclick="Recycle_bin(6)">'+lan.files.recycle_bin_type6+'</p>\
 					</div>\
 					<div class="re-con-con">\
 					<div style="margin: 15px;" class="divtable">\
 					<table width="100%" class="table table-hover">\
 						<thead>\
 							<tr>\
-								<th>文件名</th>\
-								<th>原位置</th>\
-								<th>大小</th>\
-								<th width="150">删除时间</th>\
-								<th style="text-align: right;" width="110">操作</th>\
+								<th>'+lan.files.recycle_bin_th1+'</th>\
+								<th>'+lan.files.recycle_bin_th2+'</th>\
+								<th>'+lan.files.recycle_bin_th3+'</th>\
+								<th width="150">'+lan.files.recycle_bin_th4+'</th>\
+								<th style="text-align: right;" width="110">'+lan.files.recycle_bin_th5+'</th>\
 							</tr>\
 						</thead>\
 					<tbody id="RecycleBody" class="list-list">'+body+'</tbody>\
@@ -170,7 +219,7 @@ function Recycle_bin(type){
 				shift: 5,
 				closeBtn: 2,
 				area: ['80%','606px'],
-				title: '回收站',
+				title: lan.files.recycle_bin_title,
 				content: tablehtml
 			});
 			Recycle_bin(1);
@@ -199,8 +248,8 @@ function ReisImage(fileName){
 
 //从回收站恢复文件
 function ReRecycleBin(path,obj){
-	layer.confirm('若您的原位置已有同名文件或目录，将被覆盖，继续吗？',{title:'恢复文件',closeBtn:2,icon:3},function(){
-		var loadT = layer.msg('正在恢复,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	layer.confirm(lan.files.recycle_bin_re_msg,{title:lan.files.recycle_bin_re_title,closeBtn:2,icon:3},function(){
+		var loadT = layer.msg(lan.files.recycle_bin_re_the,{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/files?action=Re_Recycle_bin','path='+encodeURIComponent(path),function(rdata){
 			layer.close(loadT);
 			layer.msg(rdata.msg,{icon:rdata.status?1:5});
@@ -211,8 +260,8 @@ function ReRecycleBin(path,obj){
 
 //从回收站删除
 function DelRecycleBin(path,obj){
-	layer.confirm('删除操作不可逆，继续吗？',{title:'删除文件',closeBtn:2,icon:3},function(){
-		var loadT = layer.msg('正在删除,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	layer.confirm(lan.files.recycle_bin_del_msg,{title:lan.files.recycle_bin_del_title,closeBtn:2,icon:3},function(){
+		var loadT = layer.msg(lan.files.recycle_bin_del_the,{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/files?action=Del_Recycle_bin','path='+encodeURIComponent(path),function(rdata){
 			layer.close(loadT);
 			layer.msg(rdata.msg,{icon:rdata.status?1:5});
@@ -223,8 +272,11 @@ function DelRecycleBin(path,obj){
 
 //清空回收站
 function CloseRecycleBin(){
-	layer.confirm('清空回收站操作会永久删除回收站中的文件，继续吗？',{title:'清空回收站',closeBtn:2,icon:3},function(){
-		var loadT = layer.msg('正在删除,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	layer.confirm(lan.files.recycle_bin_close_msg,{title:lan.files.recycle_bin_close,closeBtn:2,icon:3},function(){
+		var loadT = layer.msg("<div class='myspeed'>"+lan.files.recycle_bin_close_the+"</div>",{icon:16,time:0,shade: [0.3, '#000']});
+		setTimeout(function(){
+			getSpeed('.myspeed');
+		},1000);
 		$.post('/files?action=Close_Recycle_bin','',function(rdata){
 			layer.close(loadT);
 			layer.msg(rdata.msg,{icon:rdata.status?1:5});
@@ -233,9 +285,10 @@ function CloseRecycleBin(){
 	});
 }
 
+
 //回收站开关
 function Set_Recycle_bin(){
-	var loadT = layer.msg('正在处理,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/files?action=Recycle_bin','',function(rdata){
 		layer.close(loadT);
 		layer.msg(rdata.msg,{icon:rdata.status?1:5});
@@ -246,12 +299,39 @@ function Set_Recycle_bin(){
 
 //取数据
 function GetFiles(Path) {
+	var searchtype = Path;
+	if(isNaN(Path)){
+		var p = '1';
+		Path = encodeURIComponent(Path)
+	}else{
+		var p = Path;
+		Path = getCookie('Path');
+	}
+	
+	var search = '';
+	var searchV = $("#SearchValue").val();
+	if(searchV.length > 1 && searchtype == "1"){
+		search = "&search="+searchV;
+	}
+	var showRow = getCookie('showRow');
+	if(!showRow) showRow = '100';
 	var Body = '';
-	var data = 'path=' + encodeURIComponent(Path);
+	var data = 'path=' + Path;
 	var loadT = layer.load();
 	var totalSize = 0;
-	$.post('/files?action=GetDir', data, function(rdata) {
+	$.post('/files?action=GetDir&tojs=GetFiles&p=' + p + '&showRow=' + showRow + search, data, function(rdata) {
 		layer.close(loadT);
+		
+		var rows = ['100','200','500','1000','2000'];
+		var rowOption = '';
+		for(var i=0;i<rows.length;i++){
+			var rowSelected = '';
+			if(showRow == rows[i]) rowSelected = 'selected';
+			rowOption += '<option value="'+rows[i]+'" '+rowSelected+'>'+rows[i]+'</option>';
+		}
+		
+		$("#filePage").html(rdata.PAGE);
+		$("#filePage div").append("<span class='Pcount'>每页<select style='margin-left: 3px;margin-right: 3px;border:#ddd 1px solid' class='showRow'>"+rowOption+"</select>条</span>");
 		if(rdata.DIR == null) rdata.DIR = [];
 		for (var i = 0; i < rdata.DIR.length; i++) {
 			var fmp = rdata.DIR[i].split(";");
@@ -276,18 +356,18 @@ function GetFiles(Path) {
 						<td>"+fmp[3]+"</td>\
 						<td>"+fmp[4]+"</td>\
 						<td class='editmenu'><span>\
-						<a class='btlink' href='javascript:;' onclick=\"CopyFile('" + rdata.PATH +"/"+ fmp[0] + "')\">复制</a> | \
-						<a class='btlink' href='javascript:;' onclick=\"CutFile('" + rdata.PATH +"/"+ fmp[0]+ "')\">剪切</a> | \
-						<a class='btlink' href=\"javascript:ReName(0,'" + fmp[0] + "');\">重命名</a> | \
-						<a class='btlink' href=\"javascript:SetChmod(0,'" + rdata.PATH + "/"+fmp[0] + "');\">权限</a> | \
-						<a class='btlink' href=\"javascript:Zip('" + rdata.PATH +"/" +fmp[0] + "');\">压缩</a> | \
-						<a class='btlink' href='javascript:;' onclick=\"DeleteDir('" + rdata.PATH +"/"+ fmp[0] + "')\">删除</a></span>\
+						<a class='btlink' href='javascript:;' onclick=\"CopyFile('" + rdata.PATH +"/"+ fmp[0] + "')\">"+lan.files.file_menu_copy+"</a> | \
+						<a class='btlink' href='javascript:;' onclick=\"CutFile('" + rdata.PATH +"/"+ fmp[0]+ "')\">"+lan.files.file_menu_mv+"</a> | \
+						<a class='btlink' href=\"javascript:ReName(0,'" + fmp[0] + "');\">"+lan.files.file_menu_rename+"</a> | \
+						<a class='btlink' href=\"javascript:SetChmod(0,'" + rdata.PATH + "/"+fmp[0] + "');\">"+lan.files.file_menu_auth+"</a> | \
+						<a class='btlink' href=\"javascript:Zip('" + rdata.PATH +"/" +fmp[0] + "');\">"+lan.files.file_menu_zip+"</a> | \
+						<a class='btlink' href='javascript:;' onclick=\"DeleteDir('" + rdata.PATH +"/"+ fmp[0] + "')\">"+lan.files.file_menu_del+"</a></span>\
 					</td></tr>";
 			}
 			else{
 				$("#set_icon").addClass("active");
 				$("#set_list").removeClass("active");
-				Body += "<div class='file folderBox menufolder' data-path='" + rdata.PATH + "/" + fmp[0] + "' filetype='dir' title='文件名：" + fmp[0]+"&#13;大小：" + ToSize(fmp[1])+"&#13;修改时间："+getLocalTime(fmp[2])+"&#13;权限："+fmp[3]+"&#13;所有者："+fmp[4]+"'>\
+				Body += "<div class='file folderBox menufolder' data-path='" + rdata.PATH + "/" + fmp[0] + "' filetype='dir' title='"+lan.files.file_name+"：" + fmp[0]+"&#13;"+lan.files.file_size+"：" + ToSize(fmp[1])+"&#13;"+lan.files.file_etime+"："+getLocalTime(fmp[2])+"&#13;"+lan.files.file_auth+"："+fmp[3]+"&#13;"+lan.files.file_own+"："+fmp[4]+"'>\
 						<input type='checkbox' name='id' value='"+fmp[0]+"'>\
 						<div class='ico ico-folder' ondblclick=\"GetFiles('" + rdata.PATH + "/" + fmp[0] + "')\"></div>\
 						<div class='titleBox' onclick=\"GetFiles('" + rdata.PATH + "/" + fmp[0] + "')\"><span class='tname'>" + fmp[0] + "</span></div>\
@@ -310,15 +390,15 @@ function GetFiles(Path) {
 				}
 			}
 			if(displayZip != -1){
-				bodyZip = "<a class='btlink' href='javascript:;' onclick=\"UnZip('" + rdata.PATH +"/" +fmp[0] + "'," + displayZip + ")\">解压</a> | ";
+				bodyZip = "<a class='btlink' href='javascript:;' onclick=\"UnZip('" + rdata.PATH +"/" +fmp[0] + "'," + displayZip + ")\">"+lan.files.file_menu_unzip+"</a> | ";
 			}
 			if(isText(fmp[0])){
-				bodyZip = "<a class='btlink' href='javascript:;' onclick=\"OnlineEditFile(0,'" + rdata.PATH +"/"+ fmp[0] + "')\">编辑</a> | ";
+				bodyZip = "<a class='btlink' href='javascript:;' onclick=\"OnlineEditFile(0,'" + rdata.PATH +"/"+ fmp[0] + "')\">"+lan.files.file_menu_edit+"</a> | ";
 			}
 			if(isImage(fmp[0])){
-				download = "<a class='btlink' href='javascript:;' onclick=\"GetImage('" + rdata.PATH +"/"+ fmp[0] + "')\">预览</a> | ";
+				download = "<a class='btlink' href='javascript:;' onclick=\"GetImage('" + rdata.PATH +"/"+ fmp[0] + "')\">"+lan.files.file_menu_img+"</a> | ";
 			}else{
-				download = "<a class='btlink' href='javascript:;' onclick=\"GetFileBytes('" + rdata.PATH +"/"+ fmp[0] + "',"+fmp[1]+")\">下载</a> | ";
+				download = "<a class='btlink' href='javascript:;' onclick=\"GetFileBytes('" + rdata.PATH +"/"+ fmp[0] + "',"+fmp[1]+")\">"+lan.files.file_menu_down+"</a> | ";
 			}
 			
 			totalSize +=  parseInt(fmp[1]);
@@ -330,36 +410,36 @@ function GetFiles(Path) {
 						<td>"+fmp[3]+"</td>\
 						<td>"+fmp[4]+"</td>\
 						<td class='editmenu'>\
-						<span><a class='btlink' href='javascript:;' onclick=\"CopyFile('" + rdata.PATH +"/"+ fmp[0] + "')\">复制</a> | \
-						<a class='btlink' href='javascript:;' onclick=\"CutFile('" + rdata.PATH +"/"+ fmp[0] + "')\">剪切</a> | \
-						<a class='btlink' href='javascript:;' onclick=\"ReName(0,'" + fmp[0] + "')\">重命名</a> | \
-						<a class='btlink' href=\"javascript:SetChmod(0,'" + rdata.PATH +"/"+ fmp[0] + "');\">权限</a> | \
-						<a class='btlink' href=\"javascript:Zip('" + rdata.PATH +"/" +fmp[0] + "');\">压缩</a> | \
+						<span><a class='btlink' href='javascript:;' onclick=\"CopyFile('" + rdata.PATH +"/"+ fmp[0] + "')\">"+lan.files.file_menu_copy+"</a> | \
+						<a class='btlink' href='javascript:;' onclick=\"CutFile('" + rdata.PATH +"/"+ fmp[0] + "')\">"+lan.files.file_menu_mv+"</a> | \
+						<a class='btlink' href='javascript:;' onclick=\"ReName(0,'" + fmp[0] + "')\">"+lan.files.file_menu_rename+"</a> | \
+						<a class='btlink' href=\"javascript:SetChmod(0,'" + rdata.PATH +"/"+ fmp[0] + "');\">"+lan.files.file_menu_auth+"</a> | \
+						<a class='btlink' href=\"javascript:Zip('" + rdata.PATH +"/" +fmp[0] + "');\">"+lan.files.file_menu_zip+"</a> | \
 						"+bodyZip+download+"\
-						<a class='btlink' href='javascript:;' onclick=\"DeleteFile('" + rdata.PATH +"/"+ fmp[0] + "')\">删除</a>\
+						<a class='btlink' href='javascript:;' onclick=\"DeleteFile('" + rdata.PATH +"/"+ fmp[0] + "')\">"+lan.files.file_menu_del+"</a>\
 						</span></td></tr>";
 			}
 			else{
-				Body += "<div class='file folderBox menufile' data-path='" + rdata.PATH +"/"+ fmp[0] + "' filetype='"+fmp[0]+"' title='文件名：" + fmp[0]+"&#13;大小：" + ToSize(fmp[1])+"&#13;修改时间："+getLocalTime(fmp[2])+"&#13;权限："+fmp[3]+"&#13;所有者："+fmp[4]+"'>\
+				Body += "<div class='file folderBox menufile' data-path='" + rdata.PATH +"/"+ fmp[0] + "' filetype='"+fmp[0]+"' title='"+lan.files.file_name+"：" + fmp[0]+"&#13;"+lan.files.file_size+"：" + ToSize(fmp[1])+"&#13;"+lan.files.file_etime+"："+getLocalTime(fmp[2])+"&#13;"+lan.files.file_auth+"："+fmp[3]+"&#13;"+lan.files.file_own+"："+fmp[4]+"'>\
 						<input type='checkbox' name='id' value='"+fmp[0]+"'>\
 						<div class='ico ico-"+(GetExtName(fmp[0]))+"'></div>\
 						<div class='titleBox'><span class='tname'>" + fmp[0] + "</span></div>\
 						</div>";
 			}
 		}
-		var dirInfo = '(共'+rdata.DIR.length+'个目录与'+rdata.FILES.length+'个文件,大小:<font id="pathSize">'+(ToSize(totalSize))+'<a class="btlink ml5" onClick="GetPathSize()">获取</a></font>)';
+		var dirInfo = '('+lan.files.get_size.replace('{1}',rdata.DIR.length+'').replace('{2}',rdata.DIR.length+'')+'<font id="pathSize">'+(ToSize(totalSize))+'<a class="btlink ml5" onClick="GetPathSize()">'+lan.files.get+'</a></font>)';
 		$("#DirInfo").html(dirInfo);
 		if(getCookie("rank")=="a"){
 			var tablehtml = '<table width="100%" border="0" cellpadding="0" cellspacing="0" class="table table-hover">\
 							<thead>\
 								<tr>\
 									<th width="30"><input type="checkbox" id="setBox" placeholder=""></th>\
-									<th>文件名</th>\
-									<th>大小</th>\
-									<th>修改时间</th>\
-									<th>权限</th>\
-									<th>所有者</th>\
-									<th style="text-align: right;" width="300">操作</th>\
+									<th>'+lan.files.file_name+'</th>\
+									<th>'+lan.files.file_size+'</th>\
+									<th>'+lan.files.file_etime+'</th>\
+									<th>'+lan.files.file_auth+'</th>\
+									<th>'+lan.files.file_own+'</th>\
+									<th style="text-align: right;" width="330">'+lan.files.file_act+'</th>\
 								</tr>\
 							</thead>\
 							<tbody id="filesBody" class="list-list">'+Body+'</tbody>\
@@ -374,30 +454,30 @@ function GetFiles(Path) {
 		$("#DirPathPlace input").val(rdata.PATH);
 		var BarTools = '<div class="btn-group">\
 						<button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">\
-						新建 <span class="caret"></span>\
+						'+lan.files.new+' <span class="caret"></span>\
 						</button>\
 						<ul class="dropdown-menu">\
-						<li><a href="javascript:CreateFile(0,\'' + Path + '\');">新建空白文件</a></li>\
-						<li><a href="javascript:CreateDir(0,\'' + Path + '\');">新建新目录</a></li>\
+						<li><a href="javascript:CreateFile(0,\'' + Path + '\');">'+lan.files.new_empty_file+'</a></li>\
+						<li><a href="javascript:CreateDir(0,\'' + Path + '\');">'+lan.files.new_dir+'</a></li>\
 						</ul>\
 						</div>';
 		if (rdata.PATH != '/') {
-			BarTools += ' <button onclick="javascript:BackDir();" class="btn btn-default btn-sm glyphicon glyphicon-arrow-left" title="返回上一级"></button>';
+			BarTools += ' <button onclick="javascript:BackDir();" class="btn btn-default btn-sm glyphicon glyphicon-arrow-left" title="'+lan.files.return+'"></button>';
 		}
 		setCookie('Path',rdata.PATH);
-		BarTools += ' <button onclick="javascript:GetFiles(\'' + rdata.PATH + '\');" class="btn btn-default btn-sm glyphicon glyphicon-refresh" title="刷新"></button>';
+		BarTools += ' <button onclick="javascript:GetFiles(\'' + rdata.PATH + '\');" class="btn btn-default btn-sm glyphicon glyphicon-refresh" title="'+lan.public.fresh+'"></button> <button onclick="ExecShell()" title="'+lan.files.shell+'" type="button" class="btn btn-default btn-sm"><em class="ico-cmd"></em></button>';
 		var copyName = getCookie('copyFileName');
 		var cutName = getCookie('cutFileName');
 		var isPaste = (copyName == 'null') ? cutName : copyName;
 		if (isPaste != 'null' && isPaste != undefined) {
-			BarTools += ' <button onclick="javascript:PasteFile(\'' + (GetFileName(isPaste)) + '\');" class="btn btn-Warning btn-sm">粘贴</button>';
+			BarTools += ' <button onclick="javascript:PasteFile(\'' + (GetFileName(isPaste)) + '\');" class="btn btn-Warning btn-sm">'+lan.files.paste+'</button>';
 		}
 		
 		$("#Batch").html('');
 		var BatchTools = '';
 		var isBatch = getCookie('BatchSelected');
 		if (isBatch == 1 || isBatch == '1') {
-			BatchTools += ' <button onclick="javascript:BatchPaste();" class="btn btn-default btn-sm">粘贴所有</button>';
+			BatchTools += ' <button onclick="javascript:BatchPaste();" class="btn btn-default btn-sm">'+lan.files.paste_all+'</button>';
 		}
 		$("#Batch").html(BatchTools);
 		$("#setBox").prop("checked", false);
@@ -463,9 +543,15 @@ function GetFiles(Path) {
 				}
 			}
 		});
+		
+		//每页行数
+		$(".showRow").change(function(){
+			setCookie('showRow',$(this).val());
+			GetFiles(p);
+		});
 		PathPlaceBtn(rdata.PATH);
 	});
-	setTimeout(getCookie('path'),200);
+	//setTimeout(function(){getCookie('path');},200);
 }
 //统计选择数量
 function totalFile(){
@@ -517,11 +603,11 @@ function showSeclect(){
 	var count = totalFile();
 	var BatchTools = '';
 	if(count > 1){
-		BatchTools = '<button onclick="javascript:Batch(1);" class="btn btn-default btn-sm">复制</button>\
-						  <button onclick="javascript:Batch(2);" class="btn btn-default btn-sm">剪切</button>\
-						  <button onclick="javascript:Batch(3);" class="btn btn-default btn-sm">权限</button>\
-						  <button onclick="javascript:Batch(5);" class="btn btn-default btn-sm">压缩</button>\
-						  <button onclick="javascript:Batch(4);" class="btn btn-default btn-sm">删除</button>'
+		BatchTools = '<button onclick="javascript:Batch(1);" class="btn btn-default btn-sm">'+lan.files.file_menu_copy+'</button>\
+						  <button onclick="javascript:Batch(2);" class="btn btn-default btn-sm">'+lan.files.file_menu_mv+'</button>\
+						  <button onclick="javascript:Batch(3);" class="btn btn-default btn-sm">'+lan.files.file_menu_auth+'</button>\
+						  <button onclick="javascript:Batch(5);" class="btn btn-default btn-sm">'+lan.files.file_menu_zip+'</button>\
+						  <button onclick="javascript:Batch(4);" class="btn btn-default btn-sm">'+lan.files.file_menu_del+'</button>'
 		$("#Batch").html(BatchTools);
 	}else{
 		$("#Batch").html(BatchTools);
@@ -538,19 +624,20 @@ $(window).scroll(function () {
 	}
 });
 $("#tipTools").width($(".file-box").width());
-$("#PathPlaceBtn").width($(".file-box").width()-460);
-$("#DirPathPlace input").width($(".file-box").width()-460);
+$("#PathPlaceBtn").width($(".file-box").width()-700);
+$("#DirPathPlace input").width($(".file-box").width()-700);
 if($(window).width()<1160){
 	$("#PathPlaceBtn").width(290);
 }
 window.onresize = function(){
 	$("#tipTools").width($(".file-box").width()-30);
-	$("#PathPlaceBtn").width($(".file-box").width()-460);
-	$("#DirPathPlace input").width($(".file-box").width()-460);
+	$("#PathPlaceBtn").width($(".file-box").width()-700);
+	$("#DirPathPlace input").width($(".file-box").width()-700);
 	if($(window).width()<1160){
 		$("#PathPlaceBtn,#DirPathPlace input").width(290);
 	}
-	PathLeft()
+	PathLeft();
+	IsDiskWidth()
 }
 
 //批量操作
@@ -560,6 +647,9 @@ function Batch(type,access){
 	var len = el.length;
 	var data='path='+path+'&type='+type;
 	var name = 'data';
+	
+	var oldType = getCookie('BatchPaste');
+	
 	for(var i=0;i<len;i++){
 		if(el[i].checked == true && el[i].value != 'on'){
 			data += '&'+name+'='+encodeURIComponent(el[i].value);
@@ -567,7 +657,7 @@ function Batch(type,access){
 	}
 	
 	if(type == 3 && access == undefined){
-		SetChmod(0,'批量');
+		SetChmod(0,lan.files.all);
 		return;
 	}
 	
@@ -582,6 +672,7 @@ function Batch(type,access){
 	}
 	if(type == 4){
 		AllDeleteFileSub(data,path);
+		setCookie('BatchPaste',oldType);
 		return;
 	}
 	
@@ -596,10 +687,11 @@ function Batch(type,access){
 		return;
 	}
 		
-	myloadT = layer.msg('正在执行,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	myloadT = layer.msg("<div class='myspeed'>"+lan.public.the+"</div>",{icon:16,time:0,shade: [0.3, '#000']});
+	setTimeout(function(){getSpeed('.myspeed');},1000);
 	$.post('files?action=SetBatchData',data,function(rdata){
 		layer.close(myloadT);
-		if(type != 3) GetFiles(path);
+		GetFiles(path);
 		layer.msg(rdata.msg,{icon:1});
 	});
 }
@@ -609,7 +701,8 @@ function BatchPaste(){
 	var path = $("#DirPathPlace input").val();
 	var type = getCookie('BatchPaste');
 	var data = 'type='+type+'&path='+path;
-	myloadT = layer.msg('正在执行,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	myloadT = layer.msg("<div class='myspeed'>"+lan.public.the+"</div>",{icon:16,time:0,shade: [0.3, '#000']});
+	setTimeout(function(){getSpeed('.myspeed');},1000);
 	$.post('files?action=BatchPaste',data,function(rdata){
 		layer.close(myloadT);
 		setCookie('BatchSelected', null);
@@ -651,9 +744,11 @@ function GetDisk() {
 	var LBody = '';
 	$.get('/system?action=GetDiskInfo', function(rdata) {
 		for (var i = 0; i < rdata.length; i++) {
-			LBody += "<span onclick=\"GetFiles('" + rdata[i].path + "')\"><span class='glyphicon glyphicon-hdd'></span>&nbsp;" + (rdata[i].path=='/'?'根目录':rdata[i].path) + "(" + rdata[i].size[2] + ")</span>";
+			LBody += "<span onclick=\"GetFiles('" + rdata[i].path + "')\"><span class='glyphicon glyphicon-hdd'></span>&nbsp;" + (rdata[i].path=='/'?lan.files.path_root:rdata[i].path) + "(" + rdata[i].size[2] + ")</span>";
 		}
-		$("#comlist").html(LBody);
+		var trash = '<span id="recycle_bin" onclick="Recycle_bin(\'open\')" title="'+lan.files.recycle_bin_title+'" style="position: absolute; border-color: #ccc; right: 77px;"><span class="glyphicon glyphicon-trash"></span>&nbsp;'+lan.files.recycle_bin_title+'</span>';
+		$("#comlist").html(LBody+trash);
+		IsDiskWidth();
 	});
 }
 
@@ -684,7 +779,7 @@ function BackDir() {
 function CreateFile(type, path) {
 	if (type == 1) {
 		var fileName = $("#newFileName").val();
-		layer.msg('正在新建...', {
+		layer.msg(lan.public.the, {
 			icon: 16,
 			time: 10000
 		});
@@ -693,8 +788,10 @@ function CreateFile(type, path) {
 			layer.msg(rdata.msg, {
 				icon: rdata.status ? 1 : 2
 			});
-			GetFiles($("#DirPathPlace input").val());
-			OnlineEditFile(0,path + '/' + fileName);
+			if(rdata.status){
+				GetFiles($("#DirPathPlace input").val());
+				OnlineEditFile(0,path + '/' + fileName);
+			}
 		});
 		return;
 	}
@@ -702,15 +799,15 @@ function CreateFile(type, path) {
 		type: 1,
 		shift: 5,
 		closeBtn: 2,
-		area: '320px', //宽高
-		title: '新建空白文件',
+		area: '320px', 
+		title: lan.files.new_empty_file,
 		content: '<div class="bt-form pd20 pb70">\
 					<div class="line">\
-					<input type="text" class="bt-input-text" name="Name" id="newFileName" value="" placeholder="文件名称" style="width:100%" />\
+					<input type="text" class="bt-input-text" name="Name" id="newFileName" value="" placeholder="'+lan.files.file_name+'" style="width:100%" />\
 					</div>\
 					<div class="bt-form-submit-btn">\
-					<button type="button" class="btn btn-danger btn-sm" onclick="layer.closeAll()">取消</button>\
-					<button id="CreateFileBtn" type="button" class="btn btn-success btn-sm" onclick="CreateFile(1,\'' + path + '\')">新建</button>\
+					<button type="button" class="btn btn-danger btn-sm" onclick="layer.closeAll()">'+lan.public.close+'</button>\
+					<button id="CreateFileBtn" type="button" class="btn btn-success btn-sm" onclick="CreateFile(1,\'' + path + '\')">'+lan.files.new+'</button>\
 					</div>\
 				</div>'
 	});
@@ -722,7 +819,7 @@ function CreateFile(type, path) {
 function CreateDir(type, path) {
 	if (type == 1) {
 		var dirName = $("#newDirName").val();
-		layer.msg('正在新建...', {
+		layer.msg(lan.public.the, {
 			icon: 16,
 			time: 10000
 		});
@@ -739,15 +836,15 @@ function CreateDir(type, path) {
 		type: 1,
 		shift: 5,
 		closeBtn: 2,
-		area: '320px', //宽高
-		title: '新建新目录',
+		area: '320px',
+		title: lan.files.new_dir,
 		content: '<div class="bt-form pd20 pb70">\
 					<div class="line">\
-					<input type="text" class="bt-input-text" name="Name" id="newDirName" value="" placeholder="目录名称" style="width:100%" />\
+					<input type="text" class="bt-input-text" name="Name" id="newDirName" value="" placeholder="'+lan.files.dir_name+'" style="width:100%" />\
 					</div>\
 					<div class="bt-form-submit-btn">\
-					<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>\
-					<button type="button" id="CreateDirBtn" class="btn btn-success btn-sm btn-title" onclick="CreateDir(1,\'' + path + '\')">新建</button>\
+					<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">'+lan.public.close+'</button>\
+					<button type="button" id="CreateDirBtn" class="btn btn-success btn-sm btn-title" onclick="CreateDir(1,\'' + path + '\')">'+lan.files.new+'</button>\
 					</div>\
 				</div>'
 	});
@@ -758,8 +855,8 @@ function CreateDir(type, path) {
 
 //删除文件
 function DeleteFile(fileName){
-	layer.confirm("您真的要删除["+fileName+"]吗?",{title:'删除文件',closeBtn:2,icon:3},function(){
-		layer.msg('正在执行,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	layer.confirm(lan.get('recycle_bin_confirm',[fileName]),{title:lan.files.del_file,closeBtn:2,icon:3},function(){
+		layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/files?action=DeleteFile', 'path=' + encodeURIComponent(fileName), function(rdata) {
 			layer.closeAll();
 			layer.msg(rdata.msg, {
@@ -772,8 +869,8 @@ function DeleteFile(fileName){
 
 //删除目录
 function DeleteDir(dirName){
-	layer.confirm("您真的要删除["+dirName+"]吗?",{title:'删除目录',closeBtn:2,icon:3},function(){
-		layer.msg('正在执行,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	layer.confirm(lan.get('recycle_bin_confirm_dir',[dirName]),{title:lan.files.del_dir,closeBtn:2,icon:3},function(){
+		layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('/files?action=DeleteDir', 'path=' + encodeURIComponent(dirName), function(rdata) {
 			layer.closeAll();
 			layer.msg(rdata.msg, {
@@ -785,8 +882,9 @@ function DeleteDir(dirName){
 }
 //批量删除文件
 function AllDeleteFileSub(data,path){
-	layer.confirm('您真的要删除这些文件吗?',{title:'批量删除文件',closeBtn:2,icon:3},function(){
-		layer.msg('正在执行,请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	layer.confirm(lan.files.del_all_msg,{title:lan.files.del_all_file,closeBtn:2,icon:3},function(){
+		layer.msg("<div class='myspeed'>"+lan.public.the+"</div>",{icon:16,time:0,shade: [0.3, '#000']});
+		setTimeout(function(){getSpeed('.myspeed');},1000);
 		$.post('files?action=SetBatchData',data,function(rdata){
 			layer.closeAll();
 			GetFiles(path);
@@ -808,11 +906,11 @@ function DownloadFile(action){
 	
 	if(action == 1){
 		var fUrl = $("#mUrl").val();
-		fUrl = encodeURI(fUrl);
+		fUrl = encodeURIComponent(fUrl);
 		fpath = $("#dpath").val();
 		fname = encodeURIComponent($("#dfilename").val());
 		layer.closeAll();
-		layer.msg('正在添加队列，请稍候..',{time:0,icon:16,shade: [0.3, '#000']});
+		layer.msg(lan.files.down_task,{time:0,icon:16,shade: [0.3, '#000']});
 		$.post('/files?action=DownloadFile','path='+fpath+'&url='+fUrl+'&filename='+fname,function(rdata){
 			layer.closeAll();
 			GetFiles(fpath);
@@ -826,21 +924,21 @@ function DownloadFile(action){
 		type: 1,
 		shift: 5,
 		closeBtn: 2,
-		area: '500px', //宽高
-		title: '下载文件',
+		area: '500px',
+		title: lan.files.down_title,
 		content: '<form class="bt-form pd20 pb70">\
 					<div class="line">\
-					<span class="tname">URL地址:</span><input type="text" class="bt-input-text" name="url" id="mUrl" value="" placeholder="Url地址" style="width:370px" />\
+					<span class="tname">'+lan.files.down_url+':</span><input type="text" class="bt-input-text" name="url" id="mUrl" value="" placeholder="'+lan.files.down_url+'" style="width:330px" />\
 					</div>\
 					<div class="line">\
-					<span class="tname ">下载到:</span><input type="text" class="bt-input-text" name="path" id="dpath" value="'+path+'" placeholder="下载到" style="width:370px" />\
+					<span class="tname ">'+lan.files.down_to+':</span><input type="text" class="bt-input-text" name="path" id="dpath" value="'+path+'" placeholder="'+lan.files.down_to+'" style="width:330px" />\
 					</div>\
 					<div class="line">\
-					<span class="tname">文件名:</span><input type="text" class="bt-input-text" name="filename" id="dfilename" value="" placeholder="保存文件名" style="width:370px" />\
+					<span class="tname">'+lan.files.file_name+':</span><input type="text" class="bt-input-text" name="filename" id="dfilename" value="" placeholder="'+lan.files.down_save+'" style="width:330px" />\
 					</div>\
 					<div class="bt-form-submit-btn">\
-					<button type="button" class="btn btn-danger btn-sm" onclick="layer.closeAll()">取消</button>\
-					<button type="button" id="dlok" class="btn btn-success btn-sm dlok" onclick="DownloadFile(1)">确定</button>\
+					<button type="button" class="btn btn-danger btn-sm" onclick="layer.closeAll()">'+lan.public.close+'</button>\
+					<button type="button" id="dlok" class="btn btn-success btn-sm dlok" onclick="DownloadFile(1)">'+lan.public.ok+'</button>\
 					</div>\
 				</form>'
 	});
@@ -857,12 +955,11 @@ function DownloadFile(action){
 function ExecShell(action){
 	if(action == 1){
 		var path = $("#DirPathPlace input").val();
-		var exec = $("#mExec").val();
-		$.post('/files?action=ExecShell','path='+path+'&exec='+exec,function(rdata){
+		var exec = encodeURIComponent($("#mExec").val());
+		$.post('/files?action=ExecShell','path='+path+'&shell='+exec,function(rdata){
 			if(rdata.status){
 				$("#mExec").val('');
 				GetShellEcho();
-				//outTimeGet();
 			}
 			else{
 				layer.msg(rdata.msg,{icon:rdata.status?1:2});
@@ -875,27 +972,37 @@ function ExecShell(action){
 		type: 1,
 		shift: 5,
 		closeBtn: 2,
-		area: '70%', //宽高
-		title: '执行SHELL',
-		content: '<div class="bt-form">\
+		area: ['70%','600px'], 
+		title: lan.files.shell_title,
+		content: '<div class="bt-form pd15">\
 					<div class="shellcode"><pre id="Result"></pre></div>\
-					<div class="line noborder">\
-					<input type="text" class="form-control" name="exec" id="mExec" value="" placeholder="SHELL命令" onkeydown="if(event.keyCode==13)ExecShell(1);" /><span class="shellbutton" onclick="ExecShell(1)">发送</span>\
+					<div class="line">\
+					<input type="text" class="bt-input-text" name="exec" id="mExec" value="" placeholder="'+lan.files.shell_ps+'" onkeydown="if(event.keyCode==13)ExecShell(1);" /><span class="shellbutton btn btn-default btn-sm pull-right" onclick="ExecShell(1)" style="width:10%">'+lan.files.shell_go+'</span>\
 					</div>\
 				</div>'
 	});
+	setTimeout(function(){
+		outTimeGet();
+	},1000);
+	
 }
 
+var outTime = null;
 //取SHELL输出
 function outTimeGet(){
-	setInterval(function(){
+	outTime = setInterval(function(){
+		if(!$("#mExec").attr('name')){
+			clearInterval(outTime);
+			return;
+		}
 		GetShellEcho();
-	},3000);
+	},1000);
 }
 
 function GetShellEcho(){
-	$.get('/files?action=GetShellEcho',function(rdata){
+	$.post('/files?action=GetExecShellMsg','',function(rdata){
 		$("#Result").html(rdata);
+		$(".shellcode").scrollTop($(".shellcode")[0].scrollHeight);
 	});
 }
 
@@ -905,7 +1012,7 @@ function ReName(type, fileName) {
 		var path = $("#DirPathPlace input").val();
 		var newFileName = encodeURIComponent(path + '/' + $("#newFileName").val());
 		var oldFileName = encodeURIComponent(path + '/' + fileName);
-		layer.msg('正在处理...', {
+		layer.msg(lan.public.the, {
 			icon: 16,
 			time: 10000
 		});
@@ -922,15 +1029,15 @@ function ReName(type, fileName) {
 		type: 1,
 		shift: 5,
 		closeBtn: 2,
-		area: '320px', //宽高
-		title: '重命名',
+		area: '320px', 
+		title: lan.files.file_menu_rename,
 		content: '<div class="bt-form pd20 pb70">\
 					<div class="line">\
-					<input type="text" class="bt-input-text" name="Name" id="newFileName" value="' + fileName + '" placeholder="文件名称" style="width:100%" />\
+					<input type="text" class="bt-input-text" name="Name" id="newFileName" value="' + fileName + '" placeholder="'+lan.files.file_name+'" style="width:100%" />\
 					</div>\
 					<div class="bt-form-submit-btn">\
-					<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>\
-					<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title" onclick="ReName(1,\'' + fileName + '\')">保存</button>\
+					<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">'+lan.public.close+'</button>\
+					<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title" onclick="ReName(1,\'' + fileName + '\')">'+lan.public.save+'</button>\
 					</div>\
 				</div>'
 	});
@@ -943,7 +1050,7 @@ function CutFile(fileName) {
 	var path = $("#DirPathPlace input").val();
 	setCookie('cutFileName', fileName);
 	setCookie('copyFileName', null);
-	layer.msg('已剪切', {
+	layer.msg(lan.files.mv_ok, {
 		icon: 1,
 		time: 1
 	});
@@ -954,7 +1061,7 @@ function CopyFile(fileName) {
 	var path = $("#DirPathPlace input").val();
 	setCookie('copyFileName', fileName);
 	setCookie('cutFileName', null);
-	layer.msg('已复制', {
+	layer.msg(lan.files.copy_ok, {
 		icon: 1,
 		time: 1
 	});
@@ -965,7 +1072,7 @@ function PasteFile(fileName) {
 	var path = $("#DirPathPlace input").val();
 	var copyName = getCookie('copyFileName');
 	if (copyName != 'null' && copyName != undefined) {
-		layer.msg('正在复制...', {
+		layer.msg(lan.files.copy_the, {
 			icon: 16,
 			time: 0,shade: [0.3, '#000']
 		});
@@ -982,7 +1089,7 @@ function PasteFile(fileName) {
 	}
 	var cutName = getCookie('cutFileName');
 	if (cutName != 'null' && cutName != undefined) {
-		layer.msg('正在移动...', {
+		layer.msg(lan.files.mv_the, {
 			icon: 16,
 			time: 0,shade: [0.3, '#000']
 		});
@@ -1012,11 +1119,11 @@ function Zip(dirName,submits) {
 		
 		dfile = encodeURIComponent($("#dfile").val());
 		layer.closeAll();
-		layer.msg('正在压缩...', {icon: 16,time: 0,shade: [0.3, '#000']});
+		layer.msg(lan.files.zip_the, {icon: 16,time: 0,shade: [0.3, '#000']});
 		$.post('/files?action=Zip', 'sfile=' + sfile + '&dfile=' + dfile + '&type=tar&path='+encodeURIComponent(path), function(rdata) {
 			layer.closeAll();
 			if(rdata == null || rdata == undefined){
-				layer.msg('服务器正在后台压缩文件,请稍候检查进度!',{icon:1});
+				layer.msg(lan.files.zip_ok,{icon:1});
 				GetFiles(path)
 				ReloadFiles();
 				return;
@@ -1038,15 +1145,15 @@ function Zip(dirName,submits) {
 		shift: 5,
 		closeBtn: 2,
 		area: '650px',
-		title: '压缩文件',
+		title: lan.files.zip_title,
 		content: '<div class="bt-form pd20 pb70">'
 					+'<div class="line noborder">'
-					+'<input type="text" class="form-control" id="sfile" value="' +param + '" placeholder="压缩文件或目录" style="display:none" />'
-					+'<span>压缩到</span><input type="text" class="bt-input-text" id="dfile" value="'+dirName + '.tar.gz" placeholder="压缩到" style="width: 85%; display: inline-block; margin: 0px 10px 0px 20px;" /><span class="glyphicon glyphicon-folder-open cursor" onclick="ChangePath(\'dfile\')"></span>'
+					+'<input type="text" class="form-control" id="sfile" value="' +param + '" placeholder="" style="display:none" />'
+					+'<span>'+lan.files.zip_to+'</span><input type="text" class="bt-input-text" id="dfile" value="'+dirName + '.tar.gz" placeholder="'+lan.files.zip_to+'" style="width: 75%; display: inline-block; margin: 0px 10px 0px 20px;" /><span class="glyphicon glyphicon-folder-open cursor" onclick="ChangePath(\'dfile\')"></span>'
 					+'</div>'
 					+'<div class="bt-form-submit-btn">'
-					+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>'
-					+'<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title" onclick="Zip(\'' + param + '\',1)">压缩</button>'
+					+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">'+lan.public.close+'</button>'
+					+'<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title" onclick="Zip(\'' + param + '\',1)">'+lan.files.file_menu_zip+'</button>'
 					+'</div>'
 				+'</div>'
 	});
@@ -1054,7 +1161,6 @@ function Zip(dirName,submits) {
 	setTimeout(function(){
 		$("#dfile").change(function(){
 			var dfile = $(this).val()
-			alert(dfile)
 			tmp = dfile.split('.');
 			if(tmp[tmp.length-1] != 'gz'){
 				var path = $("#DirPathPlace input").val();
@@ -1071,12 +1177,13 @@ function Zip(dirName,submits) {
 function UnZip(fileName,type) {
 	var path = $("#DirPathPlace input").val();
 	if(type.length ==3){
-		sfile = encodeURIComponent($("#sfile").val());
-		dfile = encodeURIComponent($("#dfile").val());
+		var sfile = encodeURIComponent($("#sfile").val());
+		var dfile = encodeURIComponent($("#dfile").val());
+		var password = encodeURIComponent($("#unpass").val());
 		coding = $("select[name='coding']").val();
 		layer.closeAll();
-		layer.msg('正在解压...', {icon: 16,time: 0,shade: [0.3, '#000']});
-		$.post('/files?action=UnZip', 'sfile=' + sfile + '&dfile=' + dfile +'&type=' + type + '&coding=' + coding, function(rdata) {
+		layer.msg(lan.files.unzip_the, {icon: 16,time: 0,shade: [0.3, '#000']});
+		$.post('/files?action=UnZip', 'sfile=' + sfile + '&dfile=' + dfile +'&type=' + type + '&coding=' + coding + '&password=' + password, function(rdata) {
 			layer.closeAll();
 			layer.msg(rdata.msg, {icon: rdata.status ? 1 : 2});
 			GetFiles(path);
@@ -1085,24 +1192,28 @@ function UnZip(fileName,type) {
 	}
 	
 	type = (type == 1) ? 'tar':'zip'
+	var umpass = '';
+	if(type == 'zip'){
+		umpass = '<div class="line"><span class="tname">'+lan.files.zip_pass_title+'</span><input type="text" class="bt-input-text" id="unpass" value="" placeholder="'+lan.files.zip_pass_msg+'" style="width:330px" /></div>'
+	}
 	layer.open({
 		type: 1,
 		shift: 5,
 		closeBtn: 2,
-		area: '460px',
-		title: '压缩文件',
+		area: '490px',
+		title: lan.files.unzip_title,
 		content: '<div class="bt-form pd20 pb70">'
 					+'<div class="line unzipdiv">'
-					+'<span class="tname">文件名</span><input type="text" class="bt-input-text" id="sfile" value="' +fileName + '" placeholder="压缩文件名" style="width:330px" /></div>'
-					+'<div class="line"><span class="tname">解压到</span><input type="text" class="bt-input-text" id="dfile" value="'+path + '" placeholder="解压到" style="width:330px" /></div>'
-					+'<div class="line"><span class="tname">编码</span><select class="bt-input-text" name="coding">'
+					+'<span class="tname">'+lan.files.unzip_name+'</span><input type="text" class="bt-input-text" id="sfile" value="' +fileName + '" placeholder="'+lan.files.unzip_name_title+'" style="width:330px" /></div>'
+					+'<div class="line"><span class="tname">'+lan.files.unzip_to+'</span><input type="text" class="bt-input-text" id="dfile" value="'+path + '" placeholder="'+lan.files.unzip_to+'" style="width:330px" /></div>' + umpass
+					+'<div class="line"><span class="tname">'+lan.files.unzip_coding+'</span><select class="bt-input-text" name="coding">'
 						+'<option value="UTF-8">UTF-8</option>'
 						+'<option value="gb18030">GBK</option>'
 					+'</select>'
 					+'</div>'
 					+'<div class="bt-form-submit-btn">'
-					+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>'
-					+'<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title" onclick="UnZip(\'' + fileName + '\',\''+type+'\')">解压</button>'
+					+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">'+lan.public.close+'</button>'
+					+'<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title" onclick="UnZip(\'' + fileName + '\',\''+type+'\')">'+lan.files.file_menu_unzip+'</button>'
 					+'</div>'
 				+'</div>'
 	});
@@ -1166,23 +1277,23 @@ function UploadFiles(){
 	layer.open({
 		type:1,
 		closeBtn: 2,
-		title:'上传文件 ',
+		title:lan.files.up_title,
 		area: ['500px','500px'], 
 		shadeClose:false,
 		content:'<div class="fileUploadDiv"><input type="hidden" id="input-val" value="'+path+'" />\
 				<input type="file" id="file_input"  multiple="true" autocomplete="off" />\
-				<button type="button"  id="opt" autocomplete="off">添加文件</button>\
-				<button type="button" id="up" autocomplete="off" >开始上传</button>\
+				<button type="button"  id="opt" autocomplete="off">'+lan.files.up_add+'</button>\
+				<button type="button" id="up" autocomplete="off" >'+lan.files.up_start+'</button>\
 				<span id="totalProgress" style="position: absolute;top: 7px;right: 147px;"></span>\
 				<span style="float:right;margin-top: 9px;">\
-				<font>文件编码:</font>\
+				<font>'+lan.files.up_coding+':</font>\
 				<select id="fileCodeing" >\
-					<option value="byte">二进制</option>\
+					<option value="byte">'+lan.files.up_bin+'</option>\
 					<option value="utf-8">UTF-8</option>\
 					<option value="gb18030">GB2312</option>\
 				</select>\
 				</span>\
-				<button type="button" id="filesClose" autocomplete="off" onClick="layer.closeAll()" >关闭</button>\
+				<button type="button" id="filesClose" autocomplete="off" onClick="layer.closeAll()" >'+lan.public.close+'</button>\
 				<ul id="up_box"></ul></div>'
 	});
 	UploadStart();
@@ -1194,7 +1305,7 @@ function SetChmod(action,fileName){
 		var chmod = $("#access").val();
 		var chown = $("#chown").val();
 		var data = 'filename='+ encodeURIComponent(fileName)+'&user='+chown+'&access='+chmod;
-		var loadT = layer.msg('正在设置..',{icon:16,time:0,shade: [0.3, '#000']});
+		var loadT = layer.msg(lan.public.config,{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('files?action=SetFileAccess',data,function(rdata){
 			layer.close(loadT);
 			if(rdata.status) layer.closeAll();
@@ -1205,44 +1316,44 @@ function SetChmod(action,fileName){
 		return;
 	}
 	
-	var toExec = fileName == '批量'?'Batch(3,1)':'SetChmod(1,\''+fileName+'\')';
+	var toExec = fileName == lan.files.all?'Batch(3,1)':'SetChmod(1,\''+fileName+'\')';
 	
 	$.post('/files?action=GetFileAccess','filename='+encodeURIComponent(fileName),function(rdata){
 		layer.open({
 			type:1,
 			closeBtn: 2,
-			title:'设置权限['+fileName+']',
+			title: lan.files.set_auth + '['+fileName+']',
 			area: '400px', 
 			shadeClose:false,
 			content:'<div class="setchmod bt-form ptb15 pb70">\
 						<fieldset>\
-							<legend>所有者</legend>\
-							<p><input type="checkbox" id="owner_r" />读取</p>\
-							<p><input type="checkbox" id="owner_w" />写入</p>\
-							<p><input type="checkbox" id="owner_x" />执行</p>\
+							<legend>'+lan.files.file_own+'</legend>\
+							<p><input type="checkbox" id="owner_r" />'+lan.files.file_read+'</p>\
+							<p><input type="checkbox" id="owner_w" />'+lan.files.file_write+'</p>\
+							<p><input type="checkbox" id="owner_x" />'+lan.files.file_exec+'</p>\
 						</fieldset>\
 						<fieldset>\
-							<legend>用户组</legend>\
-							<p><input type="checkbox" id="group_r" />读取</p>\
-							<p><input type="checkbox" id="group_w" />写入</p>\
-							<p><input type="checkbox" id="group_x" />执行</p>\
+							<legend>'+lan.files.file_group+'</legend>\
+							<p><input type="checkbox" id="group_r" />'+lan.files.file_read+'</p>\
+							<p><input type="checkbox" id="group_w" />'+lan.files.file_write+'</p>\
+							<p><input type="checkbox" id="group_x" />'+lan.files.file_exec+'</p>\
 						</fieldset>\
 						<fieldset>\
-							<legend>公共</legend>\
-							<p><input type="checkbox" id="public_r" />读取</p>\
-							<p><input type="checkbox" id="public_w" />写入</p>\
-							<p><input type="checkbox" id="public_x" />执行</p>\
+							<legend>'+lan.files.file_public+'</legend>\
+							<p><input type="checkbox" id="public_r" />'+lan.files.file_read+'</p>\
+							<p><input type="checkbox" id="public_w" />'+lan.files.file_write+'</p>\
+							<p><input type="checkbox" id="public_x" />'+lan.files.file_exec+'</p>\
 						</fieldset>\
-						<div class="setchmodnum"><input class="bt-input-text" type="text" id="access" maxlength="3" value="'+rdata.chmod+'">权限，\
-						<span>所有者\
+						<div class="setchmodnum"><input class="bt-input-text" type="text" id="access" maxlength="3" value="'+rdata.chmod+'">'+lan.files.file_menu_auth+'，\
+						<span>'+lan.files.file_own+'\
 						<select id="chown" class="bt-input-text">\
 							<option value="www" '+(rdata.chown=='www'?'selected="selected"':'')+'>www</option>\
 							<option value="mysql" '+(rdata.chown=='mysql'?'selected="selected"':'')+'>mysql</option>\
 							<option value="root" '+(rdata.chown=='root'?'selected="selected"':'')+'>root</option>\
 						</select></span></div>\
 						<div class="bt-form-submit-btn">\
-							<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">取消</button>\
-					        <button type="button" class="btn btn-success btn-sm btn-title" onclick="'+toExec+'" >确定</button>\
+							<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">'+lan.public.close+'</button>\
+					        <button type="button" class="btn btn-success btn-sm btn-title" onclick="'+toExec+'" >'+lan.public.ok+'</button>\
 				        </div>\
 					</div>'
 		});
@@ -1315,27 +1426,27 @@ function onAccess(){
 function RClick(type,path,name){
 	var displayZip = isZip(type);
 	var options = {items:[
-	  {text: '复制', 	onclick: function() {CopyFile(path)}},
-	  {text: '剪切', 	onclick: function() {CutFile(path)}},
-	  {text: '重命名', 	onclick: function() {ReName(0,name)}},
-	  {text: '权限', 	onclick: function() {SetChmod(0,path)}},
-	  {text: '压缩', onclick: function() {Zip(path)}}
+	  {text: lan.files.file_menu_copy, 	onclick: function() {CopyFile(path)}},
+	  {text: lan.files.file_menu_mv, 	onclick: function() {CutFile(path)}},
+	  {text: lan.files.file_menu_rename, 	onclick: function() {ReName(0,name)}},
+	  {text: lan.files.file_menu_auth, 	onclick: function() {SetChmod(0,path)}},
+	  {text: lan.files.file_menu_zip, onclick: function() {Zip(path)}}
 	  
 	]};
 	if(type == "dir"){
-		options.items.push({text: '删除', onclick: function() {DeleteDir(path)}});
+		options.items.push({text: lan.files.file_menu_del, onclick: function() {DeleteDir(path)}});
 	}
 	else if(isText(type)){
-		options.items.push({text: '编辑', onclick: function() {OnlineEditFile(0,path)}},{text: '下载', onclick: function() {GetFileBytes(path)}},{text: '删除', onclick: function() {DeleteFile(path)}});
+		options.items.push({text: lan.files.file_menu_edit, onclick: function() {OnlineEditFile(0,path)}},{text: lan.files.file_menu_down, onclick: function() {GetFileBytes(path)}},{text: lan.files.file_menu_del, onclick: function() {DeleteFile(path)}});
 	}
 	else if(displayZip != -1){
-		options.items.push({text: '解压', onclick: function() {UnZip(path,displayZip)}},{text: '下载', onclick: function() {GetFileBytes(path)}},{text: '删除', onclick: function() {DeleteFile(path)}});
+		options.items.push({text: lan.files.file_menu_unzip, onclick: function() {UnZip(path,displayZip)}},{text: lan.files.file_menu_down, onclick: function() {GetFileBytes(path)}},{text: lan.files.file_menu_del, onclick: function() {DeleteFile(path)}});
 	}
 	else if(isImage(type)){
-		options.items.push({text: '预览', onclick: function() {GetImage(path)}},{text: '下载', onclick: function() {GetFileBytes(path)}},{text: '删除', onclick: function() {DeleteFile(path)}});
+		options.items.push({text: lan.files.file_menu_img, onclick: function() {GetImage(path)}},{text: lan.files.file_menu_down, onclick: function() {GetFileBytes(path)}},{text: lan.files.file_menu_del, onclick: function() {DeleteFile(path)}});
 	}
 	else{
-		options.items.push({text: '下载', onclick: function() {GetFileBytes(path)}},{text: '删除', onclick: function() {DeleteFile(path)}});
+		options.items.push({text: lan.files.file_menu_down, onclick: function() {GetFileBytes(path)}},{text: lan.files.file_menu_del, onclick: function() {DeleteFile(path)}});
 	}
 	return options;
 }
@@ -1378,13 +1489,13 @@ function PathPlaceBtn(path){
 	var title = '';
 	var	Dpath = path;
 	if(path == '/'){
-		html ='<li><a title="/">根目录</a></li>';
+		html ='<li><a title="/">'+lan.files.path_root+'</a></li>';
 	}
 	else{
 		Dpath = path.split("/");
 		for(var i = 0; i<Dpath.length; i++ ){
 			title += Dpath[i]+'/';
-			Dpath[0] = '根目录';
+			Dpath[0] = lan.files.path_root;
 			html +='<li><a title="'+title+'">'+Dpath[i]+'</a></li>';
 		}
 	}

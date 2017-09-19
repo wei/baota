@@ -1,7 +1,7 @@
 var num = 0;
 //查看任务日志
 function GetLogs(id){
-	layer.msg('正在获取...',{icon:16,time:0,shade: [0.3, '#000']});
+	layer.msg(lan.public.the_get,{icon:16,time:0,shade: [0.3, '#000']});
 	var data='&id='+id
 	$.post('/crontab?action=GetLogs',data,function(rdata){
 		layer.closeAll();
@@ -11,15 +11,15 @@ function GetLogs(id){
 		};
 		layer.open({
 			type:1,
-			title:'任务执行日志',
+			title:lan.crontab.task_log_title,
 			area: ['60%','500px'], 
 			shadeClose:false,
 			closeBtn:2,
 			content:'<div class="setchmod bt-form pd20 pb70">'
 					+'<pre style="overflow: auto; border: 0px none; padding: 15px; margin: 0px; height: 410px; background-color: rgb(255, 255, 255);">'+rdata.msg+'</pre>'
 					+'<div class="bt-form-submit-btn" style="margin-top: 0px;">'
-					+'<button type="button" class="btn btn-success btn-sm" onclick="CloseLogs('+id+')">清空</button>'
-					+'<button type="button" class="btn btn-danger btn-sm" onclick="layer.closeAll()">关闭</button>'
+					+'<button type="button" class="btn btn-success btn-sm" onclick="CloseLogs('+id+')">'+lan.public.empty+'</button>'
+					+'<button type="button" class="btn btn-danger btn-sm" onclick="layer.closeAll()">'+lan.public.close+'</button>'
 				    +'</div>'
 					+'</div>'
 		});
@@ -27,12 +27,12 @@ function GetLogs(id){
 }
 
 function getCronData(){
-	var laid=layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
+	var laid=layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/crontab?action=GetCrontab',"",function(rdata){
 		layer.close(laid);
 		var cbody="";
 		if(rdata == ""){
-			cbody="<tr><td colspan='5'>当前没有计划任务</td></tr>"
+			cbody="<tr><td colspan='6'>"+lan.crontab.task_empty+"</td></tr>"
 		}
 		else{
 			for(var i=0;i<rdata.length;i++){
@@ -43,10 +43,10 @@ function getCronData(){
 							<td>"+rdata[i].cycle+"</td>\
 							<td>"+rdata[i].addtime+"</td>\
 							<td>\
-								<a href=\"javascript:StartTask("+rdata[i].id+");\" class='btlink'>执行</a> | \
-								<a href=\"javascript:OnlineEditFile(0,'/www/server/cron/"+rdata[i].echo+"');\" class='btlink'>脚本</a> | \
-								<a href=\"javascript:GetLogs("+rdata[i].id+");\" class='btlink'>日志</a> | \
-								<a href=\"javascript:planDel("+rdata[i].id+" ,'"+rdata[i].name.replace('\\','\\\\')+"');\" class='btlink'>删除</a>\
+								<a href=\"javascript:StartTask("+rdata[i].id+");\" class='btlink'>"+lan.public.exec+"</a> | \
+								<a href=\"javascript:OnlineEditFile(0,'/www/server/cron/"+rdata[i].echo+"');\" class='btlink'>"+lan.public.script+"</a> | \
+								<a href=\"javascript:GetLogs("+rdata[i].id+");\" class='btlink'>"+lan.public.log+"</a> | \
+								<a href=\"javascript:planDel("+rdata[i].id+" ,'"+rdata[i].name.replace('\\','\\\\')+"');\" class='btlink'>"+lan.public.del+"</a>\
 							</td>\
 						</tr>"
 			}
@@ -57,7 +57,7 @@ function getCronData(){
 
 //执行任务脚本
 function StartTask(id){
-	layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
+	layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
 	var data='id='+id;
 	$.post('/crontab?action=StartTask',data,function(rdata){
 		layer.closeAll();
@@ -68,7 +68,7 @@ function StartTask(id){
 
 //清空日志
 function CloseLogs(id){
-	layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
+	layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
 	var data='id='+id;
 	$.post('/crontab?action=DelLogs',data,function(rdata){
 		layer.closeAll();
@@ -79,8 +79,8 @@ function CloseLogs(id){
 
 //删除
 function planDel(id,name){
-	SafeMessage("删除["+name+"]","您确定要该任务吗?",function(){
-			layer.msg('正在处理...',{icon:16,time:0,shade: [0.3, '#000']});
+	SafeMessage(lan.get('del',[name]),lan.crontab.del_task,function(){
+			layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
 			var data='id='+id;
 			$.post('/crontab?action=DelCrontab',data,function(rdata){
 				layer.closeAll();
@@ -102,7 +102,7 @@ function allDeleteCron(){
 		tmp.id = checkList[i].value;
 		dataList.push(tmp);
 	}
-	SafeMessage("批量删除任务","<a style='color:red;'>您共选择了["+dataList.length+"]个任务,删除后将无法恢复,真的要删除吗?</a>",function(){
+	SafeMessage(lan.crontab.del_task_all_title,"<a style='color:red;'>"+lan.get('del_all_task',[dataList.length])+"</a>",function(){
 		layer.closeAll();
 		syncDeleteCron(dataList,0,'');
 	});
@@ -111,10 +111,10 @@ function allDeleteCron(){
 //模拟同步开始批量删除数据库
 function syncDeleteCron(dataList,successCount,errorMsg){
 	if(dataList.length < 1) {
-		layer.msg("成功删除["+successCount+"]个任务!",{icon:1});
+		layer.msg(lan.get('del_all_task_ok',[successCount]),{icon:1});
 		return;
 	}
-	var loadT = layer.msg('正在删除['+dataList[0].name+'],请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.get('del_all_task_the',[dataList[0].name]),{icon:16,time:0,shade: [0.3, '#000']});
 	$.ajax({
 			type:'POST',
 			url:'/crontab?action=DelCrontab',
@@ -127,7 +127,7 @@ function syncDeleteCron(dataList,successCount,errorMsg){
 					$("input[title='"+dataList[0].name+"']").parents("tr").remove();
 				}else{
 					if(!errorMsg){
-						errorMsg = '<br><p>以下任务删除失败:</p>';
+						errorMsg = '<br><p>'+lan.crontab.del_task_err+'</p>';
 					}
 					errorMsg += '<li>'+dataList[0].name+' -> '+frdata.msg+'</li>'
 				}
@@ -155,7 +155,7 @@ function planAdd(){
 	var name = $(".planname input[name='name']").val();
 	if(name == ''){
 		$(".planname input[name='name']").focus();
-		layer.msg('任务名称不能为空!',{icon:2});
+		layer.msg(lan.crontab.add_task_empty,{icon:2});
 		return;
 	}
 	$("#set-Config input[name='name']").val(name);
@@ -184,7 +184,7 @@ function planAdd(){
 	
 	if(where1 > is1 || where1 < is2){
 		$("#ptime input[name='where1']").focus();
-		layer.msg('表单不合法,请重新输入!',{icon:2});
+		layer.msg(lan.public.input_err,{icon:2});
 		return;
 	}
 	
@@ -193,14 +193,14 @@ function planAdd(){
 	var hour = $("#ptime input[name='hour']").val();
 	if(hour > 23 || hour < 0){
 		$("#ptime input[name='hour']").focus();
-		layer.msg('小时值不合法!',{icon:2});
+		layer.msg(lan.crontab.input_hour_err,{icon:2});
 		return;
 	}
 	$("#set-Config input[name='hour']").val(hour);
 	var minute = $("#ptime input[name='minute']").val();
 	if(minute > 59 || minute < 0){
 		$("#ptime input[name='minute']").focus();
-		layer.msg('分钟值不合法!',{icon:2});
+		layer.msg(lan.crontab.input_minute_err,{icon:2});
 		return;
 	}
 	$("#set-Config input[name='minute']").val(minute);
@@ -208,7 +208,7 @@ function planAdd(){
 	var save = $("#save").val();
 	
 	if(save < 0){
-		layer.msg('不能有负数!',{icon:2});
+		layer.msg(lan.crontab.input_number_err,{icon:2});
 		return;
 	}
 	
@@ -221,13 +221,13 @@ function planAdd(){
 	
 	if(sType == 'toFile'){
 		if($("#viewfile").val() == ''){
-			layer.msg('请选择脚本文件!',{icon:2});
+			layer.msg(lan.crontab.input_file_err,{icon:2});
 			return;
 		}
 	}else{
 		if(sBody == ''){
 			$("#implement textarea[name='sBody']").focus();
-			layer.msg('脚本代码不能为空!',{icon:2});
+			layer.msg(lan.crontab.input_script_err,{icon:2});
 			return;
 		}
 	}
@@ -235,7 +235,7 @@ function planAdd(){
 	var urladdress = $("#urladdress").val();
 	if(sType == 'toUrl'){
 		if(!IsURL(urladdress)){
-			layer.msg('URL地址不正确!',{icon:2});
+			layer.msg(lan.crontab.input_url_err,{icon:2});
 			$("implement textarea[name='urladdress']").focus();
 			return;
 		}
@@ -261,7 +261,7 @@ function planAdd(){
 			dataList.push(tmp);
 		}
 		if(dataList.length < 1){
-			layer.msg('对象列表为空,无法继续!',{icon:5});
+			layer.msg(lan.crontab.input_empty_err,{icon:5});
 			return;
 		}
 		
@@ -270,7 +270,7 @@ function planAdd(){
 	}
 	
 	$("#set-Config input[name='sName']").val(sName);
-	layer.msg('正在添加...',{icon:16,time:0,shade: [0.3, '#000']});
+	layer.msg(lan.public.the_add,{icon:16,time:0,shade: [0.3, '#000']});
 	var data= $("#set-Config").serialize() + '&sBody='+sBody + '&urladdress=' + urladdress;
 	$.post('/crontab?action=AddCrontab',data,function(rdata){
 		layer.closeAll();
@@ -282,18 +282,20 @@ function planAdd(){
 //批量添加任务
 function allAddCrontab(dataList,successCount,errorMsg){
 	if(dataList.length < 1) {
-		layer.msg("成功添加["+successCount+"]个计划任务!",{icon:1});
+		layer.msg(lan.get('add_all_task_ok',[successCount]),{icon:1});
 		return;
 	}
-	var loadT = layer.msg('正在添加['+dataList[0]+'],请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+	var loadT = layer.msg(lan.get('add',[dataList[0]]),{icon:16,time:0,shade: [0.3, '#000']});
 	var sType = $(".planjs").find("b").attr("val");
 	var minute = parseInt($("#set-Config input[name='minute']").val());
 	var hour = parseInt($("#set-Config input[name='hour']").val());
-	var sTitle = (sType == 'site')?'备份网站':'备份数据库';
-	minute += 10;
-	if(hour != '' && minute > 60){
+	var sTitle = (sType == 'site')?lan.crontab.backup_site:lan.crontab.backup_database;
+	if(sType == 'logs') sTitle = lan.crontab.backup_log;
+	minute += 5;
+	if(hour !== '' && minute > 59){
+		if(hour >= 23) hour = 0;
 		$("#set-Config input[name='hour']").val(hour+1);
-		minute = 10;
+		minute = 5;
 	}
 	$("#set-Config input[name='minute']").val(minute);
 	$("#set-Config input[name='name']").val(sTitle + '['+dataList[0]+']');
@@ -311,7 +313,7 @@ function allAddCrontab(dataList,successCount,errorMsg){
 					getCronData();
 				}else{
 					if(!errorMsg){
-						errorMsg = '<br><p>以下对象添加任务失败:</p>';
+						errorMsg = '<br><p>'+lan.crontab.backup_all_err+'</p>';
 					}
 					errorMsg += '<li>'+dataList[0]+' -> '+frdata.msg+'</li>'
 				}
@@ -334,7 +336,7 @@ $(".dropdown ul li a").click(function(){
 			break;
 		case 'day-n':
 			closeOpt();
-			toWhere1('天');
+			toWhere1(lan.crontab.day);
 			toHour();
 			toMinute();
 			break;
@@ -344,12 +346,12 @@ $(".dropdown ul li a").click(function(){
 			break;
 		case 'hour-n':
 			closeOpt();
-			toWhere1('小时');
+			toWhere1(lan.crontab.hour);
 			toMinute();
 			break;
 		case 'minute-n':
 			closeOpt();
-			toWhere1('分钟');
+			toWhere1(lan.crontab.minute);
 			break;
 		case 'week':
 			closeOpt();
@@ -359,7 +361,7 @@ $(".dropdown ul li a").click(function(){
 			break;
 		case 'month':
 			closeOpt();
-			toWhere1('日');
+			toWhere1(lan.crontab.sun);
 			toHour();
 			toMinute();
 			break;
@@ -368,27 +370,27 @@ $(".dropdown ul li a").click(function(){
 			break;
 		case 'toShell':
 			toShell();
-			$(".controls").html('脚本内容');
+			$(".controls").html(lan.crontab.sbody);
 			break;
 		case 'rememory':
 			rememory();
-			$(".controls").html('提示');
+			$(".controls").html(lan.public.msg);
 			break;
 		case 'site':
 			toBackup('sites');
-			$(".controls").html('备份站点');
+			$(".controls").html(lan.crontab.backup_site);
 			break;
 		case 'database':
 			toBackup('databases');
-			$(".controls").html('备份数据库');
+			$(".controls").html(lan.crontab.backup_database);
 			break;
 		case 'logs':
 			toBackup('logs');
-			$(".controls").html('切割网址');
+			$(".controls").html(lan.crontab.log_site);
 			break;
 		case 'toUrl':
 			toUrl();
-			$(".controls").html('URL地址');
+			$(".controls").html(lan.crontab.url_address);
 			break;
 	}
 })
@@ -399,15 +401,15 @@ function toBackup(type){
 	var sMsg = "";
 	switch(type){
 		case 'sites':
-			sMsg = '备份网站';
+			sMsg = lan.crontab.backup_site;
 			sType = "sites";
 			break;
 		case 'databases':
-			sMsg = '备份数据库';
+			sMsg = lan.crontab.backup_database;
 			sType = "databases";
 			break;
 		case 'logs':
-			sMsg = '切割日志';
+			sMsg = lan.crontab.backup_log;
 			sType = "sites";
 			break;
 	}
@@ -416,7 +418,7 @@ function toBackup(type){
 		$(".planname input[name='name']").attr('readonly','true').css({"background-color":"#f6f6f6","color":"#666"});
 		var sOpt = "";
 		if(rdata.data.length == 0){
-			layer.msg('列表为空!',{icon:2})
+			layer.msg(lan.public.list_empty,{icon:2})
 			return
 		}
 		for(var i=0;i<rdata.data.length;i++){
@@ -438,23 +440,23 @@ function toBackup(type){
 						<b id="sName" val="'+rdata.data[0].name+'">'+rdata.data[0].name+'['+rdata.data[0].ps+']</b> <span class="caret"></span>\
 					  </button>\
 					  <ul class="dropdown-menu" role="menu" aria-labelledby="backdata">\
-					  	<li><a role="menuitem" tabindex="-1" href="javascript:;" value="backupAll">所有</a></li>\
+					  	<li><a role="menuitem" tabindex="-1" href="javascript:;" value="backupAll">'+lan.public.all+'</a></li>\
 					  	'+sOpt+'\
 					  </ul>\
 					</div>\
-					<div class="textname pull-left mr20">备份到</div>\
+					<div class="textname pull-left mr20">'+lan.crontab.backup_to+'</div>\
 					<div class="dropdown planBackupTo pull-left mr20">\
 					  <button class="btn btn-default dropdown-toggle" type="button" id="excode" data-toggle="dropdown" style="width:auto;">\
-						<b val="localhost">服务器磁盘</b> <span class="caret"></span>\
+						<b val="localhost">'+lan.crontab.disk+'</b> <span class="caret"></span>\
 					  </button>\
 					  <ul class="dropdown-menu" role="menu" aria-labelledby="excode">\
-						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="localhost">服务器磁盘</a></li>\
+						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="localhost">'+lan.crontab.disk+'</a></li>\
 						'+ orderOpt +'\
 					  </ul>\
 					</div>\
-					<div class="textname pull-left mr20">保留最新</div><div class="plan_hms pull-left mr20 bt-input-text">\
+					<div class="textname pull-left mr20">'+lan.crontab.save_new+'</div><div class="plan_hms pull-left mr20 bt-input-text">\
 					<span><input type="number" name="save" id="save" value="3" maxlength="4" max="100" min="1"></span>\
-					<span class="name">份</span>\
+					<span class="name">'+lan.crontab.save_num+'</span>\
 					</div>';
 		$("#implement").html(sBody);
 		getselectname();
@@ -483,16 +485,16 @@ function closeOpt(){
 function toWeek(){
 	var mBody = '<div class="dropdown planweek pull-left mr20">\
 					  <button class="btn btn-default dropdown-toggle" type="button" id="excode" data-toggle="dropdown">\
-						<b val="1">周一</b> <span class="caret"></span>\
+						<b val="1">'+lan.crontab.TZZ1+'</b> <span class="caret"></span>\
 					  </button>\
 					  <ul class="dropdown-menu" role="menu" aria-labelledby="excode">\
-						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="1">周一</a></li>\
-						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="2">周二</a></li>\
-						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="3">周三</a></li>\
-						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="4">周四</a></li>\
-						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="5">周五</a></li>\
-						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="6">周六</a></li>\
-						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="0">周日</a></li>\
+						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="1">'+lan.crontab.TZZ1+'</a></li>\
+						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="2">'+lan.crontab.TZZ2+'</a></li>\
+						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="3">'+lan.crontab.TZZ3+'</a></li>\
+						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="4">'+lan.crontab.TZZ4+'</a></li>\
+						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="5">'+lan.crontab.TZZ5+'</a></li>\
+						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="6">'+lan.crontab.TZZ6+'</a></li>\
+						<li><a role="menuitem" tabindex="-1" href="javascript:;" value="0">'+lan.crontab.TZZ7+'</a></li>\
 					  </ul>\
 					</div>';
 	$("#ptime").html(mBody);
@@ -510,7 +512,7 @@ function toWhere1(ix){
 function toHour(){
 	var mBody = '<div class="plan_hms pull-left mr20 bt-input-text">\
 					<span><input type="number" name="hour" value="1" maxlength="2" max="23" min="0"></span>\
-					<span class="name">时</span>\
+					<span class="name">'+lan.crontab.hour+'</span>\
 					</div>';
 	$("#ptime").append(mBody);
 }
@@ -519,7 +521,7 @@ function toHour(){
 function toMinute(){
 	var mBody = '<div class="plan_hms pull-left mr20 bt-input-text">\
 					<span><input type="number" name="minute" value="30" maxlength="2" max="59" min="0"></span>\
-					<span class="name">分</span>\
+					<span class="name">'+lan.crontab.minute+'</span>\
 					</div>';
 	$("#ptime").append(mBody);
 	
@@ -528,7 +530,7 @@ function toMinute(){
 //从文件
 function toFile(){
 	var tBody = '<input type="text" value="" name="file" id="viewfile" onclick="fileupload()" readonly="true">\
-				<button class="btn btn-default" onclick="fileupload()">上传</button>';
+				<button class="btn btn-default" onclick="fileupload()">'+lan.public.upload+'</button>';
 	$("#implement").html(tBody);
 	$(".planname input[name='name']").removeAttr('readonly style').val("");
 }
@@ -542,7 +544,7 @@ function toShell(){
 
 //从脚本
 function toUrl(){
-	var tBody = "<input type='text' style='width:400px; height:34px' class='bt-input-text' name='urladdress' id='urladdress' placeholder='URL地址' value='http://' />";
+	var tBody = "<input type='text' style='width:400px; height:34px' class='bt-input-text' name='urladdress' id='urladdress' placeholder='"+lan.crontab.url_address+"' value='http://' />";
 	$("#implement").html(tBody);
 	$(".planname input[name='name']").removeAttr('readonly style').val("");
 }
@@ -550,8 +552,8 @@ function toUrl(){
 //释放内存
 function rememory(){
 	$(".planname input[name='name']").removeAttr('readonly style').val("");
-	$(".planname input[name='name']").val('释放内存');
-	$("#implement").html('释放PHP、MYSQL、PURE-FTPD、APACHE、NGINX的内存占用,建议在每天半夜执行!');
+	$(".planname input[name='name']").val(lan.crontab.mem);
+	$("#implement").html(lan.crontab.mem_ps);
 	return;
 }
 //上传

@@ -6,8 +6,7 @@
 # +-------------------------------------------------------------------
 # | Author: 黄文良 <2879625666@qq.com>
 # +-------------------------------------------------------------------
-import math
-import string
+import math,string,public
 
 class Page():
     #--------------------------
@@ -22,8 +21,8 @@ class Page():
     __FO            =   '从'
     __LINE          =   '条'
     __LIST_NUM      =  4
-    SHIFT           =  None           #偏移量
-    ROW             =  None           #每页行数
+    SHIFT         =  None           #偏移量
+    ROW           =  None           #每页行数
     __C_PAGE        =  None           #当前页
     __COUNT_PAGE    =  None           #总页数
     __COUNT_ROW     =  None           #总行数
@@ -32,6 +31,17 @@ class Page():
     __START_NUM     =  None           #起始行
     __END_NUM       =  None           #结束行
     
+    def __init__(self):
+        tmp = public.getMsg('PAGE');
+        if tmp:
+            self.__PREV         = tmp['PREV'];
+            self.__NEXT         = tmp['NEXT'];
+            self.__START        = tmp['START'];
+            self.__END          = tmp['END'];
+            self.__COUNT_START  = tmp['COUNT_START'];
+            self.__COUNT_END    = tmp['COUNT_END'];
+            self.__FO           = tmp['FO'];
+            self.__LINE         = tmp['LINE'];
     
     def GetPage(self,pageInfo,limit = '1,2,3,4,5,6,7,8'):
         # 取分页信息
