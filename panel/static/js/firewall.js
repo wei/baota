@@ -137,7 +137,6 @@ function ping(status){
  */
 function SetMstscStatus(){
 	status = $("#sshswitch").prop("checked")==true?1:0;
-	
 	var msg = status==1?lan.firewall.ssh_off_msg:lan.firewall.ssh_on_msg;
 	layer.confirm(msg,{title:lan.public.warning,closeBtn:2,cancel:function(){
 		if(status == 0){

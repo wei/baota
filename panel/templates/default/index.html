@@ -6,7 +6,7 @@ $def with (data)
 					<a class="plr10 c4" href="/">$data['lan']['H1']</a>/<span class="plr10 c4">$data['lan']['H2']</span>
 				</div>
 				<span class="pull-right f12 c6" style="line-height:42px; margin-right:15px">
-					$data['lan']['V1'] <span id="btversion" class="mr5" onclick="openLog()">$web.ctx.session.version</span>
+					免费版 <span id="btversion" class="mr5" onclick="openLog()">$web.ctx.session.version</span>
 					<span id="toUpdate"><a class="btlink" href="javascript:checkUpdate();">$data['lan']['V3']</a></span>
 				</span>
 			</div>
@@ -22,7 +22,7 @@ $def with (data)
 				</div>
 				<div class="system-info-con mtb15">
 				<ul class="clearfix">
-					<li class="sys-i-c-box col-xs-12 col-sm-4 col-md-4 col-lg-3 plr15">
+					<li class="sys-i-c-box col-xs-6 col-sm-4 col-md-4 col-lg-3 plr15">
 						<div class="siteinfo-box b-shadown">
 							<h3 class="f14">$data['lan']['N1']</h3>
 							<div class="siteinfo-box-right">
@@ -33,7 +33,7 @@ $def with (data)
 							</div>
 						</div>
 					</li>
-					<li class="sys-i-c-box col-xs-12 col-sm-4 col-md-4 col-lg-3 plr15">
+					<li class="sys-i-c-box col-xs-6 col-sm-4 col-md-4 col-lg-3 plr15">
 						<div class="siteinfo-box b-shadown">
 							<h3 class="f14">$data['lan']['N3']</h3>
 							<div class="siteinfo-box-right">
@@ -44,7 +44,7 @@ $def with (data)
 							</div>
 						</div>
 					</li>
-					<li class="sys-i-c-box col-xs-12 col-sm-4 col-md-4 col-lg-3 plr15">
+					<li class="sys-i-c-box col-xs-6 col-sm-4 col-md-4 col-lg-3 plr15">
 						<div class="siteinfo-box b-shadown">
 							<h3 class="f14">$data['lan']['N2']</h3>
 							<div class="siteinfo-box-right">
@@ -55,6 +55,22 @@ $def with (data)
 							</div>
 						</div>
 					</li>
+                  <li class="sys-i-c-box col-xs-6 col-sm-4 col-md-4 col-lg-3 plr15">
+                      <div class="siteinfo-box b-shadown btvipbox">
+                        <div class="btvip">
+                          <span class="t2">企业运维版</span>
+                          <p><span class="price">98</span>元/月</p>
+                          <button class="btn btn-success btn-sm" onclick="window.open('https://www.bt.cn/admin/index.html')">购买</button>
+                        </div>
+						<div class="btvip-r">
+							<div class="btvipinfo">
+							  <p>1、一对一运维人员对接</p>
+							  <p>2、提供每月3次运维服务</p>
+							  <p>3、双重安全隔离登录</p>
+							</div>
+						</div>
+                      </div>
+                  </li>
 				</ul>
 			</div>
 			</div>
@@ -66,6 +82,19 @@ $def with (data)
 				</div>
 				<div class="server-circle">
 					<ul class="row" id="systemInfoList">
+						<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2 mtb20 circle-box text-center" id="LoadList">
+							<h3 class="c5 f15">负载状态<a href="https://www.bt.cn/bbs/thread-11402-1-1.html" target="_blank" class="bt-ico-ask" style="cursor: pointer;">?</a></h3>
+							<div class="circle" style="cursor: pointer;">
+								<div class="pie_left">
+									<div class="left"></div>
+								</div>
+								<div class="pie_right">
+									<div class="right"></div>
+								</div>
+								<div class="mask"><span id="Load">0</span>%</div>
+							</div>
+							<h4 id="LoadState" class="c5 f15">获取中:</h4>
+						</li>
 						<li class="col-xs-6 col-sm-3 col-md-3 col-lg-2 mtb20 circle-box text-center">
 							<h3 class="c5 f15">$data['lan']['P1']</h3>
 							<div class="circle">
@@ -93,8 +122,7 @@ $def with (data)
 								<div class="mem-re-con" title="$data['lan']['P3']"></div>
 							</div>
 							<h4 id="memory" class="c5 f15">$data['lan']['S2']</h4>
-						</li> 
-						
+						</li>  
 					</ul>
 				</div>
 			</div>
@@ -127,20 +155,21 @@ $def with (data)
 					</div>
 				</div>
 			</div>
+       
+          </div>
 		</div>
-	</div>
 	</div>
 	<script type="text/javascript">
 		setCookie('serverType','$web.ctx.session.webserver');
 		var serverType = getCookie('serverType');
 	</script>
 	<script type="text/javascript" src="/static/js/echarts.min.js"></script>
-	<script type="text/javascript" src="/static/js/site.js?date=20170920"></script>
-	<script type="text/javascript" src="/static/js/ftp.js?date=20170920"></script>
-	<script type="text/javascript" src="/static/js/data.js?date=20170920"></script>
+	<script type="text/javascript" src="/static/js/site.js?date=20180523"></script>
+	<script type="text/javascript" src="/static/js/ftp.js?date=20180307"></script>
+	<script type="text/javascript" src="/static/js/data.js?date=20180307"></script>
 	<script type="text/javascript" src="/static/js/jquery.dragsort-0.5.2.min.js"></script>
-	<script type="text/javascript" src="/static/js/soft.js?date=20170920"></script>
-	<script type="text/javascript" src="/static/js/index.js?date=20170920"></script>
+	<script type="text/javascript" src="/static/js/soft.js?date=20180523"></script>
+	<script type="text/javascript" src="/static/js/index.js?date=20180523"></script>
 	<script type="text/javascript">
 		setTimeout(function(){
 			GetDiskInfo();

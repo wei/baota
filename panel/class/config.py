@@ -4,7 +4,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2017 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 
 import public,web,re,sys,os
@@ -12,8 +12,10 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 class config:
     
+    def getPanelState(self,get):
+        return os.path.exists('/www/server/panel/data/close.pl');
+    
     def setPassword(self,get):
-        #return public.returnMsg(False,'体验服务器，禁止修改!')
         if get.password1 != get.password2: return public.returnMsg(False,'USER_PASSWORD_CHECK')
         if len(get.password1) < 5: return public.returnMsg(False,'USER_PASSWORD_LEN')
         public.M('users').where("username=?",(web.ctx.session.username,)).setField('password',public.md5(get.password1.strip()))
@@ -21,26 +23,28 @@ class config:
         return public.returnMsg(True,'USER_PASSWORD_SUCCESS')
     
     def setUsername(self,get):
-        #return public.returnMsg(False,'体验服务器，禁止修改!')
         if get.username1 != get.username2: return public.returnMsg(False,'USER_USERNAME_CHECK')
         if len(get.username1) < 3: return public.returnMsg(False,'USER_USERNAME_LEN')
         public.M('users').where("username=?",(web.ctx.session.username,)).setField('username',get.username1.strip())
+        public.WriteLog('TYPE_PANEL','USER_USERNAME_SUCCESS',(web.ctx.session.username,get.username2))
         web.ctx.session.username = get.username1
-        public.WriteLog('TYPE_PANEL','USER_USERNAME_SUCCESS',(get.username1,get.username2))
         return public.returnMsg(True,'USER_USERNAME_SUCCESS')
     
     def setPanel(self,get):
-        #return public.returnMsg(False,'体验服务器，禁止修改!')
         if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK');
         if get.domain:
             reg = "^([\w\-\*]{1,100}\.){1,4}(\w{1,10}|\w{1,10}\.\w{1,10})$";
             if not re.match(reg, get.domain): return public.returnMsg(False,'SITE_ADD_ERR_DOMAIN');
         isReWeb = False
-        oldPort = web.ctx.host.split(':')[1];
+        try:
+            oldPort = web.ctx.host.split(':')[1];
+        except:
+            oldPort = public.readFile('data/port.pl').strip()
         newPort = get.port;
         if oldPort != get.port:
+            get.port = str(int(get.port))
             if self.IsOpen(get.port):
-                return public.returnMsg(False,'PORT_CHECK_EXISTS',(get,port,))
+                return public.returnMsg(False,'PORT_CHECK_EXISTS',(get.port,))
             if int(get.port) >= 65535 or  int(get.port) < 100: return public.returnMsg(False,'PORT_CHECK_RANGE');
             public.writeFile('data/port.pl',get.port)
             import firewalls
@@ -65,16 +69,122 @@ class config:
         public.M('config').where("id=?",('1',)).save('backup_path,sites_path',(get.backup_path,get.sites_path))
         web.ctx.session.config['backup_path'] = get.backup_path
         web.ctx.session.config['sites_path'] = get.sites_path
-        
-        data = {'uri':web.ctx.fullpath,'host':web.ctx.host.split(':')[0]+':'+newPort,'status':True,'isReWeb':isReWeb,'msg':public.getMsg('PANEL_SAVE')}
+        mhost = web.ctx.host.split(':')[0];
+        if get.domain.strip(): mhost = get.domain
+        data = {'uri':web.ctx.fullpath,'host':mhost+':'+newPort,'status':True,'isReWeb':isReWeb,'msg':public.getMsg('PANEL_SAVE')}
         public.WriteLog('TYPE_PANEL','PANEL_SAVE',(newPort,get.domain,get.backup_path,get.sites_path,get.address,get.limitip))
+        self.setService()
+        if isReWeb: os.system("sleep 2 && /etc/init.d/bt restart &")
         return data
+    
+    def setService(self):
+        panel_path = '/www/server/panel';
+        if not os.path.exists(panel_path + '/service/sbin/BT-Panel'): return True;
+        port = public.readFile(panel_path + '/data/port.pl').strip();
+        domain = public.readFile(panel_path + '/domain.conf')
+        if not domain: domain = 'panel.bt.cn'
+        myssl = "";
+        if os.path.exists(panel_path + "/data/ssl.pl") and os.path.exists('ssl/certificate.pem') and os.path.exists('ssl/privateKey.pem'): 
+            port += " ssl http2"
+            myssl = '''
+        ssl_certificate    /www/server/panel/ssl/certificate.pem;
+        ssl_certificate_key    /www/server/panel/ssl/privateKey.pem;
+        ssl_protocols TLSv1.1 TLSv1.2;
+        ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:HIGH:!aNULL:!MD5:!RC4:!DHE;
+        ssl_prefer_server_ciphers on;
+        ssl_session_cache shared:SSL:10m;
+        ssl_session_timeout 10m;
+        error_page 497  https://$host$server_port$request_uri;
+        '''
+        
+        nginx_conf = '''user  root root;
+worker_processes auto;
+pid        /www/server/panel/service/logs/nginx.pid;
+error_log  /www/server/panel/service/logs/error.log crit;
+worker_rlimit_nofile 51200;
+
+events{
+    use epoll;
+    worker_connections 51200;
+    multi_accept on;
+}
+
+http{
+    include mime.types;
+    default_type  application/octet-stream;
+    server_names_hash_bucket_size 128;
+    client_header_buffer_size 32k;
+    large_client_header_buffers 4 32k;
+    client_max_body_size 8192m;
+
+    sendfile   on;
+    tcp_nopush on;
+
+    keepalive_timeout 600;
+    send_timeout 3600;
+    client_header_timeout 300;
+    client_body_timeout 1800;
+    tcp_nodelay on;
+    
+    fastcgi_connect_timeout 3600;
+    fastcgi_send_timeout 3600;
+    fastcgi_read_timeout 3600;
+    fastcgi_buffer_size 64k;
+    fastcgi_buffers 4 64k;
+    fastcgi_busy_buffers_size 128k;
+    fastcgi_temp_file_write_size 256k;
+    fastcgi_intercept_errors on;
+
+    gzip on;
+    gzip_min_length  1k;
+    gzip_buffers     4 16k;
+    gzip_http_version 1.1;
+    gzip_comp_level 2;
+    gzip_types     text/plain application/javascript application/x-javascript text/javascript text/css application/xml;
+    gzip_vary on;
+    gzip_proxied   expired no-cache no-store private auth;
+    gzip_disable   "MSIE [1-6]\.";
+
+    server_tokens off;
+    access_log off;
+
+    server{
+        listen %s;
+        server_name %s;
+        index index.html index.htm;
+        root  /www/server/panel;
+        
+        %s
+
+        location / {
+            include fastcgi_params;
+            fastcgi_param SCRIPT_NAME "";
+            fastcgi_param SCRIPT_FILENAME $fastcgi_script_name;
+            fastcgi_param PATH_INFO $fastcgi_script_name;
+            fastcgi_pass unix:/tmp/BT-Panel.sock;
+        }
+        
+        location /static/ {
+            if (-f $request_filename) {
+                rewrite ^/static/(.*)$  /static/$1 break;
+            }
+            error_log off;
+        }
+
+        access_log  off;
+        error_log /tmp/panelBoot.pl;
+    }
+}
+''' % (port,domain,myssl)
+        public.writeFile(panel_path + '/service/conf/nginx.conf',nginx_conf)
+        public.ExecShell("/www/server/panel/service/sbin/BT-Panel -s reload")
+        return True
     
     def setPathInfo(self,get):
         #设置PATH_INFO
         version = get.version
         type = get.type
-        if web.ctx.session.webserver == 'nginx':
+        if public.get_webserver() == 'nginx':
             path = web.ctx.session.setupPath+'/nginx/conf/enable-php-'+version+'.conf';
             conf = public.readFile(path);
             rep = "\s+#*include\s+pathinfo.conf;";
@@ -113,7 +223,7 @@ class config:
         conf = re.sub(rep,u'\npost_max_size = '+max+'M',conf)
         public.writeFile(path,conf)
         
-        if web.ctx.session.webserver == 'nginx':
+        if public.get_webserver() == 'nginx':
             #设置Nginx
             path = web.ctx.session.setupPath+'/nginx/conf/nginx.conf'
             conf = public.readFile(path)
@@ -159,7 +269,7 @@ class config:
         phpini = re.sub(rep,"max_input_time = "+time+"\n",phpini);
         public.writeFile(file,phpini)
         
-        if web.ctx.session.webserver == 'nginx':
+        if public.get_webserver() == 'nginx':
             #设置Nginx
             path = web.ctx.session.setupPath+'/nginx/conf/nginx.conf';
             conf = public.readFile(path);
@@ -242,7 +352,8 @@ class config:
     
     #同步时间
     def syncDate(self,get):
-        result = public.ExecShell("ntpdate 0.asia.pool.ntp.org");
+        dateStr = public.httpGet(web.ctx.session['home'] + '/api/index/get_date')
+        public.ExecShell('date -s "%s"' % dateStr);
         public.WriteLog("TYPE_PANEL", "DATE_SUCCESS");
         return public.returnMsg(True,"DATE_SUCCESS");
         
@@ -300,8 +411,10 @@ class config:
     
     #关闭面板
     def ClosePanel(self,get):
-        #return public.returnMsg(False,'体验服务器，禁止修改!')
         filename = 'data/close.pl'
+        if os.path.exists(filename):
+            os.remove(filename)
+            return public.returnMsg(True,'开启成功')
         public.writeFile(filename,'True');
         public.ExecShell("chmod 600 " + filename);
         public.ExecShell("chown root.root " + filename);
@@ -356,23 +469,28 @@ class config:
         sslConf = '/www/server/panel/data/ssl.pl';
         if os.path.exists(sslConf):
             os.system('rm -f ' + sslConf);
+            self.setService()
             return public.returnMsg(True,'PANEL_SSL_CLOSE');
         else:
-            os.system('pip install pyOpenSSL');
+            os.system('pip insatll cffi==1.10');
+            os.system('pip install cryptography==2.1');
+            os.system('pip install pyOpenSSL==16.2');
             try:
                 if not self.CreateSSL(): return public.returnMsg(False,'PANEL_SSL_ERR');
                 public.writeFile(sslConf,'True')
             except Exception,ex:
                 return public.returnMsg(False,'PANEL_SSL_ERR');
+            self.setService()
             return public.returnMsg(True,'PANEL_SSL_OPEN');
     #自签证书
     def CreateSSL(self):
+        if os.path.exists('ssl/input.pl'): return True;
         import OpenSSL
         key = OpenSSL.crypto.PKey()
         key.generate_key(OpenSSL.crypto.TYPE_RSA, 2048)
         cert = OpenSSL.crypto.X509()
         cert.set_serial_number(0)
-        cert.get_subject().CN = public.GetLocalIp();
+        cert.get_subject().CN = '120.27.27.98';
         cert.set_issuer(cert.get_subject())
         cert.gmtime_adj_notBefore( 0 )
         cert.gmtime_adj_notAfter(86400 * 3650)
@@ -395,7 +513,7 @@ class config:
     def GetPanelList(self,get):
         try:
             data = public.M('panel').field('id,title,url,username,password,click,addtime').order('click desc').select();
-            if type(data) == str: data[111111];
+            if type(data) == str: data[111];
             return data;
         except:
             sql = '''CREATE TABLE IF NOT EXISTS `panel` (
@@ -453,7 +571,6 @@ class config:
         gets = [
                 {'name':'short_open_tag','type':1,'ps':public.getMsg('PHP_CONF_1')},
                 {'name':'asp_tags','type':1,'ps':public.getMsg('PHP_CONF_2')},
-                {'name':'safe_mode','type':1,'ps':public.getMsg('PHP_CONF_3')},
                 {'name':'max_execution_time','type':2,'ps':public.getMsg('PHP_CONF_4')},
                 {'name':'max_input_time','type':2,'ps':public.getMsg('PHP_CONF_5')},
                 {'name':'memory_limit','type':2,'ps':public.getMsg('PHP_CONF_6')},
@@ -481,7 +598,7 @@ class config:
     
     #提交PHP配置参数
     def SetPHPConf(self,get):
-        gets = ['display_errors','cgi.fix_pathinfo','date.timezone','short_open_tag','asp_tags','safe_mode','max_execution_time','max_input_time','memory_limit','post_max_size','file_uploads','upload_max_filesize','max_file_uploads','default_socket_timeout','error_reporting']
+        gets = ['display_errors','cgi.fix_pathinfo','date.timezone','short_open_tag','asp_tags','max_execution_time','max_input_time','memory_limit','post_max_size','file_uploads','upload_max_filesize','max_file_uploads','default_socket_timeout','error_reporting']
         
         filename = '/www/server/php/' + get.version + '/etc/php.ini';
         phpini = public.readFile(filename);
@@ -493,7 +610,31 @@ class config:
         public.writeFile(filename,phpini);
         os.system('/etc/init.d/php-fpm-' + get.version + ' reload');
         return public.returnMsg(True,'SET_SUCCESS');
-        
+    
+    #获取面板证书
+    def GetPanelSSL(self,get):
+        cert = {}
+        cert['privateKey'] = public.readFile('ssl/privateKey.pem');
+        cert['certPem'] = public.readFile('ssl/certificate.pem');
+        cert['rep'] = os.path.exists('ssl/input.pl');
+        return cert;
+    
+    #保存面板证书
+    def SavePanelSSL(self,get):
+        keyPath = 'ssl/privateKey.pem'
+        certPath = 'ssl/certificate.pem'
+        checkCert = '/tmp/cert.pl'
+        public.writeFile(checkCert,get.certPem)
+        if get.privateKey:
+            public.writeFile(keyPath,get.privateKey);
+        if get.certPem:
+            public.writeFile(certPath,get.certPem);
+        if not public.CheckCert(checkCert): return public.returnMsg(False,'证书错误,请检查!');
+        public.writeFile('ssl/input.pl','True');
+        self.setService()
+        os.system('/etc/init.d/bt restart &');
+        return public.returnMsg(True,'证书已保存!');
+    
         
             
        

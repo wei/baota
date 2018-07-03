@@ -549,7 +549,10 @@ html {
 	background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAQCAYAAAAS7Y8mAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABx0RVh0U29mdHdhcmUAQWRvYmUgRmlyZXdvcmtzIENTNui8sowAAAGPSURBVDiNldQ9ixRBEAbgZ3Zn1fVOuQU/wK9AMDDS1MvuRxj5CwTBP2CiYmYmGBsYGRsaa2qkkSiCgRd4y3ri3XqzbdDV7Lgs7uwLRc90V1dXv29VVymluxiiRoVkNaoYG7wN+9chpTTBBn7jKA5YhYR+JPQEDxYd6rAPeIwDnOgQuMEIz3F8mUMdC9/wqkPAxb1P0Yv/6ziLX/hTy9c6jXPYXSPwBQywF+Mz7GCCSRGMbqK1Ufwbmb4beI9TuNZFqFWoZCH7Mp0XcaX33y3dUDKfmRdD1bM+BYuoWtaEKeIdyqSvg5+RZSWX6Ri3ZUqmRbxjcqnsx3cyF7Utbpmf4YxcapXcWFNcjiSbOk7Yxhu5BocRaGBeoyXYNII32MTJsJ7cvR/D92aN1xFsFA6HYZ/iiiWjTVyVGyrhBz7jXSQxxq3wPahxJ7JuX30sd9IoshviC77KzdSmag+XYm4QNq0tF+0e7sc1SwPs4xFeLPHvt2ibsfwl24rFl/KLV/jdCho2ZC3a+I6HOB9rR38B10ZjDE49T6kAAAAASUVORK5CYII=") no-repeat 0 center;
 	display: inline-block;
 	line-height: 46px;
-	padding-left: 30px
+	padding-left: 30px;
+	white-space: nowrap;
+    max-width: 146px;
+    overflow: hidden;
 }
 
 .btpc-plus {
@@ -974,7 +977,10 @@ html .menu .menu_exit:hover {
 	line-height: 50px;
 	margin-right: 12px
 }
-
+.tablescroll {
+    overflow: auto;
+    border: #ddd 1px solid;
+}
 .divtable .table {
 	border: 1px solid #ddd;
 	color: #666;
@@ -989,7 +995,9 @@ html .menu .menu_exit:hover {
 	font-weight: normal;
 	padding: 8px
 }
-
+.table .btlink{
+	word-break: break-word;
+}
 .table .btlinkbed {
 	color: #666;
 	padding: 1px 5px;
@@ -1008,7 +1016,8 @@ html .menu .menu_exit:hover {
 	display: block;
 	height: 30px;
 	margin-bottom: 10px;
-	margin-top: 15px
+	margin-top: 15px;
+	position:relative;
 }
 
 .page {
@@ -1072,7 +1081,7 @@ html .menu .menu_exit:hover {
 }
 
 .page .Pcount {
-	color: #777
+	color: #777;
 }
 
 .system-info-con {
@@ -1333,7 +1342,7 @@ html .menu .menu_exit:hover {
 
 .soft-man-con p.status {
 	line-height: 40px;
-	margin-bottom: 20px;
+	margin-bottom: 10px;
 	font-size: 14px
 }
 
@@ -3632,6 +3641,11 @@ html .menu .menu_exit:hover {
 	overflow: auto
 }
 
+@media only screen and (max-width:768px) {
+	.sys-i-c-box:nth-of-type(3){
+		margin-top: 20px;
+	}
+}
 @media only screen and (max-width:990px) {
 	.pr8 {
 		padding-right: 0
@@ -3639,6 +3653,11 @@ html .menu .menu_exit:hover {
 	.pl7 {
 		padding-left: 0;
 		margin-top: 15px
+	}
+}
+@media only screen and (max-width:1200px) {
+	.btvipbox{
+		margin-top: 20px;
 	}
 }
 
@@ -3725,4 +3744,384 @@ html .menu .menu_exit:hover {
     margin-right: 10px;
     width: 140px;
     text-align: right;
+}
+.btvipbox{
+	border: #ddd 1px solid;
+}
+.btvip{
+	border-right: #ddd 1px solid;
+	float: left;
+	width: 40%;
+	height: 108px;
+	text-align: center;
+}
+.btvip-r{
+	width: 60%;
+	float: right;
+	overflow: hidden;
+}
+.btvip .t2{
+	font-size: 16px;
+	padding: 10px 0 5px;
+	float: left;
+	width: 100%;
+}
+.btvip p{
+	float: left;
+	width: 100%;
+	margin-bottom: 8px;
+	font-size: 14px;
+}
+.btvip p .price{
+	margin-right: 3px;
+}
+.btvipinfo{
+	width: 200px;
+	float: left;
+	padding:5px 10px;
+	line-height: 32px;
+}
+/*付费插件*/
+.libLogin{
+	width: 340px;
+	margin: 0 auto 20px;
+}
+.libLogin .bt-input-text {
+    width: 300px;
+    height: 34px;
+    line-height: 34px;
+}
+.libLogin .line{
+	margin-bottom: 10px;
+}
+.libLogin .login-button,.shuoming .login-button{
+	width: 300px;
+    height: 36px;
+    background: #20a53a;
+    background: linear-gradient(#20a53a,#189d32);
+    box-shadow: inset 0 1px 2px #30ad42;
+    color: #fff;
+    text-shadow: #00851a 0 -1px 0;
+    border: 1px solid #20a53a;
+    text-align: center;
+    font-size: 16px;
+    color: #fff;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.libLogin .login-button:hover,.shuoming .login-button:hover{background:#10952a;background:linear-gradient(#10952a,#088d22);border:1px solid #10952a}
+.shuoming{
+	line-height: 24px;
+}
+.shuoming .login-button{
+	width: 100px;
+	height: 30px;
+	font-size: 14px;
+	margin: 15px;
+}
+.sm-content{
+	border: #ccc 1px solid;
+    padding: 10px;
+    height: 200px;
+    background-color: #f9f9f9;
+    overflow: auto;
+}
+.libPay .btn-group .btn{
+	width: 80px;
+}
+.libPay .btn-group .btn em{
+	position: absolute;
+    right: -2px;
+    top: -9px;
+    width: 33px;
+    height: 19px;
+    background: #ff7300;
+    border-radius: 2px;
+    font-size: 10px;
+    line-height: 19px;
+    color: #fff;
+    transform: scale(.9, .8);
+    font-style: normal;
+}
+.libPay .price{
+	font-size: 28px;
+	color: #FF6600;
+	margin-right: 3px;
+	line-height: 30px;
+}
+.libPay .sprice{
+	font-size: 14px;
+	display: inline-block;
+	line-height: 30px;
+	margin-right: 3px;
+}
+.wxPay{
+	width: 160px;
+	margin: 10px auto 20px;
+}
+.wxPay .ewm canvas{
+	border: #ccc 1px solid;
+    padding: 6px;
+    width: 160px;
+}
+.wx-pic{
+	width: 160px;
+	height: 36px;
+	background: url(../images/weixin.png) no-repeat top center;
+	margin-bottom: 10px;
+}
+.wx-pay-info{
+	width: 160px;
+    height: 30px;
+    background-color: #00C800;
+    color: #fff;
+    font-size: 14px;
+    line-height: 30px;
+    text-align: center;
+    margin-top: 10px;
+}
+.color-red{
+	color:red;
+}
+.color-green{
+	color:green;
+}
+/*插件付费*/
+.wx-pay-ico{
+	background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAOCAMAAAAR8Wy4AAAAA3NCSVQICAjb4U/gAAAAtFBMVEUAzABM2Ezx/PHB8sEazhqf6p+B5IE61TrU9tRm3mYq0Sqz77P///8Lygvj+ePI88iP549U2lR54nlF10Wm7KY31Dcj0CPS9dL1/fW58Lnr++sx0zHY99jD8sMSzBJc3FxA1kCU6JQfzx+t7a1s32zm+uaj66O377cPyw+q7ar////c99zH88fL9Mu177VG10Yk0CSR55Eczxw81TzX9tdp32k41Ti78Lsy0zLF88UhzyHB88EyB+unAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAFnRFWHRDcmVhdGlvbiBUaW1lADA1LzI5LzE4XO1tXgAAABx0RVh0U29mdHdhcmUAQWRvYmUgRmlyZXdvcmtzIENTNui8sowAAACTSURBVAiZRU8JDsIwDHNXGMcCjHNjMBhnQTAVcQjE/x9G0qHOUtLYal0HJEiiXaQzN4JrU/TAmL2WTgjG8GiyEHxqvj2yEHra0pdYEW7AgwtqTnkBXMF+w35n3aanlWtnEZATpfvq3QRd7jaNV3+jAWI5Gt6Yc0zrb3EqJZjy/Ktd9DdwF7oYZdUuoU0OxpjS7UY/XkQJtfApswsAAAAASUVORK5CYII=") no-repeat;
+	display: inline-block;
+	width: 16px;
+	height: 14px;
+}
+.libPay-item{
+	margin-bottom: 30px;
+}
+.libPay-item .li-tit{
+	margin-bottom: 10px;
+}
+.libPay-item .li-c-item li{
+	font-size: 0;
+	margin-bottom:20px;
+	border: #ddd 1px solid;
+	border-radius: 4px;
+	height: 42px;
+	line-height: 40px;
+	padding: 1px 20px;
+	cursor: pointer;
+	box-sizing: border-box;
+	transition: border-color .1s ease-in,color .1s ease-in;
+}
+.libPay-item .li-c-item li:hover{
+	border: #20a53a 1px solid;
+	color: #20A53A;
+}
+.libPay-item .li-c-item li.active,.libPay-item .li-c-item li.active:hover{
+	border: #20a53a 2px solid;
+	color: #20A53A;
+	padding: 0 19px;
+}
+.libPay-item .li-c-item li .item-name{
+	font-size: 14px;
+	vertical-align: middle;
+}
+.libPay-item .li-c-item li .item-info{
+	font-size: 14px;
+	vertical-align: middle;
+}
+.pay-btn-group{
+	position: relative;
+    display: inline-block;
+    vertical-align: middle;
+}
+.pay-btn-group>.pay-cycle-btn {
+    position: relative;
+    float: left;
+}
+.pay-cycle-btn {
+	font-size: 0;
+	width: 106px;
+	height: 40px;
+	line-height: 38px;
+    display: block;
+    margin-bottom: 0;
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid #ddd;
+    box-sizing: border-box;
+    margin-left: -1px;
+	margin-bottom:-1px;
+    transition: border-color .1s ease-in,color .1s ease-in;
+}
+.pay-cycle-btn span{
+	font-size: 14px;
+    line-height: 25px;
+    vertical-align: middle;
+}
+.pay-btn-group>.pay-cycle-btn:first-child {
+    margin-left: 0;
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+}
+.pay-btn-group>.pay-cycle-btn:nth-of-type(5n+1){
+	margin-left: 0;
+}
+.pay-btn-group>.pay-cycle-btn:last-child {
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+.pay-btn-group .active,.li-c-item .active{
+	background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAMAAADzapwJAAAAA3NCSVQICAjb4U/gAAAAclBMVEX///8fpTofpTogpTogpTogpTrw+fLt+O/i8+be8uLb8d/T7djP7NXR7NbE58u548G34sCr3bWU1KGT05+FzpN+y413yIZ0x4RxxoJwxYFnwnliv3RWu2pUumhMt2FGtVxDs1k6sFE4r1Avq0cjpjwgpTpRW86VAAAAJnRSTlMAEXd3iO7//////////////////////////////////////////0c8mUAAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAWdEVYdENyZWF0aW9uIFRpbWUAMDUvMjkvMThc7W1eAAAAHHRFWHRTb2Z0d2FyZQBBZG9iZSBGaXJld29ya3MgQ1M26LyyjAAAAHhJREFUGJVtzskSgkAMBFB2AUcR2QTcEPr/fxFmmFiW0znk8CrVac9jE1CNYqoAV8JaXTbq8K7/bBVcwRVcwRVcwbRTIDqcWrjaJ3cJ0VrdjDaHh2Sb2/F43XadPuWlTfjkJersLU2+ufNFnSdb0P/5thQv6R2CzQo9Oh+AlBF9bAAAAABJRU5ErkJggg==") no-repeat right bottom;
+}
+.pay-btn-group .pay-cycle-btn:hover{
+	border: 1px solid #20a53a;
+	color: #20a53a;
+	z-index: 2;
+	cursor: pointer;
+}
+.pay-btn-group .active,.pay-btn-group .active:hover{
+	border: 2px solid #20a53a;
+	color: #20a53a;
+	z-index: 2;
+	cursor: pointer;
+}
+.pay-btn-group .active span{
+	line-height: 22px;
+}
+.pay-cycle-btn em {
+    position: absolute;
+    right: -2px;
+    top: -9px;
+    width: 33px;
+    height: 19px;
+    background: #ff7300;
+    border-radius: 2px;
+    font-size: 10px;
+    line-height: 19px;
+    color: #fff;
+    transform: scale(.9, .8);
+    font-style: normal;
+}
+.pay-btn-group .active em{
+	right: -3px;
+    top: -10px;
+}
+.paymethod{
+	margin: 0 auto;
+	width: 160px;
+}
+.lib-price-box{
+	padding-bottom: 5px;
+}
+.price-txt{
+	color:#FF7301
+}
+.sale-price{
+	font-size: 20px;
+	margin-right: 5px;
+}
+.lib-price-name,.price-txt{
+	margin-right: 8px;
+}
+.paymethod .pay-wx{
+	height:175px;
+}
+.paymethod .pay-wx canvas {
+    width: 160px;
+    height: 160px;
+    border: #ddd 1px solid;
+    margin: 6px auto;
+    padding: 5px;
+    border-bottom-color: #00c800;
+}
+/*重置插件付费周期按钮*/
+#PayCycle .btn-group .btn{
+	width: 106px;
+    background-color: #fff;
+    height: 38px;
+	padding:1px;
+	font-size:14px;
+}
+#PayCycle .btn-group .btn:active{
+	box-shadow:0 0 0 #fff;
+	background-color:#fff;
+}
+#PayCycle .btn-group .btn-success{
+	background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAMAAADzapwJAAAAA3NCSVQICAjb4U/gAAAAclBMVEX///8fpTofpTogpTogpTogpTrw+fLt+O/i8+be8uLb8d/T7djP7NXR7NbE58u548G34sCr3bWU1KGT05+FzpN+y413yIZ0x4RxxoJwxYFnwnliv3RWu2pUumhMt2FGtVxDs1k6sFE4r1Avq0cjpjwgpTpRW86VAAAAJnRSTlMAEXd3iO7//////////////////////////////////////////0c8mUAAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAWdEVYdENyZWF0aW9uIFRpbWUAMDUvMjkvMThc7W1eAAAAHHRFWHRTb2Z0d2FyZQBBZG9iZSBGaXJld29ya3MgQ1M26LyyjAAAAHhJREFUGJVtzskSgkAMBFB2AUcR2QTcEPr/fxFmmFiW0znk8CrVac9jE1CNYqoAV8JaXTbq8K7/bBVcwRVcwRVcwbRTIDqcWrjaJ3cJ0VrdjDaHh2Sb2/F43XadPuWlTfjkJersLU2+ufNFnSdb0P/5thQv6R2CzQo9Oh+AlBF9bAAAAABJRU5ErkJggg==") no-repeat right bottom;
+	color:#20a53a;
+	border-color: #20a53a;
+    border-width: 2px;
+    z-index: 1;
+	padding:0px;
+}
+#PayCycle .btn-group .btn:hover{
+	border-color: #20a53a;
+	color:#20a53a;
+}
+#PayCycle .btn-group .btn-success em {
+    right: -3px;
+    top: -10px;
+}
+/*input样式*/
+.bt-label{
+	margin:20px 20px 0 0;
+	display:inline-block;
+	font-weight:normal
+}
+.bt-radio,.bt-checked{
+	display:none
+}
+.bt-radioinput{
+	background-color:#fff;
+	border:1px solid #ccc;
+	border-radius:100%;
+	display:inline-block;
+	height:16px;
+	margin-right:10px;
+	margin-top:-1px;
+	vertical-align:middle;
+	width:16px;
+	line-height:1
+}
+.bt-radio:checked + .bt-radioinput,.bt-checked:checked + .bt-radioinput{
+	border:1px solid #20a53a;
+	background-color: #20A53A;
+}
+.bt-radio:checked + .bt-radioinput:after{
+	background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAKBAMAAAB293L0AAAAA3NCSVQICAjb4U/gAAAAKlBMVEX///////////////////////////////////////////////////////9q+00tAAAADnRSTlMAETNEVWZ3iJmqu93u/wlUiAQAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAWdEVYdENyZWF0aW9uIFRpbWUAMDYvMDIvMTjAxKOiAAAAHHRFWHRTb2Z0d2FyZQBBZG9iZSBGaXJld29ya3MgQ1M26LyyjAAAADpJREFUCJljYACDTAjFcgRC+xpAuFcYGCqAtK0DA4P2BAbmq0A2404G3QSQpPTi62BFjGsTIJpEQQQATscJDpRQCfQAAAAASUVORK5CYII=");
+	background-repeat: no-repeat;	
+	border-radius:100%;
+	content:"";
+	display:inline-block;
+	height:12px;
+	width:12px;
+	margin: 1px;
+}
+.bt-checkbox.bt-radioinput,.bt-radio:checked + .bt-checkbox.bt-radioinput:after{
+	border-radius:0
+}
+.loading{
+	background-image: url("data:image/gif;base64,R0lGODlhJQAlAJECAL3L2AYrTv///wAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQFCgACACwAAAAAJQAlAAACi5SPqcvtDyGYIFpF690i8xUw3qJBwUlSadmcLqYmGQu6KDIeM13beGzYWWy3DlB4IYaMk+Dso2RWkFCfLPcRvFbZxFLUDTt21BW56TyjRep1e20+i+eYMR145W2eefj+6VFmgTQi+ECVY8iGxcg35phGo/iDFwlTyXWphwlm1imGRdcnuqhHeop6UAAAIfkEBQoAAgAsEAACAAQACwAAAgWMj6nLXAAh+QQFCgACACwVAAUACgALAAACFZQvgRi92dyJcVJlLobUdi8x4bIhBQAh+QQFCgACACwXABEADAADAAACBYyPqcsFACH5BAUKAAIALBUAFQAKAAsAAAITlGKZwWoMHYxqtmplxlNT7ixGAQAh+QQFCgACACwQABgABAALAAACBYyPqctcACH5BAUKAAIALAUAFQAKAAsAAAIVlC+BGL3Z3IlxUmUuhtR2LzHhsiEFACH5BAUKAAIALAEAEQAMAAMAAAIFjI+pywUAIfkEBQoAAgAsBQAFAAoACwAAAhOUYJnAagwdjGq2amXGU1PuLEYBACH5BAUKAAIALBAAAgAEAAsAAAIFhI+py1wAIfkEBQoAAgAsFQAFAAoACwAAAhWUL4AIvdnciXFSZS6G1HYvMeGyIQUAIfkEBQoAAgAsFwARAAwAAwAAAgWEj6nLBQAh+QQFCgACACwVABUACgALAAACE5RgmcBqDB2MarZqZcZTU+4sRgEAIfkEBQoAAgAsEAAYAAQACwAAAgWEj6nLXAAh+QQFCgACACwFABUACgALAAACFZQvgAi92dyJcVJlLobUdi8x4bIhBQAh+QQFCgACACwBABEADAADAAACBYSPqcsFADs=");
+	background-repeat:no-repeat;
+	background-position:62px 41px;
+	border: #ddd 1px solid;
+	width: 160px;
+	height: 160px;
+	padding:5px;
+	background-color: #787878;
+	color: #fff;
+	display: inline-block;
+	margin: 6px auto;
+	line-height: 200px;
+	font-size: 14px;
+	text-align:center;
+}
+.cloading{
+	background-image: url("data:image/gif;base64,R0lGODlhJQAlAJECAL3L2AYrTv///wAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQFCgACACwAAAAAJQAlAAACi5SPqcvtDyGYIFpF690i8xUw3qJBwUlSadmcLqYmGQu6KDIeM13beGzYWWy3DlB4IYaMk+Dso2RWkFCfLPcRvFbZxFLUDTt21BW56TyjRep1e20+i+eYMR145W2eefj+6VFmgTQi+ECVY8iGxcg35phGo/iDFwlTyXWphwlm1imGRdcnuqhHeop6UAAAIfkEBQoAAgAsEAACAAQACwAAAgWMj6nLXAAh+QQFCgACACwVAAUACgALAAACFZQvgRi92dyJcVJlLobUdi8x4bIhBQAh+QQFCgACACwXABEADAADAAACBYyPqcsFACH5BAUKAAIALBUAFQAKAAsAAAITlGKZwWoMHYxqtmplxlNT7ixGAQAh+QQFCgACACwQABgABAALAAACBYyPqctcACH5BAUKAAIALAUAFQAKAAsAAAIVlC+BGL3Z3IlxUmUuhtR2LzHhsiEFACH5BAUKAAIALAEAEQAMAAMAAAIFjI+pywUAIfkEBQoAAgAsBQAFAAoACwAAAhOUYJnAagwdjGq2amXGU1PuLEYBACH5BAUKAAIALBAAAgAEAAsAAAIFhI+py1wAIfkEBQoAAgAsFQAFAAoACwAAAhWUL4AIvdnciXFSZS6G1HYvMeGyIQUAIfkEBQoAAgAsFwARAAwAAwAAAgWEj6nLBQAh+QQFCgACACwVABUACgALAAACE5RgmcBqDB2MarZqZcZTU+4sRgEAIfkEBQoAAgAsEAAYAAQACwAAAgWEj6nLXAAh+QQFCgACACwFABUACgALAAACFZQvgAi92dyJcVJlLobUdi8x4bIhBQAh+QQFCgACACwBABEADAADAAACBYSPqcsFADs=");
+	background-repeat: no-repeat;
+	background-position: center 45px;
+	height: 150px;
+	width: 100%;
+	line-height: 210px;
+	text-align: center;
+	font-size: 14px;
 }

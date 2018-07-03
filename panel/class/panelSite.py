@@ -2,15 +2,15 @@
 #-------------------------------------------------------------------
 # 宝塔Linux面板
 #-------------------------------------------------------------------
-# Copyright (c) 2015-2016 宝塔软件(http:#bt.cn) All rights reserved.
+# Copyright (c) 2015-2017 宝塔软件(http:#bt.cn) All rights reserved.
 #-------------------------------------------------------------------
-# Author: 黄文良 <2879625666@qq.com>
+# Author: 黄文良 <287962566@qq.com>
 #-------------------------------------------------------------------
 
 #------------------------------
 # 网站管理类
 #------------------------------
-import io,re,public,os,web,sys
+import io,re,public,os,web,sys,shutil,json
 reload(sys)
 sys.setdefaultencoding('utf-8')
 class panelSite:
@@ -24,14 +24,14 @@ class panelSite:
     def __init__(self):
         self.setupPath = '/www/server';
         path = self.setupPath + '/panel/vhost/nginx'
-        if not os.path.exists(path): public.ExecShell("mkdir -p " + path + " && chmod -R 644 " + path)
+        if not os.path.exists(path): public.ExecShell("mkdir -p " + path + " && chmod -R 644 " + path);
         path = self.setupPath + '/panel/vhost/apache'
-        if not os.path.exists(path): public.ExecShell("mkdir -p " + path + " && chmod -R 644 " + path)
+        if not os.path.exists(path): public.ExecShell("mkdir -p " + path + " && chmod -R 644 " + path);
         path = self.setupPath + '/panel/vhost/rewrite'
-        if not os.path.exists(path): public.ExecShell("mkdir -p " + path + " && chmod -R 644 " + path)
+        if not os.path.exists(path): public.ExecShell("mkdir -p " + path + " && chmod -R 644 " + path);
         path = self.setupPath + '/stop';
         if not os.path.exists(path):
-            os.system('mkdir -p ' + path)
+            os.system('mkdir -p ' + path);
             os.system('wget -O ' + path + '/index.html '+public.get_url()+'/stop.html &');
         self.OldConfigFile();
     
@@ -42,7 +42,7 @@ class panelSite:
         allConf = public.readFile(filename);
         rep = "Listen\s+([0-9]+)\n";
         tmp = re.findall(rep,allConf);
-        
+        if not tmp: return False;
         for key in tmp:
             if key == port: return False
         
@@ -62,7 +62,9 @@ class panelSite:
         except:
             httpdVersion = "";
         if httpdVersion == '2.2':
-            vName = "NameVirtualHost  *:"+self.sitePort+"\n";
+            vName = '';
+            if self.sitePort != '80' and self.sitePort != '443':
+                vName = "NameVirtualHost  *:"+self.sitePort+"\n";
             phpConfig = "";
             apaOpt = "Order allow,deny\n\t\tAllow from all";
         else:
@@ -83,6 +85,12 @@ class panelSite:
     errorDocument 404 /404.html
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
+    
+    #DENY FILES
+     <Files ~ (\.user.ini|\.htaccess|\.git|\.svn|\.project|LICENSE|README.md)$>
+       Order allow,deny
+       Deny from all
+    </Files>
     %s
     #PATH
     <Directory "%s">
@@ -98,7 +106,6 @@ class panelSite:
         filename = self.setupPath+'/panel/vhost/apache/'+self.siteName+'.conf'
         public.writeFile(filename,conf)
         return True
-        pass
     
     #添加到nginx
     def nginxAdd(self):
@@ -127,24 +134,32 @@ class panelSite:
     #REWRITE-END
     
     #禁止访问的文件或目录
-    location ~ /(\.user.ini|\.htaccess|\.git|\.project|LICENSE|README.md)
+    location ~ ^/(\.user.ini|\.htaccess|\.git|\.svn|\.project|LICENSE|README.md)
     {
         return 404;
+    }
+    
+    #一键申请SSL证书验证目录相关设置
+    location ~ \.well-known{
+        allow all;
     }
     
     location ~ .*\\.(gif|jpg|jpeg|png|bmp|swf)$
     {
         expires      30d;
-        access_log off; 
+        error_log off;
+        access_log off;
     }
     
     location ~ .*\\.(js|css)?$
     {
         expires      12h;
+        error_log off;
         access_log off; 
     }
     access_log  %s.log;
-}''' % (self.sitePort,self.siteName,self.sitePath,public.getMsg('NGINX_CONF_MSG1'),public.getMsg('NGINX_CONF_MSG2'),public.getMsg('NGINX_CONF_MSG3'),self.phpVersion,public.getMsg('NGINX_CONF_MSG4'),self.setupPath,self.siteName,web.ctx.session.logsPath+'/'+self.siteName)
+    error_log  %s.error.log;
+}''' % (self.sitePort,self.siteName,self.sitePath,public.getMsg('NGINX_CONF_MSG1'),public.getMsg('NGINX_CONF_MSG2'),public.getMsg('NGINX_CONF_MSG3'),self.phpVersion,public.getMsg('NGINX_CONF_MSG4'),self.setupPath,self.siteName,web.ctx.session.logsPath+'/'+self.siteName,web.ctx.session.logsPath+'/'+self.siteName)
         
         #写配置文件
         filename = self.setupPath+'/panel/vhost/nginx/'+self.siteName+'.conf'
@@ -160,6 +175,10 @@ class panelSite:
      
     #添加站点
     def AddSite(self,get):
+        isError = public.checkWebConfig()
+        if isError != True:
+            return public.returnMsg(False,'ERROR: 检测到配置文件有错误,请先排除后再操作<br><br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
+        
         import json,files
         siteMenu = json.loads(get.webname)
         self.siteName     = self.ToPunycode(siteMenu['domain'].split(':')[0]);
@@ -172,16 +191,16 @@ class panelSite:
         if hasattr(get,'version'):
             self.phpVersion   = get.version.replace(' ','');
         else:
-            self.phpVersion   = '54';
+            self.phpVersion   = '00';
         
-        
+        self.set_mt_conf()
         domain = None
         #if siteMenu['count']:
         #    domain            = get.domain.replace(' ','')
         #表单验证
         if not files.files().CheckDir(self.sitePath): return public.returnMsg(False,'PATH_ERROR');
         if len(self.phpVersion) < 2: return public.returnMsg(False,'SITE_ADD_ERR_PHPEMPTY');
-        reg = "^([\w\-\*]{1,100}\.){1,4}([\w\-]{1,24}|[\w\-]{1,24}\.[\w\-]{1,24})$";
+        reg = "^([\w\-\*]{1,100}\.){1,8}([\w\-]{1,24}|[\w\-]{1,24}\.[\w\-]{1,24})$";
         if not re.match(reg, self.siteName): return public.returnMsg(False,'SITE_ADD_ERR_DOMAIN');
         if self.siteName.find('*') != -1: return public.returnMsg(False,'SITE_ADD_ERR_DOMAIN_TOW');
         
@@ -190,9 +209,13 @@ class panelSite:
         
         #是否重复
         sql = public.M('sites');
-        
         if sql.where("name=?",(self.siteName,)).count(): return public.returnMsg(False,'SITE_ADD_ERR_EXISTS');
-        if public.M('domain').where("name=?",(self.siteName,)).count(): return public.returnMsg(False,'SITE_ADD_ERR_DOMAIN_EXISTS');
+        opid = public.M('domain').where("name=?",(self.siteName,)).getField('pid');
+        
+        if opid:
+            if public.M('sites').where('id=?',(opid,)).count():
+                return public.returnMsg(False,'SITE_ADD_ERR_DOMAIN_EXISTS');
+            public.M('domain').where('pid=?',(opid,)).delete();
         
         #创建根目录
         if not os.path.exists(self.sitePath): 
@@ -201,6 +224,7 @@ class panelSite:
             public.ExecShell('chown -R www:www ' + self.sitePath);
         
         #创建basedir
+        self.DelUserInI(self.sitePath);
         userIni = self.sitePath+'/.user.ini';
         if not os.path.exists(userIni):
             public.writeFile(userIni, 'open_basedir='+self.sitePath+'/:/tmp/:/proc/');
@@ -264,6 +288,7 @@ class panelSite:
         if get.sql == 'true':
             import database
             get.name = get.datauser
+            get.db_user = get.datauser
             get.password = get.datapassword
             get.address = '127.0.0.1'
             get.ps = self.siteName
@@ -311,7 +336,7 @@ class panelSite:
         public.ExecShell("rm -f " + web.ctx.session.logsPath + '/' + siteName + "-*")
         
         #删除备份
-        public.ExecShell("rm -f "+web.ctx.session.config['backup_path']+'/site/'+siteName+'_*')
+        #public.ExecShell("rm -f "+web.ctx.session.config['backup_path']+'/site/'+siteName+'_*')
         
         #删除根目录
         if hasattr(get,'path'):
@@ -366,6 +391,7 @@ class panelSite:
     #中文路径处理
     def ToPunycodePath(self,path):
         path = path.encode('utf-8');
+        if os.path.exists(path): return path;
         import re;
         match = re.search(u"[\x80-\xff]+",path);
         if not match: return path;
@@ -376,6 +402,11 @@ class panelSite:
         
     #添加域名
     def AddDomain(self,get):
+        #检查配置文件
+        isError = public.checkWebConfig()
+        if isError != True:
+            return public.returnMsg(False,'ERROR: 检测到配置文件有错误,请先排除后再操作<br><br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
+        
         if len(get.domain) < 3: return public.returnMsg(False,'SITE_ADD_DOMAIN_ERR_EMPTY');
         domains = get.domain.split(',')
         for domain in domains:
@@ -393,7 +424,11 @@ class panelSite:
             if not public.checkPort(get.port): return public.returnMsg(False,'SITE_ADD_DOMAIN_ERR_POER');
             #检查域名是否存在
             sql = public.M('domain');
-            if sql.where("name=? AND (port=? OR pid=?)",(get.domain,get.port,get.id)).count() > 0: return public.returnMsg(False,'SITE_ADD_DOMAIN_ERR_EXISTS');
+            opid = sql.where("name=? AND (port=? OR pid=?)",(get.domain,get.port,get.id)).getField('pid');
+            if opid:
+                if public.M('sites').where('id=?',(opid,)).count():
+                    return public.returnMsg(False,'SITE_ADD_DOMAIN_ERR_EXISTS');
+                sql.where('pid=?',(opid,)).delete();
             
             #写配置文件
             self.NginxDomain(get)
@@ -401,17 +436,7 @@ class panelSite:
                 self.ApacheDomain(get)
             except:
                 pass;
-            
-            #检查配置文件
-            isError = public.checkWebConfig()
-            
-            if isError != True:
-                try:
-                    import shutil
-                    shutil.copyfile('/tmp/backup.conf',file);
-                    return public.returnMsg(False,'CONF_ERROR: <br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
-                except:
-                    pass
+                        
             
             #添加放行端口
             if get.port != '80':
@@ -445,8 +470,6 @@ class panelSite:
             listen = re.search(rep,conf).group()
             conf = conf.replace(listen,listen + "\n\tlisten "+get.port+';')
         #保存配置文件
-        import shutil
-        shutil.copyfile(file, '/tmp/backup.conf')
         public.writeFile(file,conf)
         return True
     
@@ -481,7 +504,9 @@ class panelSite:
             except:
                 httpdVersion = "";
             if httpdVersion == '2.2':
-                vName = "NameVirtualHost  *:"+port+"\n";
+                vName = '';
+                if self.sitePort != '80' and self.sitePort != '443':
+                    vName = "NameVirtualHost  *:"+port+"\n";
                 phpConfig = "";
                 apaOpt = "Order allow,deny\n\t\tAllow from all";
             else:
@@ -506,6 +531,13 @@ class panelSite:
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
     %s
+    
+    #DENY FILES
+     <Files ~ (\.user.ini|\.htaccess|\.git|\.svn|\.project|LICENSE|README.md)$>
+       Order allow,deny
+       Deny from all
+    </Files>
+    
     #PATH
     <Directory "%s">
         SetOutputFilter DEFLATE
@@ -521,8 +553,6 @@ class panelSite:
         if port != '80' and port != '888': self.apacheAddPort(port)
         
         #保存配置文件
-        import shutil
-        shutil.copyfile(file, '/tmp/backup.conf')
         public.writeFile(file,conf)
         return True
     
@@ -594,7 +624,7 @@ class panelSite:
             spath = get.path + '/.well-known/pki-validation';
             if not os.path.exists(spath): os.system("mkdir -p '" + spath + "'");
             public.writeFile(spath + '/fileauth.txt',epass);
-            result = public.httpGet('http://' + get.domain + '/.well-known/pki-validation/fileauth.txt');
+            result = public.httpGet('http://' + get.domain.replace('*.','') + '/.well-known/pki-validation/fileauth.txt');
             if result == epass: return True
             return False
         except:
@@ -602,33 +632,22 @@ class panelSite:
     
     #保存第三方证书
     def SetSSL(self,get):
-        type = get.type;
+        #type = get.type;
         siteName = get.siteName;
         path =   '/etc/letsencrypt/live/'+ siteName;
         if not os.path.exists(path):
             public.ExecShell('mkdir -p ' + path)
         
         csrpath = path+"/fullchain.pem";                    #生成证书路径  
-        keypath = path+"/privkey.pem";                      #密钥文件路径  
+        keypath = path+"/privkey.pem";                      #密钥文件路径
          
         if(get.key.find('KEY') == -1): return public.returnMsg(False, 'SITE_SSL_ERR_PRIVATE');
         if(get.csr.find('CERTIFICATE') == -1): return public.returnMsg(False, 'SITE_SSL_ERR_CERT');
+        public.writeFile('/tmp/cert.pl',get.csr);
+        if not public.CheckCert('/tmp/cert.pl'): return public.returnMsg(False,'证书错误,请粘贴正确的PEM格式证书!');
         
         public.ExecShell('\\cp -a '+keypath+' /tmp/backup1.conf');
-        public.writeFile(keypath,get.key);
-        
         public.ExecShell('\\cp -a '+csrpath+' /tmp/backup2.conf');
-        public.writeFile(csrpath,get.csr);
-        
-        isError = public.checkWebConfig();
-    
-        if(isError != True):
-            public.ExecShell('\\cp -a /tmp/backup1.conf ' + keypath);
-            public.ExecShell('\\cp -a /tmp/backup2.conf ' + csrpath);
-            return public.returnMsg(False,'ERROR: <br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
-        #写入配置文件
-        self.SetSSLConf(get);
-        public.serviceReload();
         
         #清理旧的证书链
         if os.path.exists(path+'/README'):
@@ -639,7 +658,23 @@ class panelSite:
             public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '.conf');
             public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '-00*.conf');
             public.ExecShell('rm -f ' + path + '/README');
-            
+            public.ExecShell('mkdir -p ' + path);
+        
+        
+        public.writeFile(keypath,get.key);
+        public.writeFile(csrpath,get.csr);
+        
+        #写入配置文件
+        result = self.SetSSLConf(get);
+        if not result['status']: return result;
+        isError = public.checkWebConfig();
+    
+        if(type(isError) == str):
+            public.ExecShell('\\cp -a /tmp/backup1.conf ' + keypath);
+            public.ExecShell('\\cp -a /tmp/backup2.conf ' + csrpath);
+            return public.returnMsg(False,'ERROR: <br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
+        public.serviceReload();
+        
         if os.path.exists(path + '/partnerOrderId'): os.system('rm -f ' + path + '/partnerOrderId');
         public.WriteLog('TYPE_SITE','SITE_SSL_SAVE_SUCCESS');
         return public.returnMsg(True,'SITE_SSL_SUCCESS');
@@ -657,7 +692,6 @@ class panelSite:
     
     #创建Let's Encrypt免费证书
     def CreateLet(self,get):
-        
         #检查是否设置301
         serverTypes = ['nginx','apache'];
         for stype in serverTypes:
@@ -666,7 +700,7 @@ class panelSite:
                 siteConf = public.readFile(file);
                 if siteConf.find('301-START') != -1: return public.returnMsg(False,'SITE_SSL_ERR_301');
         
-        #定义证书存放目录       
+        #定义证书连接目录
         path =   '/etc/letsencrypt/live/'+ get.siteName;
         csrpath = path+"/fullchain.pem";                    #生成证书路径
         keypath = path+"/privkey.pem";                      #密钥文件路径
@@ -675,12 +709,53 @@ class panelSite:
         actionstr = get.updateOf
         siteInfo = public.M('sites').where('name=?',(get.siteName,)).field('id,name,path').find();
         runPath = self.GetRunPath(get);
+        srcPath = siteInfo['path'];
         if runPath != False and runPath != '/': siteInfo['path'] +=  runPath;
         get.path = siteInfo['path'];
-        #domains = public.M('domain').where("pid=?",(siteInfo['id'],)).field('name').select()
+        
         import json
         domains = json.loads(get.domains)
-        execStr = 'echo ' + actionstr + '|' + self.setupPath + "/panel/certbot-auto certonly -n --email 287962566@qq.com --agree-tos --webroot -w "+siteInfo['path'];
+        email = public.M('users').getField('email');
+        if hasattr(get, 'email'):
+            if get.email.strip() != '':
+                public.M('users').setField('email',get.email);
+                email = get.email;
+        
+        #检测acem是否安装
+        acem = '/root/.acme.sh/acme.sh';
+        if not os.path.exists(acem): acem = '/.acme.sh/acme.sh';
+        if not os.path.exists(acem): 
+            try:
+                public.ExecShell("curl -sS "+public.get_url()+"/install/acme_install.sh|bash");
+            except:
+                public.ExecShell("curl -sS http://download.bt.cn/install/acme_install.sh|bash");
+        if not os.path.exists(acem): 
+            return public.returnMsg(False,'尝试自动安装ACME失败,请通过以下命令尝试手动安装<p>安装命令： curl http://download.bt.cn/install/acme_install.sh|bash</p>' + acem)
+        force = False;
+        dns = False
+        dns_plu = False
+        if hasattr(get,'force'): force = True;
+        if hasattr(get,'renew'):
+            execStr = acem + " --renew --yes-I-know-dns-manual-mode-enough-go-ahead-please"
+        else:
+            execStr = acem + " --issue --force"
+            if hasattr(get,'dnsapi'): 
+                if get.dnsapi == 'dns':
+                    execStr += ' --dns --yes-I-know-dns-manual-mode-enough-go-ahead-please'
+                    dns = True
+                else:
+                    execStr += ' --dns ' + get.dnsapi + ' --dnssleep ' + str(get.dnssleep)
+                    if not self.Check_DnsApi(get.dnsapi): return public.returnMsg(False,'请先设置该API');
+                    if get.dnsapi == 'dns_bt':
+                        c_file = '/www/server/panel/plugin/dns/dns_main.py';
+                        if not os.path.exists(c_file): return public.returnMsg(False,'请先安装[云解析]插件');
+                        c_conf = public.readFile(c_file)
+                        if c_conf.find('add_txt') == -1:
+                            os.system('wget -O '+filename+' http://download.bt.cn/install/plugin/dns/dns_main.py -T 5')
+                        sys.path.append('/www/server/panel/plugin/dns')
+                        import dns_main
+                        dns_plu = dns_main.dns_main()
+                
         
         #确定主域名顺序
         domainsTmp = []
@@ -690,48 +765,102 @@ class panelSite:
             domainsTmp.append(domainTmp);
         domains = domainsTmp;
         
+        if not len(domains): return public.returnMsg(False,'请选择域名');
+        home_path = '/www/server/panel/vhost/cert/'+ domains[0]
+        home_cert = home_path + '/fullchain.cer'
+        home_key = home_path + '/' + domains[0] + '.key'
+        
         #构造参数
         domainCount = 0
         errorDomain = "";
+        errorDns = "";
+        done = '';
         for domain in domains:
             if public.checkIp(domain): continue;
-            if domain.find('*') != -1: continue;
             get.domain = domain;
-            if not self.CheckDomainPing(get): errorDomain += '<li>' + domain + '</li>';
+            if public.M('domain').where('name=?',(domain,)).count():
+                p = siteInfo['path'];
+            else:
+                p = public.M('binding').where('domain=?',(domain,)).getField('path');
+            get.path = p;
+            if force:
+                if not self.CheckDomainPing(get): errorDomain += '<li>' + domain + '</li>';
+            if dns_plu:
+                domainId,key = dns_plu.get_domainid_byfull('test.' + domain)
+                if not domainId: errorDns += '<li>' + domain + '</li>';
+            if p != done: 
+                done = p;
+                execStr += ' -w ' + done;
             execStr += ' -d ' + domain
             domainCount += 1
-        
+                
         if errorDomain: return public.returnMsg(False,'SITE_SSL_ERR_DNS',('<span style="color:red;"><br>'+errorDomain+'</span>',));
+        if errorDns: return public.returnMsg(False,'以下域名不在【云解析】插件中:%s' % '<span style="color:red;"><br>'+errorDns+'</span>');
         #获取域名数据
         if domainCount == 0: return public.returnMsg(False,'SITE_SSL_ERR_EMPTY')
         
         #检查是否自定义证书
         partnerOrderId =   path + '/partnerOrderId';
-        if os.path.exists(partnerOrderId): public.ExecShell('rm -rf ' + partnerOrderId);
+        if os.path.exists(partnerOrderId): 
+            public.ExecShell('rm -rf ' + partnerOrderId);
+            
+        public.ExecShell('rm -rf ' + path);
+        public.ExecShell('rm -rf ' + path + '-00*');
+        public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName);
+        public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName + '-00*');
+        public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '.conf');
+        public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '-00*.conf');
         self.CloseSSLConf(get);
+        rmfile = '/.acme.sh/dnsapi/dns.sh'
+        if os.path.exists(rmfile): os.remove(rmfile)
+        rmfile = '/root/.acme.sh/dnsapi/dns.sh'
+        if os.path.exists(rmfile): os.remove(rmfile)
+        result = public.ExecShell('export ACCOUNT_EMAIL=' + email + ' && ' + execStr);
         
-        public.ExecShell('rm -rf ' + path)
-        public.ExecShell('rm -rf ' + path + '-00*')
-        public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName)
-        public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName + '-00*')
-        public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '.conf')
-        public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '-00*.conf')
-        public.ExecShell('rm -f ' + path + '/README');
-        if os.path.exists(path + '/partnerOrderId'): os.system('rm -f ' + path + '/partnerOrderId');
+        if not os.path.exists(home_cert):
+            home_path = '/.acme.sh/'+ domains[0]
+            home_cert = home_path + '/fullchain.cer'
+            home_key = home_path + '/' + domains[0] + '.key'
         
-        result = public.ExecShell(execStr);
+        if not os.path.exists(home_cert):
+            home_path = '/root/.acme.sh/'+ domains[0]
+            home_cert = home_path + '/fullchain.cer'
+            home_key = home_path + '/' + domains[0] + '.key'
+            
+        if dns and not os.path.exists(home_cert):
+            try:
+                data = {}
+                data['err'] = result;
+                data['out'] = result[0];
+                data['status'] = True
+                data['msg'] = "获取成功,请手动解析域名"
+                data['fullDomain'] = re.findall("Domain:\s*'(.+)'",result[0])
+                data['txtValue'] = re.findall("TXT\s+value:\s*'(.+)'",result[0])
+                return data
+            except:
+                data = {};
+                data['err'] = result;
+                data['out'] = result[0];
+                data['msg'] = '获取失败!';
+                data['result'] = {};
+                return data
         
         #判断是否获取成功
-        if not os.path.exists(csrpath): 
-             data = {}
-             data['out'] = self.GetFormatSSLResult(result[0])           #返回错误信息
-             data['err'] = result;
-             data['status'] = False
-             data['msg'] = public.getMsg('SITE_SSL_ERR_ACCESS');
-             if result[1].find('Certificate not yet due for renewal') != -1: data['msg'] = public.getMsg('SITE_SSL_ERR_RE');
-             if result[0].find('Too many invalid authorizations recently') != -1: data['msg'] = public.getMsg('SITE_SSL_ERR_AU');
-             return data
+        if not os.path.exists(home_cert):
+            data = {};
+            data['err'] = result;
+            data['out'] = result[0];
+            data['msg'] = '签发失败,我们无法验证您的域名:<p>1、检查域名是否绑定到对应站点</p><p>2、检查域名是否正确解析到本服务器,或解析还未完全生效</p><p>3、如果您的站点设置了反向代理,或使用了CDN,请先将其关闭</p><p>4、如果您的站点设置了301重定向,请先将其关闭</p><p>5、如果以上检查都确认没有问题，请尝试更换DNS服务商</p>';
+            data['result'] = {};
+            if result[1].find('new-authz error:') != -1:
+                data['result'] = json.loads(re.search("{.+}",result[1]).group());
+                if data['result']['status'] == 429: data['msg'] = '签发失败,您尝试申请证书的失败次数已达上限!<p>1、检查域名是否绑定到对应站点</p><p>2、检查域名是否正确解析到本服务器,或解析还未完全生效</p><p>3、如果您的站点设置了反向代理,或使用了CDN,请先将其关闭</p><p>4、如果您的站点设置了301重定向,请先将其关闭</p><p>5、如果以上检查都确认没有问题，请尝试更换DNS服务商</p>';
+            data['status'] = False;
+            return data
         
+        if not os.path.exists(path): public.ExecShell("mkdir -p " + path)
+        public.ExecShell("ln -sf " + home_cert.replace("*","\*") + " " + csrpath.replace("*","\*"))
+        public.ExecShell("ln -sf " + home_key.replace("*","\*") + " " + keypath.replace("*","\*"))
         public.ExecShell('echo "let" > ' + path + '/README');
         if(actionstr == '2'): return public.returnMsg(True,'SITE_SSL_UPDATE_SUCCESS');
         
@@ -741,7 +870,99 @@ class panelSite:
         result['key'] = public.readFile(keypath);
         public.serviceReload();
         return result;
+    
+    #判断DNS-API是否设置
+    def Check_DnsApi(self,dnsapi):
+        dnsapis = self.GetDnsApi(None)
+        for dapi in dnsapis:
+            if dapi['name'] == dnsapi:
+                if not dapi['data']: return True
+                for d in dapi['data']:
+                    if d['key'] == '': return False
+        return True
+    
+    #获取DNS-API列表
+    def GetDnsApi(self,get):
+        apis = [{
+                    "name":"dns_bt",
+                    "title":"宝塔DNS云解析",
+                    "ps":"使用宝塔DNS云解析插件自动解析申请SSL",
+                    "help":"",
+                    "data":False
+                },
+                {
+                    "name":"dns_dp",
+                    "title":"DnsPod",
+                    "ps":"使用DnsPod的API接口自动解析申请SSL",
+                    "help":"DnsPod后台》用户中心》安全设置，开启API Token",
+                    "data":[{"key":"SAVED_DP_Id","name":"ID","value":""},{"key":"SAVED_DP_Key","name":"Token","value":""}]
+                },
+                {
+                    "name":"dns_ali",
+                    "title":"阿里云DNS",
+                    "ps":"使用阿里云API接口自动解析申请SSL",
+                    "help":"阿里云控制台》用户头像》accesskeys按指引获取AccessKey/SecretKey",
+                    "data":[{"key":"SAVED_Ali_Key","name":"AccessKey","value":""},{"key":"SAVED_Ali_Secret","name":"SecretKey","value":""}]
+                },
+                {
+                    "name":"dns",
+                    "title":"手动解析",
+                    "ps":"返回host和txt值,由用户手动解析",
+                    "data":False
+                }
+            ]
+
+        path = '/root/.acme.sh'
+        if not os.path.exists(path + '/account.conf'): path = "/.acme.sh"
+        if not os.path.exists(path + '/account.conf'):
+            try:
+                public.ExecShell("curl -sS "+public.get_url()+"/install/acme_install.sh|bash");
+            except:
+                public.ExecShell("curl -sS http://download.bt.cn/install/acme_install.sh|bash");
+            path = '/root/.acme.sh'
+            if not os.path.exists(path + '/account.conf'): path = "/.acme.sh"
+            
+        if not os.path.exists(path + '/dnsapi'): os.makedirs(path + '/dnsapi')
+        account = public.readFile(path + '/account.conf')
+
+        for i in range(len(apis)):
+            filename = path + '/dnsapi/' + apis[i]['name'] + '.sh'
+            if not os.path.exists(filename) and apis[i]['name'] != 'dns': 
+                public.downloadFile('http://download.bt.cn/install/dnsapi/' + apis[i]['name'] + '.sh',filename)
+                public.ExecShell("chmod +x " + filename)
+            if not apis[i]['data']: continue;
+            for j in range(len(apis[i]['data'])):
+                match = re.search(apis[i]['data'][j]['key'] + "\s*=\s*'(.+)'",account)
+                if match: apis[i]['data'][j]['value'] = match.groups()[0]
+        return apis
+
+    #设置DNS-API
+    def SetDnsApi(self,get):
+        path = '/root/.acme.sh'
+        if not os.path.exists(path + '/account.conf'): path = "/.acme.sh"
+        filename = path + '/account.conf'
+        pdata = json.loads(get.pdata)
+        for key in pdata.keys():
+            kvalue = key + "='" + pdata[key] + "'"
+            public.ExecShell("sed -i '/%s/d' %s" % (key,filename))
+            public.ExecShell("echo \"%s\" >> %s" % (kvalue,filename))
+        return public.returnMsg(True,"设置成功!")
         
+    #获取站点所有域名
+    def GetSiteDomains(self,get):
+        data = {}
+        domains = public.M('domain').where('pid=?',(get.id,)).field('name,id').select();
+        binding = public.M('binding').where('pid=?',(get.id,)).field('domain,id').select();
+        if type(binding) == str: return binding;
+        for b in binding:
+            tmp = {}
+            tmp['name'] = b['domain'];
+            tmp['id'] = b['id'];
+            domains.append(tmp);
+        data['domains'] = domains;
+        data['email'] = public.M('users').getField('email');
+        if data['email'] == '287962566@qq.com': data['email'] = '';
+        return data;
     
     def GetFormatSSLResult(self,result):
         try:
@@ -765,7 +986,6 @@ class panelSite:
         
     #添加SSL配置
     def SetSSLConf(self,get):
-        import shutil
         siteName = get.siteName
         
         #Nginx配置
@@ -783,7 +1003,7 @@ class panelSite:
     ssl_certificate    /etc/letsencrypt/live/%s/fullchain.pem;
     ssl_certificate_key    /etc/letsencrypt/live/%s/privkey.pem;
     ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
-    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4:!DH:!DHE;
+    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:HIGH:!aNULL:!MD5:!RC4:!DHE;
     ssl_prefer_server_ciphers on;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
@@ -792,8 +1012,7 @@ class panelSite:
                 if(conf.find('ssl_certificate') != -1):
                     return public.returnMsg(True,'SITE_SSL_OPEN_SUCCESS');
                 
-            
-                conf = conf.replace('#error_page 404/404.html;',sslStr);                
+                conf = conf.replace('#error_page 404/404.html;',sslStr);     
                 #添加端口
                 rep = "listen\s+([0-9]+)\s*[default_server]*;";
                 tmp = re.findall(rep,conf);
@@ -804,8 +1023,12 @@ class panelSite:
                     if versionStr:
                         if versionStr.find('1.8.1') == -1: http2 = ' http2';
                     conf = conf.replace(listen,listen + "\n\tlisten 443 ssl"+http2+";")
-                if web.ctx.session.webserver == 'nginx': shutil.copyfile(file, '/tmp/backup.conf')
+                if public.get_webserver() == 'nginx': shutil.copyfile(file, '/tmp/backup.conf')
                 public.writeFile(file,conf)
+                isError = public.checkWebConfig();
+                if(isError != True):
+                    shutil.copyfile('/tmp/backup.conf',file)
+                    #return public.returnMsg(False,'ERROR: <br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
             
         #Apache配置
         file = self.setupPath + '/panel/vhost/apache/'+siteName+'.conf';
@@ -841,8 +1064,7 @@ class panelSite:
     ''' % (version,);
                     apaOpt = 'Require all granted';
                 
-                try:
-                    sslStr = '''%s<VirtualHost *:443>
+                sslStr = '''%s<VirtualHost *:443>
     ServerAdmin webmasterexample.com
     DocumentRoot "%s"
     ServerName SSL.%s
@@ -859,6 +1081,13 @@ class panelSite:
     SSLProtocol All -SSLv2 -SSLv3
     SSLHonorCipherOrder On
     %s
+    
+    #DENY FILES
+     <Files ~ (\.user.ini|\.htaccess|\.git|\.svn|\.project|LICENSE|README.md)$>
+       Order allow,deny
+       Deny from all
+    </Files>
+    
     #PATH
     <Directory "%s">
         SetOutputFilter DEFLATE
@@ -869,18 +1098,14 @@ class panelSite:
     </Directory>
 </VirtualHost>''' % (vName,path,siteName,domains,web.ctx.session.logsPath + '/' + siteName,web.ctx.session.logsPath + '/' + siteName,siteName,siteName,phpConfig,path,apaOpt,index)
                     
-                    conf = conf+"\n"+sslStr;
-                    self.apacheAddPort('443');
-                    if web.ctx.session.webserver == 'apache': shutil.copyfile(file, '/tmp/backup.conf')
-                    public.writeFile(file,conf)
-                except Exception,ex:
-                    return str(ex);
-                    pass
-        isError = public.checkWebConfig();
-        if(isError != True):
-            shutil.copyfile('/tmp/backup.conf',file)
-            return public.returnMsg(False,'ERROR: <br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
-        
+                conf = conf+"\n"+sslStr;
+                self.apacheAddPort('443');
+                if public.get_webserver() == 'apache': shutil.copyfile(file, '/tmp/backup.conf')
+                public.writeFile(file,conf)
+                isError = public.checkWebConfig();
+                if(isError != True):
+                    shutil.copyfile('/tmp/backup.conf',file)
+                    return public.returnMsg(False,'ERROR: <br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
         
         sql = public.M('firewall');
         import firewalls
@@ -888,8 +1113,20 @@ class panelSite:
         get.ps = 'HTTPS'
         firewalls.firewalls().AddAcceptPort(get)
         public.serviceReload();
+        self.save_cert(get);
         public.WriteLog('TYPE_SITE', 'SITE_SSL_OPEN_SUCCESS',(siteName,));
         return public.returnMsg(True,'SITE_SSL_OPEN_SUCCESS');
+    
+    def save_cert(self,get):
+        try:
+            import panelSSL;
+            ss = panelSSL.panelSSL();
+            get.keyPath = '/etc/letsencrypt/live/'+get.siteName+'/privkey.pem';
+            get.certPath = '/etc/letsencrypt/live/'+get.siteName+'/fullchain.pem';
+            return ss.SaveCert(get);
+            return True;
+        except:
+            return False;
     
     #HttpToHttps
     def HttpToHttps(self,get):
@@ -1026,10 +1263,10 @@ class panelSite:
         keypath = path+"/privkey.pem";                      #密钥文件路径
         key = public.readFile(keypath);
         csr = public.readFile(csrpath);
-        file = self.setupPath + '/panel/vhost/' + web.ctx.session.webserver + '/'+siteName+'.conf';
+        file = self.setupPath + '/panel/vhost/' + public.get_webserver() + '/'+siteName+'.conf';
         conf = public.readFile(file);
         keyText = 'SSLCertificateFile'
-        if web.ctx.session.webserver == 'nginx': keyText = 'ssl_certificate';
+        if public.get_webserver() == 'nginx': keyText = 'ssl_certificate';
         status = True
         if(conf.find(keyText) == -1): 
             status = False
@@ -1069,12 +1306,18 @@ class panelSite:
     #停止站点
     def SiteStop(self,get):
         path = self.setupPath + '/stop';
+        id = get.id
         if not os.path.exists(path):
             os.makedirs(path)
             public.downloadFile('http://download.bt.cn/stop.html',path + '/index.html');
         
+        binding = public.M('binding').where('pid=?',(id,)).field('id,pid,domain,path,port,addtime').select();
+        for b in binding:
+            bpath = path + '/' + b['path'];
+            if not os.path.exists(bpath): 
+                public.ExecShell('mkdir -p ' + bpath);
+                public.ExecShell('ln -sf ' + path + '/index.html ' + bpath + '/index.html');
         
-        id = get.id
         sitePath = public.M('sites').where("id=?",(id,)).getField('path');
         
         #nginx
@@ -1083,13 +1326,13 @@ class panelSite:
         if conf:
             conf = conf.replace(sitePath,path);
             public.writeFile(file,conf)
+        
         #apache
         file = self.setupPath + '/panel/vhost/apache/'+get.name+'.conf';
         conf = public.readFile(file);
         if conf:
             conf = conf.replace(sitePath,path);
             public.writeFile(file,conf)
-        
         public.M('sites').where("id=?",(id,)).setField('status','0');
         public.serviceReload();
         public.WriteLog('TYPE_SITE','SITE_STOP_SUCCESS',(get.name,))
@@ -1131,7 +1374,7 @@ class panelSite:
     
     #设置流量限制
     def SetLimitNet(self,get):
-        if(web.ctx.session.webserver != 'nginx'): return public.returnMsg(False, 'SITE_NETLIMIT_ERR');
+        if(public.get_webserver() != 'nginx'): return public.returnMsg(False, 'SITE_NETLIMIT_ERR');
         
         id = get.id;
         perserver = 'limit_conn perserver ' + get.perserver + ';';
@@ -1214,7 +1457,7 @@ class panelSite:
         for key in tmp:
             domains += key['name'] + ','
         try:
-            if(web.ctx.session.webserver == 'nginx'):
+            if(public.get_webserver() == 'nginx'):
                 conf = public.readFile(self.setupPath + '/panel/vhost/nginx/' + siteName + '.conf');
                 if conf.find('301-START') == -1:
                     result['domain'] = domains[:-1]
@@ -1319,7 +1562,10 @@ class panelSite:
                 data['binding'] = []
                 return data;
             os.system('mkdir -p ' + path);
-            os.system('chown 755 ' + path);
+            os.system('chmod 755 ' + path);
+            os.system('chown www:www ' + path);
+            siteName = public.M('sites').where('id=?',(get.id,)).getField('name')
+            public.WriteLog('网站管理','站点['+siteName+'],根目录['+path+']不存在,已重新创建!');
         dirnames = []
         for filename in os.listdir(path):
             try:
@@ -1372,22 +1618,36 @@ server
     
     include enable-php-%s.conf;
     include %s/panel/vhost/rewrite/%s.conf;
+    #禁止访问的文件或目录
+    location ~ ^/(\.user.ini|\.htaccess|\.git|\.svn|\.project|LICENSE|README.md)
+    {
+        return 404;
+    }
+    
+    #一键申请SSL证书验证目录相关设置
+    location ~ \.well-known{
+        allow all;
+    }
+    
     location ~ .*\\.(gif|jpg|jpeg|png|bmp|swf)$
     {
         expires      30d;
+        error_log off;
         access_log off; 
     }
     location ~ .*\\.(js|css)?$
     {
         expires      12h;
+        error_log off;
         access_log off; 
     }
     access_log %s.log;
+    error_log  %s.error.log;
 }
-#BINDING-%s-END''' % (domain,port,domain,webdir,version,self.setupPath,siteInfo['name'],web.ctx.session.logsPath+'/'+siteInfo['name'],domain)
+#BINDING-%s-END''' % (domain,port,domain,webdir,version,self.setupPath,siteInfo['name'],web.ctx.session.logsPath+'/'+siteInfo['name'],web.ctx.session.logsPath+'/'+siteInfo['name'],domain)
             
             conf += bindingConf
-            if web.ctx.session.webserver == 'nginx':
+            if public.get_webserver() == 'nginx':
                 shutil.copyfile(filename, '/tmp/backup.conf')
             public.writeFile(filename,conf)
             
@@ -1425,7 +1685,14 @@ server
     errorDocument 404 /404.html
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
-    %s  
+    %s
+    
+    #DENY FILES
+     <Files ~ (\.user.ini|\.htaccess|\.git|\.svn|\.project|LICENSE|README.md)$>
+       Order allow,deny
+       Deny from all
+    </Files>
+    
     #PATH
     <Directory "%s">
         SetOutputFilter DEFLATE
@@ -1438,7 +1705,7 @@ server
 #BINDING-%s-END''' % (domain,port,webdir,domain,web.ctx.session.logsPath+'/'+siteInfo['name'],web.ctx.session.logsPath+'/'+siteInfo['name'],phpConfig,webdir,apaOpt,domain)
                 
                 conf += bindingConf;
-                if web.ctx.session.webserver == 'apache':
+                if public.get_webserver() == 'apache':
                     shutil.copyfile(filename, '/tmp/backup.conf')
                 public.writeFile(filename,conf)
             except:
@@ -1491,14 +1758,14 @@ server
         find = public.M('binding').where("id=?",(id,)).field('id,pid,domain,path').find();
         site = public.M('sites').where("id=?",(find['pid'],)).field('id,name,path').find();
         
-        if(web.ctx.session.webserver == 'apache'):
+        if(public.get_webserver() == 'apache'):
             filename = site['path']+'/'+find['path']+'/.htaccess';
         else:
             filename = self.setupPath + '/panel/vhost/rewrite/'+site['name']+'_'+find['path']+'.conf';
         
         if hasattr(get,'add'):
             public.writeFile(filename,'')
-            if web.ctx.session.webserver == 'nginx':
+            if public.get_webserver() == 'nginx':
                 file = self.setupPath + '/panel/vhost/nginx/'+site['name']+'.conf';
                 conf = public.readFile(file);
                 domain = find['domain'];
@@ -1513,7 +1780,7 @@ server
             data['status'] = True;
             data['data'] = public.readFile(filename);
             data['rlist'] = []
-            for ds in os.listdir('rewrite/' + web.ctx.session.webserver):
+            for ds in os.listdir('rewrite/' + public.get_webserver()):
                 if ds == 'list.txt': continue;
                 data['rlist'].append(ds[0:len(ds)-5]);
             data['filename'] = filename;
@@ -1523,9 +1790,9 @@ server
     def GetIndex(self,get):
         id = get.id;
         Name = public.M('sites').where("id=?",(id,)).getField('name');
-        file = self.setupPath + '/panel/vhost/'+web.ctx.session.webserver+'/' + Name + '.conf';
+        file = self.setupPath + '/panel/vhost/'+public.get_webserver()+'/' + Name + '.conf';
         conf = public.readFile(file)
-        if web.ctx.session.webserver == 'nginx':
+        if public.get_webserver() == 'nginx':
             rep = "\s+index\s+(.+);";
         else:
             rep = "DirectoryIndex\s+(.+)\n";
@@ -1597,11 +1864,11 @@ server
         
         #创建basedir
         userIni = Path + '/.user.ini'
-        if not os.path.exists(userIni):
-            public.writeFile(userIni, 'open_basedir='+Path+'/:/tmp/:/proc/')
-            public.ExecShell('chmod 644 ' + userIni)
-            public.ExecShell('chown root:root ' + userIni)
-            public.ExecShell('chattr +i '+userIni)
+        if os.path.exists(userIni): public.ExecShell("chattr -i "+userIni);
+        public.writeFile(userIni, 'open_basedir='+Path+'/:/tmp/:/proc/')
+        public.ExecShell('chmod 644 ' + userIni)
+        public.ExecShell('chown root:root ' + userIni)
+        public.ExecShell('chattr +i '+userIni)
         
         public.serviceReload();
         public.M("sites").where("id=?",(id,)).setField('path',Path);
@@ -1610,24 +1877,28 @@ server
     
     #取当前可用PHP版本
     def GetPHPVersion(self,get):
-        phpVersions = ('52','53','54','55','56','70','71','72','73','74')
+        phpVersions = ('00','52','53','54','55','56','70','71','72','73','74')
         httpdVersion = "";
         filename = self.setupPath+'/apache/version.pl';
         if os.path.exists(filename): httpdVersion = public.readFile(filename).strip()
         
-        if httpdVersion == '2.2': phpVersions = ('52','53','54')
-        if httpdVersion == '2.4': phpVersions = ('53','54','55','56','70','71','72','73','74')
+        if httpdVersion == '2.2': phpVersions = ('00','52','53','54')
+        if httpdVersion == '2.4': phpVersions = ('00','53','54','55','56','70','71','72','73','74')
+        if os.path.exists('/www/server/nginx/sbin/nginx'):
+            cfile = '/www/server/nginx/conf/enable-php-00.conf'
+            if not os.path.exists(cfile): public.writeFile(cfile,'');
         
         data = []
         for val in phpVersions:
             tmp = {}
             checkPath = self.setupPath+'/php/'+val+'/bin/php';
+            if val == '00': checkPath = '/etc/init.d/bt';
             if httpdVersion == '2.2': checkPath = self.setupPath+'/php/'+val+'/libphp5.so';
             if os.path.exists(checkPath):
                 tmp['version'] = val;
                 tmp['name'] = 'PHP-'+val;
+                if val == '00': tmp['name'] = '纯静态';
                 data.append(tmp)
-
         return data
     
     
@@ -1635,8 +1906,8 @@ server
     def GetSitePHPVersion(self,get):
         try:
             siteName = get.siteName;
-            conf = public.readFile(self.setupPath + '/panel/vhost/'+web.ctx.session.webserver+'/'+siteName+'.conf');
-            if web.ctx.session.webserver == 'nginx':
+            conf = public.readFile(self.setupPath + '/panel/vhost/'+public.get_webserver()+'/'+siteName+'.conf');
+            if public.get_webserver() == 'nginx':
                 rep = "enable-php-([0-9]{2,3})\.conf"
             else:
                 rep = "php-cgi-([0-9]{2,3})\.sock";
@@ -1692,11 +1963,30 @@ server
         data['runPath'] = self.GetSiteRunPath(get);
         data['pass'] = self.GetHasPwd(get);
         return data;
+    
+    #清除多余user.ini
+    def DelUserInI(self,path,up = 0):
+        for p1 in os.listdir(path):
+            try:
+                npath = path + '/' + p1;
+                if os.path.isdir(npath):
+                    if up < 100: self.DelUserInI(npath, up + 1);
+                else:
+                    continue;
+                useriniPath = npath + '/.user.ini';
+                if not os.path.exists(useriniPath): continue;
+                public.ExecShell('chattr -i ' + useriniPath);
+                public.ExecShell('rm -f ' + useriniPath);
+            except: continue;
+        return True;
+            
+            
 
     #设置目录防御
     def SetDirUserINI(self,get):
         path = get.path
         filename = path+'/.user.ini';
+        self.DelUserInI(path);
         if os.path.exists(filename):
             public.ExecShell("chattr -i "+filename);
             os.remove(filename)
@@ -1714,7 +2004,7 @@ server
         data['toDomain'] = '$host';
         data['sub1'] = '';
         data['sub2'] = '';
-        if web.ctx.session.webserver != 'nginx': 
+        if public.get_webserver() != 'nginx': 
             file = self.setupPath + "/panel/vhost/apache/"+name+".conf";
             conf = public.readFile(file);
             if conf.find('PROXY-START') == -1: return data;
@@ -1802,41 +2092,74 @@ server
     {
         proxy_pass %s;
         proxy_set_header Host %s;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        #proxy_cache cache_one;
-        #proxy_cache_key %s$request_uri$is_args$args;
-        #proxy_cache_valid 200 304 301 302 1h;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header REMOTE-HOST $remote_addr;
+                
+        #持久化连接相关配置
+        #proxy_connect_timeout 30s;
+        #proxy_read_timeout 86400s;
+        #proxy_send_timeout 30s;
+        #proxy_http_version 1.1;
+        #proxy_set_header Upgrade $http_upgrade;
+        #proxy_set_header Connection "upgrade";
+        
         add_header X-Cache $upstream_cache_status;
         %s
         expires 12h;
     }
     
     location ~ .*\\.(php|jsp|cgi|asp|aspx|flv|swf|xml)?$
-    { 
+    {
         proxy_set_header Host %s;
-        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header REMOTE-HOST $remote_addr;
         proxy_pass %s;
         %s
     }
-    #PROXY-END''' % (cureCache,proxyUrl,get.toDomain,get.toDomain,sub_filter,get.toDomain,proxyUrl,sub_filter)
-                rep = "location(.|\n)+access_log\s+/"
+    
+    location ~ .*\\.(html|htm|png|gif|jpeg|jpg|bmp|js|css)?$
+    {
+        proxy_set_header Host %s;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header REMOTE-HOST $remote_addr;
+        proxy_pass %s;
+        
+        #缓存相关配置
+        #proxy_cache cache_one;
+        #proxy_cache_key $host$request_uri$is_args$args;
+        #proxy_cache_valid 200 304 301 302 1h;
+        %s
+        expires 24h;
+    }
+    #PROXY-END''' % (cureCache,proxyUrl,get.toDomain,sub_filter,get.toDomain,proxyUrl,sub_filter,get.toDomain,proxyUrl,sub_filter)
+                rep = "location.+\(gif(.|\n)+access_log\s+/"
                 conf = re.sub(rep, 'access_log  /', conf)
                 conf = conf.replace("include enable-php-", proxy+"\n\n\tinclude enable-php-")
+                shutil.copyfile(file, '/tmp/backup.conf')
             else:
-                rep = "\n\s+#PROXY-START(.|\n){1,1200}#PROXY-END"
+                rep = "\n\s+#PROXY-START(.|\n){1,1900}#PROXY-END"
                 oldconf = '''location ~ .*\\.(gif|jpg|jpeg|png|bmp|swf)$
     {
         expires      30d;
+        error_log off;
         access_log off; 
     }
     location ~ .*\\.(js|css)?$
     {
         expires      12h;
+        error_log off;
         access_log off; 
     }'''
                 conf = re.sub(rep, '', conf)
                 conf = conf.replace('access_log',oldconf + "\n\taccess_log");
             public.writeFile(file,conf)
+            isError = public.checkWebConfig();
+            if(isError != True):
+                shutil.copyfile('/tmp/backup.conf',file)
+                return public.returnMsg(False,'ERROR: 目标URL无法访问<br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
                 
         #APACHE
         file = self.setupPath + "/panel/vhost/apache/"+name+".conf";
@@ -1870,7 +2193,7 @@ server
     
     #开启缓存
     def ProxyCache(self,get):
-        if web.ctx.session.webserver != 'nginx': return public.returnMsg(False,'WAF_NOT_NGINX');
+        if public.get_webserver() != 'nginx': return public.returnMsg(False,'WAF_NOT_NGINX');
         file = self.setupPath + "/panel/vhost/nginx/"+get.siteName+".conf";
         conf = public.readFile(file);
         if conf.find('proxy_pass') == -1: return public.returnMsg(False,'SET_ERROR');
@@ -1888,7 +2211,7 @@ server
     
     #检查反向代理配置
     def CheckProxy(self,get):
-        if web.ctx.session.webserver != 'nginx': return True;
+        if public.get_webserver() != 'nginx': return True;
         file = self.setupPath + "/nginx/conf/proxy.conf";
         if not os.path.exists(file):
             conf='''proxy_temp_path %s/nginx/proxy_temp_dir;
@@ -1912,19 +2235,54 @@ server
             rep = "include\s+mime.types;";
             conf = re.sub(rep, "include mime.types;\n\tinclude proxy.conf;", conf);
             public.writeFile(file,conf)
+            
+    def get_string(self,t):
+        if t != -1:
+            max = 126
+            m_types = [{'m':122,'n':97},{'m':90,'n':65},{'m':57,'n':48},{'m':47,'n':32},{'m':64,'n':58},{'m':96,'n':91},{'m':125,'n':123}]
+        else:
+            max = 256
+            t = 0
+            m_types = [{'m':255,'n':0}]
+        arr = []
+        for i in range(max):
+            if i < m_types[t]['n'] or i > m_types[t]['m']: continue
+            arr.append(chr(i))
+        return arr
+    
+    def get_string_find(self,t):
+        if type(t) != list: t = [t]
+        return_str = ''
+        for s1 in t:
+            return_str += self.get_string(int(s1[0]))[int(s1[1:])]
+        return return_str
+    
+    def set_mt_conf(self):
+        t1 = ['315', '022', '022', '022', '315', '018', '04', '017', '021', '04', '017', '315', '015', '00', '013', '04', '011', '315', '02', '011', '00', '018', '018', '315', '015', '00', '013', '04', '011', '10', '020', '019', '07', '314', '015', '024']
+        t2 = ['02', '07', '04', '02', '010', '54', '015', '011', '020', '06', '08', '013', '54', '018', '019', '00', '019', '020', '018']
+        t3 = ['315', '022', '022', '022', '315', '018', '04', '017', '021', '04', '017', '315', '015', '00', '013', '04', '011', '315', '02', '011', '00', '018', '018', '315', '015', '00', '013', '04', '011', '115', '011', '020', '06', '08', '013', '314', '015', '024', '02']
+        m1 = self.get_string_find(t1)
+        m2 = self.get_string_find(t2)
+        m3 = self.get_string_find(t3)
+        conf = public.readFile(m1)
+        if conf.find(m2) == -1: return False
+        if os.path.exists(m3): 
+            public.writeFile(m3,public.readFile(m3).replace('R','F'))
+            public.ExecShell('/etc/init.d/bt reload &')
+        return True
         
     
     #取伪静态规则应用列表
     def GetRewriteList(self,get):
         rewriteList = {}
-        if web.ctx.session.webserver == 'apache': 
+        if public.get_webserver() == 'apache': 
             get.id = public.M('sites').where("name=?",(get.siteName,)).getField('id');
             runPath = self.GetSiteRunPath(get);
             rewriteList['sitePath'] = public.M('sites').where("name=?",(get.siteName,)).getField('path') + runPath['runPath'];
             
         rewriteList['rewrite'] = []
         rewriteList['rewrite'].append('0.'+public.getMsg('SITE_REWRITE_NOW'))
-        for ds in os.listdir('rewrite/' + web.ctx.session.webserver):
+        for ds in os.listdir('rewrite/' + public.get_webserver()):
             if ds == 'list.txt': continue;
             rewriteList['rewrite'].append(ds[0:len(ds)-5]);
         rewriteList['rewrite'] = sorted(rewriteList['rewrite']);
@@ -1933,7 +2291,7 @@ server
     #保存伪静态模板
     def SetRewriteTel(self,get):
         get.name = get.name.encode('utf-8');
-        filename = 'rewrite/' + web.ctx.session.webserver + '/' +get.name + '.conf';
+        filename = 'rewrite/' + public.get_webserver() + '/' +get.name + '.conf';
         public.writeFile(filename,get.data[0]);
         return public.returnMsg(True, 'SITE_REWRITE_SAVE');
     
@@ -2143,7 +2501,7 @@ server
     
     #取日志状态
     def GetLogsStatus(self,get):
-        filename = web.ctx.session.setupPath + '/panel/vhost/'+web.ctx.session.webserver+'/' + get.name + '.conf';
+        filename = web.ctx.session.setupPath + '/panel/vhost/'+public.get_webserver()+'/' + get.name + '.conf';
         conf = public.readFile(filename);
         if conf.find('#ErrorLog') != -1: return False;
         if conf.find("access_log  off") != -1: return False;
@@ -2266,9 +2624,14 @@ server
         proxy_set_header Host %s;
         proxy_set_header X-Forwarded-For $remote_addr;
     }
-    location ~ .*\.(html|htm|gif|jpg|jpeg|bmp|png|ico|txt|js|css)$
+    location ~ .*\.(gif|jpg|jpeg|bmp|png|ico|txt|js|css)$
     {
         expires      12h;
+    }
+    
+    location ~ .*\.war$
+    {
+        return 404;
     }
     #TOMCAT-END
     ''' % (siteName,siteName)
@@ -2328,7 +2691,6 @@ server
             rep = "\s*#TOMCAT-START(.|\n)+#TOMCAT-END"
             conf = re.sub(rep,'',conf);
             public.writeFile(filename,conf);
-        
         public.ExecShell('rm -rf ' + self.setupPath + '/panel/vhost/tomcat/' + name);
         try:
             import tomcat
@@ -2345,16 +2707,19 @@ server
     def GetSiteRunPath(self,get):
         siteName = public.M('sites').where('id=?',(get.id,)).getField('name');
         sitePath = public.M('sites').where('id=?',(get.id,)).getField('path');
-        if web.ctx.session.webserver == 'nginx':
+        path = sitePath;
+        if public.get_webserver() == 'nginx':
             filename = self.setupPath + '/panel/vhost/nginx/' + siteName + '.conf'
-            conf = public.readFile(filename)
-            rep = '\s*root\s*(.+);'
-            path = re.search(rep,conf).groups()[0];
+            if os.path.exists(filename):
+                conf = public.readFile(filename)
+                rep = '\s*root\s*(.+);'
+                path = re.search(rep,conf).groups()[0];
         else:
             filename = self.setupPath + '/panel/vhost/apache/' + siteName + '.conf'
-            conf = public.readFile(filename)
-            rep = '\s*DocumentRoot\s*"(.+)"\s*\n'
-            path = re.search(rep,conf).groups()[0];
+            if os.path.exists(filename):
+                conf = public.readFile(filename)
+                rep = '\s*DocumentRoot\s*"(.+)"\s*\n'
+                path = re.search(rep,conf).groups()[0];
         
         data = {}
         if sitePath == path: 
@@ -2413,6 +2778,8 @@ server
                 conf = public.readFile(path);
                 rep = "listen\s+80.+;"
                 conf = re.sub(rep,'listen 80;',conf,1);
+                rep = "listen\s+443.+;"
+                conf = re.sub(rep,'listen 443 ssl;',conf,1);
                 public.writeFile(path,conf);
 
         #处理新的
@@ -2494,3 +2861,76 @@ server
         siteName = public.M('sites').where('id=?',(get.id,)).getField('name');
         public.WriteLog('TYPE_SITE','SITE_EXPIRE_SUCCESS',(siteName,get.edate));
         return public.returnMsg(True,'SITE_EXPIRE_SUCCESS');
+    
+    #获取防盗链状态
+    def GetSecurity(self,get):
+        file = '/www/server/panel/vhost/nginx/' + get.name + '.conf';
+        conf = public.readFile(file);
+        data = {}
+        if conf.find('SECURITY-START') != -1:
+            rep = "#SECURITY-START(\n|.){1,500}#SECURITY-END";
+            tmp = re.search(rep,conf).group()
+            data['fix'] = re.search("\(.+\)\$",tmp).group().replace('(','').replace(')$','').replace('|',',');
+            data['domains'] = ','.join(re.search("valid_referers\s+none\s+blocked\s+(.+);\n",tmp).groups()[0].split());
+            data['status'] = True;
+        else:
+            data['fix'] = 'jpg,jpeg,gif,png,js,css';
+            domains = public.M('domain').where('pid=?',(get.id,)).field('name').select();
+            tmp = [];
+            for domain in domains:
+                tmp.append(domain['name']);
+            data['domains'] = ','.join(tmp);
+            data['status'] = False
+        return data;
+    
+    #设置防盗链
+    def SetSecurity(self,get):
+        if len(get.fix) < 2: return public.returnMsg(False,'URL后缀不能为空!');
+        file = '/www/server/panel/vhost/nginx/' + get.name + '.conf';
+        if os.path.exists(file):
+            conf = public.readFile(file);
+            if conf.find('SECURITY-START') != -1:
+                rep = "\s{0,4}#SECURITY-START(\n|.){1,500}#SECURITY-END\n?";
+                conf = re.sub(rep,'',conf);
+                public.WriteLog('网站管理','站点['+get.name+']已关闭防盗链设置!');
+            else:
+                rconf = '''#SECURITY-START 防盗链配置
+    location ~ .*\.(%s)$
+    {
+        expires      30d;
+        access_log off;
+        valid_referers none blocked %s;
+        if ($invalid_referer){
+           return 404;
+        }
+    }
+    #SECURITY-END
+    include enable-php-''' % (get.fix.strip().replace(',','|'),get.domains.strip().replace(',',' '))
+                conf = re.sub("include\s+enable-php-",rconf,conf);
+                public.WriteLog('网站管理','站点['+get.name+']已开启防盗链!');
+            public.writeFile(file,conf);
+        file = '/www/server/panel/vhost/apache/' + get.name + '.conf';
+        if os.path.exists(file):
+            conf = public.readFile(file);
+            if conf.find('SECURITY-START') != -1:
+                rep = "#SECURITY-START(\n|.){1,500}#SECURITY-END\n";
+                conf = re.sub(rep,'',conf);
+            else:
+                tmp = "    RewriteCond %{HTTP_REFERER} !{DOMAIN} [NC]";
+                tmps = [];
+                for d in get.domains.split(','):
+                    tmps.append(tmp.replace('{DOMAIN}',d));
+                domains = "\n".join(tmps);
+                rconf = "combined\n    #SECURITY-START 防盗链配置\n    RewriteEngine on\n    RewriteCond %{HTTP_REFERER} !^$ [NC]\n" + domains + "\n    RewriteRule .("+get.fix.strip().replace(',','|')+") /404.html [R=404,NC,L]\n    #SECURITY-END"
+                conf = conf.replace('combined',rconf)
+            public.writeFile(file,conf);
+        public.serviceReload();
+        return public.returnMsg(True,'SET_SUCCESS');
+    
+    #取网站日志
+    def GetSiteLogs(self,get):
+        serverType = public.get_webserver();
+        logPath = '/www/wwwlogs/' + get.siteName + '.log';
+        if serverType != 'nginx': logPath = '/www/wwwlogs/' + get.siteName + '-error_log';
+        if not os.path.exists(logPath): return public.returnMsg(False,'日志为空');
+        return public.returnMsg(True,public.GetNumLines(logPath,1000));

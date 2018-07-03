@@ -4,7 +4,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2016 宝塔软件(http:#bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 import web
 import sys
@@ -29,7 +29,6 @@ class data:
     #端口扫描
     def CheckPort(self,port):
         import socket
-        IP = public.GetLocalIp();
         localIP = '127.0.0.1';
         temp = {}
         temp['port'] = port;
@@ -37,21 +36,13 @@ class data:
         try:
             s = socket.socket()
             s.settimeout(0.15)
-            s.connect((IP,port))
-            temp['status'] = True;
+            s.connect((localIP,port))
             s.close()
-        except Exception,ex:
-            temp['status'] = False;
-            try:
-                s = socket.socket()
-                s.connect((localIP,port))
-                s.close()
-            except:
-                temp['local'] = False;
+        except:
+            temp['local'] = False;
         
         result = 0;
-        if temp['local']: result +=1;
-        if temp['status']: result +=1;
+        if temp['local']: result +=2;
         return result;
     
     '''
@@ -88,7 +79,7 @@ class data:
                 else:
                     data['data'][i]['status'] = self.CheckPort(int(data['data'][i]['port']));
                 
-            #返回
+        #返回
         return data;
         #except Exception,ex:
             #return str(ex);
@@ -147,7 +138,8 @@ class data:
         
         if hasattr(get,'result'): 
             result = get.result;
-        
+            
+        SQL = db.Sql();
         data = {}
         #取查询条件
         where = ''
@@ -156,9 +148,13 @@ class data:
             if get.table == 'backup':
                 where += " and type='" + get.type+"'";
             
+            if get.table == 'sites' and get.search:
+                pid = SQL.table('domain').where('name=?',(get.search,)).getField('pid');
+                if pid: where = "id=" + str(pid);
+        
         field = self.GetField(get.table)
         #实例化数据库对象
-        SQL = db.Sql();
+        
         
         #是否直接返回所有列表
         if hasattr(get,'list'):
@@ -219,7 +215,7 @@ class data:
         fields = {
             'sites'     :   "id,name,path,status,ps,addtime,edate",
             'ftps'      :   "id,pid,name,password,status,ps,addtime,path",
-            'databases' :   "id,pid,name,password,ps,addtime",
+            'databases' :   "id,pid,name,username,password,accept,ps,addtime",
             'logs'      :   "id,type,log,addtime",
             'backup'    :   "id,pid,name,filename,addtime,size",
             'users'     :   "id,username,phone,email,login_ip,login_time",

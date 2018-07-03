@@ -5,7 +5,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2016 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 import sys,os,public,time
 reload(sys)
@@ -47,33 +47,43 @@ class files:
                 web.ctx.session.setupPath)
         for dir in nDirs:
             if(dir == path):
-                return False
+                return False 
         return True
+    
+    #检测文件名
+    def CheckFileName(self,filename):
+        nots = ['\\','&','*','#','@','|']
+        if filename.find('/') != -1: filename = filename.split('/')[-1]
+        for n in nots:
+            if n in filename: return False
+        return True
+    
     #上传文件
     def UploadFile(self,get):
         get.path = get.path.encode('utf-8');
-        if get.path.find(':\\') != -1:
-            tmp = get.path.split('\\');
-            get.path = tmp[len(tmp)-1];
+        fname = get['zunfile'].filename;
+        if fname.find(':\\') != -1:
+            tmp = fname.split('\\');
+            fname = tmp[len(tmp)-1];
         try:
             if not os.path.exists(get.path): os.makedirs(get.path);
-            filename = (get['path'] + get['zunfile'].filename).encode('utf-8');
+            filename = (get['path'] + fname).encode('utf-8');
             fp = open(filename,'wb');
             fp.write(get['zunfile'].file.read());
             fp.close()
             if(get.codeing != 'byte'):
-                srcBody = public.readFile(filename)
+                srcBody = public.readFile(filename);
                 import chardet
                 char=chardet.detect(srcBody)
-                srcBody = srcBody.decode(char['encoding']).encode('utf-8')
+                srcBody = srcBody.decode(char['encoding']).encode('utf-8');
                 public.writeFile(filename,srcBody.encode(get.codeing));
             os.system('chown www.www ' + filename);
-            public.WriteLog('TYPE_FILE','FILE_UPLOAD_SUCCESS',(get['zunfile'].filename,get['path']))        
-            return public.returnMsg(True,'FILE_UPLOAD_SUCCESS')
+            public.WriteLog('TYPE_FILE','FILE_UPLOAD_SUCCESS',(fname,get['path']));   
+            return public.returnMsg(True,'FILE_UPLOAD_SUCCESS');
         except:
             import time
-            opt = time.strftime('%Y-%m-%d_%H%M%S',time.localtime())
-            tmp = get['zunfile'].filename.split('.');
+            opt = time.strftime('%Y-%m-%d_%H%M%S',time.localtime());
+            tmp = fname.split('.');
             if len(tmp) < 2:
                 ext = ""
             else:
@@ -83,8 +93,8 @@ class files:
             fp.write(get['zunfile'].file.read());
             fp.close()
             os.system('chown www.www ' + filename);
-            public.WriteLog('TYPE_FILE','FILE_UPLOAD_SUCCESS',(get['zunfile'].filename,get['path']))
-            return public.returnMsg(True,'FILE_UPLOAD_SUCCESS')
+            public.WriteLog('TYPE_FILE','FILE_UPLOAD_SUCCESS',(fname,get['path']));
+            return public.returnMsg(True,'FILE_UPLOAD_SUCCESS');
         
     #取文件/目录列表
     def GetDir(self,get):
@@ -175,11 +185,11 @@ class files:
     
     #创建文件
     def CreateFile(self,get):
-        get.path = get.path.encode('utf-8');
+        get.path = get.path.encode('utf-8').strip();
         try:
+            if not self.CheckFileName(get.path): return public.returnMsg(False,'文件名中不能包含特殊字符!');
             if os.path.exists(get.path):
                 return public.returnMsg(False,'FILE_EXISTS')
-            
             path = os.path.dirname(get.path)
             if not os.path.exists(path):
                 os.makedirs(path)
@@ -192,8 +202,9 @@ class files:
     
     #创建目录
     def CreateDir(self,get):
-        get.path = get.path.encode('utf-8');
+        get.path = get.path.encode('utf-8').strip();
         try:
+            if not self.CheckFileName(get.path): return public.returnMsg(False,'目录名中不能包含特殊字符!');
             if os.path.exists(get.path):
                 return public.returnMsg(False,'DIR_EXISTS')
             os.makedirs(get.path)
@@ -242,7 +253,6 @@ class files:
     #删除文件
     def DeleteFile(self,get):
         get.path = get.path.encode('utf-8');
-        #if get.path.find('/www/wwwroot') == -1: return public.returnMsg(False,'此为演示服务器,禁止删除此文件!');
         if not os.path.exists(get.path):
             return public.returnMsg(False,'FILE_NOT_EXISTS')
         
@@ -253,7 +263,7 @@ class files:
             if os.path.exists('data/recycle_bin.pl'):
                 if self.Mv_Recycle_bin(get): return public.returnMsg(True,'FILE_MOVE_RECYCLE_BIN');
             os.remove(get.path)
-            public.WriteLog('TYPE_FILE','FILE_DEL_SUCCESS',(get,path,))
+            public.WriteLog('TYPE_FILE','FILE_DEL_SUCCESS',(get.path,))
             return public.returnMsg(True,'FILE_DEL_SUCCESS')
         except:
             return public.returnMsg(False,'FILE_DEL_ERR')
@@ -298,6 +308,7 @@ class files:
         data['dirs'] = [];
         data['files'] = [];
         data['status'] = os.path.exists('data/recycle_bin.pl');
+        data['status_db'] = os.path.exists('data/recycle_bin_db.pl');
         for file in os.listdir(rPath):
             try:
                 tmp = {};
@@ -372,8 +383,9 @@ class files:
         return public.returnMsg(True,'FILE_CLOSE_RECYCLE_BIN');
     
     #回收站开关
-    def Recycle_bin(self,get):
-        c = 'data/recycle_bin.pl'
+    def Recycle_bin(self,get):        
+        c = 'data/recycle_bin.pl';
+        if hasattr(get,'db'): c = 'data/recycle_bin_db.pl';
         if os.path.exists(c):
             os.remove(c)
             public.WriteLog('TYPE_FILE','FILE_OFF_RECYCLE_BIN');
@@ -390,6 +402,9 @@ class files:
         if not os.path.exists(get.sfile):
             return public.returnMsg(False,'FILE_NOT_EXISTS')
         
+        #if os.path.exists(get.dfile):
+        #    return public.returnMsg(False,'FILE_EXISTS')
+        
         if os.path.isdir(get.sfile):
             return self.CopyDir(get)
         
@@ -397,7 +412,8 @@ class files:
         try:
             shutil.copyfile(get.sfile, get.dfile)
             public.WriteLog('TYPE_FILE','FILE_COPY_SUCCESS',(get.sfile,get.dfile))
-            self.SetFileAccept(get.dfile);
+            stat = os.stat(get.sfile)
+            os.chown(get.dfile,stat.st_uid,stat.st_gid)
             return public.returnMsg(True,'FILE_COPY_SUCCESS')
         except:
             return public.returnMsg(False,'FILE_COPY_ERR')
@@ -407,16 +423,20 @@ class files:
         get.sfile = get.sfile.encode('utf-8');
         get.dfile = get.dfile.encode('utf-8');
         if not os.path.exists(get.sfile):
-            return public.returnMsg(False,'DIR_NOT_EXISTS')
+            return public.returnMsg(False,'DIR_NOT_EXISTS');
         
-        if not self.CheckDir(get.dfile):
-            return public.returnMsg(False,'FILE_DANGER');
+        if os.path.exists(get.dfile):
+            return public.returnMsg(False,'DIR_EXISTS');
+        
+        #if not self.CheckDir(get.dfile):
+        #    return public.returnMsg(False,'FILE_DANGER');
         
         import shutil
         try:
             shutil.copytree(get.sfile, get.dfile)
+            stat = os.stat(get.sfile)
+            os.chown(get.dfile,stat.st_uid,stat.st_gid)
             public.WriteLog('TYPE_FILE','DIR_COPY_SUCCESS',(get.sfile,get.dfile))
-            self.SetFileAccept(get.dfile);
             return public.returnMsg(True,'DIR_COPY_SUCCESS')
         except:
             return public.returnMsg(False,'DIR_COPY_ERR')
@@ -427,11 +447,12 @@ class files:
     def MvFile(self,get) :
         get.sfile = get.sfile.encode('utf-8');
         get.dfile = get.dfile.encode('utf-8');
+        if not self.CheckFileName(get.dfile): return public.returnMsg(False,'文件名中不能包含特殊字符!');
         if not os.path.exists(get.sfile):
             return public.returnMsg(False,'FILE_NOT_EXISTS')
         
-        if os.path.exists(get.dfile):
-            return public.returnMsg(False,'FILE_EXISTS')
+        #if os.path.exists(get.dfile):
+        #    return public.returnMsg(False,'FILE_EXISTS')
         
         if not self.CheckDir(get.sfile):
             return public.returnMsg(False,'FILE_DANGER');
@@ -443,9 +464,29 @@ class files:
             return public.returnMsg(True,'MOVE_SUCCESS')
         except:
             return public.returnMsg(False,'MOVE_ERR')
-    
         
-    
+    #检查文件是否存在
+    def CheckExistsFiles(self,get):
+        get.dfile = get.dfile.encode('utf-8');
+        data = [];
+        filesx = [];
+        if not hasattr(get,'filename'):
+            import web;
+            filesx = web.ctx.session.selected.data;
+        else:
+            filesx.append(get.filename);
+        
+        for fn in filesx:
+            filename = get.dfile + '/' + fn;
+            if os.path.exists(filename):
+                tmp = {}
+                stat = os.stat(filename)
+                tmp['filename'] = fn;
+                tmp['size'] = os.path.getsize(filename);
+                tmp['mtime'] = str(int(stat.st_mtime));
+                data.append(tmp);
+        return data;
+            
     
     #获取文件内容
     def GetFileBody(self,get) :
@@ -454,24 +495,34 @@ class files:
             if get.path.find('rewrite') == -1:
                 return public.returnMsg(False,'FILE_NOT_EXISTS')
             public.writeFile(get.path,'');
+        
+        if os.path.getsize(get.path) > 2097152: return public.returnMsg(False,'不能在线编辑大于2MB的文件!');
+        srcBody = public.readFile(get.path)
+        data = {}
+        data['status'] = True
         try:
-            srcBody = public.readFile(get.path)
-            
-            data = {}
             if srcBody:
-                import chardet
-                char=chardet.detect(srcBody)
+                try:
+                    import chardet
+                    char=chardet.detect(srcBody)
+                except Exception,ex:
+                    return public.returnMsg(False,str(ex));
                 data['encoding'] = char['encoding']
-                if char['encoding'] == 'ascii':data['encoding'] = 'utf-8'
-                data['data'] = srcBody.decode(char['encoding']).encode('utf-8')
+                if char['encoding'] == 'GB2312' or not char['encoding'] or char['encoding'] == 'TIS-620' or char['encoding'] == 'ISO-8859-9': data['encoding'] = 'GBK';
+                if char['encoding'] == 'ascii' or char['encoding'] == 'ISO-8859-1': data['encoding'] = 'utf-8';
+                if char['encoding'] == 'Big5': data['encoding'] = 'BIG5';
+                if not char['encoding'] in ['GBK','utf-8','BIG5']: data['encoding'] = 'utf-8';
+                try:
+                    data['data'] = srcBody.decode(data['encoding']).encode('utf-8');
+                except:
+                    data['encoding'] = char['encoding'];
+                    data['data'] = srcBody.decode(data['encoding']).encode('utf-8');
             else:
-                data['data'] = srcBody
-                data['encoding'] = 'utf-8'
-            
-            data['status'] = True
-            return data
-        except:
-            return public.returnMsg(False,'FILE_GET_ERR')
+                data['data'] = srcBody.decode('utf-8').encode('utf-8');
+                data['encoding'] = 'utf-8';
+            return data;
+        except Exception,ex:
+            return public.returnMsg(False,'文件编码不被兼容，无法正确读取文件!' + str(ex));
     
     
     #保存文件
@@ -491,6 +542,11 @@ class files:
                     os.system('\\cp -a '+get.path+' /tmp/backup.conf');
             
             data = get.data[0];
+            userini = False;
+            if get.path.find('.user.ini') != -1:
+                userini = True;
+                public.ExecShell('chattr -i ' + get.path);
+                
             
             if get.path.find('/www/server/cron') != -1:
                     try:
@@ -508,7 +564,9 @@ class files:
                     os.system('\\cp -a /tmp/backup.conf '+get.path);
                     return public.returnMsg(False,'ERROR:<br><font style="color:red;">'+isError.replace("\n",'<br>')+'</font>');
                 public.serviceReload();
-                
+            
+            if userini: public.ExecShell('chattr +i ' + get.path);
+            
             public.WriteLog('TYPE_FILE','FILE_SAVE_SUCCESS',(get.path,));
             return public.returnMsg(True,'FILE_SAVE_SUCCESS');
         except:
@@ -545,7 +603,6 @@ class files:
         get.dfile = get.dfile.encode('utf-8');
         if not os.path.exists(get.sfile):
             return public.returnMsg(False,'FILE_NOT_EXISTS');
-        
         if not hasattr(get,'password'): get.password = '';
         
         #try:
@@ -557,7 +614,9 @@ class files:
             os.system("tar zxf '" + get.sfile + "' -C '" + get.dfile + "' > " + tmps + " 2>&1");
         else:
             os.system("gunzip -c " + get.sfile + " > " + get.sfile[:-3])
-        if self.CheckDir(get.dfile):self.SetFileAccept(get.dfile);
+        if self.CheckDir(get.dfile):
+            sites_path = public.M('config').where('id=?',(1)).getField('sites_path');
+            if get.dfile.find('/www/wwwroot') != -1 or get.dfile.find(sites_path) != -1: self.SetFileAccept(get.dfile);
         public.WriteLog("TYPE_FILE", 'UNZIP_SUCCESS',(get.sfile,get.dfile));
         return public.returnMsg(True,'UNZIP_SUCCESS');
         #except:
@@ -610,7 +669,7 @@ class files:
         import web
         get.path = web.ctx.session.rootPath
         os.system('rm -f '+web.ctx.session.logsPath+'/*')
-        if web.ctx.session.webserver == 'nginx':
+        if public.get_webserver() == 'nginx':
             os.system('kill -USR1 `cat '+web.ctx.session.setupPath+'/nginx/logs/nginx.pid`');
         else:
             os.system('/etc/init.d/httpd reload');
@@ -688,6 +747,8 @@ class files:
                         shutil.copytree(sfile,dfile)
                     else:
                         shutil.copyfile(sfile,dfile)
+                    stat = os.stat(sfile)
+                    os.chown(dfile,stat.st_uid,stat.st_gid)
                 except:
                     continue;
             public.WriteLog('TYPE_FILE','FILE_ALL_COPY',(web.ctx.session.selected.path,get.path))
@@ -727,7 +788,7 @@ class files:
         if not os.path.exists(path): os.system("mkdir -p " + path);
         if web.ctx.session.server_os['x'] != 'RHEL': get.type = '3'
         apacheVersion='false';
-        if web.ctx.session.webserver == 'apache':
+        if public.get_webserver() == 'apache':
             apacheVersion = public.readFile(web.ctx.session.setupPath+'/apache/version.pl');
         public.writeFile('/var/bt_apacheVersion.pl',apacheVersion)
         public.writeFile('/var/bt_setupPath.conf',web.ctx.session.rootPath)
@@ -820,6 +881,10 @@ done
         
         echoMsg['task'] = public.M('tasks').where("status!=?",('1',)).field('id,status,name,type').order("id asc").select()
         return echoMsg
+    
+    #取执行日志
+    def GetExecLog(self,get):
+        return self.GetLastLine('/tmp/panelExec.log',100);
                  
     #读文件指定倒数行数
     def GetLastLine(self,inputfile,lineNum):

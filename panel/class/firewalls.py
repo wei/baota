@@ -4,7 +4,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2016 宝塔软件(http:#bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 import sys,os,web,public,re,firewalld,time
 reload(sys)
@@ -18,23 +18,32 @@ class firewalls:
         if os.path.exists('/usr/sbin/firewalld'): self.__isFirewalld = True
         if os.path.exists('/usr/sbin/ufw'): self.__isUfw = True
         if self.__isFirewalld:
-            self.__Obj = firewalld.firewalld();
-            self.GetList();
+            try:
+                self.__Obj = firewalld.firewalld();
+                self.GetList();
+            except:
+                pass
         
     
     #获取服务端列表
     def GetList(self):
-        data = {}
-        data['ports'] = self.__Obj.GetAcceptPortList();
-        addtime = time.strftime('%Y-%m-%d %X',time.localtime())
-        for i in range(len(data['ports'])):
-            tmp = self.CheckDbExists(data['ports'][i]['port']);
-            if not tmp: public.M('firewall').add('port,ps,addtime',(data['ports'][i]['port'],'',addtime))
-                      
-        data['iplist'] = self.__Obj.GetDropAddressList();
-        for i in range(len(data['iplist'])):
-            tmp = self.CheckDbExists(data['iplist'][i]['address']);
-            if not tmp: public.M('firewall').add('port,ps,addtime',(data['iplist'][i]['address'],'',addtime))
+        try:
+            data = {}
+            data['ports'] = self.__Obj.GetAcceptPortList();
+            addtime = time.strftime('%Y-%m-%d %X',time.localtime())
+            for i in range(len(data['ports'])):
+                tmp = self.CheckDbExists(data['ports'][i]['port']);
+                if not tmp: public.M('firewall').add('port,ps,addtime',(data['ports'][i]['port'],'',addtime))
+                          
+            data['iplist'] = self.__Obj.GetDropAddressList();
+            for i in range(len(data['iplist'])):
+                try:
+                    tmp = self.CheckDbExists(data['iplist'][i]['address']);
+                    if not tmp: public.M('firewall').add('port,ps,addtime',(data['iplist'][i]['address'],'',addtime))
+                except:
+                    pass
+        except:
+            pass
     
     #检查数据库是否存在
     def CheckDbExists(self,port):
@@ -68,7 +77,8 @@ class firewalls:
             public.ExecShell('ufw deny from ' + address + ' to any');
         else:
             if self.__isFirewalld:
-                self.__Obj.AddDropAddress(address)
+                #self.__Obj.AddDropAddress(address)
+                public.ExecShell('firewall-cmd --permanent --add-rich-rule=\'rule family=ipv4 source address="'+ address +'" drop\'')
             else:
                 public.ExecShell('iptables -I INPUT -s '+address+' -j DROP')
         
@@ -88,7 +98,8 @@ class firewalls:
             public.ExecShell('ufw delete deny from ' + address + ' to any');
         else:
             if self.__isFirewalld:
-                self.__Obj.DelDropAddress(address)
+                #self.__Obj.DelDropAddress(address)
+                public.ExecShell('firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv4 source address="'+ address +'" drop\'')
             else:
                 public.ExecShell('iptables -D INPUT -s '+address+' -j DROP')
         
@@ -113,7 +124,9 @@ class firewalls:
             public.ExecShell('ufw allow ' + port + '/tcp');
         else:
             if self.__isFirewalld:
-                self.__Obj.AddAcceptPort(port)
+                #self.__Obj.AddAcceptPort(port)
+                port = port.replace(':','-');
+                public.ExecShell('firewall-cmd --permanent --zone=public --add-port='+port+'/tcp')
             else:
                 public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport '+port+' -j ACCEPT')
         public.WriteLog("TYPE_FIREWALL", 'FIREWALL_ACCEPT_PORT',(port,))
@@ -135,7 +148,9 @@ class firewalls:
                 public.ExecShell('ufw delete allow ' + port + '/tcp');
             else:
                 if self.__isFirewalld:
-                    self.__Obj.DelAcceptPort(port)
+                    #self.__Obj.DelAcceptPort(port)
+                    public.ExecShell('firewall-cmd --permanent --zone=public --remove-port='+port+'/tcp')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --remove-port='+port+'/udp')
                 else:
                     public.ExecShell('iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport '+port+' -j ACCEPT')
             public.WriteLog("TYPE_FIREWALL", 'FIREWALL_DROP_PORT',(port,))
@@ -233,8 +248,8 @@ class firewalls:
         panelsys = system.system();
         
         version = panelsys.GetSystemVersion();
-        if not os.path.exists('/etc/redhat-release'):
-             status = public.ExecShell("service ssh status | grep 'dead'")
+        if os.path.exists('/usr/bin/apt-get'):
+             status = public.ExecShell("service ssh status | grep -P '(dead|stop)'")
         else:
             if version.find(' 7.') != -1:
                 status = public.ExecShell("systemctl status sshd.service | grep 'dead'")

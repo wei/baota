@@ -4,7 +4,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2016 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 
 import sqlite3
@@ -144,7 +144,7 @@ class Sql():
             values=""
             for key in keys.split(','):
                 values += "?,"
-            values = values[0:len(values)-1]
+            values = self.checkInput(values[0:len(values)-1]);
             sql = "INSERT INTO "+self.__DB_TABLE+"("+keys+") "+"VALUES("+values+")"
             result = self.__DB_CONN.execute(sql,param)
             id = result.lastrowid
@@ -153,6 +153,22 @@ class Sql():
             return id
         except Exception,ex:
             return "error: " + str(ex)
+    
+    def checkInput(self,data):
+       if not data: return data;
+       if type(data) != str: return data;
+       checkList = [
+                    {'d':'<','r':'＜'},
+                    {'d':'>','r':'＞'},
+                    {'d':'\'','r':'‘'},
+                    {'d':'"','r':'“'},
+                    {'d':'&','r':'＆'},
+                    {'d':'#','r':'＃'},
+                    {'d':'<','r':'＜'}
+                    ]
+       for v in checkList:
+           data = data.replace(v['d'],v['r']);
+       return data;
     
     def addAll(self,keys,param):
         #插入数据

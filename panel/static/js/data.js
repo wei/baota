@@ -31,14 +31,14 @@ function getData(page,search) {
 				}
 				Body += "<tr><td><input type='checkbox' title='"+data.data[i].name+"' onclick='checkSelect();' name='id' value='"+data.data[i].id+"'>\
 						<td>" + data.data[i].name + "</td>\
-						<td>" + data.data[i].name + "</td>\
-						<td class='relative'><span class='password' data-pw='"+data.data[i].password+"'>**********</span><span class='glyphicon glyphicon-eye-open cursor pw-ico' style='margin-left:10px'></span><span class='ico-copy cursor btcopy' style='margin-left:10px' title='"+lan.database.copy_pass+"' data-pw='"+data.data[i].password+"'></span></td>\
+						<td>" + data.data[i].username + "</td>\
+						<td class='relative'><span class='password' data-pw='"+data.data[i].password+"'>**********</span><span class='glyphicon glyphicon-eye-open cursor pw-ico' style='margin-left:10px'></span><span class='ico-copy cursor btcopy' style='margin-left:10px' title='"+lan.database.copy_pass+"' data-pw='"+data.data[i].password+"' onclick=\"btcopy('"+data.data[i].password+"')\"></span></td>\
 						<td>"+isback+" | <a class='btlink' href=\"javascript:InputDatabase('"+data.data[i].name+"');\" title='"+lan.database.input_title+"'>"+lan.database.input+"</a></td>\
 						<td><a class='btlinkbed' href='javascript:;' data-id='"+data.data[i].id+"'>" + data.data[i].ps + "</a></td>\
 						<td style='text-align:right;'>\
-						<a href='javascript:;' class='btlink' onclick=\"AdminDatabase('"+data.data[i].name+"','"+data.data[i].name+"','"+data.data[i].password+"')\" title='"+lan.database.admin_title+"'>"+lan.database.admin+"</a> | \
-						<a href='javascript:;' class='btlink' onclick=\"SetDatabaseAccess('"+data.data[i].name+"')\" title='"+lan.database.auth_title+"'>"+lan.database.auth+"</a> | \
-						<a href='javascript:;' class='btlink' onclick=\"DataRespwd(0,'"+data.data[i].id+"','"+data.data[i].name+"')\" title='"+lan.database.edit_pass_title+"'>"+lan.database.edit_pass+"</a> | \
+						<a href='javascript:;' class='btlink' onclick=\"AdminDatabase('"+data.data[i].name+"','"+data.data[i].username+"','"+data.data[i].password+"')\" title='"+lan.database.admin_title+"'>"+lan.database.admin+"</a> | \
+						<a href='javascript:;' class='btlink' onclick=\"SetDatabaseAccess('"+data.data[i].username+"')\" title='"+lan.database.auth_title+"'>"+lan.database.auth+"</a> | \
+						<a href='javascript:;' class='btlink' onclick=\"DataRespwd(0,'"+data.data[i].id+"','"+data.data[i].username+"')\" title='"+lan.database.edit_pass_title+"'>"+lan.database.edit_pass+"</a> | \
 						<a href='javascript:;' class='btlink' onclick=\"DataDelete("+data.data[i].id+",'"+data.data[i].name+"')\" title='"+lan.database.del_title+"'>"+lan.public.del+"</a>\
 						</td></tr>"
 			}
@@ -47,6 +47,7 @@ function getData(page,search) {
 		$("#DataBody").html(Body);
 		//输出分页
 		$("#DataPage").html(data.page);
+		$("#DataPage .Pcount").css("position","static");
 		//备注
 		$(".btlinkbed").click(function(){
 			var dataid = $(this).attr("data-id");
@@ -54,8 +55,7 @@ function getData(page,search) {
 			$(this).hide().after("<input class='baktext' type='text' data-id='"+dataid+"' name='bak' value='" + databak + "' placeholder='"+lan.database.ps+"' onblur='GetBakPost(\"databases\")' />");
 			$(".baktext").focus();
 		});
-		//复制密码
-		btcopy();
+		
 		showHidePwd();
 	});
 }
@@ -80,7 +80,8 @@ function DataAdd(sign){
 		shadeClose: false,
 		content: "<form class='bt-form pd20 pb70' id='DataAdd'>\
 						<div class='line'>\
-							<span class='tname'>"+lan.database.add_name+"</span><div class='info-r'><input class='bt-input-text mr5' type='text' name='name' placeholder='"+lan.database.add_name_title+"' style='width:70%' />\
+							<span class='tname'>"+lan.database.add_name+"</span><div class='info-r'>\
+							<input class='bt-input-text mr5' id='db_name' type='text' name='name' placeholder='"+lan.database.add_name_title+"' style='width:70%' />\
 							<select class='bt-input-text' name='codeing' style='width:22%'>\
 								<option value='utf8'>utf-8</option>\
 								<option value='utf8mb4'>utf8mb4</option>\
@@ -90,7 +91,8 @@ function DataAdd(sign){
 							</div>\
 						</div>\
 						<div class='line'>\
-						<span class='tname'>"+lan.database.add_pass+"</span><div class='info-r'><input class='bt-input-text mr5' type='text' name='password' id='MyPassword' style='width:311px' placeholder='"+lan.database.add_pass_title+"' value='"+(RandomStrPwd(10))+"' /><span title='"+lan.database.add_pass_rep+"' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(10)'></span></div>\
+						<span class='tname'>用户名</span><div class='info-r'><input class='bt-input-text mr5' type='text' name='db_user' placeholder='数据库用户' style='width:70%;margin-bottom: 10px;' /></div>\
+						<span class='tname'>"+lan.database.add_pass+"</span><div class='info-r'><input class='bt-input-text mr5' type='text' name='password' id='MyPassword' style='width:311px' placeholder='"+lan.database.add_pass_title+"' value='"+(RandomStrPwd(16))+"' /><span title='"+lan.database.add_pass_rep+"' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(16)'></span></div>\
 						</div>\
                         <div class='line'>\
 						<span class='tname'>"+lan.database.add_auth+"</span>\
@@ -121,6 +123,10 @@ function DataAdd(sign){
 				$("input[name=address]").hide();
 			}
 		});
+		
+		$("#db_name").change(function(){
+			$("input[name='db_user']").val($(this).val());
+		});
 	}else{
 		var loadT=layer.load({shade:true,shadeClose:false});
 		var access = $("#dataAccess").val();
@@ -144,48 +150,48 @@ function DataAdd(sign){
  * @param {String} passwd	数据库新密码
  */
 function DataSetuppwd(sign, passwd) {
-		if (sign == 0) {
-			$.post('/data?action=getKey','table=config&key=mysql_root&id=1',function(rdata){
-				var mypasswd=rdata;
-				var index = layer.open({
-				type: 1,
-				skin: 'demo-class',
-				area: '500px',
-				title: lan.database.edit_pass_title,
-				closeBtn: 2,
-				shift: 5,
-				shadeClose: false,
-				content: "<div class='bt-form pd20 pb70' id='DataSetuppwd'>\
-						<div class='line'>\
-						<span class='tname'>"+lan.database.edit_root+":</span><div class='info-r'><input id='MyPassword' class='bt-input-text mr5' type='text' name='password' value='"+mypasswd+"' style='width:320px' /><span title='"+lan.database.add_pass_rep+"' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(16)'></span>\
-						</div></div>\
-				        <div class='bt-form-submit-btn'>\
-							<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>"+lan.public.close+"</button>\
-					        <button type='button' id='PostPwBtn' class='btn btn-success btn-sm btn-title' onclick='DataSetuppwd(1)' >"+lan.public.submit+"</button>\
-				        </div>\
-				      </div>"
-			});
-			RandomStrPwd(16);
-			$("#MyPassword").focus().keyup(function(e){
-				if(e.keyCode == 13) $("#PostPwBtn").click();
-			});
-		});			
-		} else {
-			var loadT=layer.msg(lan.public.the,{icon:16,time:0});
-			var newPassword = $("#MyPassword").val();
-			var data = 'password='+encodeURIComponent(newPassword);
-			$.post('/database?action=SetupPassword',data,function(rdata){
-				if(rdata.status){
-					getData(1);
-					layer.closeAll();
-					layer.msg(rdata.msg,{icon:1});
-					setTimeout(function(){window.location.reload();},3000);
-				}else{
-					layer.close(loadT);
-					layer.msg(rdata.msg,{icon:2});
-				}
-			});
-		}
+	if (sign == 0) {
+		$.post('/data?action=getKey','table=config&key=mysql_root&id=1',function(rdata){
+			var mypasswd=rdata;
+			var index = layer.open({
+			type: 1,
+			skin: 'demo-class',
+			area: '500px',
+			title: lan.database.edit_pass_title,
+			closeBtn: 2,
+			shift: 5,
+			shadeClose: false,
+			content: "<div class='bt-form pd20 pb70' id='DataSetuppwd'>\
+					<div class='line'>\
+					<span class='tname'>"+lan.database.edit_root+":</span><div class='info-r'><input id='MyPassword' class='bt-input-text mr5' type='text' name='password' value='"+mypasswd+"' style='width:320px' /><span title='"+lan.database.add_pass_rep+"' class='glyphicon glyphicon-repeat cursor' onclick='repeatPwd(16)'></span>\
+					</div></div>\
+			        <div class='bt-form-submit-btn'>\
+						<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>"+lan.public.close+"</button>\
+				        <button type='button' id='PostPwBtn' class='btn btn-success btn-sm btn-title' onclick='DataSetuppwd(1)' >"+lan.public.submit+"</button>\
+			        </div>\
+			      </div>"
+		});
+		RandomStrPwd(16);
+		$("#MyPassword").focus().keyup(function(e){
+			if(e.keyCode == 13) $("#PostPwBtn").click();
+		});
+	});			
+	} else {
+		var loadT=layer.msg(lan.public.the,{icon:16,time:0});
+		var newPassword = $("#MyPassword").val();
+		var data = 'password='+encodeURIComponent(newPassword);
+		$.post('/database?action=SetupPassword',data,function(rdata){
+			if(rdata.status){
+				getData(1);
+				layer.closeAll();
+				layer.msg(rdata.msg,{icon:1});
+				setTimeout(function(){window.location.reload();},3000);
+			}else{
+				layer.close(loadT);
+				layer.msg(rdata.msg,{icon:2});
+			}
+		});
+	}
 }
 /**
  * 重置数据库密码
@@ -219,16 +225,16 @@ function DataRespwd(sign,id,username){
 		return;
 	}
 	layer.confirm(lan.database.edit_pass_confirm,{title:lan.database.edit_pass_title,icon:3,closeBtn:2},function(index){
-			if(index>0){
-				var loadT=layer.load({shade:true,shadeClose:false});
-				var data = 'username='+encodeURIComponent($("#DataRespwd input[name='username']").val()) + '&password=' + encodeURIComponent($("#DataRespwd input[name='password']").val()) + '&id=' + $("#DataRespwd input[name='id']").val();
-				$.post('/database?action=ResDatabasePassword',data,function(rdata){
-					getData(1);
-					layer.closeAll();
-					layer.msg(rdata.msg,{icon:rdata.status?1:2});
-				});
-			}
-		});
+		if(index>0){
+			var loadT=layer.load({shade:true,shadeClose:false});
+			var data = 'username='+encodeURIComponent($("#DataRespwd input[name='username']").val()) + '&password=' + encodeURIComponent($("#DataRespwd input[name='password']").val()) + '&id=' + $("#DataRespwd input[name='id']").val();
+			$.post('/database?action=ResDatabasePassword',data,function(rdata){
+				getData(1);
+				layer.closeAll();
+				layer.msg(rdata.msg,{icon:rdata.status?1:2});
+			});
+		}
+	});
 	
 }
 /**
@@ -335,6 +341,7 @@ function DataBackupDelete(typeid,id,dataname){
 		});
 	});
 }
+
 /**
  *删除数据库 
  * @param {Number} id	数据编号
@@ -346,6 +353,7 @@ function DataDelete(id,name){
 	});
 
 }
+
 //删除操作
 function deleteDatabase(id,name){
 	var loadT = layer.msg(lan.get('del_all_task_the',[name]),{icon:16,time:0,shade: [0.3, '#000']});
@@ -377,7 +385,7 @@ function allDeleteDatabase(){
 //模拟同步开始批量删除数据库
 function syncDelete(dataList,successCount,errorMsg){
 	if(dataList.length < 1) {
-		layer.msg(lan.get('del_all_database',[successCount]),{icon:1});
+		layer.msg(lan.get('del_all_database_ok',[successCount]),{icon:1});
 		return;
 	}
 	var loadT = layer.msg(lan.get('del_all_task_the',[dataList[0].name]),{icon:16,time:0,shade: [0.3, '#000']});
@@ -505,7 +513,7 @@ function InputDatabase(name){
 				shift: 5,
 				shadeClose: false,
 				content: '<div class="pd15">'
-							+'<button class="btn btn-default btn-sm" onclick="UploadFiles(\''+name+'\')">'+lan.database.input_local_up+'</button>'
+							+'<button class="btn btn-default btn-sm" onclick="UploadFiles1(\''+name+'\')">'+lan.database.input_local_up+'</button>'
 							+'<div class="divtable mtb15" style="max-height:300px; overflow:auto">'
 								+'<table class="table table-hover">'
 									+'<thead>'
@@ -531,7 +539,7 @@ function InputDatabase(name){
 
 
 //上传文件
-function UploadFiles(name){
+function UploadFiles1(name){
 	var path = getCookie('backup_path') + "/database/";
 	var index = layer.open({
 		type:1,
@@ -556,7 +564,7 @@ function UploadFiles(name){
 				<ul id="up_box"></ul></div>'
 	});
 	$("#filesClose").click(function(){
-		layer.closeAll();
+		layer.close(index);
 		InputDatabase(name);
 	});
 	UploadStart(true);
@@ -585,7 +593,7 @@ function SetDatabaseAccess(dataName,action){
 		layer.open({
 			type: 1,
 			skin: 'demo-class',
-			area: '450px',
+			area: '480px',
 			title: lan.database.auth_title+'['+dataName+']',
 			closeBtn: 2,
 			shift: 5,
@@ -594,12 +602,12 @@ function SetDatabaseAccess(dataName,action){
 	                        <div class='line'>\
 							<span class='tname'>"+lan.database.auth_name+"</span>\
 							<div class='info-r'>\
-							<select id='dataAccess' class='bt-input-text mr5' style='width:100px;'>\
-								<option value='127.0.0.1' "+(rdata.msg[1] == '127.0.0.1'?'selected':'')+">"+lan.database.add_auth_local+"</option>\
-								<option value='%' "+(rdata.msg[1] == '%'?'selected':'')+">"+lan.database.add_auth_all+"</option>\
-								<option value='ip' "+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'selected':'')+">"+lan.database.add_auth_ip+"</option>\
+							<select id='dataAccess' class='bt-input-text mr5' style='width:88px;'>\
+								<option value='127.0.0.1' "+(rdata.msg == '127.0.0.1'?'selected':'')+">"+lan.database.add_auth_local+"</option>\
+								<option value='%' "+(rdata.msg == '%'?'selected':'')+">"+lan.database.add_auth_all+"</option>\
+								<option value='ip' "+((rdata.msg != '127.0.0.1' && rdata.msg != '%')?'selected':'')+">"+lan.database.add_auth_ip+"</option>\
 							</select>\
-							<input class='bt-input-text' type='text' name='address' placeholder='"+lan.database.add_auth_ip_title+"' value='"+rdata.msg[1]+"' style='width:218px;"+((rdata.msg[1] != '127.0.0.1' && rdata.msg[1] != '%')?'':'display:none;')+"' />\
+							<input class='bt-input-text' type='text' name='address' placeholder='允可IP,多个请用逗号隔开' value='"+rdata.msg+"' style='width:218px;"+((rdata.msg != '127.0.0.1' && rdata.msg != '%')?'':'display:none;')+"' />\
 							</div>\
 							</div>\
 	                        <div class='bt-form-submit-btn'>\
@@ -625,20 +633,16 @@ function SyncToDatabases(type){
 	//取选中对象
 	var el = document.getElementsByTagName('input');
 	var len = el.length;
-	var data='';
-	var a = '';
-	var count = 0;
+	var data=[];
 	//构造POST数据
 	for(var i=0;i<len;i++){
 		if(el[i].checked == true && el[i].value != 'on'){
-			data += a+count+'='+el[i].value;
-			a = '&';
-			count++;
+			data.push(el[i].value)
 		}
 	}
 	
 	var loadT = layer.msg(lan.database.sync_the,{icon:16,time:0,shade: [0.3, '#000']});
-	$.post('/database?action=SyncToDatabases&type='+type,data,function(rdata){
+	$.post('/database?action=SyncToDatabases&type='+type,{ids:JSON.stringify(data)},function(rdata){
 		layer.close(loadT);
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
 	});
@@ -663,11 +667,10 @@ function AdminDatabase(name,username,password){
 		return;
 	}
 	var murl = $("#toPHPMyAdmin").attr('action');
-	$("#pma_username").attr('value',username);
-	$("#pma_password").attr('value',password);
-	$("#db").attr('value',name);
-	layer.msg(lan.database.phpmyadmin,{icon:16,shade: [0.3, '#000'],time:1000});		
-	//$.post(murl,'',function(){},'jsonp');
+	$("#pma_username").val(username);
+	$("#pma_password").val(password);
+	$("#db").val(name);
+	layer.msg(lan.database.phpmyadmin,{icon:16,shade: [0.3, '#000'],time:1000});
 	setTimeout(function(){
 		$("#toPHPMyAdmin").submit();
 	},200);

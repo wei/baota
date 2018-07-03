@@ -4,7 +4,7 @@ $def with (data)
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 		<meta name="robots" content="noindex,nofollow">
-		<title>初始化宝塔软件</title>
+		<title>初始化$data['brand']面板</title>
 		<link href="/static/css/install.css" rel="stylesheet">
 		<script type="text/javascript" src="/static/js/jquery.js"></script>
 		<script type="text/javascript" src="/static/layer/layer.js"></script>
@@ -13,7 +13,7 @@ $def with (data)
 		<div class="main">
 		$if data['status']:
 			<div class="warp">
-				<div class="title">初始化宝塔Linux面板</div>
+				<div class="title">初始化$data['brand']面板</div>
 				<form class="form" action="/install?action=install" method="post" onsubmit="return checkSubmit()">
 					<fieldset>
 						<legend>管理员设置</legend>
@@ -26,11 +26,11 @@ $def with (data)
 			</div>
 		$else:
 			<div class="success">
-			<p>宝塔Linux面板初始化成功</p>
+			<p>$data['brand']面板初始化成功</p>
 			<a href="/login">登陆页面</a>
 			</div>
 		</div>
-		<div class="copyright">Copyright © 2014-2017 <a href="http://www.bt.cn" target="_blank">宝塔</a>|让你更简单的使用服务器(<a href="http://www.bt.cn" target="_blank">www.bt.cn</a>) All Rights Reserved</div>
+		<div class="copyright">$data['brand']$data['product'] &copy;2014-2018 <a href="http://www.bt.cn" target="_blank">宝塔</a>|让你更简单的使用服务器(<a href="http://www.bt.cn" target="_blank">www.bt.cn</a>) All Rights Reserved</div>
 		<script>
 			function checkSubmit(){
 				var username = $$("input[name='bt_username']").val();

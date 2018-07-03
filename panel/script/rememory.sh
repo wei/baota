@@ -10,33 +10,12 @@ log="释放内存!"
 echo "★[$endDate] $log"
 echo '----------------------------------------------------------------------------'
 
-if [ -f "/etc/init.d/php-fpm-52" ];then
-	/etc/init.d/php-fpm-52 reload
-fi
-
-if [ -f "/etc/init.d/php-fpm-53" ];then
-	/etc/init.d/php-fpm-53 reload
-fi
-
-if [ -f "/etc/init.d/php-fpm-54" ];then
-	/etc/init.d/php-fpm-54 reload
-fi
-
-if [ -f "/etc/init.d/php-fpm-55" ];then
-	/etc/init.d/php-fpm-55 reload
-fi
-
-if [ -f "/etc/init.d/php-fpm-56" ];then
-	/etc/init.d/php-fpm-56 reload
-fi
-
-if [ -f "/etc/init.d/php-fpm-70" ];then
-	/etc/init.d/php-fpm-70 reload
-fi
-
-if [ -f "/etc/init.d/php-fpm-71" ];then
-	/etc/init.d/php-fpm-71 reload
-fi
+for phpV in 52 53 54 56 70 71 72
+do
+	if [ -f /etc/init.d/php-fpm-${phpV} ];then
+		/etc/init.d/php-fpm-${phpV} reload
+	fi
+done
 
 if [ -f "/etc/init.d/mysqld" ];then
 	/etc/init.d/mysqld reload

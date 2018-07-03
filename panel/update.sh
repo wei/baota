@@ -3,7 +3,7 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 setup_path=/www
 CN='125.88.182.172'
-HK='103.224.251.79'
+HK='download.bt.cn'
 HK2='103.224.251.67'
 US='128.1.164.196'
 sleep 0.5;
@@ -16,18 +16,34 @@ echo "$HK_PING $HK" > ping.pl
 echo "$HK2_PING $HK2" >> ping.pl
 echo "$US_PING $US" >> ping.pl
 echo "$CN_PING $CN" >> ping.pl
-nodeAddr=`sort -n -b ping.pl|sed -n '1p'|awk '{print $2}'`
+nodeAddr=`sort -V ping.pl|sed -n '1p'|awk '{print $2}'`
 if [ "$nodeAddr" == "" ];then
-	nodeAddr=$HK
+	nodeAddr=$HK2
 fi
 
 download_Url=http://$nodeAddr:5880
 
-wget -T 5 -O panel.zip $download_Url/install/updateTest/LinuxPanel-$1.zip
+version=$1
+
+if [ "$version" = '' ];then
+	updateApi=https://www.bt.cn/Api/updateLinux
+	if [ -f /www/server/panel/plugin/beta/beta_main.py ];then
+		updateApi=https://www.bt.cn/Api/updateLinuxBeta
+	fi
+	version=`/usr/local/curl/bin/curl $updateApi 2>/dev/null|grep -Po '"version":".*?"'|grep -Po '[0-9\.]+'`
+fi
+
+if [ "$version" = '' ];then
+	echo '版本号获取失败,请手动在第一个参数传入!';
+	exit;
+fi
+
+wget -T 5 -O panel.zip $download_Url/install/update/LinuxPanel-$version.zip
 
 unzip -o panel.zip -d $setup_path/server/ > /dev/null
 rm -f panel.zip
 cd $setup_path/server/panel/
+rm -f $setup_path/server/panel/class/*.pyc
 python -m compileall $setup_path/server/panel/
 python -m compileall $setup_path/server/panel/main.py
 python -m compileall $setup_path/server/panel/task.py
@@ -42,4 +58,18 @@ if [ -f "tools.py" ];then
 	python -m py_compile tools.py
 fi
 
-service bt restart
+rm -f $setup_path/server/panel/data/templates.pl
+check_bt=`cat /etc/init.d/bt`
+if [ "${check_bt}" = "" ];then
+	rm -f /etc/init.d/bt
+	wget -O /etc/init.d/bt $download_Url/install/src/bt.init -T 10
+	chmod +x /etc/init.d/bt
+fi
+if [ ! -f "/etc/init.d/bt" ]; then
+	wget -O /etc/init.d/bt $download_Url/install/src/bt.init -T 10
+	chmod +x /etc/init.d/bt
+fi
+sleep 1 && service bt restart > /dev/null 2>&1 &
+echo "====================================="
+echo "已成功升级到[$version]";
+

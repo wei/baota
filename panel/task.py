@@ -32,21 +32,24 @@ class MyBad():
         
 
 def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):
-    global logPath
-    import shlex
-    import datetime
-    import subprocess
-    import time
-
-    if timeout:
-        end_time = datetime.datetime.now() + datetime.timedelta(seconds=timeout)
+    try:
+        global logPath
+        import shlex
+        import datetime
+        import subprocess
+        import time
     
-    sub = subprocess.Popen(cmdstring+' > '+logPath+' 2>&1', cwd=cwd, stdin=subprocess.PIPE,shell=shell,bufsize=4096)
-    
-    while sub.poll() is None:
-        time.sleep(0.1)
-            
-    return sub.returncode
+        if timeout:
+            end_time = datetime.datetime.now() + datetime.timedelta(seconds=timeout)
+        
+        sub = subprocess.Popen(cmdstring+' > '+logPath+' 2>&1', cwd=cwd, stdin=subprocess.PIPE,shell=shell,bufsize=4096)
+        
+        while sub.poll() is None:
+            time.sleep(0.1)
+                
+        return sub.returncode
+    except:
+        return None
 
 #下载文件
 def DownloadFile(url,filename):
@@ -57,11 +60,7 @@ def DownloadFile(url,filename):
         os.system('chown www.www ' + filename);
         WriteLogs('done')
     except:
-        global timeoutCount
-        if timeoutCount > 5:
-            return
-        timeoutCount += 1
-        DownloadFile(url,filename)
+        WriteLogs('done')
         
 
 
@@ -78,50 +77,61 @@ def DownloadHook(count, blockSize, totalSize):
 
 #写输出日志
 def WriteLogs(logMsg):
-    global logPath
-    fp = open(logPath,'w+');
-    fp.write(logMsg)
-    fp.close()
+    try:
+        global logPath
+        fp = open(logPath,'w+');
+        fp.write(logMsg)
+        fp.close()
+    except:
+        pass;
 
 #任务队列 
 def startTask():
     global isTask
     import time,public
-    while True:
-        try:
-            if os.path.exists(isTask):
-                sql = db.Sql()
-                sql.table('tasks').where("status=?",('-1',)).setField('status','0')
-                taskArr = sql.table('tasks').where("status=?",('0',)).field('id,type,execstr').order("id asc").select();
-                for value in taskArr:
-                    start = int(time.time());
-                    if not sql.table('tasks').where("id=?",(value['id'],)).count(): continue;
-                    sql.table('tasks').where("id=?",(value['id'],)).save('status,start',('-1',start))
-                    if value['type'] == 'download':
-                        argv = value['execstr'].split('|bt|')
-                        DownloadFile(argv[0],argv[1])
-                    elif value['type'] == 'execshell':
-                        ExecShell(value['execstr'])
-                    end = int(time.time())
-                    sql.table('tasks').where("id=?",(value['id'],)).save('status,end',('1',end))
-                    if(sql.table('tasks').where("status=?",('0')).count() < 1): os.system('rm -f ' + isTask);
-        except:
-            pass
-        siteEdate();
-        mainSafe();
-        time.sleep(2)
+    try:
+        while True:
+            try:
+                if os.path.exists(isTask):
+                    sql = db.Sql()
+                    sql.table('tasks').where("status=?",('-1',)).setField('status','0')
+                    taskArr = sql.table('tasks').where("status=?",('0',)).field('id,type,execstr').order("id asc").select();
+                    for value in taskArr:
+                        start = int(time.time());
+                        if not sql.table('tasks').where("id=?",(value['id'],)).count(): continue;
+                        sql.table('tasks').where("id=?",(value['id'],)).save('status,start',('-1',start))
+                        if value['type'] == 'download':
+                            argv = value['execstr'].split('|bt|')
+                            DownloadFile(argv[0],argv[1])
+                        elif value['type'] == 'execshell':
+                            ExecShell(value['execstr'])
+                        end = int(time.time())
+                        sql.table('tasks').where("id=?",(value['id'],)).save('status,end',('1',end))
+                        if(sql.table('tasks').where("status=?",('0')).count() < 1): os.system('rm -f ' + isTask);
+            except:
+                pass
+            siteEdate();
+            mainSafe();
+            time.sleep(2)
+    except:
+        time.sleep(60);
+        startTask();
         
 def mainSafe():
     global isCheck
-    if isCheck < 100:
-        isCheck += 1;
-        return True;
-    isCheck = 0;
-    isStart = public.ExecShell("ps aux |grep 'python main.pyc'|grep -v grep|awk '{print $2}'")[0];
-    if not isStart: 
-        os.system('/etc/init.d/bt start');
-        isStart = public.ExecShell("ps aux |grep 'python main.pyc'|grep -v grep|awk '{print $2}'")[0];
-        public.WriteLog('守护程序','面板服务程序启动成功 -> PID: ' + isStart);
+    try:
+        if isCheck < 100:
+            isCheck += 1;
+            return True;
+        isCheck = 0;
+        isStart = public.ExecShell("ps aux |grep 'python main.py'|grep -v grep|awk '{print $2}'")[0];
+        if not isStart: 
+            os.system('/etc/init.d/bt start');
+            isStart = public.ExecShell("ps aux |grep 'python main.py'|grep -v grep|awk '{print $2}'")[0];
+            public.WriteLog('守护程序','面板服务程序启动成功 -> PID: ' + isStart);
+    except:
+        time.sleep(30);
+        mainSafe();
 
 #网站到期处理
 def siteEdate():
@@ -150,11 +160,22 @@ def siteEdate():
 def systemTask():
     try:
         import system,psutil,time
+        sm = system.system();
         filename = 'data/control.conf';
         sql = db.Sql().dbfile('system')
+        csql = '''CREATE TABLE IF NOT EXISTS `load_average` (
+  `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+  `pro` REAL,
+  `one` REAL,
+  `five` REAL,
+  `fifteen` REAL,
+  `addtime` INTEGER
+)'''
+        sql.execute(csql,())
         cpuIo = cpu = {}
         cpuCount = psutil.cpu_count()
         used = count = 0
+        reloadNum=0
         network_up = network_down = diskio_1 = diskio_2 = networkInfo = cpuInfo = diskInfo = None
         while True:
             if not os.path.exists(filename):
@@ -247,97 +268,115 @@ def systemTask():
                         sql.table('diskio').add('read_count,write_count,read_bytes,write_bytes,read_time,write_time,addtime',data)
                         sql.table('diskio').where("addtime<?",(deltime,)).delete();
                     
+                    #LoadAverage
+                    load_average = sm.GetLoadAverage(None)
+                    lpro = round((load_average['one'] / load_average['max']) * 100,2)
+                    if lpro > 100: lpro = 100;
+                    sql.table('load_average').add('pro,one,five,fifteen,addtime',(lpro,load_average['one'],load_average['five'],load_average['fifteen'],addtime))
+                    
+                    lpro = None
+                    load_average = None
                     cpuInfo = None
                     networkInfo = None
                     diskInfo = None
                     count = 0
-                except:
-                    pass;
+                    reloadNum += 1;
+                    if reloadNum > 1440:
+                        if os.path.exists('data/ssl.pl'): os.system('/etc/init.d/bt restart > /dev/null 2>&1');
+                        reloadNum = 0;
+                except Exception,ex:
+                    print str(ex)
             del(tmp)
             
             time.sleep(5);
             count +=1
-    except:
+    except Exception,ex:
+        print str(ex)
         time.sleep(30);
         systemTask();
             
 
 #取内存使用率
 def GetMemUsed():
-    import psutil
-    mem = psutil.virtual_memory()
-    memInfo = {'memTotal':mem.total/1024/1024,'memFree':mem.free/1024/1024,'memBuffers':mem.buffers/1024/1024,'memCached':mem.cached/1024/1024}
-    tmp = memInfo['memTotal'] - memInfo['memFree'] - memInfo['memBuffers'] - memInfo['memCached']
-    tmp1 = memInfo['memTotal'] / 100
-    return (tmp / tmp1)
+    try:
+        import psutil
+        mem = psutil.virtual_memory()
+        memInfo = {'memTotal':mem.total/1024/1024,'memFree':mem.free/1024/1024,'memBuffers':mem.buffers/1024/1024,'memCached':mem.cached/1024/1024}
+        tmp = memInfo['memTotal'] - memInfo['memFree'] - memInfo['memBuffers'] - memInfo['memCached']
+        tmp1 = memInfo['memTotal'] / 100
+        return (tmp / tmp1)
+    except:
+        return 1;
 
 #检查502错误 
 def check502():
-    phpversions = ['52','53','54','55','56','70','71']
-    for version in phpversions:
-        if not os.path.exists('/etc/init.d/php-fpm-'+version): continue;
-        if checkPHPVersion(version): continue;
-        if startPHPVersion(version):
-            public.WriteLog('PHP守护程序','检测到PHP-' + version + '处理异常,已自动修复!')
+    try:
+        phpversions = ['53','54','55','56','70','71','72']
+        for version in phpversions:
+            if not os.path.exists('/etc/init.d/php-fpm-'+version): continue;
+            if checkPHPVersion(version): continue;
+            if startPHPVersion(version):
+                public.WriteLog('PHP守护程序','检测到PHP-' + version + '处理异常,已自动修复!')
+    except:
+        pass;
             
 #处理指定PHP版本   
 def startPHPVersion(version):
-    fpm = '/etc/init.d/php-fpm-'+version
-    if not os.path.exists(fpm): return False;
-    
-    #尝试重载服务
-    os.system(fpm + ' reload');
-    if checkPHPVersion(version): return True;
-    
-    #尝试重启服务
-    cgi = '/tmp/php-cgi-'+version
-    pid = '/www/server/php'+version+'/php-fpm.pid';
-    os.system('pkill -9 php-fpm-'+version)
-    time.sleep(0.5);
-    if not os.path.exists(cgi): os.system('rm -f ' + cgi);
-    if not os.path.exists(pid): os.system('rm -f ' + pid);
-    os.system(fpm + ' start');
-    if checkPHPVersion(version): return True;
-    
-    #检查是否正确启动
-    if os.path.exists(cgi): return True;
+    try:
+        fpm = '/etc/init.d/php-fpm-'+version
+        if not os.path.exists(fpm): return False;
+        
+        #尝试重载服务
+        os.system(fpm + ' reload');
+        if checkPHPVersion(version): return True;
+        
+        #尝试重启服务
+        cgi = '/tmp/php-cgi-'+version
+        pid = '/www/server/php'+version+'/php-fpm.pid';
+        os.system('pkill -9 php-fpm-'+version)
+        time.sleep(0.5);
+        if not os.path.exists(cgi): os.system('rm -f ' + cgi);
+        if not os.path.exists(pid): os.system('rm -f ' + pid);
+        os.system(fpm + ' start');
+        if checkPHPVersion(version): return True;
+        
+        #检查是否正确启动
+        if os.path.exists(cgi): return True;
+    except:
+        return True;
     
     
 #检查指定PHP版本
 def checkPHPVersion(version):
-    url = 'http://127.0.0.2/'+version+'/phpinfo.php';
-    result = public.httpGet(url);
-    #检查nginx
-    if result.find('Bad Gateway') != -1: return False;
-    #检查Apache
-    if result.find('Service Unavailable') != -1: return False;
-    if result.find('Not Found') != -1: CheckPHPINFO();
-    
-    #检查Web服务是否启动
-    if result.find('Connection refused') != -1: 
-        global isTask
-        if os.path.exists(isTask): 
-            isStatus = public.readFile(isTask);
-            if isStatus == 'True': return True;
-        filename = '/etc/init.d/nginx';
-        if os.path.exists(filename): os.system(filename + ' start');
-        filename = '/etc/init.d/httpd';
-        if os.path.exists(filename): os.system(filename + ' start');
+    try:
+        url = 'http://127.0.0.1/phpfpm_'+version+'_status';
+        result = public.httpGet(url);
+        #检查nginx
+        if result.find('Bad Gateway') != -1: return False;
+        #检查Apache
+        if result.find('Service Unavailable') != -1: return False;
+        if result.find('Not Found') != -1: CheckPHPINFO();
         
-    return True;
+        #检查Web服务是否启动
+        if result.find('Connection refused') != -1: 
+            global isTask
+            if os.path.exists(isTask): 
+                isStatus = public.readFile(isTask);
+                if isStatus == 'True': return True;
+            filename = '/etc/init.d/nginx';
+            if os.path.exists(filename): os.system(filename + ' start');
+            filename = '/etc/init.d/httpd';
+            if os.path.exists(filename): os.system(filename + ' start');
+            
+        return True;
+    except:
+        return True;
 
 
 #检测PHPINFO配置
 def CheckPHPINFO():
-    php_versions = ['52','53','54','55','56','70','71'];
-    setupPath = '/www/server'
-    for version in php_versions:
-        sPath = setupPath + '/phpinfo/' + version;
-        if not os.path.exists(sPath + '/phpinfo.php'):
-            os.system("mkdir -p " + sPath);
-            public.writeFile(sPath + '/phpinfo.php','<?php phpinfo(); ?>');
-    
-    
+    php_versions = ['53','54','55','56','70','71','72'];
+    setupPath = '/www/server';
     path = setupPath +'/panel/vhost/nginx/phpinfo.conf';
     if not os.path.exists(path):
         opt = "";
@@ -384,11 +423,34 @@ ServerName 127.0.0.2
 
 #502错误检查线程
 def check502Task():
-    while True:
-        if os.path.exists('/www/server/panel/data/502Task.pl'): check502();
+    try:
+        while True:
+            if os.path.exists('/www/server/panel/data/502Task.pl'): check502();
+            time.sleep(600);
+    except:
         time.sleep(600);
+        check502Task();
+
+#自动结束异常进程
+def btkill():
+    import btkill
+    b = btkill.btkill()
+    b.start();
 
 if __name__ == "__main__":
+    os.system('rm -rf /www/server/phpinfo/*');
+    if os.path.exists('/www/server/nginx/sbin/nginx'):
+        pfile = '/www/server/nginx/conf/enable-php-72.conf';
+        if not os.path.exists(pfile):
+            pconf = '''location ~ [^/]\.php(/|$)
+{
+    try_files $uri =404;
+    fastcgi_pass  unix:/tmp/php-cgi-72.sock;
+    fastcgi_index index.php;
+    include fastcgi.conf;
+    include pathinfo.conf;
+}'''
+            public.writeFile(pfile,pconf);
     import threading
     t = threading.Thread(target=systemTask)
     t.setDaemon(True)
@@ -398,6 +460,9 @@ if __name__ == "__main__":
     p.setDaemon(True)
     p.start()
     
-    startTask()
+    #p = threading.Thread(target=btkill)
+    #p.setDaemon(True)
+    #p.start()
     
+    startTask()
 

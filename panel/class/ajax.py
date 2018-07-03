@@ -4,7 +4,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2016 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 import public,os,web
 class ajax:
@@ -34,9 +34,9 @@ class ajax:
         fTime = time.localtime(int(tmp['start time']))
         tmp['start time'] = time.strftime('%Y-%m-%d %H:%M:%S',fTime)
         return tmp
-    
+        
     def CheckStatusConf(self):
-        if web.ctx.session.webserver != 'nginx': return;
+        if public.get_webserver() != 'nginx': return;
         filename = web.ctx.session.setupPath + '/panel/vhost/nginx/phpfpm_status.conf';
         if os.path.exists(filename): return;
         
@@ -80,6 +80,11 @@ class ajax:
     }
     location /phpfpm_71_status {
         fastcgi_pass unix:/tmp/php-cgi-71.sock;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME \$fastcgi_script_name;
+    }
+    location /phpfpm_72_status {
+        fastcgi_pass unix:/tmp/php-cgi-72.sock;
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME \$fastcgi_script_name;
     }
@@ -262,11 +267,8 @@ class ajax:
                 tmp['pid'] = pid;                                   #进程标识
                 tmp['status'] = p.status();                         #进程状态
                 tmp['user'] = p.username();                         #执行用户
-                cputimes = p.cpu_times()    
-                if cputimes.user > 100:
-                    tmp['cpu_percent'] = p.cpu_percent(interval = 0.5);
-                else:
-                    tmp['cpu_percent'] = 0.0
+                cputimes = p.cpu_times()
+                tmp['cpu_percent'] = p.cpu_percent(0.1);
                 tmp['cpu_times'] = cputimes.user                             #进程占用的CPU时间
                 tmp['memory_percent'] = round(p.memory_percent(),3)          #进程占用的内存比例
                 pio = p.io_counters()
@@ -319,6 +321,10 @@ class ajax:
         data = public.M('cpuio').dbfile('system').where("addtime>=? AND addtime<=?",(get.start,get.end)).field('id,pro,mem,addtime').order('id asc').select()
         return self.ToAddtime(data,True);
     
+    def get_load_average(self,get):
+        data = public.M('load_average').dbfile('system').where("addtime>=? AND addtime<=?",(get.start,get.end)).field('id,pro,one,five,fifteen,addtime').order('id asc').select()
+        return self.ToAddtime(data);
+    
     
     def ToAddtime(self,data,tomem = False):
         import time
@@ -329,9 +335,9 @@ class ajax:
             mPre = (psutil.virtual_memory().total / 1024 / 1024) / 100
         length = len(data);
         he = 1;
-        if length > 100: he = 2;
-        if length > 1000: he = 8;
-        if length > 10000: he = 20;
+        if length > 100: he = 1;
+        if length > 1000: he = 3;
+        if length > 10000: he = 15;
         if he == 1:
             for i in range(length):
                 data[i]['addtime'] = time.strftime('%m/%d %H:%M',time.localtime(float(data[i]['addtime'])))
@@ -353,14 +359,24 @@ class ajax:
         
     def GetInstalleds(self,softlist):
         softs = '';
-        for soft in softlist:
+        for soft in softlist['data']:
             try:
                 for v in soft['versions']:
                     if v['status']: softs += soft['name'] + '-' + v['version'] + '|';
             except:
-                continue;
-            
+                pass
         return softs;
+    
+    #获取SSH爆破次数
+    def get_ssh_intrusion(self):
+        fp = open('/var/log/secure','r');
+        l = fp.readline();
+        intrusion_total = 0;
+        while l:
+            if l.find('Failed password for root') != -1:  intrusion_total += 1;
+            l = fp.readline();
+        fp.close();
+        return intrusion_total;
     
     def UpdatePanel(self,get):
         #return public.returnMsg(False,'演示服务器，禁止此操作!');
@@ -368,7 +384,10 @@ class ajax:
             if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK');
             import web,json
             if int(web.ctx.session.config['status']) == 0:
-                public.httpGet(web.ctx.session.home+'/Api/SetupCount?type=Linux');
+                o = ''
+                if os.path.exists('data/o.pl'):
+                    o = public.readFile('data/o.pl').strip()
+                public.httpGet(web.ctx.session.home+'/Api/SetupCount?type=Linux&o=' + o);
                 public.M('config').where("id=?",('1',)).setField('status',1);
             
             #取回远程版本信息
@@ -384,18 +403,25 @@ class ajax:
                 import psutil,panelPlugin,system;
                 mem = psutil.virtual_memory();
                 mplugin = panelPlugin.panelPlugin();
+                mplugin.ROWS = 10000;
                 panelsys = system.system();
                 data = {}
                 data['sites'] = str(public.M('sites').count());
                 data['ftps'] = str(public.M('ftps').count());
                 data['databases'] = str(public.M('databases').count());
-                data['system'] = panelsys.GetSystemVersion() + '|' + str(mem.total / 1024 / 1024) + 'MB|' + public.getCpuType() + '*' + str(psutil.cpu_count()) + '|' + web.ctx.session.webserver + '|' + web.ctx.session.version;
+                data['system'] = panelsys.GetSystemVersion() + '|' + str(mem.total / 1024 / 1024) + 'MB|' + public.getCpuType() + '*' + str(psutil.cpu_count()) + '|' + public.get_webserver() + '|' + web.ctx.session.version;
                 data['system'] += '||'+self.GetInstalleds(mplugin.getPluginList(None));
                 data['logs'] = logs
+                data['oem'] = ''
+                data['intrusion'] = self.get_ssh_intrusion();
+                data['o'] = ''                
+                filename = '/www/server/panel/data/o.pl'
+                if os.path.exists(filename): data['o'] = str(public.readFile(filename))
                 msg = public.getMsg('PANEL_UPDATE_MSG');
                 sUrl = web.ctx.session.home + '/Api/updateLinux';
                 betaIs = 'data/beta.pl';
                 betaStr = public.readFile(betaIs);
+                
                 if betaStr:
                     if betaStr.strip() != 'False':
                         sUrl = web.ctx.session.home + '/Api/updateLinuxBeta';
@@ -412,6 +438,10 @@ class ajax:
                 if not updateInfo: return public.returnMsg(False,"CONNECT_ERR");
                 updateInfo['msg'] = msg;
                 web.ctx.session.updateInfo = updateInfo;
+                if os.path.exists('data/o.pl'):
+                    import tools
+                    tools.setup_idc()
+                    if getattr(web.ctx.session,'brand'): del(web.ctx.session.brand)
                 
             #检查是否需要升级
             if updateInfo['version'] == web.ctx.session.version:
@@ -445,11 +475,9 @@ class ajax:
                 
                 compileall.compile_dir(setupPath + '/panel');
                 compileall.compile_dir(setupPath + '/panel/class');
-                #if os.path.exists(setupPath + '/panel/main.pyc'):
-                    #public.ExecShell('rm -f ' + setupPath + '/panel/class/*.py');
-                    #public.ExecShell('rm -f ' + setupPath + '/panel/*.py');
                 public.ExecShell('rm -f panel.zip');
                 web.ctx.session.version = updateInfo['version']
+                if hasattr(web.ctx.session,'getCloudPlugin'): del(web.ctx.session['getCloudPlugin']);
                 return public.returnMsg(True,'PANEL_UPDATE',(updateInfo['version'],));
             
             #输出新版本信息
@@ -458,6 +486,8 @@ class ajax:
                 'version': updateInfo['version'],
                 'updateMsg' : updateInfo['updateMsg']
             };
+            
+            public.ExecShell('rm -rf /www/server/phpinfo/*');
             return data;
         except Exception,ex:
             return public.returnMsg(False,"CONNECT_ERR");
@@ -489,7 +519,7 @@ class ajax:
         tmp = re.search(rep,phpini).groups();
         data['disable_functions'] = tmp[0];
         
-        rep = "upload_max_filesize\s*=\s*([0-9]+)M"
+        rep = "upload_max_filesize\s*=\s*([0-9]+)(M|m|K|k)"
         tmp = re.search(rep,phpini).groups()
         data['max'] = tmp[0]
         
@@ -528,15 +558,16 @@ class ajax:
     def GetPHPInfo(self,get):
         self.CheckPHPINFO();
         sPath = web.ctx.session.setupPath + '/phpinfo/' + get.version;
-        if not os.path.exists(sPath + '/phpinfo.php'):
-            public.ExecShell("mkdir -p " + sPath);
-            public.writeFile(sPath + '/phpinfo.php','<?php phpinfo(); ?>');
+        public.ExecShell("rm -rf /www/server/phpinfo/*");
+        public.ExecShell("mkdir -p " + sPath);
+        public.writeFile(sPath + '/phpinfo.php','<?php phpinfo(); ?>');
         phpinfo = public.httpGet('http://127.0.0.2/' + get.version + '/phpinfo.php');
+        os.system("rm -rf " + sPath);
         return phpinfo;
     
     #检测PHPINFO配置
     def CheckPHPINFO(self):
-        php_versions = ['52','53','54','55','56','70','71'];
+        php_versions = ['52','53','54','55','56','70','71','72'];
         path = web.ctx.session.setupPath + '/panel/vhost/nginx/phpinfo.conf';
         if not os.path.exists(path):
             opt = "";
@@ -600,78 +631,78 @@ ServerName 127.0.0.2
     #设置PHPMyAdmin
     def setPHPMyAdmin(self,get):
         import re;
-        try:
-            if web.ctx.session.webserver == 'nginx':
-                filename = web.ctx.session.setupPath + '/nginx/conf/nginx.conf';
+        #try:
+        if public.get_webserver() == 'nginx':
+            filename = web.ctx.session.setupPath + '/nginx/conf/nginx.conf';
+        else:
+            filename = web.ctx.session.setupPath + '/apache/conf/extra/httpd-vhosts.conf';
+        
+        conf = public.readFile(filename);
+        if hasattr(get,'port'):
+            mainPort = public.readFile('data/port.pl').strip();
+            if mainPort == get.port:
+                return public.returnMsg(False,'SOFT_PHPVERSION_ERR_PORT_RE');
+            if public.get_webserver() == 'nginx':
+                rep = "listen\s+([0-9]+)\s*;"
+                oldPort = re.search(rep,conf).groups()[0];
+                conf = re.sub(rep,'listen ' + get.port + ';\n',conf);
             else:
-                filename = web.ctx.session.setupPath + '/apache/conf/extra/httpd-vhosts.conf';
+                rep = "Listen\s+([0-9]+)\s*\n";
+                oldPort = re.search(rep,conf).groups()[0];
+                conf = re.sub(rep,"Listen " + get.port + "\n",conf,1);
+                rep = "VirtualHost\s+\*:[0-9]+"
+                conf = re.sub(rep,"VirtualHost *:" + get.port,conf,1);
             
-            conf = public.readFile(filename);
-            if hasattr(get,'port'):
-                mainPort = public.readFile('data/port.pl').strip();
-                if mainPort == get.port:
-                    return public.returnMsg(False,'SOFT_PHPVERSION_ERR_PORT_RE');
-                if web.ctx.session.webserver == 'nginx':
-                    rep = "listen\s+([0-9]+)\s*;"
-                    oldPort = re.search(rep,conf).groups()[0];
-                    conf = re.sub(rep,'listen ' + get.port + ';\n',conf);
-                else:
-                    rep = "Listen\s+([0-9]+)\s*\n";
-                    oldPort = re.search(rep,conf).groups()[0];
-                    conf = re.sub(rep,"Listen " + get.port + "\n",conf,1);
-                    rep = "VirtualHost\s+\*:[0-9]+"
-                    conf = re.sub(rep,"VirtualHost *:" + get.port,conf,1);
+            if oldPort == get.port: return public.returnMsg(False,'SOFT_PHPVERSION_ERR_PORT');
+            
+            public.writeFile(filename,conf);
+            import firewalls
+            get.ps = public.getMsg('SOFT_PHPVERSION_PS');
+            fw = firewalls.firewalls();
+            fw.AddAcceptPort(get);           
+            public.serviceReload();
+            public.WriteLog('TYPE_SOFT','SOFT_PHPMYADMIN_PORT',(get.port,))
+            get.id = public.M('firewall').where('port=?',(oldPort,)).getField('id');
+            get.port = oldPort;
+            fw.DelAcceptPort(get);
+            return public.returnMsg(True,'SET_PORT_SUCCESS');
+        
+        if hasattr(get,'phpversion'):
+            if public.get_webserver() == 'nginx':
+                filename = web.ctx.session.setupPath + '/nginx/conf/enable-php.conf';
+                conf = public.readFile(filename);
+                rep = "php-cgi.*\.sock"
+                conf = re.sub(rep,'php-cgi-' + get.phpversion + '.sock',conf,1);
+            else:
+                rep = "php-cgi.*\.sock"
+                conf = re.sub(rep,'php-cgi-' + get.phpversion + '.sock',conf,1);
                 
-                if oldPort == get.port: return public.returnMsg(False,'SOFT_PHPVERSION_ERR_PORT');
-                
-                public.writeFile(filename,conf);
-                import firewalls
-                get.ps = public.getMsg('SOFT_PHPVERSION_PS');
-                fw = firewalls.firewalls();
-                fw.AddAcceptPort(get);           
-                public.serviceReload();
-                public.WriteLog('TYPE_SOFT','SOFT_PHPMYADMIN_PORT',(get.port,))
-                get.id = public.M('firewall').where('port=?',(oldPort,)).getField('id');
-                get.port = oldPort;
-                fw.DelAcceptPort(get);
-                return public.returnMsg(True,'SET_PORT_SUCCESS');
+            public.writeFile(filename,conf);
+            public.serviceReload();
+            public.WriteLog('TYPE_SOFT','SOFT_PHPMYADMIN_PHP',(get.phpversion,))
+            return public.returnMsg(True,'SOFT_PHPVERSION_SET');
+        
+        if hasattr(get,'password'):
+            import panelSite;
+            if(get.password == 'close'):
+                return panelSite.panelSite().CloseHasPwd(get);
+            else:
+                return panelSite.panelSite().SetHasPwd(get);
+        
+        if hasattr(get,'status'):
+            if conf.find(web.ctx.session.setupPath + '/stop') != -1:
+                conf = conf.replace(web.ctx.session.setupPath + '/stop',web.ctx.session.setupPath + '/phpmyadmin');
+                msg = public.getMsg('START')
+            else:
+                conf = conf.replace(web.ctx.session.setupPath + '/phpmyadmin',web.ctx.session.setupPath + '/stop');
+                msg = public.getMsg('STOP')
             
-            if hasattr(get,'phpversion'):
-                if web.ctx.session.webserver == 'nginx':
-                    filename = web.ctx.session.setupPath + '/nginx/conf/enable-php.conf';
-                    conf = public.readFile(filename);
-                    rep = "php-cgi.*\.sock"
-                    conf = re.sub(rep,'php-cgi-' + get.phpversion + '.sock',conf);
-                else:
-                    rep = "php-cgi.*\.sock"
-                    conf = re.sub(rep,'php-cgi-' + get.phpversion + '.sock',conf);
-                    
-                public.writeFile(filename,conf);
-                public.serviceReload();
-                public.WriteLog('TYPE_SOFT','SOFT_PHPMYADMIN_PHP',(get.phpversion,))
-                return public.returnMsg(True,'SOFT_PHPVERSION_SET');
-            
-            if hasattr(get,'password'):
-                import panelSite;
-                if(get.password == 'close'):
-                    return panelSite.panelSite().CloseHasPwd(get);
-                else:
-                    return panelSite.panelSite().SetHasPwd(get);
-            
-            if hasattr(get,'status'):
-                if conf.find(web.ctx.session.setupPath + '/stop') != -1:
-                    conf = conf.replace(web.ctx.session.setupPath + '/stop',web.ctx.session.setupPath + '/phpmyadmin');
-                    msg = public.getMsg('START')
-                else:
-                    conf = conf.replace(web.ctx.session.setupPath + '/phpmyadmin',web.ctx.session.setupPath + '/stop');
-                    msg = public.getMsg('STOP')
-                
-                public.writeFile(filename,conf);
-                public.serviceReload();
-                public.WriteLog('TYPE_SOFT','SOFT_PHPMYADMIN_STATUS',(msg,))
-                return public.returnMsg(True,'SOFT_PHPMYADMIN_STATUS',(msg,));
-        except:
-            return public.returnMsg(False,'ERROR');
+            public.writeFile(filename,conf);
+            public.serviceReload();
+            public.WriteLog('TYPE_SOFT','SOFT_PHPMYADMIN_STATUS',(msg,))
+            return public.returnMsg(True,'SOFT_PHPMYADMIN_STATUS',(msg,));
+        #except:
+            #return public.returnMsg(False,'ERROR');
             
     def ToPunycode(self,get):
         import re;
@@ -703,6 +734,121 @@ ServerName 127.0.0.2
     #获取进度
     def GetSpeed(self,get):
         return public.getSpeed();
+    
+    #检查登陆状态
+    def CheckLogin(self,get):
+        return True;
+    
+    #获取警告标识
+    def GetWarning(self,get):
+        warningFile = 'data/warning.json'
+        if not os.path.exists(warningFile): return public.returnMsg(False,'警告列表不存在!');
+        import json,time;
+        wlist = json.loads(public.readFile(warningFile));
+        wlist['time'] = int(time.time());
+        return wlist;
+    
+    #设置警告标识
+    def SetWarning(self,get):
+        wlist = self.GetWarning(get);
+        id = int(get.id);
+        import time,json;
+        for i in xrange(len(wlist['data'])):
+            if wlist['data'][i]['id'] == id:
+                wlist['data'][i]['ignore_count'] += 1;
+                wlist['data'][i]['ignore_time'] = int(time.time());
+        
+        warningFile = 'data/warning.json'
+        public.writeFile(warningFile,json.dumps(wlist));
+        return public.returnMsg(True,'SET_SUCCESS');
+    
+    #获取memcached状态
+    def GetMemcachedStatus(self,get):
+        import telnetlib,re;
+        tn = telnetlib.Telnet('127.0.0.1',11211);
+        tn.write("stats\n");
+        tn.write("quit\n");
+        data = tn.read_all();
+        data = data.replace('STAT','').replace('END','').split("\n");
+        result = {}
+        res = ['cmd_get','get_hits','get_misses','limit_maxbytes','curr_items','bytes','evictions','limit_maxbytes','bytes_written','bytes_read','curr_connections'];
+        for d in data:
+            if len(d)<3: continue;
+            t = d.split();
+            if not t[0] in res: continue;
+            result[t[0]] = int(t[1]);
+        result['hit'] = 1;
+        if result['get_hits'] > 0 and result['cmd_get'] > 0:
+            result['hit'] = float(result['get_hits']) / float(result['cmd_get']) * 100;
+        
+        conf = public.readFile('/etc/init.d/memcached');
+        result['bind'] = re.search('IP=(.+)',conf).groups()[0];
+        result['port'] = int(re.search('PORT=(\d+)',conf).groups()[0]);
+        result['maxconn'] = int(re.search('MAXCONN=(\d+)',conf).groups()[0]);
+        result['cachesize'] = int(re.search('CACHESIZE=(\d+)',conf).groups()[0]);
+        return result;
+    
+    #设置memcached缓存大小
+    def SetMemcachedCache(self,get):
+        import re
+        confFile = '/etc/init.d/memcached';
+        conf = public.readFile(confFile);
+        conf = re.sub('IP=.+','IP='+get.ip,conf);
+        conf = re.sub('PORT=\d+','PORT='+get.port,conf);
+        conf = re.sub('MAXCONN=\d+','MAXCONN='+get.maxconn,conf);
+        conf = re.sub('CACHESIZE=\d+','CACHESIZE='+get.cachesize,conf);
+        public.writeFile(confFile,conf);
+        os.system(confFile + ' reload');
+        return public.returnMsg(True,'设置成功!');
+    
+    #取redis状态
+    def GetRedisStatus(self,get):
+        data = public.ExecShell('/www/server/redis/src/redis-cli info')[0];
+        res = [
+               'tcp_port',
+               'uptime_in_days',    #已运行天数
+               'connected_clients', #连接的客户端数量
+               'used_memory',       #Redis已分配的内存总量
+               'used_memory_rss',   #Redis占用的系统内存总量
+               'used_memory_peak',  #Redis所用内存的高峰值
+               'mem_fragmentation_ratio',   #内存碎片比率
+               'total_connections_received',#运行以来连接过的客户端的总数量
+               'total_commands_processed',  #运行以来执行过的命令的总数量
+               'instantaneous_ops_per_sec', #服务器每秒钟执行的命令数量
+               'keyspace_hits',             #查找数据库键成功的次数
+               'keyspace_misses',           #查找数据库键失败的次数
+               'latest_fork_usec'           #最近一次 fork() 操作耗费的毫秒数
+               ];
+        data = data.split("\n");
+        result = {}
+        for d in data:
+            if len(d)<3: continue;
+            t = d.strip().split(':');
+            if not t[0] in res: continue;
+            result[t[0]] = t[1];
+        return result;
+    
+    #取PHP-FPM日志
+    def GetFpmLogs(self,get):
+        path = '/www/server/php/' + get.version + '/var/log/php-fpm.log';
+        if not os.path.exists(path): return public.returnMsg(False,'日志文件不存在!');
+        return public.returnMsg(True,public.GetNumLines(path,1000));
+    
+    #取PHP慢日志
+    def GetFpmSlowLogs(self,get):
+        path = '/www/server/php/' + get.version + '/var/log/slow.log';
+        if not os.path.exists(path): return public.returnMsg(False,'日志文件不存在!');
+        return public.returnMsg(True,public.GetNumLines(path,1000));
+    
+    #取指定日志
+    def GetOpeLogs(self,get):
+        if not os.path.exists(get.path): return public.returnMsg(False,'日志文件不存在!');
+        return public.returnMsg(True,public.GetNumLines(get.path,1000));
+    
+    #从官网取指定信息
+    def GetCloudHtml(self,get):
+        data = public.httpGet('https://www.bt.cn/' + get.rpath)
+        return data;
     
         
         

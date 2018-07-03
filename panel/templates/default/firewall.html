@@ -78,7 +78,8 @@ $def with (data)
 							<span id="f-ps" style="margin-left: 10px;">$data['lan']['F6']</span>
 						</div>
 						<div class="divtable pd15">
-							<table width="100%" border="0" cellpadding="0" cellspacing="0" class="table table-hover">
+							<div class="tablescroll">
+							<table class="table table-hover" style="min-width: 640px;border: 0 none;">
 								<thead>
 								<tr>
 									<th>$data['lan']['TH1']</th>
@@ -91,6 +92,7 @@ $def with (data)
 								</thead>
 								<tbody id="firewallBody"></tbody>
 							</table>
+							</div>
 							<div class="dataTables_paginate paging_bootstrap pagination">
 								<ul id="firewallPage" class="page"></ul>
 							</div>
@@ -106,7 +108,8 @@ $def with (data)
 							<a class="btn btn-default btn-sm" onclick="delLogs();" style="margin-top: 1px;">$data['lan']['BTN5']</a>
 						</div>
 						<div class="divtable pd15">
-							<table width="100%" border="0" cellpadding="0" cellspacing="0" class="table table-hover">
+							<div class="tablescroll">
+							<table class="table table-hover" style="min-width: 640px;border: 0 none;">
 								<thead>
 								<tr>
 									<th>$data['lan']['LTH1']</th>
@@ -117,6 +120,7 @@ $def with (data)
 								</thead>
 								<tbody id="logsBody"></tbody>
 							</table>
+							</div>
 							<div class="dataTables_paginate paging_bootstrap pagination">
 								<ul id="logsPage" class="page"></ul>
 							</div>

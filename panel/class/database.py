@@ -4,7 +4,7 @@
 #-------------------------------------------------------------------
 # Copyright (c) 2015-2017 宝塔软件(http:#bt.cn) All rights reserved.
 #-------------------------------------------------------------------
-# Author: 黄文良 <2879625666@qq.com>
+# Author: 黄文良 <287962566@qq.com>
 #-------------------------------------------------------------------
 
 #------------------------------
@@ -19,23 +19,23 @@ class database:
     def AddDatabase(self,get):
         try:
             data_name = get['name'].strip()
-            if data_name == 'root' or data_name == 'mysql' or data_name == 'test' or data_name == 'sys' or len(data_name) < 1:
-                return public.returnMsg(False,'CRONTAB_TASK_EXEC')
-            
+            if self.CheckRecycleBin(data_name): return public.returnMsg(False,'数据库['+data_name+']已在回收站，请从回收站恢复!');
             if len(data_name) > 16: return public.returnMsg(False, 'DATABASE_NAME_LEN')
-                        
             reg = "^\w+$"
             if not re.match(reg, data_name): return public.returnMsg(False,'DATABASE_NAME_ERR_T')
-            
+            if not hasattr(get,'db_user'): get.db_user = data_name;
+            username = get.db_user.strip();
+            checks = ['root','mysql','test','sys','panel_logs']
+            if username in checks or len(username) < 1: return public.returnMsg(False,'数据库用户名不合法!');
+            if data_name in checks or len(data_name) < 1: return public.returnMsg(False,'数据库名称不合法!');
             data_pwd = get['password']
             if len(data_pwd)<1:
                 data_pwd = public.md5(time.time())[0:8]
             
             sql = public.M('databases')
-            if sql.where("name=?",(data_name,)).count(): return public.returnMsg(False,'DATABASE_NAME_EXISTS')
+            if sql.where("name=? or username=?",(data_name,username)).count(): return public.returnMsg(False,'DATABASE_NAME_EXISTS')
             address = get['address'].strip()
             user = '是'
-            username = data_name
             password = data_pwd
             
             codeing = get['codeing']
@@ -49,14 +49,14 @@ class database:
             codeStr=wheres[codeing]
             #添加MYSQL
             result = panelMysql.panelMysql().execute("create database `" + data_name + "` DEFAULT CHARACTER SET " + codeing + " COLLATE " + codeStr)
-            isError=self.IsSqlError(result)
+            isError = self.IsSqlError(result)
             if  isError != None: return isError
             panelMysql.panelMysql().execute("drop user '" + username + "'@'localhost'")
             panelMysql.panelMysql().execute("drop user '" + username + "'@'" + address + "'")
             panelMysql.panelMysql().execute("grant all privileges on `" + data_name + "`.* to '" + username + "'@'localhost' identified by '" + data_pwd + "'")
-            panelMysql.panelMysql().execute("grant all privileges on `" + data_name + "`.* to '" + username + "'@'" + address + "' identified by '" + data_pwd + "'")
+            for a in address.split(','):
+                panelMysql.panelMysql().execute("grant all privileges on `" + data_name + "`.* to '" + username + "'@'" + a + "' identified by '" + data_pwd + "'")
             panelMysql.panelMysql().execute("flush privileges")
-            
             
             if get['ps'] == '': get['ps']=public.getMsg('INPUT_PS');
             addTime = time.strftime('%Y-%m-%d %X',time.localtime())
@@ -70,6 +70,15 @@ class database:
         except Exception,ex:
             public.WriteLog("TYPE_DATABASE",'DATABASE_ADD_ERR', (data_name,str(ex)))
             return public.returnMsg(False,'ADD_ERROR')
+    
+    #检查是否在回收站
+    def CheckRecycleBin(self,name):
+        try:
+            for n in os.listdir('/www/Recycle_bin'):
+                if n.find('BTDB_'+name+'_t_') != -1: return True;
+            return False;
+        except:
+            return False;
     
     #检测数据库执行错误
     def IsSqlError(self,mysqlMsg):
@@ -86,15 +95,19 @@ class database:
         try:
             id=get['id']
             name = get['name']
-            if os.path.exists('data/recycle_bin.pl'): return self.DeleteToRecycleBin(name);
+            if os.path.exists('data/recycle_bin_db.pl'): return self.DeleteToRecycleBin(name);
             
-            accept = public.M('databases').where("id=?",(id,)).getField('accept')
+            find = public.M('databases').where("id=?",(id,)).field('id,pid,name,username,password,accept,ps,addtime').find();
+            accept = find['accept'];
+            username = find['username'];
             #删除MYSQL
             result = panelMysql.panelMysql().execute("drop database `" + name + "`")
             isError=self.IsSqlError(result)
             if  isError != None: return isError
-            panelMysql.panelMysql().execute("drop user '" + name + "'@'localhost'")
-            panelMysql.panelMysql().execute("drop user '" + name + "'@'" + accept + "'")
+            users = panelMysql.panelMysql().query("select Host from mysql.user where User='" + username + "' AND Host!='localhost'")
+            panelMysql.panelMysql().execute("drop user '" + username + "'@'localhost'")
+            for us in users:
+                panelMysql.panelMysql().execute("drop user '" + username + "'@'" + us[0] + "'")
             panelMysql.panelMysql().execute("flush privileges")
             #删除SQLITE
             public.M('databases').where("id=?",(id,)).delete()
@@ -108,12 +121,16 @@ class database:
     def DeleteToRecycleBin(self,name):
         import json
         data = public.M('databases').where("name=?",(name,)).field('id,pid,name,username,password,accept,ps,addtime').find();
-        panelMysql.panelMysql().execute("drop user '" + name + "'@'localhost'");
-        panelMysql.panelMysql().execute("drop user '" + name + "'@'" + data['accept'] + "'");
+        username = data['username'];
+        panelMysql.panelMysql().execute("drop user '" + username + "'@'localhost'");
+        users = panelMysql.panelMysql().query("select Host from mysql.user where User='" + username + "' AND Host!='localhost'")
+        for us in users:
+            panelMysql.panelMysql().execute("drop user '" + username + "'@'" + us[0] + "'")
         panelMysql.panelMysql().execute("flush privileges");
         rPath = '/www/Recycle_bin/';
         public.writeFile(rPath + 'BTDB_' + name +'_t_' + str(time.time()),json.dumps(data));
         public.M('databases').where("name=?",(name,)).delete();
+        public.WriteLog("TYPE_DATABASE", 'DATABASE_DEL_SUCCESS',(name,));
         return public.returnMsg(True,'RECYCLE_BIN_DB');
     
     #永久删除数据库
@@ -126,10 +143,13 @@ class database:
         result = panelMysql.panelMysql().execute("drop database `" + data['name'] + "`")
         isError=self.IsSqlError(result)
         if  isError != None: return isError
-        panelMysql.panelMysql().execute("drop user '" + data['name'] + "'@'localhost'")
-        panelMysql.panelMysql().execute("drop user '" + data['name'] + "'@'" + data['accept'] + "'")
+        panelMysql.panelMysql().execute("drop user '" + data['username'] + "'@'localhost'")
+        users = panelMysql.panelMysql().query("select Host from mysql.user where User='" + data['username'] + "' AND Host!='localhost'")
+        for us in users:
+            panelMysql.panelMysql().execute("drop user '" + data['username'] + "'@'" + us[0] + "'")
         panelMysql.panelMysql().execute("flush privileges")
         os.remove(filename);
+        public.WriteLog("TYPE_DATABASE", 'DATABASE_DEL_SUCCESS',(data['name'],))
         return public.returnMsg(True,'DEL_SUCCESS');
     
     #恢复数据库
@@ -142,7 +162,6 @@ class database:
         result = panelMysql.panelMysql().execute("grant all privileges on `" + data['name'] + "`.* to '" + data['username'] + "'@'localhost' identified by '" + data['password'] + "'")
         isError=self.IsSqlError(result)
         if isError != None: return isError
-        
         panelMysql.panelMysql().execute("grant all privileges on `" + data['name'] + "`.* to '" + data['username'] + "'@'" + data['accept'] + "' identified by '" + data['password'] + "'")
         panelMysql.panelMysql().execute("flush privileges")
         
@@ -154,7 +173,7 @@ class database:
     def SetupPassword(self,get):
         password = get['password'].strip()
         try:
-            rep = "^[\w#@%\.]+$"
+            rep = "^[\w@\.]+$"
             if not re.match(rep, password): return public.returnMsg(False, 'DATABASE_NAME_ERR_T')
             mysql_root = public.M('config').where("id=?",(1,)).getField('mysql_root')
             #修改MYSQL
@@ -216,8 +235,10 @@ echo "The root password set ${pwd}  successuful"''';
             newpassword = get['password']
             username = get['username']
             id = get['id']
-            rep = "^[\w#@%\.]+$"
-            if len(re.search(rep, newpassword).groups()) >0: return public.returnMsg(False, 'DATABASE_NAME_ERR_T')
+            name = public.M('databases').where('id=?',(id,)).getField('name');
+            rep = "^[\w@\.]+$"
+            if len(re.search(rep, newpassword).groups()) > 0: return public.returnMsg(False, 'DATABASE_NAME_ERR_T')
+            
             #修改MYSQL
             if '5.7' in public.readFile(web.ctx.session.setupPath + '/mysql/version.pl'):
                 result = panelMysql.panelMysql().execute("update mysql.user set authentication_string=password('" + newpassword + "') where User='" + username + "'")
@@ -227,8 +248,7 @@ echo "The root password set ${pwd}  successuful"''';
             isError=self.IsSqlError(result)
             if  isError != None: return isError
             panelMysql.panelMysql().execute("flush privileges")
-            
-            if result==False: return public.returnMsg(False,'DATABASE_PASS_ERR_NOT_EXISTS')
+            #if result==False: return public.returnMsg(False,'DATABASE_PASS_ERR_NOT_EXISTS')
             #修改SQLITE
             if int(id) > 0:
                 public.M('databases').where("id=?",(id,)).setField('password',newpassword)
@@ -236,11 +256,11 @@ echo "The root password set ${pwd}  successuful"''';
                 public.M('config').where("id=?",(id,)).setField('mysql_root',newpassword)
                 web.ctx.session.config['mysql_root'] = newpassword
             
-            public.WriteLog("TYPE_DATABASE",'DATABASE_PASS_SUCCESS',(username,))
-            return public.returnMsg(True,'DATABASE_PASS_SUCCESS',(username,))
+            public.WriteLog("TYPE_DATABASE",'DATABASE_PASS_SUCCESS',(name,))
+            return public.returnMsg(True,'DATABASE_PASS_SUCCESS',(name,))
         except Exception,ex:
-            public.WriteLog("TYPE_DATABASE", 'DATABASE_PASS_ERROR',(username,str(ex)))
-            return public.returnMsg(False,'DATABASE_PASS_ERROR',(username,))
+            public.WriteLog("TYPE_DATABASE", 'DATABASE_PASS_ERROR',(name,str(ex)))
+            return public.returnMsg(False,'DATABASE_PASS_ERROR',(name,))
     
     def setMyCnf(self,action = True):
         myFile = '/etc/my.cnf'
@@ -254,13 +274,9 @@ echo "The root password set ${pwd}  successuful"''';
                 mycnf = mycnf.replace(rep, pwdConfig)
             else:
                 mycnf  += "\n[mysqldump]\nuser=root\npassword=root"
-            
         else:
             mycnf = mycnf.replace(rep, '')
-        
-        
         public.writeFile(myFile,mycnf)
-    
     
     #备份
     def ToBackup(self,get):
@@ -273,7 +289,7 @@ echo "The root password set ${pwd}  successuful"''';
         
         fileName = name + '_' + time.strftime('%Y%m%d_%H%M%S',time.localtime()) + '.sql.gz'
         backupName = web.ctx.session.config['backup_path'] + '/database/' + fileName
-        public.ExecShell("/www/server/mysql/bin/mysqldump --opt " + name + " | gzip > " + backupName)
+        public.ExecShell("/www/server/mysql/bin/mysqldump --force --opt " + name + " | gzip > " + backupName)
         if not os.path.exists(backupName): return public.returnMsg(False,'BACKUP_ERROR');
         
         self.mypass(False, root);
@@ -337,7 +353,7 @@ echo "The root password set ${pwd}  successuful"''';
                  
                 if not os.path.exists(backupPath + '/' + tmpFile) or tmpFile == '': return public.returnMsg(False, 'FILE_NOT_EXISTS',(tmpFile,))
                 self.mypass(True, root);
-                public.ExecShell(web.ctx.session.setupPath + "/mysql/bin/mysql -uroot -p" + root + " " + name + " < " + backupPath + '/' +tmpFile)
+                public.ExecShell(web.ctx.session.setupPath + "/mysql/bin/mysql -uroot -p" + root + " --force " + name + " < " + backupPath + '/' +tmpFile)
                 self.mypass(False, root);
                 if isgizp:
                     os.system('cd ' +backupPath+ ' && gzip ' + file.split('/')[-1][:-3]);
@@ -345,7 +361,7 @@ echo "The root password set ${pwd}  successuful"''';
                     os.system("rm -f " +  backupPath + '/' +tmpFile)
             else:
                 self.mypass(True, root);
-                public.ExecShell(web.ctx.session.setupPath + "/mysql/bin/mysql -uroot -p" + root + " " + name + " < " +  file)
+                public.ExecShell(web.ctx.session.setupPath + "/mysql/bin/mysql -uroot -p" + root + " --force " + name + " < " +  file)
                 self.mypass(False, root);
                 
             
@@ -365,9 +381,9 @@ echo "The root password set ${pwd}  successuful"''';
             for value in data:
                 result = self.ToDataBase(value)
                 if result == 1: n +=1
-            
         else:
-            data = get.data
+            import json
+            data = json.loads(get.ids)
             for value in data:
                 find = sql.where("id=?",(value,)).field('id,name,username,password,accept').find()   
                 result = self.ToDataBase(find)
@@ -382,13 +398,10 @@ echo "The root password set ${pwd}  successuful"''';
         if act:
             mycnf = public.readFile('/etc/my.cnf');
             rep = "\[mysqldump\]\nuser=root"
-            sea = '[mysqldump]\n'
-            subStr = sea + "user=root\npassword=" + root + "\n";
+            sea = "[mysqldump]"
+            subStr = sea + "\nuser=root\npassword=" + root;
             mycnf = mycnf.replace(sea,subStr)
-            if len(mycnf) > 100:
-                    public.writeFile('/etc/my.cnf',mycnf);
-        
-    
+            if len(mycnf) > 100: public.writeFile('/etc/my.cnf',mycnf);
     
     #添加到服务器
     def ToDataBase(self,find):
@@ -448,28 +461,36 @@ echo "The root password set ${pwd}  successuful"''';
     #获取数据库权限
     def GetDatabaseAccess(self,get):
         name = get['name']
-        users = panelMysql.panelMysql().query("select User,Host from mysql.user where User='" + name + "' AND Host!='localhost'")
+        users = panelMysql.panelMysql().query("select Host from mysql.user where User='" + name + "' AND Host!='localhost'")
         isError = self.IsSqlError(users)
         if isError != None: return isError
         if len(users)<1:
             return public.returnMsg(True,['',''])
         
-        return public.returnMsg(True,users[0])
+        accs = []
+        for c in users:
+            accs.append(c[0]);
+        userStr = ','.join(accs);
+        return public.returnMsg(True,userStr)
     
     #设置数据库权限
     def SetDatabaseAccess(self,get):
-        try:
-            name = get['name']
-            access = get['access']
-            #if access != '%' and filter_var(access, FILTER_VALIDATE_IP) == False: return public.returnMsg(False, '权限格式不合法')
-            password = public.M('databases').where("name=?",(name,)).getField('password')
-            panelMysql.panelMysql().execute("delete from mysql.user where User='" + name + "' AND Host!='localhost'")
-            panelMysql.panelMysql().execute("grant all privileges on " + name + ".* to '" + name + "'@'" + access + "' identified by '" + password + "'")
-            panelMysql.panelMysql().execute("flush privileges")
-            return public.returnMsg(True, 'SET_SUCCESS')
-        except Exception,ex:
-            public.WriteLog("TYPE_DATABASE",'DATABASE_ACCESS_ERR',(name ,str(ex)))
-            return public.returnMsg(False,'SET_ERROR')
+        #try:
+        name = get['name']
+        db_name = public.M('databases').where('username=?',(name,)).getField('name');
+        access = get['access']
+        #if access != '%' and filter_var(access, FILTER_VALIDATE_IP) == False: return public.returnMsg(False, '权限格式不合法')
+        password = public.M('databases').where("username=?",(name,)).getField('password')
+        users = panelMysql.panelMysql().query("select Host from mysql.user where User='" + name + "' AND Host!='localhost'")
+        for us in users:
+            panelMysql.panelMysql().execute("drop user '" + name + "'@'" + us[0] + "'")
+        for a in access.split(','):
+            panelMysql.panelMysql().execute("grant all privileges on " + db_name + ".* to '" + name + "'@'" + a + "' identified by '" + password + "'")
+        panelMysql.panelMysql().execute("flush privileges")
+        return public.returnMsg(True, 'SET_SUCCESS')
+        #except Exception,ex:
+            #public.WriteLog("TYPE_DATABASE",'DATABASE_ACCESS_ERR',(name ,str(ex)))
+            #return public.returnMsg(False,'SET_ERROR')
         
     
     #获取数据库配置信息
@@ -491,7 +512,7 @@ echo "The root password set ${pwd}  successuful"''';
     #修改数据库目录
     def SetDataDir(self,get):
         if get.datadir[-1] == '/': get.datadir = get.datadir[0:-1];
-        if os.path.exists(get.datadir): os.system('mkdir -p ' + get.datadir);
+        if not os.path.exists(get.datadir): os.system('mkdir -p ' + get.datadir);
         mysqlInfo = self.GetMySQLInfo(get);
         if mysqlInfo['datadir'] == get.datadir: return public.returnMsg(False,'DATABASE_MOVE_RE');
         
@@ -509,8 +530,8 @@ echo "The root password set ${pwd}  successuful"''';
         mycnf = mycnf.replace(mysqlInfo['datadir'],get.datadir);
         public.writeFile(myfile,mycnf);
         os.system('/etc/init.d/mysqld start');
-        result = public.ExecShell('/etc/init.d/mysqld status');
-        if result[0].find('SUCCESS') != -1:
+        result = public.ExecShell('ps aux|grep mysqld|grep -v grep');
+        if len(result[0]) > 10:
             public.writeFile('data/datadir.pl',get.datadir);
             return public.returnMsg(True,'DATABASE_MOVE_SUCCESS');
         else:
@@ -542,8 +563,7 @@ echo "The root password set ${pwd}  successuful"''';
         if hasattr(get,'close'): 
             public.writeFile(filename,'')
             return public.returnMsg(True,'LOG_CLOSE');
-        return public.readFile(filename);
-    
+        return public.GetNumLines(filename,1000);
     
     #二进制日志开关
     def BinLog(self,get):
@@ -583,7 +603,6 @@ echo "The root password set ${pwd}  successuful"''';
         for d in data:
             for g in gets:
                 if d[0] == g: result['mem'][g] = d[1];
-        
         if result['mem']['query_cache_type'] != 'ON': result['mem']['query_cache_size'] = '0';
         return result;
     
@@ -627,5 +646,11 @@ echo "The root password set ${pwd}  successuful"''';
             result['File'] = 'OFF';
             result['Position'] = 'OFF';
         return result;
+    
+    #取慢日志
+    def GetSlowLogs(self,get):
+        path = '/www/server/data/mysql-slow.log';
+        if not os.path.exists(path): return public.returnMsg(False,'日志文件不存在!');
+        return public.returnMsg(True,public.GetNumLines(path,1000));
         
         

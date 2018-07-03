@@ -1,12 +1,12 @@
 #coding: utf-8
 # +-------------------------------------------------------------------
-# | 宝塔Linux面板 x3
+# | 宝塔Linux面板 
 # +-------------------------------------------------------------------
-# | Copyright (c) 2015-2016 宝塔软件(http://bt.cn) All rights reserved.
+# | Copyright (c) 2015-2019 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
-import os, sys, time
+import os, sys, time,string
 
 def M(table):
     import db
@@ -81,16 +81,19 @@ def returnMsg(status,msg,args = ()):
 
 #取提示消息
 def getMsg(key,args = ()):
-    import json
-    logMessage = json.loads(readFile('static/language/' + get_language() + '/public.json'));
-    keys = logMessage.keys();
-    msg = None;
-    if key in keys:
-        msg = logMessage[key];
-        for i in range(len(args)):
-            rep = '{'+str(i+1)+'}'
-            msg = msg.replace(rep,args[i]);
-    return msg;
+    try:
+        import json
+        logMessage = json.loads(readFile('static/language/' + get_language() + '/public.json'));
+        keys = logMessage.keys();
+        msg = None;
+        if key in keys:
+            msg = logMessage[key];
+            for i in range(len(args)):
+                rep = '{'+str(i+1)+'}'
+                msg = msg.replace(rep,args[i]);
+        return msg;
+    except:
+        return key
 
 #取提示消息
 def getLan(key):
@@ -156,25 +159,32 @@ def writeFile(filename,str):
     except:
         return False
     
-def httpGet(url):
+def httpGet(url,timeout=30):
     #发送GET请求
     try:
-        import urllib2 
-        response = urllib2.urlopen(url) 
+        import urllib2,ssl
+        try:
+            ssl._create_default_https_context = ssl._create_unverified_context
+        except:pass;
+        response = urllib2.urlopen(url,timeout=timeout)
         return response.read()
     except Exception,ex:
+        #WriteLog('网络诊断',str(ex) + '['+url+']');
         return str(ex);
 
-def httpPost(url,data):
+def httpPost(url,data,timeout = 30):
     #发送POST请求
     try:
-        import urllib 
-        import urllib2 
+        import urllib,urllib2,ssl
+        try:
+            ssl._create_default_https_context = ssl._create_unverified_context
+        except:pass;
         data = urllib.urlencode(data)
         req = urllib2.Request(url, data)
-        response = urllib2.urlopen(req)
+        response = urllib2.urlopen(req,timeout=timeout)
         return response.read()
     except Exception,ex:
+        #WriteLog('网络诊断',str(ex) + '['+url+']');
         return str(ex);
     
 #写进度
@@ -248,7 +258,7 @@ def downloadFile(url,filename):
 def downloadHook(count, blockSize, totalSize):
     speed = {'total':totalSize,'block':blockSize,'count':count}
     print speed
-    print '%02d%%'%(100.0 * count * blockSize / totalSize)    
+    print '%02d%%'%(100.0 * count * blockSize / totalSize)
     
 def GetLocalIp():
     #取本地外网IP
@@ -285,11 +295,11 @@ def inArray(arrays,searchStr):
 #检查Web服务器配置文件是否有错误
 def checkWebConfig():
     import web
-    if web.ctx.session.webserver == 'nginx':
-        result = ExecShell(web.ctx.session.setupPath+"/nginx/sbin/nginx -t -c "+web.ctx.session.setupPath+"/nginx/conf/nginx.conf");
+    if get_webserver() == 'nginx':
+        result = ExecShell("ulimit -n 10240 && /www/server/nginx/sbin/nginx -t -c /www/server/nginx/conf/nginx.conf");
         searchStr = 'successful'
     else:
-        result = ExecShell(web.ctx.session.setupPath+"/apache/bin/apachectl -t");
+        result = ExecShell("ulimit -n 10240 && /www/server/apache/bin/apachectl -t");
         searchStr = 'Syntax OK'
     
     if result[1].find(searchStr) == -1:
@@ -350,9 +360,9 @@ def hasPwd(password):
 def CheckMyCnf():
     import os;
     confFile = '/etc/my.cnf'
-    if not os.path.exists(confFile): return False;
-    conf = readFile(confFile)
-    if len(conf) > 100: return True;
+    if os.path.exists(confFile): 
+        conf = readFile(confFile)
+        if len(conf) > 100: return True;
     versionFile = '/www/server/mysql/version.pl';
     if not os.path.exists(versionFile): return False;
     
@@ -369,7 +379,7 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 
 CN='125.88.182.172'
-HK='103.224.251.79'
+HK='download.bt.cn'
 HK2='103.224.251.67'
 US='174.139.221.74'
 sleep 0.5;
@@ -382,7 +392,7 @@ echo "$HK_PING $HK" > ping.pl
 echo "$HK2_PING $HK2" >> ping.pl
 echo "$US_PING $US" >> ping.pl
 echo "$CN_PING $CN" >> ping.pl
-nodeAddr=`sort -n -b ping.pl|sed -n '1p'|awk '{print $2}'`
+nodeAddr=`sort -V ping.pl|sed -n '1p'|awk '{print $2}'`
 if [ "$nodeAddr" == "" ];then
     nodeAddr=$HK
 fi
@@ -477,78 +487,6 @@ MySQL_Opt
     return True;
 
 
-def checksum(source_string):
-    sum = 0
-    countTo = (len(source_string)/2)*2
-    count = 0
-    while count<countTo:
-        thisVal = ord(source_string[count + 1])*256 + ord(source_string[count])
-        sum = sum + thisVal
-        sum = sum & 0xffffffff
-        count = count + 2
-    if countTo<len(source_string):
-        sum = sum + ord(source_string[len(source_string) - 1])
-        sum = sum & 0xffffffff
-    sum = (sum >> 16) + (sum & 0xffff)
-    sum = sum + (sum >> 16)
-    answer = ~sum
-    answer = answer & 0xffff
-    answer = answer >> 8 | (answer << 8 & 0xff00)
-    return answer
-
-def receive_one_ping(my_socket, ID, timeout):
-    import struct,select
-    timeLeft = timeout
-    while True:
-        startedSelect = time.time()
-        whatReady = select.select([my_socket], [], [], timeLeft)
-        howLongInSelect = (time.time() - startedSelect)
-        if whatReady[0] == []: return;
-        timeReceived = time.time()
-        recPacket, addr = my_socket.recvfrom(1024)
-        icmpHeader = recPacket[20:28]
-        type, code, checksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
-        if packetID == ID:
-            bytesInDouble = struct.calcsize("d")
-            timeSent = struct.unpack("d", recPacket[28:28 + bytesInDouble])[0]
-            return timeReceived - timeSent
-        timeLeft = timeLeft - howLongInSelect
-        if timeLeft <= 0: return;
-
-def send_one_ping(my_socket, dest_addr, ID):
-    import socket,struct
-    dest_addr = socket.gethostbyname(dest_addr)
-    my_checksum = 0
-    ICMP_ECHO_REQUEST = 8
-    header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, my_checksum, ID, 1) #压包
-    bytesInDouble = struct.calcsize("d")
-    data = (192 - bytesInDouble) * "Q"
-    data = struct.pack("d", time.time()) + data
-    my_checksum = checksum(header + data)
-    header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, socket.htons(my_checksum), ID, 1)
-    packet = header + data
-    my_socket.sendto(packet, (dest_addr, 1)) # Don't know about the 1
-
-def do_one(dest_addr, timeout):
-    import socket
-    icmp = socket.getprotobyname("icmp")
-    try:
-        my_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
-    except socket.error, (errno, msg):
-        if errno == 1:
-            msg = msg + (
-            " - Note that ICMP messages can only be sent from processes"
-            " running as root."
-          )
-            return socket.error(msg)
-        return timeout*1000; # raise the original error
-    
-    my_ID = os.getpid() & 0xFFFF
-    send_one_ping(my_socket, dest_addr, my_ID)
-    delay = receive_one_ping(my_socket, my_ID, timeout)
-    my_socket.close()
-    return delay
-
 def get_url(timeout = 0.5):
     import json
     try:
@@ -556,13 +494,20 @@ def get_url(timeout = 0.5):
         node_list = json.loads(readFile(nodeFile));
         mnode = None
         for node in node_list:
-            node['ping'] = do_one(node['address'], timeout)
+            node['ping'] = get_timeout(node['protocol'] + node['address'] + ':' + node['port'] + '/check.txt');
             if not node['ping']: continue;
             if not mnode: mnode = node;
             if node['ping'] < mnode['ping']: mnode = node;
         return mnode['protocol'] + mnode['address'] + ':' + mnode['port'];
     except:
-        return 'http://download.bt.cn:5880';
+        return 'http://download.bt.cn';
+
+def get_timeout(url):
+    start = time.time();
+    result = httpGet(url);
+    if result != 'True': return False;
+    return int((time.time() - start) * 1000);
+    
 
 #获取Token
 def GetToken():
@@ -627,3 +572,140 @@ def checkToken(get):
     if time.time() > tempToken['timeout']: return False
     if get.token != tempToken['token']: return False
     return True;
+
+#获取Web服务器
+def get_webserver():
+    webserver = 'nginx';
+    if not os.path.exists('/www/server/nginx/sbin/nginx'): webserver = 'apache';
+    return webserver;
+
+#过滤输入
+def checkInput(data):
+   if not data: return data;
+   if type(data) != str: return data;
+   checkList = [
+                {'d':'<','r':'＜'},
+                {'d':'>','r':'＞'},
+                {'d':'\'','r':'‘'},
+                {'d':'"','r':'“'},
+                {'d':'&','r':'＆'},
+                {'d':'#','r':'＃'},
+                {'d':'<','r':'＜'}
+                ]
+   for v in checkList:
+       data = data.replace(v['d'],v['r']);
+   return data;
+#取文件指定尾行数
+def GetNumLines(path,num,p=1):
+    try:
+        import cgi
+        if not os.path.exists(path): return "";
+        start_line = (p - 1) * num;
+        count = start_line + num;
+        fp = open(path)
+        buf = ""
+        fp.seek(-1, 2)
+        if fp.read(1) == "\n": fp.seek(-1, 2)
+        data = []
+        b = True
+        n = 0;
+        for i in range(count):
+            while True:
+                newline_pos = string.rfind(buf, "\n")
+                pos = fp.tell()
+                if newline_pos != -1:
+                    if n >= start_line:
+                        line = buf[newline_pos + 1:]
+                        try:
+                            data.insert(0,cgi.escape(line))
+                        except: pass
+                    buf = buf[:newline_pos]
+                    n += 1;
+                    break;
+                else:
+                    if pos == 0:
+                        b = False
+                        break
+                    to_read = min(4096, pos)
+                    fp.seek(-to_read, 1)
+                    buf = fp.read(to_read) + buf
+                    fp.seek(-to_read, 1)
+                    if pos - to_read == 0:
+                        buf = "\n" + buf
+            if not b: break;
+        fp.close()
+    except: data = []
+    return "\n".join(data)
+#验证证书
+def CheckCert(certPath = 'ssl/certificate.pem'):
+    openssl = '/usr/local/openssl/bin/openssl';
+    if not os.path.exists(openssl): openssl = 'openssl';
+    certPem = readFile(certPath);
+    s = "\n-----BEGIN CERTIFICATE-----";
+    tmp = certPem.strip().split(s)
+    for tmp1 in tmp:
+        if tmp1.find('-----BEGIN CERTIFICATE-----') == -1:  tmp1 = s + tmp1;
+        writeFile(certPath,tmp1);
+        result = ExecShell(openssl + " x509 -in "+certPath+" -noout -subject")
+        if result[1].find('-bash:') != -1: return True
+        if len(result[1]) > 2: return False
+        if result[0].find('error:') != -1: return False;
+    return True;
+
+
+ # 获取面板地址
+def getPanelAddr():
+    import web
+    protocol = 'https://' if os.path.exists("data/ssl.pl") else 'http://'
+    h = web.ctx.host.split(':')
+    try:
+        result = protocol + h[0] + ':' + h[1]
+    except:
+        result = protocol + h[0] + ':' + readFile('data/port.pl').strip()
+    return result
+
+
+#字节单位转换
+def to_size(size):
+    d = ('b','KB','MB','GB','TB');
+    s = d[0];
+    for b in d:
+        if size < 1024: return str(size) + ' ' + b;
+        size = size / 1024;
+        s = b;
+    return str(size) + ' ' + b;
+
+
+def get_string(t):
+    if t != -1:
+        max = 126
+        m_types = [{'m':122,'n':97},{'m':90,'n':65},{'m':57,'n':48},{'m':47,'n':32},{'m':64,'n':58},{'m':96,'n':91},{'m':125,'n':123}]
+    else:
+        max = 256
+        t = 0
+        m_types = [{'m':255,'n':0}]
+    arr = []
+    for i in range(max):
+        if i < m_types[t]['n'] or i > m_types[t]['m']: continue
+        arr.append(chr(i))
+    return arr       
+
+def get_string_find(t):
+    if type(t) != list: t = [t]
+    return_str = ''
+    for s1 in t:
+        return_str += get_string(int(s1[0]))[int(s1[1:])]
+    return return_str
+
+def get_string_arr(t):
+    s_arr = {}
+    t_arr = []
+    for s1 in t:
+        for i in range(6):
+            if not i in s_arr: s_arr[i] = get_string(i)
+            for j in range(len(s_arr[i])):
+                if s1 == s_arr[i][j]:
+                    t_arr.append(str(i) + str(j))
+    return t_arr
+    
+    

@@ -31,7 +31,7 @@ function getFtp(page,search) {
 			}
 			Body +="<tr><td><input type='checkbox' onclick='checkSelect();' title='"+data.data[i].name+"' name='id' value='"+data.data[i].id+"'></td>\
 					<td>"+data.data[i].name+"</td>\
-					<td class='relative'><span class='password' data-pw='"+data.data[i].password+"'>**********</span><span class='glyphicon glyphicon-eye-open cursor pw-ico' style='margin-left:10px'></span><span class='ico-copy cursor btcopy' style='margin-left:10px' title='"+lan.ftp.copy+"' data-pw='"+data.data[i].password+"'></span></td>\
+					<td class='relative'><span class='password' data-pw='"+data.data[i].password+"'>**********</span><span class='glyphicon glyphicon-eye-open cursor pw-ico' style='margin-left:10px'></span><span class='ico-copy cursor btcopy' style='margin-left:10px' title='"+lan.ftp.copy+"' data-pw='"+data.data[i].password+"' onclick=\"btcopy('"+data.data[i].password+"')\"></span></td>\
 					<td>"+ftp_status+"</td>\
 					<td><a class='btlink' title='"+lan.ftp.open_path+"' href=\"javascript:openPath('"+data.data[i].path+"');\">"+data.data[i].path+"</a></td>\
 					<td><a class='btlinkbed' href='javascript:;' data-id='"+data.data[i].id+"'>" + data.data[i].ps + "</a></td>\
@@ -52,7 +52,6 @@ function getFtp(page,search) {
 			$(".baktext").focus();
 		});
 		//复制密码
-		btcopy();
 		showHidePwd();
 	});
 }

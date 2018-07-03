@@ -154,7 +154,7 @@
 	"CRONTAB_FRIDAY":"五",
 	"CRONTAB_SATURDAY":"六",
 	"CRONTAB_TASKNAME_EMPTY":"任务名称不能为空!",
-	"CRONTAB_TASKLOG_EMPTY":"任务名称不能为空!",
+	"CRONTAB_TASKLOG_EMPTY":"当前日志为空!",
 	"CRONTAB_TASKLOG_CLOSE":"任务日志已清空!",
 	"CRONTAB_TASKLOG_CLOSE_ERR":"任务日志清空失败!",
 	"FILE_WRITE_ERR":"文件写入失败!",

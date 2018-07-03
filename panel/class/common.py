@@ -4,18 +4,18 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2017 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 #
 #             ┏┓      ┏┓
 #            ┏┛┻━━━━━━┛┻┓
-#            ┃               ☃          ┃
+#            ┃               ☃              ┃
 #            ┃  ┳┛   ┗┳ ┃
 #            ┃     ┻    ┃
 #            ┗━┓      ┏━┛
 #              ┃      ┗━━━━━┓
-#              ┃  神兽保佑     ┣┓
-#              ┃ 永无BUG！     ┏┛
+#              ┃  神兽保佑              ┣┓
+#              ┃ 永无BUG！            ┏┛
 #              ┗┓┓┏━┳┓┏━━━━━┛
 #               ┃┫┫ ┃┫┫
 #               ┗┻┛ ┗┻┛
@@ -29,8 +29,10 @@ class MyBad():
         return self._msg
 
 class panelSetup:
-    def __init__(self): 
-        web.ctx.session.version = "5.2.0"
+    def __init__(self):
+        ua = web.ctx.env.get('HTTP_USER_AGENT').lower();
+        if ua.find('spider') != -1 or ua.find('bot') != -1: raise web.redirect('https://www.baidu.com');
+        web.ctx.session.version = "5.9.0";
         if os.path.exists('data/title.pl'):
             web.ctx.session.webname = public.readFile('data/title.pl');
         
@@ -39,11 +41,7 @@ class panelSetup:
 class panelAdmin(panelSetup):
     setupPath = '/www/server'
     def __init__(self):
-        get = web.input();
-        if hasattr(get,'btauth_key'):
-            self.auth();
-        else:
-            self.local();
+        self.local();
     
     #api请求 
     def auth(self):
@@ -90,6 +88,7 @@ class panelAdmin(panelSetup):
         if os.path.exists('data/limitip.conf'):
             iplist = public.readFile('data/limitip.conf')
             if iplist:
+                iplist = iplist.strip();
                 if not web.ctx.ip in iplist.split(','): raise web.seeother('/login')
     
     #设置基础Session
@@ -105,11 +104,11 @@ class panelAdmin(panelSetup):
             web.ctx.session.setupPath = self.setupPath;
             web.ctx.session.logsPath = '/www/wwwlogs';
         if not hasattr(web.ctx.session,'menu'):
-            web.ctx.session.menu = public.getLan('menu')
+            web.ctx.session.menu = public.getLan('menu');
         if not hasattr(web.ctx.session,'lan'):
             web.ctx.session.lan = public.get_language();
         if not hasattr(web.ctx.session,'home'):
-            web.ctx.session.home = 'https://www.bt.cn';
+            web.ctx.session.home = 'http://www.bt.cn';
             
     
     #检查Web服务器类型
@@ -120,7 +119,6 @@ class panelAdmin(panelSetup):
             web.ctx.session.webserver = 'apache'
         if os.path.exists(self.setupPath+'/'+web.ctx.session.webserver+'/version.pl'):
             web.ctx.session.webversion = public.readFile(self.setupPath+'/'+web.ctx.session.webserver+'/version.pl').strip()
-        
         filename = self.setupPath+'/data/phpmyadminDirName.pl'
         if os.path.exists(filename):
             web.ctx.session.phpmyadminDir = public.readFile(filename).strip()
@@ -155,19 +153,12 @@ class panelAdmin(panelSetup):
     #获取操作系统类型 
     def GetOS(self):
         if not hasattr(web.ctx.session,'server_os'):
-            import json;
-            ospath = 'data/os.pl';
-            if not os.path.exists(ospath):
-                filename = "/www/server/panel/data/osname.pl";
-                if not os.path.exists(filename):
-                    os.system("bash /www/server/panel/script/GetOS.sh")
-                tmp = {}
+            tmp = {}
+            if os.path.exists('/etc/redhat-release'):
                 tmp['x'] = 'RHEL';
-                tmp['osname'] = public.readFile(filename).strip();
-                ds = ['Debian','Ubuntu','Raspbian','Deepin']
-                if tmp['osname'] in ds: tmp['x'] = 'Debian';
-                public.writeFile(ospath,json.dumps(tmp));
-            else:
-                tmp = json.loads(public.readFile(ospath));
+            elif os.path.exists('/usr/bin/yum'):
+                tmp['x'] = 'RHEL';
+            elif os.path.exists('/etc/issue'): 
+                tmp['x'] = 'Debian';
             web.ctx.session.server_os = tmp
             

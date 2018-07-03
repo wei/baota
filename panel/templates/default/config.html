@@ -23,7 +23,7 @@ $def with (data)
 						</div>
 					</div>
 					<div class="ss-text pull-left mr50">
-						<em>$data['lan']['I3']</em>
+						<em class="btlink" style="color: #20a53a;" onclick="GetPanelSSL()" title="点击自定义面板证书">$data['lan']['I3']</em>
 						<div class='ssh-item'>
 							<input class='btswitch btswitch-ios' id='panelSSL' type='checkbox'>
 							<label class='btswitch-btn' for='panelSSL' onclick="setPanelSSL()"></label>
@@ -61,6 +61,7 @@ $def with (data)
 									<option value="$template">$template</option>
 							</select>
 						<span class="modify btn btn-xs btn-success mr5" style="margin-left: 5px;" onclick="setTemplate()">$data['lan']['CY12']</span></p>
+						<p class="mtb15"><span class="set-tit text-right">微信小程序</span><input class="inputtxt bt-input-text disable" type="text" value="$data['wx']" disabled><span class="modify btn btn-xs btn-success mr5" onclick="open_wxapp()">绑定</span></p>
 					</form>
 					<div class="bt-submit set-submit">$data['lan']['C4']</div>
 				</div>
@@ -68,7 +69,120 @@ $def with (data)
 		</div>
 	</div>
 </div>
-<script src="/static/js/config.js"></script>
+<style>
+	.boxConter{
+		height: 458px;
+		position: relative;
+		overflow:auto;
+	}
+	.iconCode{
+		padding: 50px 60px;
+	}
+	.box-conter{
+		width: 100%;
+	}
+	#QRcode{
+		margin-bottom: 25px;
+		text-align: center;
+	}
+
+	.iconCode #QRcode,
+	.iconCode .codeTip{
+		width: 100%;
+		text-align: center;
+		font-size: 17px;
+	}
+	.iconCode .weChatSamll img{
+		width: 100%;
+	}
+	.iconCode .weChatSamll{
+		display: none;
+		width: 200px;
+		height: 200px;
+		position: absolute;
+		border: 1px solid #ececec;
+		border-radius: 5px;
+		bottom: 150px;
+		right: 50px;
+		padding: 20px;
+		background-color: #fff;
+	}
+	.iconCode .weChatSamll:after{
+		content: '';
+		width: 15px;
+		height: 15px;
+		background: #ffffff;
+		border-bottom: 1px solid #ececec;
+		border-right: 1px solid #ececec;
+		transform: rotate(45deg);
+		position: absolute;
+		border-radius: 4px;
+		left: 90px;
+		bottom: -8px;
+	}
+	.iconCode .weChat{
+		margin-left: 15px;
+	}
+	.iconCode .weChat:hover .weChatSamll{
+		display: block;
+	}
+	.iconCode .QRcode{
+		margin-bottom: 15px;
+		text-align: center;
+	}
+
+	.codeTip ul li{
+		margin-bottom: 10px;
+	}
+
+	.personalDetails .head_img{
+		width: 50px;
+		height: 50px;
+		float: left;
+		margin-right: 30px;
+	}
+	.personalDetails .head_img img{
+		height: 100%;
+		border-radius:50%;
+	}
+	.personalDetails .nick_name{
+		height: 50px;
+		line-height: 50px;
+		width: 148px;
+		float: left;
+		font-size: 15px;
+		color: #808080;
+	}
+	.personalDetails .userList{
+		height: 100%;
+	}
+	.personalDetails .userList .addweChat{
+		height: 50px;
+		text-align: center;
+		padding-top: 20px;
+		color: #20a53a;
+		font-size: 16px;
+	}
+	.personalDetails .userList .addweChat:hover{
+		
+	}
+	.personalDetails .userList .item{
+		height: 70px;
+		padding: 10px 15px;
+		border: 1px solid #ececec;
+		margin: 15px 65px;
+		border-radius: 5px;
+	}
+	.personalDetails .userList .cancelBind{
+		height: 50px;
+		width: 60px;
+		float: right;
+		line-height: 50px;
+		text-align: center;
+	}
+</style>
+<script type="text/javascript" src="/static/js/jquery.qrcode.min.js"></script>
+<script src="/static/js/config.js?date=20180530"></script>
 <script type="text/javascript">
 	setCookie('serverType','$web.ctx.session.webserver');
 </script>

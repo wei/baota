@@ -4,7 +4,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2016 宝塔软件(http:#bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 import public,db,os,web,time,re
 class crontab:
@@ -26,7 +26,7 @@ class crontab:
                 tmp['cycle']=public.getMsg('CRONTAB_HOUR_CYCLE',(str(cront[i]['where_minute']),))
             elif cront[i]['type']=="hour-n":
                 tmp['type']=public.getMsg('CRONTAB_N_HOUR',(str(cront[i]['where1']),))
-                tmp['cycle']=public.getMsg('CRONTAB_HOUR_CYCLE',(str(cront[i]['where1']),str(cront[i]['where_minute'])))
+                tmp['cycle']=public.getMsg('CRONTAB_N_HOUR_CYCLE',(str(cront[i]['where1']),str(cront[i]['where_minute'])))
             elif cront[i]['type']=="minute-n":
                 tmp['type']=public.getMsg('CRONTAB_N_MINUTE',(str(cront[i]['where1']),))
                 tmp['cycle']=public.getMsg('CRONTAB_N_MINUTE_CYCLE',(str(cront[i]['where1']),))
@@ -170,12 +170,31 @@ class crontab:
         echo = public.M('crontab').where("id=?",(id,)).field('echo').find()
         logFile = web.ctx.session.setupPath+'/cron/'+echo['echo']+'.log'
         if not os.path.exists(logFile):return public.returnMsg(False, 'CRONTAB_TASKLOG_EMPTY')
-        log = public.readFile(logFile)
+        log = public.GetNumLines(logFile,2000)
+        f = open(logFile,'r')
+        tmp = f.readline()
+        n=0;
+        while tmp:
+            n += 1;
+            tmp = f.readline();
+        f.close();
+        if n > 2000: public.writeFile(logFile,log)
+        
         where = "Warning: Using a password on the command line interface can be insecure.\n"
         if  log.find(where)>-1:
             log = log.replace(where, '')
             public.writeFile('/tmp/read.tmp',log)
-        return public.returnMsg(True, log)
+        
+        import chardet;
+        char=chardet.detect(log);
+        encodeing = char['encoding'];
+        if encodeing:
+            if char['encoding'] == 'GB2312': encodeing = 'GBK';
+            if char['encoding'] == 'ascii': encodeing = 'utf-8';
+            log = log.decode(encodeing).encode('utf-8');
+        else:
+            encodeing = 'utf-8';
+        return public.returnMsg(True, log);
     
     #清理任务日志
     def DelLogs(self,get):
@@ -225,7 +244,7 @@ class crontab:
             else :
                 head="#!/bin/bash\nPATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin\nexport PATH\n"
                 log='-access_log'
-                if web.ctx.session.webserver=='nginx':
+                if public.get_webserver()=='nginx':
                     log='.log'
                 
                 wheres={
@@ -243,7 +262,7 @@ class crontab:
                         'database': head + "python " + cfile + " database " + param['sName'] + " " + param['save'],
                         'logs'  :   head + "python " + web.ctx.session.setupPath+"/panel/script/logsBackup "+param['sName']+log+" "+param['save'],
                         'rememory' : head + "/bin/bash " + web.ctx.session.setupPath + '/panel/script/rememory.sh'
-                        }              
+                        }
                 
                 try:
                     shell=wheres[type]

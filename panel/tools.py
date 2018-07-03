@@ -14,7 +14,7 @@ import sys,os
 panelPath = '/www/server/panel/';
 os.chdir(panelPath)
 sys.path.append(panelPath + "class/")
-import public,time
+import public,time,json
 
 #设置MySQL密码
 def set_mysql_root(password):
@@ -293,8 +293,31 @@ def PackagePanel():
     os.system('rm -f /www/server/panel/data/*.login')
     os.system('rm -f /www/server/panel/data/domain.conf')
     print '\t\033[1;32m[done]\033[0m'
+    print '|-正在清理系统使用痕迹...',
+    command = '''cat /dev/null > /var/log/boot.log
+cat /dev/null > /var/log/btmp
+cat /dev/null > /var/log/cron
+cat /dev/null > /var/log/dmesg
+cat /dev/null > /var/log/firewalld
+cat /dev/null > /var/log/grubby
+cat /dev/null > /var/log/lastlog
+cat /dev/null > /var/log/mail.info
+cat /dev/null > /var/log/maillog
+cat /dev/null > /var/log/messages
+cat /dev/null > /var/log/secure
+cat /dev/null > /var/log/spooler
+cat /dev/null > /var/log/syslog
+cat /dev/null > /var/log/tallylog
+cat /dev/null > /var/log/wpa_supplicant.log
+cat /dev/null > /var/log/wtmp
+cat /dev/null > /var/log/yum.log
+history -c
+'''
+    os.system(command);
+    print '\t\033[1;32m[done]\033[0m'
     public.writeFile('/www/server/panel/install.pl',"True");
     port = public.readFile('data/port.pl').strip();
+    public.M('config').where("id=?",('1',)).setField('status',0);
     print '========================================================'
     print '\033[1;32m|-面板封装成功,请不要再登陆面板做任何其它操作!\033[0m'
     print '\033[1;41m|-面板初始化地址: http://{SERVERIP}:'+port+'/install\033[0m'
@@ -424,7 +447,9 @@ def ClearOther():
                  {'path':'/www/server/panel','find':'testDisk_'},
                  {'path':'/www/wwwlogs','find':'log'},
                  {'path':'/tmp','find':'panelBoot.pl'},
-                 {'path':'/www/server/panel/install','find':'.rpm'}
+                 {'path':'/www/server/panel/install','find':'.rpm'},
+                 {'path':'/www/server/panel/install','find':'.zip'},
+                 {'path':'/www/server/panel/install','find':'.gz'}
                  ]
     
     total = count = 0;
@@ -443,9 +468,24 @@ def ClearOther():
             print '\t\033[1;32m[OK]\033[0m'
             count += 1;
     public.serviceReload();
-    os.system('/etc/init.d/bt restart > /dev/null');
+    os.system('sleep 1 && /etc/init.d/bt reload > /dev/null &');
     print '|-已完成临时文件及网站日志的清理，删除['+str(count)+']个文件,共释放磁盘空间['+ToSize(total)+']';
     return total,count
+
+#关闭普通日志
+def CloseLogs():
+    try:
+        paths = ['/usr/lib/python2.7/site-packages/web/httpserver.py','/usr/lib/python2.6/site-packages/web/httpserver.py']
+        for path in paths:
+            if not os.path.exists(path): continue;
+            hsc = public.readFile(path);
+            if hsc.find('500 Internal Server Error') != -1: continue;
+            rstr = '''def log(self, status, environ):
+        if status != '500 Internal Server Error': return;''';
+            hsc = hsc.replace("def log(self, status, environ):",rstr)
+            if hsc.find('500 Internal Server Error') == -1: return False;
+            public.writeFile(path,hsc)
+    except:pass;
 
 #字节单位转换
 def ToSize(size):
@@ -454,7 +494,43 @@ def ToSize(size):
         if size < 1024: return str(size)+d;
         size = size / 1024;
     return '0b';
-            
+
+#随机面板用户名
+def set_panel_username():
+    import db
+    sql = db.Sql()
+    username = sql.table('users').where('id=?',(1,)).getField('username')
+    if username == 'admin': 
+        username = public.GetRandomString(8).lower()
+        sql.table('users').where('id=?',(1,)).setField('username',username)
+    print 'username: ' + username
+    
+#设定idc
+def setup_idc():
+    try:
+        panelPath = '/www/server/panel'
+        filename = panelPath + '/data/o.pl'
+        if not os.path.exists(filename): return False
+        o = public.readFile(filename).strip()
+        c_url = 'http://www.bt.cn/api/idc/get_idc_info_bycode?o=%s' % o
+        idcInfo = json.loads(public.httpGet(c_url))
+        if not idcInfo['status']: return False
+        pFile = panelPath + '/static/language/Simplified_Chinese/public.json'
+        pInfo = json.loads(public.readFile(pFile))
+        pInfo['BRAND'] = idcInfo['msg']['name']
+        pInfo['PRODUCT'] = u'与宝塔联合定制版'
+        pInfo['NANE'] = pInfo['BRAND'] + pInfo['PRODUCT']
+        public.writeFile(pFile,json.dumps(pInfo))
+        tFile = panelPath + '/data/title.pl'
+        titleNew = (pInfo['BRAND'] + u'面板').encode('utf-8')
+        if os.path.exists(tFile):
+            title = public.readFile(tFile).strip()
+            if title == '宝塔Linux面板' or title == '': public.writeFile(tFile,titleNew)
+        else:
+            public.writeFile(tFile,titleNew)
+        return True
+    except:pass
+    
 
 if __name__ == "__main__":
     type = sys.argv[1];
@@ -462,6 +538,10 @@ if __name__ == "__main__":
         set_mysql_root(sys.argv[2])
     elif type == 'panel':
         set_panel_pwd(sys.argv[2])
+    elif type == 'username':
+        set_panel_username()
+    elif type == 'o':
+        setup_idc()
     elif type == 'mysql_dir':
         set_mysql_dir(sys.argv[2])
     elif type == 'to':
@@ -474,5 +554,7 @@ if __name__ == "__main__":
         CheckPort();
     elif type == 'clear':
         ClearSystem();
+    elif type == 'closelog':
+        CloseLogs();
     else:
         print 'ERROR: Parameter error'

@@ -56,14 +56,14 @@ function setWebPs(b, e, a) {
 			layer.closeAll();
 			layer.msg(lan.public.edit_ok, {
 				icon: 1
-			})
+			});
 		} else {
 			layer.msg(lan.public.edit_err, {
 				icon: 2
 			});
-			layer.closeAll()
+			layer.closeAll();
 		}
-	})
+	});
 }
 
 $(".menu-icon").click(function() {
@@ -634,27 +634,19 @@ function divcenter() {
 	$(".layui-layer").css("top", e + "px")
 }
 
-function btcopy() {
-	$(".btcopy").zclip({
-		path: "/static/js/ZeroClipboard.swf",
-		copy: function() {
-			return $(this).attr("data-pw")
-		},
-		afterCopy: function() {
-			if($(this).attr("data-pw") == "") {
-				layer.msg(lan.bt.copy_empty, {
-					icon: 7,
-					time: 1500
-				})
-			} else {
-				layer.msg(lan.bt.copy_ok, {
-					icon: 1,
-					time: 1500
-				})
-			}
-		}
-	})
+function btcopy(password) {
+	$("#bt_copys").attr('data-clipboard-text',password);
+	$("#bt_copys").click();
 }
+
+var clipboard = new ClipboardJS('#bt_copys');
+clipboard.on('success', function (e) {
+    layer.msg('复制成功!',{icon:1});
+});
+
+clipboard.on('error', function (e) {
+    layer.msg('复制失败，浏览器不兼容!',{icon:2});
+});
 
 function isChineseChar(b) {
 	var a = /[\u4E00-\u9FA5\uF900-\uFA2D]/;
@@ -677,7 +669,7 @@ function SafeMessage(j, h, g, f) {
 		area: "350px",
 		closeBtn: 2,
 		shadeClose: true,
-		content: "<div class='bt-form webDelete pd20 pb70'><p>" + h + "</p>" + f + "<div class='vcode'>"+lan.bt.cal_msg+"<span class='text'>" + sumtext + "</span>=<input type='number' id='vcodeResult' value=''></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm bt-cancel'>"+lan.public.cancel+"</button> <button type='button' id='toSubmit' class='btn btn-success btn-sm' >"+lan.public.submit+"</button></div></div>"
+		content: "<div class='bt-form webDelete pd20 pb70'><p>" + h + "</p>" + f + "<div class='vcode'>"+lan.bt.cal_msg+"<span class='text'>" + sumtext + "</span>=<input type='number' id='vcodeResult' value=''></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm bt-cancel'>"+lan.public.cancel+"</button> <button type='button' id='toSubmit' class='btn btn-success btn-sm' >"+lan.public.ok+"</button></div></div>"
 	});
 	$("#vcodeResult").focus().keyup(function(a) {
 		if(a.keyCode == 13) {
@@ -690,11 +682,11 @@ function SafeMessage(j, h, g, f) {
 	$("#toSubmit").click(function() {
 		var a = $("#vcodeResult").val().replace(/ /g, "");
 		if(a == undefined || a == "") {
-			layer.msg(lan.bt.cal_empty);
+			layer.msg('请正确输入计算结果!');
 			return
 		}
 		if(a != getCookie("vcodesum")) {
-			layer.msg(lan.bt.cal_err);
+			layer.msg('请正确输入计算结果!');
 			return
 		}
 		layer.close(mess);
@@ -774,7 +766,7 @@ function setPassword(a) {
 		}
 		
 		//准备弱口令匹配元素
-		var checks = ['admin888','123123123','12345678','45678910','87654321','asdfghjkl','password'];
+		var checks = ['admin888','123123123','12345678','45678910','87654321','asdfghjkl','password','qwerqwer'];
 		pchecks = 'abcdefghijklmnopqrstuvwxyz1234567890';
 		for(var i=0;i<pchecks.length;i++){
 			checks.push(pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]+pchecks[i]);
@@ -959,8 +951,6 @@ function setSelectChecked(c, d) {
 	}
 }
 GetTaskCount();
-
-
 function RecInstall() {
 	$.post("/ajax?action=GetSoftList", "", function(l){
 		var c = "";
@@ -1030,6 +1020,9 @@ function RecInstall() {
 					n = "4.0";
 					break;
 				case "5.4":
+					n = "4.4";
+					break;
+				case "5.5":
 					n = "4.4";
 					break;
 				default:
@@ -1108,7 +1101,9 @@ function RecInstall() {
 				})
 			}
 		}
+		var de = null;
 		$(".onekey").click(function() {
+			if(de) return;
 			var v = $(this).prev().find("input").eq(0).prop("checked") ? "1" : "0";
 			var r = $(this).parents(".rec-box-con").find(".rec-list li").length;
 			var n = "";
@@ -1116,6 +1111,7 @@ function RecInstall() {
 			var p = "";
 			var x = "";
 			var s = "";
+			de = true;
 			for(var t = 0; t < r; t++) {
 				var w = $(this).parents(".rec-box-con").find("ul li").eq(t);
 				var u = w.find("input");
@@ -1139,7 +1135,7 @@ function RecInstall() {
 					type: "POST",
 					async: false,
 					success: function(y) {}
-				})
+				});
 			}
 			layer.close(loadT);
 			layer.close(k);
@@ -1317,7 +1313,7 @@ function bindBTPanel(a,type,ip,btid,url,user,pw){
 	if(a == 1) {
 		var gurl = "/config?action=AddPanelInfo";
 		var btaddress = $("#btaddress").val();
-		if(!btaddress.match(/^(http|https)+:\/\/(\w+\.)+\w+:\d+/)){
+		if(!btaddress.match(/^(http|https)+:\/\/([\w-]+\.)+[\w-]+:\d+/)){
 			layer.msg(lan.bt.panel_err_format+'<p>http://192.168.0.1:8888</p>',{icon:5,time:5000});
 			return;
 		}
@@ -1422,6 +1418,7 @@ function messagebox() {
 						<div class="bt-w-menu">\
 							<p class="bgw" id="taskList" onclick="tasklist()">'+lan.bt.task_list+'(<span class="task_count">0</span>)</p>\
 							<p onclick="remind()">'+lan.bt.task_msg+'(<span class="msg_count">0</span>)</p>\
+							<p onclick="execLog()">执行日志</p>\
 						</div>\
 						<div class="bt-w-con pd15">\
 							<div class="taskcon"></div>\
@@ -1433,6 +1430,16 @@ function messagebox() {
 		$(this).addClass("bgw").siblings().removeClass("bgw");
 	});
 	tasklist();
+}
+
+//取执行日志
+function execLog(){
+	$.post('/files?action=GetExecLog',{},function(logs){
+		var lbody = '<textarea readonly="" style="margin: 0px;width: 500px;height: 520px;background-color: #333;color:#fff; padding:0 5px" id="exec_log">'+logs+'</textarea>';
+		$(".taskcon").html(lbody);
+		var ob = document.getElementById('exec_log');
+		ob.scrollTop = ob.scrollHeight;
+	});
 }
 
 function remind(a){
@@ -1476,10 +1483,19 @@ function remind(a){
 
 function GetReloads() {
 	var a = 0;
+	var mm = $(".bt-w-menu .bgw").html()
+	if(mm == undefined || mm.indexOf(lan.bt.task_list) == -1) {
+		clearInterval(speed);
+		a = 0;
+		speed = null;
+		return
+	}
+	if(speed) return;
 	speed = setInterval(function() {
 		var mm = $(".bt-w-menu .bgw").html()
 		if(mm == undefined || mm.indexOf(lan.bt.task_list) == -1) {
 			clearInterval(speed);
+			speed = null;
 			a = 0;
 			return
 		}
@@ -1515,9 +1531,13 @@ function GetReloads() {
 			}
 			$(".cmdlist").html(b + d);
 			$(".cmd").html(c);
-			if($(".cmd")[0].scrollHeight) $(".cmd").scrollTop($(".cmd")[0].scrollHeight);
-		}).error(function() {})
-	}, 1000)
+			try{
+				if($(".cmd")[0].scrollHeight) $(".cmd").scrollTop($(".cmd")[0].scrollHeight);
+			}catch(e){
+				return;
+			}
+		}).error(function(){});
+	}, 1000);
 }
 
 //检查选中项
@@ -1538,7 +1558,7 @@ function RscheckSelect(){
 
 
 function tasklist(a){
-	var con='<ul class="cmdlist"></ul>';
+	var con='<ul class="cmdlist"></ul><span style="position:  fixed;bottom: 13px;">若任务长时间未执行，请尝试在首页点【重启面板】来重置任务队列</span>';
 	$(".taskcon").html(con);
 	a = a == undefined ? 1 : a;
 	$.post("/data?action=getData", "tojs=GetTaskList&table=tasks&limit=10&p=" + a, function(g) {
@@ -1564,9 +1584,41 @@ function tasklist(a){
 					break;
 			}
 		}
+		
+		
 		$(".task_count").text(task_count);
 		$(".cmdlist").html(b + c);
 		GetReloads();
 		return f
 	})
+}
+
+//检查登陆状态
+function check_login(){
+	$.post('/ajax?action=CheckLogin',{},function(rdata){
+		if(rdata === true) return;
+	});
+}
+
+$(function(){
+	setInterval(function(){
+		check_login();
+	},60000);
+});
+
+//登陆跳转
+function to_login(){
+	layer.confirm('您的登陆状态已过期，请重新登陆!',{title:'会话已过期',icon:2,closeBtn: 1,shift: 5},function(){
+		location.reload();
+	});
+}
+//表格头固定
+function table_fixed(name){
+	var tableName = document.querySelector('#'+name);
+	if(!tableName) return false;
+	tableName.addEventListener('scroll',scroll_handle);
+}
+function scroll_handle(e){
+	var scrollTop = this.scrollTop;
+	$(this).find("thead").css({"transform":"translateY("+scrollTop+"px)","position":"relative","z-index":"1"});
 }

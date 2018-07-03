@@ -16,13 +16,17 @@ function GetLogs(id){
 			shadeClose:false,
 			closeBtn:2,
 			content:'<div class="setchmod bt-form pd20 pb70">'
-					+'<pre style="overflow: auto; border: 0px none; padding: 15px; margin: 0px; height: 410px; background-color: rgb(255, 255, 255);">'+rdata.msg+'</pre>'
+					+'<pre id="crontab-log" style="overflow: auto; border: 0px none; padding: 15px; margin: 0px; height: 410px; background-color: rgb(255, 255, 255);"></pre>'
 					+'<div class="bt-form-submit-btn" style="margin-top: 0px;">'
 					+'<button type="button" class="btn btn-success btn-sm" onclick="CloseLogs('+id+')">'+lan.public.empty+'</button>'
 					+'<button type="button" class="btn btn-danger btn-sm" onclick="layer.closeAll()">'+lan.public.close+'</button>'
 				    +'</div>'
 					+'</div>'
 		});
+		
+		setTimeout(function(){
+			$("#crontab-log").text(rdata.msg);
+		},200)
 	});
 }
 
@@ -46,7 +50,7 @@ function getCronData(){
 								<a href=\"javascript:StartTask("+rdata[i].id+");\" class='btlink'>"+lan.public.exec+"</a> | \
 								<a href=\"javascript:OnlineEditFile(0,'/www/server/cron/"+rdata[i].echo+"');\" class='btlink'>"+lan.public.script+"</a> | \
 								<a href=\"javascript:GetLogs("+rdata[i].id+");\" class='btlink'>"+lan.public.log+"</a> | \
-								<a href=\"javascript:planDel("+rdata[i].id+" ,'"+rdata[i].name.replace('\\','\\\\')+"');\" class='btlink'>"+lan.public.del+"</a>\
+								<a href=\"javascript:planDel("+rdata[i].id+" ,'"+rdata[i].name.replace('\\','\\\\').replace("'","\\'").replace('"','')+"');\" class='btlink'>"+lan.public.del+"</a>\
 							</td>\
 						</tr>"
 			}

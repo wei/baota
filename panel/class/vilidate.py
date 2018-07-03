@@ -3,7 +3,7 @@
 # +-------------------------------------------------------------------
 # | 宝塔Linux面板
 # +-------------------------------------------------------------------
-# | Copyright (c) 2015-2017 宝塔(http://bt.cn) All rights reserved.
+# | Copyright (c) 2015-2099 宝塔(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
 # | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
@@ -40,10 +40,16 @@ class vieCode:
         self.__createCode()
         self.__createImage()
         self.__createNoise()
-        self.__createCurve()
         self.__printString()
+        self.__cerateFilter()
         
         return self.__img,self.__code
+    
+    def __cerateFilter(self):
+        '''模糊处理'''
+        self.__img = self.__img.filter(ImageFilter.BLUR)
+        filter = ImageFilter.ModeFilter(8)
+        self.__img = self.__img.filter(filter)
         
     def __createCode(self):
         '''创建验证码字符'''
@@ -51,7 +57,7 @@ class vieCode:
         if not self.__str:
             #源文本
             number = "3456789"
-            srcLetter = "qwertyuipasdfghjkzxcvbnm"
+            srcLetter = "qwertyuipasdfghjkzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM"
             srcUpper  = srcLetter.upper()
             if self.__type == 1:
                 self.__str = number
@@ -71,10 +77,10 @@ class vieCode:
         '''画干扰点'''
         if not self.__inNoise:
             return
-        font = ImageFont.truetype(self.__fontPatn, int(self.__fontSize / 2))
+        font = ImageFont.truetype(self.__fontPatn, int(self.__fontSize / 1.5))
         for i in xrange(5):
             #杂点颜色
-            noiseColor = (random.randint(150,225), random.randint(150,225), random.randint(150,225))
+            noiseColor = (random.randint(150,200), random.randint(150,200), random.randint(150,200))
             putStr = random.sample(self.__str,2)
             for j in range(2):
                 #绘杂点
@@ -97,7 +103,7 @@ class vieCode:
         w = (2 * math.pi) / t
         
         #画曲线
-        color = (random.randint(100, 150), random.randint(100, 150), random.randint(100, 150))
+        color = (random.randint(30, 150), random.randint(30, 150), random.randint(30, 150))
         for x in xrange(xend):
             if w!=0:
                 for k in xrange(int(self.__heigth / 10)):

@@ -19,13 +19,14 @@ function phpSoftMain(name,key){
 				'<p data-id="6"><a href="javascript:disFun(\''+name+'\')">'+lan.soft.php_main6+'</a><span class="spanmove"></span></p>',
 				'<p class="phphide" data-id="7"><a href="javascript:SetFpmConfig(\''+name+'\')">'+lan.soft.php_main7+'</a><span class="spanmove"></span></p>',
 				'<p class="phphide" data-id="8"><a href="javascript:GetPHPStatus(\''+name+'\')">'+lan.soft.php_main8+'</a><span class="spanmove"></span></p>',
-				'<p data-id="9"><a href="javascript:BtPhpinfo(\''+name+'\')">phpinfo</a><span class="spanmove"></span></p>'
-				
+				'<p class="phphide" data-id="9"><a href="javascript:GetFpmLogs(\''+name+'\')">FPM日志</a><span class="spanmove"></span></p>',
+				'<p class="phphide" data-id="10"><a href="javascript:GetFpmSlowLogs(\''+name+'\')">慢日志</a><span class="spanmove"></span></p>',
+				'<p data-id="11"><a href="javascript:BtPhpinfo(\''+name+'\')">phpinfo</a><span class="spanmove"></span></p>'
 		]
 		
 		var sdata = '';
 		if(rdata.phpSort == false){
-			rdata.phpSort = [0,1,2,3,4,5,6,7,8,9];
+			rdata.phpSort = [0,1,2,3,4,5,6,7,8,9,10,11];
 		}else{
 			rdata.phpSort = rdata.phpSort.split('|');
 		}
@@ -70,6 +71,39 @@ function phpSoftMain(name,key){
 		$(".soft-man-menu").dragsort({dragSelector: ".spanmove", dragEnd: MenusaveOrder});
 	});
 }
+
+//FPM日志
+function GetFpmLogs(phpversion){
+	var loadT = layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
+	$.get('/ajax?action=GetFpmLogs&version='+phpversion,function(logs){
+		layer.close(loadT);
+		if(logs.status !== true){
+			logs.msg = '';
+		}
+		if (logs.msg == '') logs.msg = '当前没有fpm日志.';
+		var phpCon = '<textarea readonly="" style="margin: 0px;width: 500px;height: 520px;background-color: #333;color:#fff; padding:0 5px" id="error_log">'+logs.msg+'</textarea>';
+		$(".soft-man-con").html(phpCon);
+		var ob = document.getElementById('error_log');
+		ob.scrollTop = ob.scrollHeight;		
+	});
+}
+
+//FPM-Slow日志
+function GetFpmSlowLogs(phpversion){
+	var loadT = layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
+	$.get('/ajax?action=GetFpmSlowLogs&version='+phpversion,function(logs){
+		layer.close(loadT);
+		if(logs.status !== true){
+			logs.msg = '';
+		}
+		if (logs.msg == '') logs.msg = '当前没有慢日志.';
+		var phpCon = '<textarea readonly="" style="margin: 0px;width: 500px;height: 520px;background-color: #333;color:#fff; padding:0 5px" id="error_log">'+logs.msg+'</textarea>';
+		$(".soft-man-con").html(phpCon);
+		var ob = document.getElementById('error_log');
+		ob.scrollTop = ob.scrollHeight;		
+	});
+}
+
 
 //配置修改
 function SetPHPConf(version){
@@ -295,11 +329,10 @@ function SetPHPConfig(version,pathinfo,go){
 		var opt = ""
 		for(var i=0;i<rdata.libs.length;i++){
 			if(rdata.libs[i].versions.indexOf(version) == -1) continue;
-			
 			if(rdata.libs[i]['task'] == '-1' && rdata.libs[i].phpversions.indexOf(version) != -1){
-				opt = '<a style="color:green;" href="javascript:task();">'+lan.soft.the_install+'</a>'
+				opt = '<a style="color:green;" href="javascript:messagebox();">'+lan.soft.the_install+'</a>'
 			}else if(rdata.libs[i]['task'] == '0' && rdata.libs[i].phpversions.indexOf(version) != -1){
-				opt = '<a style="color:#C0C0C0;" href="javascript:task();">'+lan.soft.sleep_install+'</a>'
+				opt = '<a style="color:#C0C0C0;" href="javascript:messagebox();">'+lan.soft.sleep_install+'</a>'
 			}else if(rdata.libs[i].status){
 				opt = '<a style="color:red;" href="javascript:UninstallPHPLib(\''+version+'\',\''+rdata.libs[i].name+'\',\''+rdata.libs[i].title+'\','+pathinfo+');">'+lan.soft.uninstall+'</a>'
 			}else{
@@ -320,7 +353,7 @@ function SetPHPConfig(version,pathinfo,go){
 			pathinfoOpt = '<a class="btlink" href="javascript:SetPathInfo(\''+version+'\',\'on\');">'+lan.soft.on+'</a>'
 		}
 		var pathinfo1 = '<tr id="pathInfo"><td>PATH_INFO</td><td>'+lan.soft.php_menu_ext+'</td><td>'+lan.soft.mvc_ps+'</td><td><span class="ico-'+(rdata.pathinfo?'start':'stop')+' glyphicon glyphicon-'+(rdata.pathinfo?'ok':'remove')+'"></span></td><td style="text-align: right;" width="50">'+pathinfoOpt+'</td></tr>';
-		var con='<div class="divtable" style="margin-right:10px">'
+		var con='<div class="divtable" id="phpextdiv" style="margin-right:10px;height: 420px; overflow: auto; margin-right: 0px;">'
 					+'<table class="table table-hover" width="100%" cellspacing="0" cellpadding="0" border="0">'
 						+'<thead>'
 							+'<tr>'
@@ -333,13 +366,18 @@ function SetPHPConfig(version,pathinfo,go){
 						+'</thead>'
 						+'<tbody>'+pathinfo1+body+'</tbody>'
 					+'</table>'
-				+'</div>';
-		$(".soft-man-con").html(con).css({"height":"420px","overflow":"auto","margin-right":0});
+				+'</div>'
+				+'<ul class="help-info-text c7 pull-left"><li>请按实际需求安装扩展,不要安装不必要的PHP扩展,这会影响PHP执行效率,甚至出现异常</li><li>Redis扩展只允许在1个PHP版本中使用,安装到其它PHP版本请在[软件管理]重装Redis</li><li>opcache/xcache/apc等脚本缓存扩展,请只安装其中1个,否则可能导致您的站点程序异常</li></ul>';
+		var divObj = document.getElementById('phpextdiv');
+		var scrollTopNum = 0;
+		if(divObj) scrollTopNum = divObj.scrollTop;
+		$(".soft-man-con").html(con);
+		document.getElementById('phpextdiv').scrollTop = scrollTopNum;
 	});
 	
 	if(go == undefined){
 		setTimeout(function(){
-			if($(".bgw #phpext").html() != lan.soft.php_fpm_err5){
+			if($(".bgw #phpext").html() != '安装扩展'){
 				return;
 			}
 			SetPHPConfig(version,pathinfo);
@@ -446,45 +484,53 @@ function disable_functions(version,act,fs){
 //性能调整
 function SetFpmConfig(version,action){
 	if(action == 1){
-		var max_children = Number($("input[name='max_children']").val());
-		var start_servers = Number($("input[name='start_servers']").val());
-		var min_spare_servers = Number($("input[name='min_spare_servers']").val());
-		var max_spare_servers = Number($("input[name='max_spare_servers']").val());
-		var pm = $("select[name='pm']").val();
-		if(max_children < max_spare_servers){
-			layer.msg(lan.soft.php_fpm_err1,{icon:2});
-			return;
-		}
-		
-		if(min_spare_servers > start_servers) {
-			layer.msg(lan.soft.php_fpm_err2,{icon:2});
-			return;
-		}
-		
-		if(max_spare_servers < min_spare_servers){
-			layer.msg(lan.soft.php_fpm_err3,{icon:2});
-			return;
-		}
-		
-		if(max_children < start_servers){
-			layer.msg(lan.soft.php_fpm_err4,{icon:2});
-			return;
-		}
-		
-		if(max_children < 1 || start_servers < 1 || min_spare_servers < 1 || max_spare_servers < 1){
-			layer.msg(lan.soft.php_fpm_err5,{icon:2});
-			return;
-		}
-		
-		
-		var data = 'version='+version+'&max_children='+max_children+'&start_servers='+start_servers+'&min_spare_servers='+min_spare_servers+'&max_spare_servers='+max_spare_servers + '&pm='+pm;
-		var loadT = layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
-		$.post('/config?action=setFpmConfig',data,function(rdata){
-			layer.close(loadT);
-			var loadT = layer.msg(rdata.msg,{icon:rdata.status?1:2});				
-		}).error(function(){
-			layer.close(loadT);
-			layer.msg(lan.public.config_ok,{icon:1});
+		$.post('/system?action=GetMemInfo','',function(memInfo){
+			var limit_children = parseInt(memInfo['memTotal'] / 8);
+			var max_children = Number($("input[name='max_children']").val());
+			var start_servers = Number($("input[name='start_servers']").val());
+			var min_spare_servers = Number($("input[name='min_spare_servers']").val());
+			var max_spare_servers = Number($("input[name='max_spare_servers']").val());
+			var pm = $("select[name='pm']").val();
+			
+			if(limit_children < max_children){
+				layer.msg('当前服务器内存不足，最大允许['+limit_children+']个子进程!',{icon:2});
+				$("input[name='max_children']").focus();
+				return;
+			}
+			
+			if(max_children < max_spare_servers){
+				layer.msg(lan.soft.php_fpm_err1,{icon:2});
+				return;
+			}
+			
+			if(min_spare_servers > start_servers) {
+				layer.msg(lan.soft.php_fpm_err2,{icon:2});
+				return;
+			}
+			
+			if(max_spare_servers < min_spare_servers){
+				layer.msg(lan.soft.php_fpm_err3,{icon:2});
+				return;
+			}
+			
+			if(max_children < start_servers){
+				layer.msg(lan.soft.php_fpm_err4,{icon:2});
+				return;
+			}
+			
+			if(max_children < 1 || start_servers < 1 || min_spare_servers < 1 || max_spare_servers < 1){
+				layer.msg(lan.soft.php_fpm_err5,{icon:2});
+				return;
+			}
+			var data = 'version='+version+'&max_children='+max_children+'&start_servers='+start_servers+'&min_spare_servers='+min_spare_servers+'&max_spare_servers='+max_spare_servers + '&pm='+pm;
+			var loadT = layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
+			$.post('/config?action=setFpmConfig',data,function(rdata){
+				layer.close(loadT);
+				var loadT = layer.msg(rdata.msg,{icon:rdata.status?1:2});				
+			}).error(function(){
+				layer.close(loadT);
+				layer.msg(lan.public.config_ok,{icon:1});
+			});
 		});
 		return;
 	}
@@ -498,7 +544,6 @@ function SetFpmConfig(version,action){
 						+"<option value='4' "+(rdata.max_children==200?'selected':'')+">200"+lan.soft.concurrency+"</option>"
 						+"<option value='5' "+(rdata.max_children==300?'selected':'')+">300"+lan.soft.concurrency+"</option>"
 						+"<option value='6' "+(rdata.max_children==500?'selected':'')+">500"+lan.soft.concurrency+"</option>"
-						+"<option value='7' "+(rdata.max_children==1000?'selected':'')+">1000"+lan.soft.concurrency+"</option>"
 		var pms = [{'name':'static','title':lan.bt.static},{'name':'dynamic','title':lan.bt.dynamic}];
 		var pmList = '';
 		for(var i=0;i<pms.length;i++){
@@ -558,12 +603,6 @@ function SetFpmConfig(version,action){
 							min_spare_servers = 35;
 							max_spare_servers = 250;
 							break;
-						case '7':
-							max_children = 1000;
-							start_servers = 40;
-							min_spare_servers = 40;
-							max_spare_servers = 300;
-							break;
 					}
 					
 					$("input[name='max_children']").val(max_children);
@@ -608,8 +647,10 @@ function nginxSoftMain(name,version){
 		
 		var waf = ''
 		if(name == 'nginx'){
-			waf = '<p onclick="waf()">'+lan.soft.waf_title+'</p>'
+			waf = '<p onclick="waf()">'+lan.soft.waf_title+'</p>' 
 		}
+		
+		var logsPath = (name == 'nginx')?'/www/wwwlogs/nginx_error.log':'/www/wwwlogs/error_log';
 		layer.open({
 			type: 1,
 			area: '640px',
@@ -623,6 +664,7 @@ function nginxSoftMain(name,version){
 					'+waf+'\
 					'+menu+'\
 					'+status+'\
+					<p onclick="showLogs(\''+logsPath+'\')">错误日志</p>\
 				</div>\
 				<div id="webEdit-con" class="bt-w-con pd15" style="height:555px;overflow:auto">\
 					<div class="soft-man-con"></div>\
@@ -634,6 +676,19 @@ function nginxSoftMain(name,version){
 			//var i = $(this).index();
 			$(this).addClass("bgw").siblings().removeClass("bgw");
 		});
+	});
+}
+
+//显示指定日志
+function showLogs(logPath){
+	var loadT = layer.msg(lan.public.the_get,{icon:16,time:0,shade: [0.3, '#000']});
+	$.post('/ajax?action=GetOpeLogs',{path:logPath},function(rdata){
+		layer.close(loadT);
+		if(rdata.msg == '') rdata.msg = '当前没有日志!';
+		var ebody = '<div class="soft-man-con"><textarea readonly="" style="margin: 0px;width: 500px;height: 520px;background-color: #333;color:#fff; padding:0 5px" id="error_log">'+rdata.msg+'</textarea></div>';
+		$(".soft-man-con").html(ebody);
+		var ob = document.getElementById('error_log');
+		ob.scrollTop = ob.scrollHeight;	
 	});
 }
 
@@ -890,7 +945,19 @@ function SoftMan(name,version){
 		}
 		
 		if(name == 'mysqld'){
-			menu += '<p onclick="changeMySQLDataPath()">'+lan.soft.save_path+'</p><p onclick="changeMySQLPort()">'+lan.site.port+'</p><p onclick="mysqlRunStatus()">'+lan.soft.status+'</p><p onclick="mysqlStatus()">'+lan.soft.php_main7+'</p><p onclick="mysqlLog()">'+lan.soft.log+'</p>';
+			menu += '<p onclick="changeMySQLDataPath()">'+lan.soft.save_path+'</p><p onclick="changeMySQLPort()">'+lan.site.port+'</p><p onclick="mysqlRunStatus()">'+lan.soft.status+'</p><p onclick="mysqlStatus()">'+lan.soft.php_main7+'</p><p onclick="mysqlLog()">'+lan.soft.log+'</p><p onclick="mysqlSlowLog()">慢日志</p>';
+		}
+		
+		else if(name == 'memcached'){
+			menu += '<p onclick="MemcachedStatus()">负载状态</p><p onclick="MemcachedCache()">性能调整</p>';
+		}
+		
+		else if(name == 'redis'){
+			menu += '<p onclick="RedisStatus()">负载状态</p>';
+		}
+		
+		else if(name == 'tomcat'){
+			menu += '<p onclick="showLogs(\'/www/server/tomcat/logs/catalina.out\')">运行日志</p>';
 		}
 		
 		layer.open({
@@ -908,13 +975,123 @@ function SoftMan(name,version){
 					<div class="soft-man-con"></div>\
 				</div>\
 			</div>'
-		})
+		});
 		service(name,nameA.status);
 		$(".bt-w-menu p").click(function(){
 			//var i = $(this).index();
 			$(this).addClass("bgw").siblings().removeClass("bgw");
-		})
-	})
+		});
+	});
+}
+
+//redis负载状态
+function RedisStatus(){
+	var loadT = layer.msg('正在获取...',{icon:16,time:0,shade:0.3});
+	$.get('/ajax?action=GetRedisStatus',function(rdata){
+		layer.close(loadT);
+		hit = (parseInt(rdata.keyspace_hits) / (parseInt(rdata.keyspace_hits) + parseInt(rdata.keyspace_misses)) * 100).toFixed(2);
+		var Con = '<div class="divtable">\
+						<table class="table table-hover table-bordered" style="width: 490px;">\
+						<thead><th>字段</th><th>当前值</th><th>说明</th></thead>\
+						<tbody>\
+							<tr><th>uptime_in_days</th><td>'+rdata.uptime_in_days+'</td><td>已运行天数</td></tr>\
+							<tr><th>tcp_port</th><td>'+rdata.tcp_port+'</td><td>当前监听端口</td></tr>\
+							<tr><th>connected_clients</th><td>'+rdata.connected_clients+'</td><td>连接的客户端数量</td></tr>\
+							<tr><th>used_memory_rss</th><td>'+ToSize(rdata.used_memory_rss)+'</td><td>Redis当前占用的系统内存总量</td></tr>\
+							<tr><th>used_memory</th><td>'+ToSize(rdata.used_memory)+'</td><td>Redis当前已分配的内存总量</td></tr>\
+							<tr><th>used_memory_peak</th><td>'+ToSize(rdata.used_memory_peak)+'</td><td>Redis历史分配内存的峰值</td></tr>\
+							<tr><th>mem_fragmentation_ratio</th><td>'+rdata.mem_fragmentation_ratio+'%</td><td>内存碎片比率</td></tr>\
+							<tr><th>total_connections_received</th><td>'+rdata.total_connections_received+'</td><td>运行以来连接过的客户端的总数量</td></tr>\
+							<tr><th>total_commands_processed</th><td>'+rdata.total_commands_processed+'</td><td>运行以来执行过的命令的总数量</td></tr>\
+							<tr><th>instantaneous_ops_per_sec</th><td>'+rdata.instantaneous_ops_per_sec+'</td><td>服务器每秒钟执行的命令数量</td></tr>\
+							<tr><th>keyspace_hits</th><td>'+rdata.keyspace_hits+'</td><td>查找数据库键成功的次数</td></tr>\
+							<tr><th>keyspace_misses</th><td>'+rdata.keyspace_misses+'</td><td>查找数据库键失败的次数</td></tr>\
+							<tr><th>hit</th><td>'+hit+'%</td><td>查找数据库键命中率</td></tr>\
+							<tr><th>latest_fork_usec</th><td>'+rdata.latest_fork_usec+'</td><td>最近一次 fork() 操作耗费的微秒数</td></tr>\
+						<tbody>\
+				</table></div>'
+			$(".soft-man-con").html(Con);
+	});
+}
+
+//memcached负载状态
+function MemcachedStatus(){
+	var loadT = layer.msg('正在获取...',{icon:16,time:0,shade:0.3});
+	$.get('/ajax?action=GetMemcachedStatus',function(rdata){
+		layer.close(loadT);
+		var Con = '<div class="divtable">\
+						<table class="table table-hover table-bordered" style="width: 490px;">\
+						<thead><th>字段</th><th>当前值</th><th>说明</th></thead>\
+						<tbody>\
+							<tr><th>BindIP</th><td>'+rdata.bind+'</td><td>监听IP</td></tr>\
+							<tr><th>PORT</th><td>'+rdata.port+'</td><td>监听端口</td></tr>\
+							<tr><th>CACHESIZE</th><td>'+rdata.cachesize+' MB</td><td>最大缓存容量</td></tr>\
+							<tr><th>MAXCONN</th><td>'+rdata.maxconn+'</td><td>最大连接数限制</td></tr>\
+							<tr><th>curr_connections</th><td>'+rdata.curr_connections+'</td><td>当前打开的连接数</td></tr>\
+							<tr><th>cmd_get</th><td>'+rdata.cmd_get+'</td><td>GET请求数</td></tr>\
+							<tr><th>get_hits</th><td>'+rdata.get_hits+'</td><td>GET命中次数</td></tr>\
+							<tr><th>get_misses</th><td>'+rdata.get_misses+'</td><td>GET失败次数</td></tr>\
+							<tr><th>hit</th><td>'+rdata.hit.toFixed(2)+'%</td><td>GET命中率</td></tr>\
+							<tr><th>curr_items</th><td>'+rdata.curr_items+'</td><td>当前被缓存的数据行数</td></tr>\
+							<tr><th>evictions</th><td>'+rdata.evictions+'</td><td>因内存不足而被清理的缓存行数</td></tr>\
+							<tr><th>bytes</th><td>'+ToSize(rdata.bytes)+'</td><td>当前已使用内存</td></tr>\
+							<tr><th>bytes_read</th><td>'+ToSize(rdata.bytes_read)+'</td><td>请求总大小</td></tr>\
+							<tr><th>bytes_written</th><td>'+ToSize(rdata.bytes_written)+'</td><td>发送总大小</td></tr>\
+						<tbody>\
+				</table></div>'
+			$(".soft-man-con").html(Con);
+	});
+}
+
+//memcached性能调整
+function MemcachedCache(){
+	var loadT = layer.msg('正在获取...',{icon:16,time:0,shade:0.3});
+	$.get('/ajax?action=GetMemcachedStatus',function(rdata){
+		layer.close(loadT);
+		var memCon = '<div class="conf_p" style="margin-bottom:0">\
+						<p><span>BindIP</span><input style="width: 120px;" class="bt-input-text mr5" name="membind" value="'+rdata.bind+'" type="text" ><font>监听IP,请勿随意修改</font></p>\
+						<p><span>PORT</span><input style="width: 120px;" class="bt-input-text mr5" max="65535" name="memport" value="'+rdata.port+'" type="number" ><font>监听端口,一般无需修改</font></p>\
+						<p><span>CACHESIZE</span><input style="width: 120px;" class="bt-input-text mr5" name="memcachesize" value="'+rdata.cachesize+'" type="number" >MB,<font>缓存大小,建议不要大于512M</font></p>\
+						<p><span>MAXCONN</span><input style="width: 120px;" class="bt-input-text mr5" name="memmaxconn" value="'+rdata.maxconn+'" type="number" ><font>最大连接数,建议不要大于40960</font></p>\
+						<div style="margin-top:10px; padding-right:230px" class="text-right"><button class="btn btn-success btn-sm" onclick="SetMemcachedConf()">'+lan.public.save+'</button></div>\
+					</div>'
+		$(".soft-man-con").html(memCon);
+	});
+}
+
+//memcached提交配置
+function SetMemcachedConf(){
+	var data = {
+			ip:$("input[name='membind']").val(),
+			port:$("input[name='memport']").val(),
+			cachesize:$("input[name='memcachesize']").val(),
+			maxconn:$("input[name='memmaxconn']").val()
+		}
+	
+	if(data.ip.split('.').length < 4){
+		layer.msg('IP地址格式不正确!',{icon:2});
+		return;
+	}
+	
+	if(data.port < 1 || data.port > 65535){
+		layer.msg('端口范围不正确!',{icon:2});
+		return;
+	}
+	
+	if(data.cachesize < 8){
+		layer.msg('缓存值过小',{icon:2});
+		return;
+	}
+	
+	if(data.maxconn < 4){
+		layer.msg('最大连接数过小',{icon:2});
+		return;
+	}
+	var loadT = layer.msg('正在保存...',{icon:16,time:0,shade:0.3});
+	$.post('/ajax?action=SetMemcachedCache',data,function(rdata){
+		layer.close(loadT);
+		layer.msg(rdata.msg,{icon:rdata.status?1:2});
+	});
 }
 
 //数据库存储信置
@@ -941,6 +1118,22 @@ function changeMySQLDataPath(act){
 	});
 }
 
+//MySQL-Slow日志
+function mysqlSlowLog(){
+	var loadT = layer.msg(lan.public.the,{icon:16,time:0,shade: [0.3, '#000']});
+	$.post('/database?action=GetSlowLogs',{},function(logs){
+		layer.close(loadT);
+		if(logs.status !== true){
+			logs.msg = '';
+		}
+		if (logs.msg == '') logs.msg = '当前没有慢日志.';
+		var phpCon = '<textarea readonly="" style="margin: 0px;width: 500px;height: 520px;background-color: #333;color:#fff; padding:0 5px" id="error_log">'+logs.msg+'</textarea>';
+		$(".soft-man-con").html(phpCon);
+		var ob = document.getElementById('error_log');
+		ob.scrollTop = ob.scrollHeight;		
+	});
+}
+
 //数据库日志
 function mysqlLog(act){
 	//获取二进制日志相关信息
@@ -949,10 +1142,11 @@ function mysqlLog(act){
 							<span class="f14 c6 mr20">'+lan.soft.mysql_log_bin+' </span><span class="f14 c6 mr20">'+ToSize(rdata.msg)+'</span>\
 							<button class="btn btn-success btn-xs va0" onclick="SetBinLog();">'+(rdata.status?lan.soft.off:lan.soft.on)+'</button>\
 							<p class="f14 c6 mtb10" style="border-top:#ddd 1px solid; padding:10px 0">'+lan.soft.mysql_log_err+'<button class="btn btn-default btn-xs" style="float:right;" onclick="closeMySqlLog();">'+lan.soft.mysql_log_close+'</button></p>\
-							<textarea readonly style="margin: 0px;width: 515px;height: 375px;background-color: #333;color:#fff; padding:0 5px" id="error_log"></textarea>\
+							<textarea readonly style="margin: 0px;width: 515px;height: 440px;background-color: #333;color:#fff; padding:0 5px" id="error_log"></textarea>\
 						</p>'
 		
 		$(".soft-man-con").html(limitCon);
+		
 		//获取错误日志
 		$.post('/database?action=GetErrorLog',"",function(error_body){
 			if(error_body.status === false){
@@ -961,6 +1155,8 @@ function mysqlLog(act){
 			}
 			if(error_body == "") error_body = lan.soft.mysql_log_ps1;
 			$("#error_log").text(error_body);
+			var ob = document.getElementById('error_log');
+			ob.scrollTop = ob.scrollHeight;
 		});
 	});
 }
@@ -1102,48 +1298,48 @@ function MySQLMemOpt(opt){
 	var query_size = parseInt($("input[name='query_cache_size']").val());
 	switch(opt){
 		case '1':
-			$("input[name='key_buffer_size']").val(32);
-			if(query_size) $("input[name='query_cache_size']").val(16);
-			$("input[name='tmp_table_size']").val(64);
-			$("input[name='innodb_buffer_pool_size']").val(64);
-			$("input[name='sort_buffer_size']").val(768);
-			$("input[name='read_buffer_size']").val(768);
-			$("input[name='read_rnd_buffer_size']").val(512);
-			$("input[name='join_buffer_size']").val(512);
-			$("input[name='thread_stack']").val(256);
-			$("input[name='binlog_cache_size']").val(64);
-			$("input[name='thread_cache_size']").val(8);
-			$("input[name='table_open_cache']").val(128);
-			$("input[name='max_connections']").val(100);
-			break;
-		case '2':
-			$("input[name='key_buffer_size']").val(192);
+			$("input[name='key_buffer_size']").val(128);
 			if(query_size) $("input[name='query_cache_size']").val(64);
-			$("input[name='tmp_table_size']").val(384);
-			$("input[name='innodb_buffer_pool_size']").val(128);
+			$("input[name='tmp_table_size']").val(64);
+			$("input[name='innodb_buffer_pool_size']").val(256);
 			$("input[name='sort_buffer_size']").val(768);
 			$("input[name='read_buffer_size']").val(768);
 			$("input[name='read_rnd_buffer_size']").val(512);
 			$("input[name='join_buffer_size']").val(1024);
 			$("input[name='thread_stack']").val(256);
 			$("input[name='binlog_cache_size']").val(64);
-			$("input[name='thread_cache_size']").val(16);
+			$("input[name='thread_cache_size']").val(64);
+			$("input[name='table_open_cache']").val(128);
+			$("input[name='max_connections']").val(100);
+			break;
+		case '2':
+			$("input[name='key_buffer_size']").val(256);
+			if(query_size) $("input[name='query_cache_size']").val(128);
+			$("input[name='tmp_table_size']").val(384);
+			$("input[name='innodb_buffer_pool_size']").val(384);
+			$("input[name='sort_buffer_size']").val(768);
+			$("input[name='read_buffer_size']").val(768);
+			$("input[name='read_rnd_buffer_size']").val(512);
+			$("input[name='join_buffer_size']").val(2048);
+			$("input[name='thread_stack']").val(256);
+			$("input[name='binlog_cache_size']").val(64);
+			$("input[name='thread_cache_size']").val(96);
 			$("input[name='table_open_cache']").val(192);
 			$("input[name='max_connections']").val(200);
 			break;
 		case '3':
 			$("input[name='key_buffer_size']").val(384);
-			if(query_size) $("input[name='query_cache_size']").val(128);
+			if(query_size) $("input[name='query_cache_size']").val(192);
 			$("input[name='tmp_table_size']").val(512);
-			$("input[name='innodb_buffer_pool_size']").val(384);
+			$("input[name='innodb_buffer_pool_size']").val(512);
 			$("input[name='sort_buffer_size']").val(1024);
 			$("input[name='read_buffer_size']").val(1024);
 			$("input[name='read_rnd_buffer_size']").val(768);
 			$("input[name='join_buffer_size']").val(2048);
 			$("input[name='thread_stack']").val(256);
 			$("input[name='binlog_cache_size']").val(128);
-			$("input[name='thread_cache_size']").val(32);
-			$("input[name='table_open_cache']").val(256);
+			$("input[name='thread_cache_size']").val(128);
+			$("input[name='table_open_cache']").val(384);
 			$("input[name='max_connections']").val(300);
 			break;
 		case '4':
@@ -1155,10 +1351,10 @@ function MySQLMemOpt(opt){
 			$("input[name='read_buffer_size']").val(2048);
 			$("input[name='read_rnd_buffer_size']").val(1024);
 			$("input[name='join_buffer_size']").val(4096);
-			$("input[name='thread_stack']").val(256);
+			$("input[name='thread_stack']").val(384);
 			$("input[name='binlog_cache_size']").val(192);
-			$("input[name='thread_cache_size']").val(48);
-			$("input[name='table_open_cache']").val(512);
+			$("input[name='thread_cache_size']").val(192);
+			$("input[name='table_open_cache']").val(1024);
 			$("input[name='max_connections']").val(400);
 			break;
 		case '5':
@@ -1169,11 +1365,11 @@ function MySQLMemOpt(opt){
 			$("input[name='sort_buffer_size']").val(4096);
 			$("input[name='read_buffer_size']").val(4096);
 			$("input[name='read_rnd_buffer_size']").val(2048);
-			$("input[name='join_buffer_size']").val(4096);
-			$("input[name='thread_stack']").val(256);
+			$("input[name='join_buffer_size']").val(8192);
+			$("input[name='thread_stack']").val(512);
 			$("input[name='binlog_cache_size']").val(256);
-			$("input[name='thread_cache_size']").val(64);
-			$("input[name='table_open_cache']").val(1024);
+			$("input[name='thread_cache_size']").val(256);
+			$("input[name='table_open_cache']").val(2048);
 			$("input[name='max_connections']").val(500);
 			break;
 	}
@@ -1181,42 +1377,42 @@ function MySQLMemOpt(opt){
 
 //设置MySQL配置参数
 function SetMySQLConf(){
-	var memSize = getCookie('memSize');
-	var setSize = parseInt($("input[name='memSize']").val());
-	if(memSize < setSize){
-		var msg = lan.soft.mysql_set_err.replace('{1}',memSize).replace('{2}',setSize);
-		layer.msg(msg,{icon:2,time:5000});
-		return;
-	}
-	var query_cache_size = parseInt($("input[name='query_cache_size']").val());
-	var query_cache_type = 0;
-	if(query_cache_size > 0){
-		query_cache_type = 1;
-	}
-	var data = {
-		key_buffer_size:parseInt($("input[name='key_buffer_size']").val()),
-		query_cache_size:query_cache_size,
-		query_cache_type:query_cache_type,
-		tmp_table_size:parseInt($("input[name='tmp_table_size']").val()),
-		max_heap_table_size:parseInt($("input[name='tmp_table_size']").val()),
-		innodb_buffer_pool_size:parseInt($("input[name='innodb_buffer_pool_size']").val()),
-		innodb_log_buffer_size:parseInt($("input[name='innodb_log_buffer_size']").val()),
-		sort_buffer_size:parseInt($("input[name='sort_buffer_size']").val()),
-		read_buffer_size:parseInt($("input[name='read_buffer_size']").val()),
-		read_rnd_buffer_size:parseInt($("input[name='read_rnd_buffer_size']").val()),
-		join_buffer_size:parseInt($("input[name='join_buffer_size']").val()),
-		thread_stack:parseInt($("input[name='thread_stack']").val()),
-		binlog_cache_size:parseInt($("input[name='binlog_cache_size']").val()),
-		thread_cache_size:parseInt($("input[name='thread_cache_size']").val()),
-		table_open_cache:parseInt($("input[name='table_open_cache']").val()),
-		max_connections:parseInt($("input[name='max_connections']").val())
-	};
-	
-	
-	
-	$.post('/database?action=SetDbConf',data,function(rdata){
-		layer.msg(rdata.msg,{icon:rdata.status?1:2});	
-	});
+	$.post('/system?action=GetMemInfo','',function(memInfo){
+		//var memSize = memInfo['memTotal'];
+		//var setSize = parseInt($("input[name='memSize']").val());
+		//if(memSize < setSize){
+		//	var msg = lan.soft.mysql_set_err.replace('{1}',memSize).replace('{2}',setSize);
+		//	layer.msg(msg,{icon:2,time:5000});
+		//	return;
+		//}
+		var query_cache_size = parseInt($("input[name='query_cache_size']").val());
+		var query_cache_type = 0;
+		if(query_cache_size > 0){
+			query_cache_type = 1;
+		}
+		var data = {
+			key_buffer_size:parseInt($("input[name='key_buffer_size']").val()),
+			query_cache_size:query_cache_size,
+			query_cache_type:query_cache_type,
+			tmp_table_size:parseInt($("input[name='tmp_table_size']").val()),
+			max_heap_table_size:parseInt($("input[name='tmp_table_size']").val()),
+			innodb_buffer_pool_size:parseInt($("input[name='innodb_buffer_pool_size']").val()),
+			innodb_log_buffer_size:parseInt($("input[name='innodb_log_buffer_size']").val()),
+			sort_buffer_size:parseInt($("input[name='sort_buffer_size']").val()),
+			read_buffer_size:parseInt($("input[name='read_buffer_size']").val()),
+			read_rnd_buffer_size:parseInt($("input[name='read_rnd_buffer_size']").val()),
+			join_buffer_size:parseInt($("input[name='join_buffer_size']").val()),
+			thread_stack:parseInt($("input[name='thread_stack']").val()),
+			binlog_cache_size:parseInt($("input[name='binlog_cache_size']").val()),
+			thread_cache_size:parseInt($("input[name='thread_cache_size']").val()),
+			table_open_cache:parseInt($("input[name='table_open_cache']").val()),
+			max_connections:parseInt($("input[name='max_connections']").val())
+		};
+		
+		$.post('/database?action=SetDbConf',data,function(rdata){
+			layer.msg(rdata.msg,{icon:rdata.status?1:2});	
+		});
+	})
 }
 
 //转换单们到MB
@@ -1414,7 +1610,7 @@ function phpmyadmin(msg){
 //首页软件列表
 function indexsoft(){
 	var loadT = layer.msg(lan.soft.get_list,{icon:16,time:0,shade: [0.3, '#000']});
-	$.post('/plugin?action=getPluginList','',function(rdata){
+	$.post('/plugin?action=getPluginList','display=1',function(rdata){
 		layer.close(loadT);
 		var con = '';
 		for(var i=0;i<rdata['data'].length - 1;i++){
@@ -1529,7 +1725,9 @@ function PluginMan(name,title){
 			title: ''+ title,
 			content: rhtml
 		});
-		rcode = rhtml.split('<script type="javascript/text">')[1].replace('</script>','');
+		rcode = rhtml.split('<script type="javascript/text">')[1]
+		if(!rcode) rcode = rhtml.split('<script type="text/javascript">')[1]
+		rcode = rcode.replace('</script>','');
 		setTimeout(function(){
 			if(!!(window.attachEvent && !window.opera)){ 
 				execScript(rcode); 
@@ -1638,6 +1836,7 @@ function GetSList(isdisplay){
 		
 		$(".softtype").html(tBody);
 		$("#softPage").html(rdata.page);
+		$("#softPage .Pcount").css({"position":"absolute","left":"0"})
 		
 		$(".task").text(rdata.data[rdata.length - 1]);
 		for(var i=0;i<rdata.data.length - 1;i++){
@@ -1659,14 +1858,19 @@ function GetSList(isdisplay){
             }
 			
 			var handle = '<a class="btlink" onclick="AddVersion(\''+rdata.data[i].name+'\',\''+version_info+'\',\''+rdata.data[i].tip+'\',this,\''+rdata.data[i].title+'\')">'+lan.soft.install+'</a>';
+			var isSetup = false;
 			if(rdata.data[i].name != 'php'){
 				for(var n=0; n<len; n++){
 					if(rdata.data[i].versions[n].status == true){
+						isSetup = true;
 						if(rdata.data[i].tip == 'lib'){
-							handle = '<a class="btlink" onclick="PluginMan(\''+rdata.data[i].name+'\',\''+rdata.data[i].title+'\')">'+lan.soft.setup+'</a> | <a class="btlink" onclick="UninstallVersion(\''+rdata.data[i].name+'\',\''+rdata.data[i].versions[n].version+'\',\''+rdata.data[i].title+'\')">'+lan.soft.uninstall+'</a>';
+							var mupdate = (rdata.data[i].versions[n].no == rdata.data[i].versions[n].version)? '': '<a class="btlink" onclick="SoftUpdate(\''+rdata.data[i].name+'\',\''+rdata.data[i].versions[n].version+'\',\''+rdata.data[i].versions[n].version+'\')">更新</a> | ';
+							handle = mupdate + '<a class="btlink" onclick="PluginMan(\''+rdata.data[i].name+'\',\''+rdata.data[i].title+'\')">'+lan.soft.setup+'</a> | <a class="btlink" onclick="UninstallVersion(\''+rdata.data[i].name+'\',\''+rdata.data[i].versions[n].version+'\',\''+rdata.data[i].title+'\')">'+lan.soft.uninstall+'</a>';
 							titleClick = 'onclick="PluginMan(\''+rdata.data[i].name+'\',\''+rdata.data[i].title+'\')" style="cursor:pointer"';
 						}else{
-							handle = '<a class="btlink" onclick="SoftMan(\''+rdata.data[i].name+'\',\''+version_info+'\')">'+lan.soft.setup+'</a> | <a class="btlink" onclick="UninstallVersion(\''+rdata.data[i].name+'\',\''+rdata.data[i].versions[n].version+'\',\''+rdata.data[i].title+'\')">'+lan.soft.uninstall+'</a>';
+							var mupdate = (rdata.data[i].versions[n].no == rdata.data[i].update[n])? '': '<a class="btlink" onclick="SoftUpdate(\''+rdata.data[i].name+'\',\''+rdata.data[i].versions[n].version+'\',\''+rdata.data[i].update[n]+'\')">更新</a> | ';
+							if(rdata.data[i].versions[n].no == '') mupdate = '';
+							handle = mupdate + '<a class="btlink" onclick="SoftMan(\''+rdata.data[i].name+'\',\''+version_info+'\')">'+lan.soft.setup+'</a> | <a class="btlink" onclick="UninstallVersion(\''+rdata.data[i].name+'\',\''+rdata.data[i].versions[n].version+'\',\''+rdata.data[i].title+'\')">'+lan.soft.uninstall+'</a>';
 							titleClick = 'onclick="SoftMan(\''+rdata.data[i].name+'\',\''+version_info+'\')" style="cursor:pointer"';
 						}
 						
@@ -1687,10 +1891,36 @@ function GetSList(isdisplay){
 						handle = '<a style="color:#C0C0C0;" href="javascript:task();">'+lan.soft.sleep_install+'</a>'
 					}
 				}
+				var enddate = '<td class="c9 text-center">'+rdata.data[i].end+'</td>';
+				if(rdata.data[i].price > 0){
+					var price = '<td class="text-center" style="color:#fc6d26">￥'+rdata.data[i].price+'</td>';
+					var uninstall = ''
+					if(isSetup){
+						uninstall = ' | <a class="btlink" onclick="UninstallVersion(\''+rdata.data[i].name+'\',\'1.0\',\''+rdata.data[i].title+'\')">'+lan.soft.uninstall+'</a>'
+					}
+					if(rdata.data[i].end == '未开通' || rdata.data[i].end == '已到期' || rdata.data[i].end == '待支付'){
+						handle = '<a class="btlink" onclick="Renewinstall(\''+rdata.data[i].title+'\',\''+rdata.data[i].product_id+'\')">立即购买</a>' + uninstall
+						titleClick = 'onclick="Renewinstall(\''+rdata.data[i].title+'\',\''+rdata.data[i].product_id+'\')" style="cursor:pointer"';
+						if(rdata.data[i].end == '已到期') {
+							
+							handle = '<a class="btlink" onclick="Renewinstall(\''+rdata.data[i].title+'\',\''+rdata.data[i].product_id+'\',1)">立即续费</a>' + uninstall
+						}
+						enddate = '<td class="c9 text-center">'+rdata.data[i].end+'&nbsp;&nbsp;<span class="glyphicon glyphicon-repeat cursor" onclick="FPStatus()" title="刷新状态"></span></td>';
+					}
+					if(rdata.data[i].end.indexOf('20') != -1 || rdata.data[i].end == '已到期') enddate = '<td class="c9 text-center">'+rdata.data[i].end+'<a class="btlink" onclick="Renewinstall(\''+rdata.data[i].title+'\',\''+rdata.data[i].product_id+'\',1)"> (续费)</a></td>';
+					
+				}else{
+					var price = '<td class="c9 text-center">免费</td>';
+				}
+				
+				
 				sBody += '<tr>'
 						+'<td><span '+titleClick+'><img src="/static/img/soft_ico/ico-'+rdata.data[i].name+'.png">'+rdata.data[i].title+' '+version+'</span></td>'
-						+'<td>'+rdata.data[i].type+'</td>'
+						//+'<td>'+rdata.data[i].versions[0].no+'</td>'
+						//+'<td>'+rdata.data[i].type+'</td>'
 						+'<td>'+rdata.data[i].ps+'</td>'
+						+price
+						+enddate
 						+'<td>'+softPath+'</td>'
 						+'<td>'+state+'</td>'
 						+'<td>'+indexshow+'</td>'
@@ -1702,7 +1932,8 @@ function GetSList(isdisplay){
 				for(var n=0; n<len; n++){
 					if(rdata.data[i].versions[n].status == true){
 						checked = rdata.data[i].versions[n]['display'] ? "checked":"";
-						handle = '<a class="btlink" onclick="phpSoftMain(\''+rdata.data[i].versions[n].version+'\','+n+')">'+lan.soft.setup+'</a> | <a class="btlink" onclick="UninstallVersion(\''+rdata.data[i].name+'\',\''+rdata.data[i].versions[n].version+'\',\''+rdata.data[i].title+'\')">'+lan.soft.uninstall+'</a>';
+						var mupdate = (rdata.data[i].versions[n].no == rdata.data[i].update[n])? '': '<a class="btlink" onclick="SoftUpdate(\''+rdata.data[i].name+'\',\''+rdata.data[i].versions[n].version+'\',\''+rdata.data[i].update[n]+'\')">更新</a> | ';
+						handle = mupdate + '<a class="btlink" onclick="phpSoftMain(\''+rdata.data[i].versions[n].version+'\','+n+')">'+lan.soft.setup+'</a> | <a class="btlink" onclick="UninstallVersion(\''+rdata.data[i].name+'\',\''+rdata.data[i].versions[n].version+'\',\''+rdata.data[i].title+'\')">'+lan.soft.uninstall+'</a>';
 						softPath = '<span class="glyphicon glyphicon-folder-open" title="'+rdata.data[i].path+'" onclick="openPath(\''+rdata.data[i].path+"/"+rdata.data[i].versions[n].version.replace(/\./,"")+'\')"></span>';
 						titleClick = 'onclick="phpSoftMain(\''+rdata.data[i].versions[n].version+'\','+n+')" style="cursor:pointer"';
 						indexshow = '<div class="index-item"><input class="btswitch btswitch-ios" id="index_'+rdata.data[i].name+rdata.data[i].versions[n].version.replace(/\./,"")+'" type="checkbox" '+checked+'><label class="btswitch-btn" for="index_'+rdata.data[i].name+rdata.data[i].versions[n].version.replace(/\./,"")+'" onclick="toIndexDisplay(\''+rdata.data[i].name+'\',\''+rdata.data[i].versions[n].version+'\')"></label></div>';
@@ -1743,8 +1974,11 @@ function GetSList(isdisplay){
 					}
 					pBody += '<tr>'
 							+'<td><span '+titleClick+'><img src="/static/img/soft_ico/ico-'+rdata.data[i].name+'.png">'+rdata.data[i].title+'-'+rdata.data[i].versions[n].version+'</span></td>'
-							+'<td>'+rdata.data[i].type+'</td>'
+							//+'<td>'+rdata.data[i].versions[n].no+'</td>'
+							//+'<td>'+rdata.data[i].type+'</td>'
 							+'<td>'+pps+'</td>'
+							+'<td class="c9 text-center">免费</td>'
+							+'<td class="c9 text-center">--</td>'
 							+'<td>'+softPath+'</td>'
 							+'<td>'+state+'</td>'
 							+'<td>'+indexshow+'</td>'
@@ -1769,6 +2003,453 @@ function GetSList(isdisplay){
 			GetSList();
 		})
 	})
+}
+//刷新状态
+function FPStatus(){
+	$.get("/auth?action=flush_pay_status",function(res){
+		layer.msg(res.msg,{icon:res.status?"1":"2"})
+	})
+}
+//更新
+function SoftUpdate(name,version,update){
+	var msg = "<li>建议您在服务器负载闲时进行软件更新.</li>";
+	if(name == 'mysql') msg = "<ul style='color:red;'><li>更新数据库有风险,建议在更新前,先备份您的数据库.</li><li>如果您的是云服务器,强烈建议您在更新前做一个快照.</li><li>建议您在服务器负载闲时进行软件更新.</li></ul>";
+	SafeMessage('更新['+name+']','更新过程可能会导致服务中断,您真的现在就将['+name+']更新到['+update+']吗?',function(){
+		var data = "name="+name+"&version="+version+"&type=0&upgrade=" + update;
+		var loadT = layer.msg('正在更新['+name+'-'+version+'],请稍候...',{icon:16,time:0,shade: [0.3, '#000']});
+		$.post('/plugin?action=install', data, function(rdata) {
+			if(rdata.status){
+				GetTaskCount();
+				layer.msg('已添加到任务列表,请稍候...',{icon:1});
+			}else{
+				layer.msg('更新失败!',{icon:2});
+			}
+			
+			layer.close(loadT);
+		});
+	},msg);
+}
+//续费
+function Renewinstall(pluginName,pid,an){
+	if(an === undefined){
+		var txt = "开通";
+	}
+	else{
+		var txt = "续费";
+	}
+	var payhtml = '<div class="libPay" style="padding:15px 30px 30px 30px">\
+				<div class="libPay-item f14 plr15 libPay-select">\
+					<div class="li-tit c3">类型</div>\
+					<div class="li-con c6">\
+						<ul class="li-c-item">\
+							<li class="active"><span class="item-name pull-left">'+pluginName+'</span><span class="item-info f12 pull-right c7">1款插件</span></li>\
+							<li><span class="item-name">升级为专业版</span><span class="item-info f12 pull-right c7">所有插件免费使用</span></li>\
+						</ul>\
+						<p class="pro-info" style="position:absolute;top:151px;left:42px;color: #FF7301;font-size: 12px;display:none">（专业版过期了需要续费后才能登陆使用或者进SSH执行免费版升级命令来切换成免费版）</p>\
+					</div>\
+				</div>\
+				<div class="libpay-con">\
+				</div>\
+			</div>';
+	layer.open({
+			type: 1,
+			title: txt + pluginName,
+			area: ['616px','680px'],
+			closeBtn: 2,
+			shadeClose: false,
+			content:payhtml
+		});
+	get_plugin_price(pluginName,pid,1);
+	$(".li-c-item li").click(function(){
+		var i = $(this).index();
+		$(this).addClass("active").siblings().removeClass("active");
+		if(i==0){
+			get_plugin_price(pluginName,pid,1);
+			$(".pro-info").hide();
+		}
+		else{
+			get_product_discount();
+			$(".pro-info").show();
+		}
+	});
+	$(".pay-btn-group > li").click(function(){
+		$(this).addClass("active").siblings().removeClass("active");
+	});
+}
+//升级为专业版
+function updatapro(){
+	var payhtml = '<div class="libPay" style="padding:15px 30px 30px 30px">\
+				<div class="libpay-con">\
+				</div>\
+				<p style="position:absolute;bottom:17px;left:0;width:100%;text-align:center;color:red">注：如需购买多台永久授权，请登录宝塔官网购买。<a class="btlink" href="https://www.bt.cn/download/linuxpro.html#price" target="_blank">去宝塔官网</a></p>\
+			</div>';
+	layer.open({
+			type: 1,
+			title: '升级专业版，所有插件，免费使用',
+			area: ['616px','540px'],
+			closeBtn: 2,
+			shadeClose: false,
+			content:payhtml
+		});
+	get_product_discount();
+	$(".pay-btn-group > li").click(function(){
+		$(this).addClass("active").siblings().removeClass("active");
+	});
+}
+
+//取插件折扣信息
+function get_plugin_price(pluginName,pid,an){
+	var con = '<div class="libPay-item f14 plr15">\
+						<div class="li-tit c4">付款方式</div>\
+						<div class="li-con c6" id="Payment"><ul class="pay-btn-group pay-cycle"><li class="pay-cycle-btn active"><span>微信支付</span></li><li class="pay-cycle-btn" onclick="get_plugin_coupon('+pid+')"><span>代金券</span></li></ul></div>\
+					</div>\
+					<div class="payment-con">\
+						<div class="pay-weixin">\
+							<div class="libPay-item f14 plr15">\
+								<div class="li-tit c4">开通时长</div>\
+								<div class="li-con c6" id="PayCycle"><div class="btn-group"></div></div>\
+							</div>\
+							<div class="lib-price-box text-center"><span class="lib-price-name f14"><b>总计</b></span><span class="price-txt"><b class="sale-price"></b>元</span><s class="cost-price"></s></div>\
+							<div class="paymethod">\
+								<div class="pay-wx"></div>\
+								<div class="pay-wx-info f16 text-center"><span class="wx-pay-ico mr5"></span>微信扫码支付</div>\
+							</div>\
+						</div>\
+						<div class="pay-coupon" style="display:none">\
+							<div class="libPay-item f14 plr15" style="height:200px;overflow:auto">\
+								<div class="li-tit c4 ">代金券列表</div>\
+								<div class="li-con c6" id="couponlist"><div class="btn-group"></div></div>\
+							</div>\
+							<div class="paymethod-submit text-center">\
+								<button class="btn btn-success btn-sm f16" style="width:200px;height:40px;background-color:#999;border-color:#888">提交</button>\
+							</div>\
+						</div>\
+					</div>'
+	$(".libpay-con").html("<div class='cloading'>加载中，请稍后</div>");
+	$.post('/auth?action=get_plugin_price',{pluginName:pluginName},function(rdata){
+		
+		if(rdata.status === false){
+			//未绑定
+			var payhtml = '<div class="libLogin pd20" style="padding-top:100px"><div class="bt-form text-center"><div class="line mb15"><h3 class="c2 f16 text-center mtb20">绑定宝塔官网账号</h3></div><div class="line"><input class="bt-input-text" name="username2" type="text" placeholder="手机" id="p1" aautocomplete="new-password"></div><div class="line"><input autocomplete="new-password" class="bt-input-text" type="password" name="password2"  placeholder="密码" id="p2"></div><div class="line"><input class="login-button" value="登录" type="button" onclick="loginBT(\''+pluginName+'\',\''+pid+'\')"></div><p class="text-right"><a class="btlink" href="https://www.bt.cn/register.html" target="_blank">未有账号，去注册</a></p></div></div>';
+			$(".libPay-select").hide();
+			$(".libpay-con").html(payhtml);
+		}
+		else if(an === undefined){
+			//同意协议
+			var payhtml = '<div class="shuoming pd20"><div class="alert alert-danger f16" style="line-height:30px">注意：您购买的插件只在当前服务器有效。<br>本插件为特价期间，可能存在一定的稳定性问题。<br>有任何问题，欢迎咨询QQ394030111反馈。</div><div class="line text-center"><input id="apply-ps" class="login-button" value="同意" type="button" disabled style="background:#999;border-color:#999;box-shadow:inset 0 1px 2px #999"></div></div>';
+			$(".libPay-select").hide();
+			$(".libpay-con").html(payhtml);
+			var imin=6;
+			var timehwnd = setInterval(function countdown(){
+				imin--;
+				var applyObj = $("#apply-ps");
+				if(imin == 0){
+					applyObj.prop("value","同意");
+					applyObj.removeAttr("disabled");
+					applyObj.attr("onclick","anTo('"+pluginName+"','"+pid+"')");
+					applyObj.removeAttr("style");
+					clearInterval(timehwnd);
+				}else{
+					applyObj.prop("value","同意("+imin+")");
+				}
+			},1000);
+		}
+		else{
+			$(".libPay-select").show();
+			$(".libpay-con").html(con);
+			$("#PayCycle .btn-group").html(rdata);
+			$(".pay-cycle li").click(function(){
+				var i = $(this).index();
+				$(this).addClass("active").siblings().removeClass("active");
+				$(".payment-con > div").eq(i).show().siblings().hide();
+			});
+			$(".btn-group .btn-success").click();
+			$(".btn-group .btn").click(function(){
+				$(this).addClass("btn-success").siblings().removeClass("btn-success");
+			});
+		}
+	})
+}
+
+//取插件优惠券
+function get_plugin_coupon(pid){
+	var con = '';
+	$("#couponlist").html("<div class='cloading'>加载中，请稍后</div>");
+	$.post('/auth?action=get_voucher_plugin',{pid:pid},function(rdata){
+		if(rdata !=''){
+			for(var i=0,l=rdata.length;i<l;i++){
+				con += '<li class="pay-cycle-btn" data-code="'+rdata[i].code+'"><span>'+rdata[i].cycle+conver_unit(rdata[i].unit)+'</span></li>';
+			}
+			$("#couponlist").html('<ul class="pay-btn-group">'+con+'</ul>');
+			$(".pay-btn-group > li").click(function(){
+				$(this).addClass("active").siblings().removeClass("active");
+				$(".paymethod-submit button").css({"background-color":"#20a53a","border-color":"#20a53a"});
+			});
+			$(".paymethod-submit button").click(function(){
+				var code = $("#couponlist .pay-btn-group .active").attr("data-code");
+				if(code == undefined){
+					layer.msg("请选择代金券");
+				}
+				else{
+					useCoupon_plugin(code,pid);
+				}
+			})
+		}
+		else{
+			$("#couponlist").html("<p class='text-center' style='margin-top:70px'>暂无代金券</p>");
+		}
+	})
+}
+//取专业版代金券
+function get_pro_coupon(){
+	$("#couponlist").html("<div class='cloading'>加载中，请稍后</div>");
+	$.get("/auth?action=get_voucher",function(rdata){
+		if(rdata !=null){
+			var con = '';
+			var len = rdata.length;
+			for(var i=0; i<len; i++){
+				if(rdata[i].status !=1){
+					var cyc = rdata[i].cycle+conver_unit(rdata[i].unit);
+					if(rdata[i].cycle == 999){
+						cyc = "永久"
+					}
+					con += '<li class="pay-cycle-btn" data-code="'+rdata[i].code+'"><span>'+cyc+'</span></li>';
+				}
+			}
+			$("#couponlist").html('<ul class="pay-btn-group">'+con+'</ul>');
+			$(".pay-btn-group > li").click(function(){
+				$(this).addClass("active").siblings().removeClass("active");
+				$(".paymethod-submit button").css({"background-color":"#20a53a","border-color":"#20a53a"});
+			});
+			$(".paymethod-submit button").click(function(){
+				var code = $("#couponlist .pay-btn-group .active").attr("data-code");
+				if(code == undefined){
+					layer.msg("请选择代金券");
+				}
+				else{
+					useCoupon(code);
+				}
+			})
+		}
+		else{
+			$("#couponlist").html("<p class='text-center' style='margin-top:70px'>暂无代金券</p>");
+		}
+	})
+}
+//插件代金券续费
+function useCoupon_plugin(code,pid){
+	var loadT = layer.msg("提交中，请稍后。",{ icon: 16, time: 0, shade: [0.3, "#000"]});
+	$.post("/auth?action=create_order_voucher_plugin",{pid:pid,code:code},function(rdata){
+		layer.closeAll();
+		layer.msg(rdata.msg);
+	})
+}
+//专业版代金券续费
+function useCoupon(code){
+	var loadT = layer.msg("提交中，请稍后。",{ icon: 16, time: 0, shade: [0.3, "#000"]});
+	$.post("/auth?action=create_order_voucher",{code:code},function(rdata){
+		layer.closeAll();
+		layer.msg(rdata.msg);
+		if(rdata.status === true){
+			layer.msg("支付成功！专业版升级中，请勿操作！",{icon: 16, time: 0, shade: [0.3, "#000"]});
+			$.get("/system?action=UpdatePro",function(rr){
+				show_upVip();
+			}).error(function(){
+				show_upVip();
+			});
+		}
+	})
+}
+
+function show_upVip(){
+	layer.closeAll();
+	layer.msg("恭喜您，升级完成！",{icon:1});
+	setTimeout(function(){window.location.href = '/';},3000);
+}
+
+//取专业版产品折扣信息
+function get_product_discount(){
+	var con = '<div class="libPay-item f14 plr15">\
+						<div class="li-tit c4">付款方式</div>\
+						<div class="li-con c6" id="Payment"><ul class="pay-btn-group pay-cycle"><li class="pay-cycle-btn active"><span>微信支付</span></li><li class="pay-cycle-btn" onclick="get_pro_coupon()"><span>代金券</span></li></ul></div>\
+					</div>\
+					<div class="payment-con">\
+						<div class="pay-weixin">\
+							<div class="libPay-item f14 plr15">\
+								<div class="li-tit c4">开通时长</div>\
+								<div class="li-con c6" id="PayCycle"></div>\
+							</div>\
+							<div class="lib-price-box text-center"><span class="lib-price-name f14"><b>总计</b></span><span class="price-txt"><b class="sale-price"></b>元</span><s class="cost-price"></s></div>\
+							<div class="paymethod">\
+								<div class="pay-wx"></div>\
+								<div class="pay-wx-info f16 text-center"><span class="wx-pay-ico mr5"></span>微信扫码支付</div>\
+							</div>\
+						</div>\
+						<div class="pay-coupon" style="display:none">\
+							<div class="libPay-item f14 plr15" style="height:200px;overflow:auto">\
+								<div class="li-tit c4 ">代金券列表</div>\
+								<div class="li-con c6" id="couponlist"><div class="btn-group"></div></div>\
+							</div>\
+							<div class="paymethod-submit text-center">\
+								<button class="btn btn-success btn-sm f16" style="width:200px;height:40px;background-color:#999;border-color:#888">提交</button>\
+							</div>\
+						</div>\
+					</div>'
+	$(".libpay-con").html("<div class='cloading'>加载中，请稍后</div>");
+	$.get("/auth?action=get_product_discount_by",function(rdata){
+		if(rdata !=null){
+			var coucon = '';
+			var qarr = Object.keys(rdata);
+			var qlen = qarr.length;
+			//折扣列表
+			for(var i=0;i<qlen;i++){
+				var j = qarr[i];
+				var a = rdata[j].price;
+				var b = rdata[j].sprice;
+				var c = rdata[j].discount;
+				coucon +='<li class="pay-cycle-btn" onclick="getRsCodePro('+a+','+b+','+j+')"><span>'+conver_unit(j)+'</span>'+(c==1?"":'<em>'+c*10+'折</em>')+'</li>';
+			}
+			$(".libpay-con").html(con);
+			$("#PayCycle").html('<ul class="pay-btn-group">'+coucon+'</ul>');
+			$(".pay-btn-group li").click(function(){
+				$(this).addClass("active").siblings().removeClass("active");
+			});
+			$(".pay-cycle li").click(function(){
+				var i = $(this).index();
+				$(this).addClass("active").siblings().removeClass("active");
+				$(".payment-con > div").eq(i).show().siblings().hide();
+			});
+			$("#PayCycle .pay-btn-group li").eq(0).click();
+		}
+	})
+}
+//单位转换
+function conver_unit(name){
+	var unit= '';
+	switch (name){
+		case "year":
+			unit = "年";
+			break;
+		case "month":
+			unit = "个月";
+			break;
+		case "day":
+			unit = "天";
+			break;
+		case "1":
+			unit = "1个月";
+			break;
+		case "3":
+			unit = "3个月";
+			break;
+		case "6":
+			unit = "6个月";
+			break;
+		case "12":
+			unit = "1年";
+			break;
+		case "24":
+			unit = "2年";
+			break;
+		case "36":
+			unit = "3年";
+			break;
+		case "999":
+			unit = "永久";
+			break;
+	}
+	return unit;
+}
+var wxpayTimeId = 0;
+
+function getRsCode(pid,price,sprice,cycle){
+	$(".sale-price").text(price);
+	if(price == sprice){
+		$(".cost-price").text(sprice+'元').hide();
+	}
+	else{
+		$(".cost-price").text(sprice+'元').show();
+	}
+	$(".pay-wx").html('<span class="loading">加载中，请稍后</span>');
+	$(".libPay").append('<div class="payloadingmask" style="height:100%;width:100%;position:absolute;top:0;left:0;z-index:9;background:#fff;opacity:0"></div>');
+	$.post('/auth?action=get_buy_code',{pid:pid,cycle:cycle},function(rdata){
+		$(".payloadingmask").remove();
+		if(rdata.status === false){
+			layer.msg(rdata.msg,{icon:2});
+			return;
+		}
+		$(".pay-wx").html('');
+		$(".pay-wx").qrcode(rdata.msg);
+		clearInterval(wxpayTimeId);
+		wxpayTimeId = setInterval(function(){
+			$.post('/auth?action=check_pay_status',{id:pid},function(rdata){
+				if(rdata.status) {
+					layer.closeAll();
+					layer.msg('支付成功!',{icon:1});
+					clearInterval(wxpayTimeId);
+					return;
+				}
+			})
+		},3000);
+		
+	});
+}
+function getRsCodePro(price,sprice,cycle){
+	$(".sale-price").text(price);
+	if(price == sprice){
+		$(".cost-price").text(sprice+'元').hide();
+	}
+	else{
+		$(".cost-price").text(sprice+'元').show();
+	}
+	$(".pay-wx").html('<span class="loading">加载中，请稍后</span>');
+	$(".libPay").append('<div class="payloadingmask" style="height:100%;width:100%;position:absolute;top:0;left:0;z-index:1"></div>');
+	$.post('/auth?action=create_order',{cycle:cycle},function(rdata){
+		$(".payloadingmask").remove();
+		if(rdata.status === false){
+			layer.msg(rdata.msg,{icon:2});
+			return;
+		}
+		$(".pay-wx").html('');
+		$(".pay-wx").qrcode(rdata.msg);
+		clearInterval(wxpayTimeId);
+		wxpayTimeId = setInterval(function(){
+			$.post('/auth?action=get_re_order_status',function(rdata){
+				if(rdata.status) {
+					layer.closeAll();
+					layer.msg("支付成功！专业版升级中，请勿操作！",{icon: 16, time: 0, shade: [0.3, "#000"]});
+					clearInterval(wxpayTimeId);
+					$.get("/system?action=UpdatePro",function(rr){
+						show_upVip();
+					}).error(function(){
+						show_upVip();
+					});
+					return;
+				}
+			})
+		},3000);
+		
+	});
+}
+
+function anTo(pluginName,pid){
+	layer.closeAll();
+	Renewinstall(pluginName,pid,1);
+}
+
+//登陆宝塔官网帐户
+function loginBT(pluginName,pid){
+	p1 = $("#p1").val();
+	p2 = $("#p2").val();
+	var loadT = layer.msg(lan.config.token_get,{icon:16,time:0,shade: [0.3, '#000']});
+	$.post("/ssl?action=GetToken", "username=" + p1 + "&password=" + p2, function(b){
+		layer.close(loadT);
+		layer.msg(b.msg, {icon: b.status?1:2});
+		if(b.status) {
+			layer.closeAll();
+			Renewinstall(pluginName,pid);
+		}
+	});
 }
 
 //独立安装
@@ -1966,6 +2647,10 @@ function selectChange(){
 					max = 256;
 					msg = '256M';
 					break;
+				case '8.0':
+					max = 5200;
+					msg = '6GB';
+					break;
 				case '5.7':
 					max = 1500;
 					msg = '2GB';
@@ -2006,7 +2691,7 @@ function UninstallVersion(name,version,title){
 			async:false,
 			success:function(dataD){
 				if(dataD.data.length > 0) {
-					layer.msg(lan.soft.mysql_del_err,{icon:5});
+					layer.msg(lan.soft.mysql_del_err + '<p style="color:red">强行卸载: curl http://h.bt.cn/mu.sh|bash</p>',{icon:5,time:8000});
 					isError = true;;
 				}
 			}
@@ -2149,6 +2834,15 @@ function toIndexDisplay(name,version){
 			layer.msg(rdata.msg,{icon:1})
 		}
 	})
+}
+
+//刷新缓存
+function flush_cache(){
+	var loadT = layer.msg(lan.soft.get_list,{icon:16,time:0,shade: [0.3, '#000']})
+	$.post('/plugin?action=flush_cache',{},function(rdata){
+		layer.close(loadT)
+		layer.msg(rdata.msg,{icon:rdata.status?1:2});
+	});
 }
 
 

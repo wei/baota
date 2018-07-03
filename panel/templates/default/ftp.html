@@ -23,20 +23,22 @@ $def with (tData)
 				<button onclick="allDeleteFtp();" class="btn btn-default btn-sm">$tData['lan']['BTN3']</button>
 			</span>
 			<div class="divtable mtb10">
-				<table class="table table-hover" width="100%" border="0" cellpadding="0" cellspacing="0">
+				<div class="tablescroll">
+				<table class="table table-hover" style="min-width: 900px;border: 0 none;">
 					<thead>
 					<tr>
 						<th width='30'><input type="checkbox" onclick="checkSelect();" id="setBox"></th>
                         <th onclick="listOrder('name','ftp',this)" style="cursor: pointer;">$tData['lan']['TH1']<span class="glyphicon glyphicon-triangle-top" style="margin-left:5px;color:#bbb"></span></th>
                         <th width="15%">$tData['lan']['TH2']</th>
                         <th onclick="listOrder('status','ftp',this)" style="cursor: pointer;" width="100">$tData['lan']['TH3']<span class="glyphicon glyphicon-triangle-top" style="margin-left:5px;color:#bbb"></span></th>
-                        <th>$tData['lan']['TH4']</th>
+                        <th width="26%">$tData['lan']['TH4']</th>
                         <th width="15%">$tData['lan']['TH5']</th>
                         <th width="130" class="text-right">$tData['lan']['TH6']</th>
 					</tr>
 					</thead>
 					<tbody id="ftpBody"></tbody>
 				</table>
+				</div>
 				<div class="dataTables_paginate paging_bootstrap pagination">
 					<ul id="ftpPage" class="page"></ul>
 				</div>
@@ -44,7 +46,7 @@ $def with (tData)
 		</div>
 	</div>
 </div>
-<script src="/static/js/ftp.js?date=20170920"></script>
+<script src="/static/js/ftp.js?date=20180725"></script>
 <script type="text/javascript">
 	$if not tData['isSetup']:
 		layer.msg('$tData["lan"]["JS1"]<a href="/soft" style="color:#20a53a; float: right;">$tData["lan"]["JS1"]</a>',{icon:7,time:0,shade: [0.3, '#000']});

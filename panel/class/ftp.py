@@ -4,7 +4,7 @@
 #  + -------------------------------------------------------------------
 # | Copyright (c) 2015-2016 宝塔软件(http:#bt.cn) All rights reserved.
 #  + -------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 #  + -------------------------------------------------------------------
 import public,db,re,os,web,firewalls
 class ftp:
@@ -104,7 +104,7 @@ class ftp:
         try:
             port = get['port']
             if int(port) < 1 or int(port) > 65535: return public.returnMsg(False,'PORT_CHECK_RANGE')
-            file = web.ctx.session.setupPath + '/pure-ftpd/etc/pure-ftpd.conf'
+            file = '/www/server/pure-ftpd/etc/pure-ftpd.conf'
             conf = public.readFile(file)
             rep = u"\n#?\s*Bind\s+[0-9]+\.[0-9]+\.[0-9]+\.+[0-9]+,([0-9]+)"
             #preg_match(rep,conf,tmp)
@@ -125,4 +125,4 @@ class ftp:
     
     #重载配置
     def FtpReload(self):
-        public.ExecShell(self.__runPath + '/pure-pw mkdb '  +  web.ctx.session.setupPath + '/pure-ftpd/etc/pureftpd.pdb')
+        public.ExecShell(self.__runPath + '/pure-pw mkdb /www/server/pure-ftpd/etc/pureftpd.pdb')

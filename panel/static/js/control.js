@@ -1,5 +1,8 @@
 //默认显示7天周期图表
 setTimeout(function(){
+	Wday(0,'getload');
+},500);
+setTimeout(function(){
 	Wday(0,'cpu');
 },500);
 setTimeout(function(){
@@ -23,6 +26,15 @@ $(".st").hover(function(){
 })
 $(".searcTime .gt").click(function(){
 	$(this).addClass("on").siblings().removeClass("on");
+})
+$(".loadbtn").click(function(){
+	$(this).parents(".searcTime").find("span").removeClass("on");
+	$(this).parents(".searcTime").find(".st").addClass("on");
+	var b = (new Date($(this).parent().find(".btime").val()).getTime())/1000;
+	var e = (new Date($(this).parent().find(".etime").val()).getTime())/1000;
+	b = Math.round(b);
+	e = Math.round(e);
+	getload(b,e)
 })
 $(".cpubtn").click(function(){
 	$(this).parents(".searcTime").find("span").removeClass("on");
@@ -91,6 +103,9 @@ function Wday(day,name){
 			break;
 		case "network":
 			network(b,e);
+			break;
+		case "getload":
+			getload(b,e);
 			break;
 	}
 }
@@ -204,6 +219,9 @@ $.get('/ajax?action=GetCpuIo&start='+b+'&end='+e,function(rdata){
 	option = {
 		tooltip: {
 			trigger: 'axis',
+			axisPointer: {
+				type: 'cross'
+			},
 			formatter: '{b}<br />{a}: {c}%'
 		},
 		xAxis: {
@@ -290,6 +308,9 @@ $.get('/ajax?action=GetCpuIo&start='+b+'&end='+e,function(rdata){
 	option = {
 		tooltip: {
 			trigger: 'axis',
+			axisPointer: {
+				type: 'cross'
+			},
 			formatter: '{b}<br />{a}: {c}%'
 		},
 		xAxis: {
@@ -367,22 +388,26 @@ $.get('/ajax?action=GetDiskIo&start='+b+'&end='+e,function(rdata){
 	var rData = [];
 	var wData = [];
 	var xData = [];
-	var yData = [];
-	var zData = [];
+	//var yData = [];
+	//var zData = [];
 	
 	for(var i = 0; i < rdata.length; i++){
-		rData.push(ToSizeG(rdata[i].read_bytes));
-		wData.push(ToSizeG(rdata[i].write_bytes));
+		rData.push((rdata[i].read_bytes/1024/60).toFixed(3));
+		wData.push((rdata[i].write_bytes/1024/60).toFixed(3));
 		xData.push(rdata[i].addtime);
-		yData.push(rdata[i].read_count);
-		zData.push(rdata[i].write_count);
+		//yData.push(rdata[i].read_count);
+		//zData.push(rdata[i].write_count);
 	}
 	option = {
 		tooltip: {
-			trigger: 'axis'
+			trigger: 'axis',
+			axisPointer: {
+				type: 'cross'
+			},
+			formatter:"时间：{b0}<br />{a0}: {c0} Kb/s<br />{a1}: {c1} Kb/s", 
 		},
 		legend: {
-			data:[lan.control.disk_read_num,lan.control.disk_write_num,lan.control.disk_read_bytes,lan.control.disk_write_bytes]
+			data:[lan.control.disk_read_bytes,lan.control.disk_write_bytes]
 		},
 		xAxis: {
 			type: 'category',
@@ -394,39 +419,21 @@ $.get('/ajax?action=GetDiskIo&start='+b+'&end='+e,function(rdata){
 				}
 			}
 		},
-		yAxis: [
-			{
-				type: 'value',
-				name: lan.public.num,
-				splitLine:{
-					lineStyle:{
-						color:"#ddd"
-					}
-				},
-				axisLine:{
-					lineStyle:{
-						color:"#666"
-					}
+		yAxis: {
+			type: 'value',
+			name: lan.index.unit+':KB/s',
+			boundaryGap: [0, '100%'],
+			splitLine:{
+				lineStyle:{
+					color:"#ddd"
 				}
 			},
-			{
-				type: 'value',
-				name: lan.public.byte,
-				axisLabel: {
-					formatter: '{value}'
-				},
-				splitLine:{
-					lineStyle:{
-						color:"#ddd"
-					}
-				},
-				axisLine:{
-					lineStyle:{
-						color:"#666"
-					}
+			axisLine:{
+				lineStyle:{
+					color:"#666"
 				}
 			}
-		],
+		},
 		dataZoom: [{
 			type: 'inside',
 			start: 0,
@@ -447,7 +454,7 @@ $.get('/ajax?action=GetDiskIo&start='+b+'&end='+e,function(rdata){
 		}],
 		series: [
 			{
-				name:lan.control.disk_read_num,
+				name:lan.control.disk_read_bytes,
 				type:'line',
 				smooth:true,
 				symbol: 'none',
@@ -457,10 +464,10 @@ $.get('/ajax?action=GetDiskIo&start='+b+'&end='+e,function(rdata){
 						color: 'rgb(255, 70, 131)'
 					}
 				},
-				data: yData
+				data: rData
 			},
 			{
-				name:lan.control.disk_write_num,
+				name:lan.control.disk_write_bytes,
 				type:'line',
 				smooth:true,
 				symbol: 'none',
@@ -470,18 +477,6 @@ $.get('/ajax?action=GetDiskIo&start='+b+'&end='+e,function(rdata){
 						color: 'rgba(46, 165, 186, .7)'
 					}
 				},
-				data: zData
-			},
-			{
-				name:lan.control.disk_read_bytes,
-				type:'line',
-				yAxisIndex: 1,
-				data: rData
-			},
-			{
-				name:lan.control.disk_write_bytes,
-				type:'line',
-				yAxisIndex: 1,
 				data: wData
 			}
 		]
@@ -516,7 +511,10 @@ $.get('/ajax?action=GetNetWorkIo&start='+b+'&end='+e,function(rdata){
 	}
 	option = {
 		tooltip: {
-			trigger: 'axis'
+			trigger: 'axis',
+			axisPointer: {
+				type: 'cross'
+			}
 		},
 		legend: {
 			data:[lan.index.net_up,lan.index.net_down]
@@ -598,4 +596,355 @@ $.get('/ajax?action=GetNetWorkIo&start='+b+'&end='+e,function(rdata){
 		myChartNetwork.resize();
 	});
 })
+}
+//负载
+function getload_old(b,e){
+$.get('/ajax?action=get_load_average&start='+b+'&end='+e,function(rdata){
+	var myChartgetload = echarts.init(document.getElementById('getloadview'));
+	var aData = [];
+	var bData = [];
+	var xData = [];
+	var yData = [];
+	var zData = [];
+	
+	for(var i = 0; i < rdata.length; i++){
+		xData.push(rdata[i].addtime);
+		yData.push(rdata[i].pro);
+		zData.push(rdata[i].one);
+		aData.push(rdata[i].five);
+		bData.push(rdata[i].fifteen);
+	}
+	option = {
+		tooltip: {
+			trigger: 'axis'
+		},
+		calculable: true,
+		legend: {
+			data:['系统资源使用率','1分钟','5分钟','15分钟'],
+			selectedMode: 'single',
+		},
+		xAxis: {
+			type: 'category',
+			boundaryGap: false,
+			data: xData,
+			axisLine:{
+				lineStyle:{
+					color:"#666"
+				}
+			}
+		},
+		yAxis: {
+			type: 'value',
+			name: '',
+			boundaryGap: [0, '100%'],
+			splitLine:{
+				lineStyle:{
+					color:"#ddd"
+				}
+			},
+			axisLine:{
+				lineStyle:{
+					color:"#666"
+				}
+			}
+		},
+		dataZoom: [{
+			type: 'inside',
+			start: 0,
+			end: 100,
+			zoomLock:true
+		}, {
+			start: 0,
+			end: 100,
+			handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
+			handleSize: '80%',
+			handleStyle: {
+				color: '#fff',
+				shadowBlur: 3,
+				shadowColor: 'rgba(0, 0, 0, 0.6)',
+				shadowOffsetX: 2,
+				shadowOffsetY: 2
+			}
+		}],
+		series: [
+			{
+				name:'系统资源使用率',
+				type:'line',
+				smooth:true,
+				symbol: 'none',
+				sampling: 'average',
+				itemStyle: {
+					normal: {
+						color: 'rgb(255, 140, 0)'
+					}
+				},
+				data: yData
+			},
+			{
+				name:'1分钟',
+				type:'line',
+				smooth:true,
+				symbol: 'none',
+				sampling: 'average',
+				itemStyle: {
+					normal: {
+						color: 'rgb(30, 144, 255)'
+					}
+				},
+				data: zData
+			},
+			{
+				name:'5分钟',
+				type:'line',
+				smooth:true,
+				symbol: 'none',
+				sampling: 'average',
+				itemStyle: {
+					normal: {
+						color: 'rgb(0, 178, 45)'
+					}
+				},
+				data: aData
+			},
+			{
+				name:'15分钟',
+				type:'line',
+				smooth:true,
+				symbol: 'none',
+				sampling: 'average',
+				itemStyle: {
+					normal: {
+						color: 'rgb(147, 38, 255)'
+					}
+				},
+				data: bData
+			}
+		]
+	};
+	myChartgetload.setOption(option);
+	window.addEventListener("resize",function(){
+		myChartgetload.resize();
+	});
+})
+}
+//系统负载
+function getload(b,e){
+	$.get('/ajax?action=get_load_average&start='+b+'&end='+e,function(rdata){
+	var myChartgetload = echarts.init(document.getElementById('getloadview'));
+	var aData = [];
+	var bData = [];
+	var xData = [];
+	var yData = [];
+	var zData = [];
+	
+	for(var i = 0; i < rdata.length; i++){
+		xData.push(rdata[i].addtime);
+		yData.push(rdata[i].pro);
+		zData.push(rdata[i].one);
+		aData.push(rdata[i].five);
+		bData.push(rdata[i].fifteen);
+	}
+	option = {
+		animation: false,
+		tooltip: {
+			trigger: 'axis',
+			axisPointer: {
+                type: 'cross'
+            }
+		},
+		legend: {
+			data:['1分钟','5分钟','15分钟'],
+			right:'16%',
+			top:'10px'
+		},
+		axisPointer: {
+			link: {xAxisIndex: 'all'},
+			lineStyle: {
+				color: '#aaaa',
+				width: 1
+			}
+		},
+		grid: [{ // 直角坐标系内绘图网格
+				top: '60px',
+				left: '5%',
+				right: '55%',
+				width: '40%',
+				height: 'auto'
+			},
+			{
+				top: '60px',
+				left: '55%',
+				width: '40%',
+				height: 'auto'
+			}
+		],
+		xAxis: [
+
+			{ // 直角坐标系grid的x轴
+				type: 'category',
+				axisLine: {
+					lineStyle: {
+						color: '#666'
+					}
+				},
+				data: xData
+			},
+			{ // 直角坐标系grid的x轴
+				type: 'category',
+				gridIndex: 1,
+				axisLine: {
+					lineStyle: {
+						color: '#666'
+					}
+				},
+				data: xData
+			},
+		],
+		yAxis: [{
+				scale: true,
+				name: '资源使用率%',
+				splitLine: { // y轴网格显示
+					show: true,
+					lineStyle:{
+						color:"#ddd"
+					}
+				},
+				nameTextStyle: { // 坐标轴名样式
+					color: '#666',
+					fontSize: 12,
+					align: 'left'
+				},
+				axisLine:{
+					lineStyle:{
+						color: '#666',
+					}
+				}
+			},
+			{
+				scale: true,
+				name: '负载详情',
+				gridIndex: 1,
+				splitLine: { // y轴网格显示
+					show: true,
+					lineStyle:{
+						color:"#ddd"
+					}
+				},
+				nameTextStyle: { // 坐标轴名样式
+					color: '#666',
+					fontSize: 12,
+					align: 'left'
+				},
+				axisLine:{
+					lineStyle:{
+						color: '#666',
+					}
+				}
+			},
+		],
+		dataZoom: [{
+			type: 'inside',
+			start: 0,
+			end: 100,
+			xAxisIndex:[0,1],
+			zoomLock:true
+		}, {
+			xAxisIndex: [0, 1],
+            type: 'slider',
+			start: 0,
+			end: 100,
+			handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
+			handleSize: '80%',
+			handleStyle: {
+				color: '#fff',
+				shadowBlur: 3,
+				shadowColor: 'rgba(0, 0, 0, 0.6)',
+				shadowOffsetX: 2,
+				shadowOffsetY: 2
+			},
+			left:'5%',
+			right:'5%'
+		}],
+		series: [
+			{
+				name: '资源使用率%',
+				type: 'line',
+				lineStyle: {
+					normal: {
+						width: 2,
+						color: 'rgb(255, 140, 0)'
+					}
+				},
+				itemStyle: {
+					normal: {
+						color: 'rgb(255, 140, 0)'
+					}
+				},
+				data: yData
+			},
+			{
+				xAxisIndex: 1,
+				yAxisIndex: 1,
+				name: '1分钟',
+				type: 'line',
+				lineStyle: {
+					normal: {
+						width: 2,
+						color: 'rgb(30, 144, 255)'
+					}
+				},
+				itemStyle: {
+					normal: {
+						color: 'rgb(30, 144, 255)'
+					}
+				},
+				data: zData
+			},
+			{
+				xAxisIndex: 1,
+				yAxisIndex: 1,
+				name: '5分钟',
+				type: 'line',
+				lineStyle: {
+					normal: {
+						width: 2,
+						color: 'rgb(0, 178, 45)'
+					}
+				},
+				itemStyle: {
+					normal: {
+						color: 'rgb(0, 178, 45)'
+					}
+				},
+				data: aData
+			},
+			{
+				xAxisIndex: 1,
+				yAxisIndex: 1,
+				name: '15分钟',
+				type: 'line',
+				lineStyle: {
+					normal: {
+						width: 2,
+						color: 'rgb(147, 38, 255)'
+					}
+				},
+				itemStyle: {
+					normal: {
+						color: 'rgb(147, 38, 255)'
+					}
+				},
+				data: bData
+			}
+		],
+		textStyle: {
+			color: '#666',
+			fontSize: 12
+		}
+	}
+	myChartgetload.setOption(option);
+	window.addEventListener("resize",function(){
+		myChartgetload.resize();
+	})
+	})
 }

@@ -4,7 +4,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2016 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 
 import re,os
@@ -13,15 +13,15 @@ class panelMysql:
     __DB_PASS = None
     __DB_USER = 'root'
     __DB_PORT = 3306
-    __DB_HOST = '127.0.0.1'
+    __DB_HOST = 'localhost'
     __DB_CONN = None
     __DB_CUR  = None
     __DB_ERR  = None
-    __DB_HOST_CONF = 'data/mysqlHost.pl';
     #连接MYSQL数据库
     def __Conn(self):
         try:
             import public
+            socket = '/tmp/mysql.sock';
             try:
                 import MySQLdb
             except Exception,ex:
@@ -34,19 +34,12 @@ class panelMysql:
             except:
                 self.__DB_PORT = 3306;
             self.__DB_PASS = public.M('config').where('id=?',(1,)).getField('mysql_root');
+            
             try:
-                if os.path.exists(self.__DB_HOST_CONF): self.__DB_HOST = public.readFile(self.__DB_HOST_CONF);
-                self.__DB_CONN = MySQLdb.connect(host = self.__DB_HOST,user = self.__DB_USER,passwd = self.__DB_PASS,port = self.__DB_PORT,charset="utf8",connect_timeout=1)
+                self.__DB_CONN = MySQLdb.connect(host = self.__DB_HOST,user = self.__DB_USER,passwd = self.__DB_PASS,port = self.__DB_PORT,charset="utf8",connect_timeout=1,unix_socket=socket)
             except MySQLdb.Error,e:
-                if e[0] != 2003: 
-                    self.__DB_ERR = e
-                    return False
-                if self.__DB_HOST == 'localhost':
-                    self.__DB_HOST = '127.0.0.1';
-                else:
-                    self.__DB_HOST = 'localhost';
-                public.writeFile(self.__DB_HOST_CONF,self.__DB_HOST);
-                self.__DB_CONN = MySQLdb.connect(host = self.__DB_HOST,user = self.__DB_USER,passwd = self.__DB_PASS,port = self.__DB_PORT,charset="utf8",connect_timeout=1)
+                self.__DB_HOST = '127.0.0.1';
+                self.__DB_CONN = MySQLdb.connect(host = self.__DB_HOST,user = self.__DB_USER,passwd = self.__DB_PASS,port = self.__DB_PORT,charset="utf8",connect_timeout=1,unix_socket=socket)
             self.__DB_CUR  = self.__DB_CONN.cursor()
             return True
         except MySQLdb.Error,e:

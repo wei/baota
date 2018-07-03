@@ -51,19 +51,23 @@ class firewalld:
     def DelAcceptPort(self,port,pool = 'tcp'):
         #检查是否存在
         if not self.CheckPortAccept(pool, port): return True;
+        
         mlist = self.__ROOT.getchildren();
+        m = False;
         for p in mlist:
             if p.tag != 'port': continue;
-            if p.attrib['port'] == port and p.attrib['protocol'] == pool: 
+            if p.attrib['port'] == port: 
                 self.__ROOT.remove(p);
-                self.Save();
-                return True;
+                m = True;
+        if m:
+            self.Save();
+            return True;
         return False
     
     #检查端口是否已放行
     def CheckPortAccept(self,pool,port):
         for p in self.GetAcceptPortList():
-            if p['port'] == port and p['protocol'] == pool: return True;
+            if p['port'] == port: return True;
         return False;
     
     #获取屏蔽IP列表
@@ -75,9 +79,10 @@ class firewalld:
             tmp = {}
             ch = ip.getchildren();
             for c in ch:
+                if c.tag != 'drop': continue;
                 if c.tag == 'source':
                     tmp['address'] = c.attrib['address'];
-                if c.tag == 'drop': tmp['type'] = 'drop';
+                tmp['type'] = 'drop';
             data.append(tmp);
         return data;
     
@@ -150,6 +155,7 @@ class firewalld:
     
 if __name__ == "__main__":
     p = firewalld();
+    print p.DelAcceptPort('39000-40000');
     #print p.GetAcceptPortList();
     print p.GetDropAddressList();
     
