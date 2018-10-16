@@ -15,7 +15,7 @@ import json
 import time
 import binascii 
 import base64
-import web
+from BTPanel import session,cache
 
 class ScanLogin(object):
     # 扫码登录面板
@@ -49,10 +49,12 @@ class ScanLogin(object):
                 sql = db.Sql()
                 userInfo = sql.table('users').where(
                     "id=?", (1,)).field('id,username,password').find()
-                web.ctx.session.login = True
-                web.ctx.session.username = userInfo['username']
+                session['login'] = True
+                session['username'] = userInfo['username']
+                cache.delete('panelNum')
+                cache.delete('dologin')
                 public.WriteLog('TYPE_LOGIN', 'LOGIN_SUCCESS',
-                                ('微信扫码登录', web.ctx.ip))
+                                ('微信扫码登录', public.GetClientIp()))
                 return public.returnMsg(True, '登录成功')
         return public.returnMsg(False, '登录失败')
 
@@ -96,7 +98,7 @@ class SelfModule():
         return public.returnMsg(True, '删除成功')
 
     def get_user_info(self, get):
-        if web.ctx.session.version < '5.8.6':
+        if session['version'] < '5.8.6':
             return public.returnMsg(False, '面板版本过低，请升级到最新版')
         
         data = {}
@@ -120,7 +122,7 @@ class wxapp(SelfModule, ScanLogin):
 
     def __init__(self):
         self.app_path = '/www/server/panel/data/'
-        self.app_path_p = '/www/server/panel/plugin/'
+        self.app_path_p = '/www/server/panel/plugin/app/'
         SelfModule.__init__(self)
 
     def _check(self, get):

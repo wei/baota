@@ -10,9 +10,8 @@
 #------------------------------
 # 数据库管理类
 #------------------------------
-import public,db,web,re,time,os,sys,panelMysql
-reload(sys)
-sys.setdefaultencoding('utf-8')
+import public,db,re,time,os,sys,panelMysql
+from BTPanel import session
 class database:
     
     #添加数据库
@@ -67,7 +66,7 @@ class database:
             sql.add('pid,name,username,password,accept,ps,addtime',(pid,data_name,username,password,address,get['ps'],addTime))
             public.WriteLog("TYPE_DATABASE", 'DATABASE_ADD_SUCCESS',(data_name,))
             return public.returnMsg(True,'ADD_SUCCESS')
-        except Exception,ex:
+        except Exception as ex:
             public.WriteLog("TYPE_DATABASE",'DATABASE_ADD_ERR', (data_name,str(ex)))
             return public.returnMsg(False,'ADD_ERROR')
     
@@ -113,7 +112,7 @@ class database:
             public.M('databases').where("id=?",(id,)).delete()
             public.WriteLog("TYPE_DATABASE", 'DATABASE_DEL_SUCCESS',(name,))
             return public.returnMsg(True, 'DEL_SUCCESS')
-        except Exception,ex:
+        except Exception as ex:
             public.WriteLog("TYPE_DATABASE",'DATABASE_DEL_ERR',(get.name , str(ex)))
             return public.returnMsg(False,'DEL_ERROR')
     
@@ -214,7 +213,7 @@ echo "The root password set ${pwd}  successuful"''';
                 
                 
             else:
-                if '5.7' in public.readFile(web.ctx.session.setupPath + '/mysql/version.pl'):
+                if '5.7' in public.readFile(public.GetConfigValue('setup_path') + '/mysql/version.pl'):
                     result = panelMysql.panelMysql().execute("update mysql.user set authentication_string=password('" + password + "') where User='root'")
                 else:
                     result = panelMysql.panelMysql().execute("update mysql.user set Password=password('" + password + "') where User='root'")
@@ -224,23 +223,23 @@ echo "The root password set ${pwd}  successuful"''';
             #修改SQLITE
             public.M('config').where("id=?",(1,)).setField('mysql_root',password)  
             public.WriteLog("TYPE_DATABASE", "DATABASE_ROOT_SUCCESS")
-            web.ctx.session.config['mysql_root']=password
+            session['config']['mysql_root']=password
             return public.returnMsg(True,msg)
-        except Exception,ex:
-            return public.returnMsg(False,'EDIT_ERROR');
+        except Exception as ex:
+            return public.returnMsg(False,'EDIT_ERROR' + str(ex));
     
     #修改用户密码
     def ResDatabasePassword(self,get):
         try:
             newpassword = get['password']
-            username = get['username']
+            username = get['name']
             id = get['id']
             name = public.M('databases').where('id=?',(id,)).getField('name');
             rep = "^[\w@\.]+$"
             if len(re.search(rep, newpassword).groups()) > 0: return public.returnMsg(False, 'DATABASE_NAME_ERR_T')
             
             #修改MYSQL
-            if '5.7' in public.readFile(web.ctx.session.setupPath + '/mysql/version.pl'):
+            if '5.7' in public.readFile(public.GetConfigValue('setup_path') + '/mysql/version.pl'):
                 result = panelMysql.panelMysql().execute("update mysql.user set authentication_string=password('" + newpassword + "') where User='" + username + "'")
             else:
                 result = panelMysql.panelMysql().execute("update mysql.user set Password=password('" + newpassword + "') where User='" + username + "'")
@@ -254,18 +253,19 @@ echo "The root password set ${pwd}  successuful"''';
                 public.M('databases').where("id=?",(id,)).setField('password',newpassword)
             else:
                 public.M('config').where("id=?",(id,)).setField('mysql_root',newpassword)
-                web.ctx.session.config['mysql_root'] = newpassword
+                session['config']['mysql_root'] = newpassword
             
             public.WriteLog("TYPE_DATABASE",'DATABASE_PASS_SUCCESS',(name,))
             return public.returnMsg(True,'DATABASE_PASS_SUCCESS',(name,))
-        except Exception,ex:
-            public.WriteLog("TYPE_DATABASE", 'DATABASE_PASS_ERROR',(name,str(ex)))
+        except Exception as ex:
+            import traceback
+            public.WriteLog("TYPE_DATABASE", 'DATABASE_PASS_ERROR',(name,traceback.format_exc(limit=True).replace('\n','<br>')))
             return public.returnMsg(False,'DATABASE_PASS_ERROR',(name,))
     
     def setMyCnf(self,action = True):
         myFile = '/etc/my.cnf'
         mycnf = public.readFile(myFile)
-        root = web.ctx.session.config['mysql_root']
+        root = session['config']['mysql_root']
         pwdConfig = "\n[mysqldump]\nuser=root\npassword=root"
         rep = "\n\[mysqldump\]\nuser=root\npassword=.+"
         if action:
@@ -274,9 +274,13 @@ echo "The root password set ${pwd}  successuful"''';
                 mycnf = mycnf.replace(rep, pwdConfig)
             else:
                 mycnf  += "\n[mysqldump]\nuser=root\npassword=root"
+            
         else:
             mycnf = mycnf.replace(rep, '')
+        
+        
         public.writeFile(myFile,mycnf)
+    
     
     #备份
     def ToBackup(self,get):
@@ -284,11 +288,11 @@ echo "The root password set ${pwd}  successuful"''';
         id = get['id']
         name = public.M('databases').where("id=?",(id,)).getField('name')
         root = public.M('config').where('id=?',(1,)).getField('mysql_root');
-        if not os.path.exists(web.ctx.session.config['backup_path'] + '/database'): os.system('mkdir -p ' + web.ctx.session.config['backup_path'] + '/database');
+        if not os.path.exists(session['config']['backup_path'] + '/database'): os.system('mkdir -p ' + session['config']['backup_path'] + '/database');
         self.mypass(True, root);
         
         fileName = name + '_' + time.strftime('%Y%m%d_%H%M%S',time.localtime()) + '.sql.gz'
-        backupName = web.ctx.session.config['backup_path'] + '/database/' + fileName
+        backupName = session['config']['backup_path'] + '/database/' + fileName
         public.ExecShell("/www/server/mysql/bin/mysqldump --force --opt " + name + " | gzip > " + backupName)
         if not os.path.exists(backupName): return public.returnMsg(False,'BACKUP_ERROR');
         
@@ -299,7 +303,7 @@ echo "The root password set ${pwd}  successuful"''';
         sql.add('type,name,pid,filename,size,addtime',(1,fileName,id,backupName,0,addTime))
         public.WriteLog("TYPE_DATABASE", "DATABASE_BACKUP_SUCCESS",(name,))
         return public.returnMsg(True, 'BACKUP_SUCCESS')
-        #except Exception,ex:
+        #except Exception as ex:
             #public.WriteLog("数据库管理", "备份数据库[" + name + "]失败 => "  +  str(ex))
             #return public.returnMsg(False,'备份失败!')
     
@@ -313,63 +317,63 @@ echo "The root password set ${pwd}  successuful"''';
             name=''
             if filename == 'qiniu':
                 name = public.M('backup').where(where,(id,)).getField('name');
-                public.ExecShell("python "+web.ctx.session.setupPath + '/panel/script/backup_qiniu.py delete_file ' + name)
+                public.ExecShell("python "+public.GetConfigValue('setup_path') + '/panel/script/backup_qiniu.py delete_file ' + name)
             
             public.M('backup').where(where,(id,)).delete()
             public.WriteLog("TYPE_DATABASE", 'DATABASE_BACKUP_DEL_SUCCESS',(name,filename))
             return public.returnMsg(True, 'DEL_SUCCESS');
-        except Exception,ex:
+        except Exception as ex:
             public.WriteLog("TYPE_DATABASE", 'DATABASE_BACKUP_DEL_ERR',(name,filename,str(ex)))
             return public.returnMsg(False,'DEL_ERROR')
     
     #导入
     def InputSql(self,get):
-        try:
-            name = get['name']
-            file = get['file']
-            root = public.M('config').where('id=?',(1,)).getField('mysql_root');
-            tmp = file.split('.')
-            exts = ['sql','gz','zip']
-            ext = tmp[len(tmp) -1]
-            if ext not in exts:
-                return public.returnMsg(False, 'DATABASE_INPUT_ERR_FORMAT')
+        #try:
+        name = get['name']
+        file = get['file']
+        root = public.M('config').where('id=?',(1,)).getField('mysql_root');
+        tmp = file.split('.')
+        exts = ['sql','gz','zip']
+        ext = tmp[len(tmp) -1]
+        if ext not in exts:
+            return public.returnMsg(False, 'DATABASE_INPUT_ERR_FORMAT')
             
-            isgzip = False
-            if ext != 'sql':
-                tmp = file.split('/')
-                tmpFile = tmp[len(tmp)-1]
-                tmpFile = tmpFile.replace('.sql.' + ext, '.sql')
-                tmpFile = tmpFile.replace('.' + ext, '.sql')
-                tmpFile = tmpFile.replace('tar.', '')
-                backupPath = web.ctx.session.config['backup_path'] + '/database'
+        isgzip = False
+        if ext != 'sql':
+            tmp = file.split('/')
+            tmpFile = tmp[len(tmp)-1]
+            tmpFile = tmpFile.replace('.sql.' + ext, '.sql')
+            tmpFile = tmpFile.replace('.' + ext, '.sql')
+            tmpFile = tmpFile.replace('tar.', '')
+            backupPath = session['config']['backup_path'] + '/database'
                 
-                if ext == 'zip':
-                    public.ExecShell("cd "  +  backupPath  +  " && unzip " +  file)
-                else:
-                    public.ExecShell("cd "  +  backupPath  +  " && tar zxf " +  file)
-                    if not os.path.exists(backupPath  +  "/"  +  tmpFile): 
-                        public.ExecShell("cd "  +  backupPath  +  " && gunzip -q " +  file)
-                        isgizp = True
-                 
-                if not os.path.exists(backupPath + '/' + tmpFile) or tmpFile == '': return public.returnMsg(False, 'FILE_NOT_EXISTS',(tmpFile,))
-                self.mypass(True, root);
-                public.ExecShell(web.ctx.session.setupPath + "/mysql/bin/mysql -uroot -p" + root + " --force " + name + " < " + backupPath + '/' +tmpFile)
-                self.mypass(False, root);
-                if isgizp:
-                    os.system('cd ' +backupPath+ ' && gzip ' + file.split('/')[-1][:-3]);
-                else:
-                    os.system("rm -f " +  backupPath + '/' +tmpFile)
+            if ext == 'zip':
+                public.ExecShell("cd "  +  backupPath  +  " && unzip " +  file)
             else:
-                self.mypass(True, root);
-                public.ExecShell(web.ctx.session.setupPath + "/mysql/bin/mysql -uroot -p" + root + " --force " + name + " < " +  file)
-                self.mypass(False, root);
+                public.ExecShell("cd "  +  backupPath  +  " && tar zxf " +  file)
+                if not os.path.exists(backupPath  +  "/"  +  tmpFile): 
+                    public.ExecShell("cd "  +  backupPath  +  " && gunzip -q " +  file)
+                    isgizp = True
+                 
+            if not os.path.exists(backupPath + '/' + tmpFile) or tmpFile == '': return public.returnMsg(False, 'FILE_NOT_EXISTS',(tmpFile,))
+            self.mypass(True, root);
+            public.ExecShell(public.GetConfigValue('setup_path') + "/mysql/bin/mysql -uroot -p" + root + " --force " + name + " < " + backupPath + '/' +tmpFile)
+            self.mypass(False, root);
+            if isgizp:
+                os.system('cd ' +backupPath+ ' && gzip ' + file.split('/')[-1][:-3]);
+            else:
+                os.system("rm -f " +  backupPath + '/' +tmpFile)
+        else:
+            self.mypass(True, root);
+            public.ExecShell(public.GetConfigValue('setup_path') + "/mysql/bin/mysql -uroot -p" + root + " --force " + name + " < " +  file)
+            self.mypass(False, root);
                 
             
-            public.WriteLog("TYPE_DATABASE", 'DATABASE_INPUT_SUCCESS',(name,))
-            return public.returnMsg(True, 'DATABASE_INPUT_SUCCESS');
-        except Exception,ex:
-            public.WriteLog("TYPE_DATABASE", 'DATABASE_INPUT_ERR',(name,str(ex)))
-            return public.returnMsg(False,'DATABASE_INPUT_ERR')
+        public.WriteLog("TYPE_DATABASE", 'DATABASE_INPUT_SUCCESS',(name,))
+        return public.returnMsg(True, 'DATABASE_INPUT_SUCCESS');
+        #except Exception as ex:
+            #public.WriteLog("TYPE_DATABASE", 'DATABASE_INPUT_ERR',(name,str(ex)))
+            #return public.returnMsg(False,'DATABASE_INPUT_ERR')
     
     #同步数据库到服务器
     def SyncToDatabases(self,get):
@@ -398,8 +402,8 @@ echo "The root password set ${pwd}  successuful"''';
         if act:
             mycnf = public.readFile('/etc/my.cnf');
             rep = "\[mysqldump\]\nuser=root"
-            sea = "[mysqldump]"
-            subStr = sea + "\nuser=root\npassword=" + root;
+            sea = "[mysqldump]\n"
+            subStr = sea + "user=root\npassword=" + root + "\n";
             mycnf = mycnf.replace(sea,subStr)
             if len(mycnf) > 100: public.writeFile('/etc/my.cnf',mycnf);
     
@@ -465,7 +469,7 @@ echo "The root password set ${pwd}  successuful"''';
         isError = self.IsSqlError(users)
         if isError != None: return isError
         if len(users)<1:
-            return public.returnMsg(True,['',''])
+            return public.returnMsg(True,"127.0.0.1")
         
         accs = []
         for c in users:
@@ -488,7 +492,7 @@ echo "The root password set ${pwd}  successuful"''';
             panelMysql.panelMysql().execute("grant all privileges on " + db_name + ".* to '" + name + "'@'" + a + "' identified by '" + password + "'")
         panelMysql.panelMysql().execute("flush privileges")
         return public.returnMsg(True, 'SET_SUCCESS')
-        #except Exception,ex:
+        #except Exception as ex:
             #public.WriteLog("TYPE_DATABASE",'DATABASE_ACCESS_ERR',(name ,str(ex)))
             #return public.returnMsg(False,'SET_ERROR')
         
@@ -632,11 +636,13 @@ echo "The root password set ${pwd}  successuful"''';
         result = {}
         data = panelMysql.panelMysql().query('show global status');
         gets = ['Max_used_connections','Com_commit','Com_rollback','Questions','Innodb_buffer_pool_reads','Innodb_buffer_pool_read_requests','Key_reads','Key_read_requests','Key_writes','Key_write_requests','Qcache_hits','Qcache_inserts','Bytes_received','Bytes_sent','Aborted_clients','Aborted_connects','Created_tmp_disk_tables','Created_tmp_tables','Innodb_buffer_pool_pages_dirty','Opened_files','Open_tables','Opened_tables','Select_full_join','Select_range_check','Sort_merge_passes','Table_locks_waited','Threads_cached','Threads_connected','Threads_created','Threads_running','Connections','Uptime']
-        
+        try:
+            if data[0] == 1045:
+                return public.returnMsg(False,'MySQL密码错误!')
+        except:pass
         for d in data:
             for g in gets:
                 if d[0] == g: result[g] = d[1];
-        
         result['Run'] = int(time.time()) - int(result['Uptime'])
         tmp = panelMysql.panelMysql().query('show master status');
         try:

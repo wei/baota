@@ -12,6 +12,11 @@ if [ ! -f 'lib.sh' ];then
 	wget -O lib.sh $serverUrl/$mtype/lib.sh
 fi
 
+libNull=`cat lib.sh`
+if [ "$libNull" == '' ];then
+	wget -O lib.sh $serverUrl/$mtype/lib.sh
+fi
+
 wget -O $name.sh $serverUrl/$mtype/$name.sh
 if [ "$actionType" == 'install' ];then
 	bash lib.sh

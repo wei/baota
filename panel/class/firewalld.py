@@ -5,7 +5,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2017 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 
 #------------------------------
@@ -155,7 +155,7 @@ class firewalld:
     
 if __name__ == "__main__":
     p = firewalld();
-    print p.DelAcceptPort('39000-40000');
+    p.DelAcceptPort('39000-40000');
     #print p.GetAcceptPortList();
-    print p.GetDropAddressList();
+    p.GetDropAddressList();
     

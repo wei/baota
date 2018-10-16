@@ -6,13 +6,14 @@
 # +-------------------------------------------------------------------
 # | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
-import public,os,web
+from BTPanel import session
+import public,os,json,time
 class ajax:
     
     def GetNginxStatus(self,get):
         #取Nginx负载状态
         self.CheckStatusConf();
-        result = public.httpGet('http://127.0.0.1/nginx_status')
+        result = public.HttpGet('http://127.0.0.1/nginx_status')
         tmp = result.split()
         data = {}
         data['active']   = tmp[2]
@@ -27,9 +28,8 @@ class ajax:
     def GetPHPStatus(self,get):
         #取指定PHP版本的负载状态
         self.CheckStatusConf();
-        import json,time,web
-        version = web.input(version='54').version
-        result = public.httpGet('http://127.0.0.1/phpfpm_'+version+'_status?json')
+        version = get.version
+        result = public.HttpGet('http://127.0.0.1/phpfpm_'+version+'_status?json')
         tmp = json.loads(result)
         fTime = time.localtime(int(tmp['start time']))
         tmp['start time'] = time.strftime('%Y-%m-%d %H:%M:%S',fTime)
@@ -37,7 +37,7 @@ class ajax:
         
     def CheckStatusConf(self):
         if public.get_webserver() != 'nginx': return;
-        filename = web.ctx.session.setupPath + '/panel/vhost/nginx/phpfpm_status.conf';
+        filename = session['setupPath'] + '/panel/vhost/nginx/phpfpm_status.conf';
         if os.path.exists(filename): return;
         
         conf = '''server {
@@ -99,12 +99,12 @@ class ajax:
     
     def GetSoftList(self,get):
         #取软件列表
-        import json,os,web
+        import json,os
         tmp = public.readFile('data/softList.conf');
         data = json.loads(tmp)
         tasks = public.M('tasks').where("status!=?",('1',)).field('status,name').select()
         for i in range(len(data)):
-            data[i]['check'] = web.ctx.session.rootPath+'/'+data[i]['check'];
+            data[i]['check'] = public.GetConfigValue('root_path')+'/'+data[i]['check'];
             for n in range(len(data[i]['versions'])):
                 #处理任务标记
                 isTask = '1';
@@ -123,7 +123,7 @@ class ajax:
                     checkFile = data[i]['check'].replace('VERSION',data[i]['versions'][n]['version'].replace('.',''));
                 else:
                     data[i]['task'] = isTask
-                    version = public.readFile(web.ctx.session.rootPath+'/server/'+data[i]['name'].lower()+'/version.pl');
+                    version = public.readFile(public.GetConfigValue('root_path')+'/server/'+data[i]['name'].lower()+'/version.pl');
                     if not version:continue;
                     if version.find(data[i]['versions'][n]['version']) == -1:continue;
                     checkFile = data[i]['check'];
@@ -133,7 +133,7 @@ class ajax:
     
     def GetLibList(self,get):
         #取插件列表
-        import json,os,web
+        import json,os
         tmp = public.readFile('data/libList.conf');
         data = json.loads(tmp)
         for i in range(len(data)):
@@ -160,7 +160,7 @@ class ajax:
     
     #取插件AS
     def GetQiniuAS(self,get):
-        filename = web.ctx.session.setupPath + '/panel/data/'+get.name+'As.conf';
+        filename = public.GetConfigValue('setup_path') + '/panel/data/'+get.name+'As.conf';
         if not os.path.exists(filename): public.writeFile(filename,'');
         data = {}
         data['AS'] = public.readFile(filename).split('|');
@@ -173,11 +173,11 @@ class ajax:
     #设置插件AS
     def SetQiniuAS(self,get):
         info = self.GetLibInfo(get.name);
-        filename = web.ctx.session.setupPath + '/panel/data/'+get.name+'As.conf';
+        filename = public.GetConfigValue('setup_path') + '/panel/data/'+get.name+'As.conf';
         conf = get.access_key.strip() + '|' + get.secret_key.strip() + '|' + get.bucket_name.strip() + '|' + get.bucket_domain.strip();
         public.writeFile(filename,conf);
         public.ExecShell("chmod 600 " + filename)
-        result = public.ExecShell("python " + web.ctx.session.setupPath + "/panel/script/backup_"+get.name+".py list")
+        result = public.ExecShell("python " + public.GetConfigValue('setup_path') + "/panel/script/backup_"+get.name+".py list")
         
         if result[0].find("ERROR:") == -1: 
             public.WriteLog("插件管理", "设置插件["+info['name']+"]AS!");
@@ -190,7 +190,7 @@ class ajax:
         data['username'] = get.bbs_name
         data['qq'] = get.qq
         data['email'] = get.email
-        result = public.httpPost(web.ctx.session.home + '/Api/LinuxBeta',data);
+        result = public.httpPost(public.GetConfigValue('home') + '/Api/LinuxBeta',data);
         import json;
         data = json.loads(result);
         if data['status']:
@@ -217,7 +217,7 @@ class ajax:
     def GetQiniuFileList(self,get):
         try:
             import json             
-            result = public.ExecShell("python " + web.ctx.session.setupPath + "/panel/script/backup_"+get.name+".py list")
+            result = public.ExecShell("python " + public.GetConfigValue('setup_path') + "/panel/script/backup_"+get.name+".py list")
             return json.loads(result[0]);
         except:
             return public.returnMsg(False, '获取列表失败,请检查[AK/SK/存储空间]设是否正确!');
@@ -369,7 +369,7 @@ class ajax:
     
     #获取SSH爆破次数
     def get_ssh_intrusion(self):
-        fp = open('/var/log/secure','r');
+        fp = open('/var/log/secure','rb');
         l = fp.readline();
         intrusion_total = 0;
         while l:
@@ -382,17 +382,14 @@ class ajax:
         #return public.returnMsg(False,'演示服务器，禁止此操作!');
         try:
             if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK');
-            import web,json
-            if int(web.ctx.session.config['status']) == 0:
-                o = ''
-                if os.path.exists('data/o.pl'):
-                    o = public.readFile('data/o.pl').strip()
-                public.httpGet(web.ctx.session.home+'/Api/SetupCount?type=Linux&o=' + o);
+            import json
+            if int(session['config']['status']) == 0:
+                public.HttpGet(public.GetConfigValue('home')+'/Api/SetupCount?type=Linux');
                 public.M('config').where("id=?",('1',)).setField('status',1);
             
             #取回远程版本信息
-            if hasattr(web.ctx.session,'updateInfo') == True and hasattr(get,'check') == False:
-                updateInfo = web.ctx.session.updateInfo;
+            if 'updateInfo' in session and hasattr(get,'check') == False:
+                updateInfo = session['updateInfo'];
             else:
                 login_temp = 'data/login.temp';
                 if os.path.exists(login_temp):
@@ -409,44 +406,21 @@ class ajax:
                 data['sites'] = str(public.M('sites').count());
                 data['ftps'] = str(public.M('ftps').count());
                 data['databases'] = str(public.M('databases').count());
-                data['system'] = panelsys.GetSystemVersion() + '|' + str(mem.total / 1024 / 1024) + 'MB|' + public.getCpuType() + '*' + str(psutil.cpu_count()) + '|' + public.get_webserver() + '|' + web.ctx.session.version;
+                data['system'] = panelsys.GetSystemVersion() + '|' + str(mem.total / 1024 / 1024) + 'MB|' + public.getCpuType() + '*' + str(psutil.cpu_count()) + '|' + public.get_webserver() + '|' +session['version'];
                 data['system'] += '||'+self.GetInstalleds(mplugin.getPluginList(None));
                 data['logs'] = logs
                 data['oem'] = ''
-                data['intrusion'] = self.get_ssh_intrusion();
-                data['o'] = ''                
-                filename = '/www/server/panel/data/o.pl'
-                if os.path.exists(filename): data['o'] = str(public.readFile(filename))
+                data['intrusion'] = 0;
                 msg = public.getMsg('PANEL_UPDATE_MSG');
-                sUrl = web.ctx.session.home + '/Api/updateLinux';
-                betaIs = 'data/beta.pl';
-                betaStr = public.readFile(betaIs);
-                
-                if betaStr:
-                    if betaStr.strip() != 'False':
-                        sUrl = web.ctx.session.home + '/Api/updateLinuxBeta';
-                        msg = public.getMsg('PANEL_UPDATE_MSG_TEST');
-                
-                betaIs = 'plugin/beta/config.conf';
-                betaStr = public.readFile(betaIs);
-                if betaStr:
-                    if betaStr.strip() != 'False':
-                        sUrl = web.ctx.session.home + '/Api/updateLinuxBeta';
-                        msg = public.getMsg('PANEL_UPDATE_MSG_TEST');
-                
+                sUrl = public.GetConfigValue('home') + '/api/panel/updateLinux';                
                 updateInfo = json.loads(public.httpPost(sUrl,data));
                 if not updateInfo: return public.returnMsg(False,"CONNECT_ERR");
                 updateInfo['msg'] = msg;
-                web.ctx.session.updateInfo = updateInfo;
-                if os.path.exists('data/o.pl'):
-                    import tools
-                    tools.setup_idc()
-                    if getattr(web.ctx.session,'brand'): del(web.ctx.session.brand)
+                session['updateInfo'] = updateInfo;
                 
             #检查是否需要升级
-            if updateInfo['version'] == web.ctx.session.version:
+            if updateInfo['version'] ==session['version']:
                 try:
-                    updateInfo['msg'] = public.httpGet('http://www.bt.cn/lib/update.txt')
                     return public.returnMsg(False,updateInfo['msg']);
                 except:
                     return public.returnMsg(False,'PANEL_UPDATE_ERR_NEW');
@@ -454,7 +428,7 @@ class ajax:
             
             #是否执行升级程序 
             if(updateInfo['force'] == True or hasattr(get,'toUpdate') == True or os.path.exists('data/autoUpdate.pl') == True):
-                setupPath = web.ctx.session.setupPath;
+                setupPath = public.GetConfigValue('setup_path');
                 uptype = 'update';
                 betaIs = 'plugin/beta/config.conf';
                 betaStr = public.readFile(betaIs);
@@ -466,7 +440,6 @@ class ajax:
                     if betaStr.strip() != 'False': uptype = 'updateTest';
                 httpUrl = public.get_url();
                 if httpUrl: updateInfo['downUrl'] =  httpUrl + '/install/' + uptype + '/LinuxPanel-' + updateInfo['version'] + '.zip';
-                
                 public.downloadFile(updateInfo['downUrl'],'panel.zip');
                 if os.path.getsize('panel.zip') < 1048576: return public.returnMsg(False,"PANEL_UPDATE_ERR_DOWN");
                 public.ExecShell('unzip -o panel.zip -d ' + setupPath + '/');
@@ -477,8 +450,8 @@ class ajax:
                 compileall.compile_dir(setupPath + '/panel');
                 compileall.compile_dir(setupPath + '/panel/class');
                 public.ExecShell('rm -f panel.zip');
-                web.ctx.session.version = updateInfo['version']
-                if hasattr(web.ctx.session,'getCloudPlugin'): del(web.ctx.session['getCloudPlugin']);
+                session['version'] = updateInfo['version']
+                if 'getCloudPlugin' in session: del(session['getCloudPlugin']);
                 return public.returnMsg(True,'PANEL_UPDATE',(updateInfo['version'],));
             
             #输出新版本信息
@@ -490,15 +463,15 @@ class ajax:
             
             public.ExecShell('rm -rf /www/server/phpinfo/*');
             return data;
-        except Exception,ex:
+        except Exception as ex:
             return public.returnMsg(False,"CONNECT_ERR");
          
     #检查是否安装任何
     def CheckInstalled(self,get):
         checks = ['nginx','apache','php','pure-ftpd','mysql'];
-        import os,web
+        import os
         for name in checks:
-            filename = web.ctx.session.rootPath + "/server/" + name
+            filename = public.GetConfigValue('root_path') + "/server/" + name
             if os.path.exists(filename): return True;
         return False;
     
@@ -511,8 +484,8 @@ class ajax:
     
     #取PHP配置
     def GetPHPConfig(self,get):
-        import web,re,json
-        filename = web.ctx.session.setupPath + '/php/' + get.version + '/etc/php.ini'
+        import re,json
+        filename = public.GetConfigValue('setup_path') + '/php/' + get.version + '/etc/php.ini'
         if not os.path.exists(filename): return public.returnMsg(False,'PHP_NOT_EXISTS');
         phpini = public.readFile(filename);
         data = {}
@@ -524,13 +497,13 @@ class ajax:
         tmp = re.search(rep,phpini).groups()
         data['max'] = tmp[0]
         
-        rep = ur"\n;*\s*cgi\.fix_pathinfo\s*=\s*([0-9]+)\s*\n"
+        rep = u"\n;*\s*cgi\.fix_pathinfo\s*=\s*([0-9]+)\s*\n"
         tmp = re.search(rep,phpini).groups()
         if tmp[0] == '0':
             data['pathinfo'] = False
         else:
             data['pathinfo'] = True
-        
+        self.getCloudPHPExt(get)
         phplib = json.loads(public.readFile('data/phplib.conf'));
         libs = [];
         tasks = public.M('tasks').where("status!=?",('1',)).field('status,name').select()
@@ -554,22 +527,37 @@ class ajax:
         data['libs'] = libs;
         return data
         
+    #获取PHP扩展
+    def getCloudPHPExt(self,get):
+        import json
+        try:
+            if 'php_ext' in session: return True
+            if not session.get('download_url'): session['download_url'] = 'http://download.bt.cn';
+            download_url = session['download_url'] + '/install/lib/phplib.json'
+            tstr = public.httpGet(download_url)
+            data = json.loads(tstr);
+            if not data: return False;
+            public.writeFile('data/phplib.conf',json.dumps(data));
+            session['php_ext'] = True
+            return True;
+        except:
+            return False;
         
     #取PHPINFO信息
     def GetPHPInfo(self,get):
         self.CheckPHPINFO();
-        sPath = web.ctx.session.setupPath + '/phpinfo/' + get.version;
+        sPath = public.GetConfigValue('setup_path') + '/phpinfo/' + get.version;
         public.ExecShell("rm -rf /www/server/phpinfo/*");
         public.ExecShell("mkdir -p " + sPath);
         public.writeFile(sPath + '/phpinfo.php','<?php phpinfo(); ?>');
-        phpinfo = public.httpGet('http://127.0.0.2/' + get.version + '/phpinfo.php');
+        phpinfo = public.HttpGet('http://127.0.0.2/' + get.version + '/phpinfo.php');
         os.system("rm -rf " + sPath);
         return phpinfo;
     
     #检测PHPINFO配置
     def CheckPHPINFO(self):
         php_versions = ['52','53','54','55','56','70','71','72'];
-        path = web.ctx.session.setupPath + '/panel/vhost/nginx/phpinfo.conf';
+        path = public.GetConfigValue('setup_path') + '/panel/vhost/nginx/phpinfo.conf';
         if not os.path.exists(path):
             opt = "";
             for version in php_versions:
@@ -587,7 +575,7 @@ class ajax:
             public.writeFile(path,phpinfoBody);
         
         
-        path = web.ctx.session.setupPath + '/panel/vhost/apache/phpinfo.conf';
+        path = public.GetConfigValue('setup_path') + '/panel/vhost/apache/phpinfo.conf';
         if not os.path.exists(path):
             opt = "";
             for version in php_versions:
@@ -634,9 +622,9 @@ ServerName 127.0.0.2
         import re;
         #try:
         if public.get_webserver() == 'nginx':
-            filename = web.ctx.session.setupPath + '/nginx/conf/nginx.conf';
+            filename = public.GetConfigValue('setup_path') + '/nginx/conf/nginx.conf';
         else:
-            filename = web.ctx.session.setupPath + '/apache/conf/extra/httpd-vhosts.conf';
+            filename = public.GetConfigValue('setup_path') + '/apache/conf/extra/httpd-vhosts.conf';
         
         conf = public.readFile(filename);
         if hasattr(get,'port'):
@@ -670,7 +658,7 @@ ServerName 127.0.0.2
         
         if hasattr(get,'phpversion'):
             if public.get_webserver() == 'nginx':
-                filename = web.ctx.session.setupPath + '/nginx/conf/enable-php.conf';
+                filename = public.GetConfigValue('setup_path') + '/nginx/conf/enable-php.conf';
                 conf = public.readFile(filename);
                 rep = "php-cgi.*\.sock"
                 conf = re.sub(rep,'php-cgi-' + get.phpversion + '.sock',conf,1);
@@ -691,11 +679,11 @@ ServerName 127.0.0.2
                 return panelSite.panelSite().SetHasPwd(get);
         
         if hasattr(get,'status'):
-            if conf.find(web.ctx.session.setupPath + '/stop') != -1:
-                conf = conf.replace(web.ctx.session.setupPath + '/stop',web.ctx.session.setupPath + '/phpmyadmin');
+            if conf.find(public.GetConfigValue('setup_path') + '/stop') != -1:
+                conf = conf.replace(public.GetConfigValue('setup_path') + '/stop',public.GetConfigValue('setup_path') + '/phpmyadmin');
                 msg = public.getMsg('START')
             else:
-                conf = conf.replace(web.ctx.session.setupPath + '/phpmyadmin',web.ctx.session.setupPath + '/stop');
+                conf = conf.replace(public.GetConfigValue('setup_path') + '/phpmyadmin',public.GetConfigValue('setup_path') + '/stop');
                 msg = public.getMsg('STOP')
             
             public.writeFile(filename,conf);
@@ -728,7 +716,7 @@ ServerName 127.0.0.2
     #获取广告代码
     def GetAd(self,get):
         try:
-            return public.httpGet(web.ctx.session.home + '/Api/GetAD?name='+get.name + '&soc=' + get.soc);
+            return public.HttpGet(public.GetConfigValue('home') + '/Api/GetAD?name='+get.name + '&soc=' + get.soc);
         except:
             return '';
         
@@ -767,9 +755,10 @@ ServerName 127.0.0.2
     def GetMemcachedStatus(self,get):
         import telnetlib,re;
         tn = telnetlib.Telnet('127.0.0.1',11211);
-        tn.write("stats\n");
-        tn.write("quit\n");
+        tn.write(b"stats\n");
+        tn.write(b"quit\n");
         data = tn.read_all();
+        if type(data) == bytes: data = data.decode('utf-8')
         data = data.replace('STAT','').replace('END','').split("\n");
         result = {}
         res = ['cmd_get','get_hits','get_misses','limit_maxbytes','curr_items','bytes','evictions','limit_maxbytes','bytes_written','bytes_read','curr_connections'];
@@ -804,7 +793,15 @@ ServerName 127.0.0.2
     
     #取redis状态
     def GetRedisStatus(self,get):
-        data = public.ExecShell('/www/server/redis/src/redis-cli info')[0];
+        import re
+        c = public.readFile('/www/server/redis/redis.conf')
+        port = re.findall('\n\s*port\s+(\d+)',c)[0]
+        password = re.findall('\n\s*requirepass\s+(.+)',c)
+        if password: 
+            password = ' -a ' + password[0]
+        else:
+            password = ''
+        data = public.ExecShell('/www/server/redis/src/redis-cli -p ' + port + password + ' info')[0];
         res = [
                'tcp_port',
                'uptime_in_days',    #已运行天数
@@ -845,11 +842,6 @@ ServerName 127.0.0.2
     def GetOpeLogs(self,get):
         if not os.path.exists(get.path): return public.returnMsg(False,'日志文件不存在!');
         return public.returnMsg(True,public.GetNumLines(get.path,1000));
-    
-    #从官网取指定信息
-    def GetCloudHtml(self,get):
-        data = public.httpGet('https://www.bt.cn/' + get.rpath)
-        return data;
     
         
         

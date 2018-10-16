@@ -11,10 +11,8 @@
 # AUTH验证接口
 #------------------------------
 
-import sys
-sys.path.append('/www/server/panel/class');
-reload(sys)
-import public,time,json,os,web
+import public,time,json,os
+from BTPanel import session
 
 class panelAuth:
     __product_list_path = 'data/product_list.pl'
@@ -25,6 +23,7 @@ class panelAuth:
         userPath = 'data/userInfo.json';
         if not os.path.exists(userPath): return public.returnMsg(False,'请先登陆宝塔官网用户');
         tmp = public.readFile(userPath);
+        if len(tmp) < 2: tmp = '{}'
         data = json.loads(tmp);
         if not data: return public.returnMsg(False,'请先登陆宝塔官网用户');
         if not hasattr(data,'serverid'):
@@ -43,13 +42,10 @@ class panelAuth:
         userPath = 'data/userInfo.json';
         if not 'pluginName' in get: return public.returnMsg(False,'参数错误!');
         if not os.path.exists(userPath): return public.returnMsg(False,'请先登陆宝塔官网帐号!');
-        if  len(public.readFile(userPath).strip()) < 5: 
-            os.remove(userPath)
-            return public.returnMsg(False,'请先登陆宝塔官网帐号!');
         params = {}
         params['pid'] = self.get_plugin_info(get.pluginName)['id'];
-        params['ajax2'] = '1';
-        data = self.send_cloud('get_product_discount_byhtml', params)
+        #params['ajax2'] = '1';
+        data = self.send_cloud('get_product_discount', params)
         return data;
     
     def get_plugin_info(self,pluginName):
@@ -61,10 +57,10 @@ class panelAuth:
     
     def get_plugin_list(self,get):
         try:
-            if not hasattr(web.ctx.session,'get_product_bay') or not os.path.exists(self.__product_bay_path):
+            if not session.get('get_product_bay') or not os.path.exists(self.__product_bay_path):
                 data = self.send_cloud('get_order_list_byuser', {});
                 if data: public.writeFile(self.__product_bay_path,json.dumps(data));
-                web.ctx.session.get_product_bay = True;
+                session['get_product_bay'] = True;
             data = json.loads(public.readFile(self.__product_bay_path))
             return data
         except: return None
@@ -84,11 +80,11 @@ class panelAuth:
         if not data: return public.returnMsg(False,'连接服务器失败!')
         if data['status'] == True:
             self.flush_pay_status(get);
-            if 'get_product_bay' in web.ctx.session: del(web.ctx.session['get_product_bay']);
+            if 'get_product_bay' in session: del(session['get_product_bay']);
         return data;
     
     def flush_pay_status(self,get):
-        if 'get_product_bay' in web.ctx.session: del(web.ctx.session['get_product_bay'])
+        if 'get_product_bay' in session: del(session['get_product_bay'])
         data = self.get_plugin_list(get)
         if not data: return public.returnMsg(False,'连接服务器失败!')
         return public.returnMsg(True,'状态刷新成功!')
@@ -101,10 +97,10 @@ class panelAuth:
     
     def get_business_plugin(self,get):
         try:
-            if not hasattr(web.ctx.session,'get_product_list') or not os.path.exists(self.__product_list_path):
+            if not session.get('get_product_list') or not os.path.exists(self.__product_list_path):
                 data = self.send_cloud('get_product_list', {});
                 if data: public.writeFile(self.__product_list_path,json.dumps(data));
-                web.ctx.session.get_product_list = True
+                session['get_product_list'] = True
             data = json.loads(public.readFile(self.__product_list_path))
             return data
         except: return None
@@ -122,7 +118,7 @@ class panelAuth:
         if not data: return public.returnMsg(False,'连接服务器失败!');
         if data['status'] == True:
             self.flush_pay_status(get);
-            if 'get_product_bay' in web.ctx.session: del(web.ctx.session['get_product_bay']);
+            if 'get_product_bay' in session: del(session['get_product_bay']);
         return data;
     
     def get_voucher_plugin(self,get):
@@ -141,13 +137,13 @@ class panelAuth:
         if not data: return public.returnMsg(False,'连接服务器失败!');
         if data['status'] == True:
             self.flush_pay_status(get);
-            if 'get_product_bay' in web.ctx.session: del(web.ctx.session['get_product_bay']);
+            if 'get_product_bay' in session: del(session['get_product_bay']);
         return data;
     
     
     def send_cloud(self,module,params):
         try:
-            cloudURL = 'https://www.bt.cn/api/Plugin/';
+            cloudURL = 'http://www.bt.cn/api/Plugin/';
             userInfo = self.create_serverid(None);
             if 'status' in userInfo:
                 params['uid'] = 0;
@@ -163,7 +159,7 @@ class panelAuth:
         
     def send_cloud_pro(self,module,params):
         try:
-            cloudURL = 'https://www.bt.cn/api/invite/';
+            cloudURL = 'http://www.bt.cn/api/invite/';
             userInfo = self.create_serverid(None);
             if 'status' in userInfo:
                 params['uid'] = 0;
@@ -189,6 +185,7 @@ class panelAuth:
         params = {}
         data = self.send_cloud_pro('get_order_status', params);
         return data;
+        
     
     def get_product_discount_by(self,get):
         params = {}

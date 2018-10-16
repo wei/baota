@@ -6,9 +6,7 @@
 # +-------------------------------------------------------------------
 # | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
-import sys,os,web,public,re,firewalld,time
-reload(sys)
-sys.setdefaultencoding('utf-8')
+import sys,os,public,re,firewalld,time
 class firewalls:
     __isFirewalld = False
     __isUfw = False
@@ -67,7 +65,6 @@ class firewalls:
     #添加屏蔽IP
     def AddDropAddress(self,get):
         import time
-        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         import re
         rep = "^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(\/\d{1,2})?$"
         if not re.search(rep,get.port): return public.returnMsg(False,'FIREWALL_IP_FORMAT');
@@ -91,7 +88,6 @@ class firewalls:
     
     #删除IP屏蔽
     def DelDropAddress(self,get):
-        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         address = get.port
         id = get.id
         if self.__isUfw:
@@ -112,7 +108,6 @@ class firewalls:
     
     #添加放行端口
     def AddAcceptPort(self,get):
-        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         import re
         rep = "^\d{1,5}(:\d{1,5})?$"
         if not re.search(rep,get.port): return public.returnMsg(False,'PORT_CHECK_RANGE');
@@ -120,15 +115,19 @@ class firewalls:
         port = get.port
         ps = get.ps
         if public.M('firewall').where("port=?",(port,)).count() > 0: return public.returnMsg(False,'FIREWALL_PORT_EXISTS')
+        notudps = ['80','443','8888','888','39000:40000','21','22']
         if self.__isUfw:
             public.ExecShell('ufw allow ' + port + '/tcp');
+            if not port in notudps: public.ExecShell('ufw allow ' + port + '/udp');
         else:
             if self.__isFirewalld:
                 #self.__Obj.AddAcceptPort(port)
                 port = port.replace(':','-');
                 public.ExecShell('firewall-cmd --permanent --zone=public --add-port='+port+'/tcp')
+                if not port in notudps: public.ExecShell('firewall-cmd --permanent --zone=public --add-port='+port+'/udp')
             else:
                 public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport '+port+' -j ACCEPT')
+                if not port in notudps: public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m udp --dport '+port+' -j ACCEPT')
         public.WriteLog("TYPE_FIREWALL", 'FIREWALL_ACCEPT_PORT',(port,))
         addtime = time.strftime('%Y-%m-%d %X',time.localtime())
         public.M('firewall').add('port,ps,addtime',(port,ps,addtime))
@@ -139,13 +138,13 @@ class firewalls:
     
     #删除放行端口
     def DelAcceptPort(self,get):
-        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         port = get.port
         id = get.id
         try:
-            if(port == web.ctx.host.split(':')[1]): return public.returnMsg(False,'FIREWALL_PORT_PANEL')
+            if(port == public.GetHost(True)): return public.returnMsg(False,'FIREWALL_PORT_PANEL')
             if self.__isUfw:
                 public.ExecShell('ufw delete allow ' + port + '/tcp');
+                public.ExecShell('ufw delete allow ' + port + '/udp');
             else:
                 if self.__isFirewalld:
                     #self.__Obj.DelAcceptPort(port)
@@ -153,6 +152,7 @@ class firewalls:
                     public.ExecShell('firewall-cmd --permanent --zone=public --remove-port='+port+'/udp')
                 else:
                     public.ExecShell('iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport '+port+' -j ACCEPT')
+                    public.ExecShell('iptables -D INPUT -p tcp -m state --state NEW -m udp --dport '+port+' -j ACCEPT')
             public.WriteLog("TYPE_FIREWALL", 'FIREWALL_DROP_PORT',(port,))
             public.M('firewall').where("id=?",(id,)).delete()
             
@@ -163,7 +163,6 @@ class firewalls:
     
     #设置远程端口状态
     def SetSshStatus(self,get):
-        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         version = public.readFile('/etc/redhat-release')
         if int(get['status'])==1:
             msg = public.getMsg('FIREWALL_SSH_STOP')

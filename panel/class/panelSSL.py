@@ -10,11 +10,10 @@
 #------------------------------
 # SSL接口
 #------------------------------
-import public,os,web,sys,binascii,urllib,json,time,datetime
-reload(sys)
-sys.setdefaultencoding('utf-8')
+import public,os,sys,binascii,urllib,json,time,datetime
+from BTPanel import cache
 class panelSSL:
-    __APIURL = 'https://www.bt.cn/api/Auth';
+    __APIURL = 'http://www.bt.cn/api/Auth';
     __UPATH = 'data/userInfo.json';
     __userInfo = None;
     __PDATA = None;
@@ -23,10 +22,8 @@ class panelSSL:
     def __init__(self):
         pdata = {}
         data = {}
-        tmp = public.readFile(self.__UPATH)
-        if tmp: tmp = tmp.strip()
-        if tmp:
-            self.__userInfo = json.loads(tmp);
+        if os.path.exists(self.__UPATH):
+            self.__userInfo = json.loads(public.readFile(self.__UPATH));
             if self.__userInfo:
                 pdata['access_key'] = self.__userInfo['access_key'];
                 data['secret_key'] = self.__userInfo['secret_key'];
@@ -38,23 +35,27 @@ class panelSSL:
     
     #获取Token
     def GetToken(self,get):
+        rtmp = ""
         data = {}
         data['username'] = get.username;
         data['password'] = public.md5(get.password);
-        data['o'] = '';
-        filename = '/www/server/panel/data/o.pl'
-        if os.path.exists(filename): data['o'] = str(public.readFile(filename))
         pdata = {}
         pdata['data'] = self.De_Code(data);
-        result = json.loads(public.httpPost(self.__APIURL+'/GetToken',pdata));
-        result['data'] = self.En_Code(result['data']);
-        if result['data']: public.writeFile(self.__UPATH,json.dumps(result['data']));
-        del(result['data']);
-        return result;
+        try:
+            rtmp = public.httpPost(self.__APIURL+'/GetToken',pdata)
+            result = json.loads(rtmp);
+            result['data'] = self.En_Code(result['data']);
+            if result['data']: public.writeFile(self.__UPATH,json.dumps(result['data']));
+            del(result['data']);
+            cache.delete('plugin_soft_list')
+            return result;
+        except Exception as ex:
+            return public.returnMsg(False,'连接服务器失败!<br>' + str(rtmp))
     
     #删除Token
     def DelToken(self,get):
         os.system("rm -f " + self.__UPATH);
+        cache.delete('plugin_soft_list')
         return public.returnMsg(True,"SSL_BTUSER_UN");
     
     #获取用户信息
@@ -83,6 +84,7 @@ class panelSSL:
         
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data']);
         result = json.loads(public.httpPost(self.__APIURL + '/GetSSLList',self.__PDATA));
+
         result['data'] = self.En_Code(result['data']);
         for i in range(len(result['data'])):
             result['data'][i]['endtime'] =   self.add_months(result['data'][i]['createTime'],result['data'][i]['validityPeriod'])
@@ -93,28 +95,42 @@ class panelSSL:
         import calendar
         dt = datetime.datetime.fromtimestamp(dt/1000);
         month = dt.month - 1 + months
-        year = dt.year + month / 12
+        year = dt.year + month // 12
         month = month % 12 + 1
+
         day = min(dt.day,calendar.monthrange(year,month)[1])
         return (time.mktime(dt.replace(year=year, month=month, day=day).timetuple()) + 86400) * 1000
+    
     
     #申请证书
     def GetDVSSL(self,get):
         get.id = public.M('domain').where('name=?',(get.domain,)).getField('pid');
-        get.siteName = public.M('sites').where('id=?',(get.id,)).getField('name');
+        if hasattr(get,'siteName'):
+            get.path = public.M('sites').where('id=?',(get.id,)).getField('path');
+        else:
+            get.siteName = public.M('sites').where('id=?',(get.id,)).getField('name');
+        
         runPath = self.GetRunPath(get);
         if runPath != False and runPath != '/': get.path +=  runPath;
         authfile = get.path + '/.well-known/pki-validation/fileauth.txt';
         if not self.CheckDomain(get):
             if not os.path.exists(authfile): return public.returnMsg(False,'无法创建['+authfile+']');
-            #return public.returnMsg(False,'SSL_CHECK_DNS_ERR',(get.domain,));
+        
+        action = 'GetDVSSL';
+        if hasattr(get,'partnerOrderId'):
+            self.__PDATA['data']['partnerOrderId'] = get.partnerOrderId;
+            action = 'ReDVSSL';
         
         self.__PDATA['data']['domain'] = get.domain;
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data']);
-        result = json.loads(public.httpPost(self.__APIURL + '/GetDVSSL',self.__PDATA));
+        result = public.httpPost(self.__APIURL + '/' + action,self.__PDATA)
+        try:
+            result = json.loads(result);
+        except: return result;
         result['data'] = self.En_Code(result['data']);
         if hasattr(result['data'],'authValue'):
             public.writeFile(authfile,result['data']['authValue']);
+        
         return result;
     
     #获取运行目录
@@ -203,7 +219,7 @@ class panelSSL:
                 panelSite.panelSite().SetSSLConf(get);
                 public.serviceReload();
                 return public.returnMsg(True,'SET_SUCCESS');
-            except Exception,ex:
+            except Exception as ex:
                 return public.returnMsg(False,'SET_ERROR,' + str(ex));
         result['data'] = self.En_Code(result['data']);
         return result;
@@ -235,7 +251,7 @@ class panelSSL:
             panelSite.panelSite().SetSSLConf(get);
             public.serviceReload();
             return public.returnMsg(True,'SET_SUCCESS');
-        except Exception,ex:
+        except Exception as ex:
             return public.returnMsg(False,'SET_ERROR,' + str(ex));
     
     #获取证书列表
@@ -271,8 +287,8 @@ class panelSSL:
             certInfo = self.GetCertName(get)
             if not certInfo: return public.returnMsg(False,'证书解析失败!');
             vpath = '/www/server/panel/vhost/ssl/' + certInfo['subject'];
-            if not os.path.exists(vpath.replace('*',"\*")):
-                os.system("mkdir -p " + vpath.replace('*',"\*"));
+            if not os.path.exists(vpath):
+                os.system("mkdir -p " + vpath);
             public.writeFile(vpath + '/privkey.pem',public.readFile(get.keyPath));
             public.writeFile(vpath + '/fullchain.pem',public.readFile(get.certPath));
             public.writeFile(vpath + '/info.json',json.dumps(certInfo));
@@ -323,12 +339,24 @@ class panelSSL:
     
     #加密数据
     def De_Code(self,data):
-        pdata = urllib.urlencode(data);
+        if sys.version_info[0] == 2:
+            pdata = urllib.urlencode(data);
+        else:
+            pdata = urllib.parse.urlencode(data);
+            if type(pdata) == str: pdata = pdata.encode('utf-8')
         return binascii.hexlify(pdata);
     
     #解密数据
     def En_Code(self,data):
-        result = urllib.unquote(binascii.unhexlify(data));
+        if sys.version_info[0] == 2:
+            result = urllib.unquote(binascii.unhexlify(data));
+        else:
+            if type(data) == str: data = data.encode('utf-8')
+            tmp = binascii.unhexlify(data)
+            if type(tmp) != str: tmp = tmp.decode('utf-8')
+            result = urllib.parse.unquote(tmp)
+
+        if type(result) != str: result = result.decode('utf-8')
         return json.loads(result);
     
     

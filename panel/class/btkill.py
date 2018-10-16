@@ -35,7 +35,7 @@ class btkill:
                     p.kill();
                     num += 1
                     print log + " >> killed\n";
-            except Exception,ex:print str(ex)
+            except Exception as ex:print str(ex)
         return num
 
     #检查白名单

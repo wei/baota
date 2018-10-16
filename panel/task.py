@@ -10,10 +10,8 @@
 #------------------------------
 # 计划任务
 #------------------------------
-import sys,os,json
+import sys,os,json,psutil
 sys.path.append("class/")
-reload(sys)
-sys.setdefaultencoding('utf-8')
 import db,public,time
 global pre,timeoutCount,logPath,isTask,oldEdate,isCheck
 pre = 0
@@ -41,8 +39,7 @@ def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):
     
         if timeout:
             end_time = datetime.datetime.now() + datetime.timedelta(seconds=timeout)
-        
-        sub = subprocess.Popen(cmdstring+' > '+logPath+' 2>&1', cwd=cwd, stdin=subprocess.PIPE,shell=shell,bufsize=4096)
+        sub = subprocess.Popen(cmdstring+' &> '+logPath+' 2>&1', cwd=cwd, stdin=subprocess.PIPE,shell=shell,bufsize=4096)
         
         while sub.poll() is None:
             time.sleep(0.1)
@@ -111,28 +108,11 @@ def startTask():
             except:
                 pass
             siteEdate();
-            mainSafe();
             time.sleep(2)
     except:
         time.sleep(60);
         startTask();
         
-def mainSafe():
-    global isCheck
-    try:
-        if isCheck < 100:
-            isCheck += 1;
-            return True;
-        isCheck = 0;
-        isStart = public.ExecShell("ps aux |grep 'python main.py'|grep -v grep|awk '{print $2}'")[0];
-        if not isStart: 
-            os.system('/etc/init.d/bt start');
-            isStart = public.ExecShell("ps aux |grep 'python main.py'|grep -v grep|awk '{print $2}'")[0];
-            public.WriteLog('守护程序','面板服务程序启动成功 -> PID: ' + isStart);
-    except:
-        time.sleep(30);
-        mainSafe();
-
 #网站到期处理
 def siteEdate():
     global oldEdate
@@ -153,14 +133,23 @@ def siteEdate():
         public.writeFile('data/edate.pl',mEdate);
     except:
          pass;
-    
+
+def GetLoadAverage():
+    c = os.getloadavg()
+    data = {};
+    data['one'] = float(c[0]);
+    data['five'] = float(c[1]);
+    data['fifteen'] = float(c[2]);
+    data['max'] = psutil.cpu_count() * 2;
+    data['limit'] = data['max'];
+    data['safe'] = data['max'] * 0.75;
+    return data;
          
 
 #系统监控任务
 def systemTask():
     try:
-        import system,psutil,time
-        sm = system.system();
+        import psutil,time
         filename = 'data/control.conf';
         sql = db.Sql().dbfile('system')
         csql = '''CREATE TABLE IF NOT EXISTS `load_average` (
@@ -269,7 +258,7 @@ def systemTask():
                         sql.table('diskio').where("addtime<?",(deltime,)).delete();
                     
                     #LoadAverage
-                    load_average = sm.GetLoadAverage(None)
+                    load_average = GetLoadAverage()
                     lpro = round((load_average['one'] / load_average['max']) * 100,2)
                     if lpro > 100: lpro = 100;
                     sql.table('load_average').add('pro,one,five,fifteen,addtime',(lpro,load_average['one'],load_average['five'],load_average['fifteen'],addtime))
@@ -282,16 +271,14 @@ def systemTask():
                     count = 0
                     reloadNum += 1;
                     if reloadNum > 1440:
-                        if os.path.exists('data/ssl.pl'): os.system('/etc/init.d/bt restart > /dev/null 2>&1');
                         reloadNum = 0;
-                except Exception,ex:
-                    print str(ex)
+                except Exception as ex:
+                    print(str(ex))
             del(tmp)
             
             time.sleep(5);
             count +=1
-    except Exception,ex:
-        print str(ex)
+    except:
         time.sleep(30);
         systemTask();
             
@@ -431,6 +418,45 @@ def check502Task():
         time.sleep(600);
         check502Task();
 
+
+#监控面板状态
+def panel_status():
+    time.sleep(1)
+    panel_path = '/www/server/panel'
+    pool = 'http://'
+    if os.path.exists(panel_path + '/data/ssl.pl'): pool = 'https://'
+    port = '8888'
+    if os.path.exists(panel_path + '/data/port.pl'): port = public.readFile(panel_path + '/data/port.pl').strip()
+    panel_url = pool + '127.0.0.1:' + port + '/service_status'
+    while True:
+        time.sleep(1)
+        result = public.httpGet(panel_url)
+        if result == 'True':
+            time.sleep(10)
+            continue
+        os.system("/etc/init.d/bt reload &")
+
+        result = public.httpGet(panel_url)
+        if result == 'True':
+            public.WriteLog('守护程序','检查到面板服务异常,已自动恢复!')
+            time.sleep(10)
+            continue
+        public.WriteLog('守护程序','检查到面板服务异常,自动恢复失败!')
+
+#重启面板服务
+def restart_panel_service():
+    rtips = 'data/restart.pl'
+    reload_tips = 'data/reload.pl'
+    while True:
+        if os.path.exists(rtips):
+            os.remove(rtips)
+            os.system("/etc/init.d/bt restart &")
+        if os.path.exists(reload_tips):
+            os.remove(reload_tips)
+            os.system("/etc/init.d/bt reload &")
+        time.sleep(1)
+
+
 #自动结束异常进程
 def btkill():
     import btkill
@@ -459,10 +485,16 @@ if __name__ == "__main__":
     p = threading.Thread(target=check502Task)
     p.setDaemon(True)
     p.start()
-    
-    #p = threading.Thread(target=btkill)
-    #p.setDaemon(True)
-    #p.start()
-    
+
+    pl = threading.Thread(target=panel_status)
+    pl.setDaemon(True)
+    pl.start()
+
+    p = threading.Thread(target=restart_panel_service)
+    p.setDaemon(True)
+    p.start()
+
+    public.check_home()
+
     startTask()
 

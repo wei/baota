@@ -2,163 +2,174 @@
 # +-------------------------------------------------------------------
 # | 宝塔Linux面板
 # +-------------------------------------------------------------------
-# | Copyright (c) 2015-2017 宝塔软件(http://bt.cn) All rights reserved.
+# | Copyright (c) 2015-2099 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
 # | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
-#
-#             ┏┓      ┏┓
-#            ┏┛┻━━━━━━┛┻┓
-#            ┃               ☃              ┃
-#            ┃  ┳┛   ┗┳ ┃
-#            ┃     ┻    ┃
-#            ┗━┓      ┏━┛
-#              ┃      ┗━━━━━┓
-#              ┃  神兽保佑              ┣┓
-#              ┃ 永无BUG！            ┏┛
-#              ┗┓┓┏━┳┓┏━━━━━┛
-#               ┃┫┫ ┃┫┫
-#               ┗┻┛ ┗┻┛
+from flask import request,redirect,g
+from BTPanel import session,cache
+from datetime import datetime
+import os,public,json,sys
+class dict_obj:
+    def __contains__(self, key):
+        return getattr(self,key,None)
+    def __setitem__(self, key, value): setattr(self,key,value)
+    def __getitem__(self, key): return getattr(self,key,None)
+    def __delitem__(self,key): delattr(self,key)
+    def __delattr__(self, key): delattr(self,key)
+    def get_items(self): return self
 
-import web,os,public
-class MyBad():
-    _msg = None
-    def __init__(self,msg):
-        self._msg = msg
-    def __repr__(self):
-        return self._msg
+
 
 class panelSetup:
-    def __init__(self):
-        ua = web.ctx.env.get('HTTP_USER_AGENT').lower();
-        if ua.find('spider') != -1 or ua.find('bot') != -1: raise web.redirect('https://www.baidu.com');
-        web.ctx.session.version = "5.9.2";
-        if os.path.exists('data/title.pl'):
-            web.ctx.session.webname = public.readFile('data/title.pl');
+    def init(self):
+        ua = request.headers.get('User-Agent')
+        if ua:
+            ua = ua.lower();
+            if ua.find('spider') != -1 or ua.find('bot') != -1: return redirect('https://www.baidu.com');
         
+        g.version = '6.1.0'
+        g.title =  public.GetConfigValue('title')
+        g.uri = request.path
+        session['version'] = g.version;
+        session['title'] = g.title
+        return None
         
         
 class panelAdmin(panelSetup):
     setupPath = '/www/server'
-    def __init__(self):
-        self.local();
-    
-    #api请求 
-    def auth(self):
-        self.checkAddressWhite();
-        self.setSession();
-        self.checkWebType();
-        self.checkDomain();
-        self.checkConfig();
-        self.GetOS();
-        
+            
     #本地请求
     def local(self):
-        self.checkLimitIp();
-        self.setSession();
-        self.checkClose();
-        self.checkWebType();
-        self.checkDomain();
-        self.checkConfig();
+        result = panelSetup().init()
+        if result: return result
+        result = self.checkLimitIp()
+        if result: return result
+        result = self.setSession();
+        if result: return result
+        result = self.checkClose();
+        if result: return result
+        result = self.checkWebType();
+        if result: return result
+        result = self.checkDomain();
+        if result: return result
+        result = self.checkConfig();
+        #self.checkSafe();
         self.GetOS();
     
-    #检查Token合法性
-    def checkToken(self):
-        data = public.auth_decode(web.input());
-        
-    
-    #检查api管理权限
-    def checkRule(self):
-        ruleFile = 'data/rule.json';
-        if not os.path.exists(ruleFile): return False;
-        toPath = web.ctx.path.replace('/','');
-        ruleList = public.readFile(ruleFile).split('|');
-        if toPath in ruleList: return True;
-        return False;
     
     #检查IP白名单
     def checkAddressWhite(self):
         token = self.GetToken();
-        if not token: raise web.seeother('/login');
-        if not web.ctx.ip in token['address']: raise web.seeother('/login');
+        if not token: return redirect('/login');
+        if not request.remote_addr in token['address']: return redirect('/login');
         
     
     #检查IP限制
     def checkLimitIp(self):
         if os.path.exists('data/limitip.conf'):
-            iplist = public.readFile('data/limitip.conf')
+            iplist = public.ReadFile('data/limitip.conf')
             if iplist:
                 iplist = iplist.strip();
-                if not web.ctx.ip in iplist.split(','): raise web.seeother('/login')
+                if not request.remote_addr in iplist.split(','): return redirect('/login')
+        c_token = 'client_ua'
+        user_agent_token = public.md5(request.headers.get('User-Agent'))
+        if c_token in session:
+            if session[c_token] != user_agent_token: 
+                session['login'] = False
+                del(session[c_token])
+                cache.set('dologin',True)
+                return redirect('/login');
+        else:
+            session[c_token] = user_agent_token
     
     #设置基础Session
     def setSession(self):
-        if not hasattr(web.ctx.session,'brand'):
-            web.ctx.session.brand = public.getMsg('BRAND');
-            web.ctx.session.product = public.getMsg('PRODUCT');
-            web.ctx.session.rootPath = '/www'
-            web.ctx.session.webname = public.getMsg('NAME');
-            web.ctx.session.downloadUrl = 'http://download.bt.cn';
-            if os.path.exists('data/title.pl'):
-                web.ctx.session.webname = public.readFile('data/title.pl'); 
-            web.ctx.session.setupPath = self.setupPath;
-            web.ctx.session.logsPath = '/www/wwwlogs';
-        if not hasattr(web.ctx.session,'menu'):
-            web.ctx.session.menu = public.getLan('menu');
-        if not hasattr(web.ctx.session,'lan'):
-            web.ctx.session.lan = public.get_language();
-        if not hasattr(web.ctx.session,'home'):
-            web.ctx.session.home = 'http://www.bt.cn';
+        session['menus'] = sorted(json.loads(public.ReadFile('config/menu.json')),key=lambda x:x['sort'])
+        session['yaer'] = datetime.now().year
+        session['download_url'] = 'http://download.bt.cn';
+        if not 'brand' in session:
+            session['brand'] = public.GetConfigValue('brand');
+            session['product'] = public.GetConfigValue('product');
+            session['rootPath'] = '/www'
+            session['download_url'] = 'http://download.bt.cn';
+            session['setupPath'] = session['rootPath'] + '/server';
+            session['logsPath'] = '/www/wwwlogs';
+            session['yaer'] = datetime.now().year
+        if not 'menu' in session:
+            session['menu'] = public.GetLan('menu');
+        if not 'lan' in session:
+            session['lan'] = public.GetLanguage();
+        if not 'home' in session:
+            session['home'] = 'http://www.bt.cn';
             
     
     #检查Web服务器类型
     def checkWebType(self):
         if os.path.exists(self.setupPath + '/nginx'):
-            web.ctx.session.webserver = 'nginx'
+            session['webserver'] = 'nginx'
         else:
-            web.ctx.session.webserver = 'apache'
-        if os.path.exists(self.setupPath+'/'+web.ctx.session.webserver+'/version.pl'):
-            web.ctx.session.webversion = public.readFile(self.setupPath+'/'+web.ctx.session.webserver+'/version.pl').strip()
+            session['webserver'] = 'apache'
+        if os.path.exists(self.setupPath+'/'+session['webserver']+'/version.pl'):
+            session['webversion'] = public.ReadFile(self.setupPath+'/'+session['webserver']+'/version.pl').strip()
         filename = self.setupPath+'/data/phpmyadminDirName.pl'
         if os.path.exists(filename):
-            web.ctx.session.phpmyadminDir = public.readFile(filename).strip()
+            session['phpmyadminDir'] = public.ReadFile(filename).strip()
     
     #检查面板是否关闭
     def checkClose(self):
         if os.path.exists('data/close.pl'):
-            raise web.seeother('/close');
+            return redirect('/close');
         
     #检查域名绑定
     def checkDomain(self):
         try:
-            if not web.ctx.session.login:
-                raise web.seeother('/login')
-            
-            tmp = web.ctx.host.split(':')
-            domain = public.readFile('data/domain.conf')
+            if not session['login']: return redirect('/login')
+            tmp = public.GetHost()
+            domain = public.ReadFile('data/domain.conf')
             if domain:
-                if(tmp[0].strip() != domain.strip()): raise web.seeother('/login')
+                if(tmp.strip() != domain.strip()): return redirect('/login')
         except:
-            raise web.seeother('/login')
+            return redirect('/login')
     
     #检查系统配置
     def checkConfig(self):
-        if not hasattr(web.ctx.session,'config'):
-            web.ctx.session.config = public.M('config').where("id=?",('1',)).field('webserver,sites_path,backup_path,status,mysql_root').find();
-            if not hasattr(web.ctx.session.config,'email'):
-                web.ctx.session.config['email'] = public.M('users').where("id=?",('1',)).getField('email');
-            if not hasattr(web.ctx.session,'address'):
-                web.ctx.session.address = public.GetLocalIp()
+        if not 'config' in session:
+            session['config'] = public.M('config').where("id=?",('1',)).field('webserver,sites_path,backup_path,status,mysql_root').find();
+            if not 'email' in session['config']:
+                session['config']['email'] = public.M('users').where("id=?",('1',)).getField('email');
+            if not 'address' in session:
+                session['address'] = public.GetLocalIp()
+    
+    def checkSafe(self):
+        mods = ['/','/site','/ftp','/database','/plugin','/soft','/public'];
+        if not os.path.exists('/www/server/panel/data/userInfo.json'):
+            if 'vip' in session: del(session.vip);
+        if not request.path in mods: return True
+        if 'vip' in session: return True
+        
+        import panelAuth
+        data = panelAuth.panelAuth().get_order_status(None);
+        try:
+            if data['status'] == True: 
+                session.vip = data
+                return True
+            return redirect('/vpro');
+        except:pass
+        return False
     
     #获取操作系统类型 
     def GetOS(self):
-        if not hasattr(web.ctx.session,'server_os'):
+        if not 'server_os' in session:
             tmp = {}
             if os.path.exists('/etc/redhat-release'):
                 tmp['x'] = 'RHEL';
+                tmp['osname'] = public.ReadFile('/etc/redhat-release').split()[0];
             elif os.path.exists('/usr/bin/yum'):
                 tmp['x'] = 'RHEL';
+                tmp['osname'] = public.ReadFile('/etc/issue').split()[0];
             elif os.path.exists('/etc/issue'): 
                 tmp['x'] = 'Debian';
-            web.ctx.session.server_os = tmp
+                tmp['osname'] = public.ReadFile('/etc/issue').split()[0];
+            session['server_os'] = tmp
             

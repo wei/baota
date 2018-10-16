@@ -4,7 +4,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2016 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 import math,string,public
 
@@ -32,7 +32,7 @@ class Page():
     __END_NUM       =  None           #结束行
     
     def __init__(self):
-        tmp = public.getMsg('PAGE');
+        tmp = public.GetMsg('PAGE');
         if tmp:
             self.__PREV         = tmp['PREV'];
             self.__NEXT         = tmp['NEXT'];
@@ -72,11 +72,11 @@ class Page():
         pages['5'] = self.__GetEnd()
         
         #当前显示页与总页数
-        pages['6'] = "<span class='Pnumber'>" + bytes(self.__C_PAGE) + "/" + bytes(self.__COUNT_PAGE) + "</span>"
+        pages['6'] = "<span class='Pnumber'>" + str(self.__C_PAGE) + "/" + str(self.__COUNT_PAGE) + "</span>"
         #本页显示开始与结束行
-        pages['7'] = "<span class='Pline'>" + self.__FO + bytes(self.__START_NUM) + "-" + bytes(self.__END_NUM) + self.__LINE + "</span>"
+        pages['7'] = "<span class='Pline'>" + self.__FO + str(self.__START_NUM) + "-" + str(self.__END_NUM) + self.__LINE + "</span>"
         #行数
-        pages['8'] = "<span class='Pcount'>" + self.__COUNT_START + bytes(self.__COUNT_ROW) + self.__COUNT_END + "</span>"
+        pages['8'] = "<span class='Pcount'>" + self.__COUNT_START + str(self.__COUNT_ROW) + self.__COUNT_END + "</span>"
         
         #构造返回数据
         retuls = '<div>';
@@ -94,9 +94,9 @@ class Page():
             endStr = '';
         else:
             if self.__RTURN_JS == "":
-                endStr = "<a class='Pend' href='" + self.__URI + "p=" + bytes(self.__COUNT_PAGE) + "'>" + self.__END + "</a>"
+                endStr = "<a class='Pend' href='" + self.__URI + "p=" + str(self.__COUNT_PAGE) + "'>" + self.__END + "</a>"
             else:
-                endStr = "<a class='Pend' onclick='" + self.__RTURN_JS + "(" + bytes(self.__COUNT_PAGE) + ")'>" + self.__END + "</a>"
+                endStr = "<a class='Pend' onclick='" + self.__RTURN_JS + "(" + str(self.__COUNT_PAGE) + ")'>" + self.__END + "</a>"
         return endStr
     
     def __GetNext(self):
@@ -106,9 +106,9 @@ class Page():
             nextStr = '';
         else:
             if self.__RTURN_JS == "":
-                nextStr = "<a class='Pnext' href='" + self.__URI + "p=" + bytes(self.__C_PAGE + 1) + "'>" + self.__NEXT + "</a>"
+                nextStr = "<a class='Pnext' href='" + self.__URI + "p=" + str(self.__C_PAGE + 1) + "'>" + self.__NEXT + "</a>"
             else:    
-                nextStr = "<a class='Pnext' onclick='" + self.__RTURN_JS + "(" + bytes(self.__C_PAGE + 1) + ")'>" + self.__NEXT + "</a>"
+                nextStr = "<a class='Pnext' onclick='" + self.__RTURN_JS + "(" + str(self.__C_PAGE + 1) + ")'>" + self.__NEXT + "</a>"
         
         return nextStr
     
@@ -127,13 +127,13 @@ class Page():
             page = self.__C_PAGE - n;
             if page > 0:
                 if self.__RTURN_JS == "":
-                    pages += "<a class='Pnum' href='" + self.__URI + "p=" + bytes(page) + "'>" + bytes(page) + "</a>"
+                    pages += "<a class='Pnum' href='" + self.__URI + "p=" + str(page) + "'>" + str(page) + "</a>"
                 else:
-                    pages += "<a class='Pnum' onclick='" + self.__RTURN_JS + "(" + bytes(page) + ")'>" + bytes(page) + "</a>"
+                    pages += "<a class='Pnum' onclick='" + self.__RTURN_JS + "(" + str(page) + ")'>" + str(page) + "</a>"
             
         #当前页
         if self.__C_PAGE > 0:
-                pages += "<span class='Pcurrent'>" + bytes(self.__C_PAGE) + "</span>"
+                pages += "<span class='Pcurrent'>" + str(self.__C_PAGE) + "</span>"
         
         #当前页之后
         if self.__C_PAGE <= self.__LIST_NUM:
@@ -147,9 +147,9 @@ class Page():
             if page > self.__COUNT_PAGE:
                 break;
             if self.__RTURN_JS == "":
-                pages += "<a class='Pnum' href='" + self.__URI + "p=" + bytes(page) + "'>" + bytes(page) + "</a>"
+                pages += "<a class='Pnum' href='" + self.__URI + "p=" + str(page) + "'>" + str(page) + "</a>"
             else:    
-                pages += "<a class='Pnum' onclick='" + self.__RTURN_JS + "(" + bytes(page) + ")'>" + bytes(page) + "</a>"
+                pages += "<a class='Pnum' onclick='" + self.__RTURN_JS + "(" + str(page) + ")'>" + str(page) + "</a>"
                 
         return pages;
     
@@ -160,9 +160,9 @@ class Page():
             startStr = '';
         else:
             if self.__RTURN_JS == "":
-                startStr = "<a class='Ppren' href='" + self.__URI + "p=" + bytes(self.__C_PAGE - 1) + "'>" + self.__PREV + "</a>"
+                startStr = "<a class='Ppren' href='" + self.__URI + "p=" + str(self.__C_PAGE - 1) + "'>" + self.__PREV + "</a>"
             else:    
-                startStr = "<a class='Ppren' onclick='" + self.__RTURN_JS + "(" + bytes(self.__C_PAGE - 1) + ")'>" + self.__PREV + "</a>"
+                startStr = "<a class='Ppren' onclick='" + self.__RTURN_JS + "(" + str(self.__C_PAGE - 1) + ")'>" + self.__PREV + "</a>"
         return startStr
     
     def __GetStart(self):
@@ -199,9 +199,9 @@ class Page():
     
     def __SetUri(self,input):
         #构造URI
+        if not 'args' in input: return '' 
         uri = '?'
-        for key in input:
-            if key == 'p':
-                continue
+        for key in input.args:
+            if key == 'p': continue
             uri += key+'='+input[key]+'&'
         return str(uri)

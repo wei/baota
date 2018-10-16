@@ -31,7 +31,7 @@ class Sql():
         try:
             if self.__DB_CONN == None:
                 self.__DB_CONN = sqlite3.connect(self.__DB_FILE)
-        except Exception,ex:
+        except Exception as ex:
             return "error: " + str(ex)
             
     def dbfile(self,name):
@@ -96,12 +96,12 @@ class Sql():
                 del(tmp)
             else:
                 #将元组转换成列表
-                tmp = map(list,data)
+                tmp = list(map(list,data))
                 data = tmp
                 del(tmp)
             self.__close()
             return data
-        except Exception,ex:
+        except Exception as ex:
             return "error: " + str(ex)
     
     
@@ -144,31 +144,15 @@ class Sql():
             values=""
             for key in keys.split(','):
                 values += "?,"
-            values = self.checkInput(values[0:len(values)-1]);
+            values = values[0:len(values)-1];
             sql = "INSERT INTO "+self.__DB_TABLE+"("+keys+") "+"VALUES("+values+")"
             result = self.__DB_CONN.execute(sql,param)
             id = result.lastrowid
             self.__close()
             self.__DB_CONN.commit()
             return id
-        except Exception,ex:
+        except Exception as ex:
             return "error: " + str(ex)
-    
-    def checkInput(self,data):
-       if not data: return data;
-       if type(data) != str: return data;
-       checkList = [
-                    {'d':'<','r':'＜'},
-                    {'d':'>','r':'＞'},
-                    {'d':'\'','r':'‘'},
-                    {'d':'"','r':'“'},
-                    {'d':'&','r':'＆'},
-                    {'d':'#','r':'＃'},
-                    {'d':'<','r':'＜'}
-                    ]
-       for v in checkList:
-           data = data.replace(v['d'],v['r']);
-       return data;
     
     def addAll(self,keys,param):
         #插入数据
@@ -182,7 +166,7 @@ class Sql():
             sql = "INSERT INTO "+self.__DB_TABLE+"("+keys+") "+"VALUES("+values+")"
             result = self.__DB_CONN.execute(sql,param)
             return True
-        except Exception,ex:
+        except Exception as ex:
             return "error: " + str(ex)
         
     def commit(self):
@@ -213,7 +197,7 @@ class Sql():
             self.__close()
             self.__DB_CONN.commit()
             return result.rowcount
-        except Exception,ex:
+        except Exception as ex:
             return "error: " + str(ex)
     
     def delete(self,id=None):
@@ -228,7 +212,7 @@ class Sql():
             self.__close()
             self.__DB_CONN.commit()
             return result.rowcount
-        except Exception,ex:
+        except Exception as ex:
             return "error: " + str(ex)
         
     
@@ -239,7 +223,7 @@ class Sql():
             result = self.__DB_CONN.execute(sql,param)
             self.__DB_CONN.commit()
             return result.rowcount
-        except Exception,ex:
+        except Exception as ex:
             return "error: " + str(ex)
     
     
@@ -249,9 +233,9 @@ class Sql():
         try:
             result = self.__DB_CONN.execute(sql,param)
             #将元组转换成列表
-            data = map(list,result)
+            data = list(map(list,result))
             return data
-        except Exception,ex:
+        except Exception as ex:
             return "error: " + str(ex)
         
     def create(self,name):

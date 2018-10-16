@@ -1,0 +1,314 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="main-content pb55">
+    <div class="container-fluid">
+        <div class="pos-box bgw mtb15">
+            <div class="position f14 c9 pull-left">
+                <a class="plr10 c4" href="/">{{data['lan']['H1']}}</a>/<span class="plr10 c4">{{data['lan']['H2']}}</span>
+            </div>
+            <div class="search pull-right">
+                <form target="hid" onsubmit='database.get_list(1,$("#SearchValue").val())'>
+                    <input type="text" id="SearchValue" class="ser-text pull-left" placeholder="{{data['lan']['SEARCH']}}" />
+                    <button type="button" class="ser-sub pull-left" onclick='database.get_list(1,$("#SearchValue").val())'></button>
+                </form>
+                <iframe name='hid' id="hid" style="display:none"></iframe>
+            </div>
+        </div>
+        <div class="safe bgw mtb15 pd15">
+            <button onclick="database.add_database()" title="{{data['lan']['BTNT1']}}" class="btn btn-success btn-sm" type="button" style="margin-right: 5px;">{{data['lan']['BTN1']}}</button>
+            <button onclick="bt.database.set_root()" title="{{data['lan']['BTNT2']}}" class="btn btn-default btn-sm" type="button" style="margin-right: 5px;">{{data['lan']['BTN2']}}</button>
+            <button onclick="bt.database.open_phpmyadmin('','root','{{data['mysql_root']}}')" title="{{data['lan']['BTNT3']}}" class="btn btn-default btn-sm" type="button" style="margin-right: 5px;">{{data['lan']['BTN3']}}</button>
+            <span style="float:right">            	
+                <button batch="true" style="float: right;display: none;margin-left:10px;" onclick="database.batch_database('del');" title="{{data['lan']['BTNT4']}}" class="btn btn-default btn-sm">{{data['lan']['BTN4']}}</button>
+                <button onclick="bt.recycle_bin.open_recycle_bin(6)" id="dataRecycle" title="{{data['lan']['BTNT4']}}" class="btn btn-default btn-sm" style="margin-left: 5px;"><span class="glyphicon glyphicon-trash" style="margin-right: 5px;"></span>回收站</button>
+            </span>
+            <div class="divtable mtb10">
+                <div class="tablescroll">
+                    <table id="DataBody" class="table table-hover" width="100%" cellspacing="0" cellpadding="0" border="0" style="border: 0 none;">      
+                    </table>                    
+                </div>
+                 <div id='databasePage' class="dataTables_paginate paging_bootstrap page">                   
+                </div>
+                <div class="table_toolbar">
+                    <span class="sync btn btn-default btn-sm" style="margin-right:5px" onclick="database.sync_to_database(1)" title="{{data['lan']['TP1']}}">{{data['lan']['SP1']}}</span>
+                    <span class="sync btn btn-default btn-sm" style="margin-right:5px" onclick="database.sync_to_database(0)" title="{{data['lan']['TP2']}}">{{data['lan']['SP2']}}</span>
+                    <span class="sync btn btn-default btn-sm" onclick="database.sync_database()" title="{{data['lan']['TP3']}}">{{data['lan']['SP3']}}</span>  
+                </div>
+            </div>
+        </div>
+        <form id="toPHPMyAdmin" action="{{session['phpmyadminDir']}}/index.php" method="post" style="display: none;" target="_blank">
+            <input type="text" name="pma_username" id="pma_username" value="" />
+            <input type="password" name="pma_password" id="pma_password" value="" />
+            <input type="text" name="server" value="1" />
+            <input type="text" name="target" value="index.php" />
+            <input type="text" name="db" id="db" value="" />
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script type="text/javascript">
+	bt.set_cookie('backup_path',"{{session['config']['backup_path']}}");
+
+	
+	var database = {
+		get_list:function(page,search){
+			if(page==undefined) page=1;			
+			bt.database.get_list(page,search,function(rdata){
+			$('#databasePage').html(rdata.page);
+			var _tab =  bt.render({
+				table:'#DataBody',
+					columns:[
+						{ field:'id',type:'checkbox',width:30},
+						{ field: 'name', title: '数据库名',width:'20%'},
+						{ field: 'username', title: '用户名',sort:function(){
+							database.get_list();
+						}},
+						{ field: 'password',width:'10%', title: '密码',templet : function(item){
+							var _html = '<span class="password" data-pw="'+item.password+'">**********</span>';
+							_html += '<span onclick="bt.pub.show_hide_pass(this)" class="glyphicon glyphicon-eye-open cursor pw-ico" style="margin-left:10px"></span>';
+							_html += '<span class="ico-copy cursor btcopy" style="margin-left:10px" title="复制密码" data-pw="'+item.password+'" onclick="bt.pub.copy_pass(\''+item.password+'\')"></span>';
+							return _html;
+						}},
+						{ field: 'backup', title:'备份',templet:function(item){
+							var backup = '';
+							var _msg = lan.database.backup_empty;
+							if(item.backup_count>0) _msg = lan.database.backup_ok;
+							backup = "<a href='javascript:;' class='btlink' onclick=\"database.database_detail('"+item.id+"','"+item.name+"')\">"+_msg+"</a> | "
+							backup += "<a class='btlink' href=\"javascript:database.input_database('"+item.name+"');\" title='"+lan.database.input_title+"'>"+lan.database.input+"</a>";
+							return backup;
+						}},
+						{ field: 'ps', title: '备注',templet : function(item){
+							var _ps = "<span class='c9 input-edit' onclick=\"bt.pub.set_data_by_key('databases','ps',this)\" >"
+							if(item.password){
+								_ps += item.ps
+							}else{
+								_ps += '无法获取到密码，请通过<span style="color:red">改密</span>按钮设置密码!';
+							}
+							_ps += "</span>";						
+							return _ps;
+						}},
+						{ field: 'opt',width:260, title: '操作',align:'right',templet:function(item){
+							var option = "<a href=\"javascript:;\" class=\"btlink\" onclick=\"bt.database.open_phpmyadmin('"+item.name+"','"+item.username+"','"+item.password+"')\" title=\"数据库管理\">管理</a> | ";
+							option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"bt.database.set_data_access('"+item.username+"')\" title=\"设置数据库权限\">权限</a> | ";
+							option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"database.set_data_pass("+item.id+",'"+item.username+"','"+item.password+"')\" title=\"修改数据库密码\">改密</a> | ";
+							option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"database.del_database("+item.id+",'"+item.name+"')\" title=\"删除数据库\">删除</a>";						
+							return option;
+						}},
+					],
+					data:rdata.data
+				})	
+			})
+		},
+		sync_to_database:function(type){
+			var data=[];
+			$('input[type="checkbox"].check:checked').each(function(){
+				if(!isNaN($(this).val())) data.push($(this).val());				
+			})
+			bt.database.sync_to_database({type:type,ids:JSON.stringify(data)},function(rdata){				
+				if(rdata.status) database.get_list();				
+			});
+		},
+		sync_database:function(){
+			bt.database.sync_database(function(rdata){
+				if(rdata.status) database.get_list();	
+			})
+		},
+		add_database:function(){
+			bt.database.add_database(function(rdata){
+				if(rdata.status) database.get_list();	
+			})
+		},
+		batch_database:function(type,arr,result){
+			if(arr == undefined){
+				arr = [];
+				result = {count:0,error_list:[]};
+				$('input[type="checkbox"].check:checked').each(function(){
+					var _val = $(this).val();						
+					if(!isNaN(_val)) arr.push($(this).parents('tr').data('item'));
+				})		
+				bt.show_confirm(lan.database.del_all_title,"<a style='color:red;'>"+lan.get('del_all_database',[arr.length])+"</a>",function(){
+					bt.closeAll();
+					database.batch_database(type,arr,result);
+				});
+				return;
+			}
+			var item = arr[0];
+			switch(type){
+				case 'del':					
+					if(arr.length<1){
+						database.get_list();
+						bt.msg({msg:lan.get('del_all_database_ok',[result.count]),icon:1,time:5000});						
+						return;
+					}					
+					bt.database.del_database({id:item.id,name:item.name},function(rdata){
+						if(rdata.status){
+							result.count+=1;
+						}else{
+							result.error_list.push({name:item.item,err_msg:rdata.msg});
+						}
+						arr.splice(0,1)
+						database.batch_database(type,arr,result);
+					})
+					break;
+			}
+		},
+		del_database:function(id,name){
+			bt.show_confirm(lan.get('del',[name]),lan.get('confirm_del',[name]),function(){
+				bt.database.del_database({id:id,name:name},function(rdata){
+					if(rdata.status) database.get_list();
+					bt.msg(rdata);
+				})
+			});
+		},
+		set_data_pass:function(id,username,password){
+			var bs = bt.database.set_data_pass(function(rdata){				
+				if(rdata.status) database.get_list();
+				bt.msg(rdata);
+			})
+			$('.name'+bs).val(username);
+			$('.id'+bs).val(id);
+			$('.password'+bs).val(password);
+		},	
+		database_detail:function(id,dataname,page){
+			if(page == undefined) page = '1';
+			var loadT = bt.load(lan.public.the_get);
+			bt.pub.get_data('table=backup&search='+id+'&limit=5&type=1&tojs=database.database_detail&p='+page,function(frdata){
+				loadT.close();
+				var ftpdown = '';
+				var body='';
+				var port;				
+				frdata.page = frdata.page.replace(/'/g,'"').replace(/database.database_detail\(/g,"database.database_detail(" + id + ",'"+dataname+"',");
+				if($('#DataBackupList').length<=0){
+					bt.open({
+						type: 1,
+						skin: 'demo-class',
+						area: '700px',
+						title: lan.database.backup_title,
+						closeBtn: 2,
+						shift: 5,
+						shadeClose: false,
+						content:"<div class='divtable pd15 style='padding-bottom: 0'><button id='btn_data_backup' class='btn btn-success btn-sm' type='button' style='margin-bottom:10px'>"+lan.database.backup+"</button><table width='100%' id='DataBackupList' class='table table-hover'></table><div class='page databackup_page'></div></div>"			
+					});	
+				}				
+				setTimeout(function(){
+					$('.databackup_page').html(frdata.page);
+					var _tab =  bt.render({
+						table:'#DataBackupList',
+						columns:[
+							{field:'name',title:'文件名称'},
+							{field:'size',title:'文件大小',templet:function(item){
+								return bt.format_size(item.size);
+							}},
+							{field:'addtime',title:'备份时间'},
+							{field:'opt',title:'操作',align:'right',templet:function(item){
+								var _opt = '<a class="btlink" herf="javascrpit:;" onclick="bt.database.input_sql(\''+item.filename+'\',\''+dataname+'\')">恢复</a> | ';
+								_opt+='<a class="btlink" href="/download?filename='+item.filename+'&amp;name='+item.name+'" target="_blank">下载</a> | ';
+								_opt+='<a class="btlink" herf="javascrpit:;" onclick="bt.database.del_backup(\''+item.id+'\',\''+id+'\',\''+dataname+'\')">删除</a>'
+								return _opt;
+							}},
+						],
+						data:frdata.data
+					});
+					$('#btn_data_backup').unbind('click').click(function(){
+						bt.database.backup_data(id,dataname,function(rdata){
+							if(rdata.status) database.database_detail(id,dataname);
+						})
+					})
+				},100)
+			});
+		},
+		upload_files:function(name){
+			var path = bt.get_cookie('backup_path') + "/database/";
+			var index = layer.open({
+				type:1,
+				closeBtn: 2,
+				title:lan.files.up_title+' --- <span style="color:red;">'+lan.database.input_up_type+'</span>',
+				area: ['500px','500px'], 
+				shadeClose:false,
+				content:'<div class="fileUploadDiv"><input type="hidden" id="input-val" value="'+path+'" />\
+						<input type="file" id="file_input"  multiple="true" autocomplete="off" />\
+						<button type="button"  id="opt" autocomplete="off">'+lan.files.up_add+'</button>\
+						<button type="button" id="up" autocomplete="off" >'+lan.files.up_start+'</button>\
+						<span id="totalProgress" style="position: absolute;top: 7px;right: 147px;"></span>\
+						<span style="float:right;margin-top: 9px;">\
+						<font>'+lan.files.up_coding+':</font>\
+						<select id="fileCodeing" >\
+							<option value="byte">'+lan.files.up_bin+'</option>\
+							<option value="utf-8">UTF-8</option>\
+							<option value="gb18030">GB2312</option>\
+						</select>\
+						</span>\
+						<button type="button" id="filesClose" autocomplete="off">'+lan.public.close+'</button>\
+						<ul id="up_box"></ul></div>'
+			,end:function(){						
+				database.input_database(name);	
+			}});
+			$("#filesClose").click(function(){
+				layer.close(index);
+				database.input_database(name);	
+			});			
+			UploadStart(true);
+		},
+		input_database:function(name){
+			var path = bt.get_cookie('backup_path') + "/database";
+			bt.files.get_files(path,'',function(rdata){
+				var data = [];
+				for (var i = 0; i < rdata.FILES.length; i++) {
+					if(rdata.FILES[i] == null) continue;
+					var fmp = rdata.FILES[i].split(";");
+					var ext = bt.get_file_ext(fmp[0]);					
+					if(ext != 'sql' && ext != 'zip' && ext != 'gz' && ext != 'tgz') continue;
+					data.push({name:fmp[0],size:fmp[1],etime:fmp[2],})
+				}
+				if($('#DataInputList').length <= 0){
+					bt.open({
+						type: 1,
+						skin: 'demo-class',
+						area: '600px',
+						title: lan.database.input_title_file,
+						closeBtn: 2,
+						shift: 5,
+						shadeClose: false,
+						content: '<div class="pd15"><button class="btn btn-default btn-sm" onclick="database.upload_files(\''+name+'\')">'+lan.database.input_local_up+'</button><div class="divtable mtb15" style="max-height:300px; overflow:auto">'
+										+'<table id="DataInputList" class="table table-hover"></table>'
+									+'</div>'
+									+ bt.render_help([lan.database.input_ps1,lan.database.input_ps2,(bt.os !='Linux' ? lan.database.input_ps3.replace(/\/www.*\/database/,path):lan.database.input_ps3)])
+								+'</div>'
+					});
+				}				
+				setTimeout(function(){
+					var _tab =  bt.render({
+						table:'#DataInputList',
+						columns:[
+							{field:'name',title:lan.files.file_name},
+							{field:'etime',title:lan.files.file_etime,templet:function(item){
+								return bt.format_data(item.etime);
+							}},
+							{field:'size',title:lan.files.file_size,templet:function(item){
+								return bt.format_size(item.size)
+							}},
+							{field:'opt',title:'操作',align:'right',templet:function(item){
+								return '<a class="btlink" herf="javascrpit:;" onclick="bt.database.input_sql(\''+bt.rtrim(rdata.PATH,'/') +"/"+ item.name+'\',\''+name+'\')">导入</a>  ';;
+							}},
+						],
+						data:data
+					});					
+				},100)			
+			})		
+		}
+	}
+	
+	{% if not data['isSetup'] %}
+		layer.msg('{{data["lan"]["JS1"]}}<a href="/soft#i" style="color:#20a53a;float: right;">{{data["lan"]["JS2"]}}</a>',{icon:7,shade: [0.3, '#000'],time:0});
+        $(".layui-layer-shade").css("margin-left", "180px");
+    {% else %}
+    	database.get_list();
+    {% endif %}		
+	
+</script>
+<script src="/static/js/upload.js?date={{g['version']}}"></script>
+{% endblock %}

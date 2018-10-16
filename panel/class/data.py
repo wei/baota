@@ -6,7 +6,6 @@
 # +-------------------------------------------------------------------
 # | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
-import web
 import sys
 sys.path.append("class/")
 import db,public,re
@@ -53,36 +52,36 @@ class data:
      * @return Json  page.分页数 , count.总行数   data.取回的数据
     '''
     def getData(self,get):
-        #try:
-        table = get.table;
-        data = self.GetSql(get);
-        SQL = public.M(table);
+        try:
+            table = get.table;
+            data = self.GetSql(get);
+            SQL = public.M(table);
         
-        if table == 'backup':
-            import os
-            for i in range(len(data['data'])):
-                if data['data'][i]['size'] == 0:
-                    if os.path.exists(data['data'][i]['filename']): data['data'][i]['size'] = os.path.getsize(data['data'][i]['filename'])
-        
-        elif table == 'sites' or table == 'databases':
-            type = '0'
-            if table == 'databases': type = '1'
-            for i in range(len(data['data'])):
-                data['data'][i]['backup_count'] = SQL.table('backup').where("pid=? AND type=?",(data['data'][i]['id'],type)).count()
-            if table == 'sites':
+            if table == 'backup':
+                import os
                 for i in range(len(data['data'])):
-                    data['data'][i]['domain'] = SQL.table('domain').where("pid=?",(data['data'][i]['id'],)).count()
-        elif table == 'firewall':
-            for i in range(len(data['data'])):
-                if data['data'][i]['port'].find(':') != -1 or data['data'][i]['port'].find('.') != -1 or data['data'][i]['port'].find('-') != -1:
-                    data['data'][i]['status'] = -1;
-                else:
-                    data['data'][i]['status'] = self.CheckPort(int(data['data'][i]['port']));
+                    if data['data'][i]['size'] == 0:
+                        if os.path.exists(data['data'][i]['filename']): data['data'][i]['size'] = os.path.getsize(data['data'][i]['filename'])
+        
+            elif table == 'sites' or table == 'databases':
+                type = '0'
+                if table == 'databases': type = '1'
+                for i in range(len(data['data'])):
+                    data['data'][i]['backup_count'] = SQL.table('backup').where("pid=? AND type=?",(data['data'][i]['id'],type)).count()
+                if table == 'sites':
+                    for i in range(len(data['data'])):
+                        data['data'][i]['domain'] = SQL.table('domain').where("pid=?",(data['data'][i]['id'],)).count()
+            elif table == 'firewall':
+                for i in range(len(data['data'])):
+                    if data['data'][i]['port'].find(':') != -1 or data['data'][i]['port'].find('.') != -1 or data['data'][i]['port'].find('-') != -1:
+                        data['data'][i]['status'] = -1;
+                    else:
+                        data['data'][i]['status'] = self.CheckPort(int(data['data'][i]['port']));
                 
-        #返回
-        return data;
-        #except Exception,ex:
-            #return str(ex);
+            #返回
+            return data;
+        except Exception as ex:
+            return str(ex);
     
     '''
      * 取数据库行
@@ -148,7 +147,7 @@ class data:
             if get.table == 'backup':
                 where += " and type='" + get.type+"'";
             
-            if get.table == 'sites' and get.search:
+            if get.table == 'sites':
                 pid = SQL.table('domain').where('name=?',(get.search,)).getField('pid');
                 if pid: where = "id=" + str(pid);
         
@@ -169,8 +168,6 @@ class data:
         #实例化分页类
         page = page.Page();
         
-        del(get.data)
-        del(get.zunfile)
         info = {}
         info['count'] = count
         info['row']   = limit
@@ -188,13 +185,14 @@ class data:
         #获取分页数据
         data['page'] = page.GetPage(info,result)
         #取出数据
-        data['data'] = SQL.table(get.table).where(where,()).order(order).field(field).limit(bytes(page.SHIFT)+','+bytes(page.ROW)).select()
+        data['data'] = SQL.table(get.table).where(where,()).order(order).field(field).limit(str(page.SHIFT)+','+str(page.ROW)).select()
         return data;
     
     #获取条件
     def GetWhere(self,tableName,search): 
         if not search: return ""
-        search = search.encode('utf-8').strip()
+
+        if type(search) == bytes: search = search.encode('utf-8').strip()
         search = re.search(u"[\w\x80-\xff]+",search).group();
         wheres = {
             'sites'     :   "id='"+search+"' or name like '%"+search+"%' or status like '%"+search+"%' or ps like '%"+search+"%'",

@@ -6,7 +6,8 @@
 #  + -------------------------------------------------------------------
 # | Author: 黄文良 <287962566@qq.com>
 #  + -------------------------------------------------------------------
-import public,db,re,os,web,firewalls
+import public,db,re,os,firewalls
+from BTPanel import session
 class ftp:
     __runPath = None
     
@@ -40,7 +41,7 @@ class ftp:
             public.M('ftps').add('pid,name,password,path,status,ps,addtime',(pid,username,password,get.path,1,ps,addtime))
             public.WriteLog('TYPE_FTP', 'FTP_ADD_SUCCESS',(username,))
             return public.returnMsg(True,'ADD_SUCCESS')
-        except Exception,ex:
+        except Exception as ex:
             public.WriteLog('TYPE_FTP', 'FTP_ADD_ERR',(username,str(ex)))
             return public.returnMsg(False,'ADD_ERROR')
     
@@ -54,7 +55,7 @@ class ftp:
             public.M('ftps').where("id=?",(id,)).delete()
             public.WriteLog('TYPE_FTP', 'FTP_DEL_SUCCESS',(username,))
             return public.returnMsg(True, "DEL_SUCCESS")
-        except Exception,ex:
+        except Exception as ex:
             public.WriteLog('TYPE_FTP', 'FTP_DEL_ERR',(username,str(ex)))
             return public.returnMsg(False,'DEL_ERROR')
     
@@ -70,7 +71,7 @@ class ftp:
             public.M('ftps').where("id=?",(id,)).setField('password',password)
             public.WriteLog('TYPE_FTP', 'FTP_PASS_SUCCESS',(username,))
             return public.returnMsg(True,'EDIT_SUCCESS')
-        except Exception,ex:
+        except Exception as ex:
             public.WriteLog('TYPE_FTP', 'FTP_PASS_ERR',(username,str(ex)))
             return public.returnMsg(False,'EDIT_ERROR')
     
@@ -91,7 +92,7 @@ class ftp:
             public.M('ftps').where("id=?",(id,)).setField('status',status)
             public.WriteLog('TYPE_FTP','FTP_STATUS', (msg,username))
             return public.returnMsg(True, 'SUCCESS')
-        except Exception,ex:
+        except Exception as ex:
             public.WriteLog('TYPE_FTP','FTP_STATUS_ERR', (msg,username,str(ex)))
             return public.returnMsg(False,'FTP_STATUS_ERR',(msg,))
     
@@ -117,9 +118,9 @@ class ftp:
             get.port=port
             get.ps = public.getMsg('FTP_PORT_PS');
             firewalls.firewalls().AddAcceptPort(get)
-            web.ctx.session.port=port
+            session['port']=port
             return public.returnMsg(True, 'EDIT_SUCCESS')
-        except Exception,ex:
+        except Exception as ex:
             public.WriteLog('TYPE_FTP', 'FTP_PORT_ERR',(str(ex),))
             return public.returnMsg(False,'EDIT_ERROR')
     

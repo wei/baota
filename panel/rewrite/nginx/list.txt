@@ -1,1 +1,0 @@
-default,discuz,discuzx,discuzx2,discuzx3,drupal,dabr,dedecms,ecshop,phpcms,sablog,shopex,thinkphp,typecho,typecho2,wordpress,wp2,phpwind,mvc,EmpireCMS,emlog,laravel5
