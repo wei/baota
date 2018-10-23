@@ -30,7 +30,7 @@ class panelSite:
         path = self.setupPath + '/panel/vhost/rewrite'
         if not os.path.exists(path): public.ExecShell("mkdir -p " + path + " && chmod -R 644 " + path);
         path = self.setupPath + '/stop';
-        if not os.path.exists(path):
+        if not os.path.exists(path + '/index.html'):
             os.system('mkdir -p ' + path);
             os.system('wget -O ' + path + '/index.html '+public.get_url()+'/stop.html &');
         self.OldConfigFile();
@@ -210,10 +210,10 @@ class panelSite:
         
         import json,files
         siteMenu = json.loads(get.webname)
-        self.siteName     = self.ToPunycode(siteMenu['domain'].split(':')[0]);
+        self.siteName     = self.ToPunycode(siteMenu['domain'].strip().split(':')[0]).strip();
         self.sitePath     = self.ToPunycodePath(self.GetPath(get.path.replace(' ','')));
-        self.sitePort     = get.port.replace(' ','');
-        
+        self.sitePort     = get.port.strip().replace(' ','');
+
         if self.sitePort == "": get.port = "80";
         if not public.checkPort(self.sitePort): return public.returnMsg(False,'SITE_ADD_ERR_PORT');
         
@@ -438,11 +438,11 @@ class panelSite:
             return public.returnMsg(False,'ERROR: 检测到配置文件有错误,请先排除后再操作<br><br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
         
         if len(get.domain) < 3: return public.returnMsg(False,'SITE_ADD_DOMAIN_ERR_EMPTY');
-        domains = get.domain.split(',')
+        domains = get.domain.replace(' ','').split(',')
         
         for domain in domains:
             if domain == "": continue;
-            domain = domain.split(':')
+            domain = domain.strip().split(':')
             get.domain = self.ToPunycode(domain[0])
             get.port = '80'
             
@@ -700,6 +700,7 @@ class panelSite:
         result = self.SetSSLConf(get);
         if not result['status']: return result;
         isError = public.checkWebConfig();
+        #return isError
     
         if(type(isError) == str):
             public.ExecShell('\\cp -a /tmp/backup1.conf ' + keypath);
@@ -1059,7 +1060,7 @@ class panelSite:
                 isError = public.checkWebConfig();
                 if(isError != True):
                     shutil.copyfile('/tmp/backup.conf',file)
-                    #return public.returnMsg(False,'ERROR: <br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
+                    return public.returnMsg(False,'证书错误: <br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
             
         #Apache配置
         file = self.setupPath + '/panel/vhost/apache/'+siteName+'.conf';
@@ -1136,7 +1137,7 @@ class panelSite:
                 isError = public.checkWebConfig();
                 if(isError != True):
                     shutil.copyfile('/tmp/backup.conf',file)
-                    return public.returnMsg(False,'ERROR: <br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
+                    return public.returnMsg(False,'证书错误: <br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
         
         sql = public.M('firewall');
         import firewalls

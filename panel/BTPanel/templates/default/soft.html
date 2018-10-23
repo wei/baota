@@ -173,8 +173,9 @@
 									var to_index = '';
 									if(item.setup){
 										var checked = '';
-										if(item.index_display) checked = 'checked';					
-										to_index = '<div class="index-item"><input class="btswitch btswitch-ios" id="index_'+item.name+'" type="checkbox" '+checked+'><label class="btswitch-btn" for="index_'+item.name+'" onclick="bt.soft.to_index(\''+item.name+'\')"></label></div>';
+                                        if (item.index_display) checked = 'checked';
+                                        var item_id = item.name.replace(/\./, "");                                       
+                                        to_index = '<div class="index-item"><input class="btswitch btswitch-ios" id="index_' + item_id + '" type="checkbox" ' + checked + '><label class="btswitch-btn" for="index_' + item_id+'" onclick="bt.soft.to_index(\''+item.name+'\')"></label></div>';
 									}
 									return to_index;
 								}},
@@ -198,12 +199,24 @@
 										pay_opt = '<a class="btlink" onclick="bt.soft.re_plugin_pay(\''+item.title+'\',\''+item.pid+'\','+re_status+')">'+re_msg+'</a>';
                                     }
                                     var is_php = item.name.indexOf('php-') >= 0;
-                                    if (rdata.apache22 && is_php && $.inArray(item.name, phps)==-1) {
-                                        option = '<span title="Apache2.2不兼容此版本，如需使用请切换到Apache2.4或Nginx">不兼容</span>';
+                                    if (rdata.apache22 && is_php && $.inArray(item.name, phps) == -1) {
+                                        if (item.setup) {
+                                            option = '<a class="btlink" onclick="bt.soft.un_install(\'' + item.name + '\')" >' + lan.soft.uninstall + '</a>';
+                                        }
+                                        else {
+                                            option = '<span title="Apache2.2不兼容此版本，如需使用请切换到Apache2.4或Nginx">不兼容</span>';
+                                        }                                                                               
+                                    }
+                                    else if (rdata.apache24 && item.name == 'php-5.2') {
+                                        if (item.setup) {
+                                            option = '<a class="btlink" onclick="bt.soft.un_install(\'' + item.name + '\')" >' + lan.soft.uninstall + '</a>';
+                                        }
+                                        else {
+                                            option = '<span title="Apache2.4不兼容此版本，如需使用请切换到Apache2.2或Nginx">不兼容</span>';
+                                        }                                        
                                     }
                                     else {
-                                        if (item.setup) {
-                                           
+                                        if (item.setup) {                                           
                                             if (pay_opt == '') {
                                                 if (item.versions.length > 1) {
                                                     for (var i = 0; i < item.versions.length; i++) {

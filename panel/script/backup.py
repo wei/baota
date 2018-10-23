@@ -129,11 +129,11 @@ class backupTools:
     def backupPath(self,path,count):
         sql = db.Sql();
         startTime = time.time();
+        if path[-1:] == '/': path = path[:-1]
         name = os.path.basename(path)
         backup_path = sql.table('config').where("id=?",(1,)).getField('backup_path') + '/path';
         if not os.path.exists(backup_path): os.makedirs(backup_path);
         filename= backup_path + "/Path_" + name + "_" + time.strftime('%Y%m%d_%H%M%S',time.localtime()) + '.tar.gz'
-        print(filename)
         os.system("cd " + os.path.dirname(path) + " && tar zcvf '" + filename + "' '" + os.path.basename(path) + "' > /dev/null")
                 
         endDate = time.strftime('%Y/%m/%d %X',time.localtime())

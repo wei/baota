@@ -219,7 +219,7 @@ class panelPlugin:
             cloudUrl = public.GetConfigValue('home') + '/api/panel/get_soft_list'
             import panelAuth
             pdata = panelAuth.panelAuth().create_serverid(None)
-            listTmp = public.httpPost(cloudUrl,pdata,3)
+            listTmp = public.httpPost(cloudUrl,pdata,10)
             if len(listTmp) < 200:
                 listTmp = public.readFile(lcoalTmp)
             softList = json.loads(listTmp)
@@ -339,9 +339,14 @@ class panelPlugin:
         softList['list'] = self.get_page(softList['list'],get)
         softList['list']['data'] = self.check_isinstall(softList['list']['data'])
         softList['apache22'] = False
+        softList['apache24'] = False
         check_version_path = '/www/server/apache/version_check.pl'
         if os.path.exists(check_version_path):
-            if public.readFile(check_version_path).find('2.2') == 0: softList['apache22'] = True
+            softList['apache24'] = True
+            if public.readFile(check_version_path).find('2.2') == 0: 
+                softList['apache22'] = True
+                softList['apache24'] = False
+
         return softList
 
     #取首页软件列表
@@ -352,6 +357,7 @@ class panelPlugin:
             softList = self.get_cloud_list(get)
             if not softList: return public.returnMsg(False,'软件列表获取失败(401)!')
         softList = self.set_coexist(softList)
+        if not os.path.exists(self.__index): public.writeFile(self.__index,'[]')
         indexList = json.loads(public.ReadFile(self.__index))
         dataList = []
         for index in indexList:
@@ -364,6 +370,7 @@ class panelPlugin:
     #添加到首页
     def add_index(self,get):
         sName = get.sName
+        if not os.path.exists(self.__index): public.writeFile(self.__index,'[]')
         indexList = json.loads(public.ReadFile(self.__index))
         if sName in indexList: return public.returnMsg(False,'请不要重复添加!')
         if len(indexList) >= 12: return public.returnMsg(False,'首页最多只能显示12个软件!')
@@ -375,6 +382,7 @@ class panelPlugin:
     def remove_index(self,get):
         sName = get.sName
         indexList = []
+        if not os.path.exists(self.__index): public.writeFile(self.__index,'[]')
         indexList = json.loads(public.ReadFile(self.__index))
         if not sName in indexList: return public.returnMsg(True,'删除成功!')
         indexList.remove(sName)
@@ -451,6 +459,7 @@ class panelPlugin:
 
     #检测是否安装
     def check_isinstall(self,sList):
+        if not os.path.exists(self.__index): public.writeFile(self.__index,'[]')
         indexList = json.loads(public.ReadFile(self.__index))
         for i in range(len(sList)):
             sList[i]['index_display'] = sList[i]['name'] in indexList
@@ -675,6 +684,7 @@ class panelPlugin:
     #获取图标
     def get_icon(self,name):
         iconFile = 'BTPanel/static/img/soft_ico/ico-' + name + '.png'
+
         if not os.path.exists(iconFile):
             self.download_icon(name,iconFile)
         else:
@@ -683,7 +693,7 @@ class panelPlugin:
         
     #下载图标
     def download_icon(self,name,iconFile):
-        srcIcon = self.__install_path + '/' + name + '/icon.png';
+        srcIcon =  'plugin/' + name + '/icon.png';
         if os.path.exists(srcIcon):
             public.ExecShell("\cp  -a -r " + srcIcon + " " + iconFile)
         else:

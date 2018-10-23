@@ -29,13 +29,15 @@ def control_init():
     public.M('sites').execute("alter TABLE sites add edate integer DEFAULT '0000-00-00'",());
     filename = '/www/server/nginx/off'
     if os.path.exists(filename): os.remove(filename)
-    init_file = '/etc/init.d/bt'
-    src_file = '/www/server/panel/init.sh'
-    md51 = public.md5(init_file)
-    md52 = public.md5(src_file)
-    if md51 != md52:
-        import shutil
-        shutil.copyfile(src_file,init_file)
+    try:
+        init_file = '/etc/init.d/bt'
+        src_file = '/www/server/panel/init.sh'
+        md51 = public.md5(init_file)
+        md52 = public.md5(src_file)
+        if md51 != md52:
+            import shutil
+            shutil.copyfile(src_file,init_file)
+    except:pass
     public.writeFile('/var/bt_setupPath.conf','/www')
     clean_session()
 

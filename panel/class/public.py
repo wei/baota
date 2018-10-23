@@ -85,8 +85,6 @@ def HttpPost(url,data,timeout = 60):
                 ssl._create_default_https_context = ssl._create_unverified_context
             except:pass;
             data = urllib.parse.urlencode(data).encode('utf-8')
-            if url.find('http://www.bt.cn') != -1: url = url.replace('http://www.bt.cn','https://www.bt.cn')
-
             req = urllib.request.Request(url, data)
             response = urllib.request.urlopen(req,timeout = timeout)
             result = response.read()
@@ -612,19 +610,6 @@ def checkWebConfig():
         return result[1];
     return True;
 
-#检查Web服务器配置文件是否有错误
-def checkWebConfig():
-    if get_webserver() == 'nginx':
-        result = ExecShell("ulimit -n 10240 && /www/server/nginx/sbin/nginx -t -c /www/server/nginx/conf/nginx.conf");
-        searchStr = 'successful'
-    else:
-        result = ExecShell("ulimit -n 10240 && /www/server/apache/bin/apachectl -t");
-        searchStr = 'Syntax OK'
-    
-    if result[1].find(searchStr) == -1:
-        WriteLog("TYPE_SOFT", 'CONF_CHECK_ERR',(result[1],));
-        return result[1];
-    return True;
 
 #检查是否为IPv4地址
 def checkIp(ip):

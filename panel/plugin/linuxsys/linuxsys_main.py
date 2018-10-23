@@ -101,7 +101,13 @@ class linuxsys_main:
         except:
             return cfile,devName
         
-    
+    def PrefixToNetmask(self,prefix):
+        bin_arr = ['0' for i in range(32)]
+        for i in range(prefix):
+            bin_arr[i] = '1'
+        tmpmask = [''.join(bin_arr[i * 8:i * 8 + 8]) for i in range(4)]
+        tmpmask = [str(int(tmpstr, 2)) for tmpstr in tmpmask]
+        return '.'.join(tmpmask)
     #网卡配置补全
     def CheckConfig(self,get):
         if not self.CheckIp(get.address): return public.returnMsg(False,'IP地址不合法!');
@@ -176,11 +182,15 @@ class linuxsys_main:
             tmp = {}
             conf = public.readFile(pfile);
             rep = "IPADDR\d*\s*=\s*(.+)\n";
-            tmp['address'] = re.search(rep,conf).groups()[0].replace("'",'');
+            tmp['address'] = re.search(rep,conf).groups()[0].replace("'",'').replace('"','');
             rep = "GATEWAY\d*\s*=\s*(.+)\n";
-            tmp['gateway'] = re.search(rep,conf).groups()[0].replace("'",'');
-            rep = "NETMASK\d*\s*=\s*(.+)\n";
-            tmp['netmask'] = re.search(rep,conf).groups()[0].replace("'",'');
+            tmp['gateway'] = re.search(rep,conf).groups()[0].replace("'",'').replace('"','');
+            try:
+                rep = "NETMASK\d*\s*=\s*(.+)\n";
+                tmp['netmask'] = re.search(rep,conf).groups()[0].replace("'",'').replace('"','');
+            except:
+                rep = "PREFIX\d*\s*=\s*(.+)\n";
+                tmp['netmask'] = self.PrefixToNetmask(int(re.search(rep,conf).groups()[0].replace("'",'').replace('"','')));
             result.append(tmp);
         return result;
     

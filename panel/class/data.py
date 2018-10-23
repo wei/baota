@@ -147,7 +147,7 @@ class data:
             if get.table == 'backup':
                 where += " and type='" + get.type+"'";
             
-            if get.table == 'sites':
+            if get.table == 'sites' and get.search:
                 pid = SQL.table('domain').where('name=?',(get.search,)).getField('pid');
                 if pid: where = "id=" + str(pid);
         

@@ -262,7 +262,7 @@ var bt =
 			title: lan.bt.dir,
 			closeBtn: 2,
 			shift: 5,
-			content: "<div class='changepath'><div class='path-top'><button type='button' id='btn_back' class='btn btn-default btn-sm'><span class='glyphicon glyphicon-share-alt'></span> "+lan.public.return+"</button><div class='place' id='PathPlace'>"+lan.bt.path+"：<span></span></div></div><div class='path-con'><div class='path-con-left'><dl><dt id='changecomlist' onclick='BackMyComputer()'>"+lan.bt.comp+"</dt></dl></div><div class='path-con-right'><ul class='default' id='computerDefautl'></ul><div class='file-list divtable'><table class='table table-hover' style='border:0 none'><thead><tr class='file-list-head'><th width='40%'>"+lan.bt.filename+"</th><th width='20%'>"+lan.bt.etime+"</th><th width='10%'>"+lan.bt.access+"</th><th width='10%'>"+lan.bt.own+"</th><th width='10%'></th></tr></thead><tbody id='tbody' class='list-list'></tbody></table></div></div></div></div><div class='getfile-btn' style='margin-top:0'><button type='button' class='btn btn-default btn-sm pull-left' onclick='CreateFolder()'>"+lan.bt.adddir+"</button><button type='button' class='btn btn-danger btn-sm mr5' onclick=\"layer.close(getCookie('ChangePath'))\">"+lan.public.close+"</button> <button type='button' id='bt_select' class='btn btn-success btn-sm' >"+lan.bt.path_ok+"</button></div>"
+			content: "<div class='changepath'><div class='path-top'><button type='button' id='btn_back' class='btn btn-default btn-sm'><span class='glyphicon glyphicon-share-alt'></span> "+lan.public.return+"</button><div class='place' id='PathPlace'>"+lan.bt.path+"：<span></span></div></div><div class='path-con'><div class='path-con-left'><dl><dt id='changecomlist' >"+lan.bt.comp+"</dt></dl></div><div class='path-con-right'><ul class='default' id='computerDefautl'></ul><div class='file-list divtable'><table class='table table-hover' style='border:0 none'><thead><tr class='file-list-head'><th width='40%'>"+lan.bt.filename+"</th><th width='20%'>"+lan.bt.etime+"</th><th width='10%'>"+lan.bt.access+"</th><th width='10%'>"+lan.bt.own+"</th><th width='10%'></th></tr></thead><tbody id='tbody' class='list-list'></tbody></table></div></div></div></div><div class='getfile-btn' style='margin-top:0'><button type='button' class='btn btn-default btn-sm pull-left' onclick='CreateFolder()'>"+lan.bt.adddir+"</button><button type='button' class='btn btn-danger btn-sm mr5' onclick=\"layer.close(getCookie('ChangePath'))\">"+lan.public.close+"</button> <button type='button' id='bt_select' class='btn btn-success btn-sm' >"+lan.bt.path_ok+"</button></div>"
 		});
 		setTimeout(function(){			
 			$('#btn_back').click(function(){
@@ -282,11 +282,11 @@ var bt =
 			})
 		},100)
 		get_file_list($("#" + id).val())
-
+     
 		function get_file_list(path)
-		{
-			bt.files.get_files(path,'',function(rdata){
-				var d = '';
+        {
+            bt.send('GetDir', 'files/GetDir', { path: path, disk: true }, function (rdata) {
+                var d = '',a='';                
 				if(rdata.DISK != undefined) {
 					for(var f = 0; f < rdata.DISK.length; f++) {
 						a += "<dd class=\"bt_open_dir\" path =\""+rdata.DISK[f].path+"\"><span class='glyphicon glyphicon-hdd'></span>&nbsp;" + rdata.DISK[f].path + "</dd>"
@@ -335,7 +335,34 @@ var bt =
 					get_file_list($(this).attr('path'));
 				})
 			})
-		}
+        }
+
+
+        function ActiveDisk() {
+            var a = $("#PathPlace").find("span").text().substring(0, 1);
+            switch (a) {
+                case "C":
+                    $(".path-con-left dd:nth-of-type(1)").css("background", "#eee").siblings().removeAttr("style");
+                    break;
+                case "D":
+                    $(".path-con-left dd:nth-of-type(2)").css("background", "#eee").siblings().removeAttr("style");
+                    break;
+                case "E":
+                    $(".path-con-left dd:nth-of-type(3)").css("background", "#eee").siblings().removeAttr("style");
+                    break;
+                case "F":
+                    $(".path-con-left dd:nth-of-type(4)").css("background", "#eee").siblings().removeAttr("style");
+                    break;
+                case "G":
+                    $(".path-con-left dd:nth-of-type(5)").css("background", "#eee").siblings().removeAttr("style");
+                    break;
+                case "H":
+                    $(".path-con-left dd:nth-of-type(6)").css("background", "#eee").siblings().removeAttr("style");
+                    break;
+                default:
+                    $(".path-con-left dd").removeAttr("style")
+            }
+        }
 	},
 	show_confirm : function(title, msg, fun, error) 
 	{
@@ -940,7 +967,7 @@ bt.pub = {
 	},
 	set_server_status : function(serverName,type)
 	{
-		if(bt.contains(serverName,'php')) {
+		if(bt.contains(serverName,'php-')) {
 			serverName = "php-fpm-" + serverName.replace('php-','').replace('.','');
 		}		
 		if(serverName=='pureftpd') serverName = 'pure-ftpd';
@@ -2780,10 +2807,13 @@ bt.system = {
 			if(callback) callback(rdata);
 		})
 	},
-	check_update:function(callback){
-		var load = bt.load(lan.index.update_get);
-		bt.send('UpdatePanel','ajax/UpdatePanel',{check:true},function(rdata){
-			load.close();
+    check_update: function (callback, check) {
+        var data = {};
+        if (check == undefined) data = { check: true };
+        if (check === false) data = {}
+        if (check) var load = bt.load(lan.index.update_get);
+        bt.send('UpdatePanel', 'ajax/UpdatePanel', data ,function(rdata){
+            if (check) load.close();
 			if(callback) callback(rdata);
 		})
 	},
@@ -3570,13 +3600,12 @@ bt.soft = {
 			if(callback) callback(rdata);
 		})
 	},
-	to_index:function(name,callback){
-		var status = $("#index_"+name).prop("checked")?"0":"1";
-		if(name == "php"){
-			var verinfo = version.replace(/\./,"");
-			status = $("#index_"+name+verinfo).prop("checked")?"0":"1";
-		}
-		
+    to_index: function (name, callback) {       
+        var status = $("#index_" + name).prop("checked") ? "0" : "1";
+        if (name.indexOf('php-')>=0) {
+            var verinfo = name.replace(/\./,"");
+            status = $("#index_" + verinfo).prop("checked")?"0":"1";
+        }       
 		if(status==1){
 			bt.send('add_index','plugin/add_index',{sName:name},function(rdata){
 				rdata.time = 1000;
@@ -4863,9 +4892,10 @@ bt.soft = {
 					menu = bt.soft.get_config_menu(name,rdata.ext);	
 				}
 				else{				
-					menu = bt.soft.get_config_menu(name,rdata.version,rdata.versions);	
-				}				
-			}
+                    menu = bt.soft.get_config_menu(name, rdata.version, rdata.versions);	                   
+                }              
+            }
+            menu = '<p class="bgw bt_server" onclick="bt.soft.get_tab_contents(\'service\',\'' + name + '\',\'' + rdata.status + '\')">' + lan.soft.service + '</p>' + menu
 			layer.open({
 				type: 1,
 				area: '640px',
@@ -4873,8 +4903,7 @@ bt.soft = {
 				closeBtn: 2,
 				shift: 0,
 				content: '<div class="bt-w-main" style="width:640px;">\
-					<div class="bt-w-menu">\
-						<p class="bgw bt_server" onclick="bt.soft.get_tab_contents(\'service\',\''+name+'\',\''+rdata.status+'\')">'+lan.soft.service+'</p>'
+					<div class="bt-w-menu">'
 						+menu+
 					'</div>\
 					<div id="webEdit-con" class="bt-w-con pd15" style="height:555px;overflow:auto">\
@@ -4884,21 +4913,26 @@ bt.soft = {
 			});
 			if(name== "php-5.2"){
 				$(".phphide").hide();
-			}
-				
+            }
+            if (name == 'phpmyadmin') {
+                $(".bt_server").remove();
+            }
+           
 			bt.soft.get_tab_contents('service',name,rdata.status);
 			$(".bt-w-menu p").click(function(){						
 				$(this).addClass("bgw").siblings().removeClass("bgw");
             });	
             _this.get_soft_find('apache', function (rdata) {
-                if (rdata.setup) {
+                if (rdata.setup) {                  
                     if (rdata.version.indexOf('2.2') >= 0) {
                         $(".apache24").hide();
                         $(".bt_server").remove();
                         $(".bt-w-menu p:eq(0)").trigger("click");
                     }
                 }
-            })            
+            })  
+
+            $(".bt-w-menu p:eq(0)").trigger("click");	
 		})
 	},
 	get_config_path:function(name){

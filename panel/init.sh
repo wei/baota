@@ -75,7 +75,11 @@ panel_stop()
 	for p in ${arr[@]}
     do
             kill -9 $p
-    done	
+    done
+    
+    if [ -f $pidfile ];then
+    	rm -f $pidfile
+    fi
     echo -e "\033[32mdone\033[0m"
 }
 

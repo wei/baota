@@ -7,6 +7,8 @@
 # | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 import sys,json,os,time,logging
+if sys.version_info[0] != 2:
+        from imp import reload
 sys.path.append('class/')
 import public
 from flask import Flask
@@ -120,7 +122,7 @@ def login():
                 result = make_response(result)
                 request_token = public.md5(app.secret_key + str(time.time()))
                 session['request_token'] = request_token
-                result.set_cookie('request_token',request_token,httponly=True)
+                result.set_cookie('request_token',request_token,httponly=True,max_age=86400*30)
         return result
 
     if request.method == method_get[0]:
@@ -200,7 +202,7 @@ def database(pdata = None):
         if pmd: 
             session['phpmyadminDir'] = 'http://' + public.GetHost() + ':'+ pmd[1] + '/' + pmd[0];
         data = {}
-        data['isSetup'] = os.path.exists(public.GetConfigValue('setup_path') + '/mysql/bin/mysqld');
+        data['isSetup'] = os.path.exists(public.GetConfigValue('setup_path') + '/mysql/bin');
         data['mysql_root'] = public.M('config').where('id=?',(1,)).getField('mysql_root');
         data['lan'] = public.GetLan('database')
         return render_template('database.html',data=data)
@@ -261,6 +263,20 @@ def firewall(pdata = None):
     firewallObject = firewalls.firewalls()
     defs = ('GetList','AddDropAddress','DelDropAddress','FirewallReload','SetFirewallStatus','AddAcceptPort','DelAcceptPort','SetSshStatus','SetPing','SetSshPort','GetSshInfo')
     return publicObject(firewallObject,defs,None,pdata);
+
+@app.route('/firewall_new',methods=method_all)
+def firewall_new(pdata = None):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    if request.method == method_get[0] and not pdata:
+        data = {}
+        data['lan'] = public.GetLan('firewall')
+        return render_template( 'firewall.html',data=data)
+    import firewall_new
+    firewallObject = firewall_new.firewalls()
+    defs = ('GetList','AddDropAddress','DelDropAddress','FirewallReload','SetFirewallStatus','AddAcceptPort','DelAcceptPort','SetSshStatus','SetPing','SetSshPort','GetSshInfo','AddSpecifiesIp','DelSpecifiesIp')
+    return publicObject(firewallObject,defs,None,pdata);
+
 
 @app.route('/files',methods=method_all)
 def files(pdata = None):
@@ -532,6 +548,7 @@ def download():
     if comReturn: return comReturn
     filename = request.args.get('filename')
     if not filename: return public.ReturnJson(False,"参数错误!"),json_header
+    if filename in ['alioss','qiniu','upyun','txcos']: return panel_cloud()
     if not os.path.exists(filename): return public.ReturnJson(False,"指定文件不存在!"),json_header
     mimetype = "application/octet-stream"
     extName = filename.split('.')[-1]
@@ -544,8 +561,6 @@ def panel_cloud():
     if comReturn: return comReturn
     get = get_input()
     if not os.path.exists('plugin/' + get.filename + '/' + get.filename+'_main.py'): return public.returnJson(False,'指定插件不存在!'),json_header
-    if sys.version_info[0] != 2:
-        from imp import reload
     sys.path.append('plugin/' + get.filename)
     plugin_main = __import__(get.filename+'_main')
     reload(plugin_main)
@@ -629,7 +644,11 @@ def websocket_test(data):
 def publicObject(toObject,defs,action=None,get = None):
     if 'request_token' in session and 'login' in session:
         request_token = request.cookies.get('request_token')
-        if session['request_token'] != request_token: return 'token error!'
+        if session['request_token'] != request_token:
+            if session['login'] != False:
+                session['login'] = False;
+                cache.set('dologin',True)
+                return redirect('/login')
 
     if not get: get = get_input()
     if action: get.action = action

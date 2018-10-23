@@ -129,11 +129,9 @@
 <script type="text/javascript" src="/static/js/jquery.dragsort-0.5.2.min.js"></script>
 <script type="text/javascript" src="/static/js/echarts.min.js"></script>
 <script type="text/javascript">
-    setTimeout(function () { 
-	    bt.pub.check_install(function(rdata){
-            if (rdata === false) bt.index.rec_install();
-        })
-    },1000)
+	bt.pub.check_install(function(rdata){
+        if (rdata === false) bt.index.rec_install();
+	})
     var interval_stop = false;
     var index = {
 		interval:{
@@ -313,8 +311,8 @@
                     if (rdata.status !== false) {
                         $('#toUpdate a').html('更新<i style="display: inline-block; color: red; font-size: 40px;position: absolute;top: -35px; font-style: normal; right: -8px;">.</i>');
                         $('#toUpdate a').css("position","relative");
-					}
-				})
+                    }
+                }, false)
 			},300)
 		},
 		get_data_info:function(callback){

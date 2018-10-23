@@ -817,9 +817,9 @@
                                                 {
                                                     title: ' ', name: 'btsslApply', text: '申请', type: 'button', callback: function (sdata) {
                                                         if (sdata.domains.indexOf('www.') != -1) {
-                                                            var rootDomain = ym.split(/www\./)[1];
+                                                            var rootDomain = sdata.split(/www\./)[1];
                                                             if (!$.inArray(domains, rootDomain)) {
-                                                                layer.msg('您为域名[' + ym + ']申请证书，但程序检测到您没有将其根域名[' + rootDomain + ']绑定并解析到站点，这会导致证书签发失败!', { icon: 2, time: 5000 });
+                                                                layer.msg('您为域名[' + sdata + ']申请证书，但程序检测到您没有将其根域名[' + rootDomain + ']绑定并解析到站点，这会导致证书签发失败!', { icon: 2, time: 5000 });
                                                                 return;
                                                             }
                                                         }
@@ -1003,7 +1003,7 @@
 																	if(!_val_obj.data[i].value) is_hide = false;
 																}
 																_form.btns.push({title:'保存',css:'btn-success',name:'btn_submit_save',callback:function(ldata,load){																	
-																	bt.site.set_dns_api(JSON.stringify(ldata),function(ret){																	
+                                                                    bt.site.set_dns_api({ pdata: JSON.stringify(ldata) },function(ret){																	
 																		if(ret.status){
 																			load.close();
 																			robj.find('input[type="radio"]:eq(0)').trigger('click')			

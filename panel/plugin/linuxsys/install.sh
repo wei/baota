@@ -14,10 +14,10 @@ Install_linuxsys()
 {
 	mkdir -p /www/server/panel/plugin/linuxsys
 	echo '正在安装脚本文件...' > $install_tmp
-	wget -O /www/server/panel/plugin/linuxsys/linuxsys_main.py $download_Url/install/lib/plugin/linuxsys/linuxsys_main.py -T 5
-	wget -O /www/server/panel/plugin/linuxsys/index.html $download_Url/install/lib/plugin/linuxsys/index.html -T 5
-	wget -O /www/server/panel/plugin/linuxsys/info.json $download_Url/install/lib/plugin/linuxsys/info.json -T 5
-	wget -O /www/server/panel/plugin/linuxsys/icon.png $download_Url/install/lib/plugin/linuxsys/icon.png -T 5
+	wget -O /www/server/panel/plugin/linuxsys/linuxsys_main.py $download_Url/install/plugin/linuxsys/linuxsys_main.py -T 5
+	wget -O /www/server/panel/plugin/linuxsys/index.html $download_Url/install/plugin/linuxsys/index.html -T 5
+	wget -O /www/server/panel/plugin/linuxsys/info.json $download_Url/install/plugin/linuxsys/info.json -T 5
+	wget -O /www/server/panel/plugin/linuxsys/icon.png $download_Url/install/plugin/linuxsys/icon.png -T 5
 	echo '安装完成' > $install_tmp
 }
 

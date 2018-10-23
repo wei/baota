@@ -320,6 +320,7 @@ class crontab:
                 log='.log'
                 
             wheres={
+                    'path': head + "python " + public.GetConfigValue('setup_path')+"/panel/script/backup.py path "+param['sName']+" "+str(param['save']),
                     'site'  :   head + "python " + public.GetConfigValue('setup_path')+"/panel/script/backup.py site "+param['sName']+" "+str(param['save']),
                     'database': head + "python " + public.GetConfigValue('setup_path')+"/panel/script/backup.py database "+param['sName']+" "+str(param['save']),
                     'logs'  :   head + "python " + public.GetConfigValue('setup_path')+"/panel/script/logsBackup "+param['sName']+log+" "+str(param['save']),
@@ -329,6 +330,7 @@ class crontab:
                 cfile = public.GetConfigValue('setup_path') + "/panel/plugin/" + param['backupTo'] + "/" + param['backupTo'] + "_main.py";
                 if not os.path.exists(cfile): cfile = public.GetConfigValue('setup_path') + "/panel/script/backup_" + param['backupTo'] + ".py";
                 wheres={
+                    'path': head + "python " + cfile + " path " + param['sName'] + " " + str(param['save']),
                     'site'  :   head + "python " + cfile + " site " + param['sName'] + " " + str(param['save']),
                     'database': head + "python " + cfile + " database " + param['sName'] + " " + str(param['save']),
                     'logs'  :   head + "python " + public.GetConfigValue('setup_path')+"/panel/script/logsBackup "+param['sName']+log+" "+str(param['save']),
