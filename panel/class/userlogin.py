@@ -28,7 +28,7 @@ class userlogin:
         if 'code' in session:
             if session['code']:
                 if not public.checkCode(post.code):
-                    public.WriteLog('TYPE_LOGIN','LOGIN_ERR_CODE',('****',post.code,public.GetClientIp()));
+                    public.WriteLog('TYPE_LOGIN','LOGIN_ERR_CODE',('****','****',public.GetClientIp()));
                     return public.returnJson(False,'CODE_ERR'),json_header
         try:
             if userInfo['username'] != post.username or userInfo['password'] != password:

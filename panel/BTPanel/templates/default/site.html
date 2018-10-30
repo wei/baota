@@ -1203,11 +1203,15 @@
 							bt.site.get_cer_list(function(rdata){
 								bt.render({
 									table:'#cer_list_table',
-									columns:[
-										{field:'subject', title:'域名'},
-										{field:'notAfter',width:'70px', title:'到期时间'},
-										{field:'issuer',width:'100px', title:'品牌'},							
-										{field:'opt',width:'100px',align:'right', title:'操作',templet:function(item){
+                                    columns: [
+                                        {
+                                            field: 'subject', title: '域名', templet: function (item) {                                                
+                                                return item.dns.join('<br>')
+                                            }
+                                        },
+										{field:'notAfter',width:'83px', title:'到期时间'},
+										{field:'issuer',width:'150px', title:'品牌'},							
+										{field:'opt',width:'75px',align:'right', title:'操作',templet:function(item){
 											var opt = '<a class="btlink" onclick="bt.site.set_cert_ssl(\''+item.subject+'\',\''+web.name+'\',function(rdata){if(rdata.status){site.ssl.reload(2);}})" href="javascript:;">部署</a> | ';
 											opt += '<a class="btlink" onclick="bt.site.remove_cert_ssl(\''+item.subject+'\',function(rdata){if(rdata.status){site.ssl.reload(4);}})" href="javascript:;">删除</a>'
 											return opt;

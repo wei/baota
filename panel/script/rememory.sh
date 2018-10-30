@@ -39,7 +39,7 @@ if [ -f "/etc/init.d/php-fpm-71" ];then
 fi
 
 if [ -f "/etc/init.d/php-fpm-72" ];then
-	/etc/init.d/php-fpm-71 reload
+	/etc/init.d/php-fpm-72 reload
 fi
 
 if [ -f "/etc/init.d/mysqld" ];then

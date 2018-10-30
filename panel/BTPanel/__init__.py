@@ -92,7 +92,7 @@ def close():
     return render_template('close.html',data=data)
 
 @app.route('/login',methods=method_all)
-@app.route(os.path.join(admin_path, ''),methods=method_all)
+@app.route(os.path.join(admin_path,''),methods=method_all)
 def login():
     global admin_check_auth,admin_path
     is_auth_path = False
@@ -107,7 +107,7 @@ def login():
             return redirect(login_path)
     
     if is_auth_path:
-        if not admin_path.replace('/','') in request.path.split('/'): 
+        if not admin_path.replace('/','') in request.path.split('/') and os.path.join(admin_path,'') != request.path: 
             data = {}
             data['lan'] = public.getLan('close');
             return render_template('autherr.html',data=data)
@@ -681,7 +681,9 @@ def get_pd():
     else:
         tmp4 = cache.get(public.to_string([112, 95, 116, 111, 107, 101, 110]))
         if tmp4:
-            tmp = public.readFile(public.to_string([47, 116, 109, 112, 47]) + tmp4)
+            tmp_f = public.to_string([47, 116, 109, 112, 47]) + tmp4
+            if not os.path.exists(tmp_f): public.writeFile(tmp_f,'-1')
+            tmp = public.readFile(tmp_f)
             if tmp: tmp = int(tmp)
     if tmp == -1:
         tmp3 = public.to_string([20813,36153,29256])

@@ -635,7 +635,7 @@ class system:
     
     def RestartServer(self,get):
         if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK');
-        public.ExecShell("sync && /etc/init.d/bt stop && init 6 &");
+        public.ExecShell("sync && init 6 &");
         return public.returnMsg(True,'SYS_REBOOT');
     
     #释放内存

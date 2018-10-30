@@ -700,7 +700,6 @@ class panelSite:
         result = self.SetSSLConf(get);
         if not result['status']: return result;
         isError = public.checkWebConfig();
-        #return isError
     
         if(type(isError) == str):
             public.ExecShell('\\cp -a /tmp/backup1.conf ' + keypath);

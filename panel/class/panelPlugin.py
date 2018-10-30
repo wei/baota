@@ -58,8 +58,10 @@ class panelPlugin:
         test_file = '/etc/init.d/bt_10000100.pl'
         public.writeFile(test_file,'True')
         if os.path.exists(test_file): 
+            if public.readFile(test_file) == 'True':
+                os.remove(test_file)
+                return True
             os.remove(test_file)
-            return True
         return False
 
     #检查互斥
@@ -108,7 +110,7 @@ class panelPlugin:
     def check_os_limit(self,osLimit):
         if osLimit == 0: return True
         if osLimit == 1:
-            centos = os.path.exists('/bin/yum')
+            centos = os.path.exists('/usr/bin/yum')
             return centos
         elif osLimit == 2:
             debian = os.path.exists('/usr/bin/apt-get')
@@ -118,7 +120,7 @@ class panelPlugin:
                 
     #安装插件
     def install_plugin(self,get):
-        if not self.check_sys_write(): return public.returnMsg(False,'<a style="color:red;">错误：检测到系统关键目录不可写!</a><br>1、如果安装了云锁，请关闭[系统加固]功能<br>2、如果安装了安全狗，请关闭[系统防护]功能<br>3、如果使用了其它安全软件，请先卸载<br>')
+        if not self.check_sys_write(): return public.returnMsg(False,'<a style="color:red;">错误：检测到系统关键目录不可写!</a><br>1、如果安装了[宝塔系统加固]，请先关闭<br><br>2、如果安装了云锁，请关闭[系统加固]功能<br>3、如果安装了安全狗，请关闭[系统防护]功能<br>4、如果使用了其它安全软件，请先卸载<br>')
         pluginInfo = self.get_soft_find(get.sName);
         if not pluginInfo: return public.returnMsg(False,'指定插件不存在!')
         if not self.check_mutex(pluginInfo['mutex']): return public.returnMsg(False,'请先卸载[%s]' % pluginInfo['mutex'] )
