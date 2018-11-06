@@ -52,12 +52,16 @@ echo "The root password set ${pwd}  successuful"''';
     print(result);
 
 #设置面板密码
-def set_panel_pwd(password):
+def set_panel_pwd(password,ncli = False):
     import db
     sql = db.Sql()
     result = sql.table('users').where('id=?',(1,)).setField('password',public.md5(password))
     username = sql.table('users').where('id=?',(1,)).getField('username')
-    print(username);
+    if ncli:
+        print("|-用户名: " + username);
+        print("|-新密码: " + password);
+    else:
+        print(username)
 
 #设置数据库目录
 def set_mysql_dir(path):
@@ -320,9 +324,21 @@ def ToSize(size):
     return '0b';
 
 #随机面板用户名
-def set_panel_username():
+def set_panel_username(username = None):
     import db
     sql = db.Sql()
+    if username:
+        if len(username) < 5:
+            print("|-错误，用户名长度不能少于5位")
+            return;
+        if username in ['admin','root']:
+            print("|-错误，不能使用过于简单的用户名")
+            return;
+
+        sql.table('users').where('id=?',(1,)).setField('username',username)
+        print("|-新用户名: %s" % username)
+        return;
+    
     username = sql.table('users').where('id=?',(1,)).getField('username')
     if username == 'admin': 
         username = public.GetRandomString(8).lower()
@@ -375,9 +391,132 @@ def update_to6():
     print("\033[32m所有插件已成功升级到6.0兼容!\033[0m")
     print("====================================================")
 
+#命令行菜单
+def bt_cli():
+    raw_tip = "==============================================="
+    print("===============宝塔面板命令行==================")
+    print("(01) 重启面板服务           (08) 改面板端口")
+    print("(02) 停止面板服务           (09) 清除面板缓存")
+    print("(03) 启动面板服务           (10) 清除登录限制")
+    print("(04) 重载面板服务           (11) 取消入口限制")
+    print("(05) 修改面板密码           (12) 取消域名绑定限制")
+    print("(06) 修改面板用户名         (13) 取消IP访问限制")
+    print("(07) 强制修改MySQL密码      (14) 查看面板默认信息")
+    print("(00) 取消                   (15) 清理系统垃圾")
+    print(raw_tip)
+    try:
+        u_input = input("请输入命令编号：")
+        if sys.version_info[0] == 3: u_input = int(u_input)
+    except: u_input = 0
+    nums = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+    if not u_input in nums:
+        print(raw_tip)
+        print("已取消!")
+        exit()
+
+    print(raw_tip)
+    print("正在执行(%s)..." % u_input)
+    print(raw_tip)
+
+    if u_input == 1:
+        os.system("/etc/init.d/bt restart")
+    elif u_input == 2:
+        os.system("/etc/init.d/bt stop")
+    elif u_input == 3:
+        os.system("/etc/init.d/bt start")
+    elif u_input == 4:
+        os.system("/etc/init.d/bt reload")
+    elif u_input == 5:
+        if sys.version_info[0] == 2:
+            input_pwd = raw_input("请输入新的面板密码：")
+        else:
+            input_pwd = input("请输入新的面板密码：")
+        set_panel_pwd(input_pwd.strip(),True)
+    elif u_input == 6:
+        if sys.version_info[0] == 2:
+            input_user = raw_input("请输入新的面板用户名(>5位)：")
+        else:
+            input_user = input("请输入新的面板用户名(>5位)：")
+        set_panel_username(input_user.strip())
+    elif u_input == 7:
+        if sys.version_info[0] == 2:
+            input_mysql = raw_input("请输入新的MySQL密码：")
+        else:
+            input_mysql = input("请输入新的MySQL密码：")
+        if not input_mysql:
+            print("|-错误，不能设置空密码")
+            return;
+
+        if len(input_mysql) < 8:
+            print("|-错误，长度不能少于8位")
+            return;
+
+        import re
+        rep = "^[\w@\._]+$"
+        if not re.match(rep, input_mysql):
+            print("|-错误，密码中不能包含特殊符号")
+            return;
+        
+        print(input_mysql)
+        set_mysql_root(input_mysql.strip())
+    elif u_input == 8:
+        input_port = input("请输入新的面板端口：")
+        if sys.version_info[0] == 3: input_port = int(input_port)
+        if not input_port:
+            print("|-错误，未输入任何有效端口")
+            return;
+        if input_port in [80,443,21,20,22]:
+            print("|-错误，请不要使用常用端口作为面板端口")
+            return;
+        old_port = int(public.readFile('data/port.pl'))
+        if old_port == input_port:
+            print("|-错误，与面板当前端口一致，无需修改")
+            return;
+
+        is_exists = public.ExecShell("lsof -i:%s" % input_port)
+        if len(is_exists[0]) > 5:
+            print("|-错误，指定端口已被其它应用占用")
+            return;
+
+        public.writeFile('data/port.pl',str(input_port))
+        if os.path.exists("/usr/bin/firewall-cmd"):
+            os.system("firewall-cmd --permanent --zone=public --add-port=%s/tcp" % input_port)
+            os.system("firewall-cmd --reload")
+        elif os.path.exists("/etc/sysconfig/iptables"):
+            os.system("iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport %s -j ACCEPT" % input_port)
+            os.system("service iptables save")
+        else:
+            os.system("ufw allow %s" % input_port)
+            os.system("ufw reload")
+        print("|-已将面板端口修改为：%s" % input_port)
+        print("|-若您的服务器提供商是[阿里云][腾讯云][华为云]或其它开启了[安全组]的服务器,请在安全组放行[%s]端口才能访问面板" % input_port)
+    elif u_input == 9:
+        sess_file = '/dev/shm/session.db'
+        if os.path.exists(sess_file): os.remove(sess_file)
+        os.system("/etc/init.d/bt reload")
+    elif u_input == 10:
+        os.system("/etc/init.d/bt reload")
+    elif u_input == 11:
+        auth_file = 'data/admin_path.pl'
+        if os.path.exists(auth_file): os.remove(auth_file)
+        os.system("/etc/init.d/bt reload")
+        print("|-已取消入口限制")
+    elif u_input == 12:
+        auth_file = 'data/domain.conf'
+        if os.path.exists(auth_file): os.remove(auth_file)
+        os.system("/etc/init.d/bt reload")
+        print("|-已取消域名访问限制")
+    elif u_input == 13:
+        auth_file = 'data/limitip.conf'
+        if os.path.exists(auth_file): os.remove(auth_file)
+        os.system("/etc/init.d/bt reload")
+        print("|-已取消IP访问限制")
+    elif u_input == 14:
+        os.system("/etc/init.d/bt default")
+    elif u_input == 15:
+        ClearSystem()
 
 
-    
 
 if __name__ == "__main__":
     type = sys.argv[1];
@@ -405,5 +544,7 @@ if __name__ == "__main__":
         CloseLogs();
     elif type == 'update_to6':
         update_to6()
+    elif type == "cli":
+        bt_cli()
     else:
         print('ERROR: Parameter error')

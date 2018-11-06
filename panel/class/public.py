@@ -115,7 +115,7 @@ def check_home():
         result = urllib.request.urlopen(req).read()
         result = result.decode('utf-8')
     if result != 'True': return True
-
+    ExecShell("echo '' >> /etc/hosts")
     ExecShell("echo '125.88.182.170 www.bt.cn' >> /etc/hosts")
     return True
 

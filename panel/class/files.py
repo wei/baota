@@ -64,6 +64,7 @@ class files:
         if not os.path.exists(get.path): os.makedirs(get.path)
         f = request.files['zunfile']
         filename = os.path.join(get.path, f.filename)
+        if sys.version_info[0] == 2: filename = filename.encode('utf-8');
         s_path = get.path
         if os.path.exists(filename):s_path = filename
         p_stat = os.stat(s_path)

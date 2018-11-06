@@ -28,7 +28,7 @@ class panelSetup:
             ua = ua.lower();
             if ua.find('spider') != -1 or ua.find('bot') != -1: return redirect('https://www.baidu.com');
         
-        g.version = '6.3.0'
+        g.version = '6.4.0'
         g.title =  public.GetConfigValue('title')
         g.uri = request.path
         session['version'] = g.version;
@@ -72,17 +72,6 @@ class panelAdmin(panelSetup):
             if iplist:
                 iplist = iplist.strip();
                 if not request.remote_addr in iplist.split(','): return redirect('/login')
-
-        #c_token = 'client_ua'
-        #user_agent_token = public.md5(request.headers.get('User-Agent'))
-        #if c_token in session:
-        #    if session[c_token] != user_agent_token: 
-        #        session['login'] = False
-        #        del(session[c_token])
-        #        cache.set('dologin',True)
-        #        return redirect('/login');
-        #else:
-        #    session[c_token] = user_agent_token
     
     #设置基础Session
     def setSession(self):

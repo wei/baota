@@ -111,7 +111,7 @@ panel_reload()
 		for p in ${arr[@]}
         do
                 kill -9 $p
-        done	
+        done
         gunicorn -c runconfig.py runserver:app
         isStart=`ps aux|grep 'gunicorn -c runconfig.py runserver:app'|grep -v grep|awk '{print $2}'`
         if [ "$isStart" == '' ];then
@@ -173,8 +173,12 @@ case "$1" in
         'default')
                 port=$(cat $panel_path/data/port.pl)
                 password=$(cat $panel_path/default.pl)
-                address=$(cat $panel_path/data/domain.conf)
-                auth_path=$(cat $panel_path/data/admin_path.pl)
+                if [ -f $panel_path/data/domain.conf ];then
+                	address=$(cat $panel_path/data/domain.conf)
+                fi
+                if [ -f $panel_path/data/admin_path.pl ];then
+                	auth_path=$(cat $panel_path/data/admin_path.pl)
+                fi
                 if [ "$address" = "" ];then
                 	address=$(curl -sS --connect-timeout 10 -m 60 https://www.bt.cn/Api/getIpAddress)
                 fi
@@ -190,6 +194,6 @@ case "$1" in
                 echo -e "=================================================================="
                 ;;
         *)
-                echo "Usage: /etc/init.d/bt {start|stop|restart|reload|logs|default}"
+                python $panel_path/tools.py cli $2
         ;;
 esac
