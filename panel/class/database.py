@@ -659,4 +659,3 @@ echo "The root password set ${pwd}  successuful"''';
         if not os.path.exists(path): return public.returnMsg(False,'日志文件不存在!');
         return public.returnMsg(True,public.GetNumLines(path,1000));
         
-        

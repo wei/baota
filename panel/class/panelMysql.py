@@ -17,8 +17,10 @@ class panelMysql:
     __DB_CONN = None
     __DB_CUR  = None
     __DB_ERR  = None
+    __DB_NET = None
     #连接MYSQL数据库
     def __Conn(self):
+        if self.__DB_NET: return True
         try:
             socket = '/tmp/mysql.sock';
             try:
@@ -49,6 +51,18 @@ class panelMysql:
         except MySQLdb.Error as e:
             self.__DB_ERR = e
             return False
+
+    #连接远程数据库
+    def connect_network(self,host,port,username,password):
+        self.__DB_NET = True
+        try:
+            self.__DB_CONN = MySQLdb.connect(host = host,user = username,passwd = password,port = port,charset="utf8",connect_timeout=10)
+            self.__DB_CUR  = self.__DB_CONN.cursor()
+        except MySQLdb.Error as e:
+            self.__DB_ERR = e
+            return False
+
+
           
     def execute(self,sql):
         #执行SQL语句返回受影响行

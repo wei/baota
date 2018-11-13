@@ -22,9 +22,14 @@
             <button onclick="site.add_site()" class="btn btn-success btn-sm btn-title" type="button">{{data['lan']['BTN1']}}</button>&nbsp;
             <button onclick="site.set_default_page()" class="btn btn-default btn-sm btn-title" type="button">{{data['lan']['BTN2']}}</button>
             <button onclick="site.set_default_site()" class="btn btn-default btn-sm btn-title" type="button">{{data['lan']['BTN3']}}</button>
+          	<button onclick="site.set_class_type()" class="btn btn-default btn-sm btn-title" type="button">{{data['lan']['BTN5']}}</button>
             <span id="allDelete">
                 <button batch="true" style="float: right;display: none;margin-left:10px;" class="btn btn-default btn-sm" onclick="site.batch_site('del');" >{{data['lan']['BTN4']}}</button>    
-            </span>
+			</span>
+			<div class="move_class">
+				<button batch="false" style="float: right;margin-left:10px;display: none;" class="btn btn-default btn-sm" onclick="site.batch_site('site_type')" >移动至</button>
+				<!-- <select class="bt-input-text mr5" name="defaultSite" style="width:100px"><option value="off">默认分类</option></select> -->
+			</div>
             <div class="divtable mtb10">
                 <div class="tablescroll">
                     <table id="webBody" class="table table-hover" style="min-width: 900px;border: 0 none;">
@@ -49,18 +54,16 @@
     bt.set_cookie('serverType', "{{session['webserver']}}");
     
     var site = {
-		get_list:function(page,search){
+		get_list:function(page,search,type){
 			if(page==undefined) page=1;			
-			bt.site.get_list(page,search,function(rdata){
+			bt.site.get_list(page,search,type,function(rdata){
 				$('.dataTables_paginate').html(rdata.page);
-				
 				bt.plugin.get_firewall_state(function(fdata){	
 					var data = rdata.data;
 					for(var x=0;x<data.length;x++){
 						data[x]['firewall'] = false;
 						data[x]['waf_setup'] = false;
 						if(fdata.status!==false){	
-						
 							data[x]['waf_setup'] = true;
 							for(var i=0;i<fdata.length;i++){
 								if(data[x].name==fdata[i].siteName) data[x]['firewall'] = fdata[i].open;
@@ -148,8 +151,30 @@
 				        });
 					})
 				})
-			})
-		},
+			});
+       
+        },
+        get_types: function () {
+            bt.site.get_type(function (rdata) {
+                var optionList = '';
+                for (var i = 0; i < rdata.length; i++) {
+                    optionList += '<option value="' + rdata[i].id + '">' + rdata[i].name + '</option>'
+                }
+                $('.dataTables_paginate').after('<div class="site_type"><span>站点分类:</span><select class="bt-input-text mr5"  style="width:100px"><option value="-1">全部分类</option>' + optionList + '</select></div>');
+                $('.site_type select').change(function () {
+                    var val = $(this).val();
+                    site.get_list(0, '', val);
+                    bt.set_cookie('site_type',val);
+                })
+
+                //var dval = bt.get_cookie('site_type');
+                //if (dval) {
+                //    $('.site_type select').val(dval);
+                //    site.get_list(0, '', dval);
+                //}
+
+            });
+        },
 		no_firewall:function(obj){
 			var typename = bt.get_cookie('serverType');
 			layer.confirm(typename+'防火墙暂未开通，<br>请到&quot;<a href="/soft" class="btlink">软件管理>付费插件>'+typename+'防火墙</a>&quot;<br>开通安装使用。',{title:typename+'防火墙未开通',icon:7,closeBtn:2,
@@ -320,8 +345,34 @@
 				$('input[type="checkbox"].check:checked').each(function(){
 					var _val = $(this).val();
 					if(!isNaN(_val)) arr.push($(this).parents('tr').data('item'));
-				})	
-					
+				})
+                if (type == 'site_type') {
+                    bt.site.get_type(function (tdata) {
+                        var types = [];
+                        for (var i = 0; i < tdata.length; i++) types.push({ title: tdata[i].name, value: tdata[i].id })			
+                        var form = {
+                            title: '设置站点分类',
+                            area: '530px',
+                            list: [{ title: lan.site.default_site, name: 'type_id', width: '300px', type: 'select', items: types }],
+                            btns: [
+                                bt.form.btn.close(),
+                                bt.form.btn.submit('提交', function (rdata, load) {
+                                    var ids = []
+                                    for (var x = 0; x < arr.length; x++) ids.push(arr[x].id);                                    
+                                    bt.site.set_site_type({ id: rdata.type_id, site_array: JSON.stringify(ids) }, function (rrdata) {
+                                        if (rrdata.status) {
+                                            load.close();
+                                            site.get_list();
+                                        } 
+                                        bt.msg(rrdata);
+                                    })                                    
+                                })
+                            ]
+                        }
+                        bt.render_form(form);
+                    })                
+                    return;
+                }
 				var thtml = "<div class='options'><label style=\"width:100%;\"><input type='checkbox' id='delpath' name='path'><span>"+lan.site.all_del_info+"</span></label></div>";
 				bt.show_confirm(lan.site.all_del_site,"<a style='color:red;'>"+lan.get('del_all_site',[arr.length])+"</a>",function(){								
 					if($("#delpath").is(":checked")) obj.path ='1';
@@ -350,8 +401,101 @@
 						obj.data.splice(0,1)
 						site.batch_site(type,obj,result);
 					})
-					break;
+                    break;
+          
 			}
+		},
+        set_class_type: function () {
+
+            bt.site.get_type(function (rdata) {
+                var data = {
+                    title:'',
+                    items: [
+                        { placeholder:'请填写分类名称', name: 'type_name', width: '50%', type: 'text' },
+                        {
+                            name: 'btn_submit', text: '添加', type: 'button', callback: function (sdata) {       
+                                bt.site.add_type(sdata.type_name, function (ldata) {                                   
+                                    if (ldata.status) {                                                                                                             
+                                        load_form.close();
+                                        site.set_class_type();
+                                    }
+                                    bt.msg(ldata);
+                                }) 
+                            }
+                        }
+                    ]
+                }
+                var _form_data = bt.render_form_line(data);
+                var load_form = bt.open({
+                    type: 1,
+                    area: '350px',
+                    title: '网站分类管理',
+                    closeBtn: 2,
+                    shift: 5,                    
+                    shadeClose: true,
+                    content: "<div class='bt-form edit_site_type'><div class='divtable mtb15' style='overflow:auto'>" + _form_data.html + "<table id='type_table' class='table table-hover' width='100%'></table></div></div>"
+                });               
+                setTimeout(function () {
+                    bt.render({
+                        table: '#type_table',
+                        columns: [
+                            { field: 'name', title: '名称' },
+                            { field: 'opt', width: '80px', title: '操作', templet: function (item) { return '<a class="btlink edit_type" href="javascript:;">编辑</a> | <a class="btlink del_type" href="javascript:;">删除</a>'; } }
+                        ],
+                        data: rdata
+                    })
+                    bt.render_clicks(_form_data.clicks);
+                    $('.del_type').click(function () {
+                        var _this = $(this);
+                        var item = _this.parents('tr').data('item');
+                        if (item.id == 0) {
+                            bt.msg({ icon: 2, msg: '默认分类不可删除/不可编辑!' });
+                            return;
+                        }
+                        bt.confirm({ msg: "是否确定删除分类？",title:'删除分类' }, function () {                            
+                            bt.site.del_type(item.id, function (ret) {
+                                if (ret.status) {
+                                    load_form.close();
+                                    site.set_class_type();
+                                    bt.set_cookie('site_type','-1');
+                                }
+                                bt.msg(ret);
+                            })
+                        })                       
+                    })                    
+                    $('.edit_type').click(function () {
+                        var item = $(this).parents('tr').data('item');
+                        if (item.id == 0) {
+                            bt.msg({ icon: 2, msg: '默认分类不可删除/不可编辑!' });
+                            return;
+                        }
+                        var data = {
+                            title: '修改分类管理【' + item.name + '】',
+                            area: '350px',
+                            list: [
+                                { title:'分类名称',width:'150px', name: 'name', value: item.name }
+                            ],
+                                btns: [
+                                    { title: '关闭', name: 'close' },
+                                    {
+                                        title: '提交', name: 'submit', css: 'btn-success', callback: function (rdata, load, callback) {
+                                            bt.site.edit_type({ id: item.id, name: rdata.name }, function (edata) {
+                                                if (edata.status) {
+                                                    load.close();
+                                                    load_form.close();
+                                                    site.set_class_type();
+                                                }
+                                                bt.msg(edata);
+                                            })
+                                        }
+                                    }
+                                ]
+                        }
+                        bt.render_form(data);                        
+                    })
+                }, 300)
+            })
+         
 		},
 		ssl:{
 			onekey_ssl:function(partnerOrderId,siteName){
@@ -1056,7 +1200,7 @@
 									e.stopPropagation();
 								})
                                 $("#ymlist li").click(function (){
-                                	console.log($(this).prop('tagName'))
+                                	
                                     var o = $(this).find("input");
 									if(o.prop("checked")){
 										o.prop("checked",false)
@@ -1507,14 +1651,15 @@
 		    },100)			
 		}
 	}
-    
-     {% if not data['isSetup'] %}
-            layer.msg('test',{time:0,icon:2});
-			layer.msg('{{data["lan"]["JS1"]}}<a href="/soft" style="color:#20a53a; float: right;">{{data["lan"]["JS2"]}}</a>',{icon:7,shade: [0.3, '#000'],time:0});
-			$(".layui-layer-shade").css("margin-left","180px");
+    site.get_types();
+
+    {% if not data['isSetup'] %}
+        layer.msg('test',{time:0,icon:2});
+		layer.msg('{{data["lan"]["JS1"]}}<a href="/soft" style="color:#20a53a; float: right;">{{data["lan"]["JS2"]}}</a>',{icon:7,shade: [0.3, '#000'],time:0});
+		$(".layui-layer-shade").css("margin-left","180px");
     {% else %}
-         site.get_list();	
-         site.plugin_firewall();
+            site.get_list();	
+            site.plugin_firewall();
     {% endif %}
 	
     

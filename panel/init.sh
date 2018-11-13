@@ -102,8 +102,7 @@ panel_status()
 
 panel_reload()
 {
-	pid=`cat $pidfile`
-    isStart=`ps aux|grep $pid|grep -v grep`
+	isStart=$(ps aux|grep 'gunicorn -c runconfig.py runserver:app'|grep -v grep|awk '{print $2}')
     
     if [ "$isStart" != '' ];then
     	echo -e "Reload Bt-Panel... \c";

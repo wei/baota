@@ -555,11 +555,18 @@ var bt =
 		layer.closeAll();
 	},
 	check_select:function(){
-		setTimeout(function(){
-			if($('input[type="checkbox"].check:checked').length>1){
-				$('button[batch="true"]').show();
+        setTimeout(function () {
+            var num = $('input[type="checkbox"].check:checked').length;
+            console.log(num);
+            if (num == 1) {
+                $('button[batch="true"]').hide();
+                $('button[batch="false"]').show();
+            }else if (num>1){
+                $('button[batch="true"]').show();
+                $('button[batch="false"]').show();
 			}else{
-				$('button[batch="true"]').hide();
+                $('button[batch="true"]').hide();
+                $('button[batch="false"]').hide();
 			}
 		},5)
 	},
@@ -781,7 +788,8 @@ var bt =
 					break;
 				case 'TEXTAREA':
 				case 'INPUT':
-                case 'BUTTON':                    
+                case 'BUTTON':      
+                    
                     if (btn.prop("tagName") == 'BUTTON' || btn.attr("type") == 'checkbox')
 					{
 						btn.click(function(){							
@@ -790,10 +798,12 @@ var bt =
 							var _callback =  $(this).data('callback');
 							var parent = $(this).parents('.bt-form');	
 							
-							if(_obj.callback){
+                            if (_obj.callback) {
+                            
 								var data = {};
 								parent.find('*').each(function(index,_this){
-									var _name = $(_this).attr('name');
+                                    var _name = $(_this).attr('name');
+                               
 									if(_name){
 										if($(_this).attr('type')=='checkbox' || $(_this).attr('type')=='radio'){
 											data[_name] = $(_this).prop('checked');
@@ -4871,13 +4881,13 @@ bt.soft = {
 					'<p id="phpext" onclick="bt.soft.get_tab_contents(\'set_php_config\',\''+ver+'\')" data-id="1">'+lan.soft.php_main5+'</p>',					
 					'<p data-id="1" onclick="bt.soft.get_tab_contents(\'config_edit\',\''+ver+'\')">'+lan.soft.config_edit+'</p>',					
 					'<p data-id="3" onclick="bt.soft.get_tab_contents(\'set_upload_limit\',\''+ver+'\')"  >'+lan.soft.php_main2+'</p>',
-					'<p data-id="4" onclick="bt.soft.get_tab_contents(\'set_timeout_limit\',\''+ver+'\')"  >'+lan.soft.php_main3+'</p>',
+					'<p data-id="4" class="phphide" onclick="bt.soft.get_tab_contents(\'set_timeout_limit\',\''+ver+'\')"  >'+lan.soft.php_main3+'</p>',
 					'<p data-id="4" onclick="bt.soft.get_tab_contents(\'config\',\''+ver+'\')"  >'+lan.soft.php_main4+'</p>',
 					'<p data-id="4" onclick="bt.soft.get_tab_contents(\'set_dis_fun\',\''+ver+'\')"  >'+lan.soft.php_main6+'</p>',
-					'<p class="apache24" data-id="4" onclick="bt.soft.get_tab_contents(\'set_fpm_config\',\''+ver+'\')"  >'+lan.soft.php_main7+'</p>',
-					'<p class="apache24" data-id="4" onclick="bt.soft.get_tab_contents(\'get_php_status\',\''+ver+'\')"  >'+lan.soft.php_main8+'</p>',
-					'<p class="apache24" data-id="4" onclick="bt.soft.get_tab_contents(\'get_fpm_logs\',\''+ver+'\')"  >FPM'+lan.soft.log+'</p>',
-					'<p class="apache24" data-id="4" onclick="bt.soft.get_tab_contents(\'get_slow_logs\',\''+ver+'\')"  >'+lan.public.slow_log+'</p>',
+					'<p class="apache24 phphide" data-id="4" onclick="bt.soft.get_tab_contents(\'set_fpm_config\',\''+ver+'\')"  >'+lan.soft.php_main7+'</p>',
+					'<p class="apache24 phphide" data-id="4" onclick="bt.soft.get_tab_contents(\'get_php_status\',\''+ver+'\')"  >'+lan.soft.php_main8+'</p>',
+					'<p class="apache24 phphide" data-id="4" onclick="bt.soft.get_tab_contents(\'get_fpm_logs\',\''+ver+'\')"  >FPM'+lan.soft.log+'</p>',
+					'<p class="apache24 phphide" data-id="4" onclick="bt.soft.get_tab_contents(\'get_slow_logs\',\''+ver+'\')"  >'+lan.public.slow_log+'</p>',
 					'<p data-id="2" onclick="bt.soft.get_tab_contents(\'get_phpinfo\',\''+ver+'\')"  >phpinfo</p>'
 				]
 				var  phpSort = [0,1,2,3,4,5,6,7,8,9,10,11];				
@@ -4894,7 +4904,7 @@ bt.soft = {
 				else{				
                     menu = bt.soft.get_config_menu(name, rdata.version, rdata.versions);	                   
                 }              
-            }
+            }            
             menu = '<p class="bgw bt_server" onclick="bt.soft.get_tab_contents(\'service\',\'' + name + '\',\'' + rdata.status + '\')">' + lan.soft.service + '</p>' + menu
 			layer.open({
 				type: 1,
@@ -4910,7 +4920,8 @@ bt.soft = {
 						<div class="soft-man-con"></div>\
 					</div>\
 				</div>'
-			});
+            });
+           
 			if(name== "php-5.2"){
 				$(".phphide").hide();
             }
@@ -5158,12 +5169,13 @@ bt.plugin = {
 }
 
 bt.site = {
-	get_list : function(page,search,callback)
+	get_list : function(page,search,type,callback)
 	{
 		if(page == undefined) page = 1
+		type = type == undefined ? '&type=-1' : ('&type='+ type);
 		search = search == undefined ? '':search;
 		var order = bt.get_cookie('order') ? '&order=' + bt.get_cookie('order'):'';		
-		var data = 'tojs=site.get_list&table=sites&limit=15&p='+page+'&search='+search + order; 
+		var data = 'tojs=site.get_list&table=sites&limit=15&p='+page+'&search='+search + order + type;
 		bt.pub.get_data(data,function(rdata){
 			if(callback) callback(rdata);
 		})
@@ -5173,6 +5185,31 @@ bt.site = {
 		bt.pub.get_data(data,function(rdata){
 			if(callback) callback(rdata);
 		},1)
+	},
+	get_type:function(callback){
+		bt.send('get_site_types','site/get_site_types','',function(rdata){
+			if(callback) callback(rdata);
+		});
+	},
+	add_type:function(name,callback){
+		bt.send('add_site_type','site/add_site_type',{name:name},function(rdata){
+			if(callback) callback(rdata);
+		});
+	},
+	edit_type:function(data,callback){
+        bt.send('modify_site_type_name','site/modify_site_type_name',{id:data.id,name:data.name},function(rdata){
+			if(callback) callback(rdata);
+		});
+	},
+	del_type:function(id,callback){
+        bt.send('remove_site_type','site/remove_site_type',{id:id},function(rdata){
+			if(callback) callback(rdata);
+		});
+	},
+	set_site_type:function(data,callback){
+        bt.send('set_site_type','site/set_site_type',{id:data.id,site_ids:data.site_array},function(rdata){
+			if(callback) callback(rdata);
+		});
 	},
 	get_site_domains:function(id,callback){
 		var loading =  bt.load();
@@ -5526,37 +5563,42 @@ bt.site = {
 		})		
 	},
 	add_site:function(callback)
-	{
+    {
 		var _form = $.extend(true, {}, bt.data.site.add);
-		bt.site.get_all_phpversion(function(rdata){
-			for(var i=0;i<_form.list.length;i++){
-				if(_form.list[i].name == 'version'){
-					var items = [];
-					for (var j= rdata.length-1;j>=0;j--) {
-						var o = rdata[j];
-						o.value = o.version;
-						o.title = o.name;
-						items.push(o);
-					}
-					_form.list[i].items = items;
-				}
-			}
-			var bs = bt.render_form(_form,function(rdata){	
-				if(callback) callback(rdata);
-			});			
-			$(".placeholder").click(function(){
-				$(this).hide();
-				$('.webname'+bs).focus();
+        bt.site.get_all_phpversion(function (rdata) {
+            bt.site.get_type(function (tdata) {                 
+			    for(var i=0;i<_form.list.length;i++){
+                    if (_form.list[i].name == 'version') {
+                        var items = [];
+                        for (var j = rdata.length - 1; j >= 0; j--) {
+                            var o = rdata[j];
+                            o.value = o.version;
+                            o.title = o.name;
+                            items.push(o);
+                        }
+                        _form.list[i].items = items;
+                    }
+                    else if (_form.list[i].name == 'type_id') {
+                        for (var x = 0; x < tdata.length; x++)  _form.list[i].items.push({ value: tdata[x].id, title: tdata[x].name });                                              
+                    }
+			    }
+			    var bs = bt.render_form(_form,function(rdata){	
+				    if(callback) callback(rdata);
+			    });			
+			    $(".placeholder").click(function(){
+				    $(this).hide();
+				    $('.webname'+bs).focus();
+                })
+                $('.path' + bs).val($("#defaultPath").text());
+			    $('.webname'+bs).focus(function() {
+			        $(".placeholder").hide();
+			    });			
+			    $('.webname'+bs).blur(function() {
+				    if($(this).val().length==0){
+					    $(".placeholder").show();
+				    }  
+                });
             })
-            $('.path' + bs).val($("#defaultPath").text());
-			$('.webname'+bs).focus(function() {
-			    $(".placeholder").hide();
-			});			
-			$('.webname'+bs).blur(function() {
-				if($(this).val().length==0){
-					$(".placeholder").show();
-				}  
-			});
 		})			
 	},	
 	get_all_phpversion:function(callback){
@@ -5900,7 +5942,12 @@ bt.data = {
 				}},
 				{title:'PHP版本',name:'version',type:'select',items:[
 					{value:'00',title:'纯静态'}
-				]}
+                ]
+                }, {
+                    title: '网站分类', name: 'type_id', type: 'select', items: [
+                        
+                    ]
+                }
 			],
 			btns:[
 				{title:'关闭',name:'close'},
@@ -5946,7 +5993,7 @@ bt.data = {
 					})
 				}}
 			]
-		}
+        }       
 	},
 	ftp:{
 		add:{

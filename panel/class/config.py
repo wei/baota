@@ -33,9 +33,12 @@ class config:
     def setPanel(self,get):
         if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK');
         if get.admin_path == '': get.admin_path = '/'
+
         if get.admin_path != '/':
-            if len(get.admin_path) < 8: return public.returnMsg(False,'入口地址长度不能小于8位!')
+            if len(get.admin_path) < 6: return public.returnMsg(False,'安全入口地址长度不能小于6位!')
             if get.admin_path in admin_path_checks: return public.returnMsg(False,'该入口已被面板占用,请使用其它入口!')
+        else:
+            if not get.domain.strip() and not get.limitip.strip(): return public.returnMsg(False,'警告，关闭安全入口等于直接暴露你的后台地址在外网，十分危险，至少开启以下一种安全方式才能关闭：<a style="color:red;"><br>1、绑定访问域名<br>2、绑定授权IP</a>')
 
         if get.domain:
             reg = "^([\w\-\*]{1,100}\.){1,4}(\w{1,10}|\w{1,10}\.\w{1,10})$";

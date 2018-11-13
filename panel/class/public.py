@@ -97,27 +97,30 @@ def httpPost(url,data,timeout=60):
     return HttpPost(url,data,timeout)
 
 def check_home():
-    if HttpGet('http://www.bt.cn/test.txt') ==  'True': return True
-    hosts = '/etc/hosts'
-    hosts_body  = ReadFile(hosts)
-    if hosts_body.find('www.bt.cn') != -1: return True
+    try:
+        if HttpGet('http://www.bt.cn/test.txt') ==  'True': return True
+        hosts = '/etc/hosts'
+        hosts_body  = ReadFile(hosts)
+        if hosts_body.find('www.bt.cn') != -1: return True
         
-    url = 'http://125.88.182.170/test.txt'
-    if sys.version_info[0] == 2:
-        import urllib2
-        req = urllib2.Request(url)
-        req.add_header('host','www.bt.cn')
-        result = urllib2.urlopen(req).read()
-    else:
-        import urllib.request
-        req = urllib.request.Request(url)
-        req.add_header('host','www.bt.cn')
-        result = urllib.request.urlopen(req).read()
-        result = result.decode('utf-8')
-    if result != 'True': return True
-    ExecShell("echo '' >> /etc/hosts")
-    ExecShell("echo '125.88.182.170 www.bt.cn' >> /etc/hosts")
-    return True
+        url = 'http://125.88.182.170/test.txt'
+        if sys.version_info[0] == 2:
+            import urllib2
+            req = urllib2.Request(url)
+            req.add_header('host','www.bt.cn')
+            result = urllib2.urlopen(req).read()
+        else:
+            import urllib.request
+            req = urllib.request.Request(url)
+            req.add_header('host','www.bt.cn')
+            result = urllib.request.urlopen(req).read()
+            result = result.decode('utf-8')
+        if result != 'True': return True
+        ExecShell("echo '' >> /etc/hosts")
+        ExecShell("echo '125.88.182.170 www.bt.cn' >> /etc/hosts")
+        return True
+    except:
+        return True
 
 
 

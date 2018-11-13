@@ -150,6 +150,14 @@ class data:
             if get.table == 'sites' and get.search:
                 pid = SQL.table('domain').where('name=?',(get.search,)).getField('pid');
                 if pid: where = "id=" + str(pid);
+
+        if get.table == 'sites' and hasattr(get,'type'):
+            if get.type != '-1':
+                type_where = "type_id=%s" % get.type
+                if where == '': 
+                    where = type_where
+                else:
+                    where += " and " + type_where
         
         field = self.GetField(get.table)
         #实例化数据库对象

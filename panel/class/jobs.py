@@ -27,6 +27,15 @@ def control_init():
 )'''
     sql.execute(csql,())
     public.M('sites').execute("alter TABLE sites add edate integer DEFAULT '0000-00-00'",());
+    public.M('sites').execute("alter TABLE sites add type_id integer DEFAULT 0",());
+
+    sql = db.Sql()
+    csql = '''CREATE TABLE IF NOT EXISTS `site_types` (
+`id` INTEGER PRIMARY KEY AUTOINCREMENT,
+`name` REAL,
+`ps` REAL
+)'''
+    sql.execute(csql,())
     filename = '/www/server/nginx/off'
     if os.path.exists(filename): os.remove(filename)
     try:

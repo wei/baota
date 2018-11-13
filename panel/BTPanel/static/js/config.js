@@ -103,16 +103,6 @@ function UnboundBt(){
 		})
 	})
 }
-$.get("/ssl?action=GetUserInfo",function(b){
-	if(b.status){
-		$("input[name='btusername']").val(b.data.username);
-		$("input[name='btusername']").next().text(lan.public.edit).attr("onclick","bindBTName(2,'c')").css({"margin-left":"-82px"});
-		$("input[name='btusername']").next().after('<span class="btn btn-xs btn-success" onclick="UnboundBt()" style="vertical-align: 0px;">'+lan.config.binding_un+'</span>');
-	}
-	else{
-		$("input[name='btusername']").next().text(lan.config.binding).attr("onclick","bindBTName(2,'b')").removeAttr("style");
-	}
-});
 
 //设置API
 function apiSetup(){
@@ -385,7 +375,19 @@ function open_wxapp(){
 }
 
 $(function () {
-    setTimeout(function () { bt_init(); },50)
+
+    $.get("/ssl?action=GetUserInfo", function (b) {
+        if (b.status) {
+            $("input[name='btusername']").val(b.data.username);
+            $("input[name='btusername']").next().text(lan.public.edit).attr("onclick", "bindBTName(2,'c')").css({ "margin-left": "-82px" });
+            $("input[name='btusername']").next().after('<span class="btn btn-xs btn-success" onclick="UnboundBt()" style="vertical-align: 0px;">' + lan.config.binding_un + '</span>');
+        }
+        else {
+            $("input[name='btusername']").next().text(lan.config.binding).attr("onclick", "bindBTName(2,'b')").removeAttr("style");
+
+        }
+        bt_init();
+    });
 })
 
 function bt_init() {

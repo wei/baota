@@ -155,7 +155,9 @@ html {
 .bgw {
 	background-color: white
 }
-
+.move_class{
+	float:right;
+}
 .bge6 {
 	background-color: #f2f2f2;
 }
@@ -1102,7 +1104,45 @@ html .menu .menu_exit:hover {
 	border-top: none;
 	margin: 0;
 }
+.site_type{
+    height: 30px;
+    line-height: 30px;
+    bottom: 8px;
+    position: absolute;
+}
 
+.site_type span{
+	display: inline-block;
+    height: 30px;
+    line-height: 30px;
+    padding: 0 10px;
+    font-family: "Arial";
+    font-size: 13px;
+    color: #666;
+    float: left;
+    border: 1px solid #ececec;
+    border-right: none;
+	/* border: 1px solid #ececec; */
+}
+.site_type select{
+	border-radius: 0px;
+}
+.site_type_table{
+	padding: 15px;
+	min-height: 100px;
+}
+.edit_site_type{
+	padding:0 15px;
+}
+.edit_site_type .line .info-r{
+	margin-left:0px;
+}
+.edit_site_type input{
+	width: 80% !important;
+}
+.edit_site_type .btn{
+	margin-right: 0px;
+}
 .page div {
 	float: right
 }

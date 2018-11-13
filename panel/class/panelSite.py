@@ -285,9 +285,11 @@ class panelSite:
             get.port = self.sitePort
             get.ps = self.siteName;
             firewalls.firewalls().AddAcceptPort(get);
+
+        if not hasattr(get,'type_id'): get.type_id = 0
         
         #写入数据库
-        get.pid = sql.table('sites').add('name,path,status,ps,addtime',(self.siteName,self.sitePath,'1',ps,public.getDate()))
+        get.pid = sql.table('sites').add('name,path,status,ps,type_id,addtime',(self.siteName,self.sitePath,'1',ps,get.type_id,public.getDate()))
         
         #添加更多域名
         for domain in siteMenu['domainlist']:
@@ -2928,3 +2930,47 @@ server
         if serverType != 'nginx': logPath = '/www/wwwlogs/' + get.siteName + '-error_log';
         if not os.path.exists(logPath): return public.returnMsg(False,'日志为空');
         return public.returnMsg(True,public.GetNumLines(logPath,1000));
+
+
+    #取网站分类
+    def get_site_types(self,get):
+        data = public.M("site_types").field("id,name").order("id asc").select()
+        data.insert(0,{"id":0,"name":"默认分类"})
+        return data
+
+    #添加网站分类
+    def add_site_type(self,get):
+        get.name = get.name.strip()
+        if not get.name: return public.returnMsg(False,"分类名称不能为空")
+        if len(get.name) > 18: return public.returnMsg(False,"分类名称长度不能超过6个汉字或18位字母")
+        type_sql = public.M('site_types')
+        if type_sql.count() >= 10: return public.returnMsg(False,'最多添加10个分类!')
+        if type_sql.where('name=?',(get.name,)).count()>0: return public.returnMsg(False,"指定分类名称已存在!")
+        type_sql.add("name",(get.name,))
+        return public.returnMsg(True,'添加成功!')
+
+    #删除网站分类
+    def remove_site_type(self,get):
+        type_sql = public.M('site_types')
+        if type_sql.where('id=?',(get.id,)).count()==0: return public.returnMsg(False,"指定分类不存在!")
+        type_sql.where('id=?',(get.id,)).delete()
+        public.M("sites").where("type_id=?",(get.id,)).save("type_id",(0,))
+        return public.returnMsg(True,"分类已删除!")
+
+    #修改网站分类名称
+    def modify_site_type_name(self,get):
+        get.name = get.name.strip()
+        if not get.name: return public.returnMsg(False,"分类名称不能为空")
+        if len(get.name) > 18: return public.returnMsg(False,"分类名称长度不能超过6个汉字或18位字母")
+        type_sql = public.M('site_types')
+        if type_sql.where('id=?',(get.id,)).count()==0: return public.returnMsg(False,"指定分类不存在!")
+        type_sql.where('id=?',(get.id,)).setField('name',get.name)
+        return public.returnMsg(True,"修改成功!")
+
+    #设置指定站点的分类
+    def set_site_type(self,get):
+        site_ids = json.loads(get.site_ids)
+        site_sql = public.M("sites")
+        for s_id in site_ids:
+            site_sql.where("id=?",(s_id,)).setField("type_id",get.id)
+        return public.returnMsg(True,"设置成功!")
