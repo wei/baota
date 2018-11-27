@@ -45,7 +45,7 @@
                 <form id="set-Config">
                     <p class="mtb15"><span class="set-tit text-right" title="{{data['lan']['CT1']}}">{{data['lan']['CT1']}}</span><input id="webname" name="webname" class="inputtxt bt-input-text" type="text" value="{{session['title']}}"><span class="set-info c7">{{data['lan']['CY1']}}</span></p>
                     <p class="mtb15"><span class="set-tit text-right" title="{{data['lan']['CT2']}}">{{data['lan']['CT2']}}</span><input id="banport" name="port" class="inputtxt bt-input-text" type="number" value="{{data['panel']['port']}}" maxlength="5"><span class="set-info c7">{{data['lan']['CY2']}}</span></p>
-                    <p class="mtb15"><span class="set-tit text-right" title="管理入口路径">安全入口</span><input id="admin_path" name="admin_path" class="inputtxt bt-input-text" type="text" value="{{data['panel']['admin_path']}}"><span class="set-info c7">面板管理入口,设置后只能通过指定安全入口登录面板,如: /www_bt_cn</span></p>
+                    <p class="mtb15"><span class="set-tit text-right" title="管理入口路径">安全入口</span><input id="admin_path" name="admin_path" class="inputtxt bt-input-text disable" type="text" value="{{data['panel']['admin_path']}}" disabled><span class="modify btn btn-xs btn-success" onclick="modify_auth_path()">{{data['lan']['CY10']}}</span><span class="set-info c7">面板管理入口,设置后只能通过指定安全入口登录面板,如: /www_bt_cn</span></p>
                     <p class="mtb15"><span class="set-tit text-right" title="{{data['lan']['CT3']}}">{{data['lan']['CT3']}}</span><input name="domain" class="inputtxt bt-input-text" type="text" value="{{data['panel']['domain']}}"><span class="set-info c7">{{data['lan']['CY3']}}</span></p>
                     <p class="mtb15"><span class="set-tit text-right" title="{{data['lan']['CT4']}}">{{data['lan']['CT4']}}</span><input name="limitip" class="inputtxt bt-input-text" type="text" value="{{data['panel']['limitip']}}"><span class="set-info c7">{{data['lan']['CY4']}}</span></p>
                     <p class="mtb15"><span class="set-tit text-right" title="{{data['lan']['CT5']}}">{{data['lan']['CT5']}}</span><input name="sites_path" class="inputtxt bt-input-text" type="text" value="{{data['sites_path']}}"><span class="set-info c7">{{data['lan']['CY5']}}</span></p>
@@ -190,7 +190,7 @@
         }
 </style>
 <script type="text/javascript" src="/static/js/jquery.qrcode.min.js"></script>
-<script src="/static/js/config.js?date=20180530"></script>
+<script src="/static/js/config.js?date={{g['version']}}"></script>
 <script type="text/javascript">
 	setCookie('serverType',"{{session['webserver']}}");
 </script>

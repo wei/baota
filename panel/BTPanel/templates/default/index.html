@@ -695,9 +695,15 @@
 				}
 				$(".DrawRecordCon").html(body);
 			},'jsonp');
-		}
+        },
+        get_cloud_list: function () {
+            $.post('/plugin?action=get_soft_list', { type: 8, p: 1, force: 1,cache:1 }, function (rdata) {
+                console.log("已成功从云端获取软件列表");
+            });
+        }
 	}
-	index.get_init();
+    index.get_init();
+    setTimeout(function () { index.get_cloud_list() }, 800);
 </script>
 
 {% endblock %}

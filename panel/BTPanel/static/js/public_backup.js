@@ -3797,7 +3797,7 @@ bt.soft = {
 					menu += '<p  onclick="bt.soft.get_tab_contents(\'get_redis_status\')">负载状态</p>'; 
 					break;
 				case 'tomcat':
-					menu += '<p onclick="bt.soft.get_tab_contents(\'log\',\'/www/server/tomcat/logs/catalina.out\')">运行日志</p>';
+                    menu += '<p onclick="bt.soft.get_tab_contents(\'log\',\'/www/server/tomcat/logs/catalina.out\')">运行日志</p>';
 					break;
 				case 'apache':
 				case 'nginx':

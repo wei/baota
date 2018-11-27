@@ -114,6 +114,7 @@ class crontab:
         id = get['id']
         cuonConfig,get,name = self.GetCrondCycle(get)
         cronInfo = public.M('crontab').where('id=?',(id,)).field(self.field).find()
+        if not get['where1']: get['where1'] = get['week']
         del(cronInfo['id'])
         del(cronInfo['addtime'])
         cronInfo['name'] = get['name']

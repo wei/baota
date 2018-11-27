@@ -12,7 +12,8 @@
 #------------------------------
 import public,db,re,time,os,sys,panelMysql
 from BTPanel import session
-class database:
+import datatool
+class database(datatool.datatools):
     
     #添加数据库
     def AddDatabase(self,get):
@@ -20,7 +21,7 @@ class database:
             data_name = get['name'].strip()
             if self.CheckRecycleBin(data_name): return public.returnMsg(False,'数据库['+data_name+']已在回收站，请从回收站恢复!');
             if len(data_name) > 16: return public.returnMsg(False, 'DATABASE_NAME_LEN')
-            reg = "^\w+$"
+            reg = "^[\w\.-]+$"
             if not re.match(reg, data_name): return public.returnMsg(False,'DATABASE_NAME_ERR_T')
             if not hasattr(get,'db_user'): get.db_user = data_name;
             username = get.db_user.strip();
@@ -47,15 +48,15 @@ class database:
                     }
             codeStr=wheres[codeing]
             #添加MYSQL
-            result = panelMysql.panelMysql().execute("create database `" + data_name + "` DEFAULT CHARACTER SET " + codeing + " COLLATE " + codeStr)
+            mysql_obj = panelMysql.panelMysql()
+            result = mysql_obj.execute("create database `" + data_name + "` DEFAULT CHARACTER SET " + codeing + " COLLATE " + codeStr)
             isError = self.IsSqlError(result)
             if  isError != None: return isError
-            panelMysql.panelMysql().execute("drop user '" + username + "'@'localhost'")
-            panelMysql.panelMysql().execute("drop user '" + username + "'@'" + address + "'")
-            panelMysql.panelMysql().execute("grant all privileges on `" + data_name + "`.* to '" + username + "'@'localhost' identified by '" + data_pwd + "'")
+            mysql_obj.execute("drop user '" + username + "'@'localhost'")
             for a in address.split(','):
-                panelMysql.panelMysql().execute("grant all privileges on `" + data_name + "`.* to '" + username + "'@'" + a + "' identified by '" + data_pwd + "'")
-            panelMysql.panelMysql().execute("flush privileges")
+                mysql_obj.execute("drop user '" + username + "'@'" + a + "'")
+
+            self.__CreateUsers(data_name,username,password,address)
             
             if get['ps'] == '': get['ps']=public.getMsg('INPUT_PS');
             addTime = time.strftime('%Y-%m-%d %X',time.localtime())
@@ -69,7 +70,18 @@ class database:
         except Exception as ex:
             public.WriteLog("TYPE_DATABASE",'DATABASE_ADD_ERR', (data_name,str(ex)))
             return public.returnMsg(False,'ADD_ERROR')
-    
+
+
+    #创建用户
+    def __CreateUsers(self,dbname,username,password,address):
+        mysql_obj = panelMysql.panelMysql()
+        mysql_obj.execute("CREATE USER `%s`@`localhost` IDENTIFIED BY '%s'" % (username,password))
+        mysql_obj.execute("grant all privileges on %s.* to `%s`@`localhost`" % (dbname,username))
+        for a in address.split(','):
+            mysql_obj.execute("CREATE USER `%s`@`%s` IDENTIFIED BY '%s'" % (username,a,password))
+            mysql_obj.execute("grant all privileges on %s.* to `%s`@`%s`" % (dbname,username,a))
+        mysql_obj.execute("flush privileges")
+        
     #检查是否在回收站
     def CheckRecycleBin(self,name):
         try:
@@ -83,7 +95,7 @@ class database:
     def IsSqlError(self,mysqlMsg):
         mysqlMsg=str(mysqlMsg)
         if "MySQLdb" in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_MYSQLDB')
-        if "2002," in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_CONNECT')
+        if "2002," in mysqlMsg or '2003,' in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_CONNECT')
         if "using password:" in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_PASS')
         if "Connection refused" in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_CONNECT')
         if "1133" in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_NOT_EXISTS')
@@ -158,11 +170,13 @@ class database:
         if public.M('databases').where("name=?",( data['name'],)).count():
             os.remove(filename);
             return public.returnMsg(True,'RECYCLEDB');
-        result = panelMysql.panelMysql().execute("grant all privileges on `" + data['name'] + "`.* to '" + data['username'] + "'@'localhost' identified by '" + data['password'] + "'")
-        isError=self.IsSqlError(result)
-        if isError != None: return isError
-        panelMysql.panelMysql().execute("grant all privileges on `" + data['name'] + "`.* to '" + data['username'] + "'@'" + data['accept'] + "' identified by '" + data['password'] + "'")
-        panelMysql.panelMysql().execute("flush privileges")
+
+        self.__CreateUsers(data['name'],data['username'],data['password'],data['accept'])
+        #result = panelMysql.panelMysql().execute("grant all privileges on `" + data['name'] + "`.* to '" + data['username'] + "'@'localhost' identified by '" + data['password'] + "'")
+        #isError=self.IsSqlError(result)
+        #if isError != None: return isError
+        #panelMysql.panelMysql().execute("grant all privileges on `" + data['name'] + "`.* to '" + data['username'] + "'@'" + data['accept'] + "' identified by '" + data['password'] + "'")
+        #panelMysql.panelMysql().execute("flush privileges")
         
         public.M('databases').add('id,pid,name,username,password,accept,ps,addtime',(data['id'],data['pid'],data['name'],data['username'],data['password'],data['accept'],data['ps'],data['addtime']))
         os.remove(filename);
@@ -176,48 +190,28 @@ class database:
             if not re.match(rep, password): return public.returnMsg(False, 'DATABASE_NAME_ERR_T')
             mysql_root = public.M('config').where("id=?",(1,)).getField('mysql_root')
             #修改MYSQL
-            result = panelMysql.panelMysql().query("show databases")
+            mysql_obj = panelMysql.panelMysql()
+            result = mysql_obj.query("show databases")
             isError=self.IsSqlError(result)
+            is_modify = True
             if  isError != None: 
                 #尝试使用新密码
                 public.M('config').where("id=?",(1,)).setField('mysql_root',password)
-                result = panelMysql.panelMysql().query("show databases")
+                result = mysql_obj.query("show databases")
                 isError=self.IsSqlError(result)
                 if  isError != None: 
-                    root_mysql = '''#!/bin/bash
-PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
-export PATH
-pwd=$1
-/etc/init.d/mysqld stop
-mysqld_safe --skip-grant-tables&
-echo '正在修改密码...';
-echo 'The set password...';
-sleep 6
-mysql -uroot -e "insert into mysql.user(Select_priv,Insert_priv,Update_priv,Delete_priv,Create_priv,Drop_priv,Reload_priv,Shutdown_priv,Process_priv,File_priv,Grant_priv,References_priv,Index_priv,Alter_priv,Show_db_priv,Super_priv,Create_tmp_table_priv,Lock_tables_priv,Execute_priv,Repl_slave_priv,Repl_client_priv,Create_view_priv,Show_view_priv,Create_routine_priv,Alter_routine_priv,Create_user_priv,Event_priv,Trigger_priv,Create_tablespace_priv,User,Password,host)values('Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','root',password('${pwd}'),'127.0.0.1')"
-mysql -uroot -e "insert into mysql.user(Select_priv,Insert_priv,Update_priv,Delete_priv,Create_priv,Drop_priv,Reload_priv,Shutdown_priv,Process_priv,File_priv,Grant_priv,References_priv,Index_priv,Alter_priv,Show_db_priv,Super_priv,Create_tmp_table_priv,Lock_tables_priv,Execute_priv,Repl_slave_priv,Repl_client_priv,Create_view_priv,Show_view_priv,Create_routine_priv,Alter_routine_priv,Create_user_priv,Event_priv,Trigger_priv,Create_tablespace_priv,User,Password,host)values('Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','root',password('${pwd}'),'localhost')"
-mysql -uroot -e "UPDATE mysql.user SET password=PASSWORD('${pwd}') WHERE user='root'";
-mysql -uroot -e "UPDATE mysql.user SET authentication_string=PASSWORD('${pwd}') WHERE user='root'";
-mysql -uroot -e "FLUSH PRIVILEGES";
-pkill -9 mysqld_safe
-pkill -9 mysqld
-sleep 2
-/etc/init.d/mysqld start
-
-echo '==========================================='
-echo "root密码成功修改为: ${pwd}"
-echo "The root password set ${pwd}  successuful"''';
-            
-                public.writeFile('mysql_root.sh',root_mysql)
-                os.system("bash mysql_root.sh " + password)
-                os.system("rm -f mysql_root.sh")
+                    os.system("cd /www/server/panel && python tools.py root \"" + password + "\"")
+                    is_modify = False
+            if is_modify:
+                m_version = public.readFile(public.GetConfigValue('setup_path') + '/mysql/version.pl')
                 
-                
-            else:
-                if '5.7' in public.readFile(public.GetConfigValue('setup_path') + '/mysql/version.pl'):
-                    result = panelMysql.panelMysql().execute("update mysql.user set authentication_string=password('" + password + "') where User='root'")
+                if m_version.find('5.7') == 0  or m_version.find('8.0') == 0:
+                    panelMysql.panelMysql().execute("UPDATE mysql.user SET authentication_string='' WHERE user='root'")
+                    panelMysql.panelMysql().execute("ALTER USER 'root'@'localhost' IDENTIFIED BY '%s'" % password)
+                    panelMysql.panelMysql().execute("ALTER USER 'root'@'127.0.0.1' IDENTIFIED BY '%s'" % password)
                 else:
-                    result = panelMysql.panelMysql().execute("update mysql.user set Password=password('" + password + "') where User='root'")
-                panelMysql.panelMysql().execute("flush privileges")
+                    result = mysql_obj.execute("update mysql.user set Password=password('" + password + "') where User='root'")
+                mysql_obj.execute("flush privileges")
 
             msg = public.getMsg('DATABASE_ROOT_SUCCESS');
             #修改SQLITE
@@ -235,18 +229,26 @@ echo "The root password set ${pwd}  successuful"''';
             username = get['name']
             id = get['id']
             name = public.M('databases').where('id=?',(id,)).getField('name');
+            
             rep = "^[\w@\.]+$"
             if len(re.search(rep, newpassword).groups()) > 0: return public.returnMsg(False, 'DATABASE_NAME_ERR_T')
             
             #修改MYSQL
-            if '5.7' in public.readFile(public.GetConfigValue('setup_path') + '/mysql/version.pl'):
-                result = panelMysql.panelMysql().execute("update mysql.user set authentication_string=password('" + newpassword + "') where User='" + username + "'")
+            mysql_obj = panelMysql.panelMysql()
+            m_version = public.readFile(public.GetConfigValue('setup_path') + '/mysql/version.pl')
+            if m_version.find('5.7') == 0  or m_version.find('8.0') == 0:
+                accept = self.map_to_list(panelMysql.panelMysql().query("select Host from mysql.user where User='" + name + "' AND Host!='localhost'"));
+                mysql_obj.execute("update mysql.user set authentication_string='' where User='" + username + "'")
+                result = mysql_obj.execute("ALTER USER `%s`@`localhost` IDENTIFIED BY '%s'" % (username,newpassword))
+                for my_host in accept:
+                    mysql_obj.execute("ALTER USER `%s`@`%s` IDENTIFIED BY '%s'" % (username,my_host[0],newpassword))
             else:
-                result = panelMysql.panelMysql().execute("update mysql.user set Password=password('" + newpassword + "') where User='" + username + "'")
+                result = mysql_obj.execute("update mysql.user set Password=password('" + newpassword + "') where User='" + username + "'")
             
             isError=self.IsSqlError(result)
             if  isError != None: return isError
-            panelMysql.panelMysql().execute("flush privileges")
+
+            mysql_obj.execute("flush privileges")
             #if result==False: return public.returnMsg(False,'DATABASE_PASS_ERR_NOT_EXISTS')
             #修改SQLITE
             if int(id) > 0:
@@ -260,31 +262,14 @@ echo "The root password set ${pwd}  successuful"''';
         except Exception as ex:
             import traceback
             public.WriteLog("TYPE_DATABASE", 'DATABASE_PASS_ERROR',(name,traceback.format_exc(limit=True).replace('\n','<br>')))
-            return public.returnMsg(False,'DATABASE_PASS_ERROR',(name,))
-    
-    def setMyCnf(self,action = True):
-        myFile = '/etc/my.cnf'
-        mycnf = public.readFile(myFile)
-        root = session['config']['mysql_root']
-        pwdConfig = "\n[mysqldump]\nuser=root\npassword=root"
-        rep = "\n\[mysqldump\]\nuser=root\npassword=.+"
-        if action:
-            if mycnf.find(pwdConfig) > -1: return
-            if mycnf.find("\n[mysqldump]\nuser=root\n") > -1:
-                mycnf = mycnf.replace(rep, pwdConfig)
-            else:
-                mycnf  += "\n[mysqldump]\nuser=root\npassword=root"
-            
-        else:
-            mycnf = mycnf.replace(rep, '')
-        
-        
-        public.writeFile(myFile,mycnf)
-    
+            return public.returnMsg(False,'DATABASE_PASS_ERROR',(name,))    
     
     #备份
     def ToBackup(self,get):
         #try:
+        result = panelMysql.panelMysql().execute("show databases")
+        isError=self.IsSqlError(result)
+        if isError: return isError
         id = get['id']
         name = public.M('databases').where("id=?",(id,)).getField('name')
         root = public.M('config').where('id=?',(1,)).getField('mysql_root');
@@ -293,7 +278,7 @@ echo "The root password set ${pwd}  successuful"''';
         
         fileName = name + '_' + time.strftime('%Y%m%d_%H%M%S',time.localtime()) + '.sql.gz'
         backupName = session['config']['backup_path'] + '/database/' + fileName
-        public.ExecShell("/www/server/mysql/bin/mysqldump --force --opt " + name + " | gzip > " + backupName)
+        public.ExecShell("/www/server/mysql/bin/mysqldump --force --opt \"" + name + "\" | gzip > " + backupName)
         if not os.path.exists(backupName): return public.returnMsg(False,'BACKUP_ERROR');
         
         self.mypass(False, root);
@@ -329,6 +314,9 @@ echo "The root password set ${pwd}  successuful"''';
     #导入
     def InputSql(self,get):
         #try:
+        result = panelMysql.panelMysql().execute("show databases")
+        isError=self.IsSqlError(result)
+        if isError: return isError
         name = get['name']
         file = get['file']
         root = public.M('config').where('id=?',(1,)).getField('mysql_root');
@@ -357,7 +345,7 @@ echo "The root password set ${pwd}  successuful"''';
                  
             if not os.path.exists(backupPath + '/' + tmpFile) or tmpFile == '': return public.returnMsg(False, 'FILE_NOT_EXISTS',(tmpFile,))
             self.mypass(True, root);
-            public.ExecShell(public.GetConfigValue('setup_path') + "/mysql/bin/mysql -uroot -p" + root + " --force " + name + " < " + backupPath + '/' +tmpFile)
+            public.ExecShell(public.GetConfigValue('setup_path') + "/mysql/bin/mysql -uroot -p" + root + " --force \"" + name + "\" < " + backupPath + '/' +tmpFile)
             self.mypass(False, root);
             if isgizp:
                 os.system('cd ' +backupPath+ ' && gzip ' + file.split('/')[-1][:-3]);
@@ -365,7 +353,7 @@ echo "The root password set ${pwd}  successuful"''';
                 os.system("rm -f " +  backupPath + '/' +tmpFile)
         else:
             self.mypass(True, root);
-            public.ExecShell(public.GetConfigValue('setup_path') + "/mysql/bin/mysql -uroot -p" + root + " --force " + name + " < " +  file)
+            public.ExecShell(public.GetConfigValue('setup_path') + "/mysql/bin/mysql -uroot -p" + root + " --force \"" + name + "\" < " +  file)
             self.mypass(False, root);
                 
             
@@ -377,6 +365,9 @@ echo "The root password set ${pwd}  successuful"''';
     
     #同步数据库到服务器
     def SyncToDatabases(self,get):
+        result = panelMysql.panelMysql().execute("show databases")
+        isError=self.IsSqlError(result)
+        if isError: return isError
         type = int(get['type'])
         n = 0
         sql = public.M('databases')
@@ -403,30 +394,32 @@ echo "The root password set ${pwd}  successuful"''';
             mycnf = public.readFile('/etc/my.cnf');
             rep = "\[mysqldump\]\nuser=root"
             sea = "[mysqldump]\n"
-            subStr = sea + "user=root\npassword=" + root + "\n";
+            subStr = sea + "user=root\npassword=\"" + root + "\"\n";
             mycnf = mycnf.replace(sea,subStr)
             if len(mycnf) > 100: public.writeFile('/etc/my.cnf',mycnf);
     
     #添加到服务器
     def ToDataBase(self,find):
-        if find['username'] == 'bt_default': return 0
+        #if find['username'] == 'bt_default': return 0
         if len(find['password']) < 3 :
             find['username'] = find['name']
             find['password'] = public.md5(str(time.time()) + find['name'])[0:10]
             public.M('databases').where("id=?",(find['id'],)).save('password,username',(find['password'],find['username']))
         
-        result = panelMysql.panelMysql().execute("create database " + find['name'])
+        result = panelMysql.panelMysql().execute("create database `" + find['name'] + "`")
         if "using password:" in str(result): return -1
         if "Connection refused" in str(result): return -1
-        panelMysql.panelMysql().execute("drop user '" + find['username'] + "'@'localhost'")
-        panelMysql.panelMysql().execute("drop user '" + find['username'] + "'@'" + find['accept'] + "'")
+       
         password = find['password']
-        if find['password']!="" and len(find['password']) > 20:
-            password = find['password']
+        #if find['password']!="" and len(find['password']) > 20:
+            #password = find['password']
         
-        panelMysql.panelMysql().execute("grant all privileges on " + find['name'] + ".* to '" + find['username'] + "'@'localhost' identified by '" + password + "'")
-        panelMysql.panelMysql().execute("grant all privileges on " + find['name'] + ".* to '" + find['username'] + "'@'" + find['accept'] + "' identified by '" + password + "'")
-        panelMysql.panelMysql().execute("flush privileges")
+        self.__CreateUsers(find['name'],find['username'],password,find['accept'])
+        #panelMysql.panelMysql().execute("drop user '" + find['username'] + "'@'localhost'")
+        #panelMysql.panelMysql().execute("drop user '" + find['username'] + "'@'" + find['accept'] + "'")
+        #panelMysql.panelMysql().execute("grant all privileges on " + find['name'] + ".* to '" + find['username'] + "'@'localhost' identified by '" + password + "'")
+        #panelMysql.panelMysql().execute("grant all privileges on " + find['name'] + ".* to '" + find['username'] + "'@'" + find['accept'] + "' identified by '" + password + "'")
+        #panelMysql.panelMysql().execute("flush privileges")
         return 1
     
     
@@ -436,6 +429,7 @@ echo "The root password set ${pwd}  successuful"''';
         isError = self.IsSqlError(data)
         if isError != None: return isError
         users = panelMysql.panelMysql().query("select User,Host from mysql.user where User!='root' AND Host!='localhost' AND Host!=''")
+        if type(users) == str: return public.returnMsg(False,users)
         sql = public.M('databases')
         nameArr = ['information_schema','performance_schema','mysql','sys']
         n = 0
@@ -468,6 +462,8 @@ echo "The root password set ${pwd}  successuful"''';
         users = panelMysql.panelMysql().query("select Host from mysql.user where User='" + name + "' AND Host!='localhost'")
         isError = self.IsSqlError(users)
         if isError != None: return isError
+        users = self.map_to_list(users)
+
         if len(users)<1:
             return public.returnMsg(True,"127.0.0.1")
         
@@ -483,14 +479,16 @@ echo "The root password set ${pwd}  successuful"''';
         name = get['name']
         db_name = public.M('databases').where('username=?',(name,)).getField('name');
         access = get['access']
-        #if access != '%' and filter_var(access, FILTER_VALIDATE_IP) == False: return public.returnMsg(False, '权限格式不合法')
         password = public.M('databases').where("username=?",(name,)).getField('password')
         users = panelMysql.panelMysql().query("select Host from mysql.user where User='" + name + "' AND Host!='localhost'")
         for us in users:
             panelMysql.panelMysql().execute("drop user '" + name + "'@'" + us[0] + "'")
-        for a in access.split(','):
-            panelMysql.panelMysql().execute("grant all privileges on " + db_name + ".* to '" + name + "'@'" + a + "' identified by '" + password + "'")
-        panelMysql.panelMysql().execute("flush privileges")
+
+        self.__CreateUsers(db_name,name,password,access)
+
+        #for a in access.split(','):
+        #    panelMysql.panelMysql().execute("grant all privileges on " + db_name + ".* to '" + name + "'@'" + a + "' identified by '" + password + "'")
+        #panelMysql.panelMysql().execute("flush privileges")
         return public.returnMsg(True, 'SET_SUCCESS')
         #except Exception as ex:
             #public.WriteLog("TYPE_DATABASE",'DATABASE_ACCESS_ERR',(name ,str(ex)))
@@ -601,13 +599,14 @@ echo "The root password set ${pwd}  successuful"''';
     #获取MySQL配置状态
     def GetDbStatus(self,get):
         result = {};
-        data = panelMysql.panelMysql().query('show variables');
+        data = self.map_to_list( panelMysql.panelMysql().query('show variables'));
         gets = ['table_open_cache','thread_cache_size','query_cache_type','key_buffer_size','query_cache_size','tmp_table_size','max_heap_table_size','innodb_buffer_pool_size','innodb_additional_mem_pool_size','innodb_log_buffer_size','max_connections','sort_buffer_size','read_buffer_size','read_rnd_buffer_size','join_buffer_size','thread_stack','binlog_cache_size'];
         result['mem'] = {}
         for d in data:
             for g in gets:
                 if d[0] == g: result['mem'][g] = d[1];
-        if result['mem']['query_cache_type'] != 'ON': result['mem']['query_cache_size'] = '0';
+        if 'query_cache_type' in result['mem']:
+            if result['mem']['query_cache_type'] != 'ON': result['mem']['query_cache_size'] = '0';
         return result;
     
     #设置MySQL配置参数
@@ -616,7 +615,10 @@ echo "The root password set ${pwd}  successuful"''';
         emptys = ['max_connections','query_cache_type','thread_cache_size','table_open_cache']
         mycnf = public.readFile('/etc/my.cnf');
         n = 0;
+        m_version = public.readFile('/www/server/mysql/version.pl')
+        if not m_version: m_version = '';
         for g in gets:
+            if m_version.find('8.') == 0 and g in ['query_cache_type','query_cache_size']: continue;
             s = 'M';
             if n > 5: s = 'K';
             if g in emptys: s = '';
@@ -658,4 +660,38 @@ echo "The root password set ${pwd}  successuful"''';
         path = '/www/server/data/mysql-slow.log';
         if not os.path.exists(path): return public.returnMsg(False,'日志文件不存在!');
         return public.returnMsg(True,public.GetNumLines(path,1000));
-        
+    
+
+    # 获取当前数据库信息
+    def GetInfo(self,get):
+        info=self.GetdataInfo(get)
+        return info
+        if info:
+            return info
+        else:
+            return public.returnMsg(False,"获取数据库失败!")
+    
+    #修复表信息
+    def ReTable(self,get):
+        info=self.RepairTable(get)
+
+        if info:
+            return public.returnMsg(True,"修复完成!")
+        else:
+            return public.returnMsg(False,"修复失败!")
+    
+    # 优化表
+    def OpTable(self,get):
+        info=self.OptimizeTable(get)
+        if info:
+            return public.returnMsg(True,"优化成功!")
+        else:
+            return public.returnMsg(False,"优化失败或者已经优化过了")
+
+    #更改表引擎
+    def AlTable(self,get):
+        info=self.AlterTable(get)
+        if info:
+            return public.returnMsg(True,"更改成功")
+        else:
+            return public.returnMsg(False,"更改失败")

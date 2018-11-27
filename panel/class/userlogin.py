@@ -46,7 +46,9 @@ class userlogin:
         except Exception as ex:
             stringEx = str(ex)
             if stringEx.find('unsupported') != -1 or stringEx.find('-1') != -1: 
-                btClear();
+                os.system("rm -f /tmp/sess_*")
+                os.system("rm -f /www/wwwlogs/*log")
+                public.ServiceReload()
                 return public.returnJson(False,'磁盘Inode已用完,面板已尝试释放Inode,请重试...'),json_header
             public.WriteLog('TYPE_LOGIN','LOGIN_ERR_PASS',('****','******',public.GetClientIp()));
             num = self.limit_address('+');
@@ -58,7 +60,7 @@ class userlogin:
         domain = public.readFile('data/domain.conf')
         
         if domain:
-            if(public.GetHost() != domain.strip()): 
+            if(public.GetHost().lower() != domain.strip().lower()): 
                 
                 errorStr = '''
 <meta charset="utf-8">

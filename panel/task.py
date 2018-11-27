@@ -215,28 +215,32 @@ def systemTask():
             if (tmp['up'] + tmp['down']) > (networkInfo['up'] + networkInfo['down']): networkInfo = tmp
             
             #取磁盘Io
-            if os.path.exists('/proc/diskstats'):
-                diskio_2 = psutil.disk_io_counters()
-                if not diskio_1: diskio_1 = diskio_2
-                tmp = {}
-                tmp['read_count']   = diskio_2.read_count - diskio_1.read_count
-                tmp['write_count']  = diskio_2.write_count - diskio_1.write_count
-                tmp['read_bytes']   = diskio_2.read_bytes - diskio_1.read_bytes
-                tmp['write_bytes']  = diskio_2.write_bytes - diskio_1.write_bytes
-                tmp['read_time']    = diskio_2.read_time - diskio_1.read_time
-                tmp['write_time']   = diskio_2.write_time - diskio_1.write_time
+            disk_ios = True
+            try:
+                if os.path.exists('/proc/diskstats'):
+                    diskio_2 = psutil.disk_io_counters()
+                    if not diskio_1: diskio_1 = diskio_2
+                    tmp = {}
+                    tmp['read_count']   = diskio_2.read_count - diskio_1.read_count
+                    tmp['write_count']  = diskio_2.write_count - diskio_1.write_count
+                    tmp['read_bytes']   = diskio_2.read_bytes - diskio_1.read_bytes
+                    tmp['write_bytes']  = diskio_2.write_bytes - diskio_1.write_bytes
+                    tmp['read_time']    = diskio_2.read_time - diskio_1.read_time
+                    tmp['write_time']   = diskio_2.write_time - diskio_1.write_time
                 
-                if not diskInfo: 
-                    diskInfo = tmp
-                else:
-                    diskInfo['read_count']   += tmp['read_count']
-                    diskInfo['write_count']  += tmp['write_count']
-                    diskInfo['read_bytes']   += tmp['read_bytes']
-                    diskInfo['write_bytes']  += tmp['write_bytes']
-                    diskInfo['read_time']    += tmp['read_time']
-                    diskInfo['write_time']   += tmp['write_time']
+                    if not diskInfo: 
+                        diskInfo = tmp
+                    else:
+                        diskInfo['read_count']   += tmp['read_count']
+                        diskInfo['write_count']  += tmp['write_count']
+                        diskInfo['read_bytes']   += tmp['read_bytes']
+                        diskInfo['write_bytes']  += tmp['write_bytes']
+                        diskInfo['read_time']    += tmp['read_time']
+                        diskInfo['write_time']   += tmp['write_time']
                 
-                diskio_1 = diskio_2
+                    diskio_1 = diskio_2
+            except:disk_ios = False
+
             
             #print diskInfo
             
@@ -252,7 +256,7 @@ def systemTask():
                     data = (networkInfo['up'] / 5,networkInfo['down'] / 5,networkInfo['upTotal'],networkInfo['downTotal'],networkInfo['downPackets'],networkInfo['upPackets'],addtime)
                     sql.table('network').add('up,down,total_up,total_down,down_packets,up_packets,addtime',data)
                     sql.table('network').where("addtime<?",(deltime,)).delete();
-                    if os.path.exists('/proc/diskstats'):
+                    if os.path.exists('/proc/diskstats') and disk_ios:
                         data = (diskInfo['read_count'],diskInfo['write_count'],diskInfo['read_bytes'],diskInfo['write_bytes'],diskInfo['read_time'],diskInfo['write_time'],addtime)
                         sql.table('diskio').add('read_count,write_count,read_bytes,write_bytes,read_time,write_time,addtime',data)
                         sql.table('diskio').where("addtime<?",(deltime,)).delete();

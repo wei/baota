@@ -1642,7 +1642,7 @@ function web_shell() {
         socket.emit('connect_event', '');
         interval = setInterval(function () {
             socket.emit('connect_event', '');
-        }, 1000);
+        }, 500);
     }
     
     term.on('data', function (data) {

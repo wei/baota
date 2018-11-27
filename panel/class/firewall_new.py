@@ -21,13 +21,10 @@ class firewalls:
     def __init__(self):
         if os.path.exists('/usr/sbin/firewalld'): self.__isFirewalld = True
         if os.path.exists('/usr/sbin/ufw'): self.__isUfw = True
-
-        sqlarr = '''alter table firewall add ports TEXT;
-alter table firewall add protocol TEXT;
-alter table firewall add address_ip TEXT;
-alter table firewall add types TEXT;
-'''
-        public.M('firewall').execute(sqlarr,())
+        public.M('firewall').execute("alter table firewall add ports TEXT;",())
+        public.M('firewall').execute("alter table firewall add protocol TEXT;",())
+        public.M('firewall').execute("alter table firewall add address_ip TEXT;",())
+        public.M('firewall').execute("alter table firewall add types TEXT;",())
         #这里判断的是Centos7 的系统
         if self.__isFirewalld:
             self.__Obj = firewalld.firewalld();
@@ -51,15 +48,18 @@ alter table firewall add types TEXT;
                 if not tmp: public.M('firewall').add('port,ps,addtime',(data['ports'][i]['port'],'',addtime))
                           
             data['iplist'] = self.__Obj.GetDropAddressList();
+            
             for i in range(len(data['iplist'])):
                 try:
                     tmp = self.CheckDbExists(data['iplist'][i]['address']);
                     if not tmp: public.M('firewall').add('port,ps,addtime',(data['iplist'][i]['address'],'',addtime))
                 except:
-                    pass
+                    return public.get_error_info()
 
             # 添加到firewalls 数据表中
             data['reject']=self.__Obj.GetrejectLIST()
+
+            
             for i in range(len(data['reject'])):
                 try:
                     tmp=self.CheckDbExists2(data['reject'][i]['protocol'],
@@ -72,9 +72,10 @@ alter table firewall add types TEXT;
                                                           data['reject'][i]['port'],
                                                           data['reject'][i]['address'],addtime))
                 except:
-                    pass
+                    return public.get_error_info()
             # 添加允许信息到firewalls 表中
             data['accept'] = self.__Obj.Getacceptlist()
+            #return data
             for i in range(len(data['accept'])):
                 try:
                     tmp = self.CheckDbExists2(data['accept'][i]['protocol'],
@@ -87,13 +88,15 @@ alter table firewall add types TEXT;
                                                            data['accept'][i]['port'],
                                                            data['accept'][i]['address'],addtime))
                 except:
-                    pass
-        except:
-            pass
+                    return public.get_error_info()
+            return data
+        except Exception as ex:
+            return public.get_error_info()
     
     #检查数据库是否存在
     def CheckDbExists(self,port,type=None):
-        data = public.M('firewall').field('id,port,ps,addtime,type').select();
+        data = public.M('firewall').field('id,port,ps,addtime,types').select();
+        return data
         for dt in data:
             if dt['port'] == port and dt['type'] == type: return dt;
         return False;

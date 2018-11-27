@@ -379,7 +379,6 @@ class ajax:
         return intrusion_total;
     
     def UpdatePanel(self,get):
-        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         try:
             if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK');
             import json
@@ -430,26 +429,16 @@ class ajax:
             if(updateInfo['force'] == True or hasattr(get,'toUpdate') == True or os.path.exists('data/autoUpdate.pl') == True):
                 setupPath = public.GetConfigValue('setup_path');
                 uptype = 'update';
-                betaIs = 'plugin/beta/config.conf';
-                betaStr = public.readFile(betaIs);
-                if betaStr:
-                    if betaStr.strip() != 'False': uptype = 'updateTest';
-                betaIs = 'data/beta.pl';
-                betaStr = public.readFile(betaIs);
-                if betaStr:
-                    if betaStr.strip() != 'False': uptype = 'updateTest';
                 httpUrl = public.get_url();
                 if httpUrl: updateInfo['downUrl'] =  httpUrl + '/install/' + uptype + '/LinuxPanel-' + updateInfo['version'] + '.zip';
                 public.downloadFile(updateInfo['downUrl'],'panel.zip');
                 if os.path.getsize('panel.zip') < 1048576: return public.returnMsg(False,"PANEL_UPDATE_ERR_DOWN");
                 public.ExecShell('unzip -o panel.zip -d ' + setupPath + '/');
                 import compileall
-                if os.path.exists(setupPath + '/panel/main.py'): public.ExecShell('rm -f ' + setupPath + '/panel/*.pyc');
-                if os.path.exists(setupPath + '/panel/class/common.py'): public.ExecShell('rm -f ' + setupPath + '/panel/class/*.pyc');
+                if os.path.exists('/www/server/panel/runserver.py'): public.ExecShell('rm -f /www/server/panel/*.pyc');
+                if os.path.exists('/www/server/panel/class/common.py'): public.ExecShell('rm -f /www/server/panel/class/*.pyc');
                 
-                compileall.compile_dir(setupPath + '/panel');
-                compileall.compile_dir(setupPath + '/panel/class');
-                public.ExecShell('rm -f panel.zip');
+                if os.path.exists('panel.zip'):os.remove("panel.zip")
                 session['version'] = updateInfo['version']
                 if 'getCloudPlugin' in session: del(session['getCloudPlugin']);
                 return public.returnMsg(True,'PANEL_UPDATE',(updateInfo['version'],));

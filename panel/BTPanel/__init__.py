@@ -159,8 +159,8 @@ def site(pdata = None):
     siteObject = panelSite.panelSite()
         
     defs = ('GetSiteLogs','GetSiteDomains','GetSecurity','SetSecurity','ProxyCache','CloseToHttps','HttpToHttps','SetEdate','SetRewriteTel','GetCheckSafe','CheckSafe','GetDefaultSite','SetDefaultSite','CloseTomcat','SetTomcat','apacheAddPort','AddSite','GetPHPVersion','SetPHPVersion','DeleteSite','AddDomain','DelDomain','GetDirBinding','AddDirBinding','GetDirRewrite','DelDirBinding'
-            ,'UpdateRulelist','SetSiteRunPath','GetSiteRunPath','SetPath','SetIndex','GetIndex','GetDirUserINI','SetDirUserINI','GetRewriteList','SetSSL','SetSSLConf','CreateLet','CloseSSLConf','GetSSL','SiteStart','SiteStop'
-            ,'get_site_types','add_site_type','remove_site_type','modify_site_type_name','set_site_type','Set301Status','Get301Status','CloseLimitNet','SetLimitNet','GetLimitNet','SetProxy','GetProxy','ToBackup','DelBackup','GetSitePHPVersion','logsOpen','GetLogsStatus','CloseHasPwd','SetHasPwd','GetHasPwd','GetDnsApi','SetDnsApi')
+            ,'get_site_types','add_site_type','remove_site_type','modify_site_type_name','set_site_type','UpdateRulelist','SetSiteRunPath','GetSiteRunPath','SetPath','SetIndex','GetIndex','GetDirUserINI','SetDirUserINI','GetRewriteList','SetSSL','SetSSLConf','CreateLet','CloseSSLConf','GetSSL','SiteStart','SiteStop'
+            ,'Set301Status','Get301Status','CloseLimitNet','SetLimitNet','GetLimitNet','SetProxy','GetProxy','ToBackup','DelBackup','GetSitePHPVersion','logsOpen','GetLogsStatus','CloseHasPwd','SetHasPwd','GetHasPwd','GetDnsApi','SetDnsApi')
     return publicObject(siteObject,defs,None,pdata);
 
 @app.route('/ftp',methods=method_all)
@@ -208,7 +208,7 @@ def database(pdata = None):
         return render_template('database.html',data=data)
     import database
     databaseObject = database.database()
-    defs = ('GetSlowLogs','GetRunStatus','SetDbConf','GetDbStatus','BinLog','GetErrorLog','GetMySQLInfo','SetDataDir','SetMySQLPort','AddDatabase','DeleteDatabase','SetupPassword','ResDatabasePassword','ToBackup','DelBackup','InputSql','SyncToDatabases','SyncGetDatabases','GetDatabaseAccess','SetDatabaseAccess')
+    defs = ('GetdataInfo','GetInfo','ReTable','OpTable','AlTable','GetSlowLogs','GetRunStatus','SetDbConf','GetDbStatus','BinLog','GetErrorLog','GetMySQLInfo','SetDataDir','SetMySQLPort','AddDatabase','DeleteDatabase','SetupPassword','ResDatabasePassword','ToBackup','DelBackup','InputSql','SyncToDatabases','SyncGetDatabases','GetDatabaseAccess','SetDatabaseAccess')
     return publicObject(databaseObject,defs,None,pdata);
 
 def get_phpmyadmin_dir():
@@ -330,7 +330,7 @@ def config(pdata = None):
         return render_template( 'config.html',data=data)
     import config
     configObject = config.config()
-    defs = ('is_pro','get_php_config','get_config','SavePanelSSL','GetPanelSSL','GetPHPConf','SetPHPConf','GetPanelList','AddPanelInfo','SetPanelInfo','DelPanelInfo','ClickPanelInfo','SetPanelSSL','SetTemplates','Set502','setPassword','setUsername','setPanel','setPathInfo','setPHPMaxSize','getFpmConfig','setFpmConfig','setPHPMaxTime','syncDate','setPHPDisable','SetControl','ClosePanel','AutoUpdatePanel','SetPanelLock')
+    defs = ('set_admin_path','is_pro','get_php_config','get_config','SavePanelSSL','GetPanelSSL','GetPHPConf','SetPHPConf','GetPanelList','AddPanelInfo','SetPanelInfo','DelPanelInfo','ClickPanelInfo','SetPanelSSL','SetTemplates','Set502','setPassword','setUsername','setPanel','setPathInfo','setPHPMaxSize','getFpmConfig','setFpmConfig','setPHPMaxTime','syncDate','setPHPDisable','SetControl','ClosePanel','AutoUpdatePanel','SetPanelLock')
     return publicObject(configObject,defs,None,pdata);
 
 @app.route('/ajax',methods=method_all)
@@ -460,6 +460,10 @@ def panel_safe():
         return 'False';
     get.data = check_token(get.data);
     if not get.data: return public.returnJson(False,'验证失败');
+    comm.setSession()
+    comm.init()
+    comm.checkWebType()
+    comm.GetOS()
     sys.path.append(pluginPath);
     import safelogin_main;
     reload(safelogin_main);
@@ -471,7 +475,7 @@ def panel_safe():
 
 
 #检查Token
-def check_token(self,data):
+def check_token(data):
     pluginPath = 'plugin/safelogin/token.pl';
     if not os.path.exists(pluginPath): return False;
     from urllib import unquote;

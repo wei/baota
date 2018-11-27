@@ -696,7 +696,8 @@
 						var datas = [ 
 								{title:'',items:[
 									{name:'userini',type:'checkbox',text:'防跨站攻击(open_basedir)',value:rdata.userini,callback:function(sdata){
-										bt.site.set_dir_userini(path,function(ret){
+                                    bt.site.set_dir_userini(path, function (ret) {
+                                            layer.msg(ret.msg, { icon: ret.status ? 1 : 2 });
 											if(ret.status) site.reload(2)
 										})
 									}},
@@ -708,8 +709,9 @@
 								]},
 								{title:'',items:[
 									{name:'path',title:'网站目录',width:'50%',value:path,event: {css:'glyphicon-folder-open',callback:function(obj){bt.select_path(obj);}}},
-									{name:'btn_site_path',type:'button',text:'保存',callback:function(pdata){										
-										bt.site.set_site_path(web.id,pdata.path,function(ret){
+									{name:'btn_site_path',type:'button',text:'保存',callback:function(pdata){						
+                                        bt.site.set_site_path(web.id, pdata.path, function (ret) {
+                                            layer.msg(ret.msg, { icon: ret.status ? 1 : 2 });
 											if(ret.status) site.reload(2)
 										})
 									}}
@@ -717,7 +719,8 @@
 								{title:'',items:[
 									{title:'运行目录',width:'50%',value:rdata.runPath.runPath,name:'dirName',type:'select',items:dirs},
 									{name:'btn_run_path',type:'button',text:'保存',callback:function(pdata){
-										bt.site.set_site_runpath(web.id,pdata.dirName,function(ret){
+                                        bt.site.set_site_runpath(web.id, pdata.dirName, function (ret) {
+                                            layer.msg(ret.msg, { icon: ret.status ? 1 : 2 });
 											if(ret.status) site.reload(2)
 										})
 									}}
@@ -961,9 +964,9 @@
                                                 {
                                                     title: ' ', name: 'btsslApply', text: '申请', type: 'button', callback: function (sdata) {
                                                         if (sdata.domains.indexOf('www.') != -1) {
-                                                            var rootDomain = sdata.split(/www\./)[1];
+                                                            var rootDomain = sdata.domains.split(/www\./)[1];
                                                             if (!$.inArray(domains, rootDomain)) {
-                                                                layer.msg('您为域名[' + sdata + ']申请证书，但程序检测到您没有将其根域名[' + rootDomain + ']绑定并解析到站点，这会导致证书签发失败!', { icon: 2, time: 5000 });
+                                                                layer.msg('您为域名[' + sdata.domains + ']申请证书，但程序检测到您没有将其根域名[' + rootDomain + ']绑定并解析到站点，这会导致证书签发失败!', { icon: 2, time: 5000 });
                                                                 return;
                                                             }
                                                         }

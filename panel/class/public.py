@@ -497,7 +497,9 @@ def GetNumLines(path,num,p=1):
                     fp.seek(-to_read, 1)
                     t_buf = fp.read(to_read)
                     if pyVersion == 3:
-                        if type(t_buf) == bytes: t_buf = t_buf.decode('utf-8')
+                        try:
+                            if type(t_buf) == bytes: t_buf = t_buf.decode('utf-8')
+                        except:t_buf = str(t_buf)
                     buf = t_buf + buf
                     fp.seek(-to_read, 1)
                     if pos - to_read == 0:
@@ -581,16 +583,21 @@ def getSpeed():
     return json.loads(data);
 
 def downloadFile(url,filename):
-    import urllib
     if sys.version_info[0] == 2:
+        import urllib
         urllib.urlretrieve(url,filename=filename ,reporthook= downloadHook)
     else:
+        import urllib.request
         urllib.request.urlretrieve(url,filename=filename ,reporthook= downloadHook)
     
 def downloadHook(count, blockSize, totalSize):
     speed = {'total':totalSize,'block':blockSize,'count':count}
     #print('%02d%%'%(100.0 * count * blockSize / totalSize))
 
+def get_error_info():
+    import traceback
+    errorMsg = traceback.format_exc();
+    return errorMsg
 
 #搜索数据中是否存在
 def inArray(arrays,searchStr):

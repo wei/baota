@@ -40,13 +40,12 @@ class files:
                 '/selinux',
                 '/www/server',
                 '/www/server/data',
+                '/www/wwwroot',
                 public.GetConfigValue('root_path'),
                 public.GetConfigValue('logs_path'),
                 public.GetConfigValue('setup_path'))
-        for dir in nDirs:
-            if(dir == path):
-                return False 
-        return True
+
+        return not path in nDirs
     
     #检测文件名
     def CheckFileName(self,filename):
@@ -615,22 +614,28 @@ class files:
             return public.returnMsg(False,'FILE_NOT_EXISTS');
         if not hasattr(get,'password'): get.password = '';
         
-        #try:
-        if not hasattr(get,'coding'): get.coding = 'UTF-8';
-        tmps = '/tmp/panelExec.log'
-        if get.sfile[-4:] == '.zip':
-            os.system("export LANG=\"zh_CN." + get.coding + "\" && unzip -P '"+get.password+"' -o '" + get.sfile + "' -d '" + get.dfile + "' > " + tmps + " 2>&1")
-        elif get.sfile[-7:] == '.tar.gz' or get.sfile[-4:] == '.tgz':
-            os.system("tar zxf '" + get.sfile + "' -C '" + get.dfile + "' > " + tmps + " 2>&1");
-        else:
-            os.system("gunzip -c " + get.sfile + " > " + get.sfile[:-3])
-        if self.CheckDir(get.dfile):
-            sites_path = public.M('config').where('id=?',(1)).getField('sites_path');
-            if get.dfile.find('/www/wwwroot') != -1 or get.dfile.find(sites_path) != -1: self.SetFileAccept(get.dfile);
-        public.WriteLog("TYPE_FILE", 'UNZIP_SUCCESS',(get.sfile,get.dfile));
-        return public.returnMsg(True,'UNZIP_SUCCESS');
-        #except:
-        #    return public.returnMsg(False,'文件解压失败!')
+        try:
+            if not hasattr(get,'coding'): get.coding = 'UTF-8';
+            tmps = '/tmp/panelExec.log'
+            if get.sfile[-4:] == '.zip':
+                os.system("export LANG=\"zh_CN." + get.coding + "\" && unzip -P '"+get.password+"' -o '" + get.sfile + "' -d '" + get.dfile + "' > " + tmps + " 2>&1")
+            elif get.sfile[-7:] == '.tar.gz' or get.sfile[-4:] == '.tgz':
+                os.system("tar zxf '" + get.sfile + "' -C '" + get.dfile + "' > " + tmps + " 2>&1");
+            else:
+                os.system("gunzip -c " + get.sfile + " > " + get.sfile[:-3])
+            if self.CheckDir(get.dfile):
+                sites_path = public.M('config').where('id=?',(1,)).getField('sites_path');
+                if get.dfile.find('/www/wwwroot') != -1 or get.dfile.find(sites_path) != -1: 
+                    self.SetFileAccept(get.dfile);
+                else:
+                    import pwd
+                    user = pwd.getpwuid(os.stat(get.dfile).st_uid).pw_name
+                    os.system("chown -R %s:%s %s" % (user,user,get.dfile))
+        
+            public.WriteLog("TYPE_FILE", 'UNZIP_SUCCESS',(get.sfile,get.dfile));
+            return public.returnMsg(True,'UNZIP_SUCCESS');
+        except:
+            return public.returnMsg(False,'文件解压失败!')
     
     
     #获取文件/目录 权限信息
@@ -695,7 +700,8 @@ class files:
         elif get.type == '3':
             for key in json.loads(get.data):
                 try:
-                    filename = get.path+'/'+key.encode('utf-8');
+                    if sys.version_info[0] == 2: key = key.encode('utf-8')
+                    filename = get.path+'/'+key
                     if not self.CheckDir(filename): return public.returnMsg(False,'FILE_DANGER');
                     os.system('chmod -R '+get.access+" '"+filename+"'")
                     os.system('chown -R '+get.user+':'+get.user+" '"+filename+"'")
@@ -712,7 +718,8 @@ class files:
             i = 0;
             for key in get.data:
                 try:
-                    filename = path + '/'+key.encode('utf-8');
+                    if sys.version_info[0] == 2: key = key.encode('utf-8')
+                    filename = path + '/'+key
                     get.path = filename;
                     if not os.path.exists(filename): continue
                     i += 1;
@@ -749,22 +756,22 @@ class files:
             for key in myfiles:
                 i += 1
                 public.writeSpeed(key,i,l);
-                #try:
-                if sys.version_info[0] == 2:
-                    sfile = session['selected']['path'] + '/' + key.encode('utf-8')
-                    dfile = get.path + '/' + key.encode('utf-8')
-                else:
-                    sfile = session['selected']['path'] + '/' + key
-                    dfile = get.path + '/' + key
+                try:
+                    if sys.version_info[0] == 2:
+                        sfile = session['selected']['path'] + '/' + key.encode('utf-8')
+                        dfile = get.path + '/' + key.encode('utf-8')
+                    else:
+                        sfile = session['selected']['path'] + '/' + key
+                        dfile = get.path + '/' + key
 
-                if os.path.isdir(sfile):
-                    shutil.copytree(sfile,dfile)
-                else:
-                    shutil.copyfile(sfile,dfile)
-                stat = os.stat(sfile)
-                os.chown(dfile,stat.st_uid,stat.st_gid)
-                #except:
-                    #continue;
+                    if os.path.isdir(sfile):
+                        shutil.copytree(sfile,dfile)
+                    else:
+                        shutil.copyfile(sfile,dfile)
+                    stat = os.stat(sfile)
+                    os.chown(dfile,stat.st_uid,stat.st_gid)
+                except:
+                    continue;
             public.WriteLog('TYPE_FILE','FILE_ALL_COPY',(session['selected']['path'],get.path))
         else:
             for key in myfiles:

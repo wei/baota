@@ -226,7 +226,7 @@ function edit_task_info(id){
 									<div style="line-height:34px"><input type="text" style="width:400px; height:34px" class="bt-input-text url_create" name="urladdress"  placeholder="URL地址" value="'+ obj.from.urladdress +'"></div>\
 								</div>\
 								<div class="clearfix plan ptb10">\
-									<div class="bt-submit plan-submit">保存编辑</div>\
+									<div class="bt-submit plan-submits " style="margin-left: 141px;">保存编辑</div>\
 								</div>\
 							</div>'
 			});
@@ -267,7 +267,7 @@ function edit_task_info(id){
 					obj.from.urladdress = $(this).val();
 				});
 	
-				$('[aria-labelledby="cycle"] a').click(function () {
+				$('[aria-labelledby="cycle"] a').unbind().click(function () {
 					$('.cycle_btn').find('b').attr('val',$(this).attr('value')).html($(this).html());
 					var type = $(this).attr('value');
 					switch(type){
@@ -345,16 +345,16 @@ function edit_task_info(id){
 					obj.from.type = $(this).attr('value');
 				});
 	
-				$('[aria-labelledby="week"] a').click(function () {
+				$('[aria-labelledby="week"] a').unbind().click(function () {
 					$('.week_btn').find('b').attr('val',$(this).attr('value')).html($(this).html());
 					obj.from.week = $(this).attr('value');
 				});
 	
-				$('[aria-labelledby="backupTo"] a').click(function () {
+				$('[aria-labelledby="backupTo"] a').unbind().click(function () {
 					$('.backup_btn').find('b').attr('val',$(this).attr('value')).html($(this).html());
 					obj.from.backupTo = $(this).attr('value');
 				});
-				$('.plan-submit').click(function(){
+				$('.plan-submits').unbind().click(function(){
 					if(obj.from.type == 'hour-n'){
 						obj.from.where1 = obj.from.hour;
 						obj.from.hour = '';

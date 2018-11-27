@@ -4645,3 +4645,62 @@ select[disabled]{
 	width:2.4em;height:1.4em;margin-bottom: 0
 }
 
+.db_list{
+	padding: 0px 0 10px 0;
+    font-size: 13px;
+    line-height: 35px;
+    height: 45px;
+}
+.db_list a{
+	margin-right: 15px;
+	color: #555;
+    font-weight: 600;
+}
+.db_list span:nth-child(1){
+	display: block;
+    float: left;
+    padding-left: 15px;
+    background: #ececec;
+    border-radius: 3px;
+}
+
+#db_tools button {
+    margin-right: 10px;
+}
+#db_tools button:last-child{
+	margin-right: 0;
+}
+
+/* PHP设置样式 */
+.php-limit-config .tname{
+	width:130px;
+}
+.php-limit-config .info-r p{
+	display: inline-block;
+}
+
+/* mysql设置样式 */
+.tab-db-status  .line{
+	padding:0;
+	padding-bottom: 1px;
+}
+
+.tab-db-status  .tname{
+	width: 155px;
+	padding-right:10px; 
+	height: 30px;
+	line-height: 30px;
+}
+.tab-db-status  .info-r{
+	margin-bottom: 0px;
+}
+.tab-db-status .line:nth-child(1) .ml0{
+	margin-bottom: 10px;
+    padding-left: 95px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #ccc;
+}
+.tab-db-status .bt_mysql_restart{
+	margin-left: 355px;
+    margin-top: 10px;
+}

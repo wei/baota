@@ -131,7 +131,9 @@ class panelPlugin:
                 if versionInfo['m_version'] != get.version: continue
                 if not self.check_cpu_limit(versionInfo['cpu_limit']): return public.returnMsg(False,'至少需要[%d]个CPU核心才能安装' % versionInfo['cpu_limit'])
                 if not self.check_mem_limit(versionInfo['mem_limit']): return public.returnMsg(False,'至少需要[%dMB]内存才能安装' % versionInfo['mem_limit'])
-                if not self.check_os_limit(versionInfo['os_limit']): return public.returnMsg(False,'仅支持[%s]系统' % versionInfo['os_limit'])
+                if not self.check_os_limit(versionInfo['os_limit']): 
+                    m_ps = {0:"所有的",1:"Centos",2:"Ubuntu/Debian"}
+                    return public.returnMsg(False,'仅支持[%s]系统' % m_ps[int(versionInfo['os_limit'])])
                 if not hasattr(get,'id'):
                     if not self.check_dependnet(versionInfo['dependnet']): return public.returnMsg(False,'依赖以下软件,请先安装[%s]' % versionInfo['dependnet'])
         
@@ -199,6 +201,9 @@ class panelPlugin:
             public.WriteLog('TYPE_SETUP','PLUGIN_UNINSTALL_SOFT',(pluginInfo['title'],));
             return public.returnMsg(True,'PLUGIN_UNINSTALL');
         else:
+
+            if pluginInfo['name'] == 'mysql':
+                if public.M('databases').count() > 0: return public.returnMsg(False,"数据库列表非空，为了您的数据安全，请先备份并删除现有数据库<br>强制卸载命令：rm -rf /www/server/mysql")
             get.type = '0'
             issue = public.readFile('/etc/issue')
             if session['server_os']['x'] != 'RHEL': get.type = '3'
@@ -214,10 +219,15 @@ class panelPlugin:
     def get_cloud_list(self,get=None):
         cacheKey = 'plugin_soft_list'
         softList = cache.get(cacheKey)
+        lcoalTmp = 'data/plugin.json'
+        if not softList:
+            listTmp = public.readFile(lcoalTmp)
+            if listTmp: softList = json.loads(listTmp)
         focre  = 0
         if hasattr(get,'force'): focre = int(get.force)
+        if hasattr(get,'cache'):
+            if cache.get(cacheKey+'_list'): focre = 0;
         if not softList or focre > 0:
-            lcoalTmp = 'data/plugin.json'
             cloudUrl = public.GetConfigValue('home') + '/api/panel/get_soft_list'
             import panelAuth
             pdata = panelAuth.panelAuth().create_serverid(None)
@@ -227,6 +237,7 @@ class panelPlugin:
             softList = json.loads(listTmp)
             if softList: public.writeFile(lcoalTmp,json.dumps(softList))
             cache.set(cacheKey,softList,1800)
+            cache.set(cacheKey+'_list',1,1800)
             public.ExecShell('rm -f /tmp/bmac_*')
             self.getCloudPHPExt(get)
         try:
@@ -242,6 +253,7 @@ class panelPlugin:
                 for softInfo in softList['list']:
                     if softInfo['name'].find(get.query) != -1 or softInfo['title'].find(get.query) != -1: tmpList.append(softInfo)
                 softList['list'] = tmpList
+
         return softList
 
     #取本地插件
@@ -256,7 +268,9 @@ class panelPlugin:
             if isExists: continue
             filename = 'plugin/' + name + '/info.json'
             if not os.path.exists(filename): continue
-            info = json.loads(public.ReadFile(filename))
+            tmpInfo = public.ReadFile(filename).strip()
+            if not tmpInfo: continue
+            info = json.loads(tmpInfo)
             pluginInfo = self.get_local_plugin_info(info)
             sList.append(pluginInfo)
         return sList
@@ -356,7 +370,7 @@ class panelPlugin:
         softList = self.get_cloud_list(get)['list']
         if not softList: 
             get.force = 1
-            softList = self.get_cloud_list(get)
+            softList = self.get_cloud_list(get)['list']
             if not softList: return public.returnMsg(False,'软件列表获取失败(401)!')
         softList = self.set_coexist(softList)
         if not os.path.exists(self.__index): public.writeFile(self.__index,'[]')
@@ -375,7 +389,17 @@ class panelPlugin:
         if not os.path.exists(self.__index): public.writeFile(self.__index,'[]')
         indexList = json.loads(public.ReadFile(self.__index))
         if sName in indexList: return public.returnMsg(False,'请不要重复添加!')
-        if len(indexList) >= 12: return public.returnMsg(False,'首页最多只能显示12个软件!')
+
+        if len(indexList) >= 12: 
+            new_indexList = []
+            softList = self.get_cloud_list(get)['list']
+            for softInfo in softList:
+                if softInfo['name'] in indexList:
+                    new_softInfo = self.check_status(softInfo)
+                    if not new_softInfo['setup']: indexList.remove(softInfo['name'])
+            public.writeFile(self.__index,json.dumps(indexList))
+            if len(indexList) >= 12: return public.returnMsg(False,'首页最多只能显示12个软件!')
+
         indexList.append(sName)
         public.writeFile(self.__index,json.dumps(indexList))
         return public.returnMsg(True,'添加成功!')
@@ -497,6 +521,7 @@ class panelPlugin:
         if softInfo['name'].find('php-') != -1: 
             softInfo['fpm'] = os.path.exists('/etc/init.d/php-fpm-' + softInfo['versions'][0]['m_version'].replace('.',''))
             softInfo['status'] = True
+        if softInfo['name'] == 'mysql': softInfo['status'] = self.process_exists('mysqld')
         return softInfo
 
     #获取指定软件信息
@@ -525,7 +550,11 @@ class panelPlugin:
         if os.path.exists(vFile1): 
             version = public.ReadFile(vFile1).strip()
         elif  os.path.exists(vFile2): 
-            version = json.loads(public.ReadFile(vFile2))['versions']
+            v_tmp = public.ReadFile(vFile2).strip()
+            if v_tmp: 
+                version = json.loads(v_tmp)['versions']
+            else:
+                version = "1.0"
         else:
             version = public.ExecShell(sInfo['version'])[0].strip()
             public.writeFile(vFile1,version)
@@ -535,6 +564,9 @@ class panelPlugin:
             if os.path.exists(vFile3): 
                 version_str = public.readFile(vFile3)
                 if version_str.find('AliSQL') != -1: version = 'AliSQL'
+
+        if sInfo['name'] == 'nginx':
+            if version.find('2.2.') != -1: version = '-Tengine' + version
         return version.replace('p1','')
 
 

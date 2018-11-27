@@ -130,7 +130,11 @@ class panelSite:
     </Directory>
 </VirtualHost>''' % (vName,self.sitePort,self.sitePath,acc,self.siteName,self.siteName,public.GetConfigValue('logs_path')+'/'+self.siteName,public.GetConfigValue('logs_path')+'/'+self.siteName,phpConfig,self.sitePath,apaOpt)
     
-        if not os.path.exists(self.sitePath+'/.htaccess'): public.writeFile(self.sitePath+'/.htaccess', ' ');
+        htaccess = self.sitePath+'/.htaccess'
+        if not os.path.exists(htaccess): public.writeFile(htaccess, ' ');
+        public.ExecShell('chmod -R 755 ' + htaccess);
+        public.ExecShell('chown -R www:www ' + htaccess);
+
         filename = self.setupPath+'/panel/vhost/apache/'+self.siteName+'.conf'
         public.writeFile(filename,conf)
         return True
@@ -209,6 +213,8 @@ class panelSite:
             return public.returnMsg(False,'ERROR: 检测到配置文件有错误,请先排除后再操作<br><br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
         
         import json,files
+
+        get.path = self.__get_site_format_path(get.path)
         siteMenu = json.loads(get.webname)
         self.siteName     = self.ToPunycode(siteMenu['domain'].strip().split(':')[0]).strip();
         self.sitePath     = self.ToPunycodePath(self.GetPath(get.path.replace(' ','')));
@@ -227,7 +233,7 @@ class panelSite:
         #if siteMenu['count']:
         #    domain            = get.domain.replace(' ','')
         #表单验证
-        if not files.files().CheckDir(self.sitePath): return public.returnMsg(False,'PATH_ERROR');
+        if not files.files().CheckDir(self.sitePath) or not self.__check_site_path(self.sitePath): return public.returnMsg(False,'PATH_ERROR');
         if len(self.phpVersion) < 2: return public.returnMsg(False,'SITE_ADD_ERR_PHPEMPTY');
         reg = "^([\w\-\*]{1,100}\.){1,4}([\w\-]{1,24}|[\w\-]{1,24}\.[\w\-]{1,24})$";
         if not re.match(reg, self.siteName): return public.returnMsg(False,'SITE_ADD_ERR_DOMAIN');
@@ -265,11 +271,15 @@ class panelSite:
         index = self.sitePath+'/index.html'
         if not os.path.exists(index):
             public.writeFile(index, public.readFile('data/defaultDoc.html'))
+            public.ExecShell('chmod -R 755 ' + index);
+            public.ExecShell('chown -R www:www ' + index);
         
         #创建自定义404页
         doc404 = self.sitePath+'/404.html'
         if not os.path.exists(doc404):
             public.writeFile(doc404, public.readFile('data/404.html'));
+            public.ExecShell('chmod -R 755 ' + doc404);
+            public.ExecShell('chown -R www:www ' + doc404);
         
         #写入配置
         result = self.nginxAdd()
@@ -332,6 +342,18 @@ class panelSite:
         public.serviceReload()
         public.WriteLog('TYPE_SITE','SITE_ADD_SUCCESS',(self.siteName,))
         return data
+
+    def __get_site_format_path(self,path):
+        path = path.replace('//','/');
+        if path[-1:] == '/':
+            path = path[:-1]
+        return path
+
+    def __check_site_path(self,path):
+        path = self.__get_site_format_path(path)
+        other_path = public.M('config').where("id=?",('1',)).field('sites_path,backup_path').find();
+        if path == other_path['sites_path'] or path == other_path['backup_path']: return False
+        return True
     
     #删除站点
     def DeleteSite(self,get):
@@ -373,8 +395,8 @@ class panelSite:
         #删除根目录
         if hasattr(get,'path'):
             import files
-            get.path = public.M('sites').where("id=?",(id,)).getField('path');
-            files.files().DeleteDir(get)
+            get.path = self.__get_site_format_path(public.M('sites').where("id=?",(id,)).getField('path'));
+            if self.__check_site_path(get.path): files.files().DeleteDir(get)
         
         #重载配置
         public.serviceReload();
@@ -1875,7 +1897,7 @@ server
         if Path == "" or id == '0': return public.returnMsg(False,  "DIR_EMPTY");
         
         import files
-        if not files.files().CheckDir(Path): return public.returnMsg(False,  "PATH_ERROR");
+        if not files.files().CheckDir(Path) or not self.__check_site_path(Path): return public.returnMsg(False,  "PATH_ERROR");
         
         SiteFind = public.M("sites").where("id=?",(id,)).field('path,name').find();
         if SiteFind["path"] == Path: return public.returnMsg(False,  "SITE_PATH_ERR_RE");
@@ -2116,9 +2138,8 @@ server
                 if os.path.exists('/www/server/nginx/src/ngx_cache_purge'):
                     cureCache = '''
     location ~ /purge(/.*) { 
-        proxy_cache_purge cache_one %s$request_uri$is_args$args;
-        #access_log  /www/wwwlogs/%s_purge_cache.log;
-    }''' % (get.toDomain,name)
+        proxy_cache_purge cache_one $1$is_args$args;
+    }'''
                 
                 proxy='''#PROXY-START%s
     location / 

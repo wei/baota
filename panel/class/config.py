@@ -32,14 +32,7 @@ class config:
     
     def setPanel(self,get):
         if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK');
-        if get.admin_path == '': get.admin_path = '/'
-
-        if get.admin_path != '/':
-            if len(get.admin_path) < 6: return public.returnMsg(False,'安全入口地址长度不能小于6位!')
-            if get.admin_path in admin_path_checks: return public.returnMsg(False,'该入口已被面板占用,请使用其它入口!')
-        else:
-            if not get.domain.strip() and not get.limitip.strip(): return public.returnMsg(False,'警告，关闭安全入口等于直接暴露你的后台地址在外网，十分危险，至少开启以下一种安全方式才能关闭：<a style="color:red;"><br>1、绑定访问域名<br>2、绑定授权IP</a>')
-
+        
         if get.domain:
             reg = "^([\w\-\*]{1,100}\.){1,4}(\w{1,10}|\w{1,10}\.\w{1,10})$";
             if not re.match(reg, get.domain): return public.returnMsg(False,'SITE_ADD_ERR_DOMAIN');
@@ -65,13 +58,6 @@ class config:
             session['title'] = get.webname
             public.SetConfigValue('title',get.webname)
 
-        admin_path_file = 'data/admin_path.pl'
-        admin_path = '/'
-        if os.path.exists(admin_path_file): admin_path = public.readFile(admin_path_file).strip()
-        if get.admin_path != admin_path:
-            public.writeFile(admin_path_file,get.admin_path)
-            isReWeb = True
-        
         limitip = public.readFile('data/limitip.conf');
         if get.limitip != limitip: public.writeFile('data/limitip.conf',get.limitip);
         
@@ -87,6 +73,31 @@ class config:
         public.WriteLog('TYPE_PANEL','PANEL_SAVE',(newPort,get.domain,get.backup_path,get.sites_path,get.address,get.limitip))
         if isReWeb: public.restart_panel()
         return data
+
+
+    def set_admin_path(self,get):
+        get.admin_path = get.admin_path.strip()
+        if get.admin_path == '': get.admin_path = '/'
+        if get.admin_path != '/':
+            if len(get.admin_path) < 6: return public.returnMsg(False,'安全入口地址长度不能小于6位!')
+            if get.admin_path in admin_path_checks: return public.returnMsg(False,'该入口已被面板占用,请使用其它入口!')
+            if not re.match("^/[\w\./-_]+$",get.admin_path):  return public.returnMsg(False,'入口地址格式不正确,示例: /my_panel')
+        else:
+            get.domain = public.readFile('data/domain.conf')
+            if not get.domain: get.domain = '';
+            get.limitip = public.readFile('data/limitip.conf')
+            if not get.limitip: get.limitip = '';
+            if not get.domain.strip() and not get.limitip.strip(): return public.returnMsg(False,'警告，关闭安全入口等于直接暴露你的后台地址在外网，十分危险，至少开启以下一种安全方式才能关闭：<a style="color:red;"><br>1、绑定访问域名<br>2、绑定授权IP</a>')
+
+        admin_path_file = 'data/admin_path.pl'
+        admin_path = '/'
+        if os.path.exists(admin_path_file): admin_path = public.readFile(admin_path_file).strip()
+        if get.admin_path != admin_path:
+            public.writeFile(admin_path_file,get.admin_path)
+            public.restart_panel()
+        return public.returnMsg(True,'修改成功!');
+               
+
     
     def setPathInfo(self,get):
         #设置PATH_INFO
@@ -183,7 +194,7 @@ class config:
             conf = public.readFile(path);
             rep = "fastcgi_connect_timeout\s+([0-9]+);";
             tmp = re.search(rep, conf).groups();
-            if int(tmp[0]) < time:
+            if int(tmp[0]) < int(time):
                 conf = re.sub(rep,'fastcgi_connect_timeout '+time+';',conf);
                 rep = "fastcgi_send_timeout\s+([0-9]+);";
                 conf = re.sub(rep,'fastcgi_send_timeout '+time+';',conf);

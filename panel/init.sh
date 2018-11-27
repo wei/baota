@@ -24,7 +24,9 @@ panel_start()
         if [ "$isStart" == '' ];then
                 echo -e "Starting Bt-Panel... \c"
                 gunicorn -c runconfig.py runserver:app
-                isStart=`ps aux|grep 'gunicorn -c runconfig.py runserver:app'|grep -v grep|awk '{print $2}'`
+                sleep 0.1
+                port=$(cat /www/server/panel/data/port.pl)
+                isStart=$(lsof -i :$port|grep LISTEN)
                 if [ "$isStart" == '' ];then
                         echo -e "\033[31mfailed\033[0m"
                         echo '------------------------------------------------------'
@@ -38,12 +40,12 @@ panel_start()
                 echo "Starting Bt-Panel... Bt-Panel (pid $(echo $isStart)) already running"
         fi
         
-        isStart=$(ps aux |grep 'task.py$'|awk '{print $2}')
+        isStart=$(ps aux |grep 'task.py'|grep -v grep|awk '{print $2}')
         if [ "$isStart" == '' ];then
                 echo -e "Starting Bt-Tasks... \c"
                 nohup python task.py > /tmp/panelTask.pl 2>&1 &
                 sleep 0.2
-                isStart=$(ps aux |grep 'task.py$'|awk '{print $2}')
+                isStart=$(ps aux |grep 'task.py'|grep -v grep|awk '{print $2}')
                 if [ "$isStart" == '' ];then
                         echo -e "\033[31mfailed\033[0m"
                         echo '------------------------------------------------------'
@@ -61,7 +63,7 @@ panel_start()
 panel_stop()
 {
 	echo -e "Stopping Bt-Tasks... \c";
-    pids=$(ps aux | grep 'task.py$'|awk '{print $2}')
+    pids=$(ps aux | grep 'task.py'|grep -v grep|awk '{print $2}')
     arr=($pids)
 
     for p in ${arr[@]}
@@ -74,7 +76,7 @@ panel_stop()
     arr=`ps aux|grep 'gunicorn -c runconfig.py runserver:app'|grep -v grep|awk '{print $2}'`
 	for p in ${arr[@]}
     do
-            kill -9 $p
+            kill -9 $p &>/dev/null
     done
     
     if [ -f $pidfile ];then
@@ -92,7 +94,7 @@ panel_status()
                 echo -e "\033[31mBt-Panel not running\033[0m"
         fi
         
-        isStart=$(ps aux |grep 'task.py$'|awk '{print $2}')
+        isStart=$(ps aux |grep 'task.py'|grep -v grep|awk '{print $2}')
         if [ "$isStart" != '' ];then
                 echo -e "\033[32mBt-Task (pid $isStart) already running\033[0m"
         else
@@ -196,3 +198,5 @@ case "$1" in
                 python $panel_path/tools.py cli $2
         ;;
 esac
+
+

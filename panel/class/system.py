@@ -568,7 +568,7 @@ class system:
             
             if get.type == 'start': 
                 public.ExecShell('/etc/init.d/httpd stop');
-                public.ExecShell('pkill -9 httpd');
+                self.kill_port()
                 
             result = public.ExecShell('ulimit -n 10240 && ' + self.setupPath+'/apache/bin/apachectl -t');
             if result[1].find('Syntax OK') == -1:
@@ -578,6 +578,7 @@ class system:
             if get.type == 'restart':
                 public.ExecShell('pkill -9 httpd');
                 public.ExecShell('/etc/init.d/httpd start');
+                time.sleep(0.5)
             
         #检查nginx配置文件
         elif get.name == 'nginx':
@@ -608,6 +609,10 @@ class system:
             if result[1].find('successful') == -1:
                 public.WriteLog("TYPE_SOFT",'SYS_EXEC_ERR', (str(result),));
                 return public.returnMsg(False,'SYS_CONF_NGINX_ERR',(result[1].replace("\n",'<br>'),));
+
+            if get.type == 'start': 
+                self.kill_port()
+                time.sleep(0.5)
         
         #执行
         execStr = "/etc/init.d/"+get.name+" "+get.type
@@ -637,6 +642,12 @@ class system:
         if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK');
         public.ExecShell("sync && init 6 &");
         return public.returnMsg(True,'SYS_REBOOT');
+
+    def kill_port(self):
+        public.ExecShell('pkill -9 httpd');
+        public.ExecShell('pkill -9 nginx');
+        public.ExecShell("kill -9 $(lsof -i :80|grep LISTEN|awk '{print $2}')")
+        return True
     
     #释放内存
     def ReMemory(self,get):

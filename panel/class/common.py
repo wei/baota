@@ -28,7 +28,7 @@ class panelSetup:
             ua = ua.lower();
             if ua.find('spider') != -1 or ua.find('bot') != -1: return redirect('https://www.baidu.com');
         
-        g.version = '6.5.0'
+        g.version = '6.6.6'
         g.title =  public.GetConfigValue('title')
         g.uri = request.path
         session['version'] = g.version;
@@ -118,7 +118,7 @@ class panelAdmin(panelSetup):
             tmp = public.GetHost()
             domain = public.ReadFile('data/domain.conf')
             if domain:
-                if(tmp.strip() != domain.strip()): return redirect('/login')
+                if(tmp.strip().lower() != domain.strip().lower()): return redirect('/login')
         except:
             return redirect('/login')
     

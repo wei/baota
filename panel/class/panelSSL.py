@@ -23,7 +23,12 @@ class panelSSL:
         pdata = {}
         data = {}
         if os.path.exists(self.__UPATH):
-            self.__userInfo = json.loads(public.readFile(self.__UPATH));
+            my_tmp = public.readFile(self.__UPATH)
+            if my_tmp:
+                self.__userInfo = json.loads(my_tmp);
+            else:
+                self.__userInfo = {}
+
             if self.__userInfo:
                 pdata['access_key'] = self.__userInfo['access_key'];
                 data['secret_key'] = self.__userInfo['secret_key'];
