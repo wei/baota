@@ -28,7 +28,7 @@ class panelSetup:
             ua = ua.lower();
             if ua.find('spider') != -1 or ua.find('bot') != -1: return redirect('https://www.baidu.com');
         
-        g.version = '6.6.6'
+        g.version = '6.8.2'
         g.title =  public.GetConfigValue('title')
         g.uri = request.path
         session['version'] = g.version;
@@ -114,13 +114,35 @@ class panelAdmin(panelSetup):
     #检查域名绑定
     def checkDomain(self):
         try:
-            if not session['login']: return redirect('/login')
+            if not 'login' in session: 
+                if not self.get_sk(): 
+                    return redirect('/login')
+            else:
+                if session['login'] == False: return redirect('/login')
             tmp = public.GetHost()
             domain = public.ReadFile('data/domain.conf')
             if domain:
                 if(tmp.strip().lower() != domain.strip().lower()): return redirect('/login')
         except:
             return redirect('/login')
+
+    #获取sk
+    def get_sk(self,):
+        save_path = '/www/server/panel/config/api.json'
+        if not os.path.exists(save_path): return False
+        api_config = json.loads(public.ReadFile(save_path))
+        if not api_config['open']: return False
+        from BTPanel import get_input
+        get = get_input()
+        if not 'request_token' in get: return False
+        if not 'request_time' in get: return False
+        client_ip = public.GetClientIp()
+        if not client_ip in api_config['limit_addr']: return False
+        request_token = public.md5(get.request_time + api_config['token'])
+        if get.request_token == request_token: 
+            return True
+        return False
+
     
     #检查系统配置
     def checkConfig(self):

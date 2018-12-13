@@ -304,7 +304,8 @@ def check502():
     try:
         phpversions = ['53','54','55','56','70','71','72']
         for version in phpversions:
-            if not os.path.exists('/etc/init.d/php-fpm-'+version): continue;
+            php_path = '/www/server/php/' + version + '/sbin/php-fpm'
+            if not os.path.exists(php_path): continue;
             if checkPHPVersion(version): continue;
             if startPHPVersion(version):
                 public.WriteLog('PHP守护程序','检测到PHP-' + version + '处理异常,已自动修复!')
@@ -315,15 +316,18 @@ def check502():
 def startPHPVersion(version):
     try:
         fpm = '/etc/init.d/php-fpm-'+version
-        if not os.path.exists(fpm): return False;
+        php_path = '/www/server/php/' + version + '/sbin/php-fpm'
+        if not os.path.exists(php_path): 
+            if os.path.exists(fpm): os.remove(fpm)
+            return False;
         
         #尝试重载服务
         os.system(fpm + ' reload');
         if checkPHPVersion(version): return True;
         
         #尝试重启服务
-        cgi = '/tmp/php-cgi-'+version
-        pid = '/www/server/php'+version+'/php-fpm.pid';
+        cgi = '/tmp/php-cgi-'+version + '.sock'
+        pid = '/www/server/php/'+version+'/var/run/php-fpm.pid';
         os.system('pkill -9 php-fpm-'+version)
         time.sleep(0.5);
         if not os.path.exists(cgi): os.system('rm -f ' + cgi);

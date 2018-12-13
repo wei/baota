@@ -31,6 +31,7 @@ class Sql():
         try:
             if self.__DB_CONN == None:
                 self.__DB_CONN = sqlite3.connect(self.__DB_FILE)
+                self.__DB_CONN.text_factory = str
         except Exception as ex:
             return "error: " + str(ex)
             

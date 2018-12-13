@@ -156,7 +156,8 @@ class crontab:
         cronName=self.GetShell(cronInfo)
         if type(cronName) == dict: return cronName;
         cuonConfig += ' ' + cronPath+'/'+cronName+' >> '+ cronPath+'/'+cronName+'.log 2>&1'
-        self.WriteShell(cuonConfig)
+        wRes = self.WriteShell(cuonConfig)
+        if type(wRes) != bool: return False
         self.CrondReload()
         
     #添加计划任务
@@ -168,7 +169,9 @@ class crontab:
         cronName=self.GetShell(get)
         if type(cronName) == dict: return cronName;
         cuonConfig += ' ' + cronPath+'/'+cronName+' >> '+ cronPath+'/'+cronName+'.log 2>&1'
-        self.WriteShell(cuonConfig)
+
+        wRes = self.WriteShell(cuonConfig)
+        if type(wRes) != bool: return wRes
         self.CrondReload()
         addData=public.M('crontab').add(
             'name,type,where1,where_hour,where_minute,echo,addtime,status,save,backupTo,sType,sName,sBody,urladdress',
@@ -282,7 +285,7 @@ class crontab:
         try:
             id = get['id']
             find = public.M('crontab').where("id=?",(id,)).field('name,echo').find()
-            self.remove_for_crond(find['echo'])
+            if not self.remove_for_crond(find['echo']): return public.returnMsg(False,'无法写入文件，请检查是否开启了系统加固功能!');
             cronPath = public.GetConfigValue('setup_path') + '/cron'
             sfile = cronPath + '/' + find['echo']
             if os.path.exists(sfile): os.remove(sfile)
@@ -305,8 +308,9 @@ class crontab:
         conf=public.readFile(file)
         rep = ".+" + str(echo) + ".+\n"
         conf = re.sub(rep, "", conf)
-        public.writeFile(file,conf)
+        if not public.writeFile(file,conf): return False
         self.CrondReload()
+        return True
     
     #取执行脚本
     def GetShell(self,param):
@@ -398,7 +402,7 @@ echo "--------------------------------------------------------------------------
             else:
                 public.ExecShell("chmod 600 '" + file + "' && chown root.crontab " + file)
             return True
-        return public.returnMsg(False,'FILE_WRITE_ERR')
+        return public.returnMsg(False,'文件写入失败,请检查是否开启系统加固功能!')
     
     #立即执行任务
     def StartTask(self,get):

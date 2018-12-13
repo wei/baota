@@ -38,7 +38,8 @@ class ajax:
     def CheckStatusConf(self):
         if public.get_webserver() != 'nginx': return;
         filename = session['setupPath'] + '/panel/vhost/nginx/phpfpm_status.conf';
-        if os.path.exists(filename): return;
+        if os.path.exists(filename):
+            if public.ReadFile(filename).find('74.sock')!=-1: return;
         
         conf = '''server {
     listen 80;
@@ -85,6 +86,16 @@ class ajax:
     }
     location /phpfpm_72_status {
         fastcgi_pass unix:/tmp/php-cgi-72.sock;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME \$fastcgi_script_name;
+    }
+    location /phpfpm_73_status {
+        fastcgi_pass unix:/tmp/php-cgi-73.sock;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME \$fastcgi_script_name;
+    }
+    location /phpfpm_74_status {
+        fastcgi_pass unix:/tmp/php-cgi-74.sock;
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME \$fastcgi_script_name;
     }
@@ -545,12 +556,24 @@ class ajax:
     
     #检测PHPINFO配置
     def CheckPHPINFO(self):
-        php_versions = ['52','53','54','55','56','70','71','72'];
+        php_versions = ['52','53','54','55','56','70','71','72','73','74','75'];
         path = public.GetConfigValue('setup_path') + '/panel/vhost/nginx/phpinfo.conf';
-        if not os.path.exists(path):
+        nginx_path = '/www/server/nginx/conf/enable-php-'
+        if not os.path.exists(path) or not os.path.exists(nginx_path + '75.conf'):
             opt = "";
             for version in php_versions:
                 opt += "\n\tlocation /"+version+" {\n\t\tinclude enable-php-"+version+".conf;\n\t}";
+                nginx_conf = nginx_path + version + '.conf'
+                if not os.path.exists(nginx_conf):
+                    nginx_body = '''location ~ [^/]\.php(/|$)
+{
+    try_files $uri =404;
+    fastcgi_pass  unix:/tmp/php-cgi-%s.sock;
+    fastcgi_index index.php;
+    include fastcgi.conf;
+	include pathinfo.conf;
+}''' % version
+                    public.WriteFile(nginx_conf,nginx_body)
             
             phpinfoBody = '''server
 {
@@ -562,6 +585,7 @@ class ajax:
 %s   
 }''' % (opt,);
             public.writeFile(path,phpinfoBody);
+
         
         
         path = public.GetConfigValue('setup_path') + '/panel/vhost/apache/phpinfo.conf';

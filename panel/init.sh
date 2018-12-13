@@ -24,7 +24,7 @@ panel_start()
         if [ "$isStart" == '' ];then
                 echo -e "Starting Bt-Panel... \c"
                 gunicorn -c runconfig.py runserver:app
-                sleep 0.1
+                sleep 0.5
                 port=$(cat /www/server/panel/data/port.pl)
                 isStart=$(lsof -i :$port|grep LISTEN)
                 if [ "$isStart" == '' ];then
@@ -33,7 +33,6 @@ panel_start()
                         tail -n 20 $panel_path/logs/error.log
                         echo '------------------------------------------------------'
                         echo -e "\033[31mError: BT-Panel service startup failed.\033[0m"
-                        return;
                 fi
                 echo -e "\033[32mdone\033[0m"
         else
@@ -43,13 +42,13 @@ panel_start()
         isStart=$(ps aux |grep 'task.py'|grep -v grep|awk '{print $2}')
         if [ "$isStart" == '' ];then
                 echo -e "Starting Bt-Tasks... \c"
-                nohup python task.py > /tmp/panelTask.pl 2>&1 &
+                nohup python task.py >> /www/server/panel/logs/task.log 2>&1 &
                 sleep 0.2
                 isStart=$(ps aux |grep 'task.py'|grep -v grep|awk '{print $2}')
                 if [ "$isStart" == '' ];then
                         echo -e "\033[31mfailed\033[0m"
                         echo '------------------------------------------------------'
-                        cat /tmp/panelTask.pl
+                        tail -n 20 /www/server/panel/logs/task.log
                         echo '------------------------------------------------------'
                         echo -e "\033[31mError: BT-Task service startup failed.\033[0m"
                         return;

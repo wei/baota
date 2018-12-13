@@ -194,7 +194,6 @@ class panelPlugin:
                 if os.path.getsize(toFile) > 100:
                     os.system('/bin/bash ' + toFile + ' uninstall')
             else:
-                
                 if os.path.exists(pluginPath + '/install.sh'):
                     os.system('/bin/bash ' + pluginPath + '/install.sh uninstall');
             if os.path.exists(pluginPath): os.system('rm -rf ' + pluginPath)
@@ -222,7 +221,11 @@ class panelPlugin:
         lcoalTmp = 'data/plugin.json'
         if not softList:
             listTmp = public.readFile(lcoalTmp)
-            if listTmp: softList = json.loads(listTmp)
+            try:
+                if listTmp: softList = json.loads(listTmp)
+            except:
+                if os.path.exists(lcoalTmp): os.remove(lcoalTmp)
+
         focre  = 0
         if hasattr(get,'force'): focre = int(get.force)
         if hasattr(get,'cache'):
@@ -270,8 +273,11 @@ class panelPlugin:
             if not os.path.exists(filename): continue
             tmpInfo = public.ReadFile(filename).strip()
             if not tmpInfo: continue
-            info = json.loads(tmpInfo)
+            try:
+                info = json.loads(tmpInfo)
+            except: continue
             pluginInfo = self.get_local_plugin_info(info)
+            if not pluginInfo: continue
             sList.append(pluginInfo)
         return sList
 
@@ -299,41 +305,50 @@ class panelPlugin:
 
     #构造本地插件信息
     def get_local_plugin_info(self,info):
-        pluginInfo = {
-	                    "id": 10000,
-	                    "pid": 0,
-	                    "type": 1000,
-	                    "price": 0,
-	                    "name": info['name'],
-	                    "title": info['title'],
-	                    "panel_pro": 1,
-	                    "panel_free": 1,
-	                    "panel_test": 1,
-	                    "ps": info['ps'],
-	                    "version": info['versions'],
-	                    "s_version": "0",
-	                    "manager_version": "1",
-	                    "c_manager_version": "1",
-	                    "dependnet": "",
-	                    "mutex": "",
-	                    "install_checks": "plugin/" + info['name'],
-	                    "uninsatll_checks": "plugin/" + info['name'],
-	                    "compile_args": 0,
-	                    "version_coexist": 0,
-	                    "versions": [
-		                    {
-			                    "m_version": info['versions'],
-			                    "version": "0",
-			                    "dependnet": "",
-			                    "mem_limit": 32,
-			                    "cpu_limit": 1,
-			                    "os_limit": 0,
-			                    "setup": True
-		                    }
-	                    ],
-	                    "setup": True,
-	                    "status": True
-                    }
+        m_version = info['versions'].split(".")
+        if len(m_version) < 2: return None
+        if len(m_version) > 2:
+            tmp = m_version.copy()
+            del(tmp[0])
+            m_version[1] = '.'.join(tmp)
+
+        try:
+            pluginInfo = {
+	                        "id": 10000,
+	                        "pid": 0,
+	                        "type": 10,
+	                        "price": 0,
+	                        "name": info['name'],
+	                        "title": info['title'],
+	                        "panel_pro": 1,
+	                        "panel_free": 1,
+	                        "panel_test": 1,
+	                        "ps": info['ps'],
+	                        "version": info['versions'],
+	                        "s_version": "0",
+	                        "manager_version": "1",
+	                        "c_manager_version": "1",
+	                        "dependnet": "",
+	                        "mutex": "",
+	                        "install_checks": "plugin/" + info['name'],
+	                        "uninsatll_checks": "plugin/" + info['name'],
+	                        "compile_args": 0,
+	                        "version_coexist": 0,
+	                        "versions": [
+		                        {
+			                        "m_version": m_version[0],
+			                        "version": m_version[1],
+			                        "dependnet": "",
+			                        "mem_limit": 32,
+			                        "cpu_limit": 1,
+			                        "os_limit": 0,
+			                        "setup": True
+		                        }
+	                        ],
+	                        "setup": True,
+	                        "status": True
+                        }
+        except: pluginInfo = None
         return pluginInfo
                 
     #处理分类
@@ -556,6 +571,23 @@ class panelPlugin:
             else:
                 version = "1.0"
         else:
+            exec_args = {
+                    'nginx':"/www/server/nginx/sbin/nginx -v 2>&1|grep version|awk '{print $3}'|cut -f2 -d'/'",
+                    'apache':"/www/server/apache/bin/httpd -v|grep version|awk '{print $3}'|cut -f2 -d'/'",
+                    'mysql':"/www/server/mysql/bin/mysql -V|grep Ver|awk '{print $5}'|cut -f1 -d','",
+                    'php':"/www/server/php/{VERSION}/bin/php -v|grep cli|awk '{print $2}'",
+                    'pure-ftpd':"cat /www/server/pure-ftpd/version.pl",
+                    'phpmyadmin':"cat /www/server/phpmyadmin/version.pl",
+                    'tomcat':"/www/server/tomcat/bin/version.sh|grep version|awk '{print $4}'|cut -f2 -d'/'",
+                    'memcached':"/usr/local/memcached/bin/memcached -V|awk '{print $2}'",
+                    'redis':"/www/server/redis/src/redis-server -v|awk '{print $3}'|cut -f2 -d'='"
+                }
+            
+            exec_str = ''
+            if sInfo['name'] in exec_args: exec_str = exec_args[sInfo['name']] 
+            if sInfo['version_coexist'] == 1:
+                v_tmp = sInfo['name'].split('-')
+                exec_str = exec_args[v_tmp[0]].replace('{VERSION}',v_tmp[1].replace('.',''))
             version = public.ExecShell(sInfo['version'])[0].strip()
             public.writeFile(vFile1,version)
 
@@ -938,7 +970,7 @@ class panelPlugin:
                     arr[i]['versions'] = '5.2,5.3,5.4';
                     arr[i]['update'] = self.GetPv(arr[i]['versions'], arr[i]['update'])
                 elif apacheVersion == '2.4':
-                    arr[i]['versions'] = '5.3,5.4,5.5,5.6,7.0,7.1,7.2';
+                    arr[i]['versions'] = '5.3,5.4,5.5,5.6,7.0,7.1,7.2,7.3,7.4';
                     arr[i]['update'] = self.GetPv(arr[i]['versions'], arr[i]['update'])
                 arr[i]['apache'] = apacheVersion;
                     
@@ -1289,7 +1321,7 @@ class panelPlugin:
                 if apacheVersion == '2.2':
                     pluginInfo['versions'] = '5.2,5.3,5.4';
                 elif apacheVersion == '2.4':
-                    pluginInfo['versions'] = '5.3,5.4,5.5,5.6,7.0,7.1,7.2,7.3';
+                    pluginInfo['versions'] = '5.3,5.4,5.5,5.6,7.0,7.1,7.2,7.3,7.4';
             
             pluginInfo['versions'] = self.checksSetup(pluginInfo['name'],pluginInfo['checks'],pluginInfo['versions'])
             if get.name == 'php':

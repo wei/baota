@@ -603,6 +603,42 @@ class config:
         pluginTmp = public.httpPost(url,pdata)
         pluginInfo = json.loads(pluginTmp)
         return pluginInfo
+
+    def get_token(self,get):
+        import json
+        save_path = '/www/server/panel/config/api.json'
+        if not os.path.exists(save_path): 
+            data = { "open":False, "token":"", "limit_addr":[] }
+            public.WriteFile(save_path,json.dumps(data))
+            public.ExecShell("chmod 600 " + save_path)
+        data = json.loads(public.ReadFile(save_path))
+        data['token'] = "***********************************"
+        data['limit_addr'] = '\n'.join(data['limit_addr'])
+        return data
+
+    def set_token(self,get):
+        import json
+        #panel_password = public.M('users').where('id=?',(1,)).getField('password')
+        #if not public.md5(get.panel_password.strip()) == panel_password: return public.returnMsg(False,'面板密码错误!')
+        if 'request_token' in get: return public.returnMsg(False,'不能通过API接口配置API')
+        save_path = '/www/server/panel/config/api.json'
+        data = json.loads(public.ReadFile(save_path))
+        if get.t_type == '1':
+            token = public.GetRandomString(32)
+            data['token'] = public.md5(token)
+            public.WriteLog('API配置','重新生成API-Token')
+        elif get.t_type == '2':
+            data['open'] = not data['open']
+            stats = {True:'开启',False:'关闭'}
+            public.WriteLog('API配置','%sAPI接口' % stats[data['open']])
+            token = stats[data['open']] + '成功!'
+        elif get.t_type == '3':
+            data['limit_addr'] = get.limit_addr.split('\n')
+            public.WriteLog('API配置','变更IP限制为[%s]' % get.limit_addr)
+            token ='保存成功!'
+
+        public.WriteFile(save_path,json.dumps(data))
+        return public.returnMsg(True,token)
             
        
         

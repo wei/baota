@@ -299,6 +299,7 @@ function BackFile() {
 function GetfilePath() {
 	var a = $("#PathPlace").find("span").text();
 	a = a.replace(new RegExp(/(\\)/g), "/");
+	setCookie('path_dir_change',a);
 	$("#" + getCookie("SetId")).val(a + getCookie("SetName"));
 	layer.close(getCookie("ChangePath"))
 }
@@ -1642,7 +1643,7 @@ function web_shell() {
         socket.emit('connect_event', '');
         interval = setInterval(function () {
             socket.emit('connect_event', '');
-        }, 500);
+        }, 1000);
     }
     
     term.on('data', function (data) {

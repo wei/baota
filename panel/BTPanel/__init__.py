@@ -25,6 +25,7 @@ socketio.init_app(app)
 import common,db,jobs,uuid
 jobs.control_init()
 app.secret_key = uuid.UUID(int=uuid.getnode()).hex[-12:]
+
 try:
     from flask_sqlalchemy import SQLAlchemy
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////dev/shm/session.db'
@@ -100,10 +101,11 @@ def login():
     get = get_input()
     if hasattr(get,'dologin'):
         login_path = '/login'
-        if is_auth_path: login_path = admin_path
+        if os.path.exists(admin_path_file): login_path = admin_path
         if session['login'] != False:
             session['login'] = False;
             cache.set('dologin',True)
+            session.clear()
             return redirect(login_path)
     
     if is_auth_path:
@@ -158,9 +160,7 @@ def site(pdata = None):
     import panelSite
     siteObject = panelSite.panelSite()
         
-    defs = ('GetSiteLogs','GetSiteDomains','GetSecurity','SetSecurity','ProxyCache','CloseToHttps','HttpToHttps','SetEdate','SetRewriteTel','GetCheckSafe','CheckSafe','GetDefaultSite','SetDefaultSite','CloseTomcat','SetTomcat','apacheAddPort','AddSite','GetPHPVersion','SetPHPVersion','DeleteSite','AddDomain','DelDomain','GetDirBinding','AddDirBinding','GetDirRewrite','DelDirBinding'
-            ,'get_site_types','add_site_type','remove_site_type','modify_site_type_name','set_site_type','UpdateRulelist','SetSiteRunPath','GetSiteRunPath','SetPath','SetIndex','GetIndex','GetDirUserINI','SetDirUserINI','GetRewriteList','SetSSL','SetSSLConf','CreateLet','CloseSSLConf','GetSSL','SiteStart','SiteStop'
-            ,'Set301Status','Get301Status','CloseLimitNet','SetLimitNet','GetLimitNet','SetProxy','GetProxy','ToBackup','DelBackup','GetSitePHPVersion','logsOpen','GetLogsStatus','CloseHasPwd','SetHasPwd','GetHasPwd','GetDnsApi','SetDnsApi')
+    defs = ('GetSiteLogs','GetSiteDomains','GetSecurity','SetSecurity','ProxyCache','CloseToHttps','HttpToHttps','SetEdate','SetRewriteTel','GetCheckSafe','CheckSafe','GetDefaultSite','SetDefaultSite','CloseTomcat','SetTomcat','apacheAddPort','AddSite','GetPHPVersion','SetPHPVersion','DeleteSite','AddDomain','DelDomain','GetDirBinding','AddDirBinding','GetDirRewrite','DelDirBinding','get_site_types','add_site_type','remove_site_type','modify_site_type_name','set_site_type','UpdateRulelist','SetSiteRunPath','GetSiteRunPath','SetPath','SetIndex','GetIndex','GetDirUserINI','SetDirUserINI','GetRewriteList','SetSSL','SetSSLConf','CreateLet','CloseSSLConf','GetSSL','SiteStart','SiteStop','Set301Status','Get301Status','CloseLimitNet','SetLimitNet','GetLimitNet','RemoveProxy','GetProxyList','GetProxyDetals','CreateProxy','ModifyProxy','GetProxyFile','SaveProxyFile','ToBackup','DelBackup','GetSitePHPVersion','logsOpen','GetLogsStatus','CloseHasPwd','SetHasPwd','GetHasPwd','GetDnsApi','SetDnsApi')
     return publicObject(siteObject,defs,None,pdata);
 
 @app.route('/ftp',methods=method_all)
@@ -264,7 +264,7 @@ def firewall(pdata = None):
     defs = ('GetList','AddDropAddress','DelDropAddress','FirewallReload','SetFirewallStatus','AddAcceptPort','DelAcceptPort','SetSshStatus','SetPing','SetSshPort','GetSshInfo')
     return publicObject(firewallObject,defs,None,pdata);
 
-@app.route('/firewall_new',methods=method_all)
+#@app.route('/firewall_new',methods=method_all)
 def firewall_new(pdata = None):
     comReturn = comm.local()
     if comReturn: return comReturn
@@ -323,14 +323,16 @@ def config(pdata = None):
     comReturn = comm.local()
     if comReturn: return comReturn
     if request.method == method_get[0] and not pdata:
-        import system,wxapp
+        import system,wxapp,config
         data = system.system().GetConcifInfo()
         data['lan'] = public.GetLan('config')
         data['wx'] = wxapp.wxapp().get_user_info(None)['msg']
+        data['api'] = ''
+        if config.config().get_token(None)['open']: data['api'] = 'checked' 
         return render_template( 'config.html',data=data)
     import config
     configObject = config.config()
-    defs = ('set_admin_path','is_pro','get_php_config','get_config','SavePanelSSL','GetPanelSSL','GetPHPConf','SetPHPConf','GetPanelList','AddPanelInfo','SetPanelInfo','DelPanelInfo','ClickPanelInfo','SetPanelSSL','SetTemplates','Set502','setPassword','setUsername','setPanel','setPathInfo','setPHPMaxSize','getFpmConfig','setFpmConfig','setPHPMaxTime','syncDate','setPHPDisable','SetControl','ClosePanel','AutoUpdatePanel','SetPanelLock')
+    defs = ('get_token','set_token','set_admin_path','is_pro','get_php_config','get_config','SavePanelSSL','GetPanelSSL','GetPHPConf','SetPHPConf','GetPanelList','AddPanelInfo','SetPanelInfo','DelPanelInfo','ClickPanelInfo','SetPanelSSL','SetTemplates','Set502','setPassword','setUsername','setPanel','setPathInfo','setPHPMaxSize','getFpmConfig','setFpmConfig','setPHPMaxTime','syncDate','setPHPDisable','SetControl','ClosePanel','AutoUpdatePanel','SetPanelLock')
     return publicObject(configObject,defs,None,pdata);
 
 @app.route('/ajax',methods=method_all)

@@ -222,8 +222,9 @@
 		},
 		get_init:function(){
 			var _this = this;
-			_this.get_disk_list();
-			_this.get_server_info();
+            setTimeout(function () { _this.get_disk_list(); }, 500)
+            setTimeout(function () { _this.get_server_info(); }, 1000)
+			
 
 			bt.pub.get_user_info(function(rdata){
                 if (rdata.status) {
@@ -297,9 +298,10 @@
 						})
 					}
 				})
-			});
-			_this.interval.start();
-			index.get_index_list();
+            });
+            setTimeout(function () { _this.interval.start();},1600)
+            setTimeout(function () { index.get_index_list(); }, 1200)
+			
 
 			setTimeout(function(){
 				_this.net.init();
@@ -313,7 +315,7 @@
                         $('#toUpdate a').css("position","relative");
                     }
                 }, false)
-			},300)
+			},1500)
 		},
 		get_data_info:function(callback){
 

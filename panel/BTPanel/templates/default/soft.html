@@ -21,13 +21,16 @@
                     <div class="menu-sub softtype">
                     </div>
                     <button class="btn btn-default btn-sm" onclick="soft.flush_cache()" title="从云端更新列表" style="position:absolute;top:12px;right:15px">更新软件列表</button>
-                    <div id="updata_pro_info"><div class="alert alert-success" style="margin-bottom:15px"><strong>升级专业版，所有插件，免费使用。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_pro()" title="立即升级专业版" style="margin-left:8px">立即升级</button></div>
-					</div>
-                    <table id="softList" class="table table-hover" width="100%" cellspacing="0" cellpadding="0" border="0">
-                        
-                    </table>                    
+                    <div id="updata_pro_info">
+                        <div class="alert alert-success" style="margin-bottom:15px">
+                            <strong>升级专业版，所有插件，免费使用。</strong>
+                            <button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_pro()" title="立即升级专业版" style="margin-left:8px">立即升级</button>
+                        </div>
+                    </div>
+                    <div id="other_plugin"></div>
+                    <table id="softList" class="table table-hover" width="100%" cellspacing="0" cellpadding="0" border="0"></table>
                     <div id='softPage' class="dataTables_paginate paging_bootstrap page">
-                       
+
                     </div>
                 </div>
             </div>
@@ -57,12 +60,19 @@
 					if(type==0) type = bt.get_cookie('softType');
 					if(page==0) page = bt.get_cookie('p'+type);
 					
-					bt.soft.get_soft_list(page,type,search,function(rdata){	
-						if(rdata.pro>=0){
-							 $("#updata_pro_info").html('');
-						}else if(rdata.pro===-2){
-							$("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong>专业版已到期，付费插件暂停使用。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_pro()" title="立即续费专业版" style="margin-left:8px">立即续费</button>');
-						}						
+                    bt.soft.get_soft_list(page, type, search, function (rdata) {	
+
+                        if (rdata.pro >= 0) {
+                            $("#updata_pro_info").html('');
+                        } else if (rdata.pro === -2) {
+                            $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong>专业版已到期，付费插件暂停使用。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_pro()" title="立即续费专业版" style="margin-left:8px">立即续费</button>');
+                        } else if (rdata.pro === -1){
+                            $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong > 升级专业版，所有插件，免费使用。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_pro()" title="立即升级专业版" style="margin-left:8px">立即升级</button>\</div>');
+                        }
+
+                        if (type == 10) {
+                            $("#updata_pro_info").html('<div class="alert alert-info" style="margin-bottom:15px"><strong>当前插件市场为邀请入驻，所有人都可以自行开发插件自己使用，详情可加入开发者专用群讨论。</strong><a class="btn btn-success btn-xs va0 updata_pro" href="https://www.bt.cn/bbs/thread-20382-1-1.html" title="查看开发文档" style="margin - left: 8px" target="_black">查看开发文档</a></div>')
+                        }
 						var tBody= '';
 						rdata.type.unshift({icon:'icon',id:0,ps:'全部',sort:1,title:'全部'})
 						for(var i=0;i<rdata.type.length;i++){
@@ -96,8 +106,11 @@
 									if(item.setup)
 									{
 										sStyle = ' style="cursor:pointer"';										
-										if(item.admin){
-											click_opt += 'onclick="bt.soft.set_lib_config(\''+item.name+'\',\''+item.title+'\')" ';
+                                        if (item.admin) {
+                                            if (item.endtime >= 0) {
+                                                click_opt += 'onclick="bt.soft.set_lib_config(\'' + item.name + '\',\'' + item.title + '\')" ';
+                                            }
+											
 										}
 										else{												
 											click_opt += ' onclick="bt.soft.set_soft_config(\''+item.name+'\')" ';
@@ -122,7 +135,7 @@
                                             }
                                         }                                            
                                     }                                        
-                                    return ps;
+                                    return '<span>' + ps + '</span>';
                                 }},
 								{ field: 'price', title: '价格', width: 92 , templet : function(item){
 									var price = '免费';
@@ -271,11 +284,33 @@
 				soft.get_list();
 			}
 		};		
-		soft.get_list();
+		// soft.get_list();
 		
 //		bt.send('GetCloudHtml','ajax/GetCloudHtml',{rpath:'btpanel_message/updata_pro.html'},function(rdata){
 //			$("#updata_pro_info").html('');
 //		},1)
-			
+		$(document).ready(function(){
+            soft.get_list();
+            setTimeout(function(){
+                soft_td_width_auto();
+            },500);
+        });
+        $(window).resize(function(){
+            soft_td_width_auto();
+        });
+        function soft_td_width_auto(){
+            var thead_width = '', winWidth = $(window).width();
+            if(winWidth <= 1370 && winWidth > 1280){
+                thead_width = winWidth / 4;
+            }else if(winWidth <= 1280 && winWidth > 1210){
+                thead_width = winWidth / 5;
+            }else if(winWidth <= 1210){
+                thead_width = winWidth / 6;
+            }else{
+                thead_width = winWidth / 3.5;
+            }
+            $('#softList thead th:eq(1)').width(thead_width);
+            $('#softList tbody tr td:nth-child(8n+2)>span').width(thead_width +75);
+        }
 	</script>
 {% endblock %}

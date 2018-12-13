@@ -152,8 +152,7 @@ class backupTools:
         print(u"|---文件名:"+filename)
         
         #清理多余备份     
-        backups = sql.table('backup').where('type=? and pid=?',('2',0)).field('id,filename').select();
-        
+        backups = sql.table('backup').where('type=? and pid=? and name=?',('2',0,path)).field('id,filename').select();
         num = len(backups) - int(count)
         if  num > 0:
             for backup in backups:

@@ -17,18 +17,18 @@
                         <label class='btswitch-btn' for='closePl' onclick='ClosePanel()'></label>
                     </div>
                 </div>
-                <!--<div class="ss-text pull-left mr50">
-                    <em>{{data['lan']['I2']}}</em>
-                    <div class='ssh-item'>
-                        <input class='btswitch btswitch-ios' id='autoUpdate' type='checkbox' {{data['panel']['auto']}}>
-                        <label class='btswitch-btn' for='autoUpdate' onclick="SetPanelAutoUpload()"></label>
-                    </div>
-                </div>-->
                 <div class="ss-text pull-left mr50">
                     <em class="btlink" style="color: #20a53a;" onclick="GetPanelSSL()" title="点击自定义面板证书">{{data['lan']['I3']}}</em>
                     <div class='ssh-item'>
                         <input class='btswitch btswitch-ios' id='panelSSL' type='checkbox'>
                         <label class='btswitch-btn' for='panelSSL' onclick="setPanelSSL()"></label>
+                    </div>
+                </div>
+                <div class="ss-text pull-left mr50">
+                    <em class="btlink" style="color: #20a53a;" onclick="GetPanelApi()" title="点击配置API接口">API接口</em>
+                    <div class='ssh-item'>
+                        <input class='btswitch btswitch-ios' id='panelApi' type='checkbox' {{data['api']}}>
+                        <label class='btswitch-btn' for='panelApi' onclick="SetPanelApi(2)"></label>
                     </div>
                 </div>
             </div>

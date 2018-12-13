@@ -891,6 +891,7 @@ var bt =
 								if(item.align) td+='text-align:'+item.align;
 								td+='"';
 							}
+							if(item.index) td +='data-index="' + i + '" '
 							td+='>';
 							tr.append(td +_val+'</td>');
 							tr.data('item',val);
@@ -5401,6 +5402,51 @@ bt.site = {
 			if(callback) callback(rdata);
 		})
 	},
+	get_proxy_list:function(name,callback){
+		var loadT = bt.load(lan.site.the_msg);
+		bt.send('GetProxyList','site/GetProxyList',{sitename:name },function(rdata){
+			loadT.close();
+			if(callback) callback(rdata);
+		})
+	},
+	create_proxy:function(obj,callback){
+		var loadT = bt.load(lan.site.the_msg);
+		bt.send('CreateProxy','site/CreateProxy',obj,function(rdata){
+			loadT.close();
+			if(callback) callback(rdata);
+		});
+	},
+	remove_proxy:function(sitename,proxyname,callback){
+		bt.show_confirm('删除反向代理['+ proxyname +']','您真的要从列表中删除吗?',function(){
+			var loadT = bt.load(lan.site.the_msg);
+			bt.send('RemoveProxy','site/RemoveProxy',{sitename:sitename,proxyname:proxyname},function(rdata){
+				loadT.close();			
+				if(callback) callback(rdata);	
+				bt.msg(rdata);
+			})	
+		})
+	},
+	modify_proxy:function(obj,callback){
+		var loadT = bt.load(lan.site.the_msg);
+		bt.send('ModifyProxy','	site/ModifyProxy',obj,function(rdata){
+			loadT.close();
+			if(callback) callback(rdata);
+		});
+	},
+	get_proxy_config:function(obj,callback){
+		var loadT = bt.load(lan.site.the_msg);
+		bt.send('GetProxyFile','site/GetProxyFile',obj,function(rdata){
+			loadT.close();
+			if(callback) callback(rdata);
+		});
+	},
+	save_proxy_config:function(obj,callback){
+		var loadT = bt.load(lan.site.the_msg);
+		bt.send('SaveProxyFile','site/SaveProxyFile',obj,function(rdata){
+			loadT.close();
+			if(callback) callback(rdata);
+		});
+	},
 	get_site_security:function(id,name,callback){
 		bt.send('GetSecurity','site/GetSecurity',{id:id,name:name },function(rdata){
 			if(callback) callback(rdata);
@@ -5869,7 +5915,7 @@ bt.data = {
                         var path = _path_obj.val();
                         var defaultPath = $('#defaultPath').text();
                         var dPath = bt.rtrim(defaultPath,'/');
-						if(path.substr(0,dPath.length)==dPath) _path_obj.val(dPath+'/'+res);	
+						if(path.substr(0,dPath.length)==dPath) _path_obj.val(dPath+'/'+ress);
 						_form.find('input[name="ps"]').val(ress);
 					},placeholder:'每行填写一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88'}
 				]},

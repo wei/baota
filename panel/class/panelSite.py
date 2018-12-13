@@ -10,9 +10,8 @@
 #------------------------------
 # 网站管理类
 #------------------------------
-import io,re,public,os,sys,shutil,json
+import io,re,public,os,sys,shutil,json,hashlib,socket
 from BTPanel import session
-from flask import request
 class panelSite:
     siteName = None #网站名称
     sitePath = None #根目录
@@ -33,6 +32,7 @@ class panelSite:
         if not os.path.exists(path + '/index.html'):
             os.system('mkdir -p ' + path);
             os.system('wget -O ' + path + '/index.html '+public.get_url()+'/stop.html &');
+        self.__proxyfile = '/www/server/panel/data/proxyfile.json'
         self.OldConfigFile();
 
     #默认配置文件
@@ -357,11 +357,25 @@ class panelSite:
     
     #删除站点
     def DeleteSite(self,get):
+        import files
+        proxyconf = self.__read_config(self.__proxyfile)
         id = get.id;
         siteName = get.webname;
         get.siteName = siteName
         self.CloseTomcat(get);
-        
+        # 删除反向代理
+        f = files.files()
+        for i in range(len(proxyconf)-1,-1,-1):
+            if proxyconf[i]["sitename"] == siteName:
+                del proxyconf[i]
+        self.__write_config(self.__proxyfile,proxyconf)
+
+        get.path = self.setupPath+'/panel/vhost/nginx/proxy/'+siteName
+        if os.path.exists(get.path): f.DeleteDir(get)
+
+        get.path = self.setupPath+'/panel/vhost/apache/proxy/'+siteName
+        if os.path.exists(get.path): f.DeleteDir(get)
+
         #删除配置文件
         confPath = self.setupPath+'/panel/vhost/nginx/'+siteName+'.conf'
         if os.path.exists(confPath): os.remove(confPath)
@@ -757,7 +771,7 @@ class panelSite:
                 if siteConf.find('301-START') != -1: return public.returnMsg(False,'SITE_SSL_ERR_301');
         
         #定义证书连接目录
-        path =   '/etc/letsencrypt/live/'+ get.siteName.replace('*','\*');
+        path =   '/etc/letsencrypt/live/'+ get.siteName;
         csrpath = path+"/fullchain.pem";                    #生成证书路径
         keypath = path+"/privkey.pem";                      #密钥文件路径
                 
@@ -821,9 +835,9 @@ class panelSite:
         domains = domainsTmp;
         
         if not len(domains): return public.returnMsg(False,'请选择域名');
-        home_path = '/www/server/panel/vhost/cert/'+ domains[0].replace('*','\*')
+        home_path = '/www/server/panel/vhost/cert/'+ domains[0]
         home_cert = home_path + '/fullchain.cer'
-        home_key = home_path + '/' + domains[0].replace('*','\*') + '.key'
+        home_key = home_path + '/' + domains[0] + '.key'
         
         #构造参数
         domainCount = 0
@@ -859,7 +873,7 @@ class panelSite:
         #检查是否自定义证书
         partnerOrderId =   path + '/partnerOrderId';
         if os.path.exists(partnerOrderId): 
-            public.ExecShell('rm -rf ' + partnerOrderId);
+            os.remove(partnerOrderId)
             
         public.ExecShell('rm -rf ' + path);
         public.ExecShell('rm -rf ' + path + '-00*');
@@ -871,9 +885,9 @@ class panelSite:
         result = public.ExecShell('export ACCOUNT_EMAIL=' + email + ' && ' + execStr);
         
         if not os.path.exists(home_cert):
-            home_path = '/.acme.sh/'+ domains[0].replace('*','\*')
+            home_path = '/.acme.sh/'+ domains[0]
             home_cert = home_path + '/fullchain.cer'
-            home_key = home_path + '/' + domains[0].replace('*','\*') + '.key'
+            home_key = home_path + '/' + domains[0] + '.key'
         
         if not os.path.exists(home_cert):
             home_path = '/root/.acme.sh/'+ domains[0]
@@ -899,7 +913,7 @@ class panelSite:
                 return data
         
         #判断是否获取成功
-        if not os.path.exists(home_cert):
+        if not os.path.exists(home_cert.replace("\*","*")):
             data = {};
             data['err'] = result;
             data['out'] = result[0];
@@ -912,9 +926,9 @@ class panelSite:
             return data
         
         if not os.path.exists(path): public.ExecShell("mkdir -p " + path)
-        public.ExecShell("ln -sf " + home_cert + " " + csrpath)
-        public.ExecShell("ln -sf " + home_key + " " + keypath)
-        public.ExecShell('echo "let" > ' + path + '/README');
+        public.ExecShell("ln -sf \"" + home_cert + "\" \"" + csrpath + '"')
+        public.ExecShell("ln -sf \"" + home_key + "\" \"" + keypath + '"')
+        public.ExecShell('echo "let" > "' + path + '/README"');
         if(actionstr == '2'): return public.returnMsg(True,'SITE_SSL_UPDATE_SUCCESS');
         
         #写入配置文件
@@ -2050,199 +2064,474 @@ server
         public.ExecShell("chattr +i "+filename);
         return public.returnMsg(True,'SITE_BASEDIR_OPEN_SUCCESS');
 
-    #取反向代理
-    def GetProxy(self,get):
-        name = get.name
-        data = {}
-        data['status'] = False;
-        data['proxyUrl'] = "http://";
-        data['toDomain'] = '$host';
-        data['sub1'] = '';
-        data['sub2'] = '';
-        if public.get_webserver() != 'nginx': 
-            file = self.setupPath + "/panel/vhost/apache/"+name+".conf";
-            conf = public.readFile(file);
-            if conf.find('PROXY-START') == -1: return data;
-            rep = "ProxyPass\s+/\w*\s+(.+)/";
-            tmp = re.search(rep, conf);
-            data['proxyUrl'] = "http://"
-            if tmp: data['proxyUrl'] = tmp.groups()[0];
-            data['toDomain'] = '$host';
-            if data['proxyUrl']: data['status'] = True
-            
-            rep = "\/bin\/sed\s+'s,(.+),(.+),g'";
-            tmp = re.search(rep, conf);
-            if tmp:
-                data['sub1'] = tmp.groups()[0];
-                data['sub2'] = tmp.groups()[1];
-            
-            data['cache'] = False;
-            return data;
-        
-        file = self.setupPath + "/panel/vhost/nginx/"+name+".conf";
-        conf = public.readFile(file);
-        if conf.find('PROXY-START') == -1: return data;
-        
-        rep = "proxy_pass\s+(.+);";
-        tmp = re.search(rep, conf);
-        data['proxyUrl'] = "http://"
-        if tmp: data['proxyUrl'] = tmp.groups()[0];
-        
-        rep = "proxy_set_header\s+Host\s+(.+);";
-        tmp = re.search(rep, conf);
-        data['toDomain'] = '$host';
-        if tmp: data['toDomain'] = tmp.groups()[0];
-        rep = "sub_filter \"(.+)\" \"(.+)\";"
-        tmp = re.search(rep, conf);
-        if tmp:
-            data['sub1'] = tmp.groups()[0];
-            data['sub2'] = tmp.groups()[1];
 
-        data['status'] = False;
-        data['cache'] = False;
-        if conf.find('#proxy_cache') == -1: data['cache'] = True;
-        if data['proxyUrl']: data['status'] = True
-        return data;
-    
-    
-    #设置反向代理
-    def SetProxy(self,get):
-        name = get.name;
-        type = get.type;
-        proxyUrl = get.proxyUrl
-        rep = "(http|https)\://.+";
-        if not re.match(rep, proxyUrl): return public.returnMsg(False,'SITE_PROXY_ERR_URL');
-        
-        #if get.toDomain != '$host':
-        #    rep = "^([\w\-\*]{1,100}\.){1,4}(\w{1,10}|\w{1,10}\.\w{1,10})$";
-        #    if not re.match(rep, get.toDomain): return public.returnMsg(False,'SITE_PROXY_ERR_HOST');
-        #else:
-        #    try:
-        #        get.toDomain = re.search('(\w+\.)+\w+',get.proxyUrl).group();
-        #    except:
-        #        pass
-        
-        #配置Nginx
-        file = self.setupPath + "/panel/vhost/nginx/" + name + ".conf";
-        if os.path.exists(file):
-            self.CheckProxy(get);
-            conf = public.readFile(file);
-            if(type == "1"):
-                sub_filter = '';
-                if get.sub1 != '':
-                    sub_filter = '''proxy_set_header Accept-Encoding "";
-        sub_filter "%s" "%s";
-        sub_filter_once off;''' % (get.sub1,get.sub2)
-                
-                cureCache = '';
-                if os.path.exists('/www/server/nginx/src/ngx_cache_purge'):
-                    cureCache = '''
-    location ~ /purge(/.*) { 
-        proxy_cache_purge cache_one $1$is_args$args;
-    }'''
-                
-                proxy='''#PROXY-START%s
-    location / 
-    {
-        proxy_pass %s;
-        proxy_set_header Host %s;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header REMOTE-HOST $remote_addr;
-                
-        #持久化连接相关配置
-        #proxy_connect_timeout 30s;
-        #proxy_read_timeout 86400s;
-        #proxy_send_timeout 30s;
-        #proxy_http_version 1.1;
-        #proxy_set_header Upgrade $http_upgrade;
-        #proxy_set_header Connection "upgrade";
-        
-        add_header X-Cache $upstream_cache_status;
-        %s
-        expires 12h;
-    }
-    
-    location ~ .*\\.(php|jsp|cgi|asp|aspx|flv|swf|xml)?$
-    {
-        proxy_set_header Host %s;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header REMOTE-HOST $remote_addr;
-        proxy_pass %s;
-        %s
-    }
-    
-    location ~ .*\\.(html|htm|png|gif|jpeg|jpg|bmp|js|css)?$
-    {
-        proxy_set_header Host %s;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header REMOTE-HOST $remote_addr;
-        proxy_pass %s;
-        
-        #缓存相关配置
-        #proxy_cache cache_one;
-        #proxy_cache_key $host$request_uri$is_args$args;
-        #proxy_cache_valid 200 304 301 302 1h;
-        %s
-        expires 24h;
-    }
-    #PROXY-END''' % (cureCache,proxyUrl,get.toDomain,sub_filter,get.toDomain,proxyUrl,sub_filter,get.toDomain,proxyUrl,sub_filter)
-                rep = "location.+\(gif(.|\n)+access_log\s+/"
-                conf = re.sub(rep, 'access_log  /', conf)
-                conf = conf.replace("include enable-php-", proxy+"\n\n\tinclude enable-php-")
-                shutil.copyfile(file, '/tmp/backup.conf')
+
+        # 读配置
+    def __read_config(self, path):
+        if not os.path.exists(path):
+            public.writeFile(path, '[]')
+        upBody = public.readFile(path)
+        return json.loads(upBody)
+
+        # 写配置
+    def __write_config(self, path, data):
+        return public.writeFile(path, json.dumps(data))
+
+        # 取某个站点某条反向代理详情
+    def GetProxyDetals(self, get):
+        proxyUrl = self.__read_config(self.__proxyfile)
+        sitename = get.sitename
+        proxyname = get.proxyname
+        for i in proxyUrl:
+            if i["proxyname"] == proxyname and i["sitename"] == sitename:
+                return i
+
+    # 取某个站点反向代理列表
+    def GetProxyList(self, get):
+        n = 0
+        for w in ["nginx", "apache"]:
+            conf_path = "%s/panel/vhost/%s/%s.conf" % (self.setupPath, w, get.sitename)
+            old_conf = public.readFile(conf_path)
+            rep = "(#PROXY-START(\n|.)+#PROXY-END)"
+            url_rep = "proxy_pass (.*);|ProxyPass\s/\s(.*)|Host\s(.*);"
+            host_rep = "Host\s(.*);"
+            if re.search(rep, old_conf):
+                # 构造代理配置
+                if w == "nginx":
+                    get.todomain = str(re.search(host_rep, old_conf).group(1))
+                    get.proxysite = str(re.search(url_rep, old_conf).group(1))
+                else:
+                    get.todomain = ""
+                    get.proxysite = str(re.search(url_rep, old_conf).group(2))
+                get.proxyname = "旧代理"
+                get.type = 1
+                get.proxydir = "/"
+                get.advanced = 0
+                get.cachetime = 1
+                get.cache = 0
+                get.subfilter = "[{\"sub1\":\"\",\"sub2\":\"\"},{\"sub1\":\"\",\"sub2\":\"\"},{\"sub1\":\"\",\"sub2\":\"\"}]"
+
+                #proxyname_md5 = self.__calc_md5(get.proxyname)
+                # 备份并替换老虚拟主机配置文件
+                os.system("cp %s %s_bak" % (conf_path, conf_path))
+                conf = re.sub(rep, "", old_conf)
+                public.writeFile(conf_path, conf)
+                if n == 0:
+                    self.CreateProxy(get)
+                n += 1
+                # 写入代理配置
+                #proxypath = "%s/panel/vhost/%s/proxy/%s/%s_%s.conf" % (
+                #self.setupPath, w, get.sitename, proxyname_md5, get.sitename)
+                # proxycontent = str(re.search(rep, old_conf).group(1))
+                # public.writeFile(proxypath, proxycontent)
+            if n == "1":
+                public.serviceReload()
+        proxyUrl = self.__read_config(self.__proxyfile)
+        sitename = get.sitename
+        proxylist = []
+        for i in proxyUrl:
+            if i["sitename"] == sitename:
+                proxylist.append(i)
+        return proxylist
+
+
+    # 删除反向代理
+    def RemoveProxy(self, get):
+        proxyUrl = self.__read_config(self.__proxyfile)
+        sitename = get.sitename
+        proxyname = get.proxyname
+        for i in range(len(proxyUrl)):
+            if proxyUrl[i]["sitename"] == sitename and proxyUrl[i]["proxyname"] == proxyname:
+                proxyname_md5 = self.__calc_md5(proxyUrl[i]["proxyname"])
+                os.system("rm -f %s/panel/vhost/nginx/proxy/%s/%s_%s.conf" % (self.setupPath,proxyUrl[i]["sitename"],proxyname_md5,proxyUrl[i]["sitename"]))
+                os.system("rm -f %s/panel/vhost/apache/proxy/%s/%s_%s.conf" % (self.setupPath,proxyUrl[i]["sitename"],proxyname_md5, proxyUrl[i]["sitename"]))
+                del proxyUrl[i]
+                self.__write_config(self.__proxyfile,proxyUrl)
+                self.SetNginx(get)
+                self.SetApache(get.sitename)
+                public.serviceReload()
+                return public.returnMsg(True, '删除成功')
+
+
+    # 检查代理是否存在
+    def __check_even(self,get,action=""):
+        conf_data = self.__read_config(self.__proxyfile)
+        for i in conf_data:
+            if i["sitename"] == get.sitename:
+                if action == "create":
+                    if  i["proxydir"] == get.proxydir or i["proxyname"] == get.proxyname:
+                        return i
+                else:
+                    if i["proxyname"] != get.proxyname and i["proxydir"] == get.proxydir:
+                        return i
+
+    # 检测全局代理和目录代理是否同时存在
+    def __check_proxy_even(self, sitename, advanced):
+        conf_data = self.__read_config(self.__proxyfile)
+        n = 0
+        for i in conf_data:
+            if i["sitename"] == sitename:
+                n += 1
+        if n == 1:
+            return
+        for i in conf_data:
+            if i["sitename"] == sitename:
+                if i["advanced"] != advanced:
+                    return i
+    # 计算proxyname md5
+    def __calc_md5(self,proxyname):
+        md5 = hashlib.md5()
+        md5.update(proxyname.encode('utf-8'))
+        return md5.hexdigest()
+
+    # 检测URL是否可以访问
+    def __CheckUrl(self, get):
+        sk = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sk.settimeout(5)
+        rep = "(https?)://([\w\.]+):?([\d]+)?"
+        h = re.search(rep, get.proxysite).group(1)
+        d = re.search(rep, get.proxysite).group(2)
+        try:
+            p = re.search(rep, get.proxysite).group(3)
+        except:
+            p = ""
+        print(d, p)
+        try:
+            if p:
+                sk.connect((d, int(p)))
+                print (p)
             else:
-                rep = "\n\s+#PROXY-START(.|\n){1,1900}#PROXY-END"
+                if h == "http":
+                    sk.connect((d, 80))
+                    print(80)
+                else:
+                    sk.connect((d, 443))
+                    print(443)
+        except:
+            print("目标URL无法访问")
+            return public.returnMsg(False, "目标URL无法访问")
+
+    # 基本设置检查
+    def __CheckStart(self,get,action=""):
+        if action == "create":
+            if sys.version_info.major < 3:
+                if len(get.proxyname) < 3 or len(get.proxyname) > 15:
+                    print("名称必须大于3小于15个字符串")
+                    return public.returnMsg(False, '名称必须大于3小于15个字符串')
+            else:
+                if len(get.proxyname.encode("utf-8")) < 3 or len(get.proxyname.encode("utf-8")) > 15:
+                    print("名称必须大于3小于15个字符串")
+                    return public.returnMsg(False, '名称必须大于3小于15个字符串')
+        if self.__check_even(get,action):
+            print("指定反向代理名称或代理文件夹已存在")
+            return public.returnMsg(False, '指定反向代理名称或代理文件夹已存在')
+        # 判断代理，只能有全局代理或目录代理
+        if self.__check_proxy_even(get.sitename, int(get.advanced)):
+            print('不能同时设置目录代理和全局代理')
+            return public.returnMsg(False, '不能同时设置目录代理和全局代理')
+        #判断cachetime类型
+        if get.cachetime:
+            try:
+                int(get.cachetime)
+            except:
+                return public.returnMsg(False, "请输入数字")
+        rep = "http(s)?\:\/\/([a-zA-Z0-9][-a-zA-Z0-9]{0,62}\.)+([a-zA-Z0-9][a-zA-Z0-9]{0,62})+.?"
+        repte = "[\?\=\[\]\)\(\*\&\^\%\$\#\@\!\~\`{\}\>\<\,\',\"]+"
+        # 检测代理目录格式
+        if re.search(repte,get.proxydir):
+            print("代理目录不能有以下特殊符号 ?,=,[,],),(,*,&,^,%,$,#,@,!,~,`,{,},>,<,\,',\"]")
+            return public.returnMsg(False, "代理目录不能有以下特殊符号 ?,=,[,],),(,*,&,^,%,$,#,@,!,~,`,{,},>,<,\,',\"]")
+        # 检测目标URL格式
+        if not re.match(rep, get.proxysite):
+            return public.returnMsg(False, '域名格式错误 ' + get.proxysite)
+        if re.search(repte,get.proxysite):
+            print("目标URL不能有以下特殊符号 ?,=,[,],),(,*,&,^,%,$,#,@,!,~,`,{,},>,<,\,',\"]")
+            return public.returnMsg(False, "目标URL不能有以下特殊符号 ?,=,[,],),(,*,&,^,%,$,#,@,!,~,`,{,},>,<,\,',\"]" )
+        # 检测目标url是否可用
+        if self.__CheckUrl(get):
+            return public.returnMsg(False, "目标URL无法访问")
+        subfilter = json.loads(get.subfilter)
+        # 检测替换内容
+        if subfilter:
+            for s in subfilter:
+                if not s["sub1"]:
+                    if s["sub2"]:
+                        print("请输入被替换的内容")
+                        return public.returnMsg(False, '请输入被替换的内容')
+                elif s["sub1"] == s["sub2"]:
+                    print("替换内容与被替换内容不能一致")
+                    return public.returnMsg(False, '替换内容与被替换内容不能一致')
+    # 设置Nginx配置
+    def SetNginx(self,get):
+        ng_proxyfile = "%s/panel/vhost/nginx/proxy/%s/*.conf" % (self.setupPath,get.sitename)
+        ng_file = self.setupPath + "/panel/vhost/nginx/" + get.sitename + ".conf"
+        p_conf = self.__read_config(self.__proxyfile)
+        cureCache = ''
+        if os.path.exists('/www/server/nginx/src/ngx_cache_purge'):
+            cureCache += '''
+        location ~ /purge(/.*) {
+            proxy_cache_purge cache_one $1$is_args$args;
+            #access_log  /www/wwwlogs/%s_purge_cache.log;
+        }''' % (get.sitename)
+        if os.path.exists(ng_file):
+            self.CheckProxy(get)
+            ng_conf = public.readFile(ng_file)
+            if not p_conf:
+                rep = "#清理缓存规则(\n|.)+include enable-php-"
+                ng_conf = re.sub(rep, 'include enable-php-', ng_conf)
                 oldconf = '''location ~ .*\\.(gif|jpg|jpeg|png|bmp|swf)$
     {
         expires      30d;
         error_log off;
-        access_log /dev/null; 
+        access_log /dev/null;
     }
     location ~ .*\\.(js|css)?$
     {
         expires      12h;
         error_log off;
-        access_log /dev/null; 
+        access_log /dev/null;
     }'''
-                conf = re.sub(rep, '', conf)
-                conf = conf.replace('access_log',oldconf + "\n\taccess_log");
-            public.writeFile(file,conf)
-            isError = public.checkWebConfig();
-            if(isError != True):
-                shutil.copyfile('/tmp/backup.conf',file)
-                return public.returnMsg(False,'ERROR: 目标URL无法访问<br><a style="color:red;">'+isError.replace("\n",'<br>')+'</a>');
-                
-        #APACHE
-        file = self.setupPath + "/panel/vhost/apache/"+name+".conf";
-        if os.path.exists(file):
-            conf = public.readFile(file);
-            if(type == "1"):
-                sub_filter = '';
-                if get.sub1 != '':
-                    sub_filter = '''RequestHeader unset Accept-Encoding
-        ExtFilterDefine fixtext mode=output intype=text/html cmd="/bin/sed 's,%s,%s,g'"
-        SetOutputFilter fixtext''' % (get.sub1,get.sub2)
-                proxy = '''#PROXY-START
-    <IfModule mod_proxy.c>
-        ProxyRequests Off
-        SSLProxyEngine on
-        ProxyPass / %s/
-        ProxyPassReverse / %s/
-        %s
-    </IfModule>
-    #PROXY-END''' % (proxyUrl,proxyUrl,sub_filter)
-                rep = "combined"
-                conf = conf.replace(rep,rep + "\n\n\t" + proxy);
+                ng_conf = ng_conf.replace('access_log', oldconf + "\n\taccess_log")
+                public.writeFile(ng_file, ng_conf)
+                return
+            sitenamelist = []
+            for i in p_conf:
+                sitenamelist.append(i["sitename"])
+
+            if get.sitename in sitenamelist:
+                rep = "include.*\/proxy\/.*\*.conf;"
+                if not re.search(rep,ng_conf):
+                    rep = "location.+\(gif(.|\n)+access_log\s+\/"
+                    ng_conf = re.sub(rep, 'access_log  /', ng_conf)
+                    ng_conf = ng_conf.replace("include enable-php-","#清理缓存规则\n" +cureCache + "\n\t#引用反向代理规则，注释后配置的反向代理将无效\n\t" + "include " + ng_proxyfile + ";\n\n\tinclude enable-php-")
+                    public.writeFile(ng_file,ng_conf)
+
             else:
-                rep = "\n\s+#PROXY-START(.|\n){1,400}#PROXY-END"
-                conf = re.sub(rep, '', conf)
-            public.writeFile(file,conf)
-        
+                rep = "#清理缓存规则(\n|.)+include enable-php-"
+                ng_conf = re.sub(rep,'include enable-php-',ng_conf)
+                oldconf = '''location ~ .*\\.(gif|jpg|jpeg|png|bmp|swf)$
+    {
+        expires      30d;
+        error_log off;
+        access_log /dev/null;
+    }
+    location ~ .*\\.(js|css)?$
+    {
+        expires      12h;
+        error_log off;
+        access_log /dev/null;
+    }'''
+                ng_conf = ng_conf.replace('access_log', oldconf + "\n\taccess_log")
+                public.writeFile(ng_file, ng_conf)
+
+    # 设置apache配置
+    def SetApache(self,sitename):
+        ap_proxyfile = "%s/panel/vhost/apache/proxy/%s/*.conf" % (self.setupPath,sitename)
+        ap_file = self.setupPath + "/panel/vhost/apache/" + sitename + ".conf"
+        p_conf = public.readFile(self.__proxyfile)
+        if os.path.exists(ap_file):
+            ap_conf = public.readFile(ap_file)
+            if sitename in p_conf:
+                rep = "combined(\n|.)+IncludeOptional.*conf"
+                rep1 = "combined"
+                if not re.search(rep,ap_conf):
+                    ap_conf = ap_conf.replace(rep1, rep1 + "\n\n\tIncludeOptional " + ap_proxyfile)
+                    public.writeFile(ap_file,ap_conf)
+            else:
+                rep = "combined(\n|.)+IncludeOptional.*conf"
+                ap_conf = re.sub(rep,'combined', ap_conf)
+                public.writeFile(ap_file, ap_conf)
+
+    # 创建反向代理
+    def CreateProxy(self, get):
+        if self.__CheckStart(get,"create"):
+            return self.__CheckStart(get,"create")
+        proxyUrl = self.__read_config(self.__proxyfile)
+        proxyUrl.append({
+            "proxyname": get.proxyname,
+            "sitename": get.sitename,
+            "proxydir": get.proxydir,
+            "proxysite": get.proxysite,
+            "todomain": get.todomain,
+            "type": int(get.type),
+            "cache": int(get.cache),
+            "subfilter": json.loads(get.subfilter),
+            "advanced": int(get.advanced),
+            "cachetime": int(get.cachetime)
+        })
+        self.__write_config(self.__proxyfile, proxyUrl)
+        # if self.SetProxy(get) == False:
+        #    return public.returnMsg(False, 'ERROR: 目标URL无法访问<br><a style="color:red;">')
+        self.SetProxy(get)
+        self.SetNginx(get)
+        self.SetApache(get.sitename)
         public.serviceReload()
+        print("添加成功")
+        return public.returnMsg(True, '添加成功')
+
+    # 取代理配置文件
+    def GetProxyFile(self,get):
+        import files
+        conf = self.__read_config(self.__proxyfile)
+        sitename = get.sitename
+        proxyname = get.proxyname
+        proxyname_md5 = self.__calc_md5(proxyname)
+        get.path = "%s/panel/vhost/%s/proxy/%s/%s_%s.conf" % (self.setupPath, get.webserver, sitename,proxyname_md5,sitename)
+        for i in conf:
+            if proxyname == i["proxyname"] and sitename == i["sitename"] and i["type"] != 1:
+                return public.returnMsg(False, '代理已暂停')
+        f = files.files()
+        return f.GetFileBody(get),get.path
+
+    # 保存代理配置文件
+    def SaveProxyFile(self,get):
+        import files
+        f = files.files()
+        return f.SaveFileBody(get)
+        #	return public.returnMsg(True, '保存成功')                                                                 
+
+
+    # 修改反向代理
+    def ModifyProxy(self, get):
+        #判断cachetime类型
+        if self.__CheckStart(get):
+            return self.__CheckStart(get)
+        proxyUrl = self.__read_config(self.__proxyfile)
+        for i in range(len(proxyUrl)):
+            if proxyUrl[i]["proxyname"] == get.proxyname and proxyUrl[i]["sitename"] == get.sitename:
+                proxyUrl[i]["proxydir"] = get.proxydir
+                proxyUrl[i]["proxysite"] = get.proxysite
+                proxyUrl[i]["todomain"] = get.todomain
+                proxyUrl[i]["type"] = int(get.type)
+                proxyUrl[i]["cache"] = int(get.cache)
+                proxyUrl[i]["subfilter"] = json.loads(get.subfilter)
+                proxyUrl[i]["advanced"] = int(get.advanced)
+                proxyUrl[i]["cachetime"] = int(get.cachetime)
+        self.__write_config(self.__proxyfile, proxyUrl)
+        self.SetProxy(get)
+        self.SetNginx(get)
+        self.SetApache(get.sitename)
+        proxyname_md5 = self.__calc_md5(get.proxyname)
+        if int(get.type) != 1:
+            os.system("rm -f %s/panel/vhost/apache/proxy/%s/%s_%s.conf" % (self.setupPath,get.sitename,proxyname_md5,get.sitename))
+            os.system("rm -f %s/panel/vhost/nginx/proxy/%s/%s_%s.conf" % (self.setupPath,get.sitename,proxyname_md5,get.sitename))
+        public.serviceReload()
+        print("修改成功")
+        return public.returnMsg(True, '修改成功')
+
+
+        # 设置反向代理
+    def SetProxy(self,get):
+        sitename = get.sitename  # 站点名称
+        advanced = int(get.advanced)
+        type = int(get.type)
+        cache = int(get.cache)
+        cachetime = int(get.cachetime)
+        # 配置Nginx
+        # 构造清理缓存连接
+
+
+        # 构造缓存配置
+        ng_cache = """
+    proxy_cache cache_one;
+    proxy_cache_key $host$uri$is_args$args;
+    proxy_cache_valid 200 304 301 302 %sh;""" % (get.cachetime)
+
+        # nginx主配置文件
+        # ng_file = self.setupPath + "/panel/vhost/nginx/" + sitename + ".conf"
+        #ng_proxy = ''
+        # if os.path.exists(ng_file):
+        #     self.CheckProxy(get)
+        #     ng_conf = public.readFile(ng_file)
+        ng_proxy = '''
+#PROXY-START%s
+location %s
+{
+    proxy_pass %s;
+    proxy_set_header Host %s;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header REMOTE-HOST $remote_addr;
+    
+    #持久化连接相关配置
+    #proxy_connect_timeout 30s;
+    #proxy_read_timeout 86400s;
+    #proxy_send_timeout 30s;
+    #proxy_http_version 1.1;
+    #proxy_set_header Upgrade $http_upgrade;
+    #proxy_set_header Connection "upgrade";
+
+    add_header X-Cache $upstream_cache_status;
+    %s
+    %s
+    expires 12h;
+}
+#PROXY-END%s'''
+        ng_proxy_cache = ''
+        proxyname_md5 = self.__calc_md5(get.proxyname)
+        ng_proxyfile = "%s/panel/vhost/nginx/proxy/%s/%s_%s.conf" % (self.setupPath,sitename,proxyname_md5, sitename)
+        ng_proxydir = "%s/panel/vhost/nginx/proxy/%s" % (self.setupPath, sitename)
+        if not os.path.exists(ng_proxydir):
+            os.system("mkdir -p %s" % ng_proxydir)
+
+
+        # 构造替换字符串
+        ng_subdata = ''
+        ng_sub_filter = '''
+    proxy_set_header Accept-Encoding "";%s
+    sub_filter_once off;'''
+        if get.subfilter:
+            for s in json.loads(get.subfilter):
+                if s["sub1"]:
+                    ng_subdata += '\n\tsub_filter "%s" "%s";' % (s["sub1"], s["sub2"])
+        if ng_subdata:
+            ng_sub_filter = ng_sub_filter % (ng_subdata)
+        else:
+            ng_sub_filter = ''
+        # 构造反向代理
+        if advanced == 1:
+            if type == 1 and cache == 1:
+                ng_proxy_cache += ng_proxy % (
+                    get.proxydir, get.proxydir, get.proxysite, get.todomain, ng_sub_filter, ng_cache, get.proxydir)
+            if type == 1 and cache == 0:
+                ng_proxy_cache += ng_proxy % (
+                    get.proxydir, get.proxydir, get.proxysite, get.todomain, ng_sub_filter,'' ,get.proxydir)
+        else:
+            if type == 1 and cache == 1:
+                ng_proxy_cache += ng_proxy % (
+                    get.proxydir, get.proxydir, get.proxysite, get.todomain, ng_sub_filter, ng_cache, get.proxydir)
+            if type == 1 and cache == 0:
+                ng_proxy_cache += ng_proxy % (
+                    get.proxydir, get.proxydir, get.proxysite, get.todomain, ng_sub_filter, '', get.proxydir)
+        public.writeFile(ng_proxyfile, ng_proxy_cache)
+        isError = public.checkWebConfig()
+        if (isError != True):
+           os.system("rm -f %s" % ng_proxyfile)
+           return public.returnMsg(False, 'ERROR: 目标URL无法访问<br><a style="color:red;">' + isError.replace("\n",
+                                                                                                         '<br>') + '</a>')
+
+
+        # APACHE
+        # 反向代理文件
+        ap_proxyfile = "%s/panel/vhost/apache/proxy/%s/%s_%s.conf" % (self.setupPath,get.sitename,proxyname_md5,get.sitename)
+        ap_proxydir = "%s/panel/vhost/apache/proxy/%s" % (self.setupPath,get.sitename)
+        if not os.path.exists(ap_proxydir):
+            os.system("mkdir -p %s" % ap_proxydir)
+        ap_proxy = ''
+        if type == 1:
+            ap_proxy += '''#PROXY-START%s
+<IfModule mod_proxy.c>
+    ProxyRequests Off
+    SSLProxyEngine on
+    ProxyPass %s %s/
+    ProxyPassReverse %s %s/
+    </IfModule>
+#PROXY-END%s''' % (get.proxydir, get.proxydir, get.proxysite, get.proxydir,
+                            get.proxysite, get.proxydir)
+        public.writeFile(ap_proxyfile,ap_proxy)
         return public.returnMsg(True, 'SUCCESS')
+                                
+                                
     
     
     #开启缓存

@@ -40,8 +40,6 @@ class files:
                 '/selinux',
                 '/www/server',
                 '/www/server/data',
-                '/www/wwwroot',
-                public.GetConfigValue('root_path'),
                 public.GetConfigValue('logs_path'),
                 public.GetConfigValue('setup_path'))
 
@@ -49,7 +47,7 @@ class files:
     
     #检测文件名
     def CheckFileName(self,filename):
-        nots = ['\\','&','*','#','@','|']
+        nots = ['\\','&','*','|']
         if filename.find('/') != -1: filename = filename.split('/')[-1]
         for n in nots:
             if n in filename: return False

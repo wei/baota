@@ -95,8 +95,8 @@
 						}},
 						{ field: 'opt',width:260, title: '操作',align:'right',templet:function(item){
                             var option = "<a href=\"javascript:;\" class=\"btlink\" onclick=\"bt.database.open_phpmyadmin('" + item.name + "','" + item.username + "','" + item.password + "')\" title=\"数据库管理\">管理</a> | ";
-                            option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"database.rep_tools('" + item.username + "')\" title=\"MySQL优化修复工具\">工具</a> | ";
-							option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"bt.database.set_data_access('"+item.username+"')\" title=\"设置数据库权限\">权限</a> | ";
+                            option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"database.rep_tools('" + item.name + "')\" title=\"MySQL优化修复工具\">工具</a> | ";
+                            option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"bt.database.set_data_access('" + item.name+"')\" title=\"设置数据库权限\">权限</a> | ";
 							option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"database.set_data_pass("+item.id+",'"+item.username+"','"+item.password+"')\" title=\"修改数据库密码\">改密</a> | ";
 							option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"database.del_database("+item.id+",'"+item.name+"')\" title=\"删除数据库\">删除</a>";						
 							return option;
@@ -109,15 +109,20 @@
         rep_tools: function (db_name,res) {
 			var loadT = layer.msg('正在获取数据,请稍候...', { icon: 16, time: 0 });
             bt.send('GetInfo', 'database/GetInfo', { db_name: db_name }, function (rdata) {
-				layer.close(loadT)
+                layer.close(loadT)
+                if (rdata.status === false) {
+                    layer.msg(rdata.msg, { icon: 2 });
+                    return;
+                }
                 var types = { InnoDB: "MyISAM", MyISAM: "InnoDB" };
                 var tbody = '';
                 for (var i = 0; i < rdata.tables.length; i++) {
+                    if (!types[rdata.tables[i].type]) continue;
                     tbody += '<tr>\
                         <td><input value="dbtools_' + rdata.tables[i].table_name + '" class="check" onclick="database.selected_tools(null,\'' + db_name +'\');" type="checkbox"></td>\
-                        <td> ' + rdata.tables[i].table_name + '</td>\
+                        <td><span style="width:220px;"> ' + rdata.tables[i].table_name + '</span></td>\
                         <td>' + rdata.tables[i].type + '</td>\
-                        <td>' + rdata.tables[i].collation + '</td>\
+                        <td><span style="width:90px;"> ' + rdata.tables[i].collation + '</span></td>\
                         <td>' + rdata.tables[i].rows_count + '</td>\
                         <td>' + rdata.tables[i].data_size + '</td>\
                         <td style="text-align: right;">\

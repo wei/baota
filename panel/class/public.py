@@ -22,7 +22,7 @@ def M(table):
     sql = db.Sql()
     return sql.table(table);
 
-def HttpGet(url,timeout = 60):
+def HttpGet(url,timeout = 10):
     """
     发送GET请求
     @url 被请求的URL地址(必需)
@@ -56,11 +56,11 @@ def HttpGet(url,timeout = 60):
             return str(ex)
 
 
-def httpGet(url,timeout=60):
+def httpGet(url,timeout=10):
     return HttpGet(url,timeout)
 
 
-def HttpPost(url,data,timeout = 60):
+def HttpPost(url,data,timeout = 10):
     """
     发送POST请求
     @url 被请求的URL地址(必需)
@@ -93,7 +93,7 @@ def HttpPost(url,data,timeout = 60):
         except Exception as ex:
             return str(ex);
 
-def httpPost(url,data,timeout=60):
+def httpPost(url,data,timeout=10):
     return HttpPost(url,data,timeout)
 
 def check_home():
@@ -526,7 +526,7 @@ def CheckCert(certPath = 'ssl/certificate.pem'):
     return True;
 
 
- # 获取面板地址
+# 获取面板地址
 def getPanelAddr():
     from flask import request
     protocol = 'https://' if os.path.exists("data/ssl.pl") else 'http://'
@@ -583,12 +583,15 @@ def getSpeed():
     return json.loads(data);
 
 def downloadFile(url,filename):
-    if sys.version_info[0] == 2:
-        import urllib
-        urllib.urlretrieve(url,filename=filename ,reporthook= downloadHook)
-    else:
-        import urllib.request
-        urllib.request.urlretrieve(url,filename=filename ,reporthook= downloadHook)
+    try:
+        if sys.version_info[0] == 2:
+            import urllib
+            urllib.urlretrieve(url,filename=filename ,reporthook= downloadHook)
+        else:
+            import urllib.request
+            urllib.request.urlretrieve(url,filename=filename ,reporthook= downloadHook)
+    except:
+        return False
     
 def downloadHook(count, blockSize, totalSize):
     speed = {'total':totalSize,'block':blockSize,'count':count}
@@ -985,3 +988,66 @@ def to_string(lites):
             m_str += chr(mu)
     return m_str
 
+
+#  xss 防御
+def xssencode(text):
+    import cgi
+    list=['`','~','&','#','/','*','$','@','<','>','\"','\'',';','%',',','.','\\u']
+    ret=[]
+    for i in text:
+        if i in list:
+            i=''
+        ret.append(i)
+    str_convert = ''.join(ret)
+    text2=cgi.escape(str_convert, quote=True)
+    return text2
+
+# 取缓存
+def cache_get(key):
+    from BTPanel import cache
+    return cache.get(key)
+
+# 设置缓存
+def cache_set(key,value,timeout = None):
+    from BTPanel import cache
+    return cache.set(key,value,timeout)
+
+# 删除缓存
+def cache_remove(key):
+    from BTPanel import cache
+    return cache.delete(key)
+
+# 取session值
+def sess_get(key):
+    from BTPanel import session
+    if key in session: return session[key]
+    return None
+
+# 设置或修改session值
+def sess_set(key,value):
+    from BTPanel import session
+    session[key] = value
+    return True
+
+# 删除指定session值
+def sess_remove(key):
+    from BTPanel import session
+    if key in session: del(session[key])
+    return True
+
+# 构造分页
+def get_page(count,p=1,rows=12,callback='',result='1,2,3,4,5,8'):
+    import page
+    page = page.Page();
+    info = { 'count':count,  'row':rows,  'p':p, 'return_js':callback ,'uri':''}
+    data = { 'page': page.GetPage(info,result),  'shift': str(page.SHIFT), 'row': str(page.ROW) }
+    return data
+
+# 取面板版本
+def version():
+    from BTPanel import g
+    try:
+        return g.version
+    except:
+        comm = ReadFile('/www/server/panel/class/common.py')
+        return re.search("g\.version\s*=\s*'(\d+\.\d+\.\d+)'",comm).groups()[0]

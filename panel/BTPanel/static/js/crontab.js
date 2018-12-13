@@ -36,7 +36,7 @@ function getCronData(){
 	$.post('/crontab?action=GetCrontab',"",function(rdata){
 		layer.close(laid);
 		var cbody="";
-		if(rdata == ""){
+		if(rdata == []){
 			layer.close(laid);
 			cbody="<tr><td colspan='6'>"+lan.crontab.task_empty+"</td></tr>"
 		}
@@ -56,7 +56,7 @@ function getCronData(){
 							optName = ''
 						}
                     }
-                    var arrs = ['site','database']
+					var arrs = ['site','database','path'];
                     if ($.inArray(rdata[i].sType, arrs) == -1) optName = "--";
 					cbody += "<tr>\
 						<td><input type='checkbox' onclick='checkSelect();' title='"+rdata[i].name+"' name='id' value='"+rdata[i].id+"'></td>\
@@ -419,8 +419,8 @@ function planDel(id,name){
 			var data='id='+id;
 			$.post('/crontab?action=DelCrontab',data,function(rdata){
 				layer.closeAll();
-				layer.msg(rdata.msg,{icon:rdata.status?1:2});
-				getCronData();
+                getCronData();
+                setTimeout(function () { layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 });},1000)
 			});
 	});
 }
@@ -611,8 +611,10 @@ function planAdd(){
 
 	$.post('/crontab?action=AddCrontab',data,function(rdata){
 		layer.closeAll();
-		layer.msg(rdata.msg,{icon:rdata.status?1:2});
-		getCronData();
+        getCronData();
+        setTimeout(function () {
+            layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 });
+        }, 1000)
 	});
 }
 
@@ -786,6 +788,15 @@ function toBackup(type){
 		}else{
 			$(".planname input[name='name']").val(sMsg+'[/www/wwwroot/]');
 			sOptBody = '<div class="info-r" style="display: inline-block;float: left;margin-right: 25px;"><input id="inputPath" class="bt-input-text mr5" type="text" name="path" value="/www/wwwroot/" placeholder="备份目录" style="width:208px;height:33px;"><span class="glyphicon glyphicon-folder-open cursor" onclick="ChangePath(&quot;inputPath&quot;)"></span></div>'
+			setCookie('default_dir_path','/www/wwwroot/');
+			setCookie('path_dir_change','/www/wwwroot/');
+			setInterval(function(){
+				if(getCookie('path_dir_change') != getCookie('default_dir_path')){
+					var  path_dir_change = getCookie('path_dir_change')
+					$(".planname input").val('备份目录['+getCookie('path_dir_change')+']');
+					setCookie('default_dir_path',path_dir_change);
+				}
+			},500);
 		}		
 		var orderOpt = ''
 		for (var i=0;i<rdata.orderOpt.length;i++){
