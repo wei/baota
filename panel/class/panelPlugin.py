@@ -564,6 +564,7 @@ class panelPlugin:
         vFile2 = sInfo['uninsatll_checks'] + '/info.json'
         if os.path.exists(vFile1): 
             version = public.ReadFile(vFile1).strip()
+            if not version: os.remove(vFile1)
         elif  os.path.exists(vFile2): 
             v_tmp = public.ReadFile(vFile2).strip()
             if v_tmp: 
@@ -580,7 +581,8 @@ class panelPlugin:
                     'phpmyadmin':"cat /www/server/phpmyadmin/version.pl",
                     'tomcat':"/www/server/tomcat/bin/version.sh|grep version|awk '{print $4}'|cut -f2 -d'/'",
                     'memcached':"/usr/local/memcached/bin/memcached -V|awk '{print $2}'",
-                    'redis':"/www/server/redis/src/redis-server -v|awk '{print $3}'|cut -f2 -d'='"
+                    'redis':"/www/server/redis/src/redis-server -v|awk '{print $3}'|cut -f2 -d'='",
+                    'gitlab':'echo "8.8.5"'
                 }
             
             exec_str = ''
@@ -588,8 +590,8 @@ class panelPlugin:
             if sInfo['version_coexist'] == 1:
                 v_tmp = sInfo['name'].split('-')
                 exec_str = exec_args[v_tmp[0]].replace('{VERSION}',v_tmp[1].replace('.',''))
-            version = public.ExecShell(sInfo['version'])[0].strip()
-            public.writeFile(vFile1,version)
+            version = public.ExecShell(exec_str)[0].strip()
+            if version: public.writeFile(vFile1,version)
 
         if sInfo['name'] == 'mysql':
             vFile3 = sInfo['uninsatll_checks'] + '/version.pl'

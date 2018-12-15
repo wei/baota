@@ -12,14 +12,14 @@
 #------------------------------
 import io,re,public,os,sys,shutil,json,hashlib,socket
 from BTPanel import session
-class panelSite:
+class panelSite():
     siteName = None #网站名称
     sitePath = None #根目录
     sitePort = None #端口
     phpVersion = None #PHP版本
     setupPath = None #安装路径
     isWriteLogs = None #是否写日志
-    
+
     def __init__(self):
         self.setupPath = '/www/server';
         path = self.setupPath + '/panel/vhost/nginx'
@@ -370,11 +370,11 @@ class panelSite:
                 del proxyconf[i]
         self.__write_config(self.__proxyfile,proxyconf)
 
-        get.path = self.setupPath+'/panel/vhost/nginx/proxy/'+siteName
-        if os.path.exists(get.path): f.DeleteDir(get)
+        m_path = self.setupPath+'/panel/vhost/nginx/proxy/'+siteName
+        if os.path.exists(m_path): public.ExecShell("rm -rf %s" % m_path)
 
-        get.path = self.setupPath+'/panel/vhost/apache/proxy/'+siteName
-        if os.path.exists(get.path): f.DeleteDir(get)
+        m_path = self.setupPath+'/panel/vhost/apache/proxy/'+siteName
+        if os.path.exists(m_path): public.ExecShell("rm -rf %s" % m_path)
 
         #删除配置文件
         confPath = self.setupPath+'/panel/vhost/nginx/'+siteName+'.conf'
@@ -407,10 +407,11 @@ class panelSite:
         public.ExecShell("rm -f "+session['config']['backup_path']+'/site/'+siteName+'_*')
         
         #删除根目录
-        if hasattr(get,'path'):
-            import files
-            get.path = self.__get_site_format_path(public.M('sites').where("id=?",(id,)).getField('path'));
-            if self.__check_site_path(get.path): files.files().DeleteDir(get)
+        if 'path' in get:
+            if get.path == '1':
+                import files
+                get.path = self.__get_site_format_path(public.M('sites').where("id=?",(id,)).getField('path'));
+                if self.__check_site_path(get.path): files.files().DeleteDir(get)
         
         #重载配置
         public.serviceReload();
@@ -423,21 +424,23 @@ class panelSite:
         
         #是否删除关联数据库
         if hasattr(get,'database'):
-            find = public.M('databases').where("pid=?",(id,)).field('id,name').find()
-            if find:
-                import database
-                get.name = find['name']
-                get.id = find['id']
-                database.database().DeleteDatabase(get)
+            if get.database == '1':
+                find = public.M('databases').where("pid=?",(id,)).field('id,name').find()
+                if find:
+                    import database
+                    get.name = find['name']
+                    get.id = find['id']
+                    database.database().DeleteDatabase(get)
         
         #是否删除关联FTP
         if hasattr(get,'ftp'):
-            find = public.M('ftps').where("pid=?",(id,)).field('id,name').find()
-            if find:
-                import ftp
-                get.username = find['name']
-                get.id = find['id']
-                ftp.ftp().DeleteUser(get)
+            if get.ftp == '1':
+                find = public.M('ftps').where("pid=?",(id,)).field('id,name').find()
+                if find:
+                    import ftp
+                    get.username = find['name']
+                    get.id = find['id']
+                    ftp.ftp().DeleteUser(get)
             
         return public.returnMsg(True,'SITE_DEL_SUCCESS')
     
@@ -2331,21 +2334,46 @@ server
         p_conf = public.readFile(self.__proxyfile)
         if os.path.exists(ap_file):
             ap_conf = public.readFile(ap_file)
+            if not p_conf:
+                rep = "\n*#引用反向代理(\n|.)+IncludeOptional.*\/proxy\/.*conf"
+                ap_conf = re.sub(rep, '', ap_conf)
+                public.writeFile(ap_file, ap_conf)
+                return
             if sitename in p_conf:
-                rep = "combined(\n|.)+IncludeOptional.*conf"
+                rep = "combined(\n|.)+IncludeOptional.*\/proxy\/.*conf"
                 rep1 = "combined"
                 if not re.search(rep,ap_conf):
-                    ap_conf = ap_conf.replace(rep1, rep1 + "\n\n\tIncludeOptional " + ap_proxyfile)
+                    ap_conf = ap_conf.replace(rep1, rep1 + "\n\t#引用反向代理规则，注释后配置的反向代理将无效\n\t" + "\n\tIncludeOptional " + ap_proxyfile)
                     public.writeFile(ap_file,ap_conf)
             else:
-                rep = "combined(\n|.)+IncludeOptional.*conf"
-                ap_conf = re.sub(rep,'combined', ap_conf)
+                rep = "\n*#引用反向代理(\n|.)+IncludeOptional.*\/proxy\/.*conf"
+                ap_conf = re.sub(rep,'', ap_conf)
                 public.writeFile(ap_file, ap_conf)
+
+    # 检查伪静态、主配置文件是否有location冲突
+    def CheckLocation(self,get):
+        #伪静态文件路径
+        rewriteconfpath = "%s/panel/vhost/rewrite/%s.conf" % (self.setupPath,get.sitename)
+        # 主配置文件路径
+        nginxconfpath = "%s/nginx/conf/nginx.conf" % (self.setupPath)													 
+        # vhost文件
+        vhostpath = "%s/panel/vhost/nginx/%s.conf" % (self.setupPath,get.sitename)
+
+        rep = "location\s+/[\n\s]+{"
+
+        for i in [rewriteconfpath,nginxconfpath,vhostpath]:
+            conf = public.readFile(i)
+            if re.findall(rep,conf):
+                return public.returnMsg(False, '伪静态/nginx主配置/vhost/文件已经存在全局反向代理')
 
     # 创建反向代理
     def CreateProxy(self, get):
         if self.__CheckStart(get,"create"):
             return self.__CheckStart(get,"create")
+        if public.get_webserver() == 'nginx':
+            if self.CheckLocation(get):
+                return self.CheckLocation(get)
+
         proxyUrl = self.__read_config(self.__proxyfile)
         proxyUrl.append({
             "proxyname": get.proxyname,
@@ -2360,11 +2388,10 @@ server
             "cachetime": int(get.cachetime)
         })
         self.__write_config(self.__proxyfile, proxyUrl)
-        # if self.SetProxy(get) == False:
-        #    return public.returnMsg(False, 'ERROR: 目标URL无法访问<br><a style="color:red;">')
-        self.SetProxy(get)
         self.SetNginx(get)
         self.SetApache(get.sitename)
+        self.SetProxy(get)
+            # return public.returnMsg(False, '配置冲突')
         public.serviceReload()
         print("添加成功")
         return public.returnMsg(True, '添加成功')
@@ -2408,9 +2435,9 @@ server
                 proxyUrl[i]["advanced"] = int(get.advanced)
                 proxyUrl[i]["cachetime"] = int(get.cachetime)
         self.__write_config(self.__proxyfile, proxyUrl)
-        self.SetProxy(get)
         self.SetNginx(get)
         self.SetApache(get.sitename)
+        self.SetProxy(get)
         proxyname_md5 = self.__calc_md5(get.proxyname)
         if int(get.type) != 1:
             os.system("rm -f %s/panel/vhost/apache/proxy/%s/%s_%s.conf" % (self.setupPath,get.sitename,proxyname_md5,get.sitename))
@@ -2504,12 +2531,11 @@ location %s
                 ng_proxy_cache += ng_proxy % (
                     get.proxydir, get.proxydir, get.proxysite, get.todomain, ng_sub_filter, '', get.proxydir)
         public.writeFile(ng_proxyfile, ng_proxy_cache)
-        isError = public.checkWebConfig()
-        if (isError != True):
-           os.system("rm -f %s" % ng_proxyfile)
-           return public.returnMsg(False, 'ERROR: 目标URL无法访问<br><a style="color:red;">' + isError.replace("\n",
-                                                                                                         '<br>') + '</a>')
-
+        #isError = public.checkWebConfig()
+        # if (isError != True):
+        #     shutil.copyfile('/tmp/backup.conf', ng_proxyfile)
+        #     return public.returnMsg(False, 'ERROR: 目标URL无法访问<br><a style="color:red;">' + isError.replace("\n",
+        #                                                                                                   '<br>') + '</a>');
 
         # APACHE
         # 反向代理文件

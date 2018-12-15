@@ -107,7 +107,7 @@
 									{
 										sStyle = ' style="cursor:pointer"';										
                                         if (item.admin) {
-                                            if (item.endtime >= 0) {
+                                            if (item.endtime >= 0 || item.price == 0) {
                                                 click_opt += 'onclick="bt.soft.set_lib_config(\'' + item.name + '\',\'' + item.title + '\')" ';
                                             }
 											

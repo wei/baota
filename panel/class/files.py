@@ -47,7 +47,7 @@ class files:
     
     #检测文件名
     def CheckFileName(self,filename):
-        nots = ['\\','&','*','|']
+        nots = ['\\','&','*','|',';']
         if filename.find('/') != -1: filename = filename.split('/')[-1]
         for n in nots:
             if n in filename: return False

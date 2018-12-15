@@ -4971,7 +4971,7 @@ bt.soft = {
 					break;
 				case 'redis':
 					fileName = '/www/server/redis/redis.conf';
-					break;
+                    break;
 				default:
 					fileName = '/www/server/php/'+name+'/etc/php.ini';
 					break;
