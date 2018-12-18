@@ -28,7 +28,7 @@ class panelSetup:
             ua = ua.lower();
             if ua.find('spider') != -1 or ua.find('bot') != -1: return redirect('https://www.baidu.com');
         
-        g.version = '6.8.3'
+        g.version = '6.8.4'
         g.title =  public.GetConfigValue('title')
         g.uri = request.path
         session['version'] = g.version;

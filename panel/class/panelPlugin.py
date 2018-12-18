@@ -577,7 +577,7 @@ class panelPlugin:
                     'apache':"/www/server/apache/bin/httpd -v|grep version|awk '{print $3}'|cut -f2 -d'/'",
                     'mysql':"/www/server/mysql/bin/mysql -V|grep Ver|awk '{print $5}'|cut -f1 -d','",
                     'php':"/www/server/php/{VERSION}/bin/php -v|grep cli|awk '{print $2}'",
-                    'pure-ftpd':"cat /www/server/pure-ftpd/version.pl",
+                    'pureftpd':"cat /www/server/pure-ftpd/version.pl",
                     'phpmyadmin':"cat /www/server/phpmyadmin/version.pl",
                     'tomcat':"/www/server/tomcat/bin/version.sh|grep version|awk '{print $4}'|cut -f2 -d'/'",
                     'memcached':"/usr/local/memcached/bin/memcached -V|awk '{print $2}'",

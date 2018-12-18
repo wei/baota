@@ -401,9 +401,22 @@ function GetFiles(Path) {
 			}
 			
 			totalSize +=  parseInt(fmp[1]);
-			if(getCookie("rank")=="a"){
+            if (getCookie("rank") == "a") {
+                var fileMsg = '';
+                switch (fmp[0]) {
+                    case '.user.ini':
+                        fileMsg = 'PS: PHP用户配置文件(防跨站)!';
+                        break;
+                    case '.htaccess':
+                        fileMsg = 'PS: Apache用户配置文件(伪静态)';
+                        break;
+                }
+
+                if (fileMsg != '') {
+                    fileMsg = '<span style="margin-left: 30px; color: #999;">' + fileMsg + '</span>';
+                }
 				Body += "<tr class='folderBoxTr' data-path='" + rdata.PATH +"/"+ fmp[0] + "' filetype='" + fmp[0] + "'><td><input type='checkbox' name='id' value='"+fmp[0]+"'></td>\
-						<td class='column-name'><span class='ico ico-"+(GetExtName(fmp[0]))+"'></span><a class='text' title='" + fmp[0] + fmp[5] + "'>" + cnametext + "</a></td>\
+						<td class='column-name'><span class='ico ico-"+ (GetExtName(fmp[0])) + "'></span><a class='text' title='" + fmp[0] + fmp[5] + "'>" + cnametext + fileMsg+"</a></td>\
 						<td>" + (ToSize(fmp[1])) + "</td>\
 						<td>" + ((fmp[2].length > 11)?fmp[2]:getLocalTime(fmp[2])) + "</td>\
 						<td>"+fmp[3]+"</td>\
@@ -641,7 +654,7 @@ function Batch(type,access){
 		}
     }
 
-    data += "&data=" + JSON.stringify(datas)
+    data += "&data=" + encodeURIComponent(JSON.stringify(datas))
 	
 	if(type == 3 && access == undefined){
 		SetChmod(0,lan.files.all);
@@ -676,7 +689,7 @@ function Batch(type,access){
 		
 	myloadT = layer.msg("<div class='myspeed'>"+lan.public.the+"</div>",{icon:16,time:0,shade: [0.3, '#000']});
 	setTimeout(function(){getSpeed('.myspeed');},1000);
-	$.post('files?action=SetBatchData',data,function(rdata){
+	$.post('/files?action=SetBatchData',data,function(rdata){
 		layer.close(myloadT);
 		GetFiles(path);
 		layer.msg(rdata.msg,{icon:1});

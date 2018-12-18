@@ -2191,7 +2191,7 @@ server
     def __CheckUrl(self, get):
         sk = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sk.settimeout(5)
-        rep = "(https?)://([\w\.]+):?([\d]+)?"
+        rep = "(https?)://([\w\.\-]+):?([\d]+)?"
         h = re.search(rep, get.proxysite).group(1)
         d = re.search(rep, get.proxysite).group(2)
         try:
@@ -2368,8 +2368,13 @@ server
 
     # 创建反向代理
     def CreateProxy(self, get):
-        if self.__CheckStart(get,"create"):
-            return self.__CheckStart(get,"create")
+        try:
+            nocheck = get.nocheck
+        except:
+            nocheck = ""
+        if not nocheck:
+            if self.__CheckStart(get,"create"):
+                return self.__CheckStart(get,"create")
         if public.get_webserver() == 'nginx':
             if self.CheckLocation(get):
                 return self.CheckLocation(get)

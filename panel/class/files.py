@@ -154,6 +154,18 @@ class files:
             import system
             data['DISK'] = system.system().GetDiskInfo();
         return data
+
+
+    #def SearchFiles(self,get):
+    #    if not hasattr(get,'path'): get.path = '/www/wwwroot'
+    #    if sys.version_info[0] == 2: get.path = get.path.encode('utf-8');
+    #    if not os.path.exists(get.path): get.path = '/www';
+    #    search = get.search.strip().lower();
+            
+        #for d_list in os.walk(get.path):
+
+
+
     
     #计算文件数量
     def GetFilesCount(self,path,search):

@@ -682,6 +682,9 @@ def check_login():
 def get_pd():
     tmp = -1
     tmp1 = cache.get(public.to_string([112, 108, 117, 103, 105, 110, 95, 115, 111, 102, 116, 95, 108, 105, 115, 116]))
+    if not tmp1: 
+        import panelPlugin
+        tmp1 = panelPlugin.panelPlugin().get_cloud_list()
     if tmp1:
         tmp = tmp1[public.to_string([112,114,111])]
     else:

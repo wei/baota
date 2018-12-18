@@ -248,7 +248,10 @@ class firewalls:
         
         version = panelsys.GetSystemVersion();
         if os.path.exists('/usr/bin/apt-get'):
-             status = public.ExecShell("service ssh status | grep -P '(dead|stop)'")
+            if os.path.exists('/etc/init.d/sshd'):
+                status = public.ExecShell("service sshd status | grep -P '(dead|stop)'")
+            else:
+                status = public.ExecShell("service ssh status | grep -P '(dead|stop)'")
         else:
             if version.find(' 7.') != -1:
                 status = public.ExecShell("systemctl status sshd.service | grep 'dead'")

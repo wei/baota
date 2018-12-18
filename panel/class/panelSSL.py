@@ -178,9 +178,25 @@ class panelSSL:
                 public.writeFile(spath + '/fileauth.txt',sslInfo['data']['authValue']);
             except:
                 return public.returnMsg(False,'SSL_CHECK_WRITE_ERR');
-        result = json.loads(public.httpPost(self.__APIURL + '/Completed',self.__PDATA));
-        result['data'] = self.En_Code(result['data']);
-        return result;
+        try:
+            result = json.loads(public.httpPost(self.__APIURL + '/Completed',self.__PDATA));
+        except:
+            result = public.returnMsg(True,'检测中..');
+        n = 0;
+        my_ok = False
+        while True:
+            if n > 5: break;
+            time.sleep(5);
+            rRet = json.loads(public.httpPost(self.__APIURL + '/SyncOrder',self.__PDATA));
+            n +=1
+            rRet['data'] = self.En_Code(rRet['data']);
+            try:
+                if rRet['data']['stateCode'] == 'COMPLETED': 
+                    my_ok = True
+                    break;
+            except: return public.get_error_info()
+        if not my_ok: return result;
+        return rRet;
     
     #同步指定订单
     def SyncOrder(self,get):
@@ -194,6 +210,7 @@ class panelSSL:
     def GetSSLInfo(self,get):
         self.__PDATA['data']['partnerOrderId'] = get.partnerOrderId;
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data']);
+        time.sleep(3);
         result = json.loads(public.httpPost(self.__APIURL + '/GetSSLInfo',self.__PDATA));
         result['data'] = self.En_Code(result['data']);
         
@@ -224,8 +241,8 @@ class panelSSL:
                 panelSite.panelSite().SetSSLConf(get);
                 public.serviceReload();
                 return public.returnMsg(True,'SET_SUCCESS');
-            except Exception as ex:
-                return public.returnMsg(False,'SET_ERROR,' + str(ex));
+            except:
+                return public.returnMsg(False,'SET_ERROR,' + public.get_error_info());
         result['data'] = self.En_Code(result['data']);
         return result;
     
