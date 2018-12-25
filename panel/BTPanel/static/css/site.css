@@ -4738,6 +4738,7 @@ select[disabled]{
 	cursor: default;
 	border: 1px solid #dbdbea;
 }
+
 #proxy_list td>span,
 #softList  td>span{
 	display: block;
@@ -4745,10 +4746,76 @@ select[disabled]{
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
-#proxy_config_con .line .info-r{
+#proxy_config_con .line .info-r,
+#redirect_config_con .line .info-r{
 	margin-left: 0;
 }
 
-#proxy_config_con .CodeMirror-gutter-wrapper{
+#proxy_config_con .CodeMirror-gutter-wrapper,
+#redirect_config_con .CodeMirror-gutter-wrapper{
 	left: 15px;
+}
+
+::-webkit-scrollbar
+{
+	width: 9px;
+	height: 9px;
+}
+::-webkit-scrollbar-track-piece
+{
+	background-color: #ebebeb;
+	-webkit-border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:vertical
+{
+	height: 32px;
+	background-color: #ccc;
+	-webkit-border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:horizontal
+{
+	width: 32px;
+	background-color: #ccc;
+	-webkit-border-radius: 4px;
+}
+
+
+.bootstrap-select{
+	width: 200px !important;
+	float: left !important;
+	height: 32px;
+}
+
+.bootstrap-select .filter-option{
+	width: 180px !important;
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	
+}
+.bootstrap-select .dropdown-toggle{
+	height: 30px;
+}
+
+.set_nginx_config,.set_Apache_config {
+	padding: 10px 10px 10px 0;
+}
+.set_nginx_config .line,
+.set_Apache_config .line{
+	padding: 5px 0;
+}
+.set_Apache_config .line>span{
+	width: 170px;
+}
+
+.set_nginx_config .line>span{
+	width:202px;
+}
+
+.set_nginx_config .bt_nginx_save{
+	margin-left: 202px;
+}
+.set_Apache_config .bt_apache_save{
+	margin-left: 170px;
 }

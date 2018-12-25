@@ -57,11 +57,15 @@ def clean_session():
         if not os.path.exists(session_path): return False
         now_time = time.time()
         p_time = 86400
+        old_state = False
         for fname in os.listdir(session_path):
             filename = os.path.join(session_path,fname)
             if not os.path.exists(filename): continue
             modify_time = os.path.getmtime(filename)
-            if (now_time - modify_time) > p_time: os.remove(filename)
+            if (now_time - modify_time) > p_time: 
+                old_state = True
+                break
+        if old_state: public.ExecShell("rm -f " + session_path + '/*')
         return True
     except:return False
 

@@ -300,11 +300,11 @@ class crontab:
 
     #从crond删除
     def remove_for_crond(self,echo):
-        x = session['server_os']['x'];
-        if x == 'RHEL':
+        u_file = '/var/spool/cron/crontabs/root'
+        if not os.path.exists(u_file):
             file='/var/spool/cron/root'
         else:
-            file='/var/spool/cron/crontabs/root'
+            file=u_file
         conf=public.readFile(file)
         rep = ".+" + str(echo) + ".+\n"
         conf = re.sub(rep, "", conf)
@@ -387,17 +387,17 @@ echo "--------------------------------------------------------------------------
         
     #将Shell脚本写到文件
     def WriteShell(self,config):
-        x = session['server_os']['x'];
-        if x == 'RHEL':
+        u_file = '/var/spool/cron/crontabs/root'
+        if not os.path.exists(u_file):
             file='/var/spool/cron/root'
         else:
-            file='/var/spool/cron/crontabs/root'
+            file=u_file
         
         if not os.path.exists(file): public.writeFile(file,'')
         conf = public.readFile(file)
         conf += config + "\n"
         if public.writeFile(file,conf):
-            if x == 'RHEL':
+            if not os.path.exists(u_file):
                 public.ExecShell("chmod 600 '" + file + "' && chown root.root " + file)
             else:
                 public.ExecShell("chmod 600 '" + file + "' && chown root.crontab " + file)

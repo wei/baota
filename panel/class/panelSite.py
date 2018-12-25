@@ -12,7 +12,8 @@
 #------------------------------
 import io,re,public,os,sys,shutil,json,hashlib,socket
 from BTPanel import session
-class panelSite():
+from panelRedirect import  panelRedirect
+class panelSite(panelRedirect):
     siteName = None #网站名称
     sitePath = None #根目录
     sitePort = None #端口
@@ -357,14 +358,12 @@ class panelSite():
     
     #删除站点
     def DeleteSite(self,get):
-        import files
         proxyconf = self.__read_config(self.__proxyfile)
         id = get.id;
         siteName = get.webname;
         get.siteName = siteName
         self.CloseTomcat(get);
         # 删除反向代理
-        f = files.files()
         for i in range(len(proxyconf)-1,-1,-1):
             if proxyconf[i]["sitename"] == siteName:
                 del proxyconf[i]
@@ -376,6 +375,19 @@ class panelSite():
         m_path = self.setupPath+'/panel/vhost/apache/proxy/'+siteName
         if os.path.exists(m_path): public.ExecShell("rm -rf %s" % m_path)
 
+        #删除重定向
+        __redirectfile = "%s/panel/data/redirect.conf" % self.setupPath
+        redirectconf = self.__read_config(__redirectfile)
+        for i in range(len(redirectconf)-1,-1,-1):
+            if redirectconf[i]["sitename"] == siteName:
+                del redirectconf[i]
+        self.__write_config(__redirectfile,redirectconf)
+        m_path = self.setupPath+'/panel/vhost/nginx/redirect/'+siteName
+
+        if os.path.exists(m_path): public.ExecShell("rm -rf %s" % m_path)
+
+        m_path = self.setupPath+'/panel/vhost/apache/redirect/'+siteName
+        if os.path.exists(m_path): public.ExecShell("rm -rf %s" % m_path)
         #删除配置文件
         confPath = self.setupPath+'/panel/vhost/nginx/'+siteName+'.conf'
         if os.path.exists(confPath): os.remove(confPath)
@@ -2074,6 +2086,7 @@ server
         if not os.path.exists(path):
             public.writeFile(path, '[]')
         upBody = public.readFile(path)
+        if not upBody: upBody = '[]'
         return json.loads(upBody)
 
         # 写配置
@@ -2216,6 +2229,9 @@ server
 
     # 基本设置检查
     def __CheckStart(self,get,action=""):
+        isError = public.checkWebConfig()
+        if (isError != True):
+            return public.returnMsg(False, '配置文件出错请先排查配置')
         if action == "create":
             if sys.version_info.major < 3:
                 if len(get.proxyname) < 3 or len(get.proxyname) > 15:
@@ -2238,12 +2254,22 @@ server
                 int(get.cachetime)
             except:
                 return public.returnMsg(False, "请输入数字")
-        rep = "http(s)?\:\/\/([a-zA-Z0-9][-a-zA-Z0-9]{0,62}\.)+([a-zA-Z0-9][a-zA-Z0-9]{0,62})+.?"
+
+        rep = "http(s)?\:\/\/"
+        repd = "http(s)?\:\/\/([a-zA-Z0-9][-a-zA-Z0-9]{0,62}\.)+([a-zA-Z0-9][a-zA-Z0-9]{0,62})+.?"
+        tod = "[a-zA-Z]+$"
         repte = "[\?\=\[\]\)\(\*\&\^\%\$\#\@\!\~\`{\}\>\<\,\',\"]+"
         # 检测代理目录格式
         if re.search(repte,get.proxydir):
             print("代理目录不能有以下特殊符号 ?,=,[,],),(,*,&,^,%,$,#,@,!,~,`,{,},>,<,\,',\"]")
             return public.returnMsg(False, "代理目录不能有以下特殊符号 ?,=,[,],),(,*,&,^,%,$,#,@,!,~,`,{,},>,<,\,',\"]")
+        # 检测发送域名格式
+        if get.todomain:
+            if not re.search(tod,get.todomain):
+                return public.returnMsg(False, '发送域名格式错误 ' + get.todomain)
+        else:
+            get.todomain = "$host"
+
         # 检测目标URL格式
         if not re.match(rep, get.proxysite):
             return public.returnMsg(False, '域名格式错误 ' + get.proxysite)
@@ -2251,8 +2277,9 @@ server
             print("目标URL不能有以下特殊符号 ?,=,[,],),(,*,&,^,%,$,#,@,!,~,`,{,},>,<,\,',\"]")
             return public.returnMsg(False, "目标URL不能有以下特殊符号 ?,=,[,],),(,*,&,^,%,$,#,@,!,~,`,{,},>,<,\,',\"]" )
         # 检测目标url是否可用
-        if self.__CheckUrl(get):
-            return public.returnMsg(False, "目标URL无法访问")
+        if re.match(repd, get.proxysite):
+            if self.__CheckUrl(get):
+                return public.returnMsg(False, "目标URL无法访问")
         subfilter = json.loads(get.subfilter)
         # 检测替换内容
         if subfilter:
@@ -2270,6 +2297,10 @@ server
         ng_file = self.setupPath + "/panel/vhost/nginx/" + get.sitename + ".conf"
         p_conf = self.__read_config(self.__proxyfile)
         cureCache = ''
+
+        if public.get_webserver() == 'nginx':
+            shutil.copyfile(ng_file, '/tmp/ng_file_bk.conf')
+
         if os.path.exists('/www/server/nginx/src/ngx_cache_purge'):
             cureCache += '''
         location ~ /purge(/.*) {
@@ -2332,6 +2363,10 @@ server
         ap_proxyfile = "%s/panel/vhost/apache/proxy/%s/*.conf" % (self.setupPath,sitename)
         ap_file = self.setupPath + "/panel/vhost/apache/" + sitename + ".conf"
         p_conf = public.readFile(self.__proxyfile)
+
+        if public.get_webserver() == 'apache':
+            shutil.copyfile(ap_file, '/tmp/ap_file_bk.conf')
+
         if os.path.exists(ap_file):
             ap_conf = public.readFile(ap_file)
             if not p_conf:
@@ -2459,6 +2494,9 @@ server
         type = int(get.type)
         cache = int(get.cache)
         cachetime = int(get.cachetime)
+        ng_file = self.setupPath + "/panel/vhost/nginx/" + sitename + ".conf"
+        ap_file = self.setupPath + "/panel/vhost/apache/" + sitename + ".conf"
+        p_conf = self.__read_config(self.__proxyfile)
         # 配置Nginx
         # 构造清理缓存连接
 
@@ -2467,7 +2505,7 @@ server
         ng_cache = """
     proxy_cache cache_one;
     proxy_cache_key $host$uri$is_args$args;
-    proxy_cache_valid 200 304 301 302 %sh;""" % (get.cachetime)
+    proxy_cache_valid 200 304 301 302 %sh;""" % (cachetime)
 
         # nginx主配置文件
         # ng_file = self.setupPath + "/panel/vhost/nginx/" + sitename + ".conf"
@@ -2536,11 +2574,15 @@ location %s
                 ng_proxy_cache += ng_proxy % (
                     get.proxydir, get.proxydir, get.proxysite, get.todomain, ng_sub_filter, '', get.proxydir)
         public.writeFile(ng_proxyfile, ng_proxy_cache)
-        #isError = public.checkWebConfig()
-        # if (isError != True):
-        #     shutil.copyfile('/tmp/backup.conf', ng_proxyfile)
-        #     return public.returnMsg(False, 'ERROR: 目标URL无法访问<br><a style="color:red;">' + isError.replace("\n",
-        #                                                                                                   '<br>') + '</a>');
+        isError = public.checkWebConfig()
+        if (isError != True):
+            shutil.copyfile('/tmp/ng_file_bk.conf', ng_file)
+            shutil.copyfile('/tmp/ap_file_bk.conf', ap_file)
+            for i in range(len(p_conf)-1,-1,-1):
+                if get.sitename == p_conf[i]["sitename"] and p_conf[i]["proxyname"]:
+                    del p_conf[i]
+            return public.returnMsg(False, 'ERROR: 配置出错<br><a style="color:red;">' + isError.replace("\n",
+                                                                                                          '<br>') + '</a>');
 
         # APACHE
         # 反向代理文件
@@ -2561,7 +2603,7 @@ location %s
                             get.proxysite, get.proxydir)
         public.writeFile(ap_proxyfile,ap_proxy)
         return public.returnMsg(True, 'SUCCESS')
-                                
+       
                                 
     
     

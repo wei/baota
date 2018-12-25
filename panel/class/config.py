@@ -7,7 +7,7 @@
 # | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 
-import public,re,sys,os
+import public,re,sys,os,nginx,apache
 from BTPanel import session,admin_path_checks
 from flask import request
 class config:
@@ -640,5 +640,19 @@ class config:
         public.WriteFile(save_path,json.dumps(data))
         return public.returnMsg(True,token)
             
-       
+    def GetNginxValue(self,get):
+        n = nginx.nginx()
+        return n.GetNginxValue()
+
+    def SetNginxValue(self,get):
+        n = nginx.nginx()
+        return n.SetNginxValue(get)
+
+    def GetApacheValue(self,get):
+        a = apache.apache()
+        return a.GetApacheValue()
+
+    def SetApacheValue(self,get):
+        a = apache.apache()
+        return a.SetApacheValue(get)
         

@@ -330,8 +330,8 @@ class panelPlugin:
 	                        "c_manager_version": "1",
 	                        "dependnet": "",
 	                        "mutex": "",
-	                        "install_checks": "plugin/" + info['name'],
-	                        "uninsatll_checks": "plugin/" + info['name'],
+	                        "install_checks": "/www/server/panel/plugin/" + info['name'],
+	                        "uninsatll_checks": "/www/server/panel/plugin/" + info['name'],
 	                        "compile_args": 0,
 	                        "version_coexist": 0,
 	                        "versions": [
@@ -1480,4 +1480,85 @@ class panelPlugin:
             errorMsg = traceback.format_exc();
             public.writeFile('logs/done.log',errorMsg)
             return public.returnMsg(False,'抱歉，出错了：<br> %s ' % errorMsg.replace('\n','<br>'))
+
+
+    #上传插件包
+    def update_zip(self,get):
+        tmp_path = '/www/server/panel/temp'
+        if not os.path.exists(tmp_path): 
+            os.makedirs(tmp_path,mode=384)
+
+        public.ExecShell("rm -rf " + tmp_path + '/*')
         
+        tmp_file = tmp_path + '/plugin_tmp.zip'
+        from werkzeug.utils import secure_filename
+        from flask import request
+        f = request.files['plugin_zip']
+        if f.filename[-4:] != '.zip': tmp_file = tmp_path + '/plugin_tmp.tar.gz'
+
+        f.save(tmp_file)
+        import files
+        get.sfile = tmp_file
+        get.dfile = tmp_path
+        get.coding = 'utf-8'
+        files.files().UnZip(get)
+        os.remove(tmp_file)
+        p_info = tmp_path + '/info.json'
+        if not os.path.exists(p_info):
+            d_path = None
+            for df in os.walk(tmp_path):
+                if len(df[2]) < 3: continue
+                if not 'info.json' in df[2]: continue
+                if not 'install.sh' in df[2]: continue
+                if not os.path.exists(df[0] + '/info.json'): continue
+                d_path = df[0]
+            if d_path: 
+                tmp_path = d_path
+                p_info = tmp_path + '/info.json'
+        try:
+            data = json.loads(public.ReadFile(p_info))
+            data['size'] = public.get_path_size(tmp_path)
+            if not 'author' in data: data['author'] = '未知'
+            if not 'home' in data: data['home'] = 'https://www.bt.cn/bbs/forum-40-1.html'
+
+            plugin_path = '/www/server/panel/plugin/' + data['name'] + '/info.json'
+            data['old_version'] = '0'
+            data['tmp_path'] = tmp_path
+            if os.path.exists(plugin_path):
+                try:
+                    old_info = json.loads(public.ReadFile(plugin_path))
+                    data['old_version'] = old_info['versions']
+                except:pass
+        except:
+            public.ExecShell("rm -rf " + tmp_path)
+            return public.returnMsg(False,'在压缩包中没有找到插件信息,请检查插件包!');
+        return data
+
+    #导入插件包
+    def input_zip(self,get):
+        if not os.path.exists(get.tmp_path): return public.returnMsg(False,'临时文件不存在,请重新上传!')
+        plugin_path = '/www/server/panel/plugin/' + get.plugin_name
+        if not os.path.exists(plugin_path): os.makedirs(plugin_path)
+        public.ExecShell("\cp -a -r " + get.tmp_path + '/* ' + plugin_path + '/')
+        public.ExecShell('chmod -R 600 ' + plugin_path)
+        public.ExecShell('cd ' + plugin_path + ' && bash install.sh install')
+        p_info = public.ReadFile(plugin_path + '/info.json')
+        if p_info:
+            public.WriteLog('软件管理','安装第三方插件[%s]' % json.loads(p_info)['title'])
+            return public.returnMsg(True,'安装成功!')
+        public.ExecShell("rm -rf " + plugin_path)
+        return public.returnMsg(False,'安装失败!')
+        
+
+    #导出插件包
+    def export_zip(self,get):
+        plugin_path = '/www/server/panel/plugin/' + get.plugin_name
+        if not os.path.exists(plugin_path): return public.returnMsg(False,'指定插件不存在!')
+        
+        get.sfile = plugin_path + '/'
+        get.dfile = '/www/server/panel/temp/bt_plugin_' + get.plugin_name + '.zip'
+        get.type = 'zip'
+        import files
+        files.files().Zip(get)
+        if not os.path.exists(get.dfile): return public.returnMsg(False,'导出失败,请检查权限!')
+        return public.returnMsg(True,get.dfile)

@@ -449,7 +449,7 @@ def panel_status():
             public.WriteLog('守护程序','检查到面板服务异常,已自动恢复!')
             time.sleep(10)
             continue
-        public.WriteLog('守护程序','检查到面板服务异常,自动恢复失败!')
+        #public.WriteLog('守护程序','检查到面板服务异常,自动恢复失败!')
 
 #重启面板服务
 def restart_panel_service():

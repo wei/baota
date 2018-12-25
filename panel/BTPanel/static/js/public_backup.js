@@ -618,119 +618,127 @@ var bt =
 			_obj.append(_tab);
 		}		
 	},
-	render_form_line:function(item,bs){
-		var clicks = [], _html = '',_hide='',is_title_css = ' ml0';
-		if(!bs) bs = '';
-		if(item.title){
-			_html += '<span class="tname">'+item.title+'</span>';
-			is_title_css = '';
-		}		
-		_html += "<div class='info-r "+is_title_css+"'>";
-		var _name = item.name;
-		var _placeholder = item.placeholder;
-			if(item.items && item.type!='select')
-			{
-				for(var x=0;x<item.items.length;x++){
-					var _obj = item.items[x];
-					if(!_name && !_obj.name) {
-						alert('缺少必要参数name');
-						return;
-					}
-					if(_obj.hide) continue;
-					if(_obj.name) _name = _obj.name;
-					if(_obj.placeholder) _placeholder = _obj.placeholder;
-					if(_obj.title) _html+='<span class=" mr5">'+_obj.title +"  " ;	
-					switch(_obj.type){
-						case 'select':	
-							var _width = _obj.width?_obj.width:'100px';
-							_html += '<select '+(_obj.disabled?'disabled':'')+' class="bt-input-text mr5 ' +  _name + bs + '" name="'+_name+'" style="width:'+_width+'">';
-							for(var j=0;j<_obj.items.length;j++){
-								_html+='<option '+(_obj.value==_obj.items[j].value?'selected':'' )+' value="'+_obj.items[j].value+'">'+_obj.items[j].title+'</option>';
-							}
-							_html +='</select>';		
-							break;
-						case 'textarea':
-							var _width = _obj.width?_obj.width:'330px';
-							var _height = _obj.height?_obj.height:'100px';
-							_html += '<textarea class="bt-input-text mr20 '+ _name + bs+'" name="'+_name+'" style="width:'+_width+';height:'+_height+';line-height:22px">'+(_obj.value?_obj.value:'')+'</textarea>';	
-							if(_placeholder) _html+='<div class="placeholder c9" style="top: 15px; left: 15px; display: block;">'+_placeholder+'</div>';							
-							break;
-						case 'button':
-							var _width = _obj.width?_obj.width:'330px';
-							_html +='<button name=\''+_name+'\' class="btn btn-success btn-sm mr5 '+ _name + bs+'">'+_obj.text+'</button>';
-							break;
-						case 'radio':
-							var _v = _obj.value===true?'checked':''
-							_html +='<input type="radio" class="'+_name+'" id="'+_name+'" name="'+_name+'"  '+_v+'><label class="mr20" for="'+_name+'" style="font-weight:normal">'+_obj.text+'</label>'
-							break;
-						case 'checkbox':
-							var _v = _obj.value===true?'checked':''
-							_html +='<input type="checkbox" class="'+_name+'" id="'+_name+'" name="'+_name+'"  '+_v+'><label class="mr20" for="'+_name+'" style="font-weight:normal">'+_obj.text+'</label>'
-							break;
-						case 'number':
-							var _width = _obj.width?_obj.width:'330px';	
-							_html += "<input name='" + _name + "' "+(_obj.disabled?'disabled':'') +" class='bt-input-text mr5 " +  _name + bs + "' "+(_placeholder?' placeholder="'+_placeholder+'"':"")+" type='number' style='width:"+_width+"' value='"+(_obj.value?_obj.value:'')+"' />";
-							_html += _obj.unit?_obj.unit:'';
-							break;
-						case 'password':
-							var _width = _obj.width?_obj.width:'330px';	
-							_html += "<input name='" + _name + "' "+(_obj.disabled?'disabled':'') +" class='bt-input-text mr5 " +  _name + bs + "' "+(_placeholder?' placeholder="'+_placeholder+'"':"")+" type='password' style='width:"+_width+"' value='"+(_obj.value?_obj.value:'')+"' />";							
-							break;
-						default:								
-							var _width = _obj.width?_obj.width:'330px';	
-							_html += "<input name='" + _name + "' "+(_obj.disabled?'disabled':'') +" class='bt-input-text mr5 " +  _name + bs + "' "+(_placeholder?' placeholder="'+_placeholder+'"':"")+" type='text' style='width:"+_width+"' value='"+(_obj.value?_obj.value:'')+"' />";
-							break;
-					}
-					if(_obj.title) _html+='</span>';
-					if(_obj.callback) clicks.push({bind: _name + bs,callback:_obj.callback});				
-					if(_obj.event) {
-						_html +='<span data-id="'+ _name + bs +'" class="glyphicon cursor '+_obj.event.css+' icon_'+ _name + bs+'" ></span>';
-						if(_obj.event.callback)	clicks.push({bind:'icon_'+ _name + bs,callback:_obj.event.callback});								
-					}
-					if(_obj.ps) _html +=" <p class='c9 mt10'>"+_obj.ps+"</p>";					
-				}
-				if(item.ps) _html +=" <p class='c9 mt10'>"+item.ps+"</p>";
-			}
-			else{			
-				switch(item.type){
-					case 'select':
-						var _width = item.width?item.width:'100px';
-						_html += '<select '+(item.disabled?'disabled':'')+' class="bt-input-text mr5 ' +  _name + bs + '" name="'+_name+'" style="width:'+_width+'">';
-						for(var j=0;j<item.items.length;j++){
-							_html+='<option '+(item.value==item.items[j].value?'selected':'' )+' value="'+item.items[j].value+'">'+item.items[j].title+'</option>';
-						}
-						_html +='</select>';
-						break;
-					case 'button':
-							var _width = item.width?item.width:'330px';
-							_html +='<button name=\''+_name+'\' class="btn btn-success btn-sm mr5 '+ _name + bs+'">'+item.text+'</button>';
-							break;
-					case 'number':
-						var _width = item.width?item.width:'330px';
-						_html += "<input name='" + item.name + "' "+(item.disabled?'disabled':'')+" class='bt-input-text mr5 " + _name + bs + "' "+(_placeholder?' placeholder="'+_placeholder+'"':"")+" type='number' style='width:"+_width+"' value='"+(item.value?item.value:'')+"' />";
-						break;
-					case 'checkbox':
-						var _v = item.value===true?'checked':''
-						_html +='<input type="checkbox" class="'+_name+'" id="'+_name+'" name="'+_name+'"  '+_v+'><label class="mr20" for="'+_name+'" style="font-weight:normal">'+item.text+'</label>'
-						break;
-					case 'password':
-						var _width = item.width?item.width:'330px';	
-						_html += "<input name='" + _name + "' "+(item.disabled?'disabled':'') +" class='bt-input-text mr5 " +  _name + bs + "' "+(_placeholder?' placeholder="'+_placeholder+'"':"")+" type='password' style='width:"+_width+"' value='"+(item.value?item.value:'')+"' />";							
-						break;
-					default:
-						var _width = item.width?item.width:'330px';
-						_html += "<input name='" + item.name + "' "+(item.disabled?'disabled':'')+" class='bt-input-text mr5 " + _name + bs + "' "+(_placeholder?' placeholder="'+_placeholder+'"':"")+" type='text' style='width:"+_width+"' value='"+(item.value?item.value:'')+"' />";
-						break;
-				}
-				if(item.callback) clicks.push({bind: _name + bs,callback:item.callback});		
-			}
-			_html += '</div>';
-			if(!item.class) item.class='';			
-			if(item.hide) _hide = 'style="display:none;"'
-			_html = '<div class="line '+item.class+'" '+ _hide +'>' + _html +'</div>'
-			return { html: _html,clicks:clicks,data:item};			
-		},
-		render_form:function(data,callback){
+    render_form_line: function (item, bs, form) {
+        var clicks = [], _html = '', _hide = '', is_title_css = ' ml0';
+        if (!bs) bs = '';
+        if (item.title) {
+            _html += '<span class="tname">' + item.title + '</span>';
+            is_title_css = '';
+        }
+        _html += "<div class='info-r " + is_title_css + "'>";
+
+        var _name = item.name;
+        var _placeholder = item.placeholder;
+        if (item.items && item.type != 'select') {
+            for (var x = 0; x < item.items.length; x++) {
+                var _obj = item.items[x];
+                if (!_name && !_obj.name) {
+                    alert('缺少必要参数name');
+                    return;
+                }
+                if (_obj.hide) continue;
+                if (_obj.name) _name = _obj.name;
+                if (_obj.placeholder) _placeholder = _obj.placeholder;
+                if (_obj.title) _html += '<span class=" mr5">' + _obj.title + "  ";
+                switch (_obj.type) {
+                    case 'select':
+                        var _width = _obj.width ? _obj.width : '100px';
+                        _html += '<select ' + (_obj.disabled ? 'disabled' : '') + ' class="bt-input-text mr5 ' + _name + bs + '" name="' + _name + '" style="width:' + _width + '">';
+                        for (var j = 0; j < _obj.items.length; j++) {
+                            _html += '<option ' + (_obj.value == _obj.items[j].value ? 'selected' : '') + ' value="' + _obj.items[j].value + '">' + _obj.items[j].title + '</option>';
+                        }
+                        _html += '</select>';
+                        break;
+                    case 'textarea':
+                        var _width = _obj.width ? _obj.width : '330px';
+                        var _height = _obj.height ? _obj.height : '100px';
+                        _html += '<textarea class="bt-input-text mr20 ' + _name + bs + '" name="' + _name + '" style="width:' + _width + ';height:' + _height + ';line-height:22px">' + (_obj.value ? _obj.value : '') + '</textarea>';
+                        if (_placeholder) _html += '<div class="placeholder c9" style="top: 15px; left: 15px; display: block;">' + _placeholder + '</div>';
+                        break;
+                    case 'button':
+                        var _width = _obj.width ? _obj.width : '330px';
+                        _html += '<button name=\'' + _name + '\' class="btn btn-success btn-sm mr5 ml5 ' + _name + bs + '">' + _obj.text + '</button>';
+                        break;
+                    case 'radio':
+                        var _v = _obj.value === true ? 'checked' : ''
+                        _html += '<input type="radio" class="' + _name + '" id="' + _name + '" name="' + _name + '"  ' + _v + '><label class="mr20" for="' + _name + '" style="font-weight:normal">' + _obj.text + '</label>'
+                        break;
+                    case 'checkbox':
+                        var _v = _obj.value === true ? 'checked' : ''
+                        _html += '<input type="checkbox" class="' + _name + '" id="' + _name + '" name="' + _name + '"  ' + _v + '><label class="mr20" for="' + _name + '" style="font-weight:normal">' + _obj.text + '</label>'
+                        break;
+                    case 'number':
+                        var _width = _obj.width ? _obj.width : '330px';
+                        _html += "<input name='" + _name + "' " + (_obj.disabled ? 'disabled' : '') + " class='bt-input-text mr5 " + _name + bs + "' " + (_placeholder ? ' placeholder="' + _placeholder + '"' : "") + " type='number' style='width:" + _width + "' value='" + (_obj.value ? _obj.value : '') + "' />";
+                        _html += _obj.unit ? _obj.unit : '';
+                        break;
+                    case 'password':
+                        var _width = _obj.width ? _obj.width : '330px';
+                        _html += "<input name='" + _name + "' " + (_obj.disabled ? 'disabled' : '') + " class='bt-input-text mr5 " + _name + bs + "' " + (_placeholder ? ' placeholder="' + _placeholder + '"' : "") + " type='password' style='width:" + _width + "' value='" + (_obj.value ? _obj.value : '') + "' />";
+                        break;
+                    default:
+                        var _width = _obj.width ? _obj.width : '330px';
+
+                        _html += "<input name='" + _name + "' " + (_obj.disabled ? 'disabled' : '') + " class='bt-input-text mr5 " + _name + bs + "' " + (_placeholder ? ' placeholder="' + _placeholder + '"' : "") + " type='text' style='width:" + _width + "' value='" + (_obj.value ? _obj.value : '') + "' />";
+                        break;
+                }
+                if (_obj.title) _html += '</span>';
+                if (_obj.callback) clicks.push({ bind: _name + bs, callback: _obj.callback });
+                if (_obj.event) {
+                    _html += '<span data-id="' + _name + bs + '" class="glyphicon cursor mr5 ' + _obj.event.css + ' icon_' + _name + bs + '" ></span>';
+                    if (_obj.event.callback) clicks.push({ bind: 'icon_' + _name + bs, callback: _obj.event.callback });
+                }
+                if (_obj.ps) _html += " <span class='c9 mt10'>" + _obj.ps + "</span>";
+            }
+            if (item.ps) _html += " <span class='c9 mt10'>" + item.ps + "</span>";
+        }
+        else {
+            switch (item.type) {
+                case 'select':
+                    var _width = item.width ? item.width : '100px';
+                    _html += '<select ' + (item.disabled ? 'disabled' : '') + ' class="bt-input-text mr5 ' + _name + bs + '" name="' + _name + '" style="width:' + _width + '">';
+                    for (var j = 0; j < item.items.length; j++) {
+                        _html += '<option ' + (item.value == item.items[j].value ? 'selected' : '') + ' value="' + item.items[j].value + '">' + item.items[j].title + '</option>';
+                    }
+                    _html += '</select>';
+                    break;
+                case 'button':
+                    var _width = item.width ? item.width : '330px';
+                    _html += '<button name=\'' + _name + '\' class="btn btn-success btn-sm mr5 ml5 ' + _name + bs + '">' + item.text + '</button>';
+                    break;
+                case 'number':
+                    var _width = item.width ? item.width : '330px';
+                    _html += "<input name='" + item.name + "' " + (item.disabled ? 'disabled' : '') + " class='bt-input-text mr5 " + _name + bs + "' " + (_placeholder ? ' placeholder="' + _placeholder + '"' : "") + " type='number' style='width:" + _width + "' value='" + (item.value ? item.value : '') + "' />";
+                    break;
+                case 'checkbox':
+                    var _v = item.value === true ? 'checked' : ''
+                    _html += '<input type="checkbox" class="' + _name + '" id="' + _name + '" name="' + _name + '"  ' + _v + '><label class="mr20" for="' + _name + '" style="font-weight:normal">' + item.text + '</label>'
+                    break;
+                case 'password':
+                    var _width = item.width ? item.width : '330px';
+                    _html += "<input name='" + _name + "' " + (item.disabled ? 'disabled' : '') + " class='bt-input-text mr5 " + _name + bs + "' " + (_placeholder ? ' placeholder="' + _placeholder + '"' : "") + " type='password' style='width:" + _width + "' value='" + (item.value ? item.value : '') + "' />";
+                    break;
+                default:
+                    var _width = item.width ? item.width : '330px';
+
+                    _html += "<input name='" + item.name + "' " + (item.disabled ? 'disabled' : '') + " class='bt-input-text mr5 " + _name + bs + "' " + (_placeholder ? ' placeholder="' + _placeholder + '"' : "") + " type='text' style='width:" + _width + "' value='" + (item.value ? item.value : '') + "' />";
+                    break;
+            }
+            if (item.callback) clicks.push({ bind: _name + bs, callback: item.callback });
+            if (item.ps) _html += " <span class='c9 mt10 mr5'>" + item.ps + "</span>";
+        }
+        _html += '</div>';
+        if (!item.class) item.class = '';
+        if (item.hide) _hide = 'style="display:none;"'
+        _html = '<div class="line ' + item.class + '" ' + _hide + '>' + _html + '</div>'
+
+        if (form) {
+            form.append(_html)
+            bt.render_clicks(clicks)
+        }
+        return { html: _html, clicks: clicks, data: item };
+    },
+	render_form:function(data,callback){
 			if(data){		
 			var bs = '_' + bt.get_random(6);
 			var _form = $("<div data-id='form"+bs+"' class='bt-form bt-form pd20 pb70'></div>");			
@@ -3770,1187 +3778,11 @@ bt.soft = {
 			if(callback) callback(rdata);
 		})
 	},
-	get_config_menu:function(name,version,versions) //获取设置菜单显示
-	{
-		var vstr = '';
-		if(versions && versions.length>1){
-			for(var i=0;i<versions.length;i++) vstr+= versions[i].m_version +'|'
-			vstr = bt.rtrim(vstr,'|')
-		}		
-		var menu = '';
-		if(bt.os=='Linux'){
-			menu = '<p onclick="bt.soft.get_tab_contents(\'config\',\''+name+'\')">'+lan.soft.config_edit+'</p><p onclick="bt.soft.get_tab_contents(\'change_version\',\''+name+'\',\''+vstr+'\')">'+lan.soft.nginx_version+'</p>';
-			if(version == undefined || version == ''){
-				menu = '<p onclick="bt.soft.get_tab_contents(\'config\',\''+name+'\')">'+lan.soft.config_edit+'</p>';
-			}
-			switch(name)
-			{
-				case 'mysqld':
-				 	menu += '<p onclick="bt.soft.get_tab_contents(\'change_data_path\')">'+lan.soft.save_path+'</p><p onclick="bt.soft.get_tab_contents(\'change_mysql_port\')">'+lan.site.port+'</p><p onclick="bt.soft.get_tab_contents(\'get_mysql_run_status\')">'+lan.soft.status+'</p><p onclick="bt.soft.get_tab_contents(\'get_mysql_status\')">'+lan.soft.php_main7+'</p><p onclick="bt.soft.get_tab_contents(\'mysql_log\')">'+lan.soft.log+'</p><p onclick="bt.soft.get_tab_contents(\'mysql_slow_log\')">'+lan.public.slow_log+'</p>';
-					break;
-				case 'phpmyadmin':					
-					menu = '<p onclick="bt.soft.get_tab_contents(\'phpmyadmin_php\',\''+name+'\',\''+version.phpversion+'\')">'+lan.soft.php_version+'</p><p onclick="bt.soft.get_tab_contents(\'phpmyadmin_safe\',\''+name+'\',\''+version.port+'|'+version.auth+'\')"">'+lan.soft.safe+'</p>';						
-					break;
-				case 'memcached':
-					menu += '<p onclick="bt.soft.get_tab_contents(\'memcached_status\')">负载状态</p><p onclick="bt.soft.get_tab_contents(\'memcached_set\')">性能调整</p>';
-					break;
-				case 'redis':
-					menu += '<p  onclick="bt.soft.get_tab_contents(\'get_redis_status\')">负载状态</p>'; 
-					break;
-				case 'tomcat':
-                    menu += '<p onclick="bt.soft.get_tab_contents(\'log\',\'/www/server/tomcat/logs/catalina.out\')">运行日志</p>';
-					break;
-				case 'apache':
-				case 'nginx':
-					menu = '<p onclick="bt.soft.get_tab_contents(\'config\',\''+name+'\')">'+lan.soft.config_edit+'</p>'
-					menu += (name=='nginx')?'<p onclick="bt.soft.get_tab_contents(\'nginx_status\')">'+lan.soft.nginx_status+'</p>':'';
-					if(version != undefined || version !=''){
-						 menu += '<p onclick="bt.soft.get_tab_contents(\'change_version\',\''+name+'\',\''+vstr+'\')">'+lan.soft.nginx_version+'</p>';
-					}
-					var logsPath = '/www/wwwlogs/error_log'
-					if(name == 'nginx'){
-						logsPath = '/www/wwwlogs/nginx_error.log';				
-					}
-					menu+='<p onclick="bt.soft.get_tab_contents(\'log\',\''+logsPath+'\')">错误日志</p>';
-					break;
-			}		
-		}
-		return menu;
-	},
-	get_tab_contents : function(key,name,value) //获取设置菜单操作
-	{
-		var _this = this;
-		switch(key)
-		{
-			case 'service':
-				if(typeof value == 'string') value = value=='true'?true:false;
-				var tabCon ='<p class="status">'+lan.soft.status+'：<span>'+(value?lan.soft.on:lan.soft.off)+'</span><span style="color: '+(value?'#20a53a;':'red;')+' margin-left: 3px;" class="glyphicon '+(value?'glyphicon glyphicon-play':'glyphicon-pause')+'"></span></p>\
-						<div class="sfm-opt">\
-							<button class="btn btn-default btn-sm" onclick="bt.pub.set_server_status(\''+name+'\',\''+(value?'stop':'start')+'\')">'+(value?lan.soft.stop:lan.soft.start)+'</button>\
-							<button class="btn btn-default btn-sm" onclick="bt.pub.set_server_status(\''+name+'\',\'restart\')">'+lan.soft.restart+'</button>\
-							<button class="btn btn-default btn-sm" onclick="bt.pub.set_server_status(\''+name+'\',\'reload\')">'+lan.soft.reload+'</button>\
-						</div>'; 
-				$(".soft-man-con").html(tabCon);
-				var help = '<ul class="help-info-text c7 mtb15" style="padding-top:30px"><li>'+lan.soft.mysql_mem_err+'</li></ul>';
-				if(name == 'mysqld') $(".soft-man-con").append(help);
-				break;
-			case 'config':
-				var con = '<p style="color: #666; margin-bottom: 7px">'+lan.bt.edit_ps+'</p><textarea class="bt-input-text" style="height: 320px; line-height:18px;" id="textBody"></textarea>\
-					<button id="OnlineEditFileBtn" class="btn btn-success btn-sm" style="margin-top:10px;">'+lan.public.save+'</button>\
-					<ul class="help-info-text c7 ptb15">\
-						<li>'+lan.get('config_edit_ps',[name])+'</li>\
-					</ul>';
-					$(".soft-man-con").html(con);
-					var fileName = bt.soft.get_config_path(name);				
-				    var loadT = bt.load(lan.soft.get);
-				    bt.send('GetFileBody','files/GetFileBody',{path:fileName},function(rdata){
-				    	loadT.close();
-				    	$("#textBody").text(rdata.data);
-				    	$(".CodeMirror").remove();
-				    	var editor = CodeMirror.fromTextArea(document.getElementById("textBody"), {
-							extraKeys: {"Ctrl-Space": "autocomplete"},
-							lineNumbers: true,
-							matchBrackets:true,
-						});
-						editor.focus();
-						$(".CodeMirror-scroll").css({"height":"350px","margin":0,"padding":0});
-						$("#OnlineEditFileBtn").click(function(){
-							$("#textBody").text(editor.getValue());
-							bt.soft.save_config(fileName,editor.getValue())
-						});
-				    })
-				break;
-			case 'change_version':
-				if(name == "mysqld") name = "mysql";
-				var veropt = value.split("|");
-				var SelectVersion = '';
-				for(var i=0; i<veropt.length; i++){
-					SelectVersion += '<option>'+name+' '+veropt[i]+'</option>';
-				}				
-				var body = "<div class='ver line'><span class='tname'>"+lan.soft.select_version+"</span><select id='selectVer' class='bt-input-text mr20' name='phpVersion' style='width:160px'>";
-					body += SelectVersion+'</select><button class="btn btn-success btn-sm">'+lan.soft.version_to+'</button></div>';
-				
-				if(name == 'mysql'){
-					body += "<ul class='help-info-text c7 ptb15'><li style='color:red;'>"+lan.soft.mysql_f+"</li></ul>"
-				}				
-				$(".soft-man-con").html(body);
-				$(".btn-success").click(function(){
-					var ver = $("#selectVer").val();					
-					_this.get_soft_find(name,function(rdata){
-						if(name=='mysql'){
-							bt.database.get_list(1,'',function(ddata){
-                                if (ddata.data.length>0) 
-								{
-									bt.msg({msg:lan.soft.mysql_d,icon:5,time:5000})
-									return;
-								}
-								_this.install_soft(rdata,ver.split(" ")[1],0);
-							})
-						}
-						else{
-							_this.install_soft(rdata,ver.split(" ")[1],0);
-						}
-					})					
-				});				
-				break;
-			case 'change_data_path':
-				bt.send('GetMySQLInfo','database/GetMySQLInfo',{},function(rdata){
-					
-					var tabCon  = '<p class="conf_p">\
-									<input id="datadir" class="phpUploadLimit bt-input-text mr5" style="width:350px;" type="text" value="'+rdata.datadir+'" name="datadir">\
-									<span onclick="bt.select_path(\'datadir\')" class="glyphicon glyphicon-folder-open cursor mr20" style="width:auto"></span><button class="btn btn-success btn-sm" id="btn_change_path"  >'+lan.soft.mysql_to+'</button>\
-								 </p>';
-					$(".soft-man-con").html(tabCon);
-					
-					$("#btn_change_path").click(function(){					
-						bt.confirm({msg:lan.soft.mysql_to_msg},function(){
-							var datadir = $("#datadir").val();
-							var loadT = bt.load(lan.soft.mysql_to_msg1);
-							bt.send('SetDataDir','database/SetDataDir',{datadir:datadir},function(rdata){
-								loadT.close();
-								bt.msg(rdata);
-							});
-						});
-					});		
-				});		
-				break;
-			case 'change_mysql_port':
-				bt.send('GetMySQLInfo','database/GetMySQLInfo',{},function(rdata){
-					var tabCon = '<p class="conf_p">\
-										<input id="dataport" class="phpUploadLimit bt-input-text mr20" type="number" value="'+rdata.port+'" name="dataport">\
-										<button style="margin-top: -1px;" class="btn btn-success btn-sm" id="btn_change_port">'+lan.public.edit+'</button>\
-									</p>';									
-					$(".soft-man-con").html(tabCon);
-					
-					$("#btn_change_port").click(function(){					
-						bt.confirm({msg:lan.soft.mysql_to_msg},function(){
-							var port = $("#dataport").val();
-							var loadT = bt.load();
-							bt.send('SetMySQLPort','database/SetMySQLPort',{port:port},function(rdata){
-								loadT.close();
-								bt.msg(rdata);
-							});
-						});
-					});		
-				});			
-				break;
-			case 'get_mysql_run_status':
-				bt.send('GetRunStatus','database/GetRunStatus',{},function(rdata){
-					var cache_size = ((parseInt(rdata.Qcache_hits)/(parseInt(rdata.Qcache_hits)+parseInt(rdata.Qcache_inserts)))* 100).toFixed(2) + '%';
-					if(cache_size == 'NaN%') cache_size = 'OFF';
-					var Con = '<div class="divtable"><table class="table table-hover table-bordered" style="width: 490px;margin-bottom:10px;background-color:#fafafa">\
-								<tbody>\
-									<tr><th>'+lan.soft.mysql_status_title1+'</th><td>'+getLocalTime(rdata.Run)+'</td><th>'+lan.soft.mysql_status_title5+'</th><td>'+parseInt(rdata.Questions/rdata.Uptime)+'</td></tr>\
-									<tr><th>'+lan.soft.mysql_status_title2+'</th><td>'+rdata.Connections+'</td><th>'+lan.soft.mysql_status_title6+'</th><td>'+parseInt((parseInt(rdata.Com_commit) + parseInt(rdata.Com_rollback)) / rdata.Uptime) +'</td></tr>\
-									<tr><th>'+lan.soft.mysql_status_title3+'</th><td>'+ToSize(rdata.Bytes_sent)+'</td><th>'+lan.soft.mysql_status_title7+'</th><td>'+rdata.File+'</td></tr>\
-									<tr><th>'+lan.soft.mysql_status_title4+'</th><td>'+ToSize(rdata.Bytes_received)+'</td><th>'+lan.soft.mysql_status_title8+'</th><td>'+rdata.Position+'</td></tr>\
-								</tbody>\
-								</table>\
-								<table class="table table-hover table-bordered" style="width: 490px;">\
-								<thead style="display:none;"><th></th><th></th><th></th><th></th></thead>\
-								<tbody>\
-									<tr><th>'+lan.soft.mysql_status_title9+'</th><td>'+rdata.Threads_running+'/'+rdata.Max_used_connections+'</td><td colspan="2">'+lan.soft.mysql_status_ps1+'</td></tr>\
-									<tr><th>'+lan.soft.mysql_status_title10+'</th><td>'+((1-rdata.Threads_created/rdata.Connections)* 100).toFixed(2)+'%</td><td colspan="2">'+lan.soft.mysql_status_ps2+'</td></tr>\
-									<tr><th>'+lan.soft.mysql_status_title11+'</th><td>'+((1-rdata.Key_reads / rdata.Key_read_requests) * 100).toFixed(2)+'%</td><td colspan="2">'+lan.soft.mysql_status_ps3+'</td></tr>\
-									<tr><th>'+lan.soft.mysql_status_title12+'</th><td>'+((1-rdata.Innodb_buffer_pool_reads/rdata.Innodb_buffer_pool_read_requests) * 100).toFixed(2)+'%</td><td colspan="2">'+lan.soft.mysql_status_ps4+'</td></tr>\
-									<tr><th>'+lan.soft.mysql_status_title13+'</th><td>'+cache_size+'</td><td colspan="2">'+lan.soft.mysql_status_ps5+'</td></tr>\
-									<tr><th>'+lan.soft.mysql_status_title14+'</th><td>'+((rdata.Created_tmp_disk_tables/rdata.Created_tmp_tables) * 100).toFixed(2)+'%</td><td colspan="2">'+lan.soft.mysql_status_ps6+'</td></tr>\
-									<tr><th>'+lan.soft.mysql_status_title15+'</th><td>'+rdata.Open_tables+'</td><td colspan="2">'+lan.soft.mysql_status_ps7+'</td></tr>\
-									<tr><th>'+lan.soft.mysql_status_title16+'</th><td>'+rdata.Select_full_join+'</td><td colspan="2">'+lan.soft.mysql_status_ps8+'</td></tr>\
-									<tr><th>'+lan.soft.mysql_status_title17+'</th><td>'+rdata.Select_range_check+'</td><td colspan="2">'+lan.soft.mysql_status_ps9+'</td></tr>\
-									<tr><th>'+lan.soft.mysql_status_title18+'</th><td>'+rdata.Sort_merge_passes+'</td><td colspan="2">'+lan.soft.mysql_status_ps10+'</td></tr>\
-									<tr><th>'+lan.soft.mysql_status_title19+'</th><td>'+rdata.Table_locks_waited+'</td><td colspan="2">'+lan.soft.mysql_status_ps11+'</td></tr>\
-								<tbody>\
-						</table></div>'
-					$(".soft-man-con").html(Con);
-				})
-				break;
-			case 'get_mysql_status':
-				bt.send('GetDbStatus','database/GetDbStatus',{},function(rdata){
-					var key_buffer_size = bt.format_size(rdata.mem.key_buffer_size,false,0,'MB')
-					var query_cache_size = bt.format_size(rdata.mem.query_cache_size,false,0,'MB')
-					var tmp_table_size = bt.format_size(rdata.mem.tmp_table_size,false,0,'MB')
-					var innodb_buffer_pool_size = bt.format_size(rdata.mem.innodb_buffer_pool_size,false,0,'MB')
-					var innodb_additional_mem_pool_size = bt.format_size(rdata.mem.innodb_additional_mem_pool_size,false,0,'MB')
-					var innodb_log_buffer_size = bt.format_size(rdata.mem.innodb_log_buffer_size,false,0,'MB')
-					
-					var sort_buffer_size = bt.format_size(rdata.mem.sort_buffer_size,false,0,'MB')
-					var read_buffer_size = bt.format_size(rdata.mem.read_buffer_size,false,0,'MB')
-					var read_rnd_buffer_size = bt.format_size(rdata.mem.read_rnd_buffer_size,false,0,'MB')
-					var join_buffer_size = bt.format_size(rdata.mem.join_buffer_size,false,0,'MB')
-					var thread_stack = bt.format_size(rdata.mem.thread_stack,false,0,'MB')
-					var binlog_cache_size = bt.format_size(rdata.mem.binlog_cache_size,false,0,'MB')
-					
-					var a = key_buffer_size + query_cache_size + tmp_table_size + innodb_buffer_pool_size + innodb_additional_mem_pool_size + innodb_log_buffer_size
-					var b = sort_buffer_size + read_buffer_size + read_rnd_buffer_size + join_buffer_size + thread_stack + binlog_cache_size
-					var memSize = a  + rdata.mem.max_connections * b
-					
-					
-					var memCon = '<div class="conf_p" style="margin-bottom:0">\
-									<div style="border-bottom:#ccc 1px solid;padding-bottom:10px;margin-bottom:10px"><span><b>'+lan.soft.mysql_set_msg+'</b></span>\
-									<select class="bt-input-text" name="mysql_set" style="margin-left:-4px">\
-										<option value="0">'+lan.soft.mysql_set_select+'</option>\
-										<option value="1">1-2GB</option>\
-										<option value="2">2-4GB</option>\
-										<option value="3">4-8GB</option>\
-										<option value="4">8-16GB</option>\
-										<option value="5">16-32GB</option>\
-									</select>\
-									<span>'+lan.soft.mysql_set_maxmem+': </span><input style="width:70px;background-color:#eee;" class="bt-input-text mr5" name="memSize" type="text" value="'+memSize.toFixed(2)+'" readonly>MB\
-									</div>\
-									<p><span>key_buffer_size</span><input style="width: 70px;" class="bt-input-text mr5" name="key_buffer_size" value="'+key_buffer_size+'" type="number" >MB, <font>'+lan.soft.mysql_set_key_buffer_size+'</font></p>\
-									<p><span>query_cache_size</span><input style="width: 70px;" class="bt-input-text mr5" name="query_cache_size" value="'+query_cache_size+'" type="number" >MB, <font>'+lan.soft.mysql_set_query_cache_size+'</font></p>\
-									<p><span>tmp_table_size</span><input style="width: 70px;" class="bt-input-text mr5" name="tmp_table_size" value="'+tmp_table_size+'" type="number" >MB, <font>'+lan.soft.mysql_set_tmp_table_size+'</font></p>\
-									<p><span>innodb_buffer_pool_size</span><input style="width: 70px;" class="bt-input-text mr5" name="innodb_buffer_pool_size" value="'+innodb_buffer_pool_size+'" type="number" >MB, <font>'+lan.soft.mysql_set_innodb_buffer_pool_size+'</font></p>\
-									<p><span>innodb_log_buffer_size</span><input style="width: 70px;" class="bt-input-text mr5" name="innodb_log_buffer_size" value="'+innodb_log_buffer_size+'" type="number">MB, <font>'+lan.soft.mysql_set_innodb_log_buffer_size+'</font></p>\
-									<p style="display:none;"><span>innodb_additional_mem_pool_size</span><input style="width: 70px;" class="bt-input-text mr5" name="innodb_additional_mem_pool_size" value="'+innodb_additional_mem_pool_size+'" type="number" >MB</p>\
-									<p><span>sort_buffer_size</span><input style="width: 70px;" class="bt-input-text mr5" name="sort_buffer_size" value="'+(sort_buffer_size * 1024)+'" type="number" >KB * '+lan.soft.mysql_set_conn+', <font>'+lan.soft.mysql_set_sort_buffer_size+'</font></p>\
-									<p><span>read_buffer_size</span><input style="width: 70px;" class="bt-input-text mr5" name="read_buffer_size" value="'+(read_buffer_size * 1024)+'" type="number" >KB * '+lan.soft.mysql_set_conn+', <font>'+lan.soft.mysql_set_read_buffer_size+' </font></p>\
-									<p><span>read_rnd_buffer_size</span><input style="width: 70px;" class="bt-input-text mr5" name="read_rnd_buffer_size" value="'+(read_rnd_buffer_size * 1024)+'" type="number" >KB * '+lan.soft.mysql_set_conn+', <font>'+lan.soft.mysql_set_read_rnd_buffer_size+' </font></p>\
-									<p><span>join_buffer_size</span><input style="width: 70px;" class="bt-input-text mr5" name="join_buffer_size" value="'+(join_buffer_size * 1024)+'" type="number" >KB * '+lan.soft.mysql_set_conn+', <font>'+lan.soft.mysql_set_join_buffer_size+'</font></p>\
-									<p><span>thread_stack</span><input style="width: 70px;" class="bt-input-text mr5" name="thread_stack" value="'+(thread_stack * 1024)+'" type="number" >KB * '+lan.soft.mysql_set_conn+', <font>'+lan.soft.mysql_set_thread_stack+'</font></p>\
-									<p><span>binlog_cache_size</span><input style="width: 70px;" class="bt-input-text mr5" name="binlog_cache_size" value="'+(binlog_cache_size * 1024)+'" type="number" >KB * '+lan.soft.mysql_set_conn+', <font>'+lan.soft.mysql_set_binlog_cache_size+'</font></p>\
-									<p><span>thread_cache_size</span><input style="width: 70px;" class="bt-input-text mr5" name="thread_cache_size" value="'+rdata.mem.thread_cache_size+'" type="number" ><font> '+lan.soft.mysql_set_thread_cache_size+'</font></p>\
-									<p><span>table_open_cache</span><input style="width: 70px;" class="bt-input-text mr5" name="table_open_cache" value="'+rdata.mem.table_open_cache+'" type="number" > <font>'+lan.soft.mysql_set_table_open_cache+'</font></p>\
-									<p><span>max_connections</span><input style="width: 70px;" class="bt-input-text mr5" name="max_connections" value="'+rdata.mem.max_connections+'" type="number" ><font> '+lan.soft.mysql_set_max_connections+'</font></p>\
-									<div style="margin-top:10px; padding-right:15px" class="text-right"><button class="btn btn-success btn-sm mr5" onclick="bt.pub.set_server_status(\'mysqld\',\'restart\')">'+lan.soft.mysql_set_restart+'</button><button class="btn btn-success btn-sm" id="btn_SetMySQLConf" >'+lan.public.save+'</button></div>\
-								</div>'
-					
-					$(".soft-man-con").html(memCon);
-					
-					$(".conf_p input[name*='size'],.conf_p input[name='max_connections'],.conf_p input[name='thread_stack']").change(function(){
-						ComMySqlMem();
-					});
-					
-					$(".conf_p select[name='mysql_set']").change(function(){
-						MySQLMemOpt($(this).val());
-						ComMySqlMem();
-					});
-					
-					$('#btn_SetMySQLConf').click(function(){
-						SetMySQLConf();
-					})
-					//设置MySQL配置参数
-					function SetMySQLConf(){
-						bt.send('GetMemInfo','system/GetMemInfo',{},function(memInfo){
-							var query_cache_size = parseInt($("input[name='query_cache_size']").val());
-							var query_cache_type = 0;
-							if(query_cache_size > 0){
-								query_cache_type = 1;
-							}
-							var data = {
-								key_buffer_size:parseInt($("input[name='key_buffer_size']").val()),
-								query_cache_size:query_cache_size,
-								query_cache_type:query_cache_type,
-								tmp_table_size:parseInt($("input[name='tmp_table_size']").val()),
-								max_heap_table_size:parseInt($("input[name='tmp_table_size']").val()),
-								innodb_buffer_pool_size:parseInt($("input[name='innodb_buffer_pool_size']").val()),
-								innodb_log_buffer_size:parseInt($("input[name='innodb_log_buffer_size']").val()),
-								sort_buffer_size:parseInt($("input[name='sort_buffer_size']").val()),
-								read_buffer_size:parseInt($("input[name='read_buffer_size']").val()),
-								read_rnd_buffer_size:parseInt($("input[name='read_rnd_buffer_size']").val()),
-								join_buffer_size:parseInt($("input[name='join_buffer_size']").val()),
-								thread_stack:parseInt($("input[name='thread_stack']").val()),
-								binlog_cache_size:parseInt($("input[name='binlog_cache_size']").val()),
-								thread_cache_size:parseInt($("input[name='thread_cache_size']").val()),
-								table_open_cache:parseInt($("input[name='table_open_cache']").val()),
-								max_connections:parseInt($("input[name='max_connections']").val())
-							};
-							bt.send('SetDbConf','database/SetDbConf',data,function(rdata){
-								layer.msg(rdata.msg,{icon:rdata.status?1:2});	
-							});
-						})
-					}
-
-
-					//计算MySQL内存开销
-					function ComMySqlMem(){
-						var key_buffer_size = parseInt($("input[name='key_buffer_size']").val());
-						var query_cache_size = parseInt($("input[name='query_cache_size']").val());
-						var tmp_table_size = parseInt($("input[name='tmp_table_size']").val());
-						var innodb_buffer_pool_size = parseInt($("input[name='innodb_buffer_pool_size']").val());
-						var innodb_additional_mem_pool_size = parseInt($("input[name='innodb_additional_mem_pool_size']").val());
-						var innodb_log_buffer_size = parseInt($("input[name='innodb_log_buffer_size']").val());
-						
-						var sort_buffer_size = $("input[name='sort_buffer_size']").val() / 1024;
-						var read_buffer_size = $("input[name='read_buffer_size']").val() / 1024;
-						var read_rnd_buffer_size = $("input[name='read_rnd_buffer_size']").val() / 1024;
-						var join_buffer_size = $("input[name='join_buffer_size']").val() / 1024;
-						var thread_stack = $("input[name='thread_stack']").val() / 1024;
-						var binlog_cache_size = $("input[name='binlog_cache_size']").val() / 1024;
-						var max_connections = $("input[name='max_connections']").val();
-						
-						var a = key_buffer_size + query_cache_size + tmp_table_size + innodb_buffer_pool_size + innodb_additional_mem_pool_size + innodb_log_buffer_size
-						var b = sort_buffer_size + read_buffer_size + read_rnd_buffer_size + join_buffer_size + thread_stack + binlog_cache_size
-						var memSize = a  + max_connections * b
-						$("input[name='memSize']").val(memSize.toFixed(2));
-					}
-					//MySQL内存优化方案
-					function MySQLMemOpt(opt){
-						var query_size = parseInt($("input[name='query_cache_size']").val());
-						switch(opt){
-							case '1':
-								$("input[name='key_buffer_size']").val(128);
-								if(query_size) $("input[name='query_cache_size']").val(64);
-								$("input[name='tmp_table_size']").val(64);
-								$("input[name='innodb_buffer_pool_size']").val(256);
-								$("input[name='sort_buffer_size']").val(768);
-								$("input[name='read_buffer_size']").val(768);
-								$("input[name='read_rnd_buffer_size']").val(512);
-								$("input[name='join_buffer_size']").val(1024);
-								$("input[name='thread_stack']").val(256);
-								$("input[name='binlog_cache_size']").val(64);
-								$("input[name='thread_cache_size']").val(64);
-								$("input[name='table_open_cache']").val(128);
-								$("input[name='max_connections']").val(100);
-								break;
-							case '2':
-								$("input[name='key_buffer_size']").val(256);
-								if(query_size) $("input[name='query_cache_size']").val(128);
-								$("input[name='tmp_table_size']").val(384);
-								$("input[name='innodb_buffer_pool_size']").val(384);
-								$("input[name='sort_buffer_size']").val(768);
-								$("input[name='read_buffer_size']").val(768);
-								$("input[name='read_rnd_buffer_size']").val(512);
-								$("input[name='join_buffer_size']").val(2048);
-								$("input[name='thread_stack']").val(256);
-								$("input[name='binlog_cache_size']").val(64);
-								$("input[name='thread_cache_size']").val(96);
-								$("input[name='table_open_cache']").val(192);
-								$("input[name='max_connections']").val(200);
-								break;
-							case '3':
-								$("input[name='key_buffer_size']").val(384);
-								if(query_size) $("input[name='query_cache_size']").val(192);
-								$("input[name='tmp_table_size']").val(512);
-								$("input[name='innodb_buffer_pool_size']").val(512);
-								$("input[name='sort_buffer_size']").val(1024);
-								$("input[name='read_buffer_size']").val(1024);
-								$("input[name='read_rnd_buffer_size']").val(768);
-								$("input[name='join_buffer_size']").val(2048);
-								$("input[name='thread_stack']").val(256);
-								$("input[name='binlog_cache_size']").val(128);
-								$("input[name='thread_cache_size']").val(128);
-								$("input[name='table_open_cache']").val(384);
-								$("input[name='max_connections']").val(300);
-								break;
-							case '4':
-								$("input[name='key_buffer_size']").val(512);
-								if(query_size) $("input[name='query_cache_size']").val(256);
-								$("input[name='tmp_table_size']").val(1024);
-								$("input[name='innodb_buffer_pool_size']").val(1024);
-								$("input[name='sort_buffer_size']").val(2048);
-								$("input[name='read_buffer_size']").val(2048);
-								$("input[name='read_rnd_buffer_size']").val(1024);
-								$("input[name='join_buffer_size']").val(4096);
-								$("input[name='thread_stack']").val(384);
-								$("input[name='binlog_cache_size']").val(192);
-								$("input[name='thread_cache_size']").val(192);
-								$("input[name='table_open_cache']").val(1024);
-								$("input[name='max_connections']").val(400);
-								break;
-							case '5':
-								$("input[name='key_buffer_size']").val(1024);
-								if(query_size) $("input[name='query_cache_size']").val(384);
-								$("input[name='tmp_table_size']").val(2048);
-								$("input[name='innodb_buffer_pool_size']").val(4096);
-								$("input[name='sort_buffer_size']").val(4096);
-								$("input[name='read_buffer_size']").val(4096);
-								$("input[name='read_rnd_buffer_size']").val(2048);
-								$("input[name='join_buffer_size']").val(8192);
-								$("input[name='thread_stack']").val(512);
-								$("input[name='binlog_cache_size']").val(256);
-								$("input[name='thread_cache_size']").val(256);
-								$("input[name='table_open_cache']").val(2048);
-								$("input[name='max_connections']").val(500);
-								break;
-						}
-					}
-				})
-				break;
-			case 'mysql_log':
-				var loadT = bt.load();
-				bt.send('BinLog','database/BinLog',{status:1},function(rdata){
-					loadT.close();
-					var limitCon = '<p class="conf_p">\
-										<span class="f14 c6 mr20">'+lan.soft.mysql_log_bin+' </span><span class="f14 c6 mr20">'+ToSize(rdata.msg)+'</span>\
-										<button class="btn btn-success btn-xs btn-bin va0">'+(rdata.status?lan.soft.off:lan.soft.on)+'</button>\
-										<p class="f14 c6 mtb10" style="border-top:#ddd 1px solid; padding:10px 0">'+lan.soft.mysql_log_err+'<button class="btn btn-default btn-clear btn-xs" style="float:right;" >'+lan.soft.mysql_log_close+'</button></p>\
-										<textarea readonly style="margin: 0px;width: 515px;height: 440px;background-color: #333;color:#fff; padding:0 5px" id="error_log"></textarea>\
-									</p>'					
-					$(".soft-man-con").html(limitCon);
-
-                    //设置二进制日志
-                    $(".btn-bin").click(function () {
-                        var loadT = layer.msg(lan.public.the, { icon: 16, time: 0, shade: 0.3 });
-                        $.post('/database?action=BinLog', "", function (rdata) {
-                            layer.close(loadT);
-                            layer.msg(rdata.msg, { icon: rdata.status ? 1 : 5 });
-                            bt.soft.get_tab_contents('mysql_log')
-                        });
-                    })
-                        
-                    //清空日志
-                    $(".btn-clear").click(function () {
-                        var loadT = layer.msg(lan.public.the, { icon: 16, time: 0, shade: 0.3 });
-                        $.post('/database?action=GetErrorLog', "close=1", function (rdata) {
-                            layer.close(loadT);
-                            layer.msg(rdata.msg, { icon: rdata.status ? 1 : 5 });   
-                            bt.soft.get_tab_contents('mysql_log')
-                        });
-                    })         
-
-					bt.send('GetErrorLog','database/GetErrorLog',{},function(error_body){
-						if(error_body.status === false){
-							layer.msg(error_body.msg,{icon:5});
-							error_body = lan.soft.mysql_log_ps1;
-						}
-						if(error_body == "") error_body = lan.soft.mysql_log_ps1;
-						$("#error_log").text(error_body);
-						var ob = document.getElementById('error_log');
-						ob.scrollTop = ob.scrollHeight;
-					});
-				})
-				break;
-			case 'mysql_slow_log':
-				var loadT = bt.load();
-				bt.send('GetSlowLogs','database/GetSlowLogs',{},function(logs){
-					loadT.close();
-					if(!logs.status){
-						logs.msg = '';
-					}
-					if (logs.msg == '') logs.msg = '当前没有慢日志.';
-					var phpCon = '<textarea readonly="" style="margin: 0px;width: 500px;height: 520px;background-color: #333;color:#fff; padding:0 5px" id="error_log">'+logs.msg+'</textarea>';
-					$(".soft-man-con").html(phpCon);
-					var ob = document.getElementById('error_log');
-					ob.scrollTop = ob.scrollHeight;		
-				})
-				break;
-			case 'log':
-				var loadT = bt.load(lan.public.the_get);
-				bt.send('GetOpeLogs','ajax/GetOpeLogs',{path:name},function(rdata){
-					loadT.close();
-					if(rdata.msg == '') rdata.msg = '当前没有日志!';
-					var ebody = '<div class="soft-man-con"><textarea readonly="" style="margin: 0px;width: 500px;height: 520px;background-color: #333;color:#fff; padding:0 5px" id="error_log">'+rdata.msg+'</textarea></div>';
-					$(".soft-man-con").html(ebody);
-					var ob = document.getElementById('error_log');
-					ob.scrollTop = ob.scrollHeight;	
-				})
-				break;	
-			case 'nginx_status':
-				bt.send('GetNginxStatus','ajax/GetNginxStatus',{},function(rdata){
-					var con = "<div><table class='table table-hover table-bordered'>\
-									<tr><th>"+lan.bt.nginx_active+"</th><td>"+rdata.active+"</td></tr>\
-									<tr><th>"+lan.bt.nginx_accepts+"</th><td>"+rdata.accepts+"</td></tr>\
-									<tr><th>"+lan.bt.nginx_handled+"</th><td>"+rdata.handled+"</td></tr>\
-									<tr><th>"+lan.bt.nginx_requests+"</th><td>"+rdata.requests+"</td></tr>\
-									<tr><th>"+lan.bt.nginx_reading+"</th><td>"+rdata.Reading+"</td></tr>\
-									<tr><th>"+lan.bt.nginx_writing+"</th><td>"+rdata.Writing+"</td></tr>\
-									<tr><th>"+lan.bt.nginx_waiting+"</th><td>"+rdata.Waiting+"</td></tr>\
-								 </table></div>";
-					$(".soft-man-con").html(con);
-				})
-				break;
-			case 'memcached_status':					
-			case 'memcached_set':
-				var loadT = bt.load(lan.public.get_the);
-				bt.send('GetMemcachedStatus','ajax/GetMemcachedStatus',{},function(rdata){
-					loadT.close();
-					
-					if(key=='memcached_set')
-					{
-						var memCon = '<div class="conf_p" style="margin-bottom:0">\
-								<p><span>BindIP</span><input style="width: 120px;" class="bt-input-text mr5" name="membind" value="'+rdata.bind+'" type="text" ><font>监听IP,请勿随意修改</font></p>\
-								<p><span>PORT</span><input style="width: 120px;" class="bt-input-text mr5" max="65535" name="memport" value="'+rdata.port+'" type="number" ><font>监听端口,一般无需修改</font></p>\
-								<p><span>CACHESIZE</span><input style="width: 120px;" class="bt-input-text mr5" name="memcachesize" value="'+rdata.cachesize+'" type="number" >MB,<font>缓存大小,建议不要大于512M</font></p>\
-								<p><span>MAXCONN</span><input style="width: 120px;" class="bt-input-text mr5" name="memmaxconn" value="'+rdata.maxconn+'" type="number" ><font>最大连接数,建议不要大于40960</font></p>\
-								<div style="margin-top:10px; padding-right:230px" class="text-right"><button class="btn btn-success btn-sm" >'+lan.public.save+'</button></div>\
-							</div>'
-						$(".soft-man-con").html(memCon);
-						
-						$('.btn-success').click(function(){
-							var data = {
-								ip:$("input[name='membind']").val(),
-								port:$("input[name='memport']").val(),
-								cachesize:$("input[name='memcachesize']").val(),
-								maxconn:$("input[name='memmaxconn']").val()
-							}
-							
-							if(data.ip.split('.').length < 4){
-								layer.msg('IP地址格式不正确!',{icon:2});
-								return;
-							}
-							
-							if(data.port < 1 || data.port > 65535){
-								layer.msg('端口范围不正确!',{icon:2});
-								return;
-							}
-							
-							if(data.cachesize < 8){
-								layer.msg('缓存值过小',{icon:2});
-								return;
-							}
-							
-							if(data.maxconn < 4){
-								layer.msg('最大连接数过小',{icon:2});
-								return;
-							}							
-							var loadT = bt.load(lan.public.the);
-							bt.send('SetMemcachedCache','ajax/SetMemcachedCache',data,function(rdata){			
-								loadT.close();
-								bt.msg(rdata)
-							});
-						})						
-					}
-					else{
-						var memCon = '<div class="divtable">\
-								<table class="table table-hover table-bordered" style="width: 490px;">\
-								<thead><th>字段</th><th>当前值</th><th>说明</th></thead>\
-								<tbody>\
-									<tr><th>BindIP</th><td>'+rdata.bind+'</td><td>监听IP</td></tr>\
-									<tr><th>PORT</th><td>'+rdata.port+'</td><td>监听端口</td></tr>\
-									<tr><th>CACHESIZE</th><td>'+rdata.cachesize+' MB</td><td>最大缓存容量</td></tr>\
-									<tr><th>MAXCONN</th><td>'+rdata.maxconn+'</td><td>最大连接数限制</td></tr>\
-									<tr><th>curr_connections</th><td>'+rdata.curr_connections+'</td><td>当前打开的连接数</td></tr>\
-									<tr><th>cmd_get</th><td>'+rdata.cmd_get+'</td><td>GET请求数</td></tr>\
-									<tr><th>get_hits</th><td>'+rdata.get_hits+'</td><td>GET命中次数</td></tr>\
-									<tr><th>get_misses</th><td>'+rdata.get_misses+'</td><td>GET失败次数</td></tr>\
-									<tr><th>hit</th><td>'+rdata.hit.toFixed(2)+'%</td><td>GET命中率</td></tr>\
-									<tr><th>curr_items</th><td>'+rdata.curr_items+'</td><td>当前被缓存的数据行数</td></tr>\
-									<tr><th>evictions</th><td>'+rdata.evictions+'</td><td>因内存不足而被清理的缓存行数</td></tr>\
-									<tr><th>bytes</th><td>'+ToSize(rdata.bytes)+'</td><td>当前已使用内存</td></tr>\
-									<tr><th>bytes_read</th><td>'+ToSize(rdata.bytes_read)+'</td><td>请求总大小</td></tr>\
-									<tr><th>bytes_written</th><td>'+ToSize(rdata.bytes_written)+'</td><td>发送总大小</td></tr>\
-								<tbody>\
-						</table></div>';
-						$(".soft-man-con").html(memCon);
-					}					
-				})			
-			break;
-			case 'phpmyadmin_php':
-				bt.send('GetPHPVersion','site/GetPHPVersion',{},function(rdata){
-		
-                    var body = "<div class='ver line'><span class='tname'>" + lan.soft.php_version +"</span><select id='get_phpVersion' class='bt-input-text mr20' name='phpVersion' style='width:110px'>";
-		
-					for(var i=0;i<rdata.length;i++){
-						optionSelect = rdata[i].version == value?'selected':'';
-						body += "<option value='"+ rdata[i].version +"' "+ optionSelect +">"+ rdata[i].name +"</option>"
-					}
-					body += '</select><button class="btn btn-success btn-sm" >'+lan.public.save+'</button></div>';
-					$(".soft-man-con").html(body);
-					
-                    $('.btn-success').click(function () {
-                    
-						var loadT = bt.load(lan.public.the);
-                        bt.send('setPHPMyAdmin', 'ajax/setPHPMyAdmin', { phpversion: $("#get_phpVersion").val()},function(rdata){
-							loadT.close();
-							bt.msg(rdata);
-							if(rdata.status){
-								setTimeout(function(){
-									window.location.reload();
-								},3000);
-							}
-						})
-					})
-				})
-				break;
-			case 'phpmyadmin_safe':
-				var arr = value.split('|');
-				var port = arr[0];
-				var auth = eval(arr[1]);
-				var con = '<div class="ver line">\
-									<span style="margin-right:10px">'+lan.soft.pma_port+'</span>\
-									<input class="bt-input-text phpmyadmindk mr20" name="Name" id="pmport" value="'+port+'" placeholder="'+lan.soft.pma_port_title+'" maxlength="5" type="number">\
-									<button class="btn btn-success btn-sm phpmyadmin_port" >'+lan.public.save+'</button>\
-								</div>\
-								<div class="user_pw_tit">\
-									<span class="tit">'+lan.soft.pma_pass+'</span>\
-									<span class="btswitch-p"><input class="btswitch btswitch-ios" id="phpmyadminsafe" type="checkbox" '+(auth?'checked':'')+'>\
-									<label class="btswitch-btn phpmyadmin-btn phpmyadmin_safe" for="phpmyadminsafe" ></label>\
-									</span>\
-								</div>\
-								<div class="user_pw">\
-									<p><span>'+lan.soft.pma_user+'</span><input id="username_get" class="bt-input-text" name="username_get" value="" type="text" placeholder="'+lan.soft.edit_empty+'"></p>\
-									<p><span>'+lan.soft.pma_pass1+'</span><input id="password_get_1" class="bt-input-text" name="password_get_1" value="" type="password" placeholder="'+lan.soft.edit_empty+'"></p>\
-									<p><span>'+lan.soft.pma_pass2+'</span><input id="password_get_2" class="bt-input-text" name="password_get_1" value="" type="password" placeholder="'+lan.soft.edit_empty+'"></p>\
-									<p><button class="btn btn-success btn-sm phpmyadmin_safe_save" >'+lan.public.save+'</button></p>\
-								</div>\
-								<ul class="help-info-text c7"><li>'+lan.soft.pma_ps+'</li></ul>';
-				$(".soft-man-con").html(con);
-				if(auth){
-					$(".user_pw").show();
-				}
-				$('.phpmyadmin_port').click(function(){
-					var pmport = $("#pmport").val();
-					if(!bt.check_port(pmport)){
-						layer.msg(lan.firewall.port_err,{icon:2});
-						return;
-					}
-					var loadT = bt.load(lan.public.the);
-					bt.send('setPHPMyAdmin','ajax/setPHPMyAdmin',{port:pmport},function(rdata){
-						loadT.close();
-						bt.msg(rdata);
-					})
-				})
-				$('.phpmyadmin_safe').click(function(){
-					var stat = $("#phpmyadminsafe").prop("checked");
-					if(stat) {
-						$(".user_pw").hide();
-						set_phpmyadmin('close');
-					}else{
-						 $(".user_pw").show();
-					}
-				})
-				$('.phpmyadmin_safe_save').click(function(){
-					set_phpmyadmin('get');
-				})
-				
-				function set_phpmyadmin(msg){
-					type = 'password';
-					if(msg == 'close')
-					{
-						bt.confirm({msg:lan.soft.pma_pass_close},function(){
-							var loading = bt.load(lan.public.the);
-                            bt.send('setPHPMyAdmin', 'ajax/setPHPMyAdmin', { password: msg, siteName:'phpmyadmin'},function(rdata){
-								loading.close();
-								bt.msg(rdata);
-							})
-						})
-						return;
-					}else{
-						username = $("#username_get").val()
-						password_1 = $("#password_get_1").val()
-						password_2 = $("#password_get_2").val()
-						if(username.length < 1 || password_1.length < 1){
-							bt.msg({msg:lan.soft.pma_pass_empty,icon:2})
-							return;
-						}
-						if(password_1 != password_2){
-							bt.msg({msg:lan.soft.pass_err_re,icon:2})
-							return;
-						}
-					}
-					var loading = bt.load(lan.public.the);
-                    bt.send('setPHPMyAdmin', 'ajax/setPHPMyAdmin', { password: password_1, username: username, siteName:'phpmyadmin'},function(rdata){
-						loading.close();
-						bt.msg(rdata);
-					})					
-				}
-				break;
-			case 'set_php_config':			
-				bt.soft.php.get_config(name,function(rdata){
-					var body  = ""
-					var opt = ""
-	
-					for(var i=0;i<rdata.libs.length;i++){
-						if(rdata.libs[i].versions.indexOf(name) == -1) continue;
-						if(rdata.libs[i]['task'] == '-1' && rdata.libs[i].phpversions.indexOf(name) != -1){
-							opt = '<a style="color:green;" href="javascript:messagebox();">'+lan.soft.the_install+'</a>'
-						}else if(rdata.libs[i]['task'] == '0' && rdata.libs[i].phpversions.indexOf(name) != -1){
-							opt = '<a style="color:#C0C0C0;" href="javascript:messagebox();">'+lan.soft.sleep_install+'</a>'
-						}else if(rdata.libs[i].status){
-							opt = '<a style="color:red;" data-name="'+rdata.libs[i].name+'" data-title="'+rdata.libs[i].title+'" class="lib-uninstall" href="javascript:;">'+lan.soft.uninstall+'</a>'
-						}else{
-							opt = '<a class="btlink lib-install" data-name="'+rdata.libs[i].name+'" data-title="'+rdata.libs[i].title+'"  href="javascript:;">'+lan.soft.install+'</a>'
-						}
-						
-						body += '<tr>'
-									+'<td>'+rdata.libs[i].name+'</td>'
-									+'<td>'+rdata.libs[i].type+'</td>'
-									+'<td>'+rdata.libs[i].msg+'</td>'
-									+'<td><span class="ico-'+(rdata.libs[i].status?'start':'stop')+' glyphicon glyphicon-'+(rdata.libs[i].status?'ok':'remove')+'"></span></td>'
-									+'<td style="text-align: right;">'+opt+'</td>'
-							   +'</tr>'
-					}
-					
-					var con='<div class="divtable" id="phpextdiv" style="margin-right:10px;height: 420px; overflow: auto; margin-right: 0px;">'
-								+'<table class="table table-hover" width="100%" cellspacing="0" cellpadding="0" border="0">'
-									+'<thead>'
-										+'<tr>'
-											+'<th>'+lan.soft.php_ext_name+'</th>'
-											+'<th width="64">'+lan.soft.php_ext_type+'</th>'
-											+'<th>'+lan.soft.php_ext_ps+'</th>'
-											+'<th width="40">'+lan.soft.php_ext_status+'</th>'
-											+'<th style="text-align: right;" width="50">'+lan.public.action+'</th>'
-										+'</tr>'
-									+'</thead>'
-									+'<tbody>'+body+'</tbody>'
-								+'</table>'
-							+'</div>'
-							+'<ul class="help-info-text c7 pull-left"><li>请按实际需求安装扩展,不要安装不必要的PHP扩展,这会影响PHP执行效率,甚至出现异常</li><li>Redis扩展只允许在1个PHP版本中使用,安装到其它PHP版本请在[软件管理]重装Redis</li><li>opcache/xcache/apc等脚本缓存扩展,请只安装其中1个,否则可能导致您的站点程序异常</li></ul>';
-					var divObj = document.getElementById('phpextdiv');
-					var scrollTopNum = 0;
-					if(divObj) scrollTopNum = divObj.scrollTop;
-					$(".soft-man-con").html(con);
-					document.getElementById('phpextdiv').scrollTop = scrollTopNum;
-					
-					$('a').click(function(){					
-						var _obj = $(this);
-						if(_obj.hasClass('lib-uninstall'))
-						{
-							bt.soft.php.un_install_php_lib(name,_obj.attr('data-name'),_obj.attr('data-title'),function(rdata){
-								setTimeout(function(){
-									bt.soft.get_tab_contents('set_php_config',name);
-								},1000)
-							});
-						}
-						else if(_obj.hasClass('lib-install')){
-							bt.soft.php.install_php_lib(name,_obj.attr('data-name'),_obj.attr('data-title'),function(rdata){
-								setTimeout(function(){
-									bt.soft.get_tab_contents('set_php_config',name);
-								},1000)
-							});
-						}					
-					})
-				})			
-				break;
-			case 'get_phpinfo':
-				var con = '<button id="btn_phpinfo" class="btn btn-default btn-sm" >'+lan.soft.phpinfo+'</button>';
-				$(".soft-man-con").html(con);
-			
-				$('#btn_phpinfo').click(function(){
-					var loadT = bt.load(lan.soft.get);
-					bt.send('GetPHPInfo','ajax/GetPHPInfo',{version:name},function(rdata){
-						loadT.close();
-						bt.open({
-							type: 1,
-						    title: "PHP-"+name+"-PHPINFO",
-						    area: ['70%','90%'],
-						    closeBtn: 2,
-						    shadeClose: true,
-						    content:rdata.replace('a:link {color: #009; text-decoration: none; background-color: #fff;}','').replace('a:link {color: #000099; text-decoration: none; background-color: #ffffff;}','')
-						})
-					})
-				})
-				break;
-			case 'config_edit':
-				bt.soft.php.get_php_config(name,function(rdata){
-					
-					var mlist = '';
-					for(var i=0;i<rdata.length;i++){
-						var w = '70'
-						if(rdata[i].name == 'error_reporting') w = '250';
-						var ibody = '<input style="width: '+w+'px;" class="bt-input-text mr5" name="'+rdata[i].name+'" value="'+rdata[i].value+'" type="text" >';
-						switch(rdata[i].type){
-							case 0:
-								var selected_1 = (rdata[i].value == 1)?'selected':'';
-								var selected_0 = (rdata[i].value == 0)?'selected':'';
-								ibody = '<select class="bt-input-text mr5" name="'+rdata[i].name+'" style="width: '+w+'px;"><option value="1" '+selected_1+'>开启</option><option value="0" '+selected_0+'>关闭</option></select>'
-								break;
-							case 1:
-								var selected_1 = (rdata[i].value == 'On')?'selected':'';
-								var selected_0 = (rdata[i].value == 'Off')?'selected':'';
-								ibody = '<select class="bt-input-text mr5" name="'+rdata[i].name+'" style="width: '+w+'px;"><option value="On" '+selected_1+'>开启</option><option value="Off" '+selected_0+'>关闭</option></select>'
-								break;
-						}
-						mlist += '<p><span>'+rdata[i].name+'</span>'+ibody+', <font>'+rdata[i].ps+'</font></p>'
-					}
-					var phpCon = '<style>.conf_p p{margin-bottom: 2px}</style><div class="conf_p" style="margin-bottom:0">\
-									'+mlist+'\
-									<div style="margin-top:10px; padding-right:15px" class="text-right"><button class="btn btn-success btn-sm mr5" id="btn_conf_fresh" >'+lan.public.fresh+'</button><button class="btn btn-success btn-sm"  id="btn_conf_save" >'+lan.public.save+'</button></div>\
-								</div>'
-					$(".soft-man-con").html(phpCon);
-				
-					$('button').click(function(){
-						var _id = $(this).attr('id');
-						switch(_id){
-							case 'btn_conf_fresh':
-								bt.soft.get_tab_contents(key,name);
-								break;
-							case 'btn_conf_save':
-									var data = {
-										version:name,
-										display_errors:$("select[name='display_errors']").val(),
-										'cgi.fix_pathinfo':$("select[name='cgi.fix_pathinfo']").val(),
-										'date.timezone':$("input[name='date.timezone']").val(),
-										short_open_tag:$("select[name='short_open_tag']").val(),
-										asp_tags:$("select[name='asp_tags']").val()||'On',
-										safe_mode:$("select[name='safe_mode']").val(),
-										max_execution_time:$("input[name='max_execution_time']").val(),
-										max_input_time:$("input[name='max_input_time']").val(),
-										memory_limit:$("input[name='memory_limit']").val(),
-										post_max_size:$("input[name='post_max_size']").val(),
-										file_uploads:$("select[name='file_uploads']").val(),
-										upload_max_filesize:$("input[name='upload_max_filesize']").val(),
-										max_file_uploads:$("input[name='max_file_uploads']").val(),
-										default_socket_timeout:$("input[name='default_socket_timeout']").val(),
-										error_reporting:$("input[name='error_reporting']").val()||'On'
-									}
-									var loadT = bt.load();
-									bt.send('SetPHPConf','config/SetPHPConf',data,function(rdata){
-										loadT.close();
-										bt.soft.get_tab_contents(key,name);
-										bt.msg(rdata)
-									});
-								break;
-						}
-					})
-				});
-				break;
-			case 'set_upload_limit':
-				bt.soft.php.get_limit_config(name,function(ret){							
-					var LimitCon = '<p class="conf_p"><input class="phpUploadLimit bt-input-text mr5" type="number" value="'+ret.max+'" name="max">MB<button id="btn_set_max_size" class="btn btn-success btn-sm"  style="margin-left:20px">'+lan.public.save+'</button></p>';
-					$(".soft-man-con").html(LimitCon);
-					$('#btn_set_max_size').click(function(){
-						var max = $(".phpUploadLimit").val();
-						if(max < 2){					
-							layer.msg(lan.soft.php_upload_size,{icon:2});
-							return;
-						}
-						bt.soft.php.set_upload_max(name,max,function(rdata){
-							if(rdata.status){
-								bt.soft.get_tab_contents(key,name);
-							}
-							bt.msg(rdata);
-						})
-					})
-				})
-				break;
-			case 'set_timeout_limit':
-				bt.soft.php.get_limit_config(name,function(ret){	
-					var LimitCon = '<p class="conf_p"><input class="phpTimeLimit bt-input-text mr5" type="number" value="'+ret.maxTime+'">'+lan.bt.s+'<button class="btn btn-success btn-sm" id="btn_set_max_time" style="margin-left:20px">'+lan.public.save+'</button></p>';
-					$(".soft-man-con").html(LimitCon);					
-					$('#btn_set_max_time').click(function(){
-						var max = $(".phpTimeLimit").val();
-						bt.soft.php.set_php_timeout(name,max,function(rdata){
-							if(rdata.status){
-								bt.soft.get_tab_contents(key,name);
-							}
-							bt.msg(rdata);
-						})
-					})
-				})
-				break;
-			case 'set_dis_fun':
-				bt.soft.php.get_config(name,function(rdata){
-					var disable_functions = rdata.disable_functions.split(',');
-					var dbody = ''
-					for(var i=0;i<disable_functions.length;i++){
-						if(disable_functions[i] == '') continue;
-						dbody += "<tr><td>"+disable_functions[i]+"</td><td><a class='del_functions' style='float:right;' data-val='"+disable_functions[i]+"' href=\"javascript:;\">"+lan.public.del+"</a></td></tr>";
-					}					
-					var con = "<div class='dirBinding'>"
-							   +"<input class='bt-input-text mr5' type='text' placeholder='"+lan.soft.fun_ps1+"' id='disable_function_val' style='height: 28px; border-radius: 3px;width: 410px;' />"
-							   +"<button class='btn btn-success btn-sm'>"+lan.public.add+"</button>"
-							   +"</div>"
-							   +"<div class='divtable mtb15' style='height:350px;overflow:auto'><table class='table table-hover' width='100%' style='margin-bottom:0'>"
-							   +"<thead><tr><th>"+lan.soft.php_ext_name+"</th><th width='100' class='text-right'>"+lan.public.action+"</th></tr></thead>"
-							   +"<tbody id='blacktable'>" + dbody + "</tbody>"
-							   +"</table></div>";
-					
-					con +='\
-					<ul class="help-info-text">\
-						<li>'+lan.soft.fun_ps2+'</li>\
-						<li>'+lan.soft.fun_ps3+'</li>\
-					</ul>';					
-					$(".soft-man-con").html(con);
-					
-					$('button.btn-success,a.del_functions').click(function(){
-						var data = '';
-						if($(this).is('button')){
-							var fs = $('#disable_function_val').val();
-							if($.inArray(fs, disable_functions)>=0){
-								bt.msg({msg:lan.soft.fun_msg,icon:5});
-								return;
-							}
-							disable_functions.push(fs);				
-						}
-						else{							
-							var fs = $(this).attr('data-val');
-							disable_functions.splice($.inArray(fs, disable_functions), 1)
-						}
-						data = disable_functions.join(',');
-						bt.soft.php.disable_functions(name,data,function(rdata){
-							if(rdata.status){
-								bt.soft.get_tab_contents(key,name);
-							}
-							bt.msg(rdata);
-						})
-					})
-				})
-				break;
-			case 'set_fpm_config':
-				bt.soft.php.get_fpm_config(name,function(rdata){
-					
-					var limitList = "<option value='0'>"+lan.soft.concurrency_m+"</option>"
-									+"<option value='1' "+(rdata.max_children==30?'selected':'')+">30"+lan.soft.concurrency+"</option>"
-									+"<option value='2' "+(rdata.max_children==50?'selected':'')+">50"+lan.soft.concurrency+"</option>"
-									+"<option value='3' "+(rdata.max_children==100?'selected':'')+">100"+lan.soft.concurrency+"</option>"
-									+"<option value='4' "+(rdata.max_children==200?'selected':'')+">200"+lan.soft.concurrency+"</option>"
-									+"<option value='5' "+(rdata.max_children==300?'selected':'')+">300"+lan.soft.concurrency+"</option>"
-									+"<option value='6' "+(rdata.max_children==500?'selected':'')+">500"+lan.soft.concurrency+"</option>"
-					var pms = [{'name':'static','title':lan.bt.static},{'name':'dynamic','title':lan.bt.dynamic}];
-					var pmList = '';
-					for(var i=0;i<pms.length;i++){
-						pmList += '<option value="'+pms[i].name+'" '+((pms[i].name == rdata.pm)?'selected':'')+'>'+pms[i].title+'</option>';
-					}
-					var body="<div class='bingfa'>"
-									+"<p class='line'><span class='span_tit'>"+lan.soft.concurrency_type+"：</span><select class='bt-input-text' name='limit' style='width:100px;'>"+limitList+"</select></p>"
-									+"<p class='line'><span class='span_tit'>"+lan.soft.php_fpm_model+"：</span><select class='bt-input-text' name='pm' style='width:100px;'>"+pmList+"</select><span class='c9'>*"+lan.soft.php_fpm_ps1+"</span></p>"
-									+"<p class='line'><span class='span_tit'>max_children：</span><input class='bt-input-text' type='number' name='max_children' value='"+rdata.max_children+"' /><span class='c9'>*"+lan.soft.php_fpm_ps2+"</span></p>"
-									+"<p class='line'><span class='span_tit'>start_servers：</span><input class='bt-input-text' type='number' name='start_servers' value='"+rdata.start_servers+"' />  <span class='c9'>*"+lan.soft.php_fpm_ps3+"</span></p>"
-									+"<p class='line'><span class='span_tit'>min_spare_servers：</span><input class='bt-input-text' type='number' name='min_spare_servers' value='"+rdata.min_spare_servers+"' />   <span class='c9'>*"+lan.soft.php_fpm_ps4+"</span></p>"
-									+"<p class='line'><span class='span_tit'>max_spare_servers：</span><input class='bt-input-text' type='number' name='max_spare_servers' value='"+rdata.max_spare_servers+"' />   <span class='c9'>*"+lan.soft.php_fpm_ps5+"</span></p>"
-									+"<div class='mtb15'><button class='btn btn-success btn-sm'>"+lan.public.save+"</button></div>"
-							+"</div>"
-					
-					$(".soft-man-con").html(body);
-					$("select[name='limit']").change(function(){
-						var type = $(this).val();
-						var max_children = rdata.max_children;
-						var start_servers = rdata.start_servers;
-						var min_spare_servers = rdata.min_spare_servers;
-						var max_spare_servers = rdata.max_spare_servers;
-						switch(type){
-							case '1':
-								max_children = 30;
-								start_servers = 5;
-								min_spare_servers = 5;
-								max_spare_servers = 20;
-								break;
-							case '2':
-								max_children = 50;
-								start_servers = 15;
-								min_spare_servers = 15;
-								max_spare_servers = 35;
-								break;
-							case '3':
-								max_children = 100;
-								start_servers = 20;
-								min_spare_servers = 20;
-								max_spare_servers = 70;
-								break;
-							case '4':
-								max_children = 200;
-								start_servers = 25;
-								min_spare_servers = 25;
-								max_spare_servers = 150;
-								break;
-							case '5':
-								max_children = 300;
-								start_servers = 30;
-								min_spare_servers = 30;
-								max_spare_servers = 180;
-								break;
-							case '6':
-								max_children = 500;
-								start_servers = 35;
-								min_spare_servers = 35;
-								max_spare_servers = 250;
-								break;
-						}
-						
-						$("input[name='max_children']").val(max_children);
-						$("input[name='start_servers']").val(start_servers);
-						$("input[name='min_spare_servers']").val(min_spare_servers);
-						$("input[name='max_spare_servers']").val(max_spare_servers);
-		
-					});
-					$('.btn-success').click(function(){
-						bt.pub.get_menm(function(memInfo){
-							var limit_children = parseInt(memInfo['memTotal'] / 8);
-								var max_children = Number($("input[name='max_children']").val());
-								var start_servers = Number($("input[name='start_servers']").val());
-								var min_spare_servers = Number($("input[name='min_spare_servers']").val());
-								var max_spare_servers = Number($("input[name='max_spare_servers']").val());
-								var pm = $("select[name='pm']").val();
-								
-								if(limit_children < max_children){
-									layer.msg('当前服务器内存不足，最大允许['+limit_children+']个子进程!',{icon:2});
-									$("input[name='max_children']").focus();
-									return;
-								}
-								
-								if(max_children < max_spare_servers){
-									layer.msg(lan.soft.php_fpm_err1,{icon:2});
-									return;
-								}
-								
-								if(min_spare_servers > start_servers) {
-									layer.msg(lan.soft.php_fpm_err2,{icon:2});
-									return;
-								}
-								
-								if(max_spare_servers < min_spare_servers){
-									layer.msg(lan.soft.php_fpm_err3,{icon:2});
-									return;
-								}
-								
-								if(max_children < start_servers){
-									layer.msg(lan.soft.php_fpm_err4,{icon:2});
-									return;
-								}
-								
-								if(max_children < 1 || start_servers < 1 || min_spare_servers < 1 || max_spare_servers < 1){
-									layer.msg(lan.soft.php_fpm_err5,{icon:2});
-									return;
-								}
-								var data = {
-										version:name,
-										max_children:max_children,
-										start_servers:start_servers,
-										min_spare_servers:min_spare_servers,
-										max_spare_servers:max_spare_servers,
-										pm:pm
-								}
-								bt.soft.php.set_fpm_config(name,data,function(rdata){
-									bt.soft.get_tab_contents(key,name);
-									bt.msg(rdata);
-								})
-						})
-					})
-				});
-				break;
-			case 'get_php_status':
-				bt.soft.php.get_php_status(name,function(rdata){
-					
-					var arr = {};					
-					arr[lan.bt.php_pool] = rdata.pool;
-					arr[lan.bt.php_manager] =((rdata['process manager'] == 'dynamic')?lan.bt.dynamic:lan.bt.static);
-					arr[lan.bt.php_start] = rdata['start time'];
-					arr[lan.bt.php_accepted] = rdata['accepted conn'];
-					arr[lan.bt.php_queue] = rdata['listen queue'];
-					arr[lan.bt.php_max_queue] = rdata['max listen queue'];
-					arr[lan.bt.php_len_queue] = rdata['listen queue len'];
-					arr[lan.bt.php_idle] = rdata['idle processes'];
-					arr[lan.bt.php_active] = rdata['active processes'];
-					arr[lan.bt.php_total] = rdata['total processes'];
-					arr[lan.bt.php_max_active] = rdata['max active processes'];
-					arr[lan.bt.php_max_children] = rdata['max children reached'];
-					arr[lan.bt.php_slow] = rdata['slow requests'];				
-					
-					var con = "<div style='height:450px;overflow:auto;'><table id='tab_php_status' class='table table-hover table-bordered GetPHPStatus' style='margin:0;padding:0'></table></div>";
-					$(".soft-man-con").html(con);
-					bt.render_table('tab_php_status',arr);
-				})
-				break;
-			case 'get_fpm_logs':
-				bt.soft.php.get_fpm_logs(name,function(logs){
-					var phpCon = '<textarea readonly="" style="margin: 0px;width: 500px;height: 520px;background-color: #333;color:#fff; padding:0 5px" id="error_log">'+logs.msg+'</textarea>';
-					$(".soft-man-con").html(phpCon);
-					var ob = document.getElementById('error_log');
-					ob.scrollTop = ob.scrollHeight;		
-				})
-				break;
-			case 'get_slow_logs':
-				bt.soft.php.get_slow_logs(name,function(logs){
-					var phpCon = '<textarea readonly="" style="margin: 0px;width: 500px;height: 520px;background-color: #333;color:#fff; padding:0 5px" id="error_log">'+logs.msg+'</textarea>';
-					$(".soft-man-con").html(phpCon);
-					var ob = document.getElementById('error_log');
-					ob.scrollTop = ob.scrollHeight;		
-				})
-				break;
-			case 'get_redis_status':
-				bt.soft.redis.get_redis_status(function(rdata){					
-					hit = (parseInt(rdata.keyspace_hits) / (parseInt(rdata.keyspace_hits) + parseInt(rdata.keyspace_misses)) * 100).toFixed(2);
-					var Con = '<div class="divtable">\
-									<table class="table table-hover table-bordered" style="width: 490px;">\
-									<thead><th>字段</th><th>当前值</th><th>说明</th></thead>\
-									<tbody>\
-										<tr><th>uptime_in_days</th><td>'+rdata.uptime_in_days+'</td><td>已运行天数</td></tr>\
-										<tr><th>tcp_port</th><td>'+rdata.tcp_port+'</td><td>当前监听端口</td></tr>\
-										<tr><th>connected_clients</th><td>'+rdata.connected_clients+'</td><td>连接的客户端数量</td></tr>\
-										<tr><th>used_memory_rss</th><td>'+ToSize(rdata.used_memory_rss)+'</td><td>Redis当前占用的系统内存总量</td></tr>\
-										<tr><th>used_memory</th><td>'+ToSize(rdata.used_memory)+'</td><td>Redis当前已分配的内存总量</td></tr>\
-										<tr><th>used_memory_peak</th><td>'+ToSize(rdata.used_memory_peak)+'</td><td>Redis历史分配内存的峰值</td></tr>\
-										<tr><th>mem_fragmentation_ratio</th><td>'+rdata.mem_fragmentation_ratio+'%</td><td>内存碎片比率</td></tr>\
-										<tr><th>total_connections_received</th><td>'+rdata.total_connections_received+'</td><td>运行以来连接过的客户端的总数量</td></tr>\
-										<tr><th>total_commands_processed</th><td>'+rdata.total_commands_processed+'</td><td>运行以来执行过的命令的总数量</td></tr>\
-										<tr><th>instantaneous_ops_per_sec</th><td>'+rdata.instantaneous_ops_per_sec+'</td><td>服务器每秒钟执行的命令数量</td></tr>\
-										<tr><th>keyspace_hits</th><td>'+rdata.keyspace_hits+'</td><td>查找数据库键成功的次数</td></tr>\
-										<tr><th>keyspace_misses</th><td>'+rdata.keyspace_misses+'</td><td>查找数据库键失败的次数</td></tr>\
-										<tr><th>hit</th><td>'+hit+'%</td><td>查找数据库键命中率</td></tr>\
-										<tr><th>latest_fork_usec</th><td>'+rdata.latest_fork_usec+'</td><td>最近一次 fork() 操作耗费的微秒数</td></tr>\
-									<tbody>\
-							</table></div>'
-						$(".soft-man-con").html(Con);
-				})
-				break;
-		}
-
-	}, //软件设置
-	set_soft_config:function(name){
-		_this = this;
-		var loading = bt.load();
-		_this.get_soft_find(name,function(rdata){
-			loading.close();
-			var menu = '';
-			if(rdata.version_coexist)
-            {		               
-				var ver =  name.split('-')[1].replace('.','');
-				bodys = [	
-					'<p id="phpext" onclick="bt.soft.get_tab_contents(\'set_php_config\',\''+ver+'\')" data-id="1">'+lan.soft.php_main5+'</p>',					
-					'<p data-id="1" onclick="bt.soft.get_tab_contents(\'config_edit\',\''+ver+'\')">'+lan.soft.config_edit+'</p>',					
-					'<p data-id="3" onclick="bt.soft.get_tab_contents(\'set_upload_limit\',\''+ver+'\')"  >'+lan.soft.php_main2+'</p>',
-					'<p data-id="4" class="phphide" onclick="bt.soft.get_tab_contents(\'set_timeout_limit\',\''+ver+'\')"  >'+lan.soft.php_main3+'</p>',
-					'<p data-id="4" onclick="bt.soft.get_tab_contents(\'config\',\''+ver+'\')"  >'+lan.soft.php_main4+'</p>',
-					'<p data-id="4" onclick="bt.soft.get_tab_contents(\'set_dis_fun\',\''+ver+'\')"  >'+lan.soft.php_main6+'</p>',
-					'<p class="apache24 phphide" data-id="4" onclick="bt.soft.get_tab_contents(\'set_fpm_config\',\''+ver+'\')"  >'+lan.soft.php_main7+'</p>',
-					'<p class="apache24 phphide" data-id="4" onclick="bt.soft.get_tab_contents(\'get_php_status\',\''+ver+'\')"  >'+lan.soft.php_main8+'</p>',
-					'<p class="apache24 phphide" data-id="4" onclick="bt.soft.get_tab_contents(\'get_fpm_logs\',\''+ver+'\')"  >FPM'+lan.soft.log+'</p>',
-					'<p class="apache24 phphide" data-id="4" onclick="bt.soft.get_tab_contents(\'get_slow_logs\',\''+ver+'\')"  >'+lan.public.slow_log+'</p>',
-					'<p data-id="2" onclick="bt.soft.get_tab_contents(\'get_phpinfo\',\''+ver+'\')"  >phpinfo</p>'
-				]
-				var  phpSort = [0,1,2,3,4,5,6,7,8,9,10,11];				
-				for(var i=0;i<phpSort.length;i++){
-					var m = bodys[phpSort[i]];
-					if(m) menu += m;					
-				}						
-			}
-			else{			
-				if(name =='mysql') name='mysqld';
-				if(name=='phpmyadmin'){
-					menu = bt.soft.get_config_menu(name,rdata.ext);	
-				}
-				else{				
-                    menu = bt.soft.get_config_menu(name, rdata.version, rdata.versions);	                   
-                }              
-            }            
-            menu = '<p class="bgw bt_server" onclick="bt.soft.get_tab_contents(\'service\',\'' + name + '\',\'' + rdata.status + '\')">' + lan.soft.service + '</p>' + menu
-			layer.open({
-				type: 1,
-				area: '640px',
-				title: name + lan.soft.admin,
-				closeBtn: 2,
-				shift: 0,
-				content: '<div class="bt-w-main" style="width:640px;">\
-					<div class="bt-w-menu">'
-						+menu+
-					'</div>\
-					<div id="webEdit-con" class="bt-w-con pd15" style="height:555px;overflow:auto">\
-						<div class="soft-man-con"></div>\
-					</div>\
-				</div>'
-            });
-           
-			if(name== "php-5.2"){
-				$(".phphide").hide();
-            }
-            if (name == 'phpmyadmin') {
-                $(".bt_server").remove();
-            }
-           
-			bt.soft.get_tab_contents('service',name,rdata.status);
-			$(".bt-w-menu p").click(function(){						
-				$(this).addClass("bgw").siblings().removeClass("bgw");
-            });	
-            _this.get_soft_find('apache', function (rdata) {
-                if (rdata.setup) {                  
-                    if (rdata.version.indexOf('2.2') >= 0) {
-                        $(".apache24").hide();
-                        $(".bt_server").remove();
-                        $(".bt-w-menu p:eq(0)").trigger("click");
-                    }
-                }
-            })  
-
-            $(".bt-w-menu p:eq(0)").trigger("click");	
-		})
-	},
 	get_config_path:function(name){
 		var fileName = '';
 		if(bt.os=='Linux'){
-			switch(name){
+            switch (name) {
+                case 'mysql':
 				case 'mysqld':
 					fileName = '/etc/my.cnf';
 					break;
@@ -4971,7 +3803,7 @@ bt.soft = {
 					break;
 				case 'redis':
 					fileName = '/www/server/redis/redis.conf';
-                    break;
+					break;
 				default:
 					fileName = '/www/server/php/'+name+'/etc/php.ini';
 					break;
@@ -5382,6 +4214,59 @@ bt.site = {
 			loading.close();
 			if(callback) callback(rdata);
 		})
+	},
+	// 重定向列表
+	get_redirect_list:function(name,callback){
+		var loadT = bt.load(lan.site.the_msg);
+		bt.send('GetRedirectList','site/GetRedirectList',{sitename:name },function(rdata){
+			loadT.close();
+			if(callback) callback(rdata);
+		});
+	},
+	// 重定向列表
+	get_redirect_list:function(name,callback){
+		var loadT = layer.load();
+		bt.send('GetRedirectList','site/GetRedirectList',{sitename:name },function(rdata){
+			layer.close(loadT);
+			if(callback) callback(rdata);
+		});
+	},
+	create_redirect:function(obj,callback){
+		var loadT = bt.load(lan.site.the_msg);
+		bt.send('CreateRedirect','site/CreateRedirect',obj,function(rdata){
+			loadT.close();
+			if(callback) callback(rdata);
+		});
+	},
+	modify_redirect:function(obj,callback){
+		var loadT = bt.load(lan.site.the_msg);
+		bt.send('ModifyRedirect','site/ModifyRedirect',obj,function(rdata){
+			loadT.close();
+			if(callback) callback(rdata);
+		});
+	},
+	remove_redirect:function(sitename,redirectname,callback){
+		bt.show_confirm('删除重定向['+ redirectname +']','您真的要删除该重定向吗?',function(){
+			var loadT = bt.load(lan.site.the_msg);
+			bt.send('DeleteRedirect','site/DeleteRedirect',{sitename:sitename,redirectname:redirectname},function(rdata){
+				loadT.close();
+				if(callback) callback(rdata);
+			});
+		});
+	},
+	get_redirect_config:function(obj,callback){
+		var loadT = bt.load(lan.site.the_msg);
+		bt.send('GetRedirectFile','site/GetRedirectFile',obj,function(rdata){
+			loadT.close();
+			if(callback) callback(rdata);
+		});
+	},
+	save_redirect_config:function(obj,callback){
+		var loadT = bt.load(lan.site.the_msg);
+		bt.send('SaveProxyFile','site/SaveRedirectFile',obj,function(rdata){
+			loadT.close();
+			if(callback) callback(rdata);
+		});
 	},
 	get_site_proxy:function(siteName ,callback){
 		bt.send('GetProxy','site/GetProxy',{name :siteName },function(rdata){
@@ -5915,7 +4800,7 @@ bt.data = {
                         var path = _path_obj.val();
                         var defaultPath = $('#defaultPath').text();
                         var dPath = bt.rtrim(defaultPath,'/');
-						if(path.substr(0,dPath.length)==dPath) _path_obj.val(dPath+'/'+ress);
+						if(path.substr(0,dPath.length)==dPath) _path_obj.val(dPath+'/'+res);	
 						_form.find('input[name="ps"]').val(ress);
 					},placeholder:'每行填写一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88'}
 				]},

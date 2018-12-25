@@ -1051,3 +1051,15 @@ def version():
     except:
         comm = ReadFile('/www/server/panel/class/common.py')
         return re.search("g\.version\s*=\s*'(\d+\.\d+\.\d+)'",comm).groups()[0]
+
+
+#取文件或目录大小
+def get_path_size(path):
+    if not os.path.exists(path): return 0;
+    if not os.path.isdir(path): return os.path.getsize(path)
+    size_total = 0
+    for nf in os.walk(path):
+        for f in nf[2]:
+            filename = nf[0] + '/' + f
+            size_total += os.path.getsize(filename)
+    return size_total

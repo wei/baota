@@ -7,22 +7,41 @@
 # | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 from BTPanel import session
-import public,os,json,time
+import public,os,json,time,apache
 class ajax:
-    
+
+    def GetApacheStatus(self,get):
+        a = apache.apache()
+        return a.GetApacheStatus()
     def GetNginxStatus(self,get):
+        worker = int(public.ExecShell("ps aux|grep nginx|grep 'worker process'|wc -l")[0])-1
+        workercpu = float(public.ExecShell("ps aux|grep nginx|grep 'worker process'|awk '{cpusum += $3};END {print cpusum}'")[0])
+        workermen = int(public.ExecShell("ps aux|grep nginx|grep 'worker process'|awk '{memsum+=$6};END {print memsum}'")[0]) / 1024
+
         #取Nginx负载状态
         self.CheckStatusConf();
         result = public.HttpGet('http://127.0.0.1/nginx_status')
         tmp = result.split()
         data = {}
-        data['active']   = tmp[2]
-        data['accepts']  = tmp[9]
-        data['handled']  = tmp[7]
-        data['requests'] = tmp[8]
-        data['Reading']  = tmp[11]
-        data['Writing']  = tmp[13]
-        data['Waiting']  = tmp[15]
+        if "request_time" in tmp:
+            data['accepts']  = tmp[8]
+            data['handled']  = tmp[9]
+            data['requests'] = tmp[10]
+            data['Reading']  = tmp[13]
+            data['Writing']  = tmp[15]
+            data['Waiting']  = tmp[17]
+        else:
+
+            data['accepts'] = tmp[9]
+            data['handled'] = tmp[7]
+            data['requests'] = tmp[8]
+            data['Reading'] = tmp[11]
+            data['Writing'] = tmp[13]
+            data['Waiting'] = tmp[15]
+        data['active'] = tmp[2]
+        data['worker'] = worker
+        data['workercpu'] = workercpu
+        data['workermen'] = "%s%s" % (workermen, "MB")
         return data
     
     def GetPHPStatus(self,get):
