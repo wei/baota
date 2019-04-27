@@ -613,6 +613,13 @@ class system:
             if get.type == 'start': 
                 self.kill_port()
                 time.sleep(0.5)
+        if get.name == 'redis':
+            redis_init = '/etc/init.d/redis'
+            if os.path.exists(redis_init):
+                init_body = public.ReadFile(redis_init)
+                if init_body.find('pkill -9 redis') == -1:
+                    public.ExecShell("wget -O " + redis_init + " " + public.get_url() + '/init/redis.init')
+                    public.ExecShell("chmod +x " + redis_init)
         
         #执行
         execStr = "/etc/init.d/"+get.name+" "+get.type
@@ -635,7 +642,7 @@ class system:
         if get.type != 'test':
             public.WriteLog("TYPE_SOFT", 'SYS_EXEC_SUCCESS',(execStr,));
         
-        if len(result[1]) > 1 and get.name != 'pure-ftpd': return public.returnMsg(False, '<p>警告消息： <p>' + result[1].replace('\n','<br>'));
+        if len(result[1]) > 1 and get.name != 'pure-ftpd' and get.name != 'redis': return public.returnMsg(False, '<p>警告消息： <p>' + result[1].replace('\n','<br>'));
         return public.returnMsg(True,'SYS_EXEC_SUCCESS');
     
     def RestartServer(self,get):

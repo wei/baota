@@ -7,7 +7,7 @@
 # +-------------------------------------------------------------------
 # | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
-import sys,os,public,time,json
+import sys,os,public,time,json,pwd,cgi
 from BTPanel import session
 class files:
     #检查敏感目录
@@ -47,11 +47,23 @@ class files:
     
     #检测文件名
     def CheckFileName(self,filename):
-        nots = ['\\','&','*','|',';']
+        nots = ['\\','&','*','|',';','"',"'",'<','>']
         if filename.find('/') != -1: filename = filename.split('/')[-1]
         for n in nots:
             if n in filename: return False
         return True
+
+    #名称输出过滤
+    def xssencode(self,text):
+        list=['<','>']
+        ret=[]
+        for i in text:
+            if i in list:
+                i=''
+            ret.append(i)
+        str_convert = ''.join(ret)
+        text2=cgi.escape(str_convert, quote=True)
+        return text2
     
     #上传文件
     def UploadFile(self,get):
@@ -83,6 +95,7 @@ class files:
         
         search = None
         if hasattr(get,'search'): search = get.search.strip().lower();
+        if hasattr(get,'all'): return self.SearchFiles(get)
         
         #包含分页类
         import page
@@ -114,6 +127,7 @@ class files:
         i = 0;
         n = 0;
         for filename in os.listdir(get.path):
+            filename = self.xssencode(filename)
             if search:
                 if filename.lower().find(search) == -1: continue;
             i += 1;
@@ -121,6 +135,7 @@ class files:
             if i < page.SHIFT: continue;
             
             try:
+                if sys.version_info[0] == 2: filename = filename.encode('utf-8');
                 filePath = get.path+'/'+filename
                 link = '';
                 if os.path.islink(filePath): 
@@ -156,15 +171,51 @@ class files:
         return data
 
 
-    #def SearchFiles(self,get):
-    #    if not hasattr(get,'path'): get.path = '/www/wwwroot'
-    #    if sys.version_info[0] == 2: get.path = get.path.encode('utf-8');
-    #    if not os.path.exists(get.path): get.path = '/www';
-    #    search = get.search.strip().lower();
-            
-        #for d_list in os.walk(get.path):
+    def SearchFiles(self,get):
+        if not hasattr(get,'path'): get.path = '/www/wwwroot'
+        if sys.version_info[0] == 2: get.path = get.path.encode('utf-8');
+        if not os.path.exists(get.path): get.path = '/www';
+        search = get.search.strip().lower();
+        my_dirs = []
+        my_files = []
+        count = 0
+        max = 3000
+        for d_list in os.walk(get.path):
+            if count >= max: break;
+            for d in d_list[1]:
+                if count >= max: break;
+                d = self.xssencode(d)
+                if d.lower().find(search) != -1: 
+                    my_dirs.append(self.__get_stat(d_list[0] + '/' + d,get.path))
+                    count += 1
+                    
+            for f in d_list[2]:
+                if count >= max: break;
+                f = self.xssencode(f)
+                if f.lower().find(search) != -1: 
+                    my_files.append(self.__get_stat(d_list[0] + '/' + f,get.path))
+                    count += 1
+        data = {}
+        data['DIR'] = sorted(my_dirs)
+        data['FILES'] = sorted(my_files)
+        data['PATH'] = str(get.path)
+        data['PAGE'] = public.get_page(len(my_dirs) + len(my_files),1,max,'GetFiles')['page']
+        return data
 
 
+    def __get_stat(self,filename,path):
+        stat = os.stat(filename)
+        accept = str(oct(stat.st_mode)[-3:]);
+        mtime = str(int(stat.st_mtime))
+        user = ''
+        try:
+            user = pwd.getpwuid(stat.st_uid).pw_name
+        except:
+            user = str(stat.st_uid)
+        size = str(stat.st_size)
+        link = '';
+        if os.path.islink(filename): link = ' -> ' + os.readlink(filename)
+        return filename.replace(path + '/','') + ';' + size + ';' + mtime+ ';' +accept+ ';' +user+ ';' +link
 
     
     #计算文件数量
@@ -250,7 +301,7 @@ class files:
             return public.returnMsg(False,'FILE_NOT_EXISTS')
         
         #检查是否为.user.ini
-        if get.path.find('.user.ini'):
+        if get.path.find('.user.ini') != -1:
             os.system("chattr -i '"+get.path+"'")
         try:
             if os.path.exists('data/recycle_bin.pl'):
@@ -303,6 +354,7 @@ class files:
         data['status'] = os.path.exists('data/recycle_bin.pl');
         data['status_db'] = os.path.exists('data/recycle_bin_db.pl');
         for file in os.listdir(rPath):
+            file = self.xssencode(file)
             try:
                 tmp = {};
                 fname = rPath + file;
@@ -456,8 +508,13 @@ class files:
         import shutil
         try:
             shutil.move(get.sfile, get.dfile)
-            public.WriteLog('TYPE_FILE','MOVE_SUCCESS',(get.sfile,get.dfile))
-            return public.returnMsg(True,'MOVE_SUCCESS')
+            
+            if hasattr(get,'rename'):
+                public.WriteLog('TYPE_FILE','[%s]重命名为[%s]' % (get.sfile,get.dfile))
+                return public.returnMsg(True,'重命名成功!')
+            else:
+                public.WriteLog('TYPE_FILE','MOVE_SUCCESS',(get.sfile,get.dfile))
+                return public.returnMsg(True,'MOVE_SUCCESS')
         except:
             return public.returnMsg(False,'MOVE_ERR')
         
@@ -592,60 +649,22 @@ class files:
     
     #文件压缩
     def Zip(self,get) :
-        if sys.version_info[0] == 2:
-            get.sfile = get.sfile.encode('utf-8');
-            get.dfile = get.dfile.encode('utf-8');
-        if sys.version_info[0] == 2: get.path = get.path.encode('utf-8');
-        if get.sfile.find(',') == -1:
-            if not os.path.exists(get.path+'/'+get.sfile): return public.returnMsg(False,'FILE_NOT_EXISTS');
-        try:
-            tmps = '/tmp/panelExec.log'
-            if get.type == 'zip':
-                os.system("cd '"+get.path+"' && zip '"+get.dfile+"' -r '"+get.sfile+"' > "+tmps+" 2>&1")
-            else:
-                sfiles = ''
-                for sfile in get.sfile.split(','):
-                    if not sfile: continue;
-                    sfiles += " '" + sfile + "'";
-                os.system("cd '" + get.path + "' && tar -zcvf '" + get.dfile + "' " + sfiles + " > " + tmps + " 2>&1");
-            self.SetFileAccept(get.dfile);
-            public.WriteLog("TYPE_FILE", 'ZIP_SUCCESS',(get.sfile,get.dfile));
-            return public.returnMsg(True,'ZIP_SUCCESS')
-        except:
-            return public.returnMsg(False,'ZIP_ERR')
+        if not 'z_type' in get: get.z_type = 'rar'
+        import panelTask
+        task_obj = panelTask.bt_task()
+        task_obj.create_task('压缩文件',3,get.path,json.dumps({"sfile":get.sfile,"dfile":get.dfile,"z_type":get.z_type}))
+        public.WriteLog("TYPE_FILE", 'ZIP_SUCCESS',(get.sfile,get.dfile));
+        return public.returnMsg(True,'已将压缩任务添加到消息队列!')
     
     
     #文件解压
     def UnZip(self,get):
-        if sys.version_info[0] == 2:
-            get.sfile = get.sfile.encode('utf-8');
-            get.dfile = get.dfile.encode('utf-8');
-        if not os.path.exists(get.sfile):
-            return public.returnMsg(False,'FILE_NOT_EXISTS');
-        if not hasattr(get,'password'): get.password = '';
-        
-        try:
-            if not hasattr(get,'coding'): get.coding = 'UTF-8';
-            tmps = '/tmp/panelExec.log'
-            if get.sfile[-4:] == '.zip':
-                os.system("export LANG=\"zh_CN." + get.coding + "\" && unzip -P '"+get.password+"' -o '" + get.sfile + "' -d '" + get.dfile + "' > " + tmps + " 2>&1")
-            elif get.sfile[-7:] == '.tar.gz' or get.sfile[-4:] == '.tgz':
-                os.system("tar zxf '" + get.sfile + "' -C '" + get.dfile + "' > " + tmps + " 2>&1");
-            else:
-                os.system("gunzip -c " + get.sfile + " > " + get.sfile[:-3])
-            if self.CheckDir(get.dfile):
-                sites_path = public.M('config').where('id=?',(1,)).getField('sites_path');
-                if get.dfile.find('/www/wwwroot') != -1 or get.dfile.find(sites_path) != -1: 
-                    self.SetFileAccept(get.dfile);
-                else:
-                    import pwd
-                    user = pwd.getpwuid(os.stat(get.dfile).st_uid).pw_name
-                    os.system("chown -R %s:%s %s" % (user,user,get.dfile))
-        
-            public.WriteLog("TYPE_FILE", 'UNZIP_SUCCESS',(get.sfile,get.dfile));
-            return public.returnMsg(True,'UNZIP_SUCCESS');
-        except:
-            return public.returnMsg(False,'文件解压失败!')
+        import panelTask
+        if not 'password' in get:get.password = '' 
+        task_obj = panelTask.bt_task()
+        task_obj.create_task('解压文件',2,get.sfile,json.dumps({"dfile":get.dfile,"password":get.password}))
+        public.WriteLog("TYPE_FILE", 'UNZIP_SUCCESS',(get.sfile,get.dfile));
+        return public.returnMsg(True,'已将解压任务添加到消息队列!')
     
     
     #获取文件/目录 权限信息
@@ -688,6 +707,14 @@ class files:
         if sys.version_info[0] == 2: get.path = get.path.encode('utf-8');
         tmp = public.ExecShell('du -sbh '+ get.path)
         return tmp[0].split()[0]
+
+    #取目录大小2
+    def get_path_size(self,get):
+        if sys.version_info[0] == 2: get.path = get.path.encode('utf-8');
+        data = {}
+        data['path'] = get.path
+        data['size'] = public.get_path_size(get.path)
+        return data
     
     def CloseLogs(self,get):
         get.path = public.GetConfigValue('root_path')
@@ -805,14 +832,17 @@ class files:
     
     #下载文件
     def DownloadFile(self,get):
-        if sys.version_info[0] == 2: get.path = get.path.encode('utf-8');
-        import db,time
-        isTask = '/tmp/panelTask.pl'
-        execstr = get.url +'|bt|'+get.path+'/'+get.filename
-        sql = db.Sql()
-        sql.table('tasks').add('name,type,status,addtime,execstr',('下载文件['+get.filename+']','download','0',time.strftime('%Y-%m-%d %H:%M:%S'),execstr))
-        public.writeFile(isTask,'True')
-        self.SetFileAccept(get.path+'/'+get.filename);
+        import panelTask
+        task_obj = panelTask.bt_task()
+        task_obj.create_task('下载文件',1,get.url,get.path + '/' + get.filename)
+        #if sys.version_info[0] == 2: get.path = get.path.encode('utf-8');
+        #import db,time
+        #isTask = '/tmp/panelTask.pl'
+        #execstr = get.url +'|bt|'+get.path+'/'+get.filename
+        #sql = db.Sql()
+        #sql.table('tasks').add('name,type,status,addtime,execstr',('下载文件['+get.filename+']','download','0',time.strftime('%Y-%m-%d %H:%M:%S'),execstr))
+        #public.writeFile(isTask,'True')
+        #self.SetFileAccept(get.path+'/'+get.filename);
         public.WriteLog('TYPE_FILE','FILE_DOWNLOAD',(get.url , get.path));
         return public.returnMsg(True,'FILE_DOANLOAD')
     
@@ -921,34 +951,10 @@ done
                  
     #读文件指定倒数行数
     def GetLastLine(self,inputfile,lineNum):
-        try:
-            fp = open(inputfile, 'r')
-            lastLine = ""
-            
-            lines =  fp.readlines()
-            count = len(lines)
-            if count>lineNum:
-                num=lineNum
-            else:
-                num=count
-            i=1;
-            lastre = []
-            for i in range(1,(num+1)):
-                if lines :
-                    n = -i
-                    lastLine = lines[n].strip()
-                    fp.close()
-                    lastre.append(lastLine)
-            
-            result = ''
-            lineNum -= 1
-            while lineNum > 0:
-                result += lastre[lineNum]+"\n"
-                lineNum -= 1
-                
-            return result
-        except:
+        result = public.GetNumLines(inputfile,lineNum)
+        if len(result) < 1:
             return public.getMsg('TASK_SLEEP');
+        return result
         
     
     #执行SHELL命令
@@ -1020,5 +1026,39 @@ cd %s
         fileInfo['modify_time'] = int(stat.st_mtime)
         fileInfo['size'] = os.path.getsize(path)
         return fileInfo
+
+    #安装rar组件
+    def install_rar(self,get):
+        unrar_file = '/www/server/rar/unrar'
+        rar_file = '/www/server/rar/rar'
+        bin_unrar = '/usr/local/bin/unrar'
+        bin_rar = '/usr/local/bin/rar'
+        if os.path.exists(unrar_file) and os.path.exists(bin_unrar):
+            try:
+                import rarfile
+            except: 
+                os.system("pip install rarfile")
+            return True
+
+        import platform
+        os_bit = ''
+        if platform.machine() == 'x86_64': os_bit = '-x64';
+        download_url = public.get_url() + '/src/rarlinux'+os_bit+'-5.6.1.tar.gz';
+
+        tmp_file = '/tmp/bt_rar.tar.gz'
+        os.system('wget -O ' + tmp_file + ' ' + download_url)
+        if os.path.exists(unrar_file): os.system("rm -rf /www/server/rar")
+        os.system("tar xvf " + tmp_file + ' -C /www/server/')
+        if os.path.exists(tmp_file): os.remove(tmp_file)
+        if not os.path.exists(unrar_file): return False
+                
+        if os.path.exists(bin_unrar): os.remove(bin_unrar)
+        if os.path.exists(bin_rar): os.remove(bin_rar)
+
+        os.system('ln -sf ' + unrar_file + ' ' + bin_unrar)
+        os.system('ln -sf ' + rar_file + ' ' + bin_rar)
+        os.system("pip install rarfile")
+        #public.writeFile('data/restart.pl','True')
+        return True
         
        

@@ -695,21 +695,6 @@ function SafeMessage(j, h, g, f) {
 	})
 }
 
-var W_window = $(window).width();
-if(W_window <= 980) {
-	$(window).scroll(function() {
-		var a = $(window).scrollTop();
-		$(".sidebar-scroll").css({
-			position: "absolute",
-			top: a
-		})
-	})
-} else {
-	$(".sidebar-scroll").css({
-		position: "fixed",
-		top: "0"
-	})
-}
 $(function() {
 	$(".fb-ico").hover(function() {
 		$(".fb-text").css({
@@ -1815,3 +1800,4 @@ function shell_paste_text(){
 function remove_ssh_menu() {
     $(".contextmenu").remove();
 }
+

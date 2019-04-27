@@ -206,6 +206,7 @@
     <script type="text/javascript" src="/static/layer/layer.js"></script>
     <script type="text/javascript" src="/static/js/jquery.qrcode.min.js"></script>
     <script type="text/javascript" src="/static/js/Validform_v5.3.2_min.js"></script>
+    <script type="text/javascript" src="/static/js/md5.js"></script>
     <script type="text/javascript">
         function Wreset() {
             var w = $(window).width();
@@ -288,15 +289,15 @@
         });
 
         $('#login-button').click(function () {
-            var username = encodeURIComponent($("input[name='username']").val());
-            var password = encodeURIComponent($("input[name='password']").val());
+            var username = $("input[name='username']").val();
+            var password = $("input[name='password']").val();
             var code = $("input[name='code']").val();
             if (username == '' || password == '') {
                 layer.msg("{{data['lan']['JS1']}}", { icon: 2 });
                 return;
             }
 
-            var data = 'username=' + username + '&password=' + password + '&code=' + code;
+            var data = { username: username, password: md5(md5(password) + '' + '_bt.cn'), code: code }
             var loadT = layer.msg("{{data['lan']['JS2']}}", { icon: 16, time: 0, shade: [0.3, '#000'] });
             $.post('/login', data, function (rdata) {
                 layer.close(loadT);

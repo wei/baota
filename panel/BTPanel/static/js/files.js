@@ -294,6 +294,18 @@ function Set_Recycle_bin(db){
 		layer.msg(rdata.msg,{icon:rdata.status?1:5});
 	});
 }
+
+function get_path_size(path) {
+    var loadT = layer.msg('正在计算目录大小,请稍候...', { icon: 16, time: 0, shade: [0.3, '#000'] });
+    $.post('/files?action=get_path_size', { path: path }, function (rdata) {
+        layer.close(loadT);
+        var myclass = '.' + rdata.path.replace(/[^\w]/g, '-');
+        console.log(myclass)
+        console.log($(myclass).text())
+        $(myclass).text(ToSize(rdata.size));
+    });
+}
+
 function GetFiles(Path) {
 	var searchtype = Path;
 	if(isNaN(Path)){
@@ -306,17 +318,22 @@ function GetFiles(Path) {
 	
 	var search = '';
 	var searchV = $("#SearchValue").val();
-	if(searchV.length > 1 && searchtype == "1"){
-		search = "&search="+searchV;
+    if (searchV.length > 0 && searchtype == "1") {
+        search = "&search=" + searchV;
+        if ($("#search_all")[0].checked) {
+            search += '&all=True';
+        }
 	}
 	var showRow = getCookie('showRow');
-	if(!showRow) showRow = '100';
+	if(!showRow) showRow = '200';
 	var Body = '';
-	var data = 'path=' + Path;
-	var loadT = layer.load();
+    var data = 'path=' + Path;
+    if (search) {
+        var loadT = layer.msg('正在搜索,请稍候...', { icon: 16, time: 0, shade: [0.3, '#000']});
+    }
 	var totalSize = 0;
 	$.post('/files?action=GetDir&tojs=GetFiles&p=' + p + '&showRow=' + showRow + search, data, function(rdata) {
-		layer.close(loadT);
+        if (search) layer.close(loadT);
 		
 		var rows = ['100','200','500','1000','2000'];
 		var rowOption = '';
@@ -349,7 +366,7 @@ function GetFiles(Path) {
 					Body += "<tr class='folderBoxTr' data-path='" + rdata.PATH + "/" + fmp[0] + "' filetype='dir'>\
 						<td><input type='checkbox' name='id' value='"+fmp[0]+"'></td>\
 						<td class='column-name'><span class='cursor' onclick=\"GetFiles('" + rdata.PATH + "/" + fmp[0] + "')\"><span class='ico ico-folder'></span><a class='text' title='" + fmp[0] + fmp[5] + "'>" + cnametext + "</a></span></td>\
-						<td>"+ToSize(fmp[1])+"</td>\
+						<td><a class='btlink "+ (rdata.PATH + '/' + fmp[0]).replace(/[^\w]/g,'-') + "' onclick=\"get_path_size('" + rdata.PATH + "/" + fmp[0]+"')\">点击计算</a></td>\
 						<td>"+getLocalTime(fmp[2])+"</td>\
 						<td>"+fmp[3]+"</td>\
 						<td>"+fmp[4]+"</td>\
@@ -409,6 +426,9 @@ function GetFiles(Path) {
                         break;
                     case '.htaccess':
                         fileMsg = 'PS: Apache用户配置文件(伪静态)';
+                        break;
+                    case 'swap':
+                        fileMsg = 'PS: 宝塔默认设置的SWAP交换分区文件';
                         break;
                 }
 
@@ -908,13 +928,24 @@ function DownloadFile(action){
 		var fUrl = $("#mUrl").val();
 		fUrl = encodeURIComponent(fUrl);
 		fpath = $("#dpath").val();
-		fname = encodeURIComponent($("#dfilename").val());
+        fname = encodeURIComponent($("#dfilename").val());
+        if (!fname) {
+            durl = $("#mUrl").val()
+            tmp = durl.split('/')
+            $("#dfilename").val(tmp[tmp.length - 1])
+            fname = encodeURIComponent($("#dfilename").val());
+            if (!fname) {
+                layer.msg('文件名不能为空!');
+                return;
+            }
+        }
 		layer.closeAll();
 		layer.msg(lan.files.down_task,{time:0,icon:16,shade: [0.3, '#000']});
 		$.post('/files?action=DownloadFile','path='+fpath+'&url='+fUrl+'&filename='+fname,function(rdata){
 			layer.closeAll();
 			GetFiles(fpath);
-			GetTaskCount();
+            GetTaskCount();
+            task_stat();
 			layer.msg(rdata.msg,{icon:rdata.status?1:2});
 		});
 		return;
@@ -942,12 +973,12 @@ function DownloadFile(action){
 					</div>\
 				</form>'
 	});
-	fly("dlok");
-	$("#mUrl").keyup(function(){
+    //fly("dlok");
+    $("#mUrl").change(function () {
 		durl = $(this).val()
 		tmp = durl.split('/')
 		$("#dfilename").val(tmp[tmp.length-1])
-	});
+    });
 }
 function ExecShell(action){
 	if(action == 1){
@@ -1010,7 +1041,7 @@ function ReName(type, fileName) {
 			icon: 16,
 			time: 10000
 		});
-		$.post('/files?action=MvFile', 'sfile=' + oldFileName + '&dfile=' + newFileName, function(rdata) {
+		$.post('/files?action=MvFile', 'sfile=' + oldFileName + '&dfile=' + newFileName + '&rename=true', function(rdata) {
 			layer.closeAll();
 			layer.msg(rdata.msg, {
 				icon: rdata.status ? 1 : 2
@@ -1129,10 +1160,12 @@ function Zip(dirName,submits) {
 			sfile = encodeURIComponent(dirName);
 		}
 		
-		dfile = encodeURIComponent($("#dfile").val());
+        dfile = encodeURIComponent($("#dfile").val());
+        var z_type = $("select[name='z_type']").val();
+        if (!z_type) z_type = 'tar.gz';
 		layer.closeAll();
 		layer.msg(lan.files.zip_the, {icon: 16,time: 0,shade: [0.3, '#000']});
-		$.post('/files?action=Zip', 'sfile=' + sfile + '&dfile=' + dfile + '&type=tar&path='+encodeURIComponent(path), function(rdata) {
+		$.post('/files?action=Zip', 'sfile=' + sfile + '&dfile=' + dfile + '&z_type='+z_type+'&path='+encodeURIComponent(path), function(rdata) {
 			layer.closeAll();
 			if(rdata == null || rdata == undefined){
 				layer.msg(lan.files.zip_ok,{icon:1});
@@ -1141,7 +1174,10 @@ function Zip(dirName,submits) {
 				return;
 			}
 			layer.msg(rdata.msg, {icon: rdata.status ? 1 : 2});
-			if(rdata.status) GetFiles(path);
+            if (rdata.status) {
+                task_stat()
+                GetFiles(path);
+            }
 		});
 		return
 	}
@@ -1160,9 +1196,10 @@ function Zip(dirName,submits) {
 		title: lan.files.zip_title,
 		content: '<div class="bt-form pd20 pb70">'
 					+'<div class="line noborder">'
-					+'<input type="text" class="form-control" id="sfile" value="' +param + '" placeholder="" style="display:none" />'
+                    + '<input type="text" class="form-control" id="sfile" value="' + param + '" placeholder="" style="display:none" />'
+                    + '<p style="margin-bottom: 10px;"><span>压缩类型</span><select style="margin-left: 8px;" class="bt-input-text" name="z_type"><option value="tar.gz">tar.gz (推荐)</option><option value="zip">zip (通用格式)</option><option value="rar">rar (WinRAR对中文兼容较好)</option></select></p>'
 					+'<span>'+lan.files.zip_to+'</span><input type="text" class="bt-input-text" id="dfile" value="'+dirName + '.tar.gz" placeholder="'+lan.files.zip_to+'" style="width: 75%; display: inline-block; margin: 0px 10px 0px 20px;" /><span class="glyphicon glyphicon-folder-open cursor" onclick="ChangePath(\'dfile\')"></span>'
-					+'</div>'
+                    + '</div>'
 					+'<div class="bt-form-submit-btn">'
 					+'<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">'+lan.public.close+'</button>'
 					+'<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title" onclick="Zip(\'' + param + '\',1)">'+lan.files.file_menu_zip+'</button>'
@@ -1170,16 +1207,11 @@ function Zip(dirName,submits) {
 				+'</div>'
 	});
 	
-	setTimeout(function(){
-		$("#dfile").change(function(){
-			var dfile = $(this).val()
-			tmp = dfile.split('.');
-			if(tmp[tmp.length-1] != 'gz'){
-				var path = $("#DirPathPlace input").val();
-				tmp = path.split('/');
-				dfile += '/' + tmp[tmp.length-1] + '.tar.gz'
-				$(this).val(dfile.replace(/\/\//g,'/'))
-			}
+    setTimeout(function (){
+		$("select[name='z_type']").change(function(){
+            var z_type = $(this).val();
+            dirName = dirName.replace("tar.gz", z_type)
+            $("#dfile").val(dirName + '.' + z_type);
 		});
 	},100);
 	
@@ -1195,7 +1227,8 @@ function UnZip(fileName,type) {
 		layer.msg(lan.files.unzip_the, {icon: 16,time: 0,shade: [0.3, '#000']});
 		$.post('/files?action=UnZip', 'sfile=' + sfile + '&dfile=' + dfile +'&type=' + type + '&coding=' + coding + '&password=' + password, function(rdata) {
 			layer.closeAll();
-			layer.msg(rdata.msg, {icon: rdata.status ? 1 : 2});
+            layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 });
+            task_stat()
 			GetFiles(path);
 		});
 		return
@@ -1231,7 +1264,7 @@ function UnZip(fileName,type) {
 function isZip(fileName){
 	var ext = fileName.split('.');
 	var extName = ext[ext.length-1].toLowerCase();
-	if( extName == 'zip') return 0;
+	if( extName == 'zip' || extName == 'rar') return 0;
 	if( extName == 'gz' || extName == 'tgz') return 1;
 	return -1;
 }

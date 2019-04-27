@@ -1,12 +1,12 @@
 #coding: utf-8
-# +-------------------------------------------------------------------
-# | 宝塔Linux面板
-# +-------------------------------------------------------------------
-# | Copyright (c) 2015-2017 宝塔软件(http://bt.cn) All rights reserved.
-# +-------------------------------------------------------------------
-# | Author: 黄文良 <287962566@qq.com>
-# +-------------------------------------------------------------------
-import public,os,sys,json,time,psutil
+#-------------------------------------------------------------------
+# 宝塔Linux面板
+#-------------------------------------------------------------------
+# Copyright (c) 2015-2019 宝塔软件(http:#bt.cn) All rights reserved.
+#-------------------------------------------------------------------
+# Author: 黄文良 <287962566@qq.com>
+#-------------------------------------------------------------------
+import public,os,sys,json,time,psutil,py_compile
 from BTPanel import session,cache
 if sys.version_info[0] == 3: from importlib import reload
 class mget: pass;
@@ -25,8 +25,6 @@ class panelPlugin:
     
     def __init__(self):
         self.__install_path = 'plugin'
-        #if not os.path.exists(self.__list): self.getCloudPlugin(None);
-
 
     #检查依赖
     def check_deps(self,get):
@@ -141,20 +139,35 @@ class panelPlugin:
             result = self.install_sync(pluginInfo,get)
         else:
             result = self.install_async(pluginInfo,get)
+        try:
+            if 'status' in result:
+                if result['status']:
+                    public.httpPost(public.GetConfigValue('home') + '/api/panel/plugin_total',{"pid":pluginInfo['id'],'p_name':pluginInfo['name']},3)
+        except:pass
         return result
     
     #同步安装
     def install_sync(self,pluginInfo,get):
-        if not 'download_url' in session: session['download_url'] = 'http://download.bt.cn';
-        download_url = session['download_url'] + '/install/plugin/' + pluginInfo['name'] + '/install.sh';
-        toFile = '/tmp/%s.sh' % pluginInfo['name']
-        public.downloadFile(download_url,toFile);
-        os.system('/bin/bash ' + toFile + ' install > /tmp/panelShell.pl');
-        if os.path.exists(pluginInfo['install_checks']):
-            public.WriteLog('TYPE_SETUP','PLUGIN_INSTALL_LIB',(pluginInfo['title'],));
-            if os.path.exists(toFile): os.remove(toFile)
-            return public.returnMsg(True,'PLUGIN_INSTALL_SUCCESS');
-        return public.returnMsg(False,'安装失败!');
+        if 'download' in pluginInfo['versions'][0]:
+            tmp_path = '/www/server/panel/temp'
+            if not os.path.exists(tmp_path): os.makedirs(tmp_path,mode=384);
+            toFile = tmp_path + '/' + pluginInfo['name'] + '.zip'
+            public.downloadFile('http://www.bt.cn/api/Pluginother/get_file?fname=' + pluginInfo['versions'][0]['download'],toFile)
+            if public.FileMd5(toFile) != pluginInfo['versions'][0]['md5']: return public.returnMsg(False,'文件Hash校验失败,停止安装!')
+            update = False;
+            if os.path.exists(pluginInfo['install_checks']): update =pluginInfo['versions'][0]['version_msg']
+            return self.update_zip(None,toFile,update);
+        else:
+            if not 'download_url' in session: session['download_url'] = 'http://download.bt.cn';
+            download_url = session['download_url'] + '/install/plugin/' + pluginInfo['name'] + '/install.sh';
+            toFile = '/tmp/%s.sh' % pluginInfo['name']
+            public.downloadFile(download_url,toFile);
+            os.system('/bin/bash ' + toFile + ' install > /tmp/panelShell.pl');
+            if os.path.exists(pluginInfo['install_checks']):
+                public.WriteLog('TYPE_SETUP','PLUGIN_INSTALL_LIB',(pluginInfo['title'],));
+                if os.path.exists(toFile): os.remove(toFile)
+                return public.returnMsg(True,'PLUGIN_INSTALL_SUCCESS');
+            return public.returnMsg(False,'安装失败!');
 
     #异步安装
     def install_async(self,pluginInfo,get):            
@@ -165,6 +178,8 @@ class panelPlugin:
             mmsg = 'upgrade'
         if not 'type' in get: get.type = '0'
         if int(get.type) > 3: get.type = '0'
+        if get.sName == 'nginx': 
+            if get.version == '1.8': return public.returnMsg(False,'Nginx 1.8.1版本过旧,不再提供支持，请选择其它版本!')
         if get.sName.find('php-') != -1: get.sName = get.sName.split('-')[0]
         php_path = '/www/server/php'
         if not os.path.exists(php_path): os.makedirs(php_path)
@@ -216,31 +231,37 @@ class panelPlugin:
 
     #从云端取列表
     def get_cloud_list(self,get=None):
-        cacheKey = 'plugin_soft_list'
-        softList = cache.get(cacheKey)
         lcoalTmp = 'data/plugin.json'
-        if not softList:
-            listTmp = public.readFile(lcoalTmp)
-            try:
-                if listTmp: softList = json.loads(listTmp)
-            except:
-                if os.path.exists(lcoalTmp): os.remove(lcoalTmp)
+        softList = None
+        listTmp = public.readFile(lcoalTmp)
+        try:
+            if listTmp: softList = json.loads(listTmp)
+        except:
+            if os.path.exists(lcoalTmp): os.remove(lcoalTmp)
 
         focre  = 0
         if hasattr(get,'force'): focre = int(get.force)
-        if hasattr(get,'cache'):
-            if cache.get(cacheKey+'_list'): focre = 0;
+        if 'focre_cloud' in session:
+            if session['focre_cloud']:
+                focre = 1
+                session['focre_cloud'] = False
+
+        if not 'init_cloud' in session:
+                focre = 1
+                session['init_cloud'] = True
+
         if not softList or focre > 0:
-            cloudUrl = public.GetConfigValue('home') + '/api/panel/get_soft_list'
+            self.clean_panel_log()
+            cloudUrl = public.GetConfigValue('home') + '/api/panel/get_soft_list_test'
             import panelAuth
             pdata = panelAuth.panelAuth().create_serverid(None)
             listTmp = public.httpPost(cloudUrl,pdata,10)
             if len(listTmp) < 200:
                 listTmp = public.readFile(lcoalTmp)
-            softList = json.loads(listTmp)
+            try:
+                softList = json.loads(listTmp)
+            except: pass
             if softList: public.writeFile(lcoalTmp,json.dumps(softList))
-            cache.set(cacheKey,softList,1800)
-            cache.set(cacheKey+'_list',1,1800)
             public.ExecShell('rm -f /tmp/bmac_*')
             self.getCloudPHPExt(get)
         try:
@@ -256,8 +277,23 @@ class panelPlugin:
                 for softInfo in softList['list']:
                     if softInfo['name'].find(get.query) != -1 or softInfo['title'].find(get.query) != -1: tmpList.append(softInfo)
                 softList['list'] = tmpList
-
         return softList
+
+    #清除多余面板日志
+    def clean_panel_log(self):
+        try:
+            log_path = 'logs/request'
+            if not os.path.exists(log_path): return False
+            limit_num = 7
+            p_logs = sorted(os.listdir(log_path))
+            num = len(p_logs) - limit_num
+            if num <= 0: return False
+            for i in range(num):
+                filename = log_path + '/' + p_logs[i]
+                if not os.path.exists(filename): continue
+                os.remove(filename)
+            return True
+        except:return False
 
     #取本地插件
     def get_local_plugin(self,sList):
@@ -313,11 +349,15 @@ class panelPlugin:
             m_version[1] = '.'.join(tmp)
 
         try:
+            if not 'author' in info: info['author'] = '未知'
+            if not 'home' in info: info['home'] = '#'
             pluginInfo = {
 	                        "id": 10000,
 	                        "pid": 0,
 	                        "type": 10,
 	                        "price": 0,
+                            "author":info['author'],
+                            "home":info['home'],
 	                        "name": info['name'],
 	                        "title": info['title'],
 	                        "panel_pro": 1,
@@ -358,6 +398,26 @@ class panelPlugin:
         for sInfo in sList:
             if sInfo['type'] == sType: newList.append(sInfo)
         return newList
+
+    #检查权限
+    def check_accept(self,get):
+        import common
+        args = common.dict_obj()
+        args.type = '8'
+        p_list = self.get_cloud_list(args)
+        for p in p_list['list']:
+            if p['name'] == get.name:
+                if p_list['pro'] < 0 and p['endtime'] < 0: return False
+                break
+
+        args.type = '10'
+        p_list = self.get_cloud_list(args)
+        for p in p_list['list']:
+            if p['name'] == get.name:
+                if not 'endtime' in p: continue;
+                if p['endtime'] < 0: return False
+                break
+        return True
 
     #取软件列表
     def get_soft_list(self,get = None):
@@ -532,10 +592,14 @@ class panelPlugin:
         if softInfo['version_coexist'] == 1:
             self.get_icon(softInfo['name'].split('-')[0])
         else:
-            self.get_icon(softInfo['name'])
+            if 'min_image' in softInfo: 
+                self.get_icon(softInfo['name'],softInfo['min_image'])
+            else:
+                self.get_icon(softInfo['name'])
         if softInfo['name'].find('php-') != -1: 
-            softInfo['fpm'] = os.path.exists('/etc/init.d/php-fpm-' + softInfo['versions'][0]['m_version'].replace('.',''))
-            softInfo['status'] = True
+            v2= softInfo['versions'][0]['m_version'].replace('.','')
+            softInfo['fpm'] = os.path.exists('/etc/init.d/php-fpm-' + v2)
+            softInfo['status'] = os.path.exists('/tmp/php-cgi-'+v2+'.sock')
         if softInfo['name'] == 'mysql': softInfo['status'] = self.process_exists('mysqld')
         return softInfo
 
@@ -568,7 +632,9 @@ class panelPlugin:
         elif  os.path.exists(vFile2): 
             v_tmp = public.ReadFile(vFile2).strip()
             if v_tmp: 
-                version = json.loads(v_tmp)['versions']
+                try:
+                    version = json.loads(v_tmp)['versions']
+                except: public.ExecShell('rm -f ' + vFile2)
             else:
                 version = "1.0"
         else:
@@ -598,6 +664,9 @@ class panelPlugin:
             if os.path.exists(vFile3): 
                 version_str = public.readFile(vFile3)
                 if version_str.find('AliSQL') != -1: version = 'AliSQL'
+            if version == 'Linux':
+                version = version_str
+                public.writeFile(vFile1,version)
 
         if sInfo['name'] == 'nginx':
             if version.find('2.2.') != -1: version = '-Tengine' + version
@@ -664,7 +733,7 @@ class panelPlugin:
         n = 0;
         result['data'] = [];
         for i in range(info['count']):
-            if n > page.ROW: break;
+            if n >= page.ROW: break;
             if i < page.SHIFT: continue;
             n += 1;
             result['data'].append(data[i]);
@@ -750,22 +819,25 @@ class panelPlugin:
         
     
     #获取图标
-    def get_icon(self,name):
+    def get_icon(self,name,downFile = None):
         iconFile = 'BTPanel/static/img/soft_ico/ico-' + name + '.png'
 
         if not os.path.exists(iconFile):
-            self.download_icon(name,iconFile)
+            self.download_icon(name,iconFile,downFile)
         else:
             size = os.path.getsize(iconFile)
-            if size == 0: self.download_icon(name,iconFile)
+            if size == 0: self.download_icon(name,iconFile,downFile)
         
     #下载图标
-    def download_icon(self,name,iconFile):
+    def download_icon(self,name,iconFile,downFile):
         srcIcon =  'plugin/' + name + '/icon.png';
         if os.path.exists(srcIcon):
             public.ExecShell("\cp  -a -r " + srcIcon + " " + iconFile)
         else:
-            public.ExecShell('wget -O ' + iconFile + ' ' + public.get_url() + '/install/plugin/' + name + '/icon.png &');
+            if downFile:
+                public.ExecShell('wget -O ' + iconFile + ' ' + public.GetConfigValue('home') + downFile + '&');
+            else:
+                public.ExecShell('wget -O ' + iconFile + ' ' + public.get_url() + '/install/plugin/' + name + '/icon.png &');
                 
     
     #取分页
@@ -1458,12 +1530,14 @@ class panelPlugin:
         return find['title']
 
     
+    
     #请求插件事件
     def a(self,get):
         if not hasattr(get,'name'): return public.returnMsg(False,'PLUGIN_INPUT_A');
         try:
             path = self.__install_path + '/' + get.name
             if not os.path.exists(path + '/'+get.name+'_main.py'): return public.returnMsg(False,'PLUGIN_INPUT_B');
+            if not self.check_accept(get):return public.returnMsg(False,public.to_string([24744, 26410, 36141, 20080, 91, 37, 115, 93, 25110, 25480, 26435, 24050, 21040, 26399, 33]) % (self.get_title_byname(get),))
             sys.path.append(path);
             plugin_main = __import__(get.name+'_main');
             try:
@@ -1474,8 +1548,6 @@ class panelPlugin:
             execStr = 'pluginObject.' + get.s + '(get)'
             return eval(execStr);
         except Exception as ex:
-            if str(ex).find('bool') != -1:
-                return public.returnMsg(False,'您未购买[%s]或授权已到期!' % (self.get_title_byname(get),))
             import traceback
             errorMsg = traceback.format_exc();
             public.writeFile('logs/done.log',errorMsg)
@@ -1483,25 +1555,28 @@ class panelPlugin:
 
 
     #上传插件包
-    def update_zip(self,get):
+    def update_zip(self,get = None,tmp_file = None, update = False):
         tmp_path = '/www/server/panel/temp'
         if not os.path.exists(tmp_path): 
             os.makedirs(tmp_path,mode=384)
 
-        public.ExecShell("rm -rf " + tmp_path + '/*')
-        
-        tmp_file = tmp_path + '/plugin_tmp.zip'
-        from werkzeug.utils import secure_filename
-        from flask import request
-        f = request.files['plugin_zip']
-        if f.filename[-4:] != '.zip': tmp_file = tmp_path + '/plugin_tmp.tar.gz'
+        if tmp_file: 
+            if not os.path.exists(tmp_file): return public.returnMsg(False,'文件下载失败!')
 
-        f.save(tmp_file)
-        import files
-        get.sfile = tmp_file
-        get.dfile = tmp_path
-        get.coding = 'utf-8'
-        files.files().UnZip(get)
+        
+        if get:
+            public.ExecShell("rm -rf " + tmp_path + '/*')
+            tmp_file = tmp_path + '/plugin_tmp.zip'
+            from werkzeug.utils import secure_filename
+            from flask import request
+            f = request.files['plugin_zip']
+            if f.filename[-4:] != '.zip': tmp_file = tmp_path + '/plugin_tmp.tar.gz'
+
+            f.save(tmp_file)
+
+
+        import panelTask
+        panelTask.bt_task()._unzip(tmp_file,tmp_path,'','/dev/null')
         os.remove(tmp_file)
         p_info = tmp_path + '/info.json'
         if not os.path.exists(p_info):
@@ -1530,8 +1605,10 @@ class panelPlugin:
                     data['old_version'] = old_info['versions']
                 except:pass
         except:
-            public.ExecShell("rm -rf " + tmp_path)
+            public.ExecShell("rm -rf " + tmp_path + '/*')
             return public.returnMsg(False,'在压缩包中没有找到插件信息,请检查插件包!');
+
+        data['update'] = update
         return data
 
     #导入插件包
@@ -1543,6 +1620,7 @@ class panelPlugin:
         public.ExecShell('chmod -R 600 ' + plugin_path)
         public.ExecShell('cd ' + plugin_path + ' && bash install.sh install')
         p_info = public.ReadFile(plugin_path + '/info.json')
+        public.ExecShell("rm -rf /www/server/panel/temp/*")
         if p_info:
             public.WriteLog('软件管理','安装第三方插件[%s]' % json.loads(p_info)['title'])
             return public.returnMsg(True,'安装成功!')

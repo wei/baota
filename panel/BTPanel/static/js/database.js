@@ -50,7 +50,7 @@ var database = {
                         field: 'opt', width: 260, title: '操作', align: 'right', templet: function (item) {
                             var option = "<a href=\"javascript:;\" class=\"btlink\" onclick=\"bt.database.open_phpmyadmin('" + item.name + "','" + item.username + "','" + item.password + "')\" title=\"数据库管理\">管理</a> | ";
                             option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"database.rep_tools('" + item.name + "')\" title=\"MySQL优化修复工具\">工具</a> | ";
-                            option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"bt.database.set_data_access('" + item.name + "')\" title=\"设置数据库权限\">权限</a> | ";
+                            option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"bt.database.set_data_access('" + item.username + "')\" title=\"设置数据库权限\">权限</a> | ";
                             option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"database.set_data_pass(" + item.id + ",'" + item.username + "','" + item.password + "')\" title=\"修改数据库密码\">改密</a> | ";
                             option += "<a href=\"javascript:;\" class=\"btlink\" onclick=\"database.del_database(" + item.id + ",'" + item.name + "')\" title=\"删除数据库\">删除</a>";
                             return option;

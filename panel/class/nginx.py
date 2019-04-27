@@ -23,7 +23,7 @@ class nginx:
         proxycontent = public.readFile(self.proxyfile)
         unitrep = "[kmgKMG]"
         conflist = []
-        ps = ["处理进程,auto表示自动,数字表示进程数","最大并发链接数","连接超时时间","是否开启压缩传输","KB, 最小压缩文件","压缩率","MB,最大上传文件","服务器名字的hash表大小","KB, 客户端请求头buffer大小"]
+        ps = ["处理进程,auto表示自动,数字表示进程数","最大并发链接数","连接超时时间","是否开启压缩传输","最小压缩文件","压缩率","最大上传文件","服务器名字的hash表大小","客户端请求头buffer大小"]
         gets = ["worker_processes","worker_connections","keepalive_timeout","gzip","gzip_min_length","gzip_comp_level","client_max_body_size","server_names_hash_bucket_size","client_header_buffer_size"]
         n = 0
         for i in gets:
@@ -31,16 +31,19 @@ class nginx:
             k = re.search(rep, ngconfcontent).group(1)
             v = re.search(rep, ngconfcontent).group(2)
             if re.search(unitrep,v):
-                u = ""
+                u = str.upper(v[-1])
                 v = v[:-1]
-                psstr = ps[n]
+                if len(u) == 1:
+                    psstr = u+"B，"+ps[n]
+                else:
+                    psstr = u + "，" + ps[n]
             else:
                 u = ""
                 psstr = ps[n]
             kv = {"name":k,"value":v,"unit":u,"ps":psstr}
             conflist.append(kv)
             n += 1
-        ps = ["KB, 请求主体缓冲区"]
+        ps = ["请求主体缓冲区"]
         gets = ["client_body_buffer_size"]
         n = 0
         for i in gets:
@@ -48,15 +51,19 @@ class nginx:
             k = re.search(rep, proxycontent).group(1)
             v = re.search(rep, proxycontent).group(2)
             if re.search(unitrep, v):
-                u = ""
+                u = str.upper(v[-1])
                 v = v[:-1]
-                psstr = ps[n]
+                if len(u) == 1:
+                    psstr = u+"B，"+ps[n]
+                else:
+                    psstr = u + "，" + ps[n]
             else:
                 psstr = ps[n]
                 u = ""
             kv = {"name":k, "value":v, "unit":u,"ps":psstr}
             conflist.append(kv)
             n+=1
+        print(conflist)
         return conflist
 
     def SetNginxValue(self,get):

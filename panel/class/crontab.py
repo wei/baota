@@ -13,6 +13,7 @@ class crontab:
     #取计划任务列表
     def GetCrontab(self,get):
         self.checkBackup()
+        self.__clean_log()
         cront = public.M('crontab').order("id desc").field(self.field).select()
         if type(cront) == str:
             public.M('crontab').execute("ALTER TABLE 'crontab' ADD 'status' INTEGER DEFAULT 1",())
@@ -44,12 +45,26 @@ class crontab:
                 tmp['cycle']=public.getMsg('CRONTAB_N_MINUTE_CYCLE',(str(cront[i]['where1']),))
             elif cront[i]['type']=="week":
                 tmp['type']=public.getMsg('CRONTAB_WEEK')
+                if not cront[i]['where1']: cront[i]['where1'] = '0'
                 tmp['cycle']= public.getMsg('CRONTAB_WEEK_CYCLE',(self.toWeek(int(cront[i]['where1'])),str(cront[i]['where_hour']),str(cront[i]['where_minute'])))
             elif cront[i]['type']=="month":
                 tmp['type']=public.getMsg('CRONTAB_MONTH')
                 tmp['cycle']=public.getMsg('CRONTAB_MONTH_CYCLE',(str(cront[i]['where1']),str(cront[i]['where_hour']),str(cront[i]['where_minute'])))
             data.append(tmp)
         return data
+
+
+    #清理日志
+    def __clean_log(self):
+        log_file = '/www/server/cron'
+        if not os.path.exists(log_file): return False
+        for f in os.listdir(log_file):
+            if f[-4:] != '.log': continue
+            filename = log_file + '/' + f
+            if os.path.getsize(filename) < 1048576 /2: continue
+            tmp = public.GetNumLines(filename,100)
+            public.writeFile(filename,tmp)
+
     
     #转换大写星期
     def toWeek(self,num):

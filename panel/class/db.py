@@ -109,7 +109,7 @@ class Sql():
     def getField(self,keyName):
         #取回指定字段
         result = self.field(keyName).select();
-        if len(result) == 1:
+        if len(result) != 0:
             return result[0][keyName]
         return result
     

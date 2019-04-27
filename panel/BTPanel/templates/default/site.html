@@ -23,6 +23,7 @@
             <button onclick="site.set_default_page()" class="btn btn-default btn-sm btn-title" type="button">{{data['lan']['BTN2']}}</button>
             <button onclick="site.set_default_site()" class="btn btn-default btn-sm btn-title" type="button">{{data['lan']['BTN3']}}</button>
             <button onclick="site.set_class_type()" class="btn btn-default btn-sm btn-title" type="button">{{data['lan']['BTN5']}}</button>
+            <button onclick="site.get_cli_version()" class="btn btn-default btn-sm btn-title" type="button">PHP命令行版本</button>
             <span id="allDelete">
                 <button batch="true" style="float: right;display: none;margin-left:10px;" class="btn btn-default btn-sm" onclick="site.batch_site('del');">{{data['lan']['BTN4']}}</button>
             </span>
@@ -47,7 +48,7 @@
 {% block scripts %}
 <script type="text/javascript" src="/static/laydate/laydate.js?date=20180301"></script>
 <script type="text/javascript" src="/static/js/bootstrap-select.min.js"></script>
-<script type="text/javascript" src="/static/js/site.js?date={{g['version']}}"></script>
+<script type="text/javascript" src="/static/js/site.js?version_new={{g['version']}}"></script>
 <script type="text/javascript">
     bt.set_cookie('sites_path', "{{session['config']['sites_path']}}");
     bt.set_cookie('serverType', "{{session['webserver']}}");

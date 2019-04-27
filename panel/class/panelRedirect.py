@@ -130,8 +130,8 @@ class panelRedirect:
             shutil.copyfile(ap_file, '/tmp/ap_file_bk.conf')
         if os.path.exists(ap_file):
             ap_conf = public.readFile(ap_file)
-            if not p_conf:
-                rep = "\n*#引用重定向(\n|.)+IncludeOptional.*\/redirect\/.*conf"
+            if p_conf == "[]":
+                rep = "\n*#引用重定向规则，注释后配置的重定向代理将无效\n+\s+IncludeOptiona[\s\w\/\.\*]+"
                 ap_conf = re.sub(rep, '', ap_conf)
                 public.writeFile(ap_file, ap_conf)
                 return
@@ -142,7 +142,7 @@ class panelRedirect:
                     ap_conf = ap_conf.replace(rep1, rep1 + "\n\t#引用重定向规则，注释后配置的重定向代理将无效" +"\n\tIncludeOptional " + ap_redirectfile)
                     public.writeFile(ap_file,ap_conf)
             else:
-                rep = "#引用重定向(\n|.)+IncludeOptional.*\/redirect\/.*conf"
+                rep = "\n*#引用重定向规则，注释后配置的重定向代理将无效\n+\s+IncludeOptiona[\s\w\/\.\*]+"
                 ap_conf = re.sub(rep,'', ap_conf)
                 public.writeFile(ap_file, ap_conf)
 
@@ -171,12 +171,12 @@ class panelRedirect:
         else:
             if not get.redirectpath:
                 return public.returnMsg(False, '请输入重定向路径')
-            repte = "[\?\=\[\]\)\(\*\&\^\%\$\#\@\!\~\`{\}\>\<\,\',\"]+"
+            #repte = "[\?\=\[\]\)\(\*\&\^\%\$\#\@\!\~\`{\}\>\<\,\',\"]+"
             # 检测路径格式
             if "/" not in get.redirectpath:
                 return public.returnMsg(False, "路径格式不正确，格式为/xxx")
-            if re.search(repte, get.redirectpath):
-                return public.returnMsg(False, "代理目录不能有以下特殊符号 ?,=,[,],),(,*,&,^,%,$,#,@,!,~,`,{,},>,<,\,',\"]")
+            #if re.search(repte, get.redirectpath):
+            #    return public.returnMsg(False, "代理目录不能有以下特殊符号 ?,=,[,],),(,*,&,^,%,$,#,@,!,~,`,{,},>,<,\,',\"]")
         #检测域名是否已经存在配置文件
         repeatdomain = self.__CheckRepeatDomain(get,action)
         if repeatdomain:
@@ -193,8 +193,8 @@ class panelRedirect:
             print("目标URL格式不对")
             return public.returnMsg(False, '目标URL格式不对 %s' + get.tourl)
         #检测目标URL是否可用
-        if self.__CheckRedirectUrl(get):
-            return public.returnMsg(False, '目标URL无法访问')
+        #if self.__CheckRedirectUrl(get):
+        #    return public.returnMsg(False, '目标URL无法访问')
 
         #检查目标URL的域名和被重定向的域名是否一样
         if get.domainorpath == "domain":
@@ -322,19 +322,8 @@ class panelRedirect:
 
             redirectname_md5 = self.__calc_md5(get.redirectname)
             for w in ["nginx","apache"]:
-
                 redirectfile = "%s/panel/vhost/%s/redirect/%s/%s_%s.conf" % (self.setupPath,w,get.sitename,redirectname_md5, get.sitename)
                 redirectdir = "%s/panel/vhost/%s/redirect/%s" % (self.setupPath,w,get.sitename)
-
-                isError = public.checkWebConfig()
-                if (isError != True):
-                    shutil.copyfile('/tmp/ng_file_bk.conf', ng_file)
-                    shutil.copyfile('/tmp/ap_file_bk.conf', ap_file)
-                    for i in range(len(p_conf) - 1, -1, -1):
-                        if get.sitename == p_conf[i]["sitename"] and p_conf[i]["redirectname"]:
-                            del p_conf[i]
-                    return public.returnMsg(False, 'ERROR: 配置出错<br><a style="color:red;">' + isError.replace("\n",
-                                                                                                             '<br>') + '</a>');
 
                 if not os.path.exists(redirectdir):
                     os.system("mkdir -p %s" % redirectdir)
@@ -342,6 +331,16 @@ class panelRedirect:
                     public.writeFile(redirectfile,nginxrconf)
                 else:
                     public.writeFile(redirectfile, apacherconf)
+            isError = public.checkWebConfig()
+            if (isError != True):
+                if public.get_webserver() == "nginx":
+                    shutil.copyfile('/tmp/ng_file_bk.conf', ng_file)
+                else:
+                    shutil.copyfile('/tmp/ap_file_bk.conf', ap_file)
+                for i in range(len(p_conf) - 1, -1, -1):
+                    if get.sitename == p_conf[i]["sitename"] and p_conf[i]["redirectname"]:
+                        del(p_conf[i])
+                return public.returnMsg(False, 'ERROR: 配置出错<br><a style="color:red;">' + isError.replace("\n",'<br>') + '</a>')
 
         else:
             redirectname_md5 = self.__calc_md5(get.redirectname)
@@ -397,30 +396,35 @@ class panelRedirect:
         conf_path = "%s/panel/vhost/nginx/%s.conf" % (self.setupPath, get.sitename)
         old_conf = public.readFile(conf_path)
         # print (old_conf)
-        rep = "(#301-START(\n|.)+#301-END)"
-        url_rep = "return\s(\d){3,3}\s(https?\:\/\/[\w\.]+)\$"
+        rep = "#301-START\n+[\s\w\:\/\.\;\$\(\)\'\^\~\{\}]+#301-END"
+        url_rep = "return\s(\d+)\s(https?\:\/\/[\w\.]+)\$"
         host_rep = "\$host\s~\s'\^(.*)'"
         if re.search(rep, old_conf):
             # 构造代理配置
+            get.host = ""
+            if re.search(host_rep, old_conf):
+                get.host += str(re.search(host_rep, old_conf).group(1))
             get.redirecttype = str(re.search(url_rep, old_conf).group(1))
             get.tourl = str(re.search(url_rep, old_conf).group(2))
-            get.host = str(re.search(host_rep,old_conf).group(1))
 
+            get.redirectpath = ""
             if get.host:
                 get.domainorpath = "domain"
                 get.redirectdomain = "[\"%s\"]" % get.host
             else:
                 get.domainorpath = "path"
                 get.redirectpath = "/"
+                get.redirectdomain = "[]"
             get.sitename = sitename
             get.redirectname = "旧配置"
             get.type = 1
             get.holdpath = 1
 
             # 备份并替换老虚拟主机配置文件
-            os.system("cp %s %s_bak" % (conf_path, conf_path))
-            conf = re.sub(rep, "", old_conf)
-            public.writeFile(conf_path, conf)
+            if not os.path.exists(conf_path + "_bak"):
+                os.system("cp %s %s_bak" % (conf_path, conf_path))
+            # conf = re.sub(rep, "", old_conf)
+            # public.writeFile(conf_path, conf)
             self.CreateRedirect(get)
             # 写入代理配置
             #proxypath = "%s/panel/vhost/%s/proxy/%s/%s_%s.conf" % (
@@ -428,7 +432,7 @@ class panelRedirect:
             # proxycontent = str(re.search(rep, old_conf).group(1))
             # public.writeFile(proxypath, proxycontent)
 
-            public.serviceReload()
+            #public.serviceReload()
 
         redirectlist = []
         for i in redirectconf:
@@ -436,6 +440,20 @@ class panelRedirect:
                 redirectlist.append(i)
         print(redirectlist)
         return redirectlist
+
+    def ClearOldRedirect(self,get):
+        for i in ["apache","nginx"]:
+            conf_path = "%s/panel/vhost/%s/%s.conf" % (self.setupPath,i,get.sitename)
+            old_conf = public.readFile(conf_path)
+            rep =""
+            if i == "nginx":
+                rep += "#301-START\n+[\s\w\:\/\.\;\$]+#301-END"
+            if i == "apache":
+                rep += "#301-START[\n\<\>\w\.\s\^\*\$\/\[\]\(\)\:\,\=]+#301-END"
+            conf = re.sub(rep, "", old_conf)
+            public.writeFile(conf_path, conf)
+        public.serviceReload()
+        return public.returnMsg(False, '旧版本重定向已经清理')
 
     # 取重定向配置文件
     def GetRedirectFile(self,get):
@@ -477,4 +495,5 @@ class panelRedirect:
     # 写配置
     def __write_config(self ,path, data):
         return public.writeFile(path, json.dumps(data))
+
 

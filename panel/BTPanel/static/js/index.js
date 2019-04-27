@@ -98,6 +98,9 @@ var index = {
         bt.pub.get_user_info(function (rdata) {
             if (rdata.status) {
                 $(".bind-user").html(rdata.data.username);
+                bt.send('check_user_auth', 'ajax/check_user_auth', {}, function (rd) {
+                    if (!rd.status) bt.msg(rd);
+                });
                 bt.weixin.get_user_info(function (rdata) {
                     if (!rdata.status) {
                         bt.msg(rdata);
@@ -112,7 +115,8 @@ var index = {
                             break;
                         }
                     }
-                })
+                });
+
             }
             else {
                 $(".bind-weixin a").attr("href", "javascript:;");
@@ -139,6 +143,7 @@ var index = {
                     $(this).find(".mem-re-con").css({ "display": "block" });
                     $(this).find(".mem-re-con").animate({ "top": "0", opacity: 1 });
                 }
+				$(this).next().hide();
             }, function () {
                 if (!($(this).hasClass("mem-action"))) {
                     $(this).find(".mem-re-min").show();
@@ -149,23 +154,33 @@ var index = {
                 $(this).removeClass("shine_green");
                 $(this).find(".occupy").css({ "color": "#20a53a" });
                 $(this).find(".mem-re-con").css({ "top": "15px", opacity: 1, "display": "none" });
-                $(this).next().html(bt.get_cookie("mem-before"));
+				$(this).next().show();
+                //$(this).next().html(bt.get_cookie("mem-before"));
             }).click(function () {
                 var _this = $(this);
-                if (!(_this.hasClass("mem-action"))) {
-                    var data = _this.parents('ul').data('data').mem;
-                    index.mem.set_status(_this, 2); //释放中
-                    bt.system.re_memory(function (nData) {
-                        index.mem.set_status(_this, '释放完成');
-                        setTimeout(function () {
-                            var t = nData.memFree - data.memFree;
-                            var m = lan.index.memre_ok_2;
-                            if (t > 0) m = lan.index.memre_ok_1 + "<br>" + t + "MB";
-                            index.mem.set_status(_this, m);
-                        }, 200);
-                        setTimeout(function () { index.mem.set_status(_this, 1, (nData.memRealUsed * 100 / nData.memTotal).toFixed(1)); }, 1200);
-                    })
-                }
+                bt.show_confirm('真的要释放内存吗？', '<font style="color:red;">若您的站点处于有大量访问的状态，释放内存可能带来无法预测的后果，您确定现在就释放内存吗？</font>', function () {
+                    if (!(_this.hasClass("mem-action"))) {
+						_this.next().hide();
+						_this.find('.mem-re-min').hide();
+                        var data = _this.parents('ul').data('data').mem;
+                        index.mem.set_status(_this, 2); //释放中
+                        bt.system.re_memory(function (nData) {
+                            index.mem.set_status(_this, '释放完成');
+							
+							_this.next().show();
+                            setTimeout(function () {
+                                var t = nData.memFree - data.memFree;
+                                var m = lan.index.memre_ok_2;
+                                if (t > 0) m = lan.index.memre_ok_1 + "<br>" + t + "MB";
+                                index.mem.set_status(_this, m);
+                            }, 200);
+                            setTimeout(function () { 
+								index.mem.set_status(_this, 1, (nData.memRealUsed * 100 / nData.memTotal).toFixed(1)); 
+								_this.find('.mem-re-min').show();
+							}, 1200);
+                        })
+                    }
+                })
             })
         });
         setTimeout(function () { _this.interval.start(); }, 1600)
@@ -182,7 +197,13 @@ var index = {
                 if (rdata.status !== false) {
                     $('#toUpdate a').html('更新<i style="display: inline-block; color: red; font-size: 40px;position: absolute;top: -35px; font-style: normal; right: -8px;">.</i>');
                     $('#toUpdate a').css("position", "relative");
+
                 }
+                if (rdata.msg.is_beta === 1) {
+                    $('#btversion').prepend('<span style="margin-right:5px;">Beta</span>');
+                    $('#btversion').append('<a class="btlink" href="https://www.bt.cn/bbs/forum-39-1.html" target="_blank">  [找Bug奖宝塔币]</a>');
+                }
+
             }, false)
         }, 1500)
     },
@@ -412,37 +433,192 @@ var index = {
     check_update: function () {
         bt.system.check_update(function (rdata) {
             if (rdata.status === false) {
-                layer.confirm(rdata.msg, { title: lan.index.update_check, icon: 1, closeBtn: 2, btn: [lan.public.know, lan.public.close] });
-                return;
-            }
-            if (rdata.version != undefined) {
+                if (!rdata.msg.beta) {
+                    bt.msg(rdata);
+                    return;
+                }
                 var loading = bt.open({
                     type: 1,
-                    title: lan.index.update_to + '[' + rdata.version + ']',
-                    area: '400px',
+                    title: '[Linux' + (rdata.msg.is_beta == 1 ? '测试版' : '正式版') + ']-更新版本',
+                    area: '520px',
                     shadeClose: false,
+                    skin: 'layui-layer-dialog',
                     closeBtn: 2,
-                    content: '<div class="setchmod bt-form pd20 pb70"><p style="padding: 0 0 10px;line-height: 24px;">' + rdata.updateMsg + '</p><div class="bt-form-submit-btn"><button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">' + lan.public.cancel + '</button><button type="button" class="btn btn-success btn-sm btn-title btn_update_panel" >' + lan.index.update_go + '</button></div></div>'
+                    content: '<div class="setchmod bt-form">\
+                                <div class="update_title"><i class="layui-layer-ico layui-layer-ico1"></i><span>恭喜您，当前已经是最新版本</span></div>\
+                                <div class="update_version">当前版本：<a href="http://www.bt.cn/bbs/forum.php?mod=viewthread&tid=19376" target="_blank" class="btlink" title="查看当前版本日志">宝塔Linux'+ (rdata.msg.is_beta == 1 ? '测试版 ' + rdata.msg.beta.version : '正式版 ' + rdata.msg.version) + '</a>&nbsp;&nbsp;发布时间：' + (rdata.msg.is_beta == 1 ? rdata.msg.beta.uptime : rdata.msg.uptime) + '</div>\
+                                <div class="update_conter">\
+                                    <div class="update_tips">'+ (rdata.msg.is_beta != 1 ? '测试版' : '正式版') + '最新版本为&nbsp;' + (rdata.msg.is_beta != 1 ? rdata.msg.beta.version : rdata.msg.version) + '&nbsp;&nbsp;&nbsp;更新时间&nbsp;&nbsp;' + (rdata.msg.is_beta != 1 ? rdata.msg.beta.uptime : rdata.msg.uptime) + '&nbsp;&nbsp;&nbsp;\
+                                    '+ (rdata.msg.is_beta !== 1 ? '<span>如需更新测试版请点击<a href="javascript:;" onclick="index.beta_msg()" class="btlink btn_update_testPanel">查看详情</a></span>' : '<span>如需切换回正式版请点击<a href="javascript:;" onclick="index.to_not_beta()" class="btlink btn_update_testPanel">切换到正式版</a></span>') + '\
+                                    '+ (rdata.msg.is_beta !== 1 ? rdata.msg.btb : '') + '\
+                                    </div>\
+                                </div>\
+                                <div class="bt-form-submit-btn">\
+                                    <button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">'+ lan.public.cancel + '</button>\
+                                    <button type="button" class="btn btn-success btn-sm btn-title btn_update_panel" onclick="layer.closeAll()">'+ lan.public.know + '</button>\
+                                </div>\
+                            </div>\
+                            <style>\
+                                .setchmod{padding-bottom:50px;}\
+                                .update_title{overflow: hidden;position: relative;vertical-align: middle;margin-top: 10px;}\
+                                .update_title .layui-layer-ico{display: block;left: 60px !important;top: 1px !important;}\
+                                .update_title span{display: inline-block;color: #333;height: 30px;margin-left: 105px;margin-top: 3px;font-size: 20px;}\
+                                .update_conter{background: #f9f9f9;border-radius: 4px;padding: 20px;margin: 15px 37px;margin-top: 15px;}\
+                                .update_version{font-size: 12px;margin:15px 0 10px 85px}\
+                                .update_logs{margin-bottom:10px;border-bottom:1px solid #ececec;padding-bottom:10px;}\
+                                .update_tips{font-size: 13px;color: #666;font-weight: 600;}\
+                                .update_tips span{padding-top: 5px;display: block;font-weight: 500;}\
+                            </style>'
                 });
-                setTimeout(function () {
-                    $('.btn_update_panel').click(function () {
-                        loading.close();
-                        bt.system.to_update(function (rdata) {
-                            if (rdata.status) {
-                                bt.msg({ msg: lan.index.update_ok, icon: 1 })
-                                $("#btversion").html(rdata.version);
-                                $("#toUpdate").html('');
-                                bt.system.reload_panel();
-                                setTimeout(function () { window.location.reload(); }, 3000);
-                            }
-                            else {
-                                bt.msg({ msg: rdata.msg, icon: 5, time: 5000 });
-                            }
-                        })
-                    })
-                }, 100)
+                return;
+            }
+            if (rdata.status === true) {
+                var result = rdata
+                var is_beta = rdata.msg.is_beta
+                if (is_beta) {
+                    rdata = result.msg.beta
+                } else {
+                    rdata = result.msg
+                }
+                var loading = bt.open({
+                    type: 1,
+                    title: '[Linux' + (is_beta === 1 ? '测试版' : '正式版') + ']-版本更新',
+                    area: '520px',
+                    shadeClose: false,
+                    skin: 'layui-layer-dialog',
+                    closeBtn: 2,
+                    content: '<div class="setchmod bt-form" style="padding-bottom:50px;">\
+                                    <div class="update_title"><i class="layui-layer-ico layui-layer-ico0"></i><span>有新的面板版本更新，是否更新？</span></div>\
+                                    <div class="update_conter">\
+                                        <div class="update_version">最新版本：<a href="https://www.bt.cn/bbs/forum.php?mod=forumdisplay&fid=36" target="_blank" class="btlink" title="查看版本更新日志">宝塔Linux'+ (is_beta === 1 ? '测试版' : '正式版') + rdata.version + '</a>&nbsp;&nbsp;更新日期：' + (result.msg.is_beta == 1 ? result.msg.beta.uptime : result.msg.uptime) + '</div>\
+                                        <div class="update_logs">'+ rdata.updateMsg + '</div>\
+                                    </div>\
+                                    <div class="update_conter">\
+                                        <div class="update_tips">'+ (is_beta !== 1 ? '测试版' : '正式版') + '最新版本为&nbsp;' + (result.msg.is_beta != 1 ? result.msg.beta.version : result.msg.version) + '&nbsp;&nbsp;&nbsp;更新时间&nbsp;&nbsp;' + (is_beta != 1 ? result.msg.beta.uptime : result.msg.uptime) + '</div>\
+                                        '+ (is_beta !== 1 ? '<span>如需更新测试版请点击<a href="javascript:;" onclick="index.beta_msg()" class="btlink btn_update_testPanel">查看详情</a></span>' : '<span>如需切换回正式版请点击<a href="javascript:;" onclick="index.to_not_beta()" class="btlink btn_update_testPanel">切换到正式版</a></span>') + '\
+                                    </div>\
+                                    <div class="bt-form-submit-btn">\
+                                        <button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">'+ lan.public.cancel + '</button>\
+                                        <button type="button" class="btn btn-success btn-sm btn-title btn_update_panel" onclick="index.to_update()" >'+ lan.index.update_go + '</button>\
+                                    </div>\
+                                </div>\
+                                <style>\
+                                    .update_title{overflow: hidden;position: relative;vertical-align: middle;margin-top: 10px;}.update_title .layui-layer-ico{display: block;left: 60px !important;top: 1px !important;}.update_title span{display: inline-block;color: #333;height: 30px;margin-left: 105px;margin-top: 3px;font-size: 20px;}.update_conter{background: #f9f9f9;border-radius: 4px;padding: 20px;margin: 15px 37px;margin-top: 15px;}.update_version{font-size: 13.5px; margin-bottom: 10px;font-weight: 600;}.update_logs{margin-bottom:10px;}.update_tips{font-size: 13px;color:#666;}.update_conter span{display: block;font-size:13px;color:#666}\
+                                </style>'
+                });
             }
         })
+    },
+    to_update: function () {
+        layer.closeAll();
+        bt.system.to_update(function (rdata) {
+            if (rdata.status) {
+                bt.msg({ msg: lan.index.update_ok, icon: 1 })
+                $("#btversion").html(rdata.version);
+                $("#toUpdate").html('');
+                bt.system.reload_panel();
+                setTimeout(function () { window.location.reload(); }, 3000);
+            }
+            else {
+                bt.msg({ msg: rdata.msg, icon: 5, time: 5000 });
+            }
+        });
+    },
+    to_not_beta: function () {
+        bt.show_confirm('切换到正式版', '是否从测试版切换到正式版？', function () {
+
+            bt.send('apple_beta', 'ajax/to_not_beta', {}, function (rdata) {
+                if (rdata.status === false) {
+                    bt.msg(rdata);
+                    return;
+                }
+                bt.system.check_update(function (rdata) {
+                    index.to_update();
+                });
+
+            });
+        });
+    },
+    beta_msg: function () {
+        bt.send('get_beta_logs', 'ajax/get_beta_logs', {}, function (data) {
+            var my_list = '';
+            for (var i = 0; i < data.list.length; i++) {
+                my_list += '<div class="item_list">\
+                                            <span class="index_acive"></span>\
+                                            <div class="index_date">'+ bt.format_data(data.list[i].uptime).split(' ')[0] + '</div>\
+                                            <div class="index_title">'+ data.list[i].version + '</div>\
+                                            <div class="index_conter">'+ data.list[i].upmsg + '</div>\
+                                        </div>'
+            }
+            layer.open({
+                type: 1,
+                title: '申请Linux测试版',
+                area: '650px',
+                shadeClose: false,
+                skin: 'layui-layer-dialog',
+                closeBtn: 2,
+                content: '<div class="bt-form pd20" style="padding-bottom:50px;padding-top:0">\
+                            <div class="bt-form-conter">\
+                                <span style="font-weight: 600;">申请内测须知</span>\
+                                <div class="form-body">'+ data.beta_ps + '</div>\
+                            </div>\
+                            <div class="bt-form-conter">\
+                                <span style="font-size:16px;">Linux测试版更新日志</span>\
+                                <div class="item_box"  style="height:180px;overflow: auto;">'+ my_list + '</div>\
+                            </div>\
+                            <div class="bt-form-line"> <label for="notice" style="cursor: pointer;"><input id="notice" disabled="disabled" type="checkbox" style="vertical-align: text-top;margin-right:5px"></input><span style="font-weight:500">我已查看“<b>《申请内测须知》</b>”<i id="update_time"></i></span></label>\</div>\
+                            <div class="bt-form-submit-btn">\
+                                <button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">'+ lan.public.cancel + '</button>\
+                                <button type="button" class="btn btn-success btn-sm btn-title btn_update_panel_beta" disabled>'+ lan.index.update_go + '</button>\
+                            </div>\
+                            <style>\
+                                .bt-form-conter{padding: 20px 25px;line-height: 29px;background: #f7f7f7;border-radius: 5px;padding-bottom:30px;margin-bottom:20px;}\
+                                .bt-form-conter span{margin-bottom: 10px;display: block;font-size: 19px;text-align: center;color: #333;}\
+                                .form-body{color: #333;}\
+                                #notice span{cursor: pointer;}\
+                                #update_time{font-style:normal;color:red;}\
+                                .item_list{margin-left:95px;border-left:5px solid #e1e1e1;position:relative;padding:5px 0 0 2px}.index_title{border-bottom:1px solid #ececec;margin-bottom:5px;font-size:15px;color:#20a53a;padding-left:15px;margin-top:7px;margin-left:5px}.index_conter{line-height:25px;font-size:12px;min-height:40px;padding-left:20px;color:#888}.index_date{position:absolute;left:-90px;top:13px;font-size:13px;color:#333}.index_acive{width:15px;height:15px;background-color:#20a53a;display:block;border-radius:50%;position:absolute;left:-10px;top:21px}.index_acive::after{position:relative;display:block;content:"";height:5px;width:5px;display:block;border-radius:50%;background-color:#fff;top:5px;left:5px}\
+                            </style>\
+                        </div>'
+            });
+            var countdown = 5;
+            function settime(val) {
+                if (countdown == 0) {
+                    val.removeAttr("disabled");
+                    $('#update_time').text('');
+                    return false;
+                } else {
+                    $('#update_time').text('还剩' + countdown + '秒，可点击。');
+                    countdown--;
+                    setTimeout(function () {
+                        settime(val)
+                    }, 1000)
+                }
+            }
+            settime($('#notice'));
+            $('#notice').click(function () {
+                console.log($(this).prop('checked'))
+                if ($(this).prop('checked')) {
+                    $('.btn_update_panel_beta').removeAttr('disabled');
+                } else {
+                    $('.btn_update_panel_beta').attr('disabled', 'disabled');
+                }
+            });
+            $('.btn_update_panel_beta').click(function () {
+                bt.show_confirm('升级Linux内测版', '请仔细阅读内测升级须知，是否升级Linux内测版？', function () {
+
+                    bt.send('apple_beta', 'ajax/apple_beta', {}, function (rdata) {
+                        if (rdata.status === false) {
+                            bt.msg(rdata);
+                            return;
+                        }
+                        bt.system.check_update(function (rdata) {
+                            index.to_update();
+                        });
+                    });
+                });
+            })
+        });
     },
     re_panel: function () {
         layer.confirm(lan.index.rep_panel_msg, { title: lan.index.rep_panel_title, closeBtn: 2, icon: 3 }, function () {

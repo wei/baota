@@ -8,9 +8,9 @@
 #-------------------------------------------------------------------
 
 #------------------------------
-# Nginx管理模块
+# Apache管理模块
 #------------------------------
-import public,os,re,shutil,math
+import public,os,re,shutil,math,psutil,time
 os.chdir("/www/server/panel")
 
 class apache:
@@ -18,7 +18,17 @@ class apache:
     apachedefaultfile = "%s/apache/conf/extra/httpd-default.conf" % (setupPath)
     apachempmfile = "%s/apache/conf/extra/httpd-mpm.conf" % (setupPath)
 
+    def GetProcessCpuPercent(self,i,process_cpu):
+        try:
+            pp = psutil.Process(i)
+            if pp.name() not in process_cpu.keys():
+                process_cpu[pp.name()] = float(pp.cpu_percent(interval=0.1))
+            process_cpu[pp.name()] += float(pp.cpu_percent(interval=0.1))
+        except:
+            pass
+
     def GetApacheStatus(self):
+        process_cpu = {}
         apacheconf = "%s/apache/conf/httpd.conf" % (self.setupPath)
         confcontent = public.readFile(apacheconf)
         rep = "#Include conf/extra/httpd-info.conf"
@@ -27,8 +37,11 @@ class apache:
             public.writeFile(apacheconf,confcontent)
             public.serviceReload()
         result = public.HttpGet('http://127.0.0.1/server-status?auto')
-        workercpu = float(public.ExecShell("ps aux|grep httpd|grep 'start'|awk '{cpusum += $3};END {print cpusum}'")[0])
         workermen = int(public.ExecShell("ps aux|grep httpd|grep 'start'|awk '{memsum+=$6};END {print memsum}'")[0]) / 1024
+        for proc in psutil.process_iter():
+            if proc.name() == "httpd":
+                self.GetProcessCpuPercent(proc.pid,process_cpu)
+        time.sleep(0.5)
 
         data = {}
 
@@ -61,11 +74,11 @@ class apache:
         data["UpTime"] = "%s天%s小时%s分钟" % (str(int(days)),str(int(hours)),str(int(min)))
         data["TotalAccesses"] = re.search("Total Accesses:\s+(\d+)",result).group(1)
         data["TotalKBytes"] = re.search("Total kBytes:\s+(\d+)",result).group(1)
-        data["ReqPerSec"] = reqpersec
+        data["ReqPerSec"] = round(float(reqpersec), 2)
         data["BusyWorkers"] = re.search("BusyWorkers:\s+(\d+)",result).group(1)
         data["IdleWorkers"] = re.search("IdleWorkers:\s+(\d+)",result).group(1)
-        data["workercpu"] = workercpu
-        data["workermem"] = "%s%s" % (workermen,"MB")
+        data["workercpu"] = round(float(process_cpu["httpd"]),2)
+        data["workermem"] = "%s%s" % (int(workermen),"MB")
         return data
 
     def GetApacheValue(self):

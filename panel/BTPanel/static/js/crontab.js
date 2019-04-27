@@ -122,7 +122,7 @@ function edit_task_info(id){
 					weekDom += '<li><a role="menuitem"  href="javascript:;" value="'+ obj['weekArray'][i][0] +'">'+ obj['weekArray'][i][1] +'</a></li>';
 				}
 				if(obj.from.sType == 'site' || obj.from.sType == 'database' || obj.from.sType == 'path' || obj.from.sType == 'logs'){
-					$.post('/crontab?action=GetDataList',{type:obj.from.sType  == 'databases'?'database':'sites'},function(rdata){
+					$.post('/crontab?action=GetDataList',{type:obj.from.sType  == 'database'?'databases':'sites'},function(rdata){
 						obj.sNameArray = rdata.data;
 						obj.sNameArray.unshift({name:'ALL',ps:'所有'});
 						obj.backupsArray = rdata.orderOpt;
@@ -578,7 +578,7 @@ function planAdd(){
 	$("#set-Config input[name='sType']").val(sType);
 	$("#set-Config textarea[name='sBody']").val(decodeURIComponent(sBody));
 	
-	if(sType == 'site' || sType == 'database'){
+	if(sType == 'site' || sType == 'database' || sType == 'path'){
 		var backupTo = $(".planBackupTo").find("b").attr("val");
 		$("#backupTo").val(backupTo);
 	}

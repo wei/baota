@@ -505,6 +505,18 @@ function SetPanelApi(t_type) {
                 return;
             }
         }
+        
         layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 });
+        if (rdata.msg == '开启成功!') {
+            GetPanelApi();
+        }
     })
+}
+
+function SetIPv6() {
+    var loadT = layer.msg('正在配置,请稍候...', { icon: 16, time: 0, shade: [0.3, '#000'] });
+    $.post('/config?action=set_ipv6_status', {}, function (rdata) {
+        layer.close(loadT);
+        bt.msg(rdata);
+    });
 }

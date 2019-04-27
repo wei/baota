@@ -11,8 +11,8 @@
 # 计划任务
 #------------------------------
 import sys,os,json,psutil
-sys.path.append("class/")
-import db,public,time
+sys.path.insert(0,"/www/server/panel/class/")
+import db,public,time,panelTask
 global pre,timeoutCount,logPath,isTask,oldEdate,isCheck
 pre = 0
 timeoutCount = 0
@@ -39,7 +39,7 @@ def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):
     
         if timeout:
             end_time = datetime.datetime.now() + datetime.timedelta(seconds=timeout)
-        sub = subprocess.Popen(cmdstring+' &> '+logPath+' 2>&1', cwd=cwd, stdin=subprocess.PIPE,shell=shell,bufsize=4096)
+        sub = subprocess.Popen(cmdstring+' &> '+logPath, cwd=cwd, stdin=subprocess.PIPE,shell=shell,bufsize=4096)
         
         while sub.poll() is None:
             time.sleep(0.1)
@@ -302,7 +302,7 @@ def GetMemUsed():
 #检查502错误 
 def check502():
     try:
-        phpversions = ['53','54','55','56','70','71','72']
+        phpversions = ['53','54','55','56','70','71','72','73','74']
         for version in phpversions:
             php_path = '/www/server/php/' + version + '/sbin/php-fpm'
             if not os.path.exists(php_path): continue;
@@ -370,7 +370,7 @@ def checkPHPVersion(version):
 
 #检测PHPINFO配置
 def CheckPHPINFO():
-    php_versions = ['53','54','55','56','70','71','72'];
+    php_versions = ['53','54','55','56','70','71','72','73','74'];
     setupPath = '/www/server';
     path = setupPath +'/panel/vhost/nginx/phpinfo.conf';
     if not os.path.exists(path):
@@ -436,20 +436,42 @@ def panel_status():
     port = '8888'
     if os.path.exists(panel_path + '/data/port.pl'): port = public.readFile(panel_path + '/data/port.pl').strip()
     panel_url = pool + '127.0.0.1:' + port + '/service_status'
+    panel_pid = get_panel_pid()
+    n = 0
     while True:
         time.sleep(1)
-        result = public.httpGet(panel_url)
-        if result == 'True':
-            time.sleep(10)
+        if not panel_pid: panel_pid = get_panel_pid()
+        if not panel_pid: run_panel()
+        try:
+            if psutil.Process(panel_pid).cmdline()[-1] != 'runserver:app': 
+                run_panel()
+                time.sleep(3)
+                panel_pid = get_panel_pid()
+                continue
+        except:
+            run_panel()
+            time.sleep(3)
+            panel_pid = get_panel_pid()
             continue
-        os.system("/etc/init.d/bt reload &")
 
-        result = public.httpGet(panel_url)
-        if result == 'True':
-            public.WriteLog('守护程序','检查到面板服务异常,已自动恢复!')
-            time.sleep(10)
-            continue
-        #public.WriteLog('守护程序','检查到面板服务异常,自动恢复失败!')
+        n += 1
+
+        if n > 18000:
+            n = 0
+            result = public.httpGet(panel_url)
+            if result == 'True':
+                time.sleep(10)
+                continue
+            os.system("/etc/init.d/bt reload &")
+            result = public.httpGet(panel_url)
+            if result == 'True':
+                public.WriteLog('守护程序','检查到面板服务异常,已自动恢复!')
+                time.sleep(10)
+                continue
+
+
+def run_panel():
+    os.system("/etc/init.d/bt start &")
 
 #重启面板服务
 def restart_panel_service():
@@ -464,6 +486,23 @@ def restart_panel_service():
             os.system("/etc/init.d/bt reload &")
         time.sleep(1)
 
+#取面板pid
+def get_panel_pid():
+    for pid in psutil.pids():
+        try:
+            p = psutil.Process(pid)
+            if p.cmdline()[-1] == 'runserver:app': return pid
+        except: pass
+    return None
+
+#执行后台程序
+def panel_task_run():
+    while True:
+        panel_task_start()
+        time.time(3)
+
+def panel_task_start():
+    pass
 
 #自动结束异常进程
 def btkill():
@@ -502,7 +541,12 @@ if __name__ == "__main__":
     p.setDaemon(True)
     p.start()
 
-    public.check_home()
+    task_obj = panelTask.bt_task()
+    p = threading.Thread(target=task_obj.start_task)
+    p.setDaemon(True)
+    p.start()
+
+    #public.check_home()
 
     startTask()
 
