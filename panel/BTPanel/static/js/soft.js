@@ -10,6 +10,10 @@ var soft = {
         }
         if (type == 0) type = bt.get_cookie('softType');
         if (page == 0) page = bt.get_cookie('p' + type);
+        if (type == '11') {
+            soft.get_dep_list(1)
+            return;
+        }
 
         bt.soft.get_soft_list(page, type, search, function (rdata) {
 
@@ -41,7 +45,12 @@ var soft = {
                 var _type = $(this).attr('typeid');
                 bt.set_cookie('softType', _type);
                 $(this).addClass("on").siblings().removeClass("on");
-                soft.get_list(0, _type);
+                if (_type !== '11') {
+                    soft.get_list(0, _type);
+                } else {
+                    soft.get_dep_list(0);
+                }
+                
             })
             var data = rdata.list.data;
             $('#softPage').html(rdata.list.page);
@@ -264,6 +273,186 @@ var soft = {
             })
         })
     },
+    get_dep_list: function (p) {
+        var loadT = layer.msg('正在获取列表 <img src="/static/img/ing.gif">', { icon: 16, time: 0, shade: [0.3, '#000'] });
+        var pdata = {}
+        var search = $("#SearchValue").val();
+        if (search != '') {
+            pdata['search'] = search
+        }
+        var type = '';
+        var istype = getCookie('depType');
+        if (istype == 'undefined' || istype == 'null' || !istype) {
+            istype = '0';
+        }
+        pdata['type'] = istype;
+
+        var force = bt.get_cookie('force');
+        if (force === '1') {
+            pdata['force'] = force;
+        }
+        bt.set_cookie('force',0);
+        $.post('/deployment?action=GetList', pdata, function (rdata) {
+            layer.close(loadT)
+            var tBody = '';
+            rdata.type.unshift({ icon: 'icon', id: 0, ps: '全部', sort: 1, title: '全部' })
+            
+            for (var i = 0; i < rdata.type.length; i++) {
+                var c = '';
+                if ('11' == rdata.type[i].id) {
+                    c = 'class="on"';
+                }
+                tBody += '<span typeid="' + rdata.type[i].id + '" ' + c + '>' + rdata.type[i].title + '</span>';
+            }
+            $(".softtype").html(tBody);
+
+            $(".menu-sub span").click(function () {
+                var _type = $(this).attr('typeid');
+                bt.set_cookie('softType', _type);
+                $(this).addClass("on").siblings().removeClass("on");
+                if (_type !== '11') {
+                    soft.get_list(0, _type);
+                } else {
+                    soft.get_dep_list(1);
+                }
+
+            });
+            if ($(".onekey-type").attr("class") === undefined) {
+
+                tbody = '<div class="alert alert-info" style="margin-bottom: 10px;">\
+                        <strong class="mr5">宝塔一键部署已上线，诚邀全球优秀项目入驻(限项目官方) </strong>\
+                        <a class="btn btn-success btn-xs mr5" href="https://www.bt.cn/bbs/thread-33063-1-1.html" target="_blank">免费入驻</a>\
+                        <a class="btn btn-success btn-xs" onclick="soft.input_package()">导入项目</a>\
+                        </div><div class="onekey-menu-sub onekey-type" style="margin-bottom:15px">';
+                
+                rdata.dep_type.unshift({ tid: 0, title: '全部' })
+                rdata.dep_type.push({ tid: 100, title: '其它' })
+                for (var i = 0; i < rdata.dep_type.length; i++) {
+                    var c = '';
+                    if (istype == rdata.dep_type[i].tid) {
+                        c = 'class="on"';
+                    }
+                    tbody += '<span typeid="' + rdata.dep_type[i].tid + '" ' + c + '>' + rdata.dep_type[i].title + '</span>';
+                }
+                tbody += "</div>";
+                $("#updata_pro_info").html(tbody);
+                $(".onekey-menu-sub span").click(function () {
+                    setCookie('depType', $(this).attr('typeid'));
+                    $(this).addClass("on").siblings().removeClass("on");
+                    soft.get_dep_list(1);
+                });
+            }
+            
+            var zbody = '<thead>\
+			                <tr>\
+				                <th>名称</th>\
+				                <th>版本</th>\
+				                <th>简介</th>\
+				                <th>支持PHP版本</th>\
+                                <th>提供者</th>\
+				                <th style="text-align: right;" width="80">操作</th>\
+			                </tr>\
+		                </thead>';
+            for (var i = 0; i < rdata.list.length; i++) {
+                zbody += '<tr>'
+                    + '<td><img src="'+rdata.list[i].min_image+'">' + rdata.list[i].title + '</td>'
+                    + '<td>' + rdata.list[i].version + '</td>'
+                    + '<td>' + rdata.list[i].ps + '</td>'
+                    + '<td>' + rdata.list[i].php + '</td>'
+                    + '<td><a class="btlink" target="_blank" href="' + rdata.list[i].official + '">' + (rdata.list[i].author == '宝塔' ? rdata.list[i].title : rdata.list[i].author) + '</a></td>'
+                    + '<td class="text-right"><a href="javascript:onekeyCodeSite(\'' + rdata.list[i].name + '\',\'' + rdata.list[i].php + '\',\'' + rdata.list[i].title + '\',\'' + rdata.list[i].enable_functions + '\');" class="btlink">一键部署</a></td>'
+                    + '</tr>'
+            }
+            $("#softList").html(zbody);
+            $(".searchInput").val('');
+
+        });
+    },
+    input_package: function () {
+        var con = '<form class="bt-form pd20 pb70" id="input_package">\
+					<div class="line"><span class="tname">英文名</span>\
+						<div class="info-r c9"><input class="bt-input-text" type="text" value="" name="name"  placeholder="项目英文名" style="width:190px" />\
+							<span>格式: [0-9A-Za-z_-]+，不要带有空格和特殊字符</span>\
+						</div>\
+					</div>\
+					<div class="line"><span class="tname">中文名</span>\
+						<div class="info-r c9"><input class="bt-input-text" name="title" placeholder="项目中文名" style="width:190px" type="text">\
+                            <span>用于显示到列表的名称</span>\
+                        </div>\
+					</div>\
+                    <div class="line"><span class="tname">PHP版本</span>\
+						<input class="bt-input-text mr5 " name="php"  placeholder="如：53,54,55,56,70,71,72" style="width:190px" value="" type="text" />\
+						<span class="c9">多个请使用","(逗号)隔开，不要使用PHP5.2</span>\
+					</div>\
+					<div class="line"><span class="tname">解禁的函数</span>\
+						<input class="bt-input-text mr5" name="enable_functions" style="width:190px" placeholder="如：system,exec" type="text" />\
+						<span class="c9">多个请使用","(逗号)隔开，只解禁必要函数</span>\
+					</div>\
+                    <div class="line"><span class="tname">项目版本</span>\
+						<input class="bt-input-text mr5" name="version" style="width:190px" placeholder="如：5.2.1" type="text" />\
+						<span class="c9">当前导入的项目版本</span>\
+					</div>\
+                    <div class="line"><span class="tname">简介</span>\
+						<div class="info-r c15"><input  class="bt-input-text mr5" name="ps" value="" type="text" style="width:290px" /></div>\
+					</div>\
+					<div class="line"><span class="tname">上传项目包</span>\
+						<input class="bt-input-text mr5" name="dep_zip" type="file" style="width:290px" placeholder="如：system,exec" >\
+						<span class="c9">请上传zip格式的项目包,里面必需包含auto_insatll.json配置文件</span>\
+					</div>\
+					<div class="bt-form-submit-btn">\
+						<button type="button" class="btn btn-danger btn-sm onekeycodeclose" onclick="layer.closeAll()">取消</button>\
+						<button type="button" class="btn btn-success btn-sm" onclick="soft.input_package_to()">提交</button>\
+					</div>\
+				</from>';
+        layer.open({
+            type: 1,
+            title: "导入一键部署项目包",
+            area: '600px',
+            closeBtn: 2,
+            shadeClose: false,
+            content: con
+        });
+    },
+    input_package_to: function () {
+        var pdata = new FormData($("#input_package")[0]);
+        if (!pdata.get('name') || !pdata.get('title') || !pdata.get('version') || !pdata.get('php') || !pdata.get('ps')) {
+            layer.msg('以下为必填(英文名/中文名/项目版本/PHP版本/简介)', { icon: 2 });
+            return;
+        }
+        var fs = $("input[name='dep_zip']")[0].files;
+        if (fs.length < 1) {
+            layer.msg('请选择项目包文件', { icon: 2 });
+            return;
+        }
+        var f = fs[0]
+        if (f.type !== 'application/x-zip-compressed' && f.type !== 'application/zip') {
+            layer.msg('只支持zip格式的文件！');
+            return;
+        }
+        if (!pdata.get('dep_zip')) pdata.append('dep_zip', f);
+
+        var loadT = layer.msg('正在导入...', { icon: 16, time: 0, shade:0.3 });
+
+        $.ajax({
+            url: "/deployment?action=AddPackage",
+            type: "POST",
+            data: pdata,
+            processData: false,
+            contentType: false,
+            success: function (data) {
+                layer.close(loadT);
+                if (data.status) {
+                    layer.closeAll();
+                    setCookie('depType',100)
+                    soft.get_dep_list();
+                    setTimeout(function () { layer.msg('导入成功!'); },1000)
+                }
+            },
+            error: function (responseStr) {
+                layer.msg('上传失败2!', { icon: 2 });
+            }
+        });
+    },
     flush_cache: function () {
         bt.set_cookie('force', 1);
         soft.get_list();
@@ -343,7 +532,7 @@ var soft = {
             });
             var menu = $('.bt-soft-menu').data("data", rdata);
             setTimeout(function () {
-                if (name != 'phpmyadmin') menu.append($('<p class="bgw bt_server" onclick="soft.get_tab_contents(\'service\',this)">' + lan.soft.service + '</p>'))
+                menu.append($('<p class="bgw bt_server" onclick="soft.get_tab_contents(\'service\',this)">' + lan.soft.service + '</p>'))
                 if (rdata.version_coexist) {
                     var ver = name.split('-')[1].replace('.', '');
                     var opt_list = [
@@ -401,11 +590,15 @@ var soft = {
             case 'service':
 
                 var tabCon = $(".soft-man-con").empty();
+                
                 var status_list = [
                     { opt: data.status ? 'stop' : 'start', title: data.status ? lan.soft.stop : lan.soft.start },
                     { opt: 'restart', title: lan.soft.restart },
                     { opt: 'reload', title: lan.soft.reload }
                 ]
+                if (data.name == 'phpmyadmin') {
+                    status_list = [status_list[0]];
+                }
                 var btns = $('<div class="sfm-opt"></div>');
                 for (var i = 0; i < status_list.length; i++)  btns.append('<button class="btn btn-default btn-sm" onclick="bt.pub.set_server_status(\'' + data.name + '\',\'' + status_list[i].opt + '\')">' + status_list[i].title + '</button>');
                 tabCon.append('<p class="status">' + lan.soft.status + '：<span>' + (data.status ? lan.soft.on : lan.soft.off) + '</span><span style="color: ' + (data.status ? '#20a53a;' : 'red;') + ' margin-left: 3px;" class="glyphicon ' + (data.status ? 'glyphicon glyphicon-play' : 'glyphicon-pause') + '"></span></p');
@@ -442,12 +635,21 @@ var soft = {
                 break;
             case 'change_version':
                 var _list = [];
-                for (var i = 0; i < data.versions.length; i++)  _list.push({ value: data.name + ' ' + data.versions[i].m_version, title: data.name + ' ' + data.versions[i].m_version });
+                var opt_version = '';
+                for (var i = 0; i < data.versions.length; i++) {
+                    if (data.versions[i].setup) opt_version = data.name + ' ' + data.versions[i].m_version;
+                    _list.push({ value: data.name + ' ' + data.versions[i].m_version, title: data.name + ' ' + data.versions[i].m_version });
+                }
+
                 var _form_data = {
                     title: lan.soft.select_version, items: [
-                        { name: 'phpVersion', width: '160px', type: 'select', items: _list },
+                        { name: 'phpVersion', width: '160px', type: 'select', value: opt_version, items: _list },
                         {
                             name: 'btn_change_version', type: 'button', text: lan.soft.version_to, callback: function (ldata) {
+                                if (ldata.phpVersion == opt_version) {
+                                    bt.msg({ msg: '当前已经是[' + opt_version + ']', icon: 2 })
+                                    return;
+                                }
                                 if (data.name == 'mysql') {
                                     bt.database.get_list(1, '', function (ddata) {
                                         if (ddata.data.length > 0) {
@@ -1669,17 +1871,7 @@ var soft = {
 
 
 };
-soft.get_list();
 
-$(document).ready(function () {
-    soft.get_list();
-    setTimeout(function () {
-        soft_td_width_auto();
-    }, 500);
-});
-$(window).resize(function () {
-    soft_td_width_auto();
-});
 function soft_td_width_auto() {
     var thead_width = '', winWidth = $(window).width();
     if (winWidth <= 1370 && winWidth > 1280) {
@@ -1702,4 +1894,297 @@ function set_disable_functions(version, data) {
         }
         bt.msg(rdata);
     })
+}
+
+var openId = add = null;
+function AddDeployment(maction) {
+    if (maction == 1) {
+        var pdata = 'title=' + $("input[name='title']").val()
+            + '&dname=' + $("input[name='name']").val()
+            + '&ps=' + $("input[name='ps']").val()
+            + '&version=' + $("input[name='version']").val()
+            + '&rewrite=' + ($("input[name='rewrite']").attr('checked') ? 1 : 0)
+            + '&shell=' + ($("input[name='shell']").attr('checked') ? 1 : 0)
+            + '&php=' + $("input[name='php']").val()
+            + '&md5=' + $("input[name='md5']").val()
+            + '&download=' + $("input[name='download']").val()
+        var loadT = layer.msg('正在提交 <img src="/static/img/ing.gif">', { icon: 16, time: 0, shade: [0.3, '#000'] });
+        $.post('/deployment?action=AddPackage', pdata, function (rdata) {
+            layer.close(loadT);
+            layer.msg(rdata.msg, { icon: rdata.status ? 1 : 5 });
+            if (rdata.status) {
+                GetSrcList();
+                layer.close(openId);
+            }
+        });
+
+        return;
+    }
+    openId = layer.open({
+        type: 1,
+        skin: 'demo-class',
+        area: '480px',
+        title: '添加源码包',
+        closeBtn: 2,
+        shift: 5,
+        shadeClose: false,
+        content: '标题：<input type="text" name="title"><br>\
+					标识：<input type="text" name="name"><br>\
+					描述：<input type="text" name="ps"><br>\
+					版本：<input type="text" name="version"><br>\
+					是否写伪静态：<input type="checkbox" name="rewrite"><br>\
+					是否执行安装脚本：<input type="checkbox" name="shell"><br>\
+					支持的PHP版本：<input type="text" name="php"><br>\
+					md5：<input type="text" name="md5">\
+					下载地址：<input type="text" name="download"><br>\
+					<button class="btn btn-default btn-sm" onclick="AddDeployment(1);">提交</button>'
+    });
+}
+
+
+$(".searchInput").keyup(function (e) {
+    if (e.keyCode == 13) {
+        GetSrcList();
+    }
+});
+
+function AddSite(codename,title) {
+    var array;
+    var str = "";
+    var domainlist = '';
+    var domain = array = $("#mainDomain").val().split("\n");
+    var Webport = [];
+    var checkDomain = domain[0].split('.');
+    if (checkDomain.length < 1) {
+        layer.msg('域名格式不正确，请重新输入!', { icon: 2 });
+        return;
+    }
+    for (var i = 1; i < domain.length; i++) {
+        domainlist += '"' + domain[i] + '",';
+    }
+    Webport = domain[0].split(":")[1];//主域名端口
+    if (Webport == undefined) {
+        Webport = "80";
+    }
+    domainlist = domainlist.substring(0, domainlist.length - 1);//子域名json
+    mainDomain = domain[0].split(':')[0];
+    domain = '{"domain":"' + domain[0] + '","domainlist":[' + domainlist + '],"count":' + domain.length + '}';//拼接json
+    var php_version = $("select[name='version']").val();
+    var loadT = layer.msg('正在创建站点 <img src="/static/img/ing.gif">', { icon: 16, time: 0, shade: [0.3, "#000"] })
+    var data = $("#addweb").serialize() + "&port=" + Webport + "&webname=" + domain + '&ftp=false&sql=true&address=localhost&codeing=utf8&version=' + php_version;
+    $.post('/site?action=AddSite', data, function (ret) {
+        layer.close(loadT)
+        if (!ret.siteStatus) {
+            layer.msg(ret.msg, { icon: 5 });
+            return;
+        }
+        layer.close(add)
+        var sqlData = '';
+        if (ret.databaseStatus) {
+            sqlData = "<p class='p1'>数据库账号资料</p>\
+					 		<p><span>数据库名：</span><strong>" + ret.databaseUser + "</strong></p>\
+					 		<p><span>用户：</span><strong>" + ret.databaseUser + "</strong></p>\
+					 		<p><span>密码：</span><strong>" + ret.databasePass + "</strong></p>\
+					 		"
+        }
+        var pdata = 'dname=' + codename + '&site_name=' + mainDomain + '&php_version=' + php_version;
+        var loadT = layer.msg('<div class="depSpeed">正在提交 <img src="/static/img/ing.gif"></div>', { icon: 16, time: 0, shade: [0.3, "#000"] });
+
+        setTimeout(function () {
+            GetSpeed();
+        }, 2000);
+
+        $.post('/deployment?action=SetupPackage', pdata, function (rdata) {
+            layer.close(loadT)
+            if (!rdata.status) {
+                layer.msg(rdata.msg, { icon: 5 ,time:10000});
+                return;
+            }
+
+            if (rdata.msg.admin_username != '') {
+                sqlData = "<p class='p1'>已成功部署，无需安装，请登录修改默认账号密码</p>\
+					 		<p><span>用户：</span><strong>" + rdata.msg.admin_username + "</strong></p>\
+					 		<p><span>密码：</span><strong>" + rdata.msg.admin_password + "</strong></p>\
+					 		"
+            }
+            sqlData += "<p><span>访问站点：</span><a class='btlink' href='http://" + mainDomain + rdata.msg.success_url + "' target='_blank'>http://" + mainDomain + rdata.msg.success_url + "</a></p>";
+
+            layer.open({
+                type: 1,
+                area: '600px',
+                title: '已成功部署【' + title+'】',
+                closeBtn: 2,
+                shadeClose: false,
+                content: "<div class='success-msg'>\
+						<div class='pic'><img src='/static/img/success-pic.png'></div>\
+						<div class='suc-con'>\
+							" + sqlData + "\
+						</div>\
+					 </div>",
+            });
+            if ($(".success-msg").height() < 150) {
+                $(".success-msg").find("img").css({
+                    "width": "150px",
+                    "margin-top": "30px"
+                });
+            }
+        });
+
+
+    });
+
+}
+
+function GetSpeed() {
+    if (!$('.depSpeed')) return;
+    $.get('/deployment?action=GetSpeed', function (speed) {
+        if (speed.status === false) return;
+        if (speed.name == '下载文件') {
+            speed = '<p>正在' + speed.name + ' <img src="/static/img/ing.gif"></p>\
+				<div class="bt-progress"><div class="bt-progress-bar" style="width:'+ speed.pre + '%"><span class="bt-progress-text">' + speed.pre + '%</span></div></div>\
+				<p class="f12 c9"><span class="pull-left">'+ ToSize(speed.used) + '/' + ToSize(speed.total) + '</span><span class="pull-right">' + ToSize(speed.speed) + '/s</span></p>';
+            $('.depSpeed').prev().hide();
+            $('.depSpeed').css({ "margin-left": "-37px", "width": "380px" });
+            $('.depSpeed').parents(".layui-layer").css({ "margin-left": "-100px" });
+        } else {
+            speed = '<p>' + speed.name + '</p>';
+            $('.depSpeed').prev().show();
+            $('.depSpeed').removeAttr("style");
+            $('.depSpeed').parents(".layui-layer").css({ "margin-left": "0" });
+        }
+
+        $('.depSpeed').html(speed);
+        setTimeout(function () {
+            GetSpeed();
+        }, 1000);
+    });
+}
+
+function onekeyCodeSite(codename, versions,title,enable_functions) {
+    $.post('/site?action=GetPHPVersion', function (rdata) {
+        var php_version = "";
+        var n = 0;
+        for (var i = rdata.length - 1; i >= 0; i--) {
+            if (versions.indexOf(rdata[i].version) != -1) {
+                php_version += "<option value='" + rdata[i].version + "'>" + rdata[i].name + "</option>";
+                n++;
+            }
+        }
+
+        if (n == 0) {
+            layer.msg('缺少被支持的PHP版本，请安装!', { icon: 5 });
+            return;
+        }
+
+        
+
+        var con = '<form class="bt-form pd20 pb70" id="addweb">\
+					<div class="line"><span class="tname">域名</span>\
+						<div class="info-r c4"><textarea id="mainDomain" class="bt-input-text" name="webname_1" style="width:398px;height:100px;line-height:22px"></textarea>\
+							<div class="placeholder c9" style="top:10px;left:10px">每行填写一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88</div>\
+						</div>\
+					</div>\
+					<div class="line"><span class="tname">备注</span>\
+						<div class="info-r c4"><input id="Wbeizhu" class="bt-input-text" name="ps" placeholder="网站备注" style="width:398px" type="text"> </div>\
+					</div>\
+					<div class="line"><span class="tname">根目录</span>\
+						<div class="info-r c4"><input id="inputPath" class="bt-input-text mr5" name="path" value="/www/wwwroot/" placeholder="网站根目录" style="width:398px" type="text"><span class="glyphicon glyphicon-folder-open cursor" onclick="ChangePath(\'inputPath\')"></span> </div>\
+					</div>\
+					<div class="line"><span class="tname">数据库</span>\
+						<div class="info-r c4">\
+							<input id="datauser" class="bt-input-text" name="datauser" placeholder="用户名/数据库名" style="width:190px;margin-right:13px" type="text">\
+							<input id="datapassword" class="bt-input-text" name="datapassword" placeholder="密码" style="width:190px" type="text">\
+						</div>\
+					</div>\
+					<div class="line"><span class="tname">源码</span>\
+						<input class="bt-input-text mr5 disable" name="code" style="width:190px" value="'+ title + '" disabled>\
+						<span class="c9">准备为你部署的源码程序</span>\
+					</div>\
+					<div class="line"><span class="tname">PHP版本</span>\
+						<select class="bt-input-text mr5" name="version" id="c_k3" style="width:100px">\
+							'+ php_version + '\
+						</select>\
+						<span class="c9">请选择源码程序支持的php版本</span>\
+					</div>\
+					<div class="bt-form-submit-btn">\
+						<button type="button" class="btn btn-danger btn-sm onekeycodeclose">取消</button>\
+						<button type="button" class="btn btn-success btn-sm" onclick="AddSite(\''+ codename + '\',\'' + title + '\')">提交</button>\
+					</div>\
+				</from>';
+        add = layer.open({
+            type: 1,
+            title: "宝塔一键部署【" + title+'】',
+            area: '560px',
+            closeBtn: 2,
+            shadeClose: false,
+            content: con
+        });
+
+        if (enable_functions.length > 2) {
+            layer.msg("<span style='color:red'>注意：部署此项目，以下函数将被解禁:<br> "+ enable_functions +"</span>", {icon:7,time:10000});
+        }
+        var placeholder = "<div class='placeholder c9' style='top:10px;left:10px'>每行填写一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88</div>";
+        $(".onekeycodeclose").click(function () {
+            layer.close(add);
+        });
+        $('#mainDomain').after(placeholder);
+        $(".placeholder").click(function () {
+            $(this).hide();
+            $('#mainDomain').focus();
+        })
+        $('#mainDomain').focus(function () {
+            $(".placeholder").hide();
+        });
+
+        $('#mainDomain').blur(function () {
+            if ($(this).val().length == 0) {
+                $(".placeholder").show();
+            }
+        });
+        //FTP账号数据绑定域名
+        $('#mainDomain').on('input', function () {
+            var defaultPath = '/www/wwwroot';
+            var array;
+            var res, ress;
+            var str = $(this).val();
+            var len = str.replace(/[^\x00-\xff]/g, "**").length;
+            array = str.split("\n");
+            ress = array[0].split(":")[0];
+            res = ress.replace(new RegExp(/([-.])/g), '_');
+            if (res.length > 15) res = res.substr(0, 15);
+            if ($("#inputPath").val().substr(0, defaultPath.length) == defaultPath) $("#inputPath").val(defaultPath + '/' + ress);
+            if (!isNaN(res.substr(0, 1))) res = "sql" + res;
+            if (res.length > 15) res = res.substr(0, 15);
+            $("#Wbeizhu").val(ress);
+            $("#datauser").val(res);
+        })
+        $('#Wbeizhu').on('input', function () {
+            var str = $(this).val();
+            var len = str.replace(/[^\x00-\xff]/g, "**").length;
+            if (len > 20) {
+                str = str.substring(0, 20);
+                $(this).val(str);
+                layer.msg('不要超出20个字符', {
+                    icon: 0
+                });
+            }
+        })
+        //获取当前时间时间戳，截取后6位
+        var timestamp = new Date().getTime().toString();
+        var dtpw = timestamp.substring(7);
+        $("#datauser").val("sql" + dtpw);
+        $("#datapassword").val(_getRandomString(10));
+    });
+}
+
+//生成n位随机密码
+function _getRandomString(len) {
+    len = len || 32;
+    var $chars = 'ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678'; // 默认去掉了容易混淆的字符oOLl,9gq,Vv,Uu,I1  
+    var maxPos = $chars.length;
+    var pwd = '';
+    for (i = 0; i < len; i++) {
+        pwd += $chars.charAt(Math.floor(Math.random() * maxPos));
+    }
+    return pwd;
 }

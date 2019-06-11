@@ -22,13 +22,20 @@ def M(table):
     sql = db.Sql()
     return sql.table(table);
 
-def HttpGet(url,timeout = 10):
+def HttpGet(url,timeout = 6,headers = {}):
     """
     发送GET请求
     @url 被请求的URL地址(必需)
     @timeout 超时时间默认60秒
     return string
     """
+    home = 'www.bt.cn'
+    host_home = 'data/home_host.pl'
+    old_url = url
+    if url.find(home) != -1:
+        if os.path.exists(host_home): 
+            headers['host'] = home
+            url = url.replace(home,readFile(host_home))
     if sys.version_info[0] == 2:
         try:
             import urllib2,ssl
@@ -38,9 +45,12 @@ def HttpGet(url,timeout = 10):
             try:
                 ssl._create_default_https_context = ssl._create_unverified_context
             except:pass;
-            response = urllib2.urlopen(url,timeout=timeout)
+            req = urllib2.Request(url, headers = headers)
+            response = urllib2.urlopen(req,timeout = timeout,)
             return response.read()
         except Exception as ex:
+            if old_url.find(home) != -1: return http_get_home(old_url,timeout,str(ex))
+            if headers: return False
             return str(ex);
     else:
         try:
@@ -48,19 +58,45 @@ def HttpGet(url,timeout = 10):
             try:
                 ssl._create_default_https_context = ssl._create_unverified_context
             except:pass;
-            response = urllib.request.urlopen(url,timeout=timeout)
+            req = urllib.request.Request(url,headers = headers)
+            response = urllib.request.urlopen(req,timeout = timeout)
             result = response.read()
             if type(result) == bytes: result = result.decode('utf-8')
             return result
         except Exception as ex:
+            if old_url.find(home) != -1: return http_get_home(old_url,timeout,str(ex))
+            if headers: return False
             return str(ex)
 
+def http_get_home(url,timeout,ex):
+    try:
+        home = 'www.bt.cn'
+        if url.find(home) == -1: return ex
+        hosts_file = "config/hosts.json"
+        if not os.path.exists(hosts_file): return ex
+        hosts = json.loads(readFile(hosts_file))
+        headers = {"host":home}
+        for host in hosts:
+            new_url = url.replace(home,host)
+            res = HttpGet(new_url,timeout,headers)
+            if res: 
+                writeFile("data/home_host.pl",host)
+                set_home_host(host)
+                return res
+        return ex
+    except: return ex
 
-def httpGet(url,timeout=10):
+
+def set_home_host(host):
+    ExecShell('sed -i "/www.bt.cn/d" /etc/hosts')
+    ExecShell("echo '' >> /etc/hosts")
+    ExecShell("echo '%s www.bt.cn' >> /etc/hosts" % host)
+    ExecShell('sed -i "/^\s*$/d" /etc/hosts')
+
+def httpGet(url,timeout=6):
     return HttpGet(url,timeout)
 
-
-def HttpPost(url,data,timeout = 10):
+def HttpPost(url,data,timeout = 6,headers = {}):
     """
     发送POST请求
     @url 被请求的URL地址(必需)
@@ -68,15 +104,27 @@ def HttpPost(url,data,timeout = 10):
     @timeout 超时时间默认60秒
     return string
     """
+    home = 'www.bt.cn'
+    host_home = 'data/home_host.pl'
+    old_url = url
+    if url.find(home) != -1:
+        if os.path.exists(host_home): 
+            headers['host'] = home
+            url = url.replace(home,readFile(host_home))
+
     if sys.version_info[0] == 2:
         try:
             import urllib,urllib2,ssl
-            ssl._create_default_https_context = ssl._create_unverified_context
-            data = urllib.urlencode(data)
-            req = urllib2.Request(url, data)
-            response = urllib2.urlopen(req,timeout = timeout)
+            try:
+                ssl._create_default_https_context = ssl._create_unverified_context
+            except:pass
+            data2 = urllib.urlencode(data)
+            req = urllib2.Request(url, data2,headers = headers)
+            response = urllib2.urlopen(req,timeout=timeout)
             return response.read()
         except Exception as ex:
+            if old_url.find(home) != -1: return http_post_home(old_url,data,timeout,str(ex))
+            if headers: return False
             return str(ex);
     else:
         try:
@@ -84,45 +132,40 @@ def HttpPost(url,data,timeout = 10):
             try:
                 ssl._create_default_https_context = ssl._create_unverified_context
             except:pass;
-            data = urllib.parse.urlencode(data).encode('utf-8')
-            req = urllib.request.Request(url, data)
+            data2 = urllib.parse.urlencode(data).encode('utf-8')
+            req = urllib.request.Request(url, data2,headers = headers)
             response = urllib.request.urlopen(req,timeout = timeout)
             result = response.read()
             if type(result) == bytes: result = result.decode('utf-8')
             return result
         except Exception as ex:
+            if old_url.find(home) != -1: return http_post_home(old_url,data,timeout,str(ex))
+            if headers: return False
             return str(ex);
 
-def httpPost(url,data,timeout=10):
+def http_post_home(url,data,timeout,ex):
+    try:
+        home = 'www.bt.cn'
+        if url.find(home) == -1: return ex
+        hosts_file = "config/hosts.json"
+        if not os.path.exists(hosts_file): return ex
+        hosts = json.loads(readFile(hosts_file))
+        headers = {"host":home}
+        for host in hosts:
+            new_url = url.replace(home,host)
+            res = HttpPost(new_url,data,timeout,headers)
+            if res: 
+                writeFile("data/home_host.pl",host)
+                set_home_host(host)
+                return res
+        return ex
+    except: return ex
+
+def httpPost(url,data,timeout=6):
     return HttpPost(url,data,timeout)
 
 def check_home():
-    try:
-        if HttpGet('http://www.bt.cn/test.txt') ==  'True': return True
-        hosts = '/etc/hosts'
-        hosts_body  = ReadFile(hosts)
-        if hosts_body.find('www.bt.cn') != -1: return True
-        
-        url = 'http://125.88.182.170/test.txt'
-        if sys.version_info[0] == 2:
-            import urllib2
-            req = urllib2.Request(url)
-            req.add_header('host','www.bt.cn')
-            result = urllib2.urlopen(req).read()
-        else:
-            import urllib.request
-            req = urllib.request.Request(url)
-            req.add_header('host','www.bt.cn')
-            result = urllib.request.urlopen(req).read()
-            result = result.decode('utf-8')
-        if result != 'True': return True
-        ExecShell("echo '' >> /etc/hosts")
-        ExecShell("echo '125.88.182.170 www.bt.cn' >> /etc/hosts")
-        return True
-    except:
-        return True
-
-
+    return True
 
 def Md5(strings):
     """
@@ -204,6 +247,20 @@ def GetFileMode(filename):
     stat = os.stat(filename)
     accept = str(oct(stat.st_mode)[-3:]);
     return accept
+
+def get_mode_and_user(path):
+    '''取文件或目录权限信息'''
+    import pwd
+    data = {}
+    if not os.path.exists(path): return None
+    stat = os.stat(path)
+    data['mode'] = str(oct(stat.st_mode)[-3:])
+    try:
+        data['user'] = pwd.getpwuid(stat.st_uid).pw_name
+    except:
+        data['user'] = str(stat.st_uid)
+    return data
+
 
 def GetJson(data):
     """
@@ -395,8 +452,10 @@ def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):
             if end_time <= datetime.datetime.now():
                 raise Exception("Timeout：%s"%cmdstring)
     a,e = sub.communicate()
-    if type(a) == bytes: a = a.decode('utf-8')
-    if type(e) == bytes: e = e.decode('utf-8')
+    try:
+        if type(a) == bytes: a = a.decode('utf-8')
+        if type(e) == bytes: e = e.decode('utf-8')
+    except:pass
     return a,e
 
 def GetLocalIp():
@@ -449,7 +508,9 @@ def check_ip(ip):
 
 def GetHost(port = False):
     from flask import request
-    h = request.headers.get('host').split(':')
+    host_tmp = request.headers.get('host')
+    if host_tmp.find(':') == -1: host_tmp += ':80';
+    h = host_tmp.split(':')
     if port: return h[1]
     return h[0]
 
@@ -476,6 +537,7 @@ def get_url(timeout = 0.5):
             if not node['ping']: continue;
             if not mnode: mnode = node;
             if node['ping'] < mnode['ping']: mnode = node;
+            if mnode['ping'] < 50: break
         return mnode['protocol'] + mnode['address'] + ':' + mnode['port'];
     except:
         return 'http://download.bt.cn';
@@ -646,6 +708,7 @@ def inArray(arrays,searchStr):
     
     return False
 
+
 #检查Web服务器配置文件是否有错误
 def checkWebConfig():
     f1 = '/www/server/panel/vhost/'
@@ -671,10 +734,10 @@ def checkWebConfig():
             if os.path.exists(f3): os.remove(f3)
 
     if get_webserver() == 'nginx':
-        result = ExecShell("ulimit -n 10240 && /www/server/nginx/sbin/nginx -t -c /www/server/nginx/conf/nginx.conf");
+        result = ExecShell("ulimit -n 8192 && /www/server/nginx/sbin/nginx -t -c /www/server/nginx/conf/nginx.conf");
         searchStr = 'successful'
     else:
-        result = ExecShell("ulimit -n 10240 && /www/server/apache/bin/apachectl -t");
+        result = ExecShell("ulimit -n 8192 && /www/server/apache/bin/apachectl -t");
         searchStr = 'Syntax OK'
     
     if result[1].find(searchStr) == -1:
@@ -729,11 +792,13 @@ def hasPwd(password):
     import crypt;
     return crypt.crypt(password,password);
 
-def get_timeout(url):
-    start = time.time();
-    result = httpGet(url);
-    if result != 'True': return False;
-    return int((time.time() - start) * 1000);
+def get_timeout(url,timeout=3):
+    try:
+        start = time.time();
+        result = httpGet(url,timeout);
+        if result != 'True': return False;
+        return int((time.time() - start) * 1000);
+    except: return False
 
 def getDate(format='%Y-%m-%d %X'):
     #取格式时间

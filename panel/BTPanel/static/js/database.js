@@ -330,6 +330,11 @@ var database = {
     },
     upload_files: function (name) {
         var path = bt.get_cookie('backup_path') + "/database/";
+        bt_upload_file.open(path, '.sql,.gz,.tar.gz,.zip', lan.database.input_up_type, function () {
+            database.input_database(name);
+        });
+
+        /*
         var index = layer.open({
             type: 1,
             closeBtn: 2,
@@ -360,6 +365,7 @@ var database = {
             database.input_database(name);
         });
         UploadStart(true);
+        */
     },
     input_database: function (name) {
         var path = bt.get_cookie('backup_path') + "/database";

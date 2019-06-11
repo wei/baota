@@ -7,7 +7,7 @@
 # | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 
-import public,re,sys,os,nginx,apache
+import public,re,sys,os,nginx,apache,json,time
 from BTPanel import session,admin_path_checks
 from flask import request
 class config:
@@ -770,7 +770,18 @@ class config:
 
         public.WriteFile(save_path,json.dumps(data))
         return public.returnMsg(True,token)
-            
+
+
+    def get_tmp_token(self,get):
+        save_path = '/www/server/panel/config/api.json'
+        if not 'request_token' in get: return public.returnMsg(False,'只能通过API接口获取临时密钥')
+        data = json.loads(public.ReadFile(save_path))
+        data['tmp_token'] = public.GetRandomString(64)
+        data['tmp_time'] = time.time()
+        public.WriteFile(save_path,json.dumps(data))
+        return public.returnMsg(True,data['tmp_token'])
+
+
     def GetNginxValue(self,get):
         n = nginx.nginx()
         return n.GetNginxValue()

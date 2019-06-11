@@ -20,6 +20,12 @@ from werkzeug.contrib.cache import SimpleCache
 from werkzeug.wrappers import Response
 from flask_socketio import SocketIO,emit,send
 
+#from flask_basicauth import BasicAuth
+#app.config['BASIC_AUTH_USERNAME'] = 'admin'
+#app.config['BASIC_AUTH_PASSWORD'] = '11111'
+#app.config['BASIC_AUTH_FORCE'] = True
+#basic_auth = BasicAuth(app)
+
 
 cache = SimpleCache()
 socketio = SocketIO()
@@ -28,6 +34,7 @@ socketio.init_app(app)
 import common,db,jobs,uuid
 jobs.control_init()
 app.secret_key = uuid.UUID(int=uuid.getnode()).hex[-12:]
+
 
 try:
     from flask_sqlalchemy import SQLAlchemy
@@ -70,7 +77,6 @@ if os.path.exists(admin_path_file): admin_path = public.readFile(admin_path_file
 admin_path_checks = ['/','/close','/task','/login','/config','/site','/sites','ftp','/public','/database','/data','/download_file','/control','/crontab','/firewall','/files','config','/soft','/ajax','/system','/panel_data','/code','/ssl','/plugin','/wxapp','/hook','/safe','/yield','/downloadApi','/pluginApi','/auth','/download','/cloud','/webssh','/connect_event','/panel']
 if admin_path in admin_path_checks: admin_path = '/bt'
 
-
 @app.route('/service_status',methods = method_get)
 def service_status():
     return 'True'
@@ -106,6 +112,11 @@ def login():
     is_auth_path = False
     if admin_path != '/bt' and os.path.exists(admin_path_file) and  not 'admin_auth' in session: is_auth_path = True
     get = get_input()
+    import userlogin
+    if hasattr(get,'tmp_token'):
+        result = userlogin.userlogin().request_tmp(get)
+        return is_login(result)
+
     if hasattr(get,'dologin'):
         login_path = '/login'
         if os.path.exists(admin_path_file): login_path = route_path
@@ -118,23 +129,17 @@ def login():
             return redirect(login_path)
     
     if is_auth_path:
-        if not admin_path.replace('/','') in request.path.split('/') and (route_path != request.path or route_path + '/' != request.path): 
+        if route_path != request.path and route_path + '/' != request.path: 
             data = {}
             data['lan'] = public.getLan('close');
             return render_template('autherr.html',data=data)
     session['admin_auth'] = True
     comReturn = common.panelSetup().init()
     if comReturn: return comReturn
-    import userlogin
+    
     if request.method == method_post[0]:
         result = userlogin.userlogin().request_post(get)
-        if 'login' in session:
-            if session['login'] == True:
-                result = make_response(result)
-                request_token = public.md5(app.secret_key + str(time.time()))
-                session['request_token'] = request_token
-                result.set_cookie('request_token',request_token,httponly=True,max_age=86400*30)
-        return result
+        return is_login(result)
 
     if request.method == method_get[0]:
         result = userlogin.userlogin().request_get(get)
@@ -145,6 +150,15 @@ def login():
             'login.html',
             data=data
             )
+
+def is_login(result):
+    if 'login' in session:
+        if session['login'] == True:
+            result = make_response(result)
+            request_token = public.md5(app.secret_key + str(time.time()))
+            session['request_token'] = request_token
+            result.set_cookie('request_token',request_token,httponly=True,max_age=86400*30)
+    return result
 
 @app.route('/site',methods=method_all)
 def site(pdata = None):
@@ -288,7 +302,7 @@ def files(pdata = None):
     import files
     filesObject = files.files()
     defs = ('CheckExistsFiles','GetExecLog','GetSearch','ExecShell','GetExecShellMsg','UploadFile','GetDir','CreateFile','CreateDir','DeleteDir','DeleteFile',
-            'CopyFile','CopyDir','MvFile','GetFileBody','SaveFileBody','Zip','UnZip','SearchFiles',
+            'CopyFile','CopyDir','MvFile','GetFileBody','SaveFileBody','Zip','UnZip','SearchFiles','upload',
             'GetFileAccess','SetFileAccess','GetDirSize','SetBatchData','BatchPaste','install_rar','get_path_size',
             'DownloadFile','GetTaskSpeed','CloseLogs','InstallSoft','UninstallSoft','SaveTmpFile','GetTmpFile',
             'RemoveTask','ActionTask','Re_Recycle_bin','Get_Recycle_bin','Del_Recycle_bin','Close_Recycle_bin','Recycle_bin')
@@ -342,7 +356,7 @@ def config(pdata = None):
         return render_template( 'config.html',data=data)
     import config
     configObject = config.config()
-    defs = ('get_cli_php_version','set_cli_php_version','DelOldSession', 'GetSessionCount', 'SetSessionConf', 'GetSessionConf','get_ipv6_listen','set_ipv6_status','GetApacheValue','SetApacheValue','GetNginxValue','SetNginxValue','get_token','set_token','set_admin_path','is_pro','get_php_config','get_config','SavePanelSSL','GetPanelSSL','GetPHPConf','SetPHPConf','GetPanelList','AddPanelInfo','SetPanelInfo','DelPanelInfo','ClickPanelInfo','SetPanelSSL','SetTemplates','Set502','setPassword','setUsername','setPanel','setPathInfo','setPHPMaxSize','getFpmConfig','setFpmConfig','setPHPMaxTime','syncDate','setPHPDisable','SetControl','ClosePanel','AutoUpdatePanel','SetPanelLock')
+    defs = ('get_cli_php_version','get_tmp_token','set_cli_php_version','DelOldSession', 'GetSessionCount', 'SetSessionConf', 'GetSessionConf','get_ipv6_listen','set_ipv6_status','GetApacheValue','SetApacheValue','GetNginxValue','SetNginxValue','get_token','set_token','set_admin_path','is_pro','get_php_config','get_config','SavePanelSSL','GetPanelSSL','GetPHPConf','SetPHPConf','GetPanelList','AddPanelInfo','SetPanelInfo','DelPanelInfo','ClickPanelInfo','SetPanelSSL','SetTemplates','Set502','setPassword','setUsername','setPanel','setPathInfo','setPHPMaxSize','getFpmConfig','setFpmConfig','setPHPMaxTime','syncDate','setPHPDisable','SetControl','ClosePanel','AutoUpdatePanel','SetPanelLock')
     return publicObject(configObject,defs,None,pdata);
 
 @app.route('/ajax',methods=method_all)
@@ -361,6 +375,15 @@ def system(pdata = None):
     import system
     sysObject = system.system()
     defs = ('get_io_info','UpdatePro','GetAllInfo','GetNetWorkApi','GetLoadAverage','ClearSystem','GetNetWorkOld','GetNetWork','GetDiskInfo','GetCpuInfo','GetBootTime','GetSystemVersion','GetMemInfo','GetSystemTotal','GetConcifInfo','ServiceAdmin','ReWeb','RestartServer','ReMemory','RepPanel')
+    return publicObject(sysObject,defs,None,pdata);
+
+@app.route('/deployment',methods=method_all)
+def deployment(pdata = None):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    import plugin_deployment
+    sysObject = plugin_deployment.plugin_deployment()
+    defs = ('GetList','AddPackage','DelPackage','SetupPackage','GetSpeed')
     return publicObject(sysObject,defs,None,pdata);
 
 @app.route('/data',methods=method_all)
@@ -454,6 +477,37 @@ def panel_public():
     result = plu.a(get)
     return public.getJson(result),json_header
 
+@app.route('/favicon.ico',methods=method_get)
+def send_favicon():
+    s_file = '/www/server/panel/BTPanel/static/favicon.ico'
+    if not os.path.exists(s_file): return abort(404)
+    return send_file(s_file,conditional=True,add_etags=True)
+
+
+@socketio.on('coll_socket')
+def coll_socket(msg):
+    coll_path = '/www/server/panel/plugin/coll'
+    if not os.path.exists(coll_path): 
+        emit('coll_response',{'data':'未安装宝塔群控主控端!'})
+        return;
+    if type(msg) == str or not 'f' in msg: 
+        emit('coll_response',{'data':'参数错误!'})
+        return;
+    sys.path.insert(0,coll_path)
+    from inc import coll_terminal
+    try:
+        if sys.version_info[0] == 2:
+            reload(coll_terminal)
+        else:
+            from imp import reload
+            reload(coll_terminal)
+    except:pass
+    t = coll_terminal.coll_terminal()
+    if not hasattr(t,msg['f']): 
+        emit('coll_response',{'data':'指定方法不存在!'})
+        return;
+    emit('coll_response',getattr(t,msg['f'])(msg))
+
 @app.route('/btco',methods=method_all)
 @app.route('/btco/',methods=method_all)
 @app.route('/<name>/<fun>',methods=method_all)
@@ -469,13 +523,22 @@ def panel_other(name=None,fun = None,stype=None):
     '''
 
     #前置准备
+
     if not name: name = 'btco'
+
+    #是否响应面板默认静态文件
+    if name == 'static':
+        s_file = '/www/server/panel/BTPanel/static/' + fun + '/' + stype
+        if not os.path.exists(s_file): return abort(404)
+        return send_file(s_file,conditional=True,add_etags=True)
+
     if name.find('./') != -1 or not re.match("^[\w-]+$",name): return public.returnJson(False,'错误的请求!'),json_header
     if not name: return public.returnJson(False,'请传入插件名称!'),json_header
     p_path = '/www/server/panel/plugin/' + name
     if not os.path.exists(p_path): return abort(404)
 
-    #是否响应静态文件
+
+    #是否响插件应静态文件
     if fun == 'static':
         if stype.find('./') != -1 or not os.path.exists(p_path + '/static'): return public.returnJson(False,'错误的请求!'),json_header
         s_file = p_path + '/static/' + stype
@@ -494,47 +557,71 @@ def panel_other(name=None,fun = None,stype=None):
     args.fun = fun
     
     #初始化插件对象
-    sys.path.append(p_path);
-    plugin_main = __import__(name+'_main')
-    plu = eval('plugin_main.' + name + '_main()')
-    if not hasattr(plu,fun): return public.returnJson(False,'指定方法不存在!'),json_header
+    try:
+        sys.path.append(p_path);
+        plugin_main = __import__(name+'_main')
+        try:
+            if sys.version_info[0] == 2:
+                reload(plugin_main)
+            else:
+                from imp import reload
+                reload(plugin_main)
+        except:pass
+        plu = eval('plugin_main.' + name + '_main()')
+        if not hasattr(plu,fun): return public.returnJson(False,'指定方法不存在!'),json_header
 
-    #检查访问权限
-    comReturn = comm.local()
-    if comReturn: 
-        if not hasattr(plu,'_check'): return public.returnJson(False,'指定插件不支持公共访问!'),json_header
-        checks = plu._check(args)
-        r_type = type(checks)
-        if r_type == Response: return checks
-        if r_type != bool or not checks: return public.getJson(checks),json_header
+        #检查访问权限
+        comReturn = comm.local()
+        if comReturn: 
+            if not hasattr(plu,'_check'): return public.returnJson(False,'指定插件不支持公共访问!'),json_header
+            checks = plu._check(args)
+            r_type = type(checks)
+            if r_type == Response: return checks
+            if r_type != bool or not checks: return public.getJson(checks),json_header
 
-        #初始化面板数据
-        comm.setSession()
-        comm.init()
-        comm.checkWebType()
-        comm.GetOS()
-
-    import panelPlugin
-    plugins = panelPlugin.panelPlugin()
-    args.name = name
-    if not plugins.check_accept(args):
-        return public.returnMsg(False,public.to_string([24744, 26410, 36141, 20080, 91, 37, 115, 93, 25110, 25480, 26435, 24050, 21040, 26399, 33]) % (plugins.get_title_byname(args),))
+            #初始化面板数据
+            comm.setSession()
+            comm.init()
+            comm.checkWebType()
+            comm.GetOS()
     
-    #执行插件方法
-    data = eval('plu.'+fun+'(args)')
-
-    #处理响应
-    if stype == 'json':  #响应JSON
-        return public.getJson(data),json_header
-    elif stype == 'html':   #使用模板
-        t_path_root = p_path + '/templates/'
-        t_path = t_path_root + fun+'.html'
-        if not os.path.exists(t_path): return public.returnJson(False,'指定模板不存在!'),json_header
-        return render_template_string(public.readFile(t_path),data = data)
-    else:  #直接响应插件返回值,可以是任意flask支持的响应类型
+            import panelPlugin
+            plugins = panelPlugin.panelPlugin()
+            args.name = name
+            if not plugins.check_accept(args):
+                return public.returnMsg(False,public.to_string([24744, 26410, 36141, 20080, 91, 37, 115, 93, 25110, 25480, 26435, 24050, 21040, 26399, 33]) % (plugins.get_title_byname(args),))
+    
+        #执行插件方法
+        data = eval('plu.'+fun+'(args)')
         r_type = type(data)
-        if r_type == dict: return public.returnJson(False,'错误的返回类型[%s]' % r_type),json_header
-        return data
+        if r_type == Response: return data
+
+        #处理响应
+        if stype == 'json':  #响应JSON
+            return public.getJson(data),json_header
+        elif stype == 'html':   #使用模板
+            t_path_root = p_path + '/templates/'
+            t_path = t_path_root + fun + '.html'
+            if not os.path.exists(t_path): return public.returnJson(False,'指定模板不存在!'),json_header
+            t_body = public.readFile(t_path)
+
+            #处理模板包含
+            rep = '{%\s?include\s"(.+)"\s?%}'
+            includes = re.findall(rep,t_body)
+            for i_file in includes:
+                filename = p_path + '/templates/' + i_file
+                i_body = 'ERROR: File '+filename+' does not exists.'
+                if os.path.exists(filename):
+                    i_body = public.readFile(filename)
+                t_body = re.sub(rep.replace('(.+)',i_file),i_body,t_body)
+
+            return render_template_string(t_body,data = data)
+        else:  #直接响应插件返回值,可以是任意flask支持的响应类型
+            r_type = type(data)
+            if r_type == dict: return public.returnJson(False,'错误的返回类型[%s]' % r_type),json_header
+            return data
+    except:
+        return public.get_error_info().replace('\n','<br>\n')
 
 
 @app.route('/wxapp',methods=method_all)
@@ -695,7 +782,8 @@ def download():
     mimetype = "application/octet-stream"
     extName = filename.split('.')[-1]
     if extName in ['png','gif','jpeg','jpg']: mimetype = None
-    return send_file(filename,mimetype=mimetype, as_attachment=True,attachment_filename=os.path.basename(filename))
+    #if extName in ['mp4','avi']: mimetype = 'multipart/x-mixed-replace'
+    return send_file(filename,mimetype=mimetype, as_attachment=True,attachment_filename=os.path.basename(filename),cache_timeout=0)
 
 @app.route('/cloud',methods=method_get)
 def panel_cloud():
@@ -730,6 +818,9 @@ def webssh(msg):
         return None
     global shell,ssh
     ssh_success = True
+    if type(msg) == dict:
+        if 'ssh_user' in msg:
+            connect_ssh(msg['ssh_user'].strip(),msg['ssh_passwd'].strip())
     if not shell: ssh_success = connect_ssh()
     if not shell:
         emit('server_response',{'data':public.getMsg('INIT_WEBSSH_CONN_ERR')})
@@ -746,41 +837,63 @@ def webssh(msg):
     except Exception as ex:
         pass
 
-def connect_ssh():
+def connect_ssh(user=None,passwd=None):
     global shell,ssh
-    if not os.path.exists('/root/.ssh/authorized_keys') or not os.path.exists('/root/.ssh/id_rsa') or not os.path.exists('/root/.ssh/id_rsa.pub'):
+    pkey = '/root/.ssh/id_rsa_bt'
+    if not os.path.exists('/root/.ssh/authorized_keys') or not os.path.exists(pkey):
         create_rsa()
-
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        ssh.connect('127.0.0.1', public.GetSSHPort())
+        if not user:
+            key=paramiko.RSAKey.from_private_key_file(pkey)
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            if not user:
+                ssh.connect('127.0.0.1', public.GetSSHPort(),pkey=key)
+            else:
+                ssh.connect('127.0.0.1', public.GetSSHPort(),username=user,password=passwd)
+        except:
+            if public.GetSSHStatus():
+                try:
+                    if not user:
+                        ssh.connect('localhost', public.GetSSHPort(),pkey=key)
+                    else:
+                        ssh.connect('localhost', public.GetSSHPort(),username=user,password=passwd)
+                except:
+                    create_rsa()
+                    return False;
+            import firewalls
+            fw = firewalls.firewalls()
+            get = common.dict_obj()
+            get.status = '0';
+            fw.SetSshStatus(get)
+            if not user:
+                ssh.connect('127.0.0.1', public.GetSSHPort(),pkey=key)
+            else:
+                ssh.connect('127.0.0.1', public.GetSSHPort(),username=user,password=passwd)
+            get.status = '1';
+            fw.SetSshStatus(get);
+        shell = ssh.invoke_shell(term='xterm', width=100, height=29)
+        shell.setblocking(0)
+        return True
     except:
-        if public.GetSSHStatus():
-            try:
-                ssh.connect('localhost', public.GetSSHPort())
-            except:
-                create_rsa()
-                return False;
-        import firewalls
-        fw = firewalls.firewalls()
-        get = common.dict_obj()
-        get.status = '0';
-        fw.SetSshStatus(get)
-        ssh.connect('127.0.0.1', public.GetSSHPort())
-        get.status = '1';
-        fw.SetSshStatus(get);
-    shell = ssh.invoke_shell(term='xterm', width=100, height=29)
-    shell.setblocking(0)
-    return True
+        shell = None
+        return False
 
 def create_rsa():
-    id_ras = '/root/.ssh/id_rsa'
+    id_ras = '/root/.ssh/id_rsa_bt'
     a_keys = '/root/.ssh/authorized_keys'
-    if not os.path.exists(id_ras) or not os.path.exists(id_ras):
-        public.ExecShell("rm -f /root/.ssh/*")
-        public.ExecShell('ssh-keygen -q -t rsa -P "" -f /root/.ssh/id_rsa')
-        public.ExecShell('cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys')
-        public.ExecShell('chmod 600 /root/.ssh/authorized_keys')
+    if not os.path.exists(a_keys) or not os.path.exists(id_ras):
+        public.ExecShell("rm -f /root/.ssh/id_rsa_bt*")
+        public.ExecShell('ssh-keygen -q -t rsa -P "" -f /root/.ssh/id_rsa_bt')
+        public.ExecShell('cat /root/.ssh/id_rsa_bt.pub >> /root/.ssh/authorized_keys')
+    else:
+        id_ras_pub = '/root/.ssh/id_rsa_bt.pub'
+        if os.path.exists(id_ras_pub):
+            pub_body = public.readFile(id_ras_pub)
+            keys_body = public.readFile(a_keys)
+            if keys_body.find(pub_body) == -1:
+                public.ExecShell('cat /root/.ssh/id_rsa_bt.pub >> /root/.ssh/authorized_keys')
+    public.ExecShell('chmod 600 /root/.ssh/authorized_keys')
     
 @socketio.on('connect_event')
 def connected_msg(msg):
@@ -789,12 +902,13 @@ def connected_msg(msg):
         return None 
     global shell
     if not shell: connect_ssh()
-    try:
-        #shell.send(msg)
-        recv = shell.recv(8192)
-        emit('server_response',{'data':recv.decode("utf-8")})
-    except:
-        pass
+    if shell:
+        try:
+            #shell.send(msg)
+            recv = shell.recv(8192)
+            emit('server_response',{'data':recv.decode("utf-8")})
+        except:
+            pass
 
 
 @socketio.on('panel')

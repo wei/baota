@@ -110,6 +110,7 @@ class firewalls:
     #添加放行端口
     def AddAcceptPort(self,get):
         import re
+        get.port = get.port.replace('-',':')
         rep = "^\d{1,5}(:\d{1,5})?$"
         if not re.search(rep,get.port): return public.returnMsg(False,'PORT_CHECK_RANGE');
         import time
@@ -142,7 +143,7 @@ class firewalls:
         port = get.port
         id = get.id
         try:
-            if(port == public.GetHost(True)): return public.returnMsg(False,'FIREWALL_PORT_PANEL')
+            if(port == public.GetHost(True) or port == public.readFile('data/port.pl').strip()): return public.returnMsg(False,'FIREWALL_PORT_PANEL')
             if self.__isUfw:
                 public.ExecShell('ufw delete allow ' + port + '/tcp');
                 public.ExecShell('ufw delete allow ' + port + '/udp');

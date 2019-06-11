@@ -95,7 +95,10 @@ class panelSSL:
                     self.__PDATA['data']['partnerOrderId'] = public.readFile(path);
 
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data']);
-        result = json.loads(public.httpPost(self.__APIURL + '/GetSSLList',self.__PDATA));
+        rs = public.httpPost(self.__APIURL + '/GetSSLList',self.__PDATA)
+        try:
+            result = json.loads(rs);
+        except: return public.returnMsg(False,'获取失败，请稍候重试!')
 
         result['data'] = self.En_Code(result['data']);
         for i in range(len(result['data'])):
@@ -305,7 +308,7 @@ class panelSSL:
     #删除证书
     def RemoveCert(self,get):
         try:
-            vpath = '/www/server/panel/vhost/ssl/' + get.certName
+            vpath = '/www/server/panel/vhost/ssl/' + get.certName.replace("*.",'')
             if not os.path.exists(vpath): return public.returnMsg(False,'证书不存在!');
             os.system("rm -rf " + vpath)
             return public.returnMsg(True,'证书已删除!');
@@ -330,7 +333,7 @@ class panelSSL:
     
     #读取证书
     def GetCert(self,get):
-        vpath = '/www/server/panel/vhost/ssl/' + get.certName
+        vpath = os.path.join('/www/server/panel/vhost/ssl' , get.certName.replace("*.",''))
         if not os.path.exists(vpath): return public.returnMsg(False,'证书不存在!')
         data = {}
         data['privkey'] = public.readFile(vpath + '/privkey.pem')

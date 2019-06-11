@@ -120,6 +120,9 @@ class panelPlugin:
     def install_plugin(self,get):
         if not self.check_sys_write(): return public.returnMsg(False,'<a style="color:red;">错误：检测到系统关键目录不可写!</a><br>1、如果安装了[宝塔系统加固]，请先关闭<br><br>2、如果安装了云锁，请关闭[系统加固]功能<br>3、如果安装了安全狗，请关闭[系统防护]功能<br>4、如果使用了其它安全软件，请先卸载<br>')
         pluginInfo = self.get_soft_find(get.sName);
+        p_node = '/www/server/panel/install/public.sh'
+        if os.path.exists(p_node):
+            if len(public.readFile(p_node)) < 100: os.remove(p_node)
         if not pluginInfo: return public.returnMsg(False,'指定插件不存在!')
         if not self.check_mutex(pluginInfo['mutex']): return public.returnMsg(False,'请先卸载[%s]' % pluginInfo['mutex'] )
         if not hasattr(get,'id'):
@@ -202,15 +205,17 @@ class panelPlugin:
         if not pluginInfo: return public.returnMsg(False,'指定插件不存在!')
         if pluginInfo['type'] != 5:
             pluginPath = self.__install_path + '/' + pluginInfo['name']
-            download_url = session['download_url'] + '/install/plugin/' + pluginInfo['name'] + '/install.sh'
-            toFile = '/tmp/%s.sh' % pluginInfo['name']
-            public.downloadFile(download_url,toFile)
-            if os.path.exists(toFile):
-                if os.path.getsize(toFile) > 100:
-                    os.system('/bin/bash ' + toFile + ' uninstall')
-            else:
-                if os.path.exists(pluginPath + '/install.sh'):
-                    os.system('/bin/bash ' + pluginPath + '/install.sh uninstall');
+            if pluginInfo['type'] != 6:
+                download_url = session['download_url'] + '/install/plugin/' + pluginInfo['name'] + '/install.sh'
+                toFile = '/tmp/%s.sh' % pluginInfo['name']
+                public.downloadFile(download_url,toFile)
+                if os.path.exists(toFile):
+                    if os.path.getsize(toFile) > 100:
+                        os.system('/bin/bash ' + toFile + ' uninstall')
+            
+            if os.path.exists(pluginPath + '/install.sh'):
+                os.system('/bin/bash ' + pluginPath + '/install.sh uninstall');
+
             if os.path.exists(pluginPath): os.system('rm -rf ' + pluginPath)
             public.WriteLog('TYPE_SETUP','PLUGIN_UNINSTALL_SOFT',(pluginInfo['title'],));
             return public.returnMsg(True,'PLUGIN_UNINSTALL');
@@ -601,7 +606,19 @@ class panelPlugin:
             softInfo['fpm'] = os.path.exists('/etc/init.d/php-fpm-' + v2)
             softInfo['status'] = os.path.exists('/tmp/php-cgi-'+v2+'.sock')
         if softInfo['name'] == 'mysql': softInfo['status'] = self.process_exists('mysqld')
+        if softInfo['name'] == 'phpmyadmin': softInfo['status'] = self.get_phpmyadmin_stat()
         return softInfo
+
+    #取phpmyadmin状态
+    def get_phpmyadmin_stat(self):
+        if public.get_webserver() == 'nginx':
+            filename = public.GetConfigValue('setup_path') + '/nginx/conf/nginx.conf';
+        else:
+            filename = public.GetConfigValue('setup_path') + '/apache/conf/extra/httpd-vhosts.conf';
+        if not os.path.exists(filename): return False
+        conf = public.readFile(filename)
+        if not conf: return False
+        return conf.find('/www/server/stop') == -1
 
     #获取指定软件信息
     def get_soft_find(self,get = None):
@@ -1553,7 +1570,7 @@ class panelPlugin:
             public.writeFile('logs/done.log',errorMsg)
             return public.returnMsg(False,'抱歉，出错了：<br> %s ' % errorMsg.replace('\n','<br>'))
 
-
+    
     #上传插件包
     def update_zip(self,get = None,tmp_file = None, update = False):
         tmp_path = '/www/server/panel/temp'
@@ -1591,7 +1608,10 @@ class panelPlugin:
                 tmp_path = d_path
                 p_info = tmp_path + '/info.json'
         try:
-            data = json.loads(public.ReadFile(p_info))
+            try:
+                data = json.loads(public.ReadFile(p_info))
+            except:
+                data = json.loads(public.ReadFile(p_info).decode('utf-8-sig'))
             data['size'] = public.get_path_size(tmp_path)
             if not 'author' in data: data['author'] = '未知'
             if not 'home' in data: data['home'] = 'https://www.bt.cn/bbs/forum-40-1.html'

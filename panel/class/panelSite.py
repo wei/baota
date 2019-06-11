@@ -129,7 +129,7 @@ class panelSite(panelRedirect):
     DocumentRoot "%s"
     ServerName %s.%s
     ServerAlias %s
-    errorDocument 404 /404.html
+    #errorDocument 404 /404.html
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
     
@@ -175,8 +175,8 @@ class panelSite(panelRedirect):
     #SSL-END
     
     #ERROR-PAGE-START  %s
-    error_page 404 /404.html;
-    error_page 502 /502.html;
+    #error_page 404 /404.html;
+    #error_page 502 /502.html;
     #ERROR-PAGE-END
     
     #PHP-INFO-START  %s
@@ -346,6 +346,7 @@ class panelSite(panelRedirect):
         
         data = {}
         data['siteStatus'] = True
+        data['siteId'] = get.pid
             
         #添加FTP
         data['ftpStatus'] = False
@@ -587,7 +588,7 @@ class panelSite(panelRedirect):
         #添加域名
         rep = "server_name\s*(.*);";
         tmp = re.search(rep,conf).group()
-        domains = tmp.split(' ')
+        domains = tmp.replace(';','').strip().split(' ')
         if not public.inArray(domains,get.domain):
             newServerName = tmp.replace(';',' ' + get.domain + ';')
             conf = conf.replace(tmp,newServerName)
@@ -623,12 +624,23 @@ class panelSite(panelRedirect):
             domainV = re.search(repV,conf).group()
             rep = "ServerAlias\s*(.*)\n";
             tmp = re.search(rep,domainV).group(0)
-            domains = tmp[1].split(' ')
+            domains = tmp.strip().split(' ')
             if not public.inArray(domains,newDomain):
                 rs = tmp.replace("\n","")
                 newServerName = rs+' '+newDomain+"\n";
                 myconf = domainV.replace(tmp,newServerName);
                 conf = re.sub(repV, myconf, conf);
+            if conf.find('<VirtualHost *:443>') != -1:
+                repV = "<VirtualHost\s+\*\:443>(.|\n)*</VirtualHost>";
+                domainV = re.search(repV,conf).group()
+                rep = "ServerAlias\s*(.*)\n";
+                tmp = re.search(rep,domainV).group(0)
+                domains = tmp.strip().split(' ')
+                if not public.inArray(domains,newDomain):
+                    rs = tmp.replace("\n","")
+                    newServerName = rs+' '+newDomain+"\n";
+                    myconf = domainV.replace(tmp,newServerName);
+                    conf = re.sub(repV, myconf, conf);
         else:
             try:
                 httpdVersion = public.readFile(self.setupPath+'/apache/version.pl').strip();
@@ -658,7 +670,7 @@ class panelSite(panelRedirect):
     DocumentRoot "%s"
     ServerName %s.%s
     ServerAlias %s
-    errorDocument 404 /404.html
+    #errorDocument 404 /404.html
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
     %s
@@ -725,7 +737,7 @@ class panelSite(panelRedirect):
         if conf:
             #删除域名
             try:
-                rep = "\n*<VirtualHost \*\:" + port + ">(.|\n)*?</VirtualHost>";
+                rep = "\n*<VirtualHost \*\:" + port + ">(.|\n)*</VirtualHost>";
                 tmp = re.search(rep, conf).group()
                 
                 rep1 = "ServerAlias\s+(.+)\n";
@@ -829,14 +841,7 @@ class panelSite(panelRedirect):
     # 创建Let's Encrypt免费证书
     def CreateLet(self, get):
         import time
-        # 检查是否设置301
-        serverTypes = ['nginx', 'apache'];
-        for stype in serverTypes:
-            file = self.setupPath + '/panel/vhost/' + stype + '/' + get.siteName + '.conf';
-            if os.path.exists(file):
-                siteConf = public.readFile(file);
-                if siteConf.find('301-START') != -1: return public.returnMsg(False, 'SITE_SSL_ERR_301');
-
+        
         # 确定主域名顺序
         domains = json.loads(get.domains)
         domainsTmp = []
@@ -994,10 +999,12 @@ class panelSite(panelRedirect):
         if os.path.exists(partnerOrderId):
             os.remove(partnerOrderId)
 
+        #检查依赖
+        self.check_ssl_pack()
+
         # dns调用脚本获取ssl证书
         if dns_type:
             json_parem['domain_alt_names'] = ",".join(domains)
-            self.check_ssl_pack()
             if dns:
                 result = public.ExecShell('''nohup python /www/server/panel/class/sewer_Usage.py  '{}'  > sewer_Usage.log 2>&1 & '''.format(json.dumps(json_parem)))
             else:
@@ -1061,7 +1068,7 @@ class panelSite(panelRedirect):
             if os.path.isfile(os.path.join(path, "apply_for_cert_issuance_response")):
                 data['result'] = json.loads(public.ReadFile(os.path.join(path, "apply_for_cert_issuance_response")));
                 if data['result']['status'] == 429:
-                    data['msg'] = '<h2>签发失败,您尝试申请证书的失败次数已达上限!</h2>';
+                    data['msg'] = '<h2>签发失败,您今天尝试申请证书的次数已达上限!</h2>';
                 if data['result']['status'] == 400:
                     data['msg'] = '<h2>签发失败,::通配符域名不能和子域名一起申请证书!</h2>';
 
@@ -1069,6 +1076,11 @@ class panelSite(panelRedirect):
             return data
 
         if file_auth:  # 文件验证调用脚本
+            # 检查是否设置301和反向代理
+            get.sitename = get.siteName
+            if self.GetRedirectList(get): return public.returnMsg(False, 'SITE_SSL_ERR_301');
+            if self.GetProxyList(get): return public.returnMsg(False,'已开启反向代理的站点无法申请SSL!');
+
             DOMAINS = ''
             for dom in domains:
                 DOMAINS += 'DNS:{},'.format(dom)
@@ -1085,7 +1097,7 @@ class panelSite(panelRedirect):
                     data['msg'] = '签发失败,我们无法验证您的域名:<p>1、检查域名是否绑定到对应站点</p><p>2、检查域名是否正确解析到本服务器,或解析还未完全生效</p><p>3、如果您的站点设置了反向代理,或使用了CDN,请先将其关闭</p><p>4、如果您的站点设置了301重定向,请先将其关闭</p><p>5、如果以上检查都确认没有问题，请尝试更换DNS服务商</p>';
                     data['result'] = result;
                     if "too many certificates already issued for exact set of domains" in result[1] or "Error creating new account :: too many registrations for this IP" in result[1]:
-                        data['msg'] = '<h2>签发失败,您尝试申请证书的失败次数已达上限!</h2>';
+                        data['msg'] = '<h2>签发失败,您今天尝试申请证书的次数已达上限!</h2>';
                     elif "DNS problem: NXDOMAIN looking up A for" in result[1] or "No valid IP addresses found for" in result[1] or "Invalid response from" in result[1] \
                             or "Policy forbids issuing for name" in result[1] or "\'status\'\:\ 4" in result[1] or '''"status": 4''' in result[1]:
                         data['msg'] = '<h2>签发失败,域名解析错误，或解析未生效，或域名未备案!</h2>';
@@ -1227,6 +1239,7 @@ class panelSite(panelRedirect):
             tmp = {}
             tmp['name'] = b['domain']
             tmp['id'] = b['id']
+            tmp['binding'] = True
             domains.append(tmp)
         data['domains'] = domains
         data['email'] = public.M('users').getField('email')
@@ -1256,7 +1269,8 @@ class panelSite(panelRedirect):
     #获取TLS1.3标记
     def get_tls13(self):
         nginx_bin = '/www/server/nginx/sbin/nginx'
-        nginx_v = public.ExecShell(nginx_bin + ' -V 2>&1|grep version:')[0].find('nginx/1.15.') != -1
+        nginx_v = public.ExecShell(nginx_bin + ' -V 2>&1|grep version:')[0]
+        nginx_v = re.search('nginx/1\.1(5|6|7|8|9).\d',nginx_v)
         openssl_v = public.ExecShell(nginx_bin + ' -V 2>&1|grep OpenSSL')[0].find('OpenSSL 1.1.') != -1
         if nginx_v and openssl_v:
             return ' TLSv1.3'
@@ -1350,7 +1364,7 @@ class panelSite(panelRedirect):
     DocumentRoot "%s"
     ServerName SSL.%s
     ServerAlias %s
-    errorDocument 404 /404.html
+    #errorDocument 404 /404.html
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
 
@@ -1978,7 +1992,7 @@ server
     ServerAdmin webmaster@example.com
     DocumentRoot "%s"
     ServerName %s
-    errorDocument 404 /404.html
+    #errorDocument 404 /404.html
     ErrorLog "%s-error_log"
     CustomLog "%s-access_log" combined
     %s
@@ -3479,8 +3493,10 @@ location %s
         if os.path.exists(path):
             conf = '''<IfModule mod_rewrite.c>
   RewriteEngine on
+  RewriteCond %{HTTP_HOST} !^127.0.0.1 [NC] 
   RewriteRule (.*) http://%s/$1 [L]
-</IfModule>''' % (get.name,)
+</IfModule>'''
+            conf = conf.replace("%s",get.name)
             if get.name == 'off': conf = '';
             public.writeFile(path + '/.htaccess',conf);
             

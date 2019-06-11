@@ -106,7 +106,15 @@ var bt =
 		var m = dd.getMonth() + 1;
 		var d = dd.getDate();
 		return y + "-" + (m < 10 ? ('0' + m) : m) + "-" + (d < 10 ? ('0' + d) : d);
-	},
+    },
+    get_form: function (select) {
+        var sarr = $(select).serializeArray();
+        var iarr = {}
+        for (var i = 0; i < sarr.length; i++) {
+            iarr[sarr[i].name] = sarr[i].value;
+        }
+        return iarr;
+    },
 	ltrim:function(str,r){
 		var reg_str = "/(^\\"+r+"+)/g"
 		var reg = eval(reg_str);
@@ -263,7 +271,8 @@ var bt =
 			closeBtn: 2,
 			shift: 5,
 			content: "<div class='changepath'><div class='path-top'><button type='button' id='btn_back' class='btn btn-default btn-sm'><span class='glyphicon glyphicon-share-alt'></span> "+lan.public.return+"</button><div class='place' id='PathPlace'>"+lan.bt.path+"：<span></span></div></div><div class='path-con'><div class='path-con-left'><dl><dt id='changecomlist' >"+lan.bt.comp+"</dt></dl></div><div class='path-con-right'><ul class='default' id='computerDefautl'></ul><div class='file-list divtable'><table class='table table-hover' style='border:0 none'><thead><tr class='file-list-head'><th width='40%'>"+lan.bt.filename+"</th><th width='20%'>"+lan.bt.etime+"</th><th width='10%'>"+lan.bt.access+"</th><th width='10%'>"+lan.bt.own+"</th><th width='10%'></th></tr></thead><tbody id='tbody' class='list-list'></tbody></table></div></div></div></div><div class='getfile-btn' style='margin-top:0'><button type='button' class='btn btn-default btn-sm pull-left' onclick='CreateFolder()'>"+lan.bt.adddir+"</button><button type='button' class='btn btn-danger btn-sm mr5' onclick=\"layer.close(getCookie('ChangePath'))\">"+lan.public.close+"</button> <button type='button' id='bt_select' class='btn btn-success btn-sm' >"+lan.bt.path_ok+"</button></div>"
-		});
+        });
+        _this.set_cookie('ChangePath', loadT.form);
 		setTimeout(function(){			
 			$('#btn_back').click(function(){
 				var path = $("#PathPlace").find("span").text();			
@@ -275,7 +284,7 @@ var bt =
 			//选择
 			$('#bt_select').click(function(){						
 				var path = bt.format_path($("#PathPlace").find("span").text());
-				path = bt.rtrim(path,'/')
+                path = bt.rtrim(path, '/');
 				$("#"+id).val(path);
 				$("."+id).val(path);
 				loadT.close();
@@ -450,9 +459,17 @@ var bt =
 		else{
 			data = bt.win_format_param(data);
 			var url = '/' + modelTmp[0] + '?action=' + modelTmp[1];
-			$.post(url,data,function(rdata){
+            $.post(url, data, function (rdata) {
+
+                //会话失效时自动跳转到登录页面
+                if (typeof (rdata) == 'string') {
+                    if (rdata.indexOf('/static/favicon.ico') != -1 && rdata.indexOf('/static/img/qrCode.png') != -1) {
+                        window.location.href = "/login"
+                        return
+                    }
+                }
 				if(callback) callback(rdata);
-			}).error(function(){
+            }).error(function () {
 				if(callback) callback('error');
 			});
 		}
@@ -3100,7 +3117,8 @@ bt.firewall = {
 	add_accept_port : function(type,port,ps,callback){
 		var action = "AddDropAddress";
 		if(type == 'port'){
-			ports = port.split(':');
+            ports = port.split(':');
+            if (port.indexOf('-') != -1) ports = port.split('-');
 			for(var i=0;i<ports.length;i++){
 				if(!bt.check_port(ports[i])){
 					layer.msg(lan.firewall.port_err,{icon:5});
@@ -3466,9 +3484,8 @@ bt.soft = {
 						<div class="li-con c6">\
 							<ul class="li-c-item">\
 								<li class="active"><span class="item-name pull-left">'+pluginName+'</span><span class="item-info f12 pull-right c7">1款插件</span></li>\
-								<li><span class="item-name">升级为专业版</span><span class="item-info f12 pull-right c7">所有插件免费使用</span></li>\
+								<li><span class="item-name">升级为专业版</span><span class="item-info f12 pull-right c7">十多款付费插件免费用</span></li>\
 							</ul>\
-							<p class="pro-info" style="position:absolute;top:151px;left:42px;color: #FF7301;font-size: 12px;display:none">（专业版过期了需要续费后才能登陆使用或者进SSH执行免费版升级命令来切换成免费版）</p>\
 						</div>\
 					</div>\
 					<div class="libpay-con">\

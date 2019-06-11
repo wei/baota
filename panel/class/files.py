@@ -8,7 +8,7 @@
 # | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 import sys,os,public,time,json,pwd,cgi
-from BTPanel import session
+from BTPanel import session,request
 class files:
     #检查敏感目录
     def CheckDir(self,path):
@@ -82,13 +82,72 @@ class files:
         os.chmod(filename,p_stat.st_mode)
         public.WriteLog('TYPE_FILE','FILE_UPLOAD_SUCCESS',(filename,get['path']));
         return public.returnMsg(True,'FILE_UPLOAD_SUCCESS');
+
+
+
+    #上传文件2
+    def upload(self,args):
+        if sys.version_info[0] == 2: 
+            args.f_name = args.f_name.encode('utf-8')
+            args.f_path = args.f_path.encode('utf-8')
+        if args.f_name.find('./') != -1 or args.f_path.find('./') != -1: 
+            return public.returnMsg(False,'错误的参数')
+        if not os.path.exists(args.f_path): 
+            os.makedirs(args.f_path,493)
+            if not 'dir_mode' in args or not 'file_mode' in args:
+                self.set_mode(args.f_path)
+
+        save_path =  os.path.join(args.f_path,args.f_name + '.' + str(int(args.f_size)) + '.upload.tmp')
+        d_size = 0
+        if os.path.exists(save_path): d_size = os.path.getsize(save_path)
+        if d_size != int(args.f_start): return d_size
+        upload_files = request.files.getlist("blob")
+        f = open(save_path,'ab')
+        for tmp_f in upload_files:
+            f.write(tmp_f.read())
+        f.close()
+        f_size = os.path.getsize(save_path)
+        if f_size != int(args.f_size):  return f_size
+        new_name = os.path.join(args.f_path ,args.f_name)
+        if os.path.exists(new_name): 
+            if new_name.find('.user.ini') != -1:
+                public.ExecShell("chattr -i " + new_name)
+            os.remove(new_name)
+        os.renames(save_path, new_name)
+        if 'dir_mode' in args and 'file_mode' in args:
+            mode_tmp1 = args.dir_mode.split(',')
+            public.ExecShell("chmod " + mode_tmp1[0] + " " + args.f_path )
+            public.ExecShell("chown " + mode_tmp1[1] + ":" + mode_tmp1[1] + " " + args.f_path)
+            mode_tmp2 = args.file_mode.split(',')
+            public.ExecShell("chmod " + mode_tmp2[0] + " " + new_name )
+            public.ExecShell("chown " + mode_tmp2[1] + ":" + mode_tmp2[1] + " " + new_name )
+
+        else:
+            self.set_mode(new_name)
+        if new_name.find('.user.ini') != -1:
+                public.ExecShell("chattr +i " + new_name)
+        
+        public.WriteLog('TYPE_FILE','FILE_UPLOAD_SUCCESS',(args.f_name,args.f_path));
+        return public.returnMsg(True,'上传成功!')
+
+    #设置文件和目录权限
+    def set_mode(self,path):
+        s_path = os.path.dirname(path)
+        p_stat = os.stat(s_path)
+        os.chown(path,p_stat.st_uid,p_stat.st_gid)
+        os.chmod(path,p_stat.st_mode)
         
         
     #取文件/目录列表
     def GetDir(self,get):
-        if not hasattr(get,'path'): get.path = '/www/wwwroot'
+        if not hasattr(get,'path'): 
+            #return public.returnMsg(False,'错误的参数!')
+            get.path = '/www/wwwroot'
         if sys.version_info[0] == 2: get.path = get.path.encode('utf-8');
-        if not os.path.exists(get.path): get.path = '/www';
+        if get.path == '': get.path = '/www';
+        if not os.path.exists(get.path): 
+            return public.ReturnMsg(False,'指定目录不存在!')
+            
         import pwd 
         dirnames = []
         filenames = []
@@ -122,54 +181,111 @@ class files:
         data = {}
         data['PAGE'] = page.GetPage(info,'1,2,3,4,5,6,7,8')
         
-        
-        
         i = 0;
         n = 0;
-        for filename in os.listdir(get.path):
-            filename = self.xssencode(filename)
-            if search:
-                if filename.lower().find(search) == -1: continue;
-            i += 1;
-            if n >= page.ROW: break;
-            if i < page.SHIFT: continue;
+
+        if not hasattr(get,'reverse'):
+            for filename in os.listdir(get.path):
+                filename = self.xssencode(filename)
+
+
+
+                if search:
+                    if filename.lower().find(search) == -1: continue;
+                i += 1;
+                if n >= page.ROW: break;
+                if i < page.SHIFT: continue;
             
-            try:
-                if sys.version_info[0] == 2: filename = filename.encode('utf-8');
-                filePath = get.path+'/'+filename
-                link = '';
-                if os.path.islink(filePath): 
-                    filePath = os.readlink(filePath);
-                    link = ' -> ' + filePath;
-                    if not os.path.exists(filePath): filePath = get.path + '/' + filePath;
-                    if not os.path.exists(filePath): continue;
-                
-                stat = os.stat(filePath)
-                accept = str(oct(stat.st_mode)[-3:]);
-                mtime = str(int(stat.st_mtime))
-                user = ''
                 try:
-                    user = pwd.getpwuid(stat.st_uid).pw_name
+                    if sys.version_info[0] == 2: filename = filename.encode('utf-8');
+                    filePath = get.path+'/'+filename
+                    link = '';
+                    if os.path.islink(filePath): 
+                        filePath = os.readlink(filePath);
+                        link = ' -> ' + filePath;
+                        if not os.path.exists(filePath): filePath = get.path + '/' + filePath;
+                        if not os.path.exists(filePath): continue;
+                
+                    stat = os.stat(filePath)
+                    accept = str(oct(stat.st_mode)[-3:]);
+                    mtime = str(int(stat.st_mtime))
+                    user = ''
+                    try:
+                        user = pwd.getpwuid(stat.st_uid).pw_name
+                    except:
+                        user = str(stat.st_uid)
+                    size = str(stat.st_size)
+                    if os.path.isdir(filePath):
+                        dirnames.append(filename+';'+size+';'+mtime+';'+accept+';'+user+';'+link);
+                    else:
+                        filenames.append(filename+';'+size+';'+mtime+';'+accept+';'+user+';'+link);
+                    n += 1;
                 except:
-                    user = str(stat.st_uid)
-                size = str(stat.st_size)
-                if os.path.isdir(filePath):
-                    dirnames.append(filename+';'+size+';'+mtime+';'+accept+';'+user+';'+link);
+                    continue;
+        
+        
+            data['DIR'] = sorted(dirnames);
+            data['FILES'] = sorted(filenames);
+        else:
+            reverse = bool(get.reverse)
+            if get.reverse == 'False': reverse = False
+            for file_info in  self.__list_dir(get.path,get.sort,reverse):
+                filename = os.path.join(get.path,file_info['name'])
+                if not os.path.exists(filename): continue
+                if search:
+                    if file_info['name'].lower().find(search) == -1: continue;
+                i += 1;
+                if n >= page.ROW: break;
+                if i < page.SHIFT: continue;
+
+                r_file = file_info['name'] + ';' + str(file_info['size']) + ';' + str(file_info['mtime']) + ';' + str(file_info['accept']) + ';' + file_info['user']+ ';' + file_info['link']
+                if os.path.isdir(filename):
+                    dirnames.append(r_file)
                 else:
-                    filenames.append(filename+';'+size+';'+mtime+';'+accept+';'+user+';'+link);
+                    filenames.append(r_file)
                 n += 1;
-            except:
-                continue;
-        
-        
-        data['DIR'] = sorted(dirnames);
-        data['FILES'] = sorted(filenames);
+
+            data['DIR'] = dirnames
+            data['FILES'] = filenames
+
         data['PATH'] = str(get.path)
         if hasattr(get,'disk'):
             import system
             data['DISK'] = system.system().GetDiskInfo();
         return data
 
+
+    def __list_dir(self,path,my_sort = 'name',reverse = False):
+        if not os.path.exists(path): return []
+        py_v = sys.version_info[0]
+        tmp_files = []
+        tmp_dirs = []
+        for f_name in os.listdir(path):
+            if py_v == 2: f_name = f_name.encode('utf-8');
+            filename = os.path.join(path,f_name)
+            if not os.path.exists(filename): continue
+            file_info = self.__format_stat(filename,path)
+            if not file_info: continue
+            if os.path.isdir(filename):
+                tmp_dirs.append(file_info)
+            else:
+                tmp_files.append(file_info)
+        tmp_dirs = sorted(tmp_dirs,key=lambda x:x[my_sort],reverse=reverse)
+        tmp_files = sorted(tmp_files,key=lambda x:x[my_sort],reverse=reverse)
+        
+        for f in tmp_files: tmp_dirs.append(f)
+        return tmp_dirs
+
+
+    def __format_stat(self,filename,path):
+        try:
+            stat = self.__get_stat(filename,path)
+            if not stat: return None
+            tmp_stat = stat.split(';')
+            file_info = {'name': self.xssencode(tmp_stat[0].replace('/','')),'size':int(tmp_stat[1]),'mtime':int(tmp_stat[2]),'accept':int(tmp_stat[3]),'user':tmp_stat[4],'link':tmp_stat[5]}
+            return file_info
+        except: return None
+        
 
     def SearchFiles(self,get):
         if not hasattr(get,'path'): get.path = '/www/wwwroot'
@@ -203,7 +319,7 @@ class files:
         return data
 
 
-    def __get_stat(self,filename,path):
+    def __get_stat(self,filename,path = None):
         stat = os.stat(filename)
         accept = str(oct(stat.st_mode)[-3:]);
         mtime = str(int(stat.st_mtime))
@@ -215,7 +331,9 @@ class files:
         size = str(stat.st_size)
         link = '';
         if os.path.islink(filename): link = ' -> ' + os.readlink(filename)
-        return filename.replace(path + '/','') + ';' + size + ';' + mtime+ ';' +accept+ ';' +user+ ';' +link
+        tmp_path = (path + '/').replace('//','/')
+        if path and tmp_path != '/':filename = filename.replace(tmp_path,'')
+        return filename + ';' + size + ';' + mtime+ ';' +accept+ ';' +user+ ';' +link
 
     
     #计算文件数量
@@ -685,6 +803,8 @@ class files:
     #设置文件权限和所有者
     def SetFileAccess(self,get,all = '-R'):
         if sys.version_info[0] == 2: get.filename = get.filename.encode('utf-8');
+        if 'all' in get:
+            if get.all == 'False': all = ''
         try:
             if not self.CheckDir(get.filename): return public.returnMsg(False,'FILE_DANGER');
             if not os.path.exists(get.filename):

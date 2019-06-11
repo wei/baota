@@ -56,7 +56,7 @@ class bt_task:
             else:
                 sql = sql.where('status=?',(get.status,))
         data = sql.field('id,name,type,shell,other,status,exectime,endtime,addtime').order('id asc').limit('10').select();
-        if not 'num' in get: get.num = 5
+        if not 'num' in get: get.num = 15
         num = int(get.num)
         for i in range(len(data)):
             data[i]['log'] = ''
@@ -106,7 +106,7 @@ class bt_task:
                 os.system("kill -9 $(ps aux|grep 'unzip -P'|grep -v grep|awk '{print $2}')")
                 os.system("kill -9 $(ps aux|grep 'gunzip -c'|grep -v grep|awk '{print $2}')")
             elif task_info['type'] == '0':
-                os.system("kill -9 $(ps aux|grep '> /www/server/panel/tmp/'|grep -v grep|awk '{print $2}')")
+                os.system("kill -9 $(ps aux|grep '"+task_info['shell']+"'|grep -v grep|awk '{print $2}')")
 
             os.system("/etc/init.d/bt start")
         return public.returnMsg(True,'任务已取消!')
@@ -255,6 +255,8 @@ class bt_task:
             rar_file =  '/www/server/rar/unrar'
             if not os.path.exists(rar_file): self.install_rar()
             os.system('echo "'+password+'"|' + rar_file + ' x -u -y "' + sfile + '" "' + dfile + '" &> ' + log_file)
+        elif sfile[-4:] == '.war':
+             os.system("unzip -P '"+password+"' -o '" + sfile + "' -d '" + dfile + "' &> " + log_file)
         else:
             os.system("gunzip -c " + sfile + " > " + sfile[:-3])
 
@@ -266,7 +268,7 @@ class bt_task:
             else:
                 import pwd
                 user = pwd.getpwuid(os.stat(dfile).st_uid).pw_name
-                os.system("chown -R %s:%s %s" % (user,user,dfile))
+                os.system("chown %s:%s %s" % (user,user,dfile))
         
         public.WriteLog("TYPE_FILE", 'UNZIP_SUCCESS',(sfile,dfile));
         return public.returnMsg(True,'UNZIP_SUCCESS');

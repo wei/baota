@@ -219,7 +219,7 @@ case "$1" in
                 echo -e "=================================================================="
                 ;;
         *)
-                python $panel_path/tools.py cli $2
+                python $panel_path/tools.py cli $1
         ;;
 esac
 

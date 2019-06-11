@@ -392,7 +392,7 @@ var index = {
                         clickName = 'onclick="soft.set_soft_config(\'' + rdata[i].name + '\')"';
                     }
                     var icon = rdata[i].name;
-                    if (bt.contains(rdata[i].name, 'php')) {
+                    if (bt.contains(rdata[i].name, 'php-')) {
                         icon = 'php';
                         rdata[i].version = '';
                     }
@@ -405,7 +405,7 @@ var index = {
                     con += '<div class="col-sm-3 col-md-3 col-lg-3" data-id="' + rdata[i].name + '">\
 							<span class="spanmove"></span>\
 							<div '+ clickName + '>\
-							<div class="image"><img src="/static/img/soft_ico/ico-'+ icon + '.png"></div>\
+							<div class="image"><img width="48" src="/static/img/soft_ico/ico-'+ icon + '.png"></div>\
 							<div class="sname">'+ rdata[i].title + ' ' + rdata[i].version + status + '</div>\
 							</div>\
 						</div>'
@@ -747,4 +747,4 @@ var index = {
     }
 }
 index.get_init();
-setTimeout(function () { index.get_cloud_list() }, 800);
+//setTimeout(function () { index.get_cloud_list() }, 800);

@@ -4,7 +4,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2099 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
 
 #------------------------------
@@ -296,13 +296,11 @@ def ClearOther():
         for d in os.listdir(c['path']):
             if d.find(c['find']) == -1: continue;
             filename = c['path'] + '/' + d;
+            if os.path.isdir(filename): continue
             fsize = os.path.getsize(filename);
             print('|---['+ToSize(fsize)+'] del ' + filename),
             total += fsize
-            if os.path.isdir(filename):
-                shutil.rmtree(filename)
-            else:
-                os.remove(filename)
+            os.remove(filename)
             print('\t\033[1;32m[OK]\033[0m')
             count += 1;
     public.serviceReload();
@@ -404,24 +402,26 @@ def update_to6():
     print("====================================================")
 
 #命令行菜单
-def bt_cli():
+def bt_cli(u_input = 0):
     raw_tip = "==============================================="
-    print("===============宝塔面板命令行==================")
-    print("(1) 重启面板服务           (8) 改面板端口")
-    print("(2) 停止面板服务           (9) 清除面板缓存")
-    print("(3) 启动面板服务           (10) 清除登录限制")
-    print("(4) 重载面板服务           (11) 取消入口限制")
-    print("(5) 修改面板密码           (12) 取消域名绑定限制")
-    print("(6) 修改面板用户名         (13) 取消IP访问限制")
-    print("(7) 强制修改MySQL密码      (14) 查看面板默认信息")
-    print("(0) 取消                   (15) 清理系统垃圾")
-    print("(0) 取消                   (16) 修复面板(检查错误并更新面板文件到最新版)")
-    print(raw_tip)
-    try:
-        u_input = input("请输入命令编号：")
-        if sys.version_info[0] == 3: u_input = int(u_input)
-    except: u_input = 0
-    nums = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+    if not u_input:
+        print("===============宝塔面板命令行==================")
+        print("(1) 重启面板服务           (8) 改面板端口")
+        print("(2) 停止面板服务           (9) 清除面板缓存")
+        print("(3) 启动面板服务           (10) 清除登录限制")
+        print("(4) 重载面板服务           (11) 取消入口限制")
+        print("(5) 修改面板密码           (12) 取消域名绑定限制")
+        print("(6) 修改面板用户名         (13) 取消IP访问限制")
+        print("(7) 强制修改MySQL密码      (14) 查看面板默认信息")
+        print("(22) 显示面板错误日志      (15) 清理系统垃圾")
+        print("(0) 取消                   (16) 修复面板(检查错误并更新面板文件到最新版)")
+        print(raw_tip)
+        try:
+            u_input = input("请输入命令编号：")
+            if sys.version_info[0] == 3: u_input = int(u_input)
+        except: u_input = 0
+
+    nums = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,22]
     if not u_input in nums:
         print(raw_tip)
         print("已取消!")
@@ -531,6 +531,8 @@ def bt_cli():
         ClearSystem()
     elif u_input == 16:
         os.system("curl http://download.bt.cn/install/update6.sh|bash")
+    elif u_input == 22:
+        os.system('tail -100 /www/server/panel/logs/error.log')
 
 
 
@@ -563,6 +565,8 @@ if __name__ == "__main__":
     elif type == 'update_to6':
         update_to6()
     elif type == "cli":
-        bt_cli()
+        clinum = 0
+        if len(sys.argv) > 2: clinum = int(sys.argv[2])
+        bt_cli(clinum)
     else:
         print('ERROR: Parameter error')

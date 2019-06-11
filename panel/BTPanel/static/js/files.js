@@ -27,7 +27,7 @@ function Recycle_bin(type){
 									<a class="btlink" href="javascript:;" onclick="ReRecycleBin(\'' + rdata.dirs[i].rname.replace(/'/,"\\'") + '\',this)">'+lan.files.recycle_bin_re+'</a>\
 									 | <a class="btlink" href="javascript:;" onclick="DelRecycleBin(\'' + rdata.dirs[i].rname.replace(/'/,"\\'") + '\',this)">'+lan.files.recycle_bin_del+'</a>\
 								</td>\
-							</tr>'
+							</tr>';
 				}
 				for(var i=0;i<rdata.files.length;i++){
 					if(rdata.files[i].name.indexOf('BTDB_') != -1){
@@ -306,36 +306,73 @@ function get_path_size(path) {
     });
 }
 
-function GetFiles(Path) {
-	var searchtype = Path;
-	if(isNaN(Path)){
-		var p = '1';
-		Path = encodeURIComponent(Path)
-	}else{
-		var p = Path;
+
+function path_check(path) {
+    if (path == '/') return path;
+    path = path.replace(/[\/]{2,}/g, '/');
+    path = path.replace(/[\/]+$/g, '');
+    return path;
+}
+
+function GetFiles(Path,sort) {
+    var searchtype = Path;
+    var p = '1';
+	if(!isNaN(Path)){
+		p = Path;
 		Path = getCookie('Path');
-	}
-	
+    }
+
+    Path = path_check(Path);
+
+    var data = {};
 	var search = '';
 	var searchV = $("#SearchValue").val();
     if (searchV.length > 0 && searchtype == "1") {
-        search = "&search=" + searchV;
+        data['search'] = searchV;
         if ($("#search_all")[0].checked) {
-            search += '&all=True';
+            data['all'] = 'True'
         }
-	}
+    }
+
+    var sorted = '';
+    var reverse = '';
+    if (!sort) {
+        sort = getCookie('files_sort');
+        reverse = getCookie(sort + '_reverse');
+    } else {
+        reverse = getCookie(sort + '_reverse');
+        if (reverse === 'True') {
+            reverse = 'False';
+        } else {
+            reverse = 'True';
+        }
+    }
+    if (sort) {
+        data['sort'] = sort;
+        data['reverse'] = reverse;
+        setCookie(sort + '_reverse', reverse);
+        setCookie('files_sort', sort);
+    }
+
+
 	var showRow = getCookie('showRow');
 	if(!showRow) showRow = '200';
 	var Body = '';
-    var data = 'path=' + Path;
-    if (search) {
+    data['path'] = Path;
+
+
+    if (searchV) {
         var loadT = layer.msg('正在搜索,请稍候...', { icon: 16, time: 0, shade: [0.3, '#000']});
     }
 	var totalSize = 0;
 	$.post('/files?action=GetDir&tojs=GetFiles&p=' + p + '&showRow=' + showRow + search, data, function(rdata) {
-        if (search) layer.close(loadT);
+        if (searchV) layer.close(loadT);
+        if (rdata.status === false) {
+            layer.msg(rdata.msg, { icon: 2 });
+            return;
+        }
 		
-		var rows = ['100','200','500','1000','2000'];
+		var rows = ['10','50','100','200','500','1000','2000'];
 		var rowOption = '';
 		for(var i=0;i<rows.length;i++){
 			var rowSelected = '';
@@ -432,6 +469,10 @@ function GetFiles(Path) {
                         break;
                 }
 
+                if (fmp[0].indexOf('.upload.tmp') != -1) {
+                    fileMsg = 'PS: 宝塔文件上传临时文件,重新上传从断点续传,可删除';
+                }
+
                 if (fileMsg != '') {
                     fileMsg = '<span style="margin-left: 30px; color: #999;">' + fileMsg + '</span>';
                 }
@@ -458,24 +499,41 @@ function GetFiles(Path) {
 						<div class='titleBox'><span class='tname'>" + fmp[0] + "</span></div>\
 						</div>";
 			}
-		}
-		var dirInfo = '('+lan.files.get_size.replace('{1}',rdata.DIR.length+'').replace('{2}',rdata.DIR.length+'')+'<font id="pathSize">'+(ToSize(totalSize))+'<a class="btlink ml5" onClick="GetPathSize()">'+lan.files.get+'</a></font>)';
+        }
+        var dirInfo = '(' + lan.files.get_size.replace('{1}', rdata.DIR.length + '').replace('{2}', rdata.FILES.length + '') + '<font id="pathSize">' + (ToSize(totalSize)) + '<a class="btlink ml5" onClick="GetPathSize()">' + lan.files.get + '</a></font>)';
 		$("#DirInfo").html(dirInfo);
-		if(getCookie("rank")=="a"){
-			var tablehtml = '<table width="100%" border="0" cellpadding="0" cellspacing="0" class="table table-hover">\
+        if (getCookie("rank") === "a") {
+            var sort_icon = '<span data-id="status" class="glyphicon glyphicon-triangle-' + ((data['reverse'] !== 'False') ? 'bottom' :'top')+'" style="margin-left:5px;color:#bbb"></span>';
+            var tablehtml = '<div class="newTable"><table width="100%" border="0" cellpadding="0" cellspacing="0" class="table table-hover">\
+                              <thead>\
+                                  <tr>\
+                                      <th width="30"><input type="checkbox" id="setBox" placeholder=""></th>\
+                                      <th><a style="cursor: pointer;" onclick="GetFiles('+ p + ',\'name\')">' + lan.files.file_name + ((data['sort'] === 'name' || !data['sort']) ? sort_icon:'') +'</a></th>\
+                                      <th><a style="cursor: pointer;" onclick="GetFiles('+ p + ',\'size\')">' + lan.files.file_size + ((data['sort'] === 'size') ? sort_icon : '') +'</a></th>\
+                                      <th><a style="cursor: pointer;" onclick="GetFiles('+ p + ',\'mtime\')">' + lan.files.file_etime + ((data['sort'] === 'mtime') ? sort_icon : '') +'</a></th>\
+                                      <th><a style="cursor: pointer;" onclick="GetFiles('+ p + ',\'accept\')">' + lan.files.file_auth + ((data['sort'] === 'accept') ? sort_icon : '') +'</a></th>\
+                                      <th><a style="cursor: pointer;" onclick="GetFiles('+ p + ',\'user\')">' + lan.files.file_own + ((data['sort'] === 'user') ? sort_icon : '') +'</a></th>\
+                                      <th style="text-align: right;" width="330">'+lan.files.file_act+'</th>\
+									  <th></th>\
+                                  </tr>\
+                              </thead>\
+                              </table>\
+							</div>\
+							<div class="newTableShadow"></div>\
+            				<div class="oldTable" style="overflow: auto;height: 500px;margin-top: -8px;"><table width="100%" border="0" cellpadding="0" cellspacing="0" class="table table-hover">\
 							<thead>\
 								<tr>\
 									<th width="30"><input type="checkbox" id="setBox" placeholder=""></th>\
-									<th>'+lan.files.file_name+'</th>\
-									<th>'+lan.files.file_size+'</th>\
-									<th>'+lan.files.file_etime+'</th>\
-									<th>'+lan.files.file_auth+'</th>\
-									<th>'+lan.files.file_own+'</th>\
+									<th><a style="cursor: pointer;" class="btlink" onclick="GetFiles('+ p + ',\'name\')">' + lan.files.file_name + ((data['sort'] === 'name' || !data['sort']) ? sort_icon:'') +'</a></th>\
+									<th><a style="cursor: pointer;" class="btlink" onclick="GetFiles('+ p + ',\'size\')">' + lan.files.file_size + ((data['sort'] === 'size') ? sort_icon : '') +'</a></th>\
+									<th><a style="cursor: pointer;" class="btlink" onclick="GetFiles('+ p + ',\'mtime\')">' + lan.files.file_etime + ((data['sort'] === 'mtime') ? sort_icon : '') +'</a></th>\
+									<th><a style="cursor: pointer;" class="btlink" onclick="GetFiles('+ p + ',\'accept\')">' + lan.files.file_auth + ((data['sort'] === 'accept') ? sort_icon : '') +'</a></th>\
+									<th><a style="cursor: pointer;" class="btlink" onclick="GetFiles('+ p + ',\'user\')">' + lan.files.file_own + ((data['sort'] === 'user') ? sort_icon : '') +'</a></th>\
 									<th style="text-align: right;" width="330">'+lan.files.file_act+'</th>\
 								</tr>\
 							</thead>\
 							<tbody id="filesBody" class="list-list">'+Body+'</tbody>\
-						</table>';
+						</table></div><div class="oldTableShadow"></div>';
 			$("#fileCon").removeClass("fileList").html(tablehtml);
 			$("#tipTools").width($("#fileCon").width());
 		}
@@ -508,7 +566,7 @@ function GetFiles(Path) {
 		$("#Batch").html('');
 		var BatchTools = '';
 		var isBatch = getCookie('BatchSelected');
-		if (isBatch == 1 || isBatch == '1') {
+		if (isBatch == 1 || isBatch == '1'){
 			BatchTools += ' <button onclick="javascript:BatchPaste();" class="btn btn-default btn-sm">'+lan.files.paste_all+'</button>';
 		}
 		$("#Batch").html(BatchTools);
@@ -538,18 +596,19 @@ function GetFiles(Path) {
 				$("#filesBody > tr").removeClass("ui-selected");
 			}
 			showSeclect();
-		});
+        });
+
 		$("#filesBody .btlink").click(function(e){
 			e.stopPropagation();
 		});
 		$("input[name=id]").dblclick(function(e){
 			e.stopPropagation();
 		});
-		$("#fileCon").bind("contextmenu",function(e){
+        $("#filesBody").bind("contextmenu",function(e){
 			return false;
 		});
 		bindselect();
-		$("#fileCon").mousedown(function(e){
+        $("#filesBody").mousedown(function(e){
 			var count = totalFile();
 			if(e.which == 3) {
 				if(count>1){
@@ -577,8 +636,30 @@ function GetFiles(Path) {
 			GetFiles(p);
 		});
 		PathPlaceBtn(rdata.PATH);
+      	auto_table_width();
 	});
 }
+function auto_table_width(){
+	var oldTable = $(window).height() - $('#tipTools')[0].getBoundingClientRect().height - $('#filePage')[0].getBoundingClientRect().height - $('.footer')[0].getBoundingClientRect().height - 111;
+	var oldTable_heigth =  $('.oldTable table').height();
+    $('.oldTable thead th').each(function(index,el){
+        var table_th = $('.oldTable thead th').length;
+        $('.newTable thead th').eq(index).attr('width',el.offsetWidth);
+        if(index == (table_th - 1)) $('.newTable thead th').eq(table_th).attr('width','10').css('padding','0');
+    });
+	if(oldTable_heigth > oldTable){
+		$('.oldTableShadow,.newTableShadow').show();
+		$('.oldTable').css('marginTop','-8px')
+	}else{
+    	$('.oldTableShadow,.newTableShadow').hide();
+		$('.oldTable').css('marginTop','0')
+	}
+  	$('.oldTable').height(oldTable);
+	$('.oldTable table').css({'marginTop':'-39px'})
+
+}
+
+
 function totalFile(){
 	var el = $("input[name='id']");
 	var len = el.length;
@@ -591,7 +672,7 @@ function totalFile(){
 	return count;
 }
 function bindselect(){
-	$("#filesBody,#fileCon").selectable({
+	$("#filesBody").selectable({
 		autoRefresh: false,
 		filter:"tr,.folderBox",
 		cancel: "a,span,input,.ico-folder",
@@ -613,7 +694,7 @@ function bindselect(){
 			$("#rmenu").hide()
 		}
 	});
-	$("#filesBody,#fileCon").selectable("refresh");
+	$("#filesBody").selectable("refresh");
 	$(".ico-folder").click(function(){
 		$(this).parent().addClass("ui-selected").siblings().removeClass("ui-selected");
 		$(".ui-selectee").find("input").prop("checked", false);
@@ -635,13 +716,6 @@ function showSeclect(){
 		$("#Batch").html(BatchTools);
 	}
 }
-$(window).scroll(function () {
-	if($(window).scrollTop() > 16){
-		$("#tipTools").css({"position":"fixed","top":"0","left":"195px","box-shadow":"0 1px 10px 3px #ccc"});
-	}else{
-		$("#tipTools").css({"position":"absolute","top":"0","left":"0","box-shadow":"none"});
-	}
-});
 $("#tipTools").width($(".file-box").width());
 $("#PathPlaceBtn").width($(".file-box").width()-700);
 $("#DirPathPlace input").width($(".file-box").width()-700);
@@ -657,6 +731,7 @@ window.onresize = function(){
 	}
 	PathLeft();
 	IsDiskWidth()
+  	auto_table_width();
 }
 function Batch(type,access){
 	var path = $("#DirPathPlace input").val();
@@ -1264,17 +1339,21 @@ function UnZip(fileName,type) {
 function isZip(fileName){
 	var ext = fileName.split('.');
 	var extName = ext[ext.length-1].toLowerCase();
-	if( extName == 'zip' || extName == 'rar') return 0;
+    if (extName == 'zip' || extName == 'war' || extName == 'rar') return 0;
 	if( extName == 'gz' || extName == 'tgz') return 1;
 	return -1;
 }
 function isText(fileName){
-	var exts = ['rar','zip','tar.gz','gz','iso','xsl','doc','xdoc','jpeg','jpg','png','gif','bmp','tiff','exe','so','7z','bz'];
+	var exts = ['rar','war','zip','tar.gz','gz','iso','xsl','doc','xdoc','jpeg','jpg','png','gif','bmp','tiff','exe','so','7z','bz'];
 	return isExts(fileName,exts)?false:true;
 }
 function isImage(fileName){
 	var exts = ['jpg','jpeg','png','bmp','gif','tiff','ico'];
 	return isExts(fileName,exts);
+}
+function isVideo(fileName) {
+    var exts = ['mp4', 'mpeg', 'mpg', 'mov', 'avi', 'webm', 'mkv'];
+    return isExts(fileName, exts);
 }
 function isExts(fileName,exts){
 	var ext = fileName.split('.');
@@ -1297,11 +1376,33 @@ function GetImage(fileName){
 	});
 	$(".layui-layer").css("top", "30%");
 }
+
+function GetPlay(fileName) {
+    var imgUrl = '/download?filename=' + fileName;
+    layer.open({
+        type: 1,
+        closeBtn: 2,
+        title: '播放[' + fileName+']',
+        area: '500px',
+        shadeClose: false,
+        content: '<div class="showpicdiv"><video src="' + imgUrl +'" controls="controls" autoplay="autoplay" width="100%" type="video/mp4">\
+                    您的浏览器不支持 video 标签。\
+                    </video></div>'
+    });
+    $(".layui-layer").css("top", "30%");
+}
 function GetFileBytes(fileName, fileSize){
 	window.open('/download?filename='+encodeURIComponent(fileName));
 }
-function UploadFiles(){
-	var path = $("#DirPathPlace input").val()+"/";
+function UploadFiles() {
+
+    var path = $("#DirPathPlace input").val() + "/";
+    bt_upload_file.open(path, null, null, function (path) {
+        GetFiles(path);
+    });
+    return;
+
+    /*
 	layer.open({
 		type:1,
 		closeBtn: 2,
@@ -1324,13 +1425,14 @@ function UploadFiles(){
 				<button type="button" id="filesClose" autocomplete="off" onClick="layer.closeAll()" >'+lan.public.close+'</button>\
 				<ul id="up_box"></ul></div>'
 	});
-	UploadStart();
+	UploadStart();*/
 }
 function SetChmod(action,fileName){
 	if(action == 1){
 		var chmod = $("#access").val();
-		var chown = $("#chown").val();
-		var data = 'filename='+ encodeURIComponent(fileName)+'&user='+chown+'&access='+chmod;
+        var chown = $("#chown").val();
+        var all = $("#accept_all").prop("checked") ? 'True' : 'False';
+		var data = 'filename='+ encodeURIComponent(fileName)+'&user='+chown+'&access='+chmod+'&all=' + all;
 		var loadT = layer.msg(lan.public.config,{icon:16,time:0,shade: [0.3, '#000']});
 		$.post('files?action=SetFileAccess',data,function(rdata){
 			layer.close(loadT);
@@ -1376,7 +1478,9 @@ function SetChmod(action,fileName){
 							<option value="www" '+(rdata.chown=='www'?'selected="selected"':'')+'>www</option>\
 							<option value="mysql" '+(rdata.chown=='mysql'?'selected="selected"':'')+'>mysql</option>\
 							<option value="root" '+(rdata.chown=='root'?'selected="selected"':'')+'>root</option>\
-						</select></span></div>\
+						</select></span>\
+                        <span><input type="checkbox" id="accept_all" checked /><label for="accept_all" style="position: absolute;margin-top: 4px; margin-left: 5px;font-weight: 400;">应用到子目录</label></span>\
+                        </div>\
 						<div class="bt-form-submit-btn">\
 							<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">'+lan.public.close+'</button>\
 					        <button type="button" class="btn btn-success btn-sm btn-title" onclick="'+toExec+'" >'+lan.public.ok+'</button>\
@@ -1457,10 +1561,15 @@ function RClick(type,path,name){
 	  {text: lan.files.file_menu_auth, 	onclick: function() {SetChmod(0,path)}},
 	  {text: lan.files.file_menu_zip, onclick: function() {Zip(path)}}
 	  
-	]};
+    ]
+    };  
+    
 	if(type == "dir"){
 		options.items.push({text: lan.files.file_menu_del, onclick: function() {DeleteDir(path)}});
-	}
+    }
+    //else if (isVideo(type)) {
+    //    options.items.push({ text: '播放', onclick: function () { GetPlay(path) } }, { text: lan.files.file_menu_down, onclick: function () { GetFileBytes(path) } }, { text: lan.files.file_menu_del, onclick: function () { DeleteFile(path) } });
+    //}
 	else if(isText(type)){
 		options.items.push({text: lan.files.file_menu_edit, onclick: function() {OnlineEditFile(0,path)}},{text: lan.files.file_menu_down, onclick: function() {GetFileBytes(path)}},{text: lan.files.file_menu_del, onclick: function() {DeleteFile(path)}});
 	}
@@ -1469,12 +1578,14 @@ function RClick(type,path,name){
 	}
 	else if(isImage(type)){
 		options.items.push({text: lan.files.file_menu_img, onclick: function() {GetImage(path)}},{text: lan.files.file_menu_down, onclick: function() {GetFileBytes(path)}},{text: lan.files.file_menu_del, onclick: function() {DeleteFile(path)}});
-	}
+    }
 	else{
 		options.items.push({text: lan.files.file_menu_down, onclick: function() {GetFileBytes(path)}},{text: lan.files.file_menu_del, onclick: function() {DeleteFile(path)}});
 	}
 	return options;
 }
+
+
 function RClickAll(e){
 	var menu = $("#rmenu");
 	var windowWidth = $(window).width(),
@@ -1508,7 +1619,8 @@ $("#DirPathPlace input").keyup(function(e){
 });
 function PathPlaceBtn(path){
 	var html = '';
-	var title = '';
+    var title = '';
+    path = path.replace('//', '/');
 	var	Dpath = path;
 	if(path == '/'){
 		html ='<li><a title="/">'+lan.files.path_root+'</a></li>';

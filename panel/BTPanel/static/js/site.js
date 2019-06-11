@@ -4,21 +4,21 @@ var site = {
     get_list: function (page, search, type) {
         if (page == undefined) page = 1;
         if (type == '-1' || type == undefined) {
-            console.log($('.site_type select').val())
+            //console.log($('.site_type select').val())
             type = $('.site_type select').val();
         }
         bt.site.get_list(page, search, type, function (rdata) {
             $('.dataTables_paginate').html(rdata.page);
-            bt.plugin.get_firewall_state(function (fdata) {
+            //bt.plugin.get_firewall_state(function (fdata) {
                 var data = rdata.data;
-                for (var x = 0; x < data.length; x++) {
-                    data[x]['firewall'] = false;
-                    data[x]['waf_setup'] = false;
-                    if (fdata.status !== false) {
-                        data[x]['firewall'] = true
-                        data[x]['waf_setup'] = true
-                    }
-                }
+            //    for (var x = 0; x < data.length; x++) {
+            //        data[x]['firewall'] = false;
+            //        data[x]['waf_setup'] = false;
+            //        if (fdata.status !== false) {
+            //            data[x]['firewall'] = true
+            //            data[x]['waf_setup'] = true
+             //       }
+            //    }
                 var _tab = bt.render({
                     table: '#webBody',
                     columns: [
@@ -82,8 +82,9 @@ var site = {
                         {
                             field: 'opt', width: 260, title: '操作', align: 'right', templet: function (item) {
                                 var opt = '';
-                                var _check = ' onclick="site.no_firewall()"';
-                                if (item.waf_setup) _check = ' onclick="site_waf_config(\'' + item.name + '\')"';
+                                //var _check = ' onclick="site.no_firewall()"';
+                                //if (item.waf_setup) 
+                                var _check = ' onclick="site.site_waf(\'' + item.name + '\')"';
 
                                 if (bt.os == 'Linux') opt += '<a href="javascript:;" ' + _check + ' class="btlink ">防火墙</a> | ';
                                 opt += '<a href="javascript:;" class="btlink" onclick="site.web_edit(this)">设置 </a> | ';
@@ -116,9 +117,17 @@ var site = {
                         }
                     });
                 })
-            })
+           //})
         });
 
+    },
+    site_waf: function (siteName) {
+        try {
+            site_waf_config(siteName);
+        } catch (err) {
+            site.no_firewall();
+        }
+        
     },
     get_types: function (callback) {
         bt.site.get_type(function (rdata) {
@@ -573,7 +582,12 @@ var site = {
             bt.site.verify_domain(partnerOrderId, siteName, function (vdata) {
                 bt.msg(vdata);
                 if (vdata.status) {
-                    site.ssl.onekey_ssl(partnerOrderId, siteName)
+                    if (vdata.data.stateCode == 'COMPLETED') {
+                        site.ssl.onekey_ssl(partnerOrderId, siteName)
+                    } else {
+                        layer.msg('等待CA验证中，若长时间未能成功验证，请登录官网使用DNS方式重新申请...');
+                    }
+                    
                 }
             })
         },
@@ -1108,6 +1122,10 @@ var site = {
                                         var loading = bt.load()
                                         bt.site.get_order_list(web.name, function (odata) {
                                             loading.close();
+                                            if (odata.status === false) {
+                                                layer.msg(odata.msg, { icon: 2 });
+                                                return;
+                                            }
                                             robj.append("<div class=\"divtable mtb15 table-fixed-box\" style=\"max-height:200px;overflow-y: auto;\"><table id='bt_order_list' class='table table-hover'></table></div>");
                                             bt.render({
                                                 table: '#bt_order_list',
@@ -1348,6 +1366,7 @@ var site = {
                                 }
                                 var _ul = $('<ul id="ymlist" class="domain-ul-list"></ul>');
                                 for (var i = 0; i < ddata.domains.length; i++) {
+                                    if (ddata.domains[i].binding === true) continue
                                     _ul.append('<li style="cursor: pointer;"><input class="checkbox-text" type="checkbox" value="' + ddata.domains[i].name + '">' + ddata.domains[i].name + '</li>');
                                 }
                                 var _line = $("<div class='line mtb10'></div>");

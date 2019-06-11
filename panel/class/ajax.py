@@ -858,29 +858,29 @@ ServerName 127.0.0.2
     #获取memcached状态
     def GetMemcachedStatus(self,get):
         import telnetlib,re;
-        tn = telnetlib.Telnet('127.0.0.1',11211);
-        tn.write(b"stats\n");
-        tn.write(b"quit\n");
-        data = tn.read_all();
+        conf = public.readFile('/etc/init.d/memcached')
+        result = {}
+        result['bind'] = re.search('IP=(.+)',conf).groups()[0]
+        result['port'] = int(re.search('PORT=(\d+)',conf).groups()[0])
+        result['maxconn'] = int(re.search('MAXCONN=(\d+)',conf).groups()[0])
+        result['cachesize'] = int(re.search('CACHESIZE=(\d+)',conf).groups()[0])
+        tn = telnetlib.Telnet(result['bind'],result['port'])
+        tn.write(b"stats\n")
+        tn.write(b"quit\n")
+        data = tn.read_all()
         if type(data) == bytes: data = data.decode('utf-8')
         data = data.replace('STAT','').replace('END','').split("\n");
-        result = {}
         res = ['cmd_get','get_hits','get_misses','limit_maxbytes','curr_items','bytes','evictions','limit_maxbytes','bytes_written','bytes_read','curr_connections'];
         for d in data:
             if len(d)<3: continue;
             t = d.split();
             if not t[0] in res: continue;
-            result[t[0]] = int(t[1]);
-        result['hit'] = 1;
+            result[t[0]] = int(t[1])
+        result['hit'] = 1
         if result['get_hits'] > 0 and result['cmd_get'] > 0:
-            result['hit'] = float(result['get_hits']) / float(result['cmd_get']) * 100;
-        
-        conf = public.readFile('/etc/init.d/memcached');
-        result['bind'] = re.search('IP=(.+)',conf).groups()[0];
-        result['port'] = int(re.search('PORT=(\d+)',conf).groups()[0]);
-        result['maxconn'] = int(re.search('MAXCONN=(\d+)',conf).groups()[0]);
-        result['cachesize'] = int(re.search('CACHESIZE=(\d+)',conf).groups()[0]);
-        return result;
+            result['hit'] = float(result['get_hits']) / float(result['cmd_get']) * 100
+
+        return result
     
     #设置memcached缓存大小
     def SetMemcachedCache(self,get):

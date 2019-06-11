@@ -31,13 +31,8 @@ class panelMysql:
                 if sys.version_info[0] == 2:
                     reload(MySQLdb)
             except Exception as ex:
-                try:
-                    import pymysql
-                    pymysql.install_as_MySQLdb()
-                    import MySQLdb
-                except Exception as e:
-                    self.__DB_ERR = e
-                    return False;
+                self.__DB_ERR = ex
+                return False;
             try:
                 myconf = public.readFile('/etc/my.cnf');
                 rep = "port\s*=\s*([0-9]+)"
