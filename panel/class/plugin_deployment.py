@@ -164,6 +164,18 @@ class plugin_deployment:
 
         public.writeFile(jsonFile,json.dumps(data));
         return public.returnMsg(True,'导入成功!');
+
+    #取本地包信息
+    def GetPackageOther(self,get):
+        p_name = get.p_name
+        jsonFile = self.__setupPath + '/deployment_list_other.json';
+        if not os.path.exists(jsonFile): public.returnMsg(False,'没有找到[%s]' % p_name)
+        data = json.loads(public.readFile(jsonFile));
+        
+        for i in range(len(data)):
+            if data[i]['name'] == p_name: return data[i]
+        return public.returnMsg(False,'没有找到[%s]' % p_name)
+                
     
     #删除程序包
     def DelPackage(self,get):
@@ -265,7 +277,7 @@ class plugin_deployment:
         self.WriteLogs(json.dumps({'name':'设置权限','total':0,'used':0,'pre':0,'speed':0}));
         os.system('chmod -R 755 ' + path);
         os.system('chown -R www.www ' + path);
-        if pinfo['chmod'] != "":
+        if pinfo['chmod']:
             for chm in pinfo['chmod']:
                 os.system('chmod -R ' + str(chm['mode']) + ' ' + (path + '/' + chm['path']).replace('//','/'));
         
@@ -273,7 +285,7 @@ class plugin_deployment:
         self.WriteLogs(json.dumps({'name':'安装必要的PHP扩展','total':0,'used':0,'pre':0,'speed':0}));
         import files
         mfile = files.files();
-        pinfo['php_ext'] = pinfo['php_ext'].strip().split(',')
+        if type(pinfo['php_ext']) == str : pinfo['php_ext'] = pinfo['php_ext'].strip().split(',')
         for ext in pinfo['php_ext']:
             if ext == 'pathinfo': 
                 import config
@@ -290,6 +302,7 @@ class plugin_deployment:
         #解禁PHP函数
         if 'enable_functions' in pinfo:
             try:
+                if type(pinfo['enable_functions']) == str : pinfo['enable_functions'] = pinfo['enable_functions'].strip().split(',')
                 php_f = public.GetConfigValue('setup_path') + '/php/' + php_version + '/etc/php.ini'
                 php_c = public.readFile(php_f)
                 rep = "disable_functions\s*=\s{0,1}(.*)\n"
@@ -308,7 +321,7 @@ class plugin_deployment:
         #执行额外shell进行依赖安装
         self.WriteLogs(json.dumps({'name':'执行额外SHELL','total':0,'used':0,'pre':0,'speed':0}));
         if os.path.exists(path+'/install.sh'): 
-            os.system('cd '+path+' && bash ' + 'install.sh ' + find['name']);
+            os.system('cd '+path+' && bash ' + 'install.sh ' + find['name'] + " &> install.log");
             os.system('rm -f ' + path+'/install.sh')
             
         #是否执行Composer
@@ -333,6 +346,13 @@ class plugin_deployment:
             rewriteConf = public.readFile(swfile);
             dwfile = self.__panelPath + '/vhost/rewrite/' + site_name + '.conf';
             public.writeFile(dwfile,rewriteConf);
+
+        swfile = path + '/.htaccess';
+        if os.path.exists(swfile):
+            swpath = (path + '/'+ pinfo['run_path'] + '/.htaccess').replace('//','/')
+            if pinfo['run_path'] != '/' and not os.path.exists(swpath):
+                public.writeFile(swpath, public.readFile(swfile))
+
                 
         #删除伪静态文件
         public.ExecShell("rm -f " + path + '/*.rewrite')
@@ -369,6 +389,8 @@ class plugin_deployment:
                     public.writeFile(siteConfigFile,siteConfig)
 
         #清理文件和目录
+        self.WriteLogs(json.dumps({'name':'清理多余的文件','total':0,'used':0,'pre':0,'speed':0}));
+        if type(pinfo['remove_file']) == str : pinfo['remove_file'] = pinfo['remove_file'].strip().split(',')
         for f_path in pinfo['remove_file']:
             filename = (path + '/' + f_path).replace('//','/')
             if os.path.exists(filename):
@@ -413,9 +435,9 @@ class plugin_deployment:
                 os.remove(p_info)
                 i_ndex_html = path + '/index.html'
                 if os.path.exists(i_ndex_html): os.remove(i_ndex_html)
-                public.ExecShell("\cp -a -r " + p_tmp + '/* ' + path + '/')
+                os.system("\cp -arf " + p_tmp + '/. ' + path + '/')
             except: pass
-        public.ExecShell("rm -rf " + self.__tmp + '/*')
+        os.system("rm -rf " + self.__tmp + '/*')
         return p_config
                 
     

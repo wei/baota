@@ -708,6 +708,12 @@ def inArray(arrays,searchStr):
     
     return False
 
+#格式化指定时间戳
+def format_date(format="%Y-%m-%d %H:%M:%S",times = None):
+    if not times: times = int(time.time())
+    time_local = time.localtime(times)
+    return time.strftime(format, time_local) 
+
 
 #检查Web服务器配置文件是否有错误
 def checkWebConfig():
@@ -734,10 +740,10 @@ def checkWebConfig():
             if os.path.exists(f3): os.remove(f3)
 
     if get_webserver() == 'nginx':
-        result = ExecShell("ulimit -n 8192 && /www/server/nginx/sbin/nginx -t -c /www/server/nginx/conf/nginx.conf");
+        result = ExecShell("ulimit -n 8192 ; /www/server/nginx/sbin/nginx -t -c /www/server/nginx/conf/nginx.conf");
         searchStr = 'successful'
     else:
-        result = ExecShell("ulimit -n 8192 && /www/server/apache/bin/apachectl -t");
+        result = ExecShell("ulimit -n 8192 ; /www/server/apache/bin/apachectl -t");
         searchStr = 'Syntax OK'
     
     if result[1].find(searchStr) == -1:
@@ -1078,7 +1084,7 @@ def get_uuid():
 
 
 #进程是否存在
-def process_exists(pname,exe = None):
+def process_exists(pname,exe = None,cmdline = None):
     try:
         import psutil
         pids = psutil.pids()
@@ -1086,10 +1092,13 @@ def process_exists(pname,exe = None):
             try:
                 p = psutil.Process(pid)
                 if p.name() == pname: 
-                    if not exe:
+                    if not exe and not cmdline:
                         return True;
                     else:
-                        if p.exe() == exe: return True
+                        if exe:
+                            if p.exe() == exe: return True
+                        if cmdline:
+                            if cmdline in  p.cmdline(): return True
             except:pass
         return False
     except: return True
@@ -1212,3 +1221,41 @@ def write_request_log():
         log_data['user-agent'] = request.headers.get('User-Agent')
         WriteFile(log_path + '/' + log_file,json.dumps(log_data) + "\n",'a+')
     except: pass
+
+#重载模块
+def mod_reload(mode):
+    if not mode: return False
+    try:
+        if sys.version_info[0] == 2:
+            reload(mode)
+        else:
+            import imp
+            imp.reload(module)
+        return True
+    except: return False
+
+#设置权限
+def set_mode(filename,mode):
+    if not os.path.exists(filename): return False
+    mode = int(str(mode),8)
+    os.chmod(filename,mode)
+    return True
+
+
+#设置用户组
+def set_own(filename,user,group=None):
+    if not os.path.exists(filename): return False
+    from pwd import getpwnam
+    try:
+        user_info = getpwnam(user)
+        user = user_info.pw_uid
+        if group:
+            user_info = getpwnam(group)
+        group = user_info.pw_gid
+    except:
+        #如果指定用户或组不存在，则使用www
+        user_info = getpwnam('www')
+        user = user_info.pw_uid
+        group = user_info.pw_gid
+    os.chown(filename,user,group)
+    return True

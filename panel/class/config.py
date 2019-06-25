@@ -14,12 +14,19 @@ class config:
     
     def getPanelState(self,get):
         return os.path.exists('/www/server/panel/data/close.pl');
+
+    def reload_session(self):
+        userInfo = public.M('users').where("username=?",(session['username'],)).find()
+        token = public.Md5(userInfo['username'] + '/' + userInfo['password'])
+        public.writeFile('data/login_token.pl',token)
+        session['login_token'] = token
     
     def setPassword(self,get):
         if get.password1 != get.password2: return public.returnMsg(False,'USER_PASSWORD_CHECK')
         if len(get.password1) < 5: return public.returnMsg(False,'USER_PASSWORD_LEN')
         public.M('users').where("username=?",(session['username'],)).setField('password',public.md5(get.password1.strip()))
         public.WriteLog('TYPE_PANEL','USER_PASSWORD_SUCCESS',(session['username'],))
+        self.reload_session()
         return public.returnMsg(True,'USER_PASSWORD_SUCCESS')
     
     def setUsername(self,get):
@@ -28,6 +35,7 @@ class config:
         public.M('users').where("username=?",(session['username'],)).setField('username',get.username1.strip())
         public.WriteLog('TYPE_PANEL','USER_USERNAME_SUCCESS',(session['username'],get.username2))
         session['username'] = get.username1
+        self.reload_session()
         return public.returnMsg(True,'USER_USERNAME_SUCCESS')
     
     def setPanel(self,get):
@@ -36,7 +44,9 @@ class config:
         sess_out_path = 'data/session_timeout.pl'
         if 'session_timeout' in get:
             session_timeout = int(get.session_timeout)
-            if int(public.readFile(sess_out_path)) != session_timeout:
+            s_time_tmp = public.readFile(sess_out_path)
+            if not s_time_tmp: s_time_tmp = '0'
+            if int(s_time_tmp) != session_timeout:
                 if session_timeout < 300: return public.returnMsg(False,'超时时间不能小于300秒')
                 public.writeFile(sess_out_path,str(session_timeout))
                 isReWeb = True
@@ -289,8 +299,11 @@ class config:
     
     #同步时间
     def syncDate(self,get):
-        dateStr = public.HttpGet(public.GetConfigValue('home') + '/api/index/get_date')
-        result = public.ExecShell('date -s "%s"' % dateStr);
+        time_str = public.HttpGet(public.GetConfigValue('home') + '/api/index/get_time')
+        new_time = int(time_str)
+        time_arr = time.localtime(new_time)
+        date_str = time.strftime("%Y-%m-%d %H:%M:%S", time_arr)
+        result = public.ExecShell('date -s "%s"' % date_str);
         public.WriteLog("TYPE_PANEL", "DATE_SUCCESS");
         return public.returnMsg(True,"DATE_SUCCESS");
         
@@ -408,9 +421,6 @@ class config:
             os.system('rm -f ' + sslConf);
             return public.returnMsg(True,'PANEL_SSL_CLOSE');
         else:
-            os.system('pip insatll cffi==1.10');
-            os.system('pip install cryptography==2.1');
-            os.system('pip install pyOpenSSL==16.2');
             try:
                 if not self.CreateSSL(): return public.returnMsg(False,'PANEL_SSL_ERR');
                 public.writeFile(sslConf,'True')
@@ -425,7 +435,7 @@ class config:
         key.generate_key(OpenSSL.crypto.TYPE_RSA, 2048)
         cert = OpenSSL.crypto.X509()
         cert.set_serial_number(0)
-        cert.get_subject().CN = '120.27.27.98';
+        cert.get_subject().CN = public.GetLocalIp()
         cert.set_issuer(cert.get_subject())
         cert.gmtime_adj_notBefore( 0 )
         cert.gmtime_adj_notAfter(86400 * 3650)
@@ -736,7 +746,6 @@ class config:
         return pluginInfo
 
     def get_token(self,get):
-        import json
         save_path = '/www/server/panel/config/api.json'
         if not os.path.exists(save_path): 
             data = { "open":False, "token":"", "limit_addr":[] }
@@ -748,9 +757,6 @@ class config:
         return data
 
     def set_token(self,get):
-        import json
-        #panel_password = public.M('users').where('id=?',(1,)).getField('password')
-        #if not public.md5(get.panel_password.strip()) == panel_password: return public.returnMsg(False,'面板密码错误!')
         if 'request_token' in get: return public.returnMsg(False,'不能通过API接口配置API')
         save_path = '/www/server/panel/config/api.json'
         data = json.loads(public.ReadFile(save_path))
@@ -857,6 +863,51 @@ class config:
         public.ExecShell("ln -sf %s %s" % (php_pecl_src,php_pecl))
         public.ExecShell("ln -sf %s %s" % (php_pear_src,php_pear))
         if is_chattr != -1:  public.ExecShell('chattr +i /usr/bin')
+        public.WriteLog('面板设置','设置PHP-CLI版本为: %s' % get.php_version)
         return public.returnMsg(True,'设置成功!')
 
+    
+    #获取BasicAuth状态
+    def get_basic_auth_stat(self,get):
+        path = 'config/basic_auth.json'
+        is_install = True
+        if not os.path.exists(path): return {"basic_user":"","basic_pwd":"","open":False,"is_install":is_install}
+        ba_conf = json.loads(public.readFile(path))
+        ba_conf['is_install'] = is_install
+        return ba_conf
+
+    #设置BasicAuth
+    def set_basic_auth(self,get):
+        is_open = False
+        if get.open == 'True': is_open = True
+        tips = '_bt.cn'
+        path = 'config/basic_auth.json'
+        ba_conf = None
+        if os.path.exists(path):
+            ba_conf = json.loads(public.readFile(path))
+
+        if not ba_conf: 
+            ba_conf = {"basic_user":public.md5(get.basic_user.strip() + tips),"basic_pwd":public.md5(get.basic_pwd.strip() + tips),"open":is_open}
+        else:
+            if get.basic_user: ba_conf['basic_user'] = public.md5(get.basic_user.strip() + tips)
+            if get.basic_pwd: ba_conf['basic_pwd'] = public.md5(get.basic_pwd.strip() + tips)
+            ba_conf['open'] = is_open
         
+        public.writeFile(path,json.dumps(ba_conf))
+        os.chmod(path,384)
+        public.WriteLog('面板设置','设置BasicAuth状态为: %s' % is_open)
+        public.writeFile('data/reload.pl','True')
+        return public.returnMsg(True,"设置成功!")
+
+    #取面板运行日志
+    def get_panel_error_logs(self,get):
+        filename = 'logs/error.log'
+        if not os.path.exists(filename): return public.returnMsg(False,'没有找到运行日志')
+        result = public.GetNumLines(filename,2000)
+        return public.returnMsg(True,result)
+    #清空面板运行日志
+    def clean_panel_error_logs(self,get):
+        filename = 'logs/error.log'
+        public.writeFile(filename,'')
+        public.WriteLog('面板配置','清空面板运行日志')
+        return public.returnMsg(True,'已清空!')

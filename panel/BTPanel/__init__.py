@@ -20,12 +20,16 @@ from werkzeug.contrib.cache import SimpleCache
 from werkzeug.wrappers import Response
 from flask_socketio import SocketIO,emit,send
 
-#from flask_basicauth import BasicAuth
-#app.config['BASIC_AUTH_USERNAME'] = 'admin'
-#app.config['BASIC_AUTH_PASSWORD'] = '11111'
-#app.config['BASIC_AUTH_FORCE'] = True
-#basic_auth = BasicAuth(app)
-
+#设置BasicAuth
+basic_auth_conf = 'config/basic_auth.json' 
+app.config['BASIC_AUTH_OPEN'] = False
+if os.path.exists(basic_auth_conf):
+    try:
+        ba_conf = json.loads(public.readFile(basic_auth_conf))
+        app.config['BASIC_AUTH_USERNAME'] = ba_conf['basic_user']
+        app.config['BASIC_AUTH_PASSWORD'] = ba_conf['basic_pwd']
+        app.config['BASIC_AUTH_OPEN'] = ba_conf['open']
+    except: pass
 
 cache = SimpleCache()
 socketio = SocketIO()
@@ -34,6 +38,7 @@ socketio.init_app(app)
 import common,db,jobs,uuid
 jobs.control_init()
 app.secret_key = uuid.UUID(int=uuid.getnode()).hex[-12:]
+local_ip = None
 
 
 try:
@@ -81,6 +86,24 @@ if admin_path in admin_path_checks: admin_path = '/bt'
 def service_status():
     return 'True'
 
+
+@app.before_request
+def basic_auth_check():
+    if app.config['BASIC_AUTH_OPEN']:
+        if request.path in ['/public','/download']: return;
+        auth = request.authorization
+        if not comm.get_sk(): return;
+        if not auth: return send_authenticated()
+        tips = '_bt.cn'
+        if public.md5(auth.username.strip() + tips) != app.config['BASIC_AUTH_USERNAME'] or public.md5(auth.password.strip() + tips) != app.config['BASIC_AUTH_PASSWORD']:
+            return send_authenticated()
+
+
+def send_authenticated():
+    global local_ip
+    if not local_ip: local_ip = public.GetLocalIp()
+    return Response('', 401,{'WWW-Authenticate': 'Basic realm="%s"' % local_ip})
+
 @app.route('/',methods=method_all)
 def home():
     comReturn = comm.local()
@@ -91,6 +114,7 @@ def home():
     data['ftpCount'] = public.M('ftps').count()
     data['databaseCount'] = public.M('databases').count()
     data['lan'] = public.GetLan('index')
+    data['724'] = public.format_date("%m%d") == '0724'
     return render_template( 'index.html',data = data)
 
 @app.route('/close',methods=method_get)
@@ -155,9 +179,9 @@ def is_login(result):
     if 'login' in session:
         if session['login'] == True:
             result = make_response(result)
-            request_token = public.md5(app.secret_key + str(time.time()))
+            request_token = public.GetRandomString(48)
             session['request_token'] = request_token
-            result.set_cookie('request_token',request_token,httponly=True,max_age=86400*30)
+            result.set_cookie('request_token',request_token,max_age=86400*30)
     return result
 
 @app.route('/site',methods=method_all)
@@ -186,7 +210,7 @@ def ftp(pdata = None):
         data['isSetup'] = True;
         if os.path.exists(public.GetConfigValue('setup_path') + '/pure-ftpd') == False: data['isSetup'] = False;
         data['lan'] = public.GetLan('ftp')
-        return render_template( 'ftp.html',data=data)
+        return render_template('ftp.html',data=data)
     import ftp
     ftpObject = ftp.ftp()
     defs = ('AddUser','DeleteUser','SetUserPassword','SetStatus','setPort')
@@ -291,6 +315,35 @@ def firewall_new(pdata = None):
     return publicObject(firewallObject,defs,None,pdata);
 
 
+@app.route('/monitor', methods=method_all)
+def panel_monitor(pdata=None):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    import monitor
+    dataObject = monitor.Monitor()
+    defs = ('get_access_ip', 'get_exception', 'get_exception_logs', 'get_attack_nums', 'php_count', 'return_php', 'mysql_client_count')
+    return publicObject(dataObject, defs, None, pdata)
+
+
+@app.route('/san', methods=method_all)
+def san_baseline(pdata=None):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    import san_baseline
+    dataObject = san_baseline.san_baseline()
+    defs = ('start', 'get_api_log', 'get_resut', 'get_ssh_errorlogin')
+    return publicObject(dataObject, defs, None, pdata)
+  
+  
+@app.route('/abnormal', methods=method_all)
+def abnormal(pdata=None):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    import abnormal
+    dataObject = abnormal.abnormal()
+    defs = ( 'mysql_server', 'mysql_cpu', 'mysql_count', 'php_server', 'php_conn_max', 'php_cpu', 'CPU', 'Memory', 'disk', 'not_root_user','start')
+    return publicObject(dataObject, defs, None, pdata)
+
 @app.route('/files',methods=method_all)
 def files(pdata = None):
     comReturn = comm.local()
@@ -337,6 +390,7 @@ def config(pdata = None):
     if comReturn: return comReturn
     if request.method == method_get[0] and not pdata:
         import system,wxapp,config
+        c_obj = config.config()
         data = system.system().GetConcifInfo()
         data['lan'] = public.GetLan('config')
         try:
@@ -350,14 +404,18 @@ def config(pdata = None):
         workers_p = 'data/workers.pl'
         if not os.path.exists(workers_p): public.writeFile(workers_p,'1')
         data['workers'] = int(public.readFile(workers_p))
-        data['session_timeout'] = int(public.readFile(sess_out_path))
-        if config.config().get_ipv6_listen(None): data['ipv6'] = 'checked'
-        if config.config().get_token(None)['open']: data['api'] = 'checked' 
+        s_time_tmp = public.readFile(sess_out_path)
+        if not s_time_tmp: s_time_tmp = '0'
+        data['session_timeout'] = int(s_time_tmp)
+        if c_obj.get_ipv6_listen(None): data['ipv6'] = 'checked'
+        if c_obj.get_token(None)['open']: data['api'] = 'checked'
+        data['basic_auth'] = c_obj.get_basic_auth_stat(None)
+        data['basic_auth']['value'] = '已关闭'
+        if data['basic_auth']['open']: data['basic_auth']['value'] = '已开启'
         return render_template( 'config.html',data=data)
     import config
-    configObject = config.config()
-    defs = ('get_cli_php_version','get_tmp_token','set_cli_php_version','DelOldSession', 'GetSessionCount', 'SetSessionConf', 'GetSessionConf','get_ipv6_listen','set_ipv6_status','GetApacheValue','SetApacheValue','GetNginxValue','SetNginxValue','get_token','set_token','set_admin_path','is_pro','get_php_config','get_config','SavePanelSSL','GetPanelSSL','GetPHPConf','SetPHPConf','GetPanelList','AddPanelInfo','SetPanelInfo','DelPanelInfo','ClickPanelInfo','SetPanelSSL','SetTemplates','Set502','setPassword','setUsername','setPanel','setPathInfo','setPHPMaxSize','getFpmConfig','setFpmConfig','setPHPMaxTime','syncDate','setPHPDisable','SetControl','ClosePanel','AutoUpdatePanel','SetPanelLock')
-    return publicObject(configObject,defs,None,pdata);
+    defs = ('get_panel_error_logs','clean_panel_error_logs','get_basic_auth_stat','set_basic_auth','get_cli_php_version','get_tmp_token','set_cli_php_version','DelOldSession', 'GetSessionCount', 'SetSessionConf', 'GetSessionConf','get_ipv6_listen','set_ipv6_status','GetApacheValue','SetApacheValue','GetNginxValue','SetNginxValue','get_token','set_token','set_admin_path','is_pro','get_php_config','get_config','SavePanelSSL','GetPanelSSL','GetPHPConf','SetPHPConf','GetPanelList','AddPanelInfo','SetPanelInfo','DelPanelInfo','ClickPanelInfo','SetPanelSSL','SetTemplates','Set502','setPassword','setUsername','setPanel','setPathInfo','setPHPMaxSize','getFpmConfig','setFpmConfig','setPHPMaxTime','syncDate','setPHPDisable','SetControl','ClosePanel','AutoUpdatePanel','SetPanelLock')
+    return publicObject(config.config(),defs,None,pdata);
 
 @app.route('/ajax',methods=method_all)
 def ajax(pdata = None):
@@ -383,7 +441,7 @@ def deployment(pdata = None):
     if comReturn: return comReturn
     import plugin_deployment
     sysObject = plugin_deployment.plugin_deployment()
-    defs = ('GetList','AddPackage','DelPackage','SetupPackage','GetSpeed')
+    defs = ('GetList','AddPackage','DelPackage','SetupPackage','GetSpeed','GetPackageOther')
     return publicObject(sysObject,defs,None,pdata);
 
 @app.route('/data',methods=method_all)
@@ -426,7 +484,7 @@ def ssl(pdata = None):
     if comReturn: return comReturn
     import panelSSL
     toObject = panelSSL.panelSSL()
-    defs = ('RemoveCert','SetCertToSite','GetCertList','SaveCert','GetCert','GetCertName','DelToken','GetToken','GetUserInfo','GetOrderList','GetDVSSL','Completed','SyncOrder','GetSSLInfo','downloadCRT','GetSSLProduct','Renew_SSL','Get_Renew_SSL')
+    defs = ('RemoveCert','renew_lets_ssl','SetCertToSite','GetCertList','SaveCert','GetCert','GetCertName','DelToken','GetToken','GetUserInfo','GetOrderList','GetDVSSL','Completed','SyncOrder','GetSSLInfo','downloadCRT','GetSSLProduct','Renew_SSL','Get_Renew_SSL')
     result = publicObject(toObject,defs,None,pdata);
     return result;
 
@@ -455,7 +513,12 @@ def plugin(pdata = None):
 def panel_public():
     get = get_input();
     get.client_ip = public.GetClientIp();
+    
     if get.fun in ['scan_login','login_qrcode','set_login','is_scan_ok','blind']:
+        #检查是否验证过安全入口
+        if get.fun in ['login_qrcode','is_scan_ok']:
+            global admin_check_auth,admin_path,route_path,admin_path_file
+            if admin_path != '/bt' and os.path.exists(admin_path_file) and  not 'admin_auth' in session: return 'False'
         import wxapp
         pluwx = wxapp.wxapp()
         checks = pluwx._check(get)
@@ -508,8 +571,8 @@ def coll_socket(msg):
         return;
     emit('coll_response',getattr(t,msg['f'])(msg))
 
-@app.route('/btco',methods=method_all)
-@app.route('/btco/',methods=method_all)
+@app.route('/coll',methods=method_all)
+@app.route('/coll/',methods=method_all)
 @app.route('/<name>/<fun>',methods=method_all)
 @app.route('/<name>/<fun>/<path:stype>',methods=method_all)
 def panel_other(name=None,fun = None,stype=None):
@@ -524,7 +587,7 @@ def panel_other(name=None,fun = None,stype=None):
 
     #前置准备
 
-    if not name: name = 'btco'
+    if not name: name = 'coll'
 
     #是否响应面板默认静态文件
     if name == 'static':
@@ -813,14 +876,15 @@ except:
 
 @socketio.on('webssh')
 def webssh(msg):
-    if not check_login(): 
+    if not check_login(msg['x_http_token']): 
         emit('server_response',{'data':public.getMsg('INIT_WEBSSH_LOGOUT')})
         return None
+
     global shell,ssh
     ssh_success = True
-    if type(msg) == dict:
-        if 'ssh_user' in msg:
-            connect_ssh(msg['ssh_user'].strip(),msg['ssh_passwd'].strip())
+    if type(msg['data']) == dict:
+        if 'ssh_user' in msg['data']:
+            connect_ssh(msg['data']['ssh_user'].strip(),msg['data']['ssh_passwd'].strip())
     if not shell: ssh_success = connect_ssh()
     if not shell:
         emit('server_response',{'data':public.getMsg('INIT_WEBSSH_CONN_ERR')})
@@ -829,13 +893,10 @@ def webssh(msg):
     if not ssh_success:
         emit('server_response',{'data':public.getMsg('INIT_WEBSSH_CONN_ERR')})
         return;
-    shell.send(msg)
-    try:
-        time.sleep(0.005)
-        recv = shell.recv(4096)
-        emit('server_response',{'data':recv.decode("utf-8")})
-    except Exception as ex:
-        pass
+    shell.send(msg['data'])
+    time.sleep(0.005)
+    recv = shell.recv(4096)
+    emit('server_response',{'data':recv.decode("utf-8")})
 
 def connect_ssh(user=None,passwd=None):
     global shell,ssh
@@ -904,41 +965,32 @@ def connected_msg(msg):
     if not shell: connect_ssh()
     if shell:
         try:
-            #shell.send(msg)
             recv = shell.recv(8192)
             emit('server_response',{'data':recv.decode("utf-8")})
         except:
             pass
 
 
-@socketio.on('panel')
-def websocket_test(data):
-    pdata = data
-    if not check_login():
-        emit(pdata.s_response,{'data':public.returnMsg(-1,public.getMsg('INIT_WEBSSH_LOGOUT'))})
-        return None 
-    mods = ['site','ftp','database','ajax','system','crontab','files','config','panel_data','plugin','ssl','auth','firewall','panel_wxapp']
-    if not pdata['s_module'] in mods:
-        result = public.returnMsg(False,"INIT_WEBSOCKET_ERR")
-    else:
-        result = eval("%s(pdata)" % pdata['s_module'])
-    if not hasattr(pdata,'s_response'): pdata.s_response = 'response'
-    emit(pdata.s_response,{'data':result})
+def check_csrf():
+    request_token = request.cookies.get('request_token')
+    if session['request_token'] != request_token: return False
+    http_token = request.headers.get('x-http-token')
+    if not http_token: return False
+    if http_token != session['request_token_head']: return False
+    cookie_token = request.headers.get('x-cookie-token')
+    if cookie_token != session['request_token']: return False
+    return True
 
 def publicObject(toObject,defs,action=None,get = None):
     if 'request_token' in session and 'login' in session:
-        request_token = request.cookies.get('request_token')
-        if session['request_token'] != request_token:
-            if session['login'] != False:
-                session['login'] = False;
-                cache.set('dologin',True)
-                return redirect('/login')
+        if not check_csrf(): return public.ReturnJson(False,'Csrf-Token error.'),json_header
 
     if not get: get = get_input()
     if action: get.action = action
 
     if hasattr(get,'path'):
             get.path = get.path.replace('//','/').replace('\\','/');
+            if get.path.find('..') != -1: return public.ReturnJson(False,'不安全的路径'),json_header
             if get.path.find('->') != -1:
                 get.path = get.path.split('->')[0].strip();
     not_acts = ['GetTaskSpeed','GetNetWork','check_pay_status','get_re_order_status','get_order_stat']
@@ -954,10 +1006,12 @@ def publicObject(toObject,defs,action=None,get = None):
     return public.ReturnJson(False,'ARGS_ERR'),json_header
 
 
-def check_login():
+def check_login(http_token=None):
     if cache.get('dologin'): return False
     if 'login' in session: 
         loginStatus = session['login']
+        if loginStatus and http_token:
+            if session['request_token_head'] != http_token: return False
         return loginStatus
     return False
 

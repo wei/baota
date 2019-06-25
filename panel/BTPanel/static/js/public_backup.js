@@ -515,12 +515,15 @@ var bt =
 		if(!config.hasOwnProperty('time')) config.time = 2000;		
 		if(typeof config.msg=='string' && bt.contains(config.msg,'ERROR')) config.time = 0;
 		
-		if(config.hasOwnProperty('icon')){
-			if(typeof config.icon=='boolean') config.icon = config.icon?1:2;
-		}
-		else if(config.hasOwnProperty('status')){
-			config.icon=config.status?1:2;
-		}
+        if (config.hasOwnProperty('icon')) {
+            if (typeof config.icon == 'boolean') config.icon = config.icon ? 1 : 2;
+        }
+        else if (config.hasOwnProperty('status')) {
+            config.icon = config.status ? 1 : 2;
+            if (!config.status) {
+                btnObj.time = 0;
+            }
+        }
 		if(config.icon) btnObj.icon = config.icon;
 		btnObj.time = config.time;
 		var msg = ''
@@ -949,29 +952,40 @@ var bt =
 					$('.check').prop('checked',checked?'checked':'');					
 				}				
 			})
-			$(obj.table).find('th').data('checks',checks).click(function(){				
-				var _th =$(this);
-				var _checks = _th.data('checks');
-				var _span = _th.find('span');
-				if(_span.length>0){
-					var asc = 'glyphicon-triangle-top';
-					var desc = 'glyphicon-triangle-bottom';
-					var or = _span.attr('data-id');
-					if(_span.hasClass(asc)){						
-						bt.set_cookie('order',or + ' desc');
-						_checks[or]();
-						setTimeout(function(){
-							$(obj.table).find('th span[data-id="'+or+'"]').removeClass(asc).addClass(desc);
-						},500)
-					}else if(_span.hasClass(desc)){							
-						bt.set_cookie('order',or + ' asc');
-						_checks[or]();						
-						setTimeout(function(){
-							$(obj.table).find('th span[data-id="'+or+'"]').removeClass(desc).addClass(asc);			
-                        }, 500)
-					}	
-				}
-			})
+            var asc = 'glyphicon-triangle-top';
+            var desc = 'glyphicon-triangle-bottom';
+
+            var orderby = bt.get_cookie('order');
+            if (orderby != undefined) {
+                var arrys = orderby.split(' ')
+                if (arrys.length == 2) {
+                    if (arrys[1] == 'asc') {
+                        $(obj.table).find('th span[data-id="' + arrys[0] + '"]').removeClass(desc).addClass(asc);
+                    }
+                    else {
+                        $(obj.table).find('th span[data-id="' + arrys[0] + '"]').removeClass(asc).addClass(desc);
+                    }
+                }
+            }
+
+            $(obj.table).find('th').data('checks', checks).click(function () {
+                var _th = $(this);
+                var _checks = _th.data('checks');
+                var _span = _th.find('span');
+                if (_span.length > 0) {
+                    var or = _span.attr('data-id');
+                    if (_span.hasClass(asc)) {
+                        bt.set_cookie('order', or + ' desc');
+                        $(obj.table).find('th span[data-id="' + or + '"]').removeClass(asc).addClass(desc);
+                        _checks[or]();
+
+                    } else if (_span.hasClass(desc)) {
+                        bt.set_cookie('order', or + ' asc');
+                        $(obj.table).find('th span[data-id="' + arrys[0] + '"]').removeClass(desc).addClass(asc);
+                        _checks[or]();
+                    }
+                }
+            })
 		}
 		return _tab;
 	}
