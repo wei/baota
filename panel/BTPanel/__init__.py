@@ -19,6 +19,7 @@ from flask_session import Session
 from werkzeug.contrib.cache import SimpleCache
 from werkzeug.wrappers import Response
 from flask_socketio import SocketIO,emit,send
+dns_client = None
 
 #设置BasicAuth
 basic_auth_conf = 'config/basic_auth.json' 
@@ -547,30 +548,6 @@ def send_favicon():
     return send_file(s_file,conditional=True,add_etags=True)
 
 
-@socketio.on('coll_socket')
-def coll_socket(msg):
-    coll_path = '/www/server/panel/plugin/coll'
-    if not os.path.exists(coll_path): 
-        emit('coll_response',{'data':'未安装宝塔群控主控端!'})
-        return;
-    if type(msg) == str or not 'f' in msg: 
-        emit('coll_response',{'data':'参数错误!'})
-        return;
-    sys.path.insert(0,coll_path)
-    from inc import coll_terminal
-    try:
-        if sys.version_info[0] == 2:
-            reload(coll_terminal)
-        else:
-            from imp import reload
-            reload(coll_terminal)
-    except:pass
-    t = coll_terminal.coll_terminal()
-    if not hasattr(t,msg['f']): 
-        emit('coll_response',{'data':'指定方法不存在!'})
-        return;
-    emit('coll_response',getattr(t,msg['f'])(msg))
-
 @app.route('/coll',methods=method_all)
 @app.route('/coll/',methods=method_all)
 @app.route('/<name>/<fun>',methods=method_all)
@@ -588,10 +565,12 @@ def panel_other(name=None,fun = None,stype=None):
     #前置准备
 
     if not name: name = 'coll'
+    if not public.path_safe_check("%s/%s/%s" % (name,fun,stype)): return abort(404)
 
     #是否响应面板默认静态文件
     if name == 'static':
         s_file = '/www/server/panel/BTPanel/static/' + fun + '/' + stype
+        if s_file.find('..') != -1 or s_file.find('./') != -1: return abort(404)
         if not os.path.exists(s_file): return abort(404)
         return send_file(s_file,conditional=True,add_etags=True)
 
@@ -605,6 +584,7 @@ def panel_other(name=None,fun = None,stype=None):
     if fun == 'static':
         if stype.find('./') != -1 or not os.path.exists(p_path + '/static'): return public.returnJson(False,'错误的请求!'),json_header
         s_file = p_path + '/static/' + stype
+        if s_file.find('..') != -1: return abort(404)
         if not os.path.exists(s_file): return public.returnJson(False,'指定文件不存在['+stype+']'),json_header
         return send_file(s_file,conditional=True,add_etags=True)
 
@@ -874,6 +854,11 @@ try:
 except:
     public.ExecShell('pip install paramiko==2.0.2 &')
 
+@socketio.on('connect')
+def socket_connect(msg=None):
+    if not check_login(): 
+        raise emit('server_response',{'data':public.getMsg('INIT_WEBSSH_LOGOUT')})
+
 @socketio.on('webssh')
 def webssh(msg):
     if not check_login(msg['x_http_token']): 
@@ -983,7 +968,7 @@ def check_csrf():
 
 def publicObject(toObject,defs,action=None,get = None):
     if 'request_token' in session and 'login' in session:
-        if not check_csrf(): return public.ReturnJson(False,'Csrf-Token error.'),json_header
+        if not check_csrf(): return public.ReturnJson(False,'CSRF校验失败，请重新登录面板'),json_header
 
     if not get: get = get_input()
     if action: get.action = action

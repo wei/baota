@@ -12,11 +12,22 @@ os.chdir(setup_path)
 sys.path.append("class/")
 import requests,sewer,public
 from OpenSSL import crypto
-requests.packages.urllib3.disable_warnings()
+try:
+    requests.packages.urllib3.disable_warnings()
+except:pass
+import BTPanel
+try:
+    import dns.resolver
+except:
+    os.system("pip install dnspython")
+    try:
+        import dns.resolver
+    except:
+        pass
 
 class panelLets:
     let_url = "https://acme-v02.api.letsencrypt.org/directory"
-    #let_url_test = "https://acme-staging-v02.api.letsencrypt.org/directory"
+    #let_url = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
     setupPath = None #安装路径  
     server_type = None
@@ -137,7 +148,9 @@ class panelLets:
         pfx_buffer = p12.export()
         public.writeFile(path + "/fullchain.pfx",pfx_buffer,'wb+')
          
-        return public.returnMsg(True, '[%s]证书续签成功.' % data['siteName']) 
+        return public.returnMsg(True, '[%s]证书续签成功.' % data['siteName'])
+
+
 
     #申请证书
     def apple_lest_cert(self,get):
@@ -172,8 +185,7 @@ class panelLets:
             domain_list = data['domains']
             if data['app_root'] == '1':
                 domain_list = []
-                data['first_domain'] = self.get_root_domain(data['first_domain'])               
-
+                data['first_domain'] = self.get_root_domain(data['first_domain'])
                 for domain in data['domains']:
                     rootDoamin = self.get_root_domain(domain)
                     if not rootDoamin in domain_list: domain_list.append(rootDoamin)
@@ -239,30 +251,35 @@ class panelLets:
         
         return public.returnMsg(True, '申请成功.')
 
+
+
+
+
     #手动解析
     def crate_let_by_oper(self,data):
         result = {}
         result['status'] = False
         try:
             if not data['email']: data['email'] = public.M('users').getField('email')
-            client = sewer.Client(domain_name = data['first_domain'],dns_class = None,account_key = data['account_key'],domain_alt_names = data['domains'],contact_email = str(data['email']) ,ACME_AUTH_STATUS_WAIT_PERIOD = 15,ACME_AUTH_STATUS_MAX_CHECKS = 5,ACME_REQUEST_TIMEOUT = 20,ACME_DIRECTORY_URL = self.let_url)
+            
             
             #手动解析记录值
             if not 'renew' in data:
+                BTPanel.dns_client = sewer.Client(domain_name = data['first_domain'],dns_class = None,account_key = data['account_key'],domain_alt_names = data['domains'],contact_email = str(data['email']) ,ACME_AUTH_STATUS_WAIT_PERIOD = 15,ACME_AUTH_STATUS_MAX_CHECKS = 5,ACME_REQUEST_TIMEOUT = 20,ACME_DIRECTORY_URL = self.let_url)
                 domain_dns_value = "placeholder"
                 dns_names_to_delete = []
 
-                client.acme_register()
-                authorizations, finalize_url = client.apply_for_cert_issuance()
+                BTPanel.dns_client.acme_register()
+                authorizations, finalize_url = BTPanel.dns_client.apply_for_cert_issuance()
                 responders = []
                 for url in authorizations:
-                    identifier_auth = client.get_identifier_authorization(url)
+                    identifier_auth = BTPanel.dns_client.get_identifier_authorization(url)
                     authorization_url = identifier_auth["url"]
                     dns_name = identifier_auth["domain"]
                     dns_token = identifier_auth["dns_token"]
                     dns_challenge_url = identifier_auth["dns_challenge_url"]
 
-                    acme_keyauthorization, domain_dns_value = client.get_keyauthorization(dns_token)
+                    acme_keyauthorization, domain_dns_value = BTPanel.dns_client.get_keyauthorization(dns_token)
                  
                     acme_name = self.get_acme_name(dns_name)
                     dns_names_to_delete.append({"dns_name": dns_name,"acme_name":acme_name, "domain_dns_value": domain_dns_value})
@@ -280,27 +297,29 @@ class panelLets:
                 dns['finalize_url'] = finalize_url
                 return dns
             else:
+
                 responders = data['dns']['responders']
                 dns_names_to_delete = data['dns']['dns_names']
                 finalize_url = data['dns']['finalize_url']
                 for i in responders:  
-                    auth_status_response = client.check_authorization_status(i["authorization_url"])
+                    auth_status_response = BTPanel.dns_client.check_authorization_status(i["authorization_url"])
                     if auth_status_response.json()["status"] == "pending":
-                        client.respond_to_challenge(i["acme_keyauthorization"], i["dns_challenge_url"])
+                        BTPanel.dns_client.respond_to_challenge(i["acme_keyauthorization"], i["dns_challenge_url"])
 
                 for i in responders:
-                    client.check_authorization_status(i["authorization_url"], ["valid"])
+                    BTPanel.dns_client.check_authorization_status(i["authorization_url"], ["valid"])
 
-                certificate_url = client.send_csr(finalize_url)
-                certificate = client.download_certificate(certificate_url)
+                certificate_url = BTPanel.dns_client.send_csr(finalize_url)
+                certificate = BTPanel.dns_client.download_certificate(certificate_url)
 
                 if certificate:
                     certificate = self.split_ca_data(certificate)
                     result['cert'] = certificate['cert']
                     result['ca_data'] = certificate['ca_data']
-                    result['key'] = client.certificate_key
-                    result['account_key'] = client.account_key
+                    result['key'] = BTPanel.dns_client.certificate_key
+                    result['account_key'] = BTPanel.dns_client.account_key
                     result['status'] = True
+                    BTPanel.dns_client = None
                 else:
                     result['msg'] = '证书获取失败，请稍后重试.'
 
@@ -310,8 +329,8 @@ class panelLets:
         return result
 
     #dns验证
-    def crate_let_by_dns(self,data):        
-        dns_class = self.get_dns_class(data)  
+    def crate_let_by_dns(self,data):
+        dns_class = self.get_dns_class(data)
         if not dns_class: 
             return public.returnMsg(False, 'DNS连接失败，请检查密钥是否正确.')
      
@@ -338,15 +357,23 @@ class panelLets:
 
                     acme_keyauthorization, domain_dns_value = client.get_keyauthorization(dns_token)
                     dns_class.create_dns_record(dns_name, domain_dns_value)
+                    self.check_dns(self.get_acme_name(dns_name),domain_dns_value)
                     dns_names_to_delete.append({"dns_name": dns_name, "domain_dns_value": domain_dns_value})
                     responders.append({"authorization_url": authorization_url, "acme_keyauthorization": acme_keyauthorization,"dns_challenge_url": dns_challenge_url} )
-                for i in responders:     
-                    auth_status_response = client.check_authorization_status(i["authorization_url"])
-                    r_data = auth_status_response.json()
-                    if r_data["status"] == "pending":
-                        client.respond_to_challenge(i["acme_keyauthorization"], i["dns_challenge_url"])
+                n = 0
+                while n<2:
+                    print("第",n+1,"次验证")
+                    try:
+                        for i in responders:     
+                            auth_status_response = client.check_authorization_status(i["authorization_url"])
+                            r_data = auth_status_response.json()
+                            if r_data["status"] == "pending":
+                                client.respond_to_challenge(i["acme_keyauthorization"], i["dns_challenge_url"])
 
-                for i in responders: client.check_authorization_status(i["authorization_url"], ["valid"])
+                        for i in responders: client.check_authorization_status(i["authorization_url"], ["valid"])
+                        break
+                    except:
+                        n+=1
 
                 certificate_url = client.send_csr(finalize_url)
                 certificate = client.download_certificate(certificate_url)
@@ -357,6 +384,7 @@ class panelLets:
                     result['key'] = client.certificate_key
                     result['account_key'] = client.account_key
                     result['status'] = True
+
             except Exception as e:
                 print(public.get_error_info())
                 raise e
@@ -462,6 +490,30 @@ class panelLets:
             "http_challenge_url": http_challenge_url,
         }
         return identifier_auth
+
+    #检查DNS记录
+    def check_dns(self,domain,value,type='TXT'):
+        time.sleep(5)
+        n = 0
+        while n < 10:
+            try:
+                import dns.resolver
+                ns = dns.resolver.query(domain,type)
+                for j in ns.response.answer:
+                    for i in j.items:
+                        txt_value = i.to_text().replace('"','').strip()
+                        print(txt_value)
+                        if txt_value == value: 
+                            print("验证成功：",txt_value)
+                            return True
+            except:
+                try:
+                    import dns.resolver
+                except:
+                    return False
+                n+=1
+                time.sleep(5)
+        return True
     
     #获取证书哈希
     def get_cert_data(self,path):
