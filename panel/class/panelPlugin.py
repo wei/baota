@@ -130,8 +130,11 @@ class panelPlugin:
         if 'version' in get:
             for versionInfo in pluginInfo['versions']:
                 if versionInfo['m_version'] != get.version: continue
-                if not self.check_cpu_limit(versionInfo['cpu_limit']): return public.returnMsg(False,'至少需要[%d]个CPU核心才能安装' % versionInfo['cpu_limit'])
-                if not self.check_mem_limit(versionInfo['mem_limit']): return public.returnMsg(False,'至少需要[%dMB]内存才能安装' % versionInfo['mem_limit'])
+                if not 'type' in get: get.type = '0'
+                if int(get.type) > 3: get.type = '0'
+                if get.type == '0':
+                    if not self.check_cpu_limit(versionInfo['cpu_limit']): return public.returnMsg(False,'至少需要[%d]个CPU核心才能安装' % versionInfo['cpu_limit'])
+                    if not self.check_mem_limit(versionInfo['mem_limit']): return public.returnMsg(False,'至少需要[%dMB]内存才能安装' % versionInfo['mem_limit'])
                 if not self.check_os_limit(versionInfo['os_limit']): 
                     m_ps = {0:"所有的",1:"Centos",2:"Ubuntu/Debian"}
                     return public.returnMsg(False,'仅支持[%s]系统' % m_ps[int(versionInfo['os_limit'])])
@@ -257,10 +260,11 @@ class panelPlugin:
         if not softList or focre > 0:
             self.clean_panel_log()
             cloudUrl = public.GetConfigValue('home') + '/api/panel/get_soft_list_test'
+            print(cloudUrl)
             import panelAuth
             pdata = panelAuth.panelAuth().create_serverid(None)
             listTmp = public.httpPost(cloudUrl,pdata,10)
-            if len(listTmp) < 200:
+            if not listTmp or len(listTmp) < 200:
                 listTmp = public.readFile(lcoalTmp)
             try:
                 softList = json.loads(listTmp)
@@ -1552,8 +1556,13 @@ class panelPlugin:
     def a(self,get):
         if not hasattr(get,'name'): return public.returnMsg(False,'PLUGIN_INPUT_A');
         try:
+            if not public.path_safe_check("%s/%s" % (get.name,get.s)): return public.returnMsg(False,'PLUGIN_INPUT_C');
             path = self.__install_path + '/' + get.name
-            if not os.path.exists(path + '/'+get.name+'_main.py'): return public.returnMsg(False,'PLUGIN_INPUT_B');
+            if not os.path.exists(path + '/'+get.name+'_main.py'): 
+                if os.path.exists(path+'/index.php'):
+                    import panelPHP
+                    return panelPHP.panelPHP(get.name).exec_php_script(get)
+                return public.returnMsg(False,'PLUGIN_INPUT_B');
             if not self.check_accept(get):return public.returnMsg(False,public.to_string([24744, 26410, 36141, 20080, 91, 37, 115, 93, 25110, 25480, 26435, 24050, 21040, 26399, 33]) % (self.get_title_byname(get),))
             sys.path.append(path);
             plugin_main = __import__(get.name+'_main');
@@ -1567,7 +1576,7 @@ class panelPlugin:
         except Exception as ex:
             import traceback
             errorMsg = traceback.format_exc();
-            public.writeFile('logs/done.log',errorMsg)
+            public.submit_error(errorMsg)
             return public.returnMsg(False,'抱歉，出错了：<br> %s ' % errorMsg.replace('\n','<br>'))
 
     

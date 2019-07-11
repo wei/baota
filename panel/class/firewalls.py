@@ -110,13 +110,14 @@ class firewalls:
     #添加放行端口
     def AddAcceptPort(self,get):
         import re
+        src_port = get.port
         get.port = get.port.replace('-',':')
         rep = "^\d{1,5}(:\d{1,5})?$"
         if not re.search(rep,get.port): return public.returnMsg(False,'PORT_CHECK_RANGE');
         import time
         port = get.port
         ps = get.ps
-        if public.M('firewall').where("port=?",(port,)).count() > 0: return public.returnMsg(False,'FIREWALL_PORT_EXISTS')
+        if public.M('firewall').where("port=? or port=?",(port,src_port)).count() > 0: return public.returnMsg(False,'FIREWALL_PORT_EXISTS')
         notudps = ['80','443','8888','888','39000:40000','21','22']
         if self.__isUfw:
             public.ExecShell('ufw allow ' + port + '/tcp');
@@ -209,7 +210,6 @@ class firewalls:
     
     #改远程端口
     def SetSshPort(self,get):
-        #return public.returnMsg(False,'演示服务器，禁止此操作!');
         port = get.port
         if int(port) < 22 or int(port) > 65535: return public.returnMsg(False,'FIREWALL_SSH_PORT_ERR');
         ports = ['21','25','80','443','8080','888','8888'];
@@ -223,7 +223,7 @@ class firewalls:
         public.writeFile(file,conf)
         
         if self.__isFirewalld:
-            self.__Obj.AddAcceptPort(port);
+            public.ExecShell('firewall-cmd --permanent --zone=public --add-port='+port+'/tcp')
             public.ExecShell('setenforce 0');
             public.ExecShell('sed -i "s#SELINUX=enforcing#SELINUX=disabled#" /etc/selinux/config');
             public.ExecShell("systemctl restart sshd.service")
@@ -235,7 +235,8 @@ class firewalls:
             public.ExecShell("/etc/init.d/sshd restart")
         
         self.FirewallReload()
-        public.M('firewall').where("ps=?",('SSH远程管理服务',)).setField('port',port)
+        public.M('firewall').where("ps=? or ps=? or port=?",('SSH远程管理服务','SSH远程服务',port)).delete()
+        public.M('firewall').add('port,ps,addtime',(port,'SSH远程服务',time.strftime('%Y-%m-%d %X',time.localtime())))
         public.WriteLog("TYPE_FIREWALL", "FIREWALL_SSH_PORT",(port,))
         return public.returnMsg(True,'EDIT_SUCCESS') 
     
@@ -243,8 +244,12 @@ class firewalls:
     def GetSshInfo(self,get):
         file = '/etc/ssh/sshd_config'
         conf = public.readFile(file)
+        if not conf: conf = ''
         rep = "#*Port\s+([0-9]+)\s*\n"
-        port = re.search(rep,conf).groups(0)[0]
+        tmp1 = re.search(rep,conf)
+        port = '22'
+        if tmp1:
+            port = tmp1.groups(0)[0]
         import system
         panelsys = system.system();
         
@@ -274,8 +279,6 @@ class firewalls:
             if tmp == '1': isPing = False
         except:
             isPing = True
-        
-        
         
         data = {}
         data['port'] = port

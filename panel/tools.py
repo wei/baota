@@ -25,26 +25,22 @@ def set_mysql_root(password):
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 pwd=$1
-service mysqld stop
+/etc/init.d/mysqld stop
 mysqld_safe --skip-grant-tables&
 echo '正在修改密码...';
 echo 'The set password...';
 sleep 6
-m_version=$(cat /www/server/mysql/version.pl|grep -E "(5.1.|5.5.|5.6.|mariadb)")
+m_version=$(cat /www/server/mysql/version.pl|grep -E "(5.1.|5.5.|5.6.|10.0|10.1)")
 if [ "$m_version" != "" ];then
-    mysql -uroot -e "insert into mysql.user(Select_priv,Insert_priv,Update_priv,Delete_priv,Create_priv,Drop_priv,Reload_priv,Shutdown_priv,Process_priv,File_priv,Grant_priv,References_priv,Index_priv,Alter_priv,Show_db_priv,Super_priv,Create_tmp_table_priv,Lock_tables_priv,Execute_priv,Repl_slave_priv,Repl_client_priv,Create_view_priv,Show_view_priv,Create_routine_priv,Alter_routine_priv,Create_user_priv,Event_priv,Trigger_priv,Create_tablespace_priv,User,Password,host)values('Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','root',password('${pwd}'),'127.0.0.1')"
-    mysql -uroot -e "insert into mysql.user(Select_priv,Insert_priv,Update_priv,Delete_priv,Create_priv,Drop_priv,Reload_priv,Shutdown_priv,Process_priv,File_priv,Grant_priv,References_priv,Index_priv,Alter_priv,Show_db_priv,Super_priv,Create_tmp_table_priv,Lock_tables_priv,Execute_priv,Repl_slave_priv,Repl_client_priv,Create_view_priv,Show_view_priv,Create_routine_priv,Alter_routine_priv,Create_user_priv,Event_priv,Trigger_priv,Create_tablespace_priv,User,Password,host)values('Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','Y','root',password('${pwd}'),'localhost')"
     mysql -uroot -e "UPDATE mysql.user SET password=PASSWORD('${pwd}') WHERE user='root'";
 else
-    mysql -uroot -e "UPDATE mysql.user SET authentication_string='' WHERE user='root'";
-    mysql -uroot -e "FLUSH PRIVILEGES";
-    mysql -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${pwd}';";
+    mysql -uroot -e "update mysql.user set authentication_string=password('${pwd}') where user='root';"
 fi
 mysql -uroot -e "FLUSH PRIVILEGES";
 pkill -9 mysqld_safe
 pkill -9 mysqld
 sleep 2
-service mysqld start
+/etc/init.d/mysqld start
 
 echo '==========================================='
 echo "root密码成功修改为: ${pwd}"
@@ -82,7 +78,7 @@ if [ ! -d "${newDir}" ];then
     exit
 fi
 echo "Stopping MySQL service..."
-service mysqld stop
+/etc/init.d/mysqld stop
 
 echo "Copying files, please wait..."
 \cp -r -a $oldDir/* $newDir
@@ -90,7 +86,7 @@ chown -R mysql.mysql $newDir
 sed -i "s#$oldDir#$newDir#" /etc/my.cnf
 
 echo "Starting MySQL service..."
-service mysqld start
+/etc/init.d/mysqld start
 echo ''
 echo 'Successful'
 echo '---------------------------------------------------------------------'
@@ -128,6 +124,7 @@ def PackagePanel():
     os.system('rm -f /www/server/panel/data/domain.conf')
     os.system('rm -f /www/server/panel/data/user*')
     os.system('rm -f /www/server/panel/data/admin_path.pl')
+    os.system("rm -f /www/server/panel/data/licenes.pl")
     os.system('rm -f /root/.ssh/*')
 
     print('\t\033[1;32m[done]\033[0m')
@@ -415,14 +412,14 @@ def bt_cli(u_input = 0):
         print("(7) 强制修改MySQL密码      (14) 查看面板默认信息")
         print("(22) 显示面板错误日志      (15) 清理系统垃圾")
         print("(23) 关闭BasicAuth认证     (16) 修复面板(检查错误并更新面板文件到最新版)")
-        print("(0) 取消                   ")
+        print("(0) 取消                   (17) 设置日志切割是否压缩")
         print(raw_tip)
         try:
             u_input = input("请输入命令编号：")
             if sys.version_info[0] == 3: u_input = int(u_input)
         except: u_input = 0
 
-    nums = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,22,23]
+    nums = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,22,23]
     if not u_input in nums:
         print(raw_tip)
         print("已取消!")
@@ -532,6 +529,16 @@ def bt_cli(u_input = 0):
         ClearSystem()
     elif u_input == 16:
         os.system("curl http://download.bt.cn/install/update6.sh|bash")
+    elif u_input == 17:
+        l_path = '/www/server/panel/data/log_not_gzip.pl'
+        if os.path.exists(l_path):
+            print("|-检测到已关闭gzip压缩功能,正在开启...")
+            os.remove(l_path)
+            print("|-已开启gzip压缩")
+        else:
+            print("|-检测到已开启gzip压缩功能,正在关闭...")
+            public.writeFile(l_path,'True')
+            print("|-已关闭gzip压缩")
     elif u_input == 22:
         os.system('tail -100 /www/server/panel/logs/error.log')
     elif u_input == 23:

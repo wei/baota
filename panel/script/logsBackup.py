@@ -38,7 +38,11 @@ def split_logs(oldFileName,num):
 
     newFileName=oldFileName+'_'+time.strftime("%Y-%m-%d_%H%M%S")+'.log'
     shutil.move(oldFileName,newFileName)
-    print('|---已切割日志到:'+newFileName)
+    if not os.path.exists('/www/server/panel/data/log_not_gzip.pl'):
+        os.system("gzip %s" % newFileName)
+        print('|---已切割日志到:'+newFileName+'.gz')
+    else:
+        print('|---已切割日志到:'+newFileName+'.log')
 
 def split_all(save):
     sites = public.M('sites').field('name').select()

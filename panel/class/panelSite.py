@@ -13,6 +13,7 @@
 import io,re,public,os,sys,shutil,json,hashlib,socket,time
 from BTPanel import session
 from panelRedirect import  panelRedirect
+import site_dir_auth
 class panelSite(panelRedirect):
     siteName = None #网站名称
     sitePath = None #根目录
@@ -239,7 +240,7 @@ class panelSite(panelRedirect):
         get.path = self.__get_site_format_path(get.path)
         siteMenu = json.loads(get.webname)
         self.siteName     = self.ToPunycode(siteMenu['domain'].strip().split(':')[0]).strip().lower();
-        self.sitePath     = self.ToPunycodePath(self.GetPath(get.path.replace(' ','')));
+        self.sitePath     = self.ToPunycodePath(self.GetPath(get.path.replace(' ',''))).strip();
         self.sitePort     = get.port.strip().replace(' ','');
 
         if self.sitePort == "": get.port = "80";
@@ -409,6 +410,24 @@ class panelSite(panelRedirect):
 
         m_path = self.setupPath+'/panel/vhost/apache/proxy/'+siteName
         if os.path.exists(m_path): public.ExecShell("rm -rf %s" % m_path)
+
+        # 删除目录保护
+        _dir_aith_file = "%s/panel/data/site_dir_auth.json" % self.setupPath
+        _dir_aith_conf = public.readFile(_dir_aith_file)
+        if _dir_aith_conf:
+            try:
+                _dir_aith_conf = json.loads(_dir_aith_conf)
+                if siteName in _dir_aith_conf:
+                    del(_dir_aith_conf[siteName])
+            except:
+                pass
+        self.__write_config(_dir_aith_file,_dir_aith_conf)
+
+        dir_aith_path = self.setupPath+'/panel/vhost/nginx/dir_auth/'+siteName
+        if os.path.exists(dir_aith_path): public.ExecShell("rm -rf %s" % dir_aith_path)
+
+        dir_aith_path = self.setupPath+'/panel/vhost/apache/dir_auth/'+siteName
+        if os.path.exists(dir_aith_path): public.ExecShell("rm -rf %s" % dir_aith_path)
 
         #删除重定向
         __redirectfile = "%s/panel/data/redirect.conf" % self.setupPath
@@ -864,7 +883,15 @@ class panelSite(panelRedirect):
             if self.GetRedirectList(get): return public.returnMsg(False, 'SITE_SSL_ERR_301');
             if self.GetProxyList(get): return public.returnMsg(False,'已开启反向代理的站点无法申请SSL!');
             data = self.get_site_info(get.siteName)
-            get.site_dir = data['path']
+            get.id = data['id']
+            runPath = self.GetRunPath(get)
+            if runPath != '/':
+                if runPath[:1] != '/': runPath = '/' + runPath
+            else:
+                runPath = ''
+            get.site_dir = data['path'] + runPath
+            print(get.site_dir)
+            
         else:          
             dns_api_list = self.GetDnsApi(get)
             get.dns_param = None
@@ -884,6 +911,7 @@ class panelSite(panelRedirect):
 
         self.check_ssl_pack()
         import panelLets
+        public.mod_reload(panelLets)
         lets = panelLets.panelLets()
         result = lets.apple_lest_cert(get)
         if result['status'] and not 'code' in result:       
@@ -892,7 +920,7 @@ class panelSite(panelRedirect):
         return result
 
     def get_site_info(self,siteName):
-        data = public.M("sites").where('name=?',siteName).field('path,name').find()
+        data = public.M("sites").where('name=?',siteName).field('id,path,name').find()
         return data
 
 
@@ -920,7 +948,14 @@ class panelSite(panelRedirect):
     
     #获取DNS-API列表
     def GetDnsApi(self,get):
-        apis = json.loads(public.ReadFile('./config/dns_api.json'))
+        api_path = './config/dns_api.json'
+        api_init = './config/dns_api_init.json'
+        if not os.path.exists(api_path):
+            if os.path.exists(api_init):
+                import shutil
+                shutil.copyfile(api_init,api_path)
+        apis = json.loads(public.ReadFile(api_path))
+        
         path = '/root/.acme.sh'
         if not os.path.exists(path + '/account.conf'): path = "/.acme.sh"
         account = public.readFile(path + '/account.conf')
@@ -1339,12 +1374,14 @@ class panelSite(panelRedirect):
         conf = public.readFile(file);
         if conf:
             conf = conf.replace(Path, sitePath);
+            conf = conf.replace("#include","include")
             public.writeFile(file,conf)
         #apaceh
         file = self.setupPath + '/panel/vhost/apache/'+get.name+'.conf';
         conf = public.readFile(file);
         if conf:
             conf = conf.replace(Path, sitePath);
+            conf = conf.replace("#IncludeOptional", "IncludeOptional")
             public.writeFile(file,conf)
         
         public.M('sites').where("id=?",(id,)).setField('status','1');
@@ -1375,6 +1412,7 @@ class panelSite(panelRedirect):
         conf = public.readFile(file);
         if conf:
             conf = conf.replace(sitePath,path);
+            conf = conf.replace("include","#include")
             public.writeFile(file,conf)
         
         #apache
@@ -1382,6 +1420,7 @@ class panelSite(panelRedirect):
         conf = public.readFile(file);
         if conf:
             conf = conf.replace(sitePath,path);
+            conf = conf.replace("IncludeOptional", "#IncludeOptional")
             public.writeFile(file,conf)
         public.M('sites').where("id=?",(id,)).setField('status','0');
         public.serviceReload();
@@ -1613,6 +1652,8 @@ class panelSite(panelRedirect):
             os.system('mkdir -p ' + path);
             os.system('chmod 755 ' + path);
             os.system('chown www:www ' + path);
+            get.path = path
+            self.SetDirUserINI(get)
             siteName = public.M('sites').where('id=?',(get.id,)).getField('name')
             public.WriteLog('网站管理','站点['+siteName+'],根目录['+path+']不存在,已重新创建!');
         dirnames = []
@@ -2009,7 +2050,9 @@ server
         data = {}
         data['logs'] = self.GetLogsStatus(get);
         data['userini'] = False;
-        if os.path.exists(path+'/.user.ini'):
+        user_ini_file = path+'/.user.ini'
+        user_ini_conf = public.readFile(user_ini_file)
+        if user_ini_conf and "open_basedir" in user_ini_conf:
             data['userini'] = True;
         data['runPath'] = self.GetSiteRunPath(get);
         data['pass'] = self.GetHasPwd(get);
@@ -2040,21 +2083,36 @@ server
         path = get.path
         runPath = self.GetRunPath(get)
         filename = path+runPath+'/.user.ini';
-        if os.path.exists(filename):
-            public.ExecShell("chattr -i "+filename);
-            os.remove(filename)
-            return public.returnMsg(True, 'SITE_BASEDIR_CLOSE_SUCCESS');
-
-        if len(runPath) > 1: 
-            self.DelUserInI(path + runPath);
-        else:
-            self.DelUserInI(path);
-        
-        public.writeFile(filename, 'open_basedir='+path+'/:/tmp/:/proc/');
-        public.ExecShell("chattr +i "+filename);
-        
-        return public.returnMsg(True,'SITE_BASEDIR_OPEN_SUCCESS');
-
+        conf = public.readFile(filename)
+        try:
+            public.ExecShell("chattr -i " + filename)
+            # if "open_basedir" not in conf:
+            #     return public.returnMsg(True, 'SITE_BASEDIR_CLOSE_SUCCESS');
+            if conf and "open_basedir" in conf:
+                rep = "\n*open_basedir.*"
+                conf = re.sub(rep,"",conf)
+                if not conf:
+                    os.remove(filename)
+                else:
+                    public.writeFile(filename,conf)
+                    public.ExecShell("chattr +i " + filename)
+                return public.returnMsg(True, 'SITE_BASEDIR_CLOSE_SUCCESS')
+            #
+            # if len(runPath) > 1:
+            #     self.DelUserInI(path + runPath);
+            # else:
+            #     self.DelUserInI(path);
+            if conf and "session.save_path" in conf:
+                rep = "session.save_path\s*=\s*(.*)"
+                s_path = re.search(rep,conf).groups(1)[0]
+                public.writeFile(filename, conf + '\nopen_basedir={}/:/tmp/:/proc/:{}'.format(path,s_path))
+            else:
+                public.writeFile(filename,'open_basedir={}/:/tmp/:/proc/'.format(path))
+            public.ExecShell("chattr +i " + filename)
+            return public.returnMsg(True,'SITE_BASEDIR_OPEN_SUCCESS');
+        except Exception as e:
+            public.ExecShell("chattr +i " + filename)
+            return e
 
 
        # 读配置
@@ -2083,7 +2141,9 @@ server
         n = 0
         for w in ["nginx", "apache"]:
             conf_path = "%s/panel/vhost/%s/%s.conf" % (self.setupPath, w, get.sitename)
-            old_conf = public.readFile(conf_path)
+            old_conf = ""
+            if os.path.exists(conf_path):
+                old_conf = public.readFile(conf_path)
             rep = "(#PROXY-START(\n|.)+#PROXY-END)"
             url_rep = "proxy_pass (.*);|ProxyPass\s/\s(.*)|Host\s(.*);"
             host_rep = "Host\s(.*);"
@@ -2438,7 +2498,12 @@ server
         return f.SaveFileBody(get)
         #	return public.returnMsg(True, '保存成功')                                                                 
 
-
+    # 检查是否存在#Set Nginx Cache
+    def check_annotate(self,data):
+        rep = "\n\s*#Set\s*Nginx\s*Cache"
+        if re.search(rep,data):
+            return True
+                                                                             
     # 修改反向代理
     def ModifyProxy(self, get):
         proxyname_md5 = self.__calc_md5(get.proxyname)
@@ -2476,17 +2541,26 @@ server
     proxy_cache cache_one;
     proxy_cache_key $host$uri$is_args$args;
     proxy_cache_valid 200 304 301 302 %sm;""" % (get.cachetime)
-                            cache_rep = '#proxy_set_header\s+Connection\s+"upgrade";'
-                            ng_conf = re.sub(cache_rep,'#proxy_set_header Connection "upgrade";\n'+ng_cache,ng_conf)
+                            if self.check_annotate(ng_conf):
+                                cache_rep = '\n\s*#Set\s*Nginx\s*Cache(.|\n)*no-cache;'
+                                ng_conf = re.sub(cache_rep,'\n\t#Set Nginx Cache\n'+ng_cache,ng_conf)
+                            else:
+                                cache_rep = '#proxy_set_header\s+Connection\s+"upgrade";'
+                                ng_conf = re.sub(cache_rep, '\n\t#proxy_set_header Connection "upgrade";\n\t#Set Nginx Cache' + ng_cache,
+                                                 ng_conf)
                     else:
-                        rep = '\s+proxy_cache\s+cache_one.*[\n\s\w\_\";\$]+m;'
-                        ng_conf = re.sub(rep, "", ng_conf)
+                        if self.check_annotate(ng_conf):
+                            rep = '\n\s*#Set\s*Nginx\s*Cache(.|\n)*1m;'
+                            ng_conf = re.sub(rep, "\n\t#Set Nginx Cache\n\tadd_header Cache-Control no-cache;", ng_conf)
+                        else:
+                            rep = '\s+proxy_cache\s+cache_one.*[\n\s\w\_\";\$]+m;'
+                            ng_conf = re.sub(rep, '\n\t#Set Nginx Cache\n\tadd_header Cache-Control no-cache;', ng_conf)
 
                     sub_rep = "sub_filter"
                     subfilter = json.loads(get.subfilter)
                     if str(proxyUrl[i]["subfilter"]) != str(subfilter):
                         if re.search(sub_rep, ng_conf):
-                            sub_rep = "\s+proxy_set_header\s+Accept-Encoding.*[\n\s\w\_\";]+off;"
+                            sub_rep = "\s+proxy_set_header\s+Accept-Encoding(.|\n)+off;"
                             ng_conf = re.sub(sub_rep,"",ng_conf)
 
                         # 构造替换字符串
@@ -2582,8 +2656,9 @@ location %s
     #proxy_http_version 1.1;
     #proxy_set_header Upgrade $http_upgrade;
     #proxy_set_header Connection "upgrade";
-
     add_header X-Cache $upstream_cache_status;
+    
+    #Set Nginx Cache
     %s
     %s
 }
@@ -2617,14 +2692,14 @@ location %s
                     get.proxydir, get.proxydir,get.proxysite, get.todomain, "#持久化连接相关配置" ,ng_sub_filter, ng_cache ,get.proxydir)
             if type == 1 and cache == 0:
                 ng_proxy_cache += ng_proxy % (
-                    get.proxydir, get.proxydir, get.proxysite, get.todomain, "#持久化连接相关配置" ,ng_sub_filter,'' ,get.proxydir)
+                    get.proxydir, get.proxydir, get.proxysite, get.todomain, "#持久化连接相关配置" ,ng_sub_filter,'\tadd_header Cache-Control no-cache;' ,get.proxydir)
         else:
             if type == 1 and cache == 1:
                 ng_proxy_cache += ng_proxy % (
                     get.proxydir, get.proxydir, get.proxysite, get.todomain, "#持久化连接相关配置" ,ng_sub_filter, ng_cache, get.proxydir)
             if type == 1 and cache == 0:
                 ng_proxy_cache += ng_proxy % (
-                    get.proxydir, get.proxydir, get.proxysite, get.todomain, "#持久化连接相关配置" ,ng_sub_filter, '', get.proxydir)
+                    get.proxydir, get.proxydir, get.proxysite, get.todomain, "#持久化连接相关配置" ,ng_sub_filter, '\tadd_header Cache-Control no-cache;', get.proxydir)
         public.writeFile(ng_proxyfile, ng_proxy_cache)
 
 
@@ -2657,7 +2732,7 @@ location %s
                     del p_conf[i]
             return public.returnMsg(False, 'ERROR: %s<br><a style="color:red;">' % public.GetMsg("CONFIG_ERROR") + isError.replace("\n",
                                                                                                           '<br>') + '</a>')
-        return public.returnMsg(True, 'SUCCESS')          
+        return public.returnMsg(True, 'SUCCESS')        
     
     
     #开启缓存
@@ -3180,7 +3255,7 @@ location %s
     def SetSiteRunPath(self,get):
         siteName = public.M('sites').where('id=?',(get.id,)).getField('name');
         sitePath = public.M('sites').where('id=?',(get.id,)).getField('path');
-        
+        old_run_path = self.GetRunPath(get)
         #处理Nginx
         filename = self.setupPath + '/panel/vhost/nginx/' + siteName + '.conf'
         if os.path.exists(filename):
@@ -3199,17 +3274,22 @@ location %s
             conf = conf.replace(path,sitePath + get.runPath);
             public.writeFile(filename,conf);
 
-        self.DelUserInI(sitePath);
-        get.path = sitePath;
-        self.SetDirUserINI(get);
-        
+        # self.DelUserInI(sitePath);
+        # get.path = sitePath;
+        # self.SetDirUserINI(get);
+        s_path = sitePath+old_run_path+"/.user.ini"
+        d_path = sitePath + get.runPath+"/.user.ini"
+        if s_path != d_path:
+            os.system("chattr -i {}".format(s_path))
+            os.system("mv {} {}".format(s_path,d_path))
+            os.system("chattr +i {}".format(d_path))
+
         public.serviceReload();
         return public.returnMsg(True,'SET_SUCCESS');
     
     #设置默认站点
     def SetDefaultSite(self,get):
         import time;
-
         default_site_save = 'data/defaultSite.pl'
         #清理旧的
         defaultSite = public.readFile(default_site_save);
@@ -3235,7 +3315,7 @@ location %s
             if os.path.exists(path): os.remove(path)
 
         if get.name == '0': 
-            os.remove(default_site_save)
+            if os.path.exists(default_site_save): os.remove(default_site_save)
             return public.returnMsg(True,'设置成功!')
 
         #处理新的
@@ -3348,6 +3428,7 @@ location %s
     #设置防盗链
     def SetSecurity(self,get):
         if len(get.fix) < 2: return public.returnMsg(False,'URL后缀不能为空!');
+        if len(get.domains) < 3: return public.returnMsg(False,'防盗链域名不能为空!'); 
         file = '/www/server/panel/vhost/nginx/' + get.name + '.conf';
         if os.path.exists(file):
             conf = public.readFile(file);
@@ -3440,3 +3521,23 @@ location %s
         for s_id in site_ids:
             site_sql.where("id=?",(s_id,)).setField("type_id",get.id)
         return public.returnMsg(True,"设置成功!")
+        
+    # 设置目录保护
+    def set_dir_auth(self,get):
+        sd = site_dir_auth.SiteDirAuth()
+        return sd.set_dir_auth(get)
+
+    # 删除目录保护
+    def delete_dir_auth(self,get):
+        sd = site_dir_auth.SiteDirAuth()
+        return sd.delete_dir_auth(get)
+
+    # 获取目录保护列表
+    def get_dir_auth(self,get):
+        sd = site_dir_auth.SiteDirAuth()
+        return sd.get_dir_auth(get)
+
+    # 修改目录保护密码
+    def modify_dir_auth_pass(self,get):
+        sd = site_dir_auth.SiteDirAuth()
+        return sd.modify_dir_auth_pass(get)

@@ -1,3 +1,4 @@
+#!/bin/python
 #coding: utf-8
 # +-------------------------------------------------------------------
 # | 宝塔Linux面板
@@ -12,7 +13,7 @@
 #------------------------------
 import sys,os,json,psutil
 sys.path.insert(0,"/www/server/panel/class/")
-import db,public,time,panelTask
+import db,public,time,panelTask,setPanelLets
 global pre,timeoutCount,logPath,isTask,oldEdate,isCheck
 pre = 0
 timeoutCount = 0
@@ -426,6 +427,24 @@ def check502Task():
         time.sleep(600);
         check502Task();
 
+# 检查面板证书是否有更新
+def check_panel_ssl():
+    try:
+        while True:
+            lets_info = public.readFile("/www/server/panel/ssl/lets.info")
+            if lets_info:
+                lets_info = json.loads(lets_info)
+                cert_info_file = "/www/server/panel/vhost/ssl/" + lets_info["domain"] + "/info.json"
+                cert_info = public.readFile(cert_info_file)
+                if cert_info:
+                    cert_info = json.loads(cert_info)
+                    if setPanelLets.setPanelLets().copy_cert(cert_info):
+                        strTime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
+                        public.writeFile("/tmp/panelSSL.pl","{} 面板证书更新成功".format(strTime))
+            time.sleep(60)
+    except:
+        e = public.get_error_info()
+        public.writeFile("/tmp/panelSSL.pl", str(e))
 
 #监控面板状态
 def panel_status():
@@ -438,6 +457,8 @@ def panel_status():
     panel_url = pool + '127.0.0.1:' + port + '/service_status'
     panel_pid = get_panel_pid()
     n = 0
+    s = 0
+    v = 0
     while True:
         time.sleep(1)
         if not panel_pid: panel_pid = get_panel_pid()
@@ -455,6 +476,25 @@ def panel_status():
             continue
 
         n += 1
+        v += 1
+
+        if v > 10:
+            v = 0
+            log_path = panel_path + '/logs/error.log'
+            if os.path.exists(log_path):
+                e_body = public.GetNumLines(log_path,10)
+                if e_body:
+                    if e_body.find('PyWSGIServer.do_close') != -1 or e_body.find('Expected GET method:')!=-1 or e_body.find('Invalid HTTP method:') != -1 or e_body.find('table session') != -1:
+                        result = public.httpGet(panel_url)
+                        if result != 'True':
+                            if e_body.find('table session') != -1:
+                                sess_file = '/dev/shm/session.db'
+                                if os.path.exists(sess_file): os.remove(sess_file)
+                            os.system("/etc/init.d/bt reload &")
+                            time.sleep(10)
+                            result = public.httpGet(panel_url)
+                            if result == 'True':
+                                public.WriteLog('守护程序','检查到面板服务异常,已自动恢复!')
 
         if n > 18000:
             n = 0
@@ -538,6 +578,10 @@ if __name__ == "__main__":
     pl.start()
 
     p = threading.Thread(target=restart_panel_service)
+    p.setDaemon(True)
+    p.start()
+    
+    p = threading.Thread(target=check_panel_ssl)
     p.setDaemon(True)
     p.start()
 

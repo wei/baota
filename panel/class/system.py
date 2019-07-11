@@ -273,7 +273,10 @@ class system:
         #取CPU信息
         cpuCount = psutil.cpu_count()
         used = self.get_cpu_percent()
-        return used,cpuCount
+        used_all = psutil.cpu_percent(percpu=True)
+        cpu_name = public.getCpuType()
+        return used,cpuCount,used_all,cpu_name
+
 
     def GetCpuInfo_new(self):
         cpuCount = psutil.cpu_count()
@@ -345,19 +348,23 @@ class system:
         cuts = ['/mnt/cdrom','/boot','/boot/efi','/dev','/dev/shm','/run/lock','/run','/run/shm','/run/user'];
         for tmp in temp1:
             n += 1
-            inodes = tempInodes1[n-1].split();
-            disk = tmp.split();
-            if len(disk) < 5: continue;
-            if disk[1].find('M') != -1: continue;
-            if disk[1].find('K') != -1: continue;
-            if len(disk[5].split('/')) > 4: continue;
-            if disk[5] in cuts: continue;
-            arr = {}
-            arr['path'] = disk[5];
-            tmp1 = [disk[1],disk[2],disk[3],disk[4]];
-            arr['size'] = tmp1;
-            arr['inodes'] = [inodes[1],inodes[2],inodes[3],inodes[4]]
-            diskInfo.append(arr);
+            try:
+                inodes = tempInodes1[n-1].split();
+                disk = tmp.split();
+                if len(disk) < 5: continue;
+                if disk[1].find('M') != -1: continue;
+                if disk[1].find('K') != -1: continue;
+                if len(disk[5].split('/')) > 4: continue;
+                if disk[5] in cuts: continue;
+                arr = {}
+                arr['path'] = disk[5];
+                tmp1 = [disk[1],disk[2],disk[3],disk[4]];
+                arr['size'] = tmp1;
+                arr['inodes'] = [inodes[1],inodes[2],inodes[3],inodes[4]]
+                diskInfo.append(arr);
+            except Exception as ex: 
+                public.WriteLog('信息获取',str(ex))
+                continue
         return diskInfo;
 
     #清理系统垃圾

@@ -29,6 +29,8 @@ def HttpGet(url,timeout = 6,headers = {}):
     @timeout 超时时间默认60秒
     return string
     """
+
+    if is_local(): return False
     home = 'www.bt.cn'
     host_home = 'data/home_host.pl'
     old_url = url
@@ -104,6 +106,7 @@ def HttpPost(url,data,timeout = 6,headers = {}):
     @timeout 超时时间默认60秒
     return string
     """
+    if is_local(): return False
     home = 'www.bt.cn'
     host_home = 'data/home_host.pl'
     old_url = url
@@ -431,31 +434,36 @@ def serviceReload():
 
 
 def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):
-    #通过管道执行SHELL
-    import shlex
-    import datetime
-    import subprocess
-    import time
-
-    if shell:
-        cmdstring_list = cmdstring
-    else:
-        cmdstring_list = shlex.split(cmdstring)
-    if timeout:
-        end_time = datetime.datetime.now() + datetime.timedelta(seconds=timeout)
-    
-    sub = subprocess.Popen(cmdstring_list, cwd=cwd, stdin=subprocess.PIPE,shell=shell,bufsize=4096,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    
-    while sub.poll() is None:
-        time.sleep(0.1)
-        if timeout:
-            if end_time <= datetime.datetime.now():
-                raise Exception("Timeout：%s"%cmdstring)
-    a,e = sub.communicate()
+    a = ''
+    e = ''
     try:
-        if type(a) == bytes: a = a.decode('utf-8')
-        if type(e) == bytes: e = e.decode('utf-8')
-    except:pass
+        #通过管道执行SHELL
+        import shlex
+        import datetime
+        import subprocess
+        import time
+
+        if shell:
+            cmdstring_list = cmdstring
+        else:
+            cmdstring_list = shlex.split(cmdstring)
+        if timeout:
+            end_time = datetime.datetime.now() + datetime.timedelta(seconds=timeout)
+        sub = subprocess.Popen(cmdstring_list, cwd=cwd, stdin=subprocess.PIPE,shell=shell,bufsize=4096,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        while sub.poll() is None:
+            time.sleep(0.1)
+            if timeout:
+                if end_time <= datetime.datetime.now():
+                    raise Exception("Timeout：%s"%cmdstring)
+        a,e = sub.communicate()
+        try:
+            if type(a) == bytes: a = a.decode('utf-8')
+            if type(e) == bytes: e = e.decode('utf-8')
+        except:pass
+    except:
+        if not a:
+            a = os.popen(cmdstring).read()
+
     return a,e
 
 def GetLocalIp():
@@ -509,6 +517,11 @@ def check_ip(ip):
 def GetHost(port = False):
     from flask import request
     host_tmp = request.headers.get('host')
+    if not host_tmp: 
+        if request.url_root:
+            host_tmp = re.findall("^https?://([\w:\.-]+)",request.url_root)[0]
+    if not host_tmp:
+        host_tmp = GetLocalIp() + ':' + readFile('data/port.pl').strip()
     if host_tmp.find(':') == -1: host_tmp += ':80';
     h = host_tmp.split(':')
     if port: return h[1]
@@ -605,7 +618,7 @@ def GetNumLines(path,num,p=1):
                         buf = "\n" + buf
             if not b: break;
         fp.close()
-    except: return []
+    except: return ""
     return "\n".join(data)
 
 #验证证书
@@ -637,10 +650,10 @@ def to_size(size):
     d = ('b','KB','MB','GB','TB');
     s = d[0];
     for b in d:
-        if size < 1024: return str(size) + ' ' + b;
+        if size < 1024: return ("%.2f" % size) + ' ' + b;
         size = size / 1024;
         s = b;
-    return str(size) + ' ' + b;
+    return ("%.2f" % size) + ' ' + b;
 
 
 def checkCode(code,outime = 120):
@@ -700,6 +713,25 @@ def get_error_info():
     import traceback
     errorMsg = traceback.format_exc();
     return errorMsg
+
+def submit_error(err_msg = None):
+    try:
+        if os.path.exists('/www/server/panel/not_submit_errinfo.pl'): return False
+        from BTPanel import request
+        import system
+        if not err_msg: err_msg = get_error_info()
+        pdata = {}
+        pdata['err_info'] = err_msg
+        pdata['path_full'] = request.full_path
+        pdata['version'] = 'Linux-Panel-%s' % version()
+        pdata['os'] = system.system().GetSystemVersion()
+        pdata['py_version'] = sys.version
+        pdata['install_date'] = int(os.stat('/www/server/panel/class/common.py').st_mtime)
+        httpPost("http://www.bt.cn/api/panel/s_error",pdata,timeout=3)
+    except:
+        pass
+
+
 
 #搜索数据中是否存在
 def inArray(arrays,searchStr):
@@ -762,6 +794,7 @@ def checkIp(ip):
     
 #检查端口是否合法
 def checkPort(port):
+    if not re.match("^\d+$",port): return False
     ports = ['21','25','443','8080','888','8888','8443'];
     if port in ports: return False;
     intport = int(port);
@@ -1189,8 +1222,8 @@ def get_page(count,p=1,rows=12,callback='',result='1,2,3,4,5,8'):
 
 # 取面板版本
 def version():
-    from BTPanel import g
     try:
+        from BTPanel import g
         return g.version
     except:
         comm = ReadFile('/www/server/panel/class/common.py')
@@ -1211,19 +1244,19 @@ def get_path_size(path):
     return size_total
 
 #写关键请求日志
-def write_request_log():
+def write_request_log(reques = None):
     try:
         log_path = '/www/server/panel/logs/request'
         log_file = getDate(format='%Y-%m-%d') + '.json'
         if not os.path.exists(log_path): os.makedirs(log_path)
 
         from flask import request
-        log_data = {}
-        log_data['date'] = getDate()
-        log_data['ip'] = GetClientIp()
-        log_data['method'] = request.method
-        log_data['uri'] = request.full_path
-        log_data['user-agent'] = request.headers.get('User-Agent')
+        log_data = []
+        log_data.append(getDate())
+        log_data.append(GetClientIp())
+        log_data.append(request.method)
+        log_data.append(request.full_path)
+        log_data.append(request.headers.get('User-Agent'))
         WriteFile(log_path + '/' + log_file,json.dumps(log_data) + "\n",'a+')
     except: pass
 
@@ -1235,7 +1268,7 @@ def mod_reload(mode):
             reload(mode)
         else:
             import imp
-            imp.reload(module)
+            imp.reload(mode)
         return True
     except: return False
 
@@ -1273,4 +1306,163 @@ def path_safe_check(path):
     rep = "^[\w\s\.\/-]+$"
     if not re.match(rep,path): return False
     return True
+
+#取数据库字符集
+def get_database_character(db_name):
+    try:
+        import panelMysql
+        tmp = panelMysql.panelMysql().query("show create database `%s`" % db_name.strip())
+        c_type = str(re.findall("SET\s+([\w\d-]+)\s",tmp[0][1])[0])
+        c_types = ['utf8','utf-8','gbk','big5','utf8mb4']
+        if not c_type.lower() in c_types: return 'utf8'
+        return c_type
+    except:
+        return 'utf8'
+
+def en_punycode(domain):
+        tmp = domain.split('.');
+        newdomain = '';
+        for dkey in tmp:
+            #匹配非ascii字符
+            match = re.search(u"[\x80-\xff]+",dkey);
+            if not match: match = re.search(u"[\u4e00-\u9fa5]+",dkey);
+            if not match:
+                newdomain += dkey + '.';
+            else:
+                newdomain += 'xn--' + dkey.encode('punycode').decode('utf-8') + '.'
+        return newdomain[0:-1];
+
+#punycode 转中文
+def de_punycode(domain):
+    tmp = domain.split('.');
+    newdomain = '';
+    for dkey in tmp:
+        if dkey.find('xn--') >=0:
+            newdomain += dkey.replace('xn--','').encode('utf-8').decode('punycode') + '.'
+        else:
+            newdomain += dkey + '.'
+    return newdomain[0:-1];
+
+#取计划任务文件路径
+def get_cron_path():
+    u_file = '/var/spool/cron/crontabs/root'
+    if not os.path.exists(u_file):
+        file='/var/spool/cron/root'
+    else:
+        file=u_file
+    return file
+
+#加密字符串
+def en_crypt(key,strings):
+    try:
+        if type(strings) != bytes: strings = strings.encode('utf-8')
+        from cryptography.fernet import Fernet
+        f = Fernet(key)
+        result = f.encrypt(strings)
+        return result.decode('utf-8')
+    except:
+        print(get_error_info())
+        return strings
+
+#解密字符串
+def de_crypt(key,strings):
+    try:
+        if type(strings) != bytes: strings = strings.encode('utf-8')
+        from cryptography.fernet import Fernet
+        f = Fernet(key)
+        result =  f.decrypt(strings).decode('utf-8')
+        return result
+    except:
+        print(get_error_info())
+        return strings
+
+
+#检查IP白名单
+def check_ip_panel():
+    ip_file = 'data/limitip.conf'
+    if os.path.exists(ip_file):
+        iplist = ReadFile(ip_file)
+        if iplist:
+            iplist = iplist.strip();
+            if not GetClientIp() in iplist.split(','): 
+                errorStr = ReadFile('./BTPanel/templates/' + GetConfigValue('template') + '/error2.html')
+                try:
+                    errorStr = errorStr.format(getMsg('PAGE_ERR_TITLE'),getMsg('PAGE_ERR_IP_H1'),getMsg('PAGE_ERR_IP_P1',(GetClientIp(),)),getMsg('PAGE_ERR_IP_P2'),getMsg('PAGE_ERR_IP_P3'),getMsg('NAME'),getMsg('PAGE_ERR_HELP'))
+                except IndexError:pass
+                return errorStr
+    return False
+
+#检查面板域名
+def check_domain_panel():
+    tmp = GetHost()
+    domain = ReadFile('data/domain.conf')
+    if domain:
+        if tmp.strip().lower() != domain.strip().lower(): 
+            errorStr = ReadFile('./BTPanel/templates/' + GetConfigValue('template') + '/error2.html')
+            try:
+                errorStr = errorStr.format(getMsg('PAGE_ERR_TITLE'),getMsg('PAGE_ERR_DOMAIN_H1'),getMsg('PAGE_ERR_DOMAIN_P1'),getMsg('PAGE_ERR_DOMAIN_P2'),getMsg('PAGE_ERR_DOMAIN_P3'),getMsg('NAME'),getMsg('PAGE_ERR_HELP'))
+            except IndexError:pass
+            return errorStr
+    return False
+
+#是否离线模式
+def is_local():
+    s_file = '/www/server/panel/data/not_network.pl'
+    return os.path.exists(s_file)
+
+
+#自动备份面板数据
+def auto_backup_panel():
+    panel_paeh = '/www/server/panel'
+    paths = panel_paeh + '/data/not_auto_backup.pl'
+    if os.path.exists(paths): return False
+    b_path = '/www/backup/panel'
+    backup_path = b_path + '/' + format_date('%Y-%m-%d')
+    if os.path.exists(backup_path): return True
+    if os.path.getsize(panel_paeh + '/data/default.db') > 104857600 * 2: return False
+    os.makedirs(backup_path,384)
+    import shutil
+    shutil.copytree(panel_paeh + '/data',backup_path + '/data')
+    shutil.copytree(panel_paeh + '/config',backup_path + '/config')
+    time_now = time.time() - (86400 * 15)
+    for f in os.listdir(b_path):
+        try:
+            if time.mktime(time.strptime(f, "%Y-%m-%d")) < time_now: 
+                path = b_path + '/' + f
+                if os.path.exists(path): shutil.rmtree(path)
+        except: continue
+
+
+#检查端口状态
+def check_port_stat(port):
+    import socket
+    localIP = '127.0.0.1';
+    temp = {}
+    temp['port'] = port;
+    temp['local'] = True;
+    try:
+        s = socket.socket()
+        s.settimeout(0.15)
+        s.connect((localIP,port))
+        s.close()
+    except:
+        temp['local'] = False;
+        
+    result = 0;
+    if temp['local']: result +=2;
+    return result;
+
+#取通用对象
+class dict_obj:
+    def __contains__(self, key):
+        return getattr(self,key,None)
+    def __setitem__(self, key, value): setattr(self,key,value)
+    def __getitem__(self, key): return getattr(self,key,None)
+    def __delitem__(self,key): delattr(self,key)
+    def __delattr__(self, key): delattr(self,key)
+    def get_items(self): return self
+
+
+
+
 

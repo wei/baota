@@ -533,7 +533,7 @@ var bt =
 		
 		layer.msg(msg,btnObj);	
 	},
-	confirm : function(config,callback){
+	confirm : function(config,callback,callback1){
 		var btnObj =  {						
 			title:config.title?config.title:false,
 			time : config.time?config.time:0,					
@@ -541,10 +541,13 @@ var bt =
 			closeBtn: config.closeBtn?config.closeBtn:2,	
 			scrollbar:true,
 			shade:0.3,
-			icon:3
+			icon:3,
+			cancel: (config.cancel?config.cancel:function(){})
 		};
 		layer.confirm(config.msg, btnObj, function(index){
 		 	if(callback) callback(index);
+		},function(index){
+			if(callback1) callback1(index);
 		});
 	},
 	load : function(msg)  
@@ -776,13 +779,20 @@ var bt =
 	render_form:function(data,callback){
 			if(data){		
 			var bs = '_' + bt.get_random(6);
-			var _form = $("<div data-id='form"+bs+"' class='bt-form bt-form pd20 pb70'></div>");			
+			var _form = $("<div data-id='form"+bs+"' class='bt-form bt-form pd20 pb70 "+ (data.class?data.class:'')  +"'></div>");
 			var _lines = data.list; 
 			var clicks = [];
-			for (var i = 0;i<_lines.length;i++){
-				var rRet = bt.render_form_line(_lines[i],bs);
-				for(var s = 0;s<rRet.clicks.length;s++) clicks.push(rRet.clicks[s]);			
-				_form.append(rRet.html);				
+			for (var i = 0; i < _lines.length; i++)
+            {
+                var _obj = _lines[i]
+                if (_obj.hasOwnProperty("html")) {
+                    _form.append(_obj.html)
+                }
+                else {
+                    var rRet = bt.render_form_line(_obj, bs);
+                    for (var s = 0; s < rRet.clicks.length; s++) clicks.push(rRet.clicks[s]);
+                    _form.append(rRet.html);	
+                }			
 			}
 			
 			var _btn_html = '';
@@ -799,7 +809,8 @@ var bt =
 				area: data.area,
 				title: data.title,
 				closeBtn: 2,
-				content:_form.prop("outerHTML")
+				content:_form.prop("outerHTML"),
+                end: data.end ? data.end : false
 			})				
 			setTimeout(function(){
 				bt.render_clicks(clicks,loadOpen,callback);			
@@ -3758,9 +3769,9 @@ bt.soft = {
 				if(pluginName) qlen = qlen-1;
 				//折扣列表
 				for(var i=0;i<qlen;i++){
-					var j = qarr[i];
-					var a = rdata[j].price;
-					var b = rdata[j].sprice;
+                    var j = qarr[i];
+                    var a = rdata[j].price.toFixed(2);
+                    var b = rdata[j].sprice.toFixed(2);
 					var c = rdata[j].discount;
 					coucon +='<li class="pay-cycle-btn" onclick="bt.soft.get_rscode('+pid+','+a+','+b+','+j+')"><span>'+bt.soft.pro.conver_unit(j)+'</span>'+(c==1?"":'<em>'+c*10+'折</em>')+'</li>';
 				}
@@ -4854,7 +4865,37 @@ bt.site = {
 		bt.send('SetDefaultSite','site/SetDefaultSite',{name:name},function(rdata){
 			loading.close();
 			if(callback) callback(rdata);
-		})		
+		})
+	},
+	get_dir_auth:function(id,callback){
+		var loading = bt.load();
+		bt.send('get_dir_auth','site/get_dir_auth',{id:id},function(rdata){
+			loading.close();
+			if(callback) callback(rdata);
+		})
+	},
+	create_dir_guard:function(data,callback){
+		var loading = bt.load();
+		bt.send('set_dir_auth','site/set_dir_auth',{id:data.id,name:data.name,site_dir:data.site_dir,username:data.username,password:data.password},function(rdata){
+			loading.close();
+			if(callback) callback(rdata);
+		})
+	},
+	edit_dir_account:function(data,callback){
+		var loading = bt.load();
+		bt.send('modify_dir_auth_pass','site/modify_dir_auth_pass',{id:data.id,name:data.name,username:data.username,password:data.password},function(rdata){
+			loading.close();
+			if(callback) callback(rdata);
+		})
+	},
+	delete_dir_guard:function(id,data,callback){
+		var loading = bt.load();
+		bt.show_confirm('删除['+ data +']',"你确定要删除目录保护吗",function(){
+			bt.send('delete_dir_auth','site/delete_dir_auth',{id:id,name:data},function(rdata){
+				loading.close();
+				if(callback) callback(rdata);
+			})
+		})
 	}
 }
 

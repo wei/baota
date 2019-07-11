@@ -176,41 +176,111 @@ function setTemplate(){
 
 //设置面板SSL
 function setPanelSSL(){
-	var status = $("#sshswitch").prop("checked")==true?1:0;
-	var msg = $("#panelSSL").attr('checked')?lan.config.ssl_close_msg:'<a style="font-weight: bolder;font-size: 16px;">'+lan.config.ssl_open_ps+'</a><li style="margin-top: 12px;color:red;">'+lan.config.ssl_open_ps_1+'</li><li>'+lan.config.ssl_open_ps_2+'</li><li>'+lan.config.ssl_open_ps_3+'</li><p style="margin-top: 10px;"><input type="checkbox" id="checkSSL" /><label style="font-weight: 400;margin: 3px 5px 0px;" for="checkSSL">'+lan.config.ssl_open_ps_4+'</label><a target="_blank" class="btlink" href="https://www.bt.cn/bbs/thread-4689-1-1.html" style="float: right;">'+lan.config.ssl_open_ps_5+'</a></p>';
-	layer.confirm(msg,{title:lan.config.ssl_title,closeBtn:2,icon:3,area:'550px',cancel:function(){
-		if(status == 0){
-			$("#panelSSL").prop("checked",false);
-		}
-		else{
-			$("#panelSSL").prop("checked",true);
-		}
-	}},function(){
-		if(window.location.protocol.indexOf('https') == -1){
-			if(!$("#checkSSL").prop('checked')){
-				layer.msg(lan.config.ssl_ps,{icon:2});
-				return false;
-			}
-		}
-		var loadT = layer.msg(lan.config.ssl_msg,{icon:16,time:0,shade: [0.3, '#000']});
-		$.post('/config?action=SetPanelSSL','',function(rdata){
-			layer.close(loadT);
-			layer.msg(rdata.msg,{icon:rdata.status?1:5});
-			if(rdata.status === true){
-				$.get('/system?action=ReWeb',function(){});
-				setTimeout(function(){
-					window.location.href = ((window.location.protocol.indexOf('https') != -1)?'http://':'https://') + window.location.host + window.location.pathname;
-				},1500);
-			}
-		});
-	},function(){
-		if(status == 0){
-			$("#panelSSL").prop("checked",false);
-		}
-		else{
-			$("#panelSSL").prop("checked",true);
-		}
-	});
+	var status = $("#panelSSL").prop("checked");
+	var loadT = layer.msg(lan.config.ssl_msg,{icon:16,time:0,shade: [0.3, '#000']});
+	if(status){
+		var confirm = layer.confirm('是否关闭面板SSL证书', {title:'提示',btn: ['确定','取消'],icon:0,closeBtn:2}, function() {
+            bt.send('SetPanelSSL', 'config/SetPanelSSL', {}, function (rdata) {
+                layer.close(loadT);
+                if (rdata.status) {
+                	layer.msg(rdata.msg,{icon:1});
+                    $.get('/system?action=ReWeb', function () {
+                    });
+                    setTimeout(function () {
+                        window.location.href = ((window.location.protocol.indexOf('https') != -1) ? 'http://' : 'https://') + window.location.host + window.location.pathname;
+                    }, 1500);
+                }
+                else {
+                    layer.msg(res.rdata,{icon:2});
+                }
+            });
+            return;
+        })
+	}
+	else {
+        bt.send('get_cert_source', 'config/get_cert_source', {}, function (rdata) {
+            layer.close(loadT);
+            var sdata = rdata;
+            var _data = {
+                title: '面板SSL',
+                area: '530px',
+				class:'ssl_cert_from',
+                list: [
+                  {
+                  		html:'<div><i class="layui-layer-ico layui-layer-ico3"></i><h3>'+lan.config.ssl_open_ps+'</h3><ul><li style="color:red;">'+lan.config.ssl_open_ps_1+'</li><li>'+lan.config.ssl_open_ps_2+'</li><li>'+lan.config.ssl_open_ps_3+'</li></ul></div>'
+                  },
+                    {
+                        title: '类型',
+                        name: 'cert_type',
+                        type: 'select',
+                        width: '200px',
+                        value: sdata.cert_type,
+                        items: [{value: '1', title: '自签证书'}, {value: '2', title: 'Let\'s Encrypt'}],
+                        callback: function (obj) {
+                            var subid = obj.attr('name') + '_subid';
+                            $('#' + subid).remove();
+                            if (obj.val() == '2') {
+                                var _tr = bt.render_form_line({
+                                    title: '管理员邮箱',
+                                    name: 'email',
+									width: '250px',
+                                    placeholder: '管理员邮箱',
+                                    value: sdata.email
+                                });
+                                obj.parents('div.line').append('<div class="line" id=' + subid + '>' + _tr.html + '</div>');
+                            }
+                        }
+                    },
+                  {
+                  	html:'<div class="details"><input type="checkbox" id="checkSSL" /><label style="font-weight: 400;margin: 3px 5px 0px;" for="checkSSL">'+lan.config.ssl_open_ps_4+'</label><a target="_blank" class="btlink" href="https://www.bt.cn/bbs">'+lan.config.ssl_open_ps_5+'</a></p></div>'
+                  }
+                  
+                ],
+                btns: [
+                    {
+                        title: '关闭', name: 'close', callback: function (rdata, load, callback) {
+                            load.close();
+                            $("#panelSSL").prop("checked", false);
+                        }
+                    },
+                    {
+                        title: '提交', name: 'submit', css: 'btn-success', callback: function (rdata, load, callback) {                                                    	
+                          	if(!$('#checkSSL').is(':checked')){
+                            	bt.msg({status:false,msg:'请先确认风险！'})
+                              	return;
+                            }                          
+                        	var confirm = layer.confirm('是否开启面板SSL证书', {title:'提示',btn: ['确定','取消'],icon:0,closeBtn:2}, function() {
+                            var loading = bt.load();
+                            bt.send('SetPanelSSL', 'config/SetPanelSSL', rdata, function (rdata) {
+                                loading.close()
+                                if (rdata.status) {
+                                	layer.msg(rdata.msg,{icon:1});
+                                    $.get('/system?action=ReWeb', function () {
+                                    });
+                                    setTimeout(function () {
+                                        window.location.href = ((window.location.protocol.indexOf('https') != -1) ? 'http://' : 'https://') + window.location.host + window.location.pathname;
+                                    }, 1500);
+                                }
+                                else {
+                                    layer.msg(rdata.msg,{icon:2});
+                                }
+                            })
+							});
+                        }
+
+                    }
+                ],
+                end: function () {
+                    $("#panelSSL").prop("checked", false);
+                }
+            };
+
+            var _bs = bt.render_form(_data);
+            setTimeout(function () {
+                $('.cert_type' + _bs).trigger('change')
+            }, 200);
+        });
+    }
 }
 
 function GetPanelSSL(){
@@ -260,6 +330,48 @@ function SavePanelSSL(){
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
 	});
 }
+
+
+function SetDebug() {
+    var status_s = {false:'开启',true:'关闭'}
+    var debug_stat = $("#panelDebug").prop('checked');
+    bt.confirm({
+		title: status_s[debug_stat] + "开发者模式",
+		msg: "您真的要"+ status_s[debug_stat]+"开发者模式?",
+		cancel: function () {
+			$("#panelDebug").prop('checked',debug_stat);
+    	}}, function () {
+			var loadT = layer.msg(lan.public.the, { icon: 16, time: 0, shade: [0.3, '#000'] });
+			$.post('/config?action=set_debug', {}, function (rdata) {
+				layer.close(loadT);
+				if (rdata.status) layer.closeAll()
+				layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 });
+			});
+		},function () {
+		$("#panelDebug").prop('checked',debug_stat);
+	});
+}
+
+function set_local() {
+    var status_s = { false: '开启', true: '关闭' }
+    var debug_stat = $("#panelLocal").prop('checked');
+    bt.confirm({
+		title: status_s[debug_stat] + "离线模式",
+		msg: "您真的要"+ status_s[debug_stat] + "离线模式 ?",
+	    cancel: function () {
+			$("#panelLocal").prop('checked',debug_stat);
+    	}}, function () {
+        	var loadT = layer.msg(lan.public.the, { icon: 16, time: 0, shade: [0.3, '#000'] });
+			$.post('/config?action=set_local', {}, function (rdata) {
+				layer.close(loadT);
+				if (rdata.status) layer.closeAll();
+				layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 });
+			});
+        },function () {
+		$("#panelLocal").prop('checked',debug_stat);
+    });
+}
+
 
 if(window.location.protocol.indexOf('https') != -1){
 	$("#panelSSL").attr('checked',true);
@@ -468,8 +580,8 @@ function GetPanelApi() {
                         <div class="line">\
                             <span class="tname">接口密钥</span>\
                             <div class="info-r">\
-                                <input disabled="disabled" name="panel_token_value" class="bt-input-text mr5 disable" type="text" style="width: 310px" value="'+rdata.token+'" disable>\
-                                <button class="btn btn-xs btn-success btn-sm" style="margin-left: -50px;" onclick="SetPanelApi(1)">重置</button>\
+                                <input readonly="readonly" name="panel_token_value" class="bt-input-text mr5 disable" type="text" style="width: 310px" value="'+rdata.token+'" disable>\
+                                <button class="btn btn-xs btn-success btn-sm" style="margin-left: -70px;" onclick="SetPanelApi(1)">显示密钥</button>\
                             </div>\
                         </div>\
                         <div class="line ">\
@@ -481,7 +593,7 @@ function GetPanelApi() {
                         </div>\
                         <ul class="help-info-text c7">\
                             <li>开启API后，必需在IP白名单列表中的IP才能访问面板API接口</li>\
-                            <li>接口密钥只要重置时显示1次，之后不再显示，请保管好您的密钥</li>\
+                            <li>接口密钥只在点【显示密钥】后显示1次，之后不再显示，请保管好您的密钥</li>\
                             <li>API接口文档在这里：<a class="btlink" href="https://www.bt.cn/bbs/thread-20376-1-1.html" target="_blank">https://www.bt.cn/bbs/thread-20376-1-1.html</a></li>\
                         </ul>\
                     </div>'
@@ -501,7 +613,7 @@ function SetPanelApi(t_type) {
         if (t_type == 1) {
             if (rdata.status) {
                 $("input[name='panel_token_value']").val(rdata.msg);
-                layer.msg('接口密钥已生成，请保管好您的新密钥，此密钥只显示一次!', { icon: 1 });
+                layer.msg('接口密钥已生成，请保管好您的新密钥，此密钥只显示一次!', { icon: 1, time: 0, shade: 0.3, shadeClose:true });
                 return;
             }
         }
@@ -544,33 +656,64 @@ function modify_basic_auth() {
     var loadT = layer.msg('正在获取配置,请稍候...', { icon: 16, time: 0, shade: [0.3, '#000'] });
     $.post('/config?action=get_basic_auth_stat', {}, function (rdata) {
         layer.close(loadT);
-        layer.open({
-            type: 1,
-            area: "500px",
-            title: "配置BasicAuth认证",
-            closeBtn: 2,
-            shift: 5,
-            shadeClose: false,
-            content: ' <div class="bt-form bt-form" style="padding:15px 25px">\
+        if (rdata.open) {
+            show_basic_auth(rdata);
+        } else {
+            m_html = '<div><i class="layui-layer-ico layui-layer-ico3"></i>'
+                + '<h3 style="margin-left: 40px;margin - bottom:10px;"> 危险！此功能不懂别开启!</h3>'
+                + '<ul style="border: 1px solid #ececec;border-radius: 10px; margin: 0px auto;margin-top: 20px;margin-bottom: 20px;background: #f7f7f7; width: 100 %;padding: 33px;list-style-type: inherit;">'
+                + '<li style="color:red;">必须要用到且了解此功能才决定自己是否要开启!</li>'
+                + '<li>开启后，以任何方式访问面板，将先要求输入BasicAuth用户名和密码</li>'
+                + '<li>开启后，能有效防止面板被扫描发现，但并不能代替面板本身的帐号密码</li>'
+                + '<li>请牢记BasicAuth密码，一但忘记将无法访问面板</li>'
+                + '<li>如忘记密码，可在SSH通过bt命令来关闭BasicAuth验证</li>'
+                + '</ul></div>'
+                + '<div class="details">'
+                + '<input type="checkbox" id="check_basic"><label style="font-weight: 400;margin: 3px 5px 0px;" for="check_basic">我已经了解详情,并愿意承担风险</label>'
+                + '<a target="_blank" class="btlink" href="https://www.bt.cn/bbs/thread-34374-1-1.html">什么是BasicAuth认证？</a><p></p></div>'
+            var loadT = layer.confirm(m_html, { title: "风险提醒", area: "600px" }, function () {
+                if (!$("#check_basic").prop("checked")) {
+                    layer.msg("请仔细阅读注意事项，并勾选同意承担风险!");
+                    setTimeout(function () { modify_basic_auth();},3000)
+                    return;
+                }
+                layer.close(loadT)
+                show_basic_auth(rdata);
+            });
+            
+        }
+    });
+}
+
+
+function show_basic_auth(rdata) {
+    layer.open({
+        type: 1,
+        area: "500px",
+        title: "配置BasicAuth认证",
+        closeBtn: 2,
+        shift: 5,
+        shadeClose: false,
+        content: ' <div class="bt-form bt-form" style="padding:15px 25px">\
 						<div class="line">\
 							<span class="tname">服务状态</span>\
 							<div class="info-r" style="height:28px;">\
 								<select class="bt-input-text" name="open">\
-                                    <option value="True" '+(rdata.open?'selected':'')+'>开启</option>\
-                                    <option value="False" '+ (rdata.open ? '' : 'selected' )+'>关闭</option>\
+                                    <option value="True" '+ (rdata.open ? 'selected' : '') + '>开启</option>\
+                                    <option value="False" '+ (rdata.open ? '' : 'selected') + '>关闭</option>\
                                 </select>\
 							</div>\
 						</div>\
                         <div class="line">\
                             <span class="tname">用户名</span>\
                             <div class="info-r">\
-                                <input name="basic_user" class="bt-input-text mr5" type="text" style="width: 310px" value="" placeholder="'+ (rdata.basic_user?'不修改请留空':'请设置用户名') +'">\
+                                <input name="basic_user" class="bt-input-text mr5" type="text" style="width: 310px" value="" placeholder="'+ (rdata.basic_user ? '不修改请留空' : '请设置用户名') + '">\
                             </div>\
                         </div>\
                         <div class="line">\
                             <span class="tname">密码</span>\
                             <div class="info-r">\
-                                <input name="basic_pwd" class="bt-input-text mr5" type="text" style="width: 310px" value="" placeholder="'+ (rdata.basic_pwd ? '不修改请留空' : '请设置密码') +'">\
+                                <input name="basic_pwd" class="bt-input-text mr5" type="text" style="width: 310px" value="" placeholder="'+ (rdata.basic_pwd ? '不修改请留空' : '请设置密码') + '">\
                             </div>\
                         </div>\
                         <span><button class="btn btn-success btn-sm" style="    margin-left: 340px;" onclick="modify_basic_auth_to()">保存配置</button></span>\
@@ -580,6 +723,5 @@ function modify_basic_auth() {
                             <li>开启后，能有效防止面板被扫描发现，但并不能代替面板本身的帐号密码</li>\
                         </ul>\
                     </div>'
-        })
-    });
+    })
 }

@@ -56,6 +56,10 @@ class bt_task:
             else:
                 sql = sql.where('status=?',(get.status,))
         data = sql.field('id,name,type,shell,other,status,exectime,endtime,addtime').order('id asc').limit('10').select();
+        if type(data) == str: 
+            public.WriteLog('任务队列',data)
+            return []
+
         if not 'num' in get: get.num = 15
         num = int(get.num)
         for i in range(len(data)):
@@ -199,12 +203,17 @@ class bt_task:
     
     #清理任务日志
     def clean_log(self):
+        import shutil
         s_time = int(time.time())
         timeout = 86400
         for f in os.listdir(self.__task_path):
             filename = self.__task_path + f
             c_time = os.stat(filename).st_ctime
-            if s_time - c_time > timeout: os.remove(filename)
+            if s_time - c_time > timeout: 
+                if os.path.isdir(filename):
+                    shutil.rmtree(filename)
+                else:
+                    os.remove(filename)
         return True
 
     #文件压缩

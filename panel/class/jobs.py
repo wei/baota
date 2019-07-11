@@ -6,7 +6,7 @@
 # +-------------------------------------------------------------------
 # | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
-import system,psutil,time,public,db,os,sys,json,py_compile
+import system,psutil,time,public,db,os,sys,json,py_compile,re
 os.chdir('/www/server/panel')
 sm = system.system();
 taskConfig = json.loads(public.ReadFile('config/task.json'))
@@ -49,6 +49,10 @@ def control_init():
         if md51 != md52:
             import shutil
             shutil.copyfile(src_file,init_file)
+            if os.path.getsize(init_file) < 10:
+                os.system("chattr -i " + init_file)
+                os.system("\cp -arf %s %s" % (src_file,init_file))
+                os.system("chmod +x %s" % init_file)
     except:pass
     public.writeFile('/var/bt_setupPath.conf','/www')
     public.ExecShell(c)
@@ -61,9 +65,93 @@ def control_init():
     public.ExecShell("chmod -R  600 /www/server/cron/*.log")
     public.ExecShell("chown -R root:root /www/server/panel/data")
     public.ExecShell("chown -R root:root /www/server/panel/config")
-
-    
+    #disable_putenv('putenv')
     clean_session()
+    #set_crond()
+    clean_max_log('/www/server/panel/plugin/rsync/lsyncd.log')
+    remove_tty1()
+    clean_hook_log()
+
+#清理webhook日志
+def clean_hook_log():
+    path = '/www/server/panel/plugin/webhook/script'
+    if not os.path.exists(path): return False
+    for name in os.listdir(path):
+        if name[-4:] != ".log": continue;
+        clean_max_log(path+'/' + name,524288)
+
+#清理大日志
+def clean_max_log(log_file,max_size = 104857600,old_line = 100):
+    if not os.path.exists(log_file): return False
+    if os.path.getsize(log_file) > max_size:
+        try:
+            old_body = public.GetNumLines(log_file,old_line)
+            public.writeFile(log_file,old_body)
+        except:
+            print(public.get_error_info())
+
+#删除tty1
+def remove_tty1():
+    file_path = '/etc/systemd/system/getty@tty1.service'
+    if not os.path.exists(file_path): return False
+    if not os.path.islink(file_path): return False
+    if os.readlink(file_path) != '/dev/null': return False
+    try:
+        os.remove(file_path)
+    except:pass
+
+
+#默认禁用指定PHP函数
+def disable_putenv(fun_name):
+    try:
+        is_set_disable = '/www/server/panel/data/disable_%s' % fun_name 
+        if os.path.exists(is_set_disable): return True
+        php_vs = ('52','53','54','55','56','70','71','72','73','74')
+        php_ini = "/www/server/php/{0}/etc/php.ini"
+        rep = "disable_functions\s*=\s*.*"
+        for pv in php_vs:
+            php_ini_path = php_ini.format(pv)
+            if not os.path.exists(php_ini_path): continue
+            php_ini_body = public.readFile(php_ini_path)
+            tmp = re.search(rep,php_ini_body)
+            if not tmp: continue
+            disable_functions = tmp.group()
+            if disable_functions.find(fun_name) != -1: continue
+            print(disable_functions)
+            php_ini_body = php_ini_body.replace(disable_functions,disable_functions+',%s' % fun_name)
+            php_ini_body.find(fun_name)
+            public.writeFile(php_ini_path,php_ini_body)
+            public.phpReload(pv)
+        public.writeFile(is_set_disable,'True')
+        return True
+    except: return False
+
+
+#创建计划任务
+def set_crond():
+    try:
+        echo = public.md5(public.md5('renew_lets_ssl_bt'))
+        cron_id = public.M('crontab').where('echo=?',(echo,)).getField('id')
+
+        import crontab
+        args_obj = public.dict_obj()
+        if not cron_id:
+            cronPath = public.GetConfigValue('setup_path') + '/cron/' + echo    
+            shell = 'python /www/server/panel/class/panelLets.py renew_lets_ssl'
+            public.writeFile(cronPath,shell)
+            args_obj.id = public.M('crontab').add('name,type,where1,where_hour,where_minute,echo,addtime,status,save,backupTo,sType,sName,sBody,urladdress',("续签Let's Encrypt证书",'day','','0','10',echo,time.strftime('%Y-%m-%d %X',time.localtime()),0,'','localhost','toShell','',shell,''))
+            crontab.crontab().set_cron_status(args_obj)
+        else:
+            cron_path = public.get_cron_path()
+            if os.path.exists(cron_path):
+                cron_s = public.readFile(cron_path)
+                if cron_s.find(echo) == -1:
+                    public.M('crontab').where('echo=?',(echo,)).setField('status',0)
+                    args_obj.id = cron_id
+                    crontab.crontab().set_cron_status(args_obj)
+    except:
+        print(public.get_error_info())
+
 
 #清理多余的session文件
 def clean_session():

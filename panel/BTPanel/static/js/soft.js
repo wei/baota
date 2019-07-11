@@ -489,7 +489,7 @@ var soft = {
             return;
         }
         var f = fs[0]
-        if (f.type !== 'application/x-zip-compressed' && f.type !== 'application/zip') {
+        if (f.type.indexOf('zip') == -1) {
             layer.msg('只支持zip格式的文件！');
             return;
         }
@@ -1263,40 +1263,82 @@ var soft = {
                 })
                 break;
             case 'phpmyadmin_safe':
-                var sdata = $('.bt-soft-menu').data('data');
-                var con = '<div class="ver line">\
-									<span style="margin-right:10px">'+ lan.soft.pma_port + '</span>\
-									<input class="bt-input-text phpmyadmindk mr20" name="Name" id="pmport" value="'+ sdata.ext.port + '" placeholder="' + lan.soft.pma_port_title + '" maxlength="5" type="number">\
-									<button class="btn btn-success btn-sm phpmyadmin_port" >'+ lan.public.save + '</button>\
-								</div>\
-								<div class="user_pw_tit">\
-									<span class="tit">'+ lan.soft.pma_pass + '</span>\
-									<span class="btswitch-p"><input class="btswitch btswitch-ios" id="phpmyadminsafe" type="checkbox" '+ (sdata.ext.auth ? 'checked' : '') + '>\
-									<label class="btswitch-btn phpmyadmin-btn phpmyadmin_safe" for="phpmyadminsafe" ></label>\
-									</span>\
-								</div>\
-								<div class="user_pw">\
-									<p><span>'+ lan.soft.pma_user + '</span><input id="username_get" class="bt-input-text" name="username_get" value="" type="text" placeholder="' + lan.soft.edit_empty + '"></p>\
-									<p><span>'+ lan.soft.pma_pass1 + '</span><input id="password_get_1" class="bt-input-text" name="password_get_1" value="" type="password" placeholder="' + lan.soft.edit_empty + '"></p>\
-									<p><span>'+ lan.soft.pma_pass2 + '</span><input id="password_get_2" class="bt-input-text" name="password_get_1" value="" type="password" placeholder="' + lan.soft.edit_empty + '"></p>\
-									<p><button class="btn btn-success btn-sm phpmyadmin_safe_save" >'+ lan.public.save + '</button></p>\
-								</div>\
-								<ul class="help-info-text c7"><li>'+ lan.soft.pma_ps + '</li></ul>';
+                var sdata = $('.bt-soft-menu').data('data'),sslPortNum ='';
+                var con = '<div class="ver line user_set_info">\
+                                    <span class="tit">'+ lan.soft.pma_port + '</span>\
+                                    <input class="bt-input-text phpmyadmindk mr20" name="Name" id="pmport" value="'+ sdata.ext.port + '" placeholder="' + lan.soft.pma_port_title + '" maxlength="5" type="number">\
+                                    <button class="btn btn-success btn-sm phpmyadmin_port" >'+ lan.public.save + '</button>\
+                                </div>\
+                                <div class="ver line user_set_info" style="margin-top: 30px;padding-top: 30px;border-top: #ccc 1px dashed;">\
+                                	<span class="tit">开启SSL</span>\
+                                    <span class="btswitch-p"><input class="btswitch btswitch-ios" id="ssl_safe_checkbox" type="checkbox">\
+                                    <label class="btswitch-btn phpmyadmin-btn ssl_safe_label" for="ssl_safe_checkbox" style="margin:0px" ></label>\
+                                    </span>\
+                                </div>\
+                                <div class="ver line user_set_info">\
+                                	<span class="tit">SSL端口</span>\
+                                	<input class="bt-input-text ssl_port_input mr20" name="Name" id="sslport" value="" maxlength="5" type="number">\
+                                    <button class="btn btn-success btn-sm ssl_port_button" >保存</button>\
+                                </div>\
+                                <div class="user_pw_tit">\
+                                    <span class="tit">'+ lan.soft.pma_pass + '</span>\
+                                    <span class="btswitch-p"><input class="btswitch btswitch-ios" id="phpmyadminsafe" type="checkbox" '+ (sdata.ext.auth ? 'checked' : '') + '>\
+                                    <label class="btswitch-btn phpmyadmin-btn phpmyadmin_safe" for="phpmyadminsafe" ></label>\
+                                    </span>\
+                                </div>\
+                                <div class="user_pw">\
+                                    <p><span>'+ lan.soft.pma_user + '</span><input id="username_get" class="bt-input-text" name="username_get" value="" type="text" placeholder="' + lan.soft.edit_empty + '"></p>\
+                                    <p><span>'+ lan.soft.pma_pass1 + '</span><input id="password_get_1" class="bt-input-text" name="password_get_1" value="" type="password" placeholder="' + lan.soft.edit_empty + '"></p>\
+                                    <p><span>'+ lan.soft.pma_pass2 + '</span><input id="password_get_2" class="bt-input-text" name="password_get_1" value="" type="password" placeholder="' + lan.soft.edit_empty + '"></p>\
+                                    <p><button class="btn btn-success btn-sm phpmyadmin_safe_save" >'+ lan.public.save + '</button></p>\
+                                </div>\
+                                <ul class="help-info-text c7"><li>'+ lan.soft.pma_ps + '</li></ul>';
+				
                 $(".soft-man-con").html(con);
                 if (sdata.ext.port) {
                     $(".user_pw").show();
                 }
+                
+            	function get_phpmyadmin_ssl(){
+            		var loading = bt.load('正在获取SSL状态，请稍后...');
+					bt.send('get_phpmyadmin_ssl','ajax/get_phpmyadmin_ssl',{},function(tdata){
+						loading.close();
+						$('#ssl_safe_checkbox').prop("checked",tdata.status);
+						$('#sslport').val(tdata.port)
+					})
+				}
+				get_phpmyadmin_ssl()
                 $('.phpmyadmin_port').click(function () {
                     var pmport = $("#pmport").val();
-                    if (!bt.check_port(pmport)) {
-                        layer.msg(lan.firewall.port_err, { icon: 2 });
-                        return;
-                    }
                     var loadT = bt.load(lan.public.the);
                     bt.send('setPHPMyAdmin', 'ajax/setPHPMyAdmin', { port: pmport }, function (rdata) {
                         loadT.close();
                         bt.msg(rdata);
                     })
+                })
+                $('.ssl_safe_label').click(function (){
+                	var stat = $('#ssl_safe_checkbox').prop("checked");
+                	bt.send('set_phpmyadmin_ssl','ajax/set_phpmyadmin_ssl',{v: !stat? 1:0},function(rdata){
+                		bt.msg(rdata)
+                	})
+                	setTimeout(function () {
+                        get_phpmyadmin_ssl();
+                    }, 500)
+                	
+                })
+                $('.ssl_port_button').click(function (){
+                	var sslPort = $('#sslport').val();
+                	if (!bt.check_port(sslPort)) {
+                        layer.msg(lan.firewall.port_err, { icon: 2 });
+                        return;
+                    }
+                    var loadTo = bt.load(lan.public.the);
+                	if(sslPort > 0){
+                		bt.send('change_phpmyadmin_ssl_port','ajax/change_phpmyadmin_ssl_port',{port: sslPort},function(rdata) {
+                			loadTo.close();
+                        	bt.msg(rdata);
+                		})
+                	}
                 })
                 $('.phpmyadmin_safe').click(function () {
                     var stat = $("#phpmyadminsafe").prop("checked");
@@ -1725,6 +1767,7 @@ var soft = {
                                     '<option value="files" '+ (res.save_handler == 'files'?'selected':'') +'>files</option>'+
                                     (version != '52'?'<option value="redis" '+ (res.save_handler == 'redis'?'selected':'') +'>redis</option>':'') +
                                     (version != '73'?'<option value="memcache" '+ (res.save_handler == 'memcache'?'selected':'') +'>memcache</option>':'')+
+                                    '<option value="memcached" '+ (res.save_handler == 'memcached'?'selected':'') +'>memcached</option>'+
                                 '</select>'+
                             '</div>'+
                         '</div>'+
@@ -1788,6 +1831,10 @@ var soft = {
                                 $('[name="ip"]').val('127.0.0.1');
                                 $('[name="port"]').val('11211');
                             break;
+                            case 'memcached':
+                                $('[name="ip"]').val('127.0.0.1');
+                                $('[name="port"]').val('11211');
+                            break;
                         }
                     });
                     $('.btn_conf_save').click(function(){
@@ -1817,6 +1864,11 @@ var soft = {
                                 $('[name="passwd"]').attr('disabled',false);
                             break;
                             case 'memcache':
+                                $('[name="ip"]').attr('disabled',false);
+                                $('[name="port"]').attr('disabled',false);
+                                $('[name="passwd"]').attr('disabled','disabled').val('');
+                            break;
+                            case 'memcached':
                                 $('[name="ip"]').attr('disabled',false);
                                 $('[name="port"]').attr('disabled',false);
                                 $('[name="passwd"]').attr('disabled','disabled').val('');
