@@ -71,6 +71,8 @@ class abnormal():
         ret = []
         if not os.path.exists('/www/server/php'): return ret
         for i in os.listdir('/www/server/php'):
+            php_list=['52','53','54','55','56','70','71','72','73','74']
+            if not i in php_list:continue
             if os.path.isdir('/www/server/php/' + i):
                 ret.append(i)
         return ret
@@ -84,10 +86,16 @@ class abnormal():
             for i in php_count:
                 get.sName = 'php-%s.%s'%(i[0],i[1])
                 mysql = self.__plugin.get_soft_find(get)
-                php={}
-                php['version']=i
-                php['status']=mysql['status']
-                ret.append(php)
+                if not mysql:
+                    php={}
+                    php['version']=i
+                    php['status']=False
+                    ret.append(php)
+                else:
+                    php = {}
+                    php['version'] = i
+                    php['status'] = mysql['status']
+                    ret.append(php)
             else:
                 return ret
         else:

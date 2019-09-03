@@ -22,9 +22,184 @@ function SetPanelAutoUpload(){
 }
 
 
+
+
+$('#panel_verification').click(function(){
+	var _checked = $(this).prop('checked');
+	if(_checked){
+		layer.open({
+			type: 1,
+			area: ['500px','530px'],
+			title: 'Google身份认证绑定',
+			closeBtn: 2,
+			shift: 5,
+			shadeClose: false,
+			content: '<div class="bt-form pd20 pd70 ssl_cert_from" style="padding:20px 35px;">\
+				<div class="">\
+					<i class="layui-layer-ico layui-layer-ico3"></i>\
+					<h3>危险！此功能不懂别开启!</h3>\
+					<ul style="width:91%;margin-bottom:10px;margin-top:10px;">\
+						<li style="color:red;">必须要用到且了解此功能才决定自己是否要开启!</li>\
+						<li style="color:red;">如果无法验证，命令行输入"bt 24" 取消谷歌登录认证</li>\
+						<li>请先下载APP，并完成安装和初始化</li>\
+						<li>开启服务后，请立即绑定，以免出现面板不能访问。</li>\
+						<li>开启后导致面板不能访问，可以点击下面链接了解解决方法。</li>\
+					</ul>\
+				</div>\
+				<div class="download_Qcode">\
+					<div class="item_down">\
+						<div class="qcode_title">Android 应用下载</div>\
+						<div class="qcode_conter"><img src="/static/img/icon_qcode_android.png" /></div>\
+					</div>\
+					<div class="item_down">\
+						<div class="qcode_title">IOS 应用下载</div>\
+						<div class="qcode_conter"><img src="/static/img/icon_qcode_ios.png" /></div>\
+					</div>\
+				</div>\
+				<div class="details" style="width: 90%;margin-bottom:10px;">\
+					<input type="checkbox" id="check_verification">\
+					<label style="font-weight: 400;margin: 3px 5px 0px;" for="check_verification">我已安装APP和了解详情,并愿意承担风险</label>\
+					<a target="_blank" class="btlink" href="https://www.bt.cn/bbs/forum.php?mod=viewthread&tid=37437">了解详情</a>\
+				</div>\
+				<div class="bt-form-submit-btn">\
+					<button type="button" class="btn btn-sm btn-danger close_verify">关闭</button>\
+					<button type="button" class="btn btn-sm btn-success submit_verify">确认</button>\
+				</div>\
+			</div>',
+			success:function(layers,index){
+				$('.submit_verify').click(function(e){
+					var check_verification = $('#check_verification').prop('checked');
+					if(!check_verification){
+						layer.msg('请先勾选同意风险',{icon:0});
+						return false;
+					}
+					var loadT = layer.msg('正在开启Google身份认证，请稍后...', { icon: 16, time: 0, shade: [0.3, '#000'] });
+					set_two_step_auth({act:_checked},function(rdata){
+						layer.close(loadT);
+						if (rdata.status) layer.closeAll();
+						layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 });
+						if(rdata.status && _checked){
+							$('.open_two_verify_view').click();
+						}
+					});
+				});
+				$('.close_verify').click(function(){
+					layer.closeAll();
+					$('#panel_verification').prop('checked',!_checked);
+				});
+			},cancel:function () {
+				layer.closeAll();
+				$('#panel_verification').prop('checked',!_checked);
+			}
+		});
+	}else{
+		bt.confirm({
+			title: 'Google身份认证',
+			msg: '是否关闭Google身份认证，是否继续？',
+			cancel: function () {
+				$('#panel_verification').prop('checked',!_checked);
+			}}, function () {
+				var loadT = layer.msg('正在关闭Google身份认证，请稍后...', { icon: 16, time: 0, shade: [0.3, '#000'] });
+				set_two_step_auth({act:_checked},function(rdata){
+					layer.close(loadT);
+					if (rdata.status) layer.closeAll();
+					layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 });
+					if(rdata.status && _checked){
+						$('.open_two_verify_view').click();
+					}
+				});
+			},function () {
+				$('#panel_verification').prop('checked',!_checked);
+		   });
+	}
+	
+	// console.log(_data);
+	
+});
+
+$('.open_two_verify_view').click(function(){
+	var _checked = $('#panel_verification').prop('checked');
+	if(!_checked){
+		layer.msg('请先开启Google身份认证服务',{icon:0});
+		return false;
+	}
+	layer.open({
+        type: 1,
+        area: ['600px','670px'],
+        title: 'Google身份认证绑定',
+        closeBtn: 2,
+        shift: 5,
+        shadeClose: false,
+        content: '<div class="bt-form pd20" style="padding:20px 35px;">\
+					<div class="verify_title">基于Google Authenticator用户进行登录认证</div>\
+					<div class="verify_item">\
+						<div class="verify_vice_title">1. 密钥绑定</div>\
+						<div class="verify_conter">\
+							<div class="verify_box">\
+								<div class="verify_box_line">账号：<span class="username"></sapn></div>\
+								<div class="verify_box_line">密钥：<span class="userkey"></sapn></div>\
+								<div class="verify_box_line">类型：<span class="usertype">基于时间</sapn></div>\
+							</div>\
+						</div>\
+					</div>\
+					<div class="verify_item">\
+						<div class="verify_vice_title">2. 扫码绑定 （ 使用Google 身份验证器APP扫码 ）</div>\
+						<div class="verify_conter" style="text-align:center;padding-top:10px;">\
+							<div id="verify_qrcode"></div>\
+						</div>\
+					</div>\
+					<div class="verify_tips">\
+						<p>提示：请使用“ Google 身份验证器APP ”绑定,各大软件商店均可下载该APP，支持安卓、IOS系统。<a href="https://www.bt.cn/bbs/forum.php?mod=viewthread&tid=37437" class="btlink" target="_blank">使用教程</a></p>\
+						<p style="color:red;">开启服务后，请立即使用“Google 身份验证器APP”绑定，以免出现无法登录的情况。</p>\
+					</div>\
+				</div>',
+		success:function(e){
+			get_two_verify(function(res){
+				$('.verify_box_line .username').html(res.username);
+				$('.verify_box_line .userkey').html(res.key);
+			});
+			get_qrcode_data(function(res){
+				jQuery('#verify_qrcode').qrcode({
+					render: "canvas",
+					text: res,
+					height:150,
+					width:150
+				});
+			});
+		}
+    });
+});
+
+(function(){
+	check_two_step(function(res){
+		$('#panel_verification').prop('checked',res.status);
+	});
+})()
+
+
+function check_two_step(callback){
+	$.post('/config?action=check_two_step',function(res){
+		if(callback) callback(res);
+	});
+}
+function get_qrcode_data(callback){
+	$.post('/config?action=get_qrcode_data',function(res){
+		if(callback) callback(res);
+	});
+}
+function get_two_verify(callback){
+	$.post('/config?action=get_key',function(res){
+		if(callback) callback(res);
+	});
+}
+function set_two_step_auth(obj,callback){
+	$.post('/config?action=set_two_step_auth',{act:obj.act?1:0},function(res){
+		if(callback) callback(res);
+	});
+}
+
 $(".set-submit").click(function(){
 	var data = $("#set-Config").serialize();
-	console.log(data)
 	layer.msg(lan.config.config_save,{icon:16,time:0,shade: [0.3, '#000']});
 	$.post('/config?action=setPanel',data,function(rdata){
 		layer.closeAll();
@@ -581,7 +756,8 @@ function GetPanelApi() {
                             <span class="tname">接口密钥</span>\
                             <div class="info-r">\
                                 <input readonly="readonly" name="panel_token_value" class="bt-input-text mr5 disable" type="text" style="width: 310px" value="'+rdata.token+'" disable>\
-                                <button class="btn btn-xs btn-success btn-sm" style="margin-left: -70px;" onclick="SetPanelApi(1)">显示密钥</button>\
+								<button class="btn btn-xs btn-success btn-sm" style="margin-left: -50px;margin-right: -15px;" onclick="showPawApi()">显示</button>\
+								<button class="btn btn-xs btn-success btn-sm" style="margin-left: -70px;" onclick="SetPanelApi(1)">重置</button>\
                             </div>\
                         </div>\
                         <div class="line ">\
@@ -594,11 +770,15 @@ function GetPanelApi() {
                         <ul class="help-info-text c7">\
                             <li>开启API后，必需在IP白名单列表中的IP才能访问面板API接口</li>\
                             <li>接口密钥只在点【显示密钥】后显示1次，之后不再显示，请保管好您的密钥</li>\
+                            <li style="color:red;">如需本机调用面板API密钥，请添加" 127.0.0.1 "和本机IP至IP白名单</li>\
                             <li>API接口文档在这里：<a class="btlink" href="https://www.bt.cn/bbs/thread-20376-1-1.html" target="_blank">https://www.bt.cn/bbs/thread-20376-1-1.html</a></li>\
                         </ul>\
                     </div>'
         })
     });
+}
+function showPawApi(){
+	layer.msg('面板API密钥仅支持一次性显示,请妥善保管。<br>如需显示面板API密钥,请点击重置按钮，重新获取新的API密钥。<br><span style="color:red;">注意事项：重置密钥后，已关联密钥产品，将失效，请重新添加新密钥至产品。</span>',{icon:0,time:0,shadeClose:true,shade:0.1});
 }
 
 
@@ -613,7 +793,7 @@ function SetPanelApi(t_type) {
         if (t_type == 1) {
             if (rdata.status) {
                 $("input[name='panel_token_value']").val(rdata.msg);
-                layer.msg('接口密钥已生成，请保管好您的新密钥，此密钥只显示一次!', { icon: 1, time: 0, shade: 0.3, shadeClose:true });
+                layer.msg('接口密钥已生成，请保管好您的新密钥，此密钥只显示一次!', { icon: 1, time: 0, shade: 0.3, shadeClose:true,closeBtn:2});
                 return;
             }
         }
