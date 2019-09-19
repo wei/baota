@@ -1,0 +1,9 @@
+{
+    "projects": [
+        {
+            "owner": "username",
+            "repository": "reponamne",
+            "alias": "aliasname/alaiasrepo"
+        }
+    ]
+}
