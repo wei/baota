@@ -7,7 +7,7 @@ const Page = () => {
     const [projects, isLoading] = useApi('GET', '/api', [])
 
     return (
-        <Layout title={!isLoading ? "Latest releases" : ''}>
+        <Layout title={!isLoading ? "Latest release" : ''}>
             {isLoading && projects.length < 1 &&  <Loader />}
 
             {projects.map((project, i) =>

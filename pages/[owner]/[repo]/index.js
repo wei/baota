@@ -17,7 +17,7 @@ const Page = () => {
     }
 
     return (
-        <Layout title={!isLoading ? "All releases" : ''}>
+        <Layout title={!isLoading ? "Project releases" : ''}>
             {isLoading && projects.length < 1 &&  <Loader />}
 
             {project && project.releases.map((release, i) =>
