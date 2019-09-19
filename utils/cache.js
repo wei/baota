@@ -1,3 +1,5 @@
+import fetch from 'isomorphic-unfetch'
+
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || null;
 const CACHE_DELAY = process.env.CACHE_DELAY || 1000 * 60 * 15; // minutes
 const MAXIMUM_RELEASES = process.env.MAXIMUM_RELEASES || 25
