@@ -1,4 +1,3 @@
-import Head from 'next/head'
 import Error from 'next/error'
 import Item from 'components/Item'
 import Layout from 'components/Layout'
@@ -21,10 +20,6 @@ const Page = () => {
 
     return (
         <Layout title={!isLoading ? "Release details" : ''}>
-            <Head>
-                <title>{isLoading ? 'Loading ...' : 'Release details'}</title>
-            </Head>
-
             {isLoading
                 ? <Loader />
                 : <>

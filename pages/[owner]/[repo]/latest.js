@@ -1,3 +1,4 @@
+import Head from 'next/head'
 import Error from 'next/error'
 import Item from 'components/Item'
 import Layout from 'components/Layout'
@@ -5,6 +6,8 @@ import Loader from 'components/Loader'
 
 import {useRouter} from 'next/router'
 import {useApi} from 'utils/api'
+
+import {redirectTo} from 'utils/redirect'
 
 const Page = () => {
     const {query} = useRouter()
@@ -16,15 +19,20 @@ const Page = () => {
         return <Error statusCode={404} />
     }
 
-    return (
-        <Layout title={!isLoading ? "All releases" : ''}>
-            {isLoading && projects.length < 1 &&  <Loader />}
+    /* show loader while waiting */
+    if (isLoading) {
+        return <Layout><Loader /></Layout>
+    }
 
-            {project && project.releases.map((release, i) =>
-                <Item key={i} value={release} />
-            )}
-        </Layout>
-    )
+
+    let release = project.releases[0]
+
+    if (!release || !release.version) {
+        return <Error statusCode={404} />
+    }
+
+    redirectTo('/[owner]/[repo]/[version]', { as: `/${owner}/${repo}/${release.version}` });
+    return <Layout></Layout>
 }
 
 export default Page

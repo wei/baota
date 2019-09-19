@@ -1,5 +1,12 @@
+import Head from 'next/head'
+import config from 'utils/../config.json'
+
 export default ({title, children}) => (
     <main>
+        <Head>
+            <title>{config.title} - {title}</title>
+        </Head>
+
         <h1>{title}</h1>
 
         <section>
