@@ -4,7 +4,7 @@ import config from 'utils/../config.json'
 export default ({title, children}) => (
     <main>
         <Head>
-            <title>{config.title} - {title}</title>
+            <title>{config.title} - {title || 'Loading ...'}</title>
         </Head>
 
         <h1>{title}</h1>
