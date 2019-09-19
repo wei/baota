@@ -1,3 +1,4 @@
+import Head from 'next/head'
 import Item from 'components/Item'
 import Layout from 'components/Layout'
 import Loader from 'components/Loader'
@@ -8,6 +9,10 @@ const Page = () => {
 
     return (
         <Layout title={!isLoading ? "Latest releases" : ''}>
+            <Head>
+                <title>{isLoading ? 'Loading ...' : 'Latest releases'}</title>
+            </Head>
+
             {isLoading && projects.length < 1 &&  <Loader />}
 
             {projects.map((project, i) =>

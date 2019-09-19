@@ -1,3 +1,4 @@
+import Head from 'next/head'
 import Error from 'next/error'
 import Item from 'components/Item'
 import Layout from 'components/Layout'
@@ -20,6 +21,10 @@ const Page = () => {
 
     return (
         <Layout title={!isLoading ? "Release details" : ''}>
+            <Head>
+                <title>{isLoading ? 'Loading ...' : 'Release details'}</title>
+            </Head>
+
             {isLoading
                 ? <Loader />
                 : <>
@@ -29,7 +34,7 @@ const Page = () => {
                         <h2>Release notes</h2>
 
                         <p>
-                            {release.notes}
+                            {release.notes.map((v, i) => <li key={i}>{v}</li>)}
                         </p>
 
                         <style jsx>{`

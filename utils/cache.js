@@ -49,11 +49,16 @@ const refreshCache = async (owner, repo, alias) => {
             owner: aOwner,
             repo: aRepo,
             name: release.name,
-            notes: release.body,
             date: release.published_at,
             version: release.tag_name,
             expiresAt: Date.now() + CACHE_DELAY,
+            notes: (release.body || '')
+                .split('*')
+                .map(a => a.trim())
+                .filter(a => a),
         }
+
+        newEntry.notes.sort()
 
         newEntry.files = release.assets.map(asset => ({
             id: asset.id,
