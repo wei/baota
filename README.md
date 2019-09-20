@@ -8,7 +8,9 @@ A simple web-page/api resource that allows you to display latest releases to you
 
 1. `git clone`
 2. `npm install`
-3. `GITHUB_TOKEN=... npm run dev`
+3. Create a local config file based off the `config.dest.json` via `cp config.dest.json config.json`
+4. Edit it to reflect your needs
+5. Run in develop mode to test it out locally `GITHUB_TOKEN=... npm run dev`
 
 ### Deployment (using now)
 
