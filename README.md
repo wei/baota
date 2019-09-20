@@ -19,3 +19,5 @@ A simple web-page/api resource that allows you to display latest releases to you
 ## Information
 
 By default all releases are cached for 15 minutes. To bust cache (for example right after release) you can call `GET /api?cache=bust`
+
+The overall idea and design elements are based off the [ZEIT's Hazel](https://github.com/zeit/hazel/), props to them for making such a cool tool.
