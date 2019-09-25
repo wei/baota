@@ -2,7 +2,8 @@ import fetch from 'isomorphic-unfetch'
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || null;
 const CACHE_DELAY = process.env.CACHE_DELAY || 1000 * 60 * 15; // minutes
-const MAXIMUM_RELEASES = process.env.MAXIMUM_RELEASES || 25
+const MAXIMUM_RELEASES = process.env.MAXIMUM_RELEASES || 25;
+const PRE_RELEASES = process.env.PRE_RELEASES || false;
 
 let cachedData = {};
 
@@ -37,10 +38,11 @@ const refreshCache = async (owner, repo, alias) => {
         return
     }
 
-    const releases = data.filter(item => {
-        return item && !item.draft && !item.prerelease
-            && item.assets && Array.isArray(item.assets) && item.assets.length > 0
-    })
+    const releases = data
+        .filter(item => item)
+        .filter(item => !item.draft)
+        .filter(item => PRE_RELEASES ? item.prerelease : !item.prerelease)
+        .filter(item => item.assets && Array.isArray(item.assets) && item.assets.length > 0)
 
     const [aOwner, aRepo] = alias.split('/')
 

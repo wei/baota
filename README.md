@@ -17,6 +17,12 @@ Oriented to work and support private github repositories.
 
 1. `now --prod -e GITHUB_TOKEN=...`
 
+### Additional options
+
+* `CACHE_DELAY=900000` - cache time for the specific release
+* `MAXIMUM_RELEASES=25` - how many releases should be pulled from gihtub and displayed on `All releases` page
+* `PRE_RELEASES=true` - do you want to display only pre-releases or stable releases (false by default)
+
 ## Information
 
 By default all releases are cached for 15 minutes. To bust cache (for example right after release) you can call `GET /api?cache=bust`

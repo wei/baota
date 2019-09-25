@@ -100,7 +100,10 @@ const Item = ({ value, hasAll, noNotes }) => (
                 margin-right: 8px;
                 padding: 2px 6px;
                 border-radius: 4px;
-                background: linear-gradient(#ff00a5, #f65538)
+                background: ${!process.env.PRE_RELEASES
+                    ? 'linear-gradient(#ff00a5, #f65538);'
+                    : 'linear-gradient(#258c2b, #44f638);'
+                }
             }
 
             .release-notes {
@@ -123,7 +126,7 @@ const Item = ({ value, hasAll, noNotes }) => (
             }
 
             .item a {
-                color: #ff0387;
+                color: ${!process.env.PRE_RELEASES ? '#ff0387;' : '#03ff8f;' }
                 text-decoration: none;
             }
 
