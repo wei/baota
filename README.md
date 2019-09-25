@@ -1,6 +1,7 @@
 # releases
 
-A simple web-page/api resource that allows you to display latest releases to your users and allow them to download those releases. Oriented to work and support private github repositories.
+A simple web-page/api resource that allows you to display latest releases to your users and allow them to download those releases.
+Oriented to work and support private github repositories.
 
 ## Instructions
 
