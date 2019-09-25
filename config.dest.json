@@ -3,8 +3,8 @@
     "projects": [
         {
             "owner": "username",
-            "repository": "reponamne",
-            "alias": "aliasname/alaiasrepo"
+            "repository": "reponame",
+            "alias": "aliasname/aliasrepo"
         }
     ]
 }
