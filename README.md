@@ -23,6 +23,15 @@ It is riented to work with and support private github repositories.
 * `MAXIMUM_RELEASES=25` - how many releases should be pulled from gihtub and displayed on `All releases` page
 * `PRE_RELEASES=true` - do you want to display only pre-releases or stable releases (false by default)
 
+Ability to fetch a release directly by matched keywords:
+
+```/api/fetch/[owner]/[repo]/[platform]/[keyword]/[version]```
+
+Examples:
+
+* `/api/fetch/inlife/releases/win/serv/latest`
+* `/api/fetch/inlife/nexrender/lin/worker/1.23.2`
+
 ## Information
 
 By default all releases are cached for 15 minutes. To bust cache (for example right after the release) you can call `GET /api?cache=bust`
