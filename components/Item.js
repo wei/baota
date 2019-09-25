@@ -1,5 +1,8 @@
 import Link from 'next/link'
 import {formatDistanceToNow} from 'date-fns'
+import config from 'utils/../config.json'
+
+const IS_PRERELEASE = config.prereleases;
 
 const Item = ({ value, hasAll, noNotes }) => (
     <article>
@@ -100,7 +103,7 @@ const Item = ({ value, hasAll, noNotes }) => (
                 margin-right: 8px;
                 padding: 2px 6px;
                 border-radius: 4px;
-                background: ${process.env.PRE_RELEASES == "true"
+                background: ${IS_PRERELEASE
                     ? 'linear-gradient(#258c2b, #44f638);'
                     : 'linear-gradient(#ff00a5, #f65538);'
                 }
@@ -126,7 +129,7 @@ const Item = ({ value, hasAll, noNotes }) => (
             }
 
             .item a {
-                color: ${process.env.PRE_RELEASES == "true" ? '#03ff8f;' : '#ff0387;' }
+                color: ${IS_PRERELEASE ? '#03ff8f;' : '#ff0387;' }
                 text-decoration: none;
             }
 

@@ -1,5 +1,6 @@
 {
     "title": "Title",
+    "prerelases": false,
     "projects": [
         {
             "owner": "username",
