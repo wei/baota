@@ -6,7 +6,7 @@ module.exports = phase => {
         target: 'serverless',
 
         env: {
-            PRE_RELEASES: process.env.PRE_RELEASES || false,
+            PRE_RELEASES: process.env.PRE_RELEASES || "false",
         },
 
         webpack(config, options) {

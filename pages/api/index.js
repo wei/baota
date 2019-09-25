@@ -15,5 +15,5 @@ export default async (req, res) => {
         }
     }))
 
-    res.json(data)
+    res.json((data || []).filter(p => p.releases.length > 0))
 }

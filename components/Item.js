@@ -100,9 +100,9 @@ const Item = ({ value, hasAll, noNotes }) => (
                 margin-right: 8px;
                 padding: 2px 6px;
                 border-radius: 4px;
-                background: ${!process.env.PRE_RELEASES
-                    ? 'linear-gradient(#ff00a5, #f65538);'
-                    : 'linear-gradient(#258c2b, #44f638);'
+                background: ${process.env.PRE_RELEASES == "true"
+                    ? 'linear-gradient(#258c2b, #44f638);'
+                    : 'linear-gradient(#ff00a5, #f65538);'
                 }
             }
 
@@ -126,7 +126,7 @@ const Item = ({ value, hasAll, noNotes }) => (
             }
 
             .item a {
-                color: ${!process.env.PRE_RELEASES ? '#ff0387;' : '#03ff8f;' }
+                color: ${process.env.PRE_RELEASES == "true" ? '#03ff8f;' : '#ff0387;' }
                 text-decoration: none;
             }
 
