@@ -28,7 +28,7 @@ const Item = ({ value, hasAll, noNotes }) => (
         )}
 
         <footer>
-            <div className="version">v{value.version}</div>
+            <div className="version">{value.version.indexOf('v')===0?'':'v'}{value.version}</div>
 
             {noNotes ? null :
                 <Link href='/[owner]/[repo]/[version]' as={`/${value.owner}/${value.repo}/${value.version}`}>
