@@ -6,6 +6,8 @@ It is riented to work with and support private github repositories.
 
 ![](https://user-images.githubusercontent.com/2182108/65677990-3ce81800-e05b-11e9-8750-4e116048d3e0.png)
 
+> Example page: [nexrender.now.sh](https://nexrender.now.sh/)
+
 It is based on the same idea, design, and principles established by [ZEIT's Hazel](https://github.com/zeit/hazel/) (which is an amazing tool on it's own).
 
 However this is a more general version with intention to support:
