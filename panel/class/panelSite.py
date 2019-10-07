@@ -916,7 +916,12 @@ class panelSite(panelRedirect):
                     return public.returnMsg(False, '请先到软件商店安装【云解析】，并完成域名NS绑定.');
 
         self.check_ssl_pack()
-        import panelLets
+        try:
+            import panelLets
+        except Exception as ex:
+            if str(ex).find('No module named requests') != -1:
+                os.system("pip install requests &")
+                return public.returnMsg(False,'缺少requests组件，请尝试修复面板!')
         public.mod_reload(panelLets)
         lets = panelLets.panelLets()
         result = lets.apple_lest_cert(get)
@@ -1606,6 +1611,7 @@ class panelSite(panelRedirect):
         #nginx
         filename = self.setupPath + '/panel/vhost/nginx/' + siteName + '.conf';
         mconf = public.readFile(filename);
+        if mconf == False: return public.returnMsg(False,'指定配置文件不存在!')
         if mconf:
             if(srcDomain == 'all'):
                 conf301 = "\t#301-START\n\t\treturn 301 "+toDomain+"$request_uri;\n\t#301-END";
@@ -1623,6 +1629,7 @@ class panelSite(panelRedirect):
         #apache
         filename = self.setupPath + '/panel/vhost/apache/' + siteName + '.conf';
         mconf = public.readFile(filename);
+        if mconf == False: return public.returnMsg(False,'指定配置文件不存在!')
         if type == '1': 
             if(srcDomain == 'all'):
                 conf301 = "\n\t#301-START\n\t<IfModule mod_rewrite.c>\n\t\tRewriteEngine on\n\t\tRewriteRule ^(.*)$ "+toDomain+"$1 [L,R=301]\n\t</IfModule>\n\t#301-END\n";
@@ -1890,6 +1897,7 @@ server
         Name = public.M('sites').where("id=?",(id,)).getField('name');
         file = self.setupPath + '/panel/vhost/'+public.get_webserver()+'/' + Name + '.conf';
         conf = public.readFile(file)
+        if conf == False: return public.returnMsg(False,'指定网站配置文件不存在!')
         if public.get_webserver() == 'nginx':
             rep = "\s+index\s+(.+);";
         else:

@@ -801,7 +801,11 @@ class config:
             public.WriteFile(save_path,json.dumps(data))
             public.ExecShell("chmod 600 " + save_path)
         data = json.loads(public.ReadFile(save_path))
-        data['token'] = "***********************************"
+        
+        if 'token_crypt' in data:
+            data['token'] = public.de_crypt(data['token'],data['token_crypt'])
+        else:
+            data['token'] = "***********************************"
         data['limit_addr'] = '\n'.join(data['limit_addr'])
         return data
 
@@ -812,6 +816,7 @@ class config:
         if get.t_type == '1':
             token = public.GetRandomString(32)
             data['token'] = public.md5(token)
+            data['token_crypt'] = public.en_crypt(data['token'],token).decode('utf-8')
             public.WriteLog('API配置','重新生成API-Token')
         elif get.t_type == '2':
             data['open'] = not data['open']
@@ -824,6 +829,7 @@ class config:
             token ='保存成功!'
 
         public.WriteFile(save_path,json.dumps(data))
+        public.ExecShell("chmod 600 " + save_path)
         return public.returnMsg(True,token)
 
 
