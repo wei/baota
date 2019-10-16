@@ -262,7 +262,6 @@ class panelPlugin:
         if not softList or focre > 0:
             self.clean_panel_log()
             cloudUrl = public.GetConfigValue('home') + '/api/panel/get_soft_list_test'
-            print(cloudUrl)
             import panelAuth
             pdata = panelAuth.panelAuth().create_serverid(None)
             listTmp = public.httpPost(cloudUrl,pdata,10)
@@ -280,6 +279,8 @@ class panelPlugin:
         sType = 0
         try:
             if hasattr(get,'type'): sType = int(get['type'])
+            if hasattr(get,'query'): 
+                if get.query: sType = 0
         except:pass
         softList['list'] = self.get_local_plugin(softList['list'])
         softList['list'] = self.get_types(softList['list'],sType)
@@ -287,7 +288,10 @@ class panelPlugin:
             if get.query:
                 tmpList = []
                 for softInfo in softList['list']:
-                    if softInfo['name'].find(get.query) != -1 or softInfo['title'].find(get.query) != -1: tmpList.append(softInfo)
+                    if softInfo['name'].lower().find(get.query) != -1 or \
+                        softInfo['title'].lower().find(get.query) != -1 or \
+                        softInfo['ps'].lower().find(get.query) != -1: 
+                        tmpList.append(softInfo)
                 softList['list'] = tmpList
         return softList
 
