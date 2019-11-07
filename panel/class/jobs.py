@@ -8,8 +8,6 @@
 # +-------------------------------------------------------------------
 import time,public,db,os,sys,json,re
 os.chdir('/www/server/panel')
-exec_tips = None
-from BTPanel import cache
 
 def control_init():
     sql = db.Sql().dbfile('system')
@@ -51,9 +49,9 @@ def control_init():
             import shutil
             shutil.copyfile(src_file,init_file)
             if os.path.getsize(init_file) < 10:
-                os.system("chattr -i " + init_file)
-                os.system("\cp -arf %s %s" % (src_file,init_file))
-                os.system("chmod +x %s" % init_file)
+                public.ExecShell("chattr -i " + init_file)
+                public.ExecShell("\cp -arf %s %s" % (src_file,init_file))
+                public.ExecShell("chmod +x %s" % init_file)
     except:pass
     public.writeFile('/var/bt_setupPath.conf','/www')
     public.ExecShell(c)
@@ -66,13 +64,98 @@ def control_init():
     clean_max_log('/www/server/panel/plugin/rsync/lsyncd.log')
     remove_tty1()
     clean_hook_log()
+    run_new()
+    clean_max_log('/www/server/cron',1024*1024*5,20)
+    #check_firewall()
+    check_dnsapi()
+
+
+#检查dnsapi
+def check_dnsapi():
+    dnsapi_file = 'config/dns_api.json'
+    tmp = public.readFile(dnsapi_file)
+    if not tmp: return False
+    dnsapi = json.loads(tmp)
+    if tmp.find('CloudFlare') == -1:
+        cloudflare = {
+                        "ps": "使用CloudFlare的API接口自动解析申请SSL",
+                        "title": "CloudFlare",
+                        "data": [{
+                            "value": "",
+                            "key": "SAVED_CF_MAIL",
+                            "name": "E-Mail"
+                        }, {
+                            "value": "",
+                            "key": "SAVED_CF_KEY",
+                            "name": "API Key"
+                        }],
+                        "help": "CloudFlare后台获取Global API Key",
+                        "name": "CloudFlareDns"
+                    }
+        dnsapi.insert(0,cloudflare)
+    check_names = {"dns_bt":"Dns_com","dns_dp":"DNSPodDns","dns_ali":"AliyunDns","dns_cx":"CloudxnsDns"}
+    for i in range(len(dnsapi)):
+        if dnsapi[i]['name'] in check_names:
+            dnsapi[i]['name'] = check_names[dnsapi[i]['name']]
+
+    public.writeFile(dnsapi_file,json.dumps(dnsapi))
+    return True
+
+
+
+#检测端口放行是否同步(仅firewalld)
+def check_firewall():
+    try:
+        if not os.path.exists('/usr/sbin/firewalld'): return False
+        data = public.M('firewall').field('port,ps').select()
+        import firewalld,firewalls
+        fs = firewalls.firewalls()
+        accept_ports = firewalld.firewalld().GetAcceptPortList()
+        
+        port_list = []
+        for port_info  in accept_ports:
+            if port_info['port'] in port_list: 
+                continue
+            port_list.append(port_info['port'])
+            
+        n = 0
+        for p in data:
+            if p['port'].find('.') != -1:
+                continue
+            if p['port'] in port_list:
+                continue
+            fs.AddAcceptPortAll(p['port'],p['ps'])
+            n+=1
+        #重载
+        if n: fs.FirewallReload()
+    except:
+        pass
+
+
+#尝试启动新架构
+def run_new():
+    try:
+        new_file = '/www/server/panel/data/new.pl'
+        port_file = '/www/server/panel/data/port.pl'
+        if os.path.exists(new_file): return False
+        if not os.path.exists(port_file): return False
+        port = public.readFile(port_file)
+        if not port: return False
+        cmd_line = public.ExecShell('lsof -P -i:{}|grep LISTEN|grep -v grep'.format(int(port)))[0]
+        if len(cmd_line) < 20: return False
+        if cmd_line.find('BT-Panel') != -1: return False
+        public.writeFile('/www/server/panel/data/restart.pl','True')
+        public.writeFile(new_file,'True')
+        return True
+    except:
+        return False
 
 #清理webhook日志
 def clean_hook_log():
     path = '/www/server/panel/plugin/webhook/script'
     if not os.path.exists(path): return False
     for name in os.listdir(path):
-        if name[-4:] != ".log": continue;
+        if name[-4:] != ".log": continue
         clean_max_log(path+'/' + name,524288)
 
 #清理PHP日志
@@ -80,9 +163,9 @@ def clean_php_log():
     path = '/www/server/panel/php'
     if not os.path.exists(path): return False
     for name in os.listdir(path):
-        filename = path + '/var/log/php-fpm.log'
+        filename = path +'/'+name + '/var/log/php-fpm.log'
         if os.path.exists(filename): clean_max_log(filename)
-        filename = path + '/var/log/slow.log'
+        filename =  path +'/'+name + '/var/log/slow.log'
         if os.path.exists(filename): clean_max_log(filename)
 
 #清理大日志

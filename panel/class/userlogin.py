@@ -105,6 +105,7 @@ class userlogin:
     def login_token(self):
         import config
         config.config().reload_session()
+        self.clear_session()
 
     def request_get(self,get):
         #if os.path.exists('/www/server/panel/install.pl'): raise redirect('/install');
@@ -234,3 +235,22 @@ class userlogin:
             if ip and v_time < 86400:
                 acc_client_ip = True
         return acc_client_ip
+
+    # 清理多余SESSION数据
+    def clear_session(self):
+        try:
+            session_file = '/dev/shm/session.db'
+            if not os.path.exists(session_file): return False
+            s_size = os.path.getsize(session_file)
+            if s_size < 1024 * 512: return False
+            if s_size > 1024 * 1024 * 10:
+                from BTPanel import sdb
+                if os.path.exists(session_file): os.remove(session_file)
+                sdb.create_all()
+                if not os.path.exists(session_file): 
+                    public.writeFile('/www/server/panel/data/reload.pl','True')
+                    return False
+            return True
+        except:
+            return False
+

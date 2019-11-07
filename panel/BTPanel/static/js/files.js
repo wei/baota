@@ -5,12 +5,13 @@ function IsDiskWidth() {
         $("#comlist").css({ "width": bodyWidth - 530 + "px", "height": "34px", "overflow": "auto" });
     }
     else {
-        $("#comlist").removeAttr("style");
+        $("#comlist").removeAttr("style"); 
     }
 }
+
 function Recycle_bin(type) {
-    $.post('/files?action=Get_Recycle_bin', '', function (rdata) {
-        var body = ''
+    $.post('/files?action=Get_Recycle_bin','',function (rdata) {
+        var body = '';
         switch (type) {
             case 1:
                 for (var i = 0; i < rdata.dirs.length; i++) {
@@ -334,6 +335,11 @@ function GetFiles(Path, sort) {
         }
     }
 
+    var old_scroll_top = 0;
+    if (getCookie('Path') === Path) {
+        old_scroll_top = $(".oldTable").scrollTop();
+    }
+    
     var sorted = '';
     var reverse = '';
     if (!sort) {
@@ -396,18 +402,26 @@ function GetFiles(Path, sort) {
                     cnametext = cnametext.substring(0, 10) + '...'
                 }
             }
+            var fileMsg = '';
+            if (fmp[0].indexOf('Recycle_bin') != -1) {
+                fileMsg = 'PS: 回收站目录,勿动!';
+            }
+            if (fileMsg != '') {
+                fileMsg = '<span style="margin-left: 30px; color: #999;">' + fileMsg + '</span>';
+            }
             var timetext = '--';
             if (getCookie("rank") == "a") {
                 $("#set_list").addClass("active");
                 $("#set_icon").removeClass("active");
                 Body += "<tr class='folderBoxTr' data-path='" + rdata.PATH + "/" + fmp[0] + "' filetype='dir'>\
 						<td><input type='checkbox' name='id' value='"+ fmp[0] + "'></td>\
-						<td class='column-name'><span class='cursor' onclick=\"GetFiles('" + rdata.PATH + "/" + fmp[0] + "')\"><span class='ico ico-folder'></span><a class='text' title='" + fmp[0] + fmp[5] + "'>" + cnametext + "</a></span></td>\
+						<td class='column-name'><span class='cursor' onclick=\"GetFiles('" + rdata.PATH + "/" + fmp[0] + "')\"><span class='ico ico-folder'></span><a class='text' title='" + fmp[0] + fmp[5] + "'>" + cnametext + fileMsg + "</a></span></td>\
 						<td><a class='btlink "+ (rdata.PATH + '/' + fmp[0]).replace(/[^\w]/g, '-') + "' onclick=\"get_path_size('" + rdata.PATH + "/" + fmp[0] + "')\">点击计算</a></td>\
 						<td>"+ getLocalTime(fmp[2]) + "</td>\
 						<td>"+ fmp[3] + "</td>\
 						<td>"+ fmp[4] + "</td>\
 						<td class='editmenu'><span>\
+						<a class='btlink' href='javascript:;' onclick=\"webshell_dir('" + rdata.PATH + "/" + fmp[0] + "')\">" + lan.files.dir_menu_webshell + "</a> | \
 						<a class='btlink' href='javascript:;' onclick=\"CopyFile('" + rdata.PATH + "/" + fmp[0] + "')\">" + lan.files.file_menu_copy + "</a> | \
 						<a class='btlink' href='javascript:;' onclick=\"CutFile('" + rdata.PATH + "/" + fmp[0] + "')\">" + lan.files.file_menu_mv + "</a> | \
 						<a class='btlink' href=\"javascript:ReName(0,'" + fmp[0] + "');\">" + lan.files.file_menu_rename + "</a> | \
@@ -432,6 +446,7 @@ function GetFiles(Path, sort) {
             var displayZip = isZip(fmp[0]);
             var bodyZip = '';
             var download = '';
+            var file_webshell = '';
             var cnametext = fmp[0] + fmp[5];
             fmp[0] = fmp[0].replace(/'/, "\\'");
             if (cnametext.length > 48) {
@@ -441,6 +456,9 @@ function GetFiles(Path, sort) {
                 if (cnametext.length > 16) {
                     cnametext = cnametext.substring(0, 16) + '...'
                 }
+            }
+            if(isPhp(fmp[0])){
+            	file_webshell = "<a class='btlink' href='javascript:;' onclick=\"php_file_webshell('" + rdata.PATH + "/" + fmp[0] + "')\">" + lan.files.file_menu_webshell + "</a> | ";
             }
             if (displayZip != -1) {
                 bodyZip = "<a class='btlink' href='javascript:;' onclick=\"UnZip('" + rdata.PATH + "/" + fmp[0] + "'," + displayZip + ")\">" + lan.files.file_menu_unzip + "</a> | ";
@@ -483,7 +501,7 @@ function GetFiles(Path, sort) {
 						<td>"+ fmp[3] + "</td>\
 						<td>"+ fmp[4] + "</td>\
 						<td class='editmenu'>\
-						<span><a class='btlink' href='javascript:;' onclick=\"CopyFile('" + rdata.PATH + "/" + fmp[0] + "')\">" + lan.files.file_menu_copy + "</a> | \
+						<span>"+file_webshell+"<a class='btlink' href='javascript:;' onclick=\"CopyFile('" + rdata.PATH + "/" + fmp[0] + "')\">" + lan.files.file_menu_copy + "</a> | \
 						<a class='btlink' href='javascript:;' onclick=\"CutFile('" + rdata.PATH + "/" + fmp[0] + "')\">" + lan.files.file_menu_mv + "</a> | \
 						<a class='btlink' href='javascript:;' onclick=\"ReName(0,'" + fmp[0] + "')\">" + lan.files.file_menu_rename + "</a> | \
 						<a class='btlink' href=\"javascript:SetChmod(0,'" + rdata.PATH + "/" + fmp[0] + "');\">" + lan.files.file_menu_auth + "</a> | \
@@ -500,7 +518,7 @@ function GetFiles(Path, sort) {
 						</div>";
             }
         }
-        var dirInfo = '(' + lan.files.get_size.replace('{1}', rdata.DIR.length + '').replace('{2}', rdata.FILES.length + '') + '<font id="pathSize">' + (ToSize(totalSize)) + '<a class="btlink ml5" onClick="GetPathSize()">' + lan.files.get + '</a></font>)';
+        var dirInfo = '(' + lan.files.get_size.replace('{1}', rdata.DIR.length + '').replace('{2}', rdata.FILES.length + '') + '<font id="pathSize"><a class="btlink ml5" onClick="GetPathSize()">' + lan.files.get + '</a></font>)';
         $("#DirInfo").html(dirInfo);
         if (getCookie("rank") === "a") {
             var sort_icon = '<span data-id="status" class="glyphicon glyphicon-triangle-' + ((data['reverse'] !== 'False') ? 'bottom' : 'top') + '" style="margin-left:5px;color:#bbb"></span>';
@@ -535,11 +553,11 @@ function GetFiles(Path, sort) {
 							<tbody id="filesBody" class="list-list">'+ Body + '</tbody>\
 						</table></div><div class="oldTableShadow"></div>';
             $("#fileCon").removeClass("fileList").html(tablehtml);
-            $("#tipTools").width($("#fileCon")[0].clientWidth - 20);
+            $("#tipTools").width($("#fileCon")[0].clientWidth - 30);
         }
         else {
             $("#fileCon").addClass("fileList").html(Body);
-            $("#tipTools").width($("#fileCon")[0].clientWidth - 20);
+            $("#tipTools").width($("#fileCon")[0].clientWidth - 30);
         }
         $("#DirPathPlace input").val(rdata.PATH);
         var BarTools = '<div class="btn-group">\
@@ -558,38 +576,24 @@ function GetFiles(Path, sort) {
         BarTools += ' <button onclick="javascript:GetFiles(\'' + rdata.PATH + '\');" class="btn btn-default btn-sm glyphicon glyphicon-refresh" title="' + lan.public.fresh + '"></button> <button onclick="web_shell()" title="' + lan.files.shell + '" type="button" class="btn btn-default btn-sm"><em class="ico-cmd"></em></button>';
 
 
-        //收藏夹
+        // 收藏夹
         var shtml = '<div class="btn-group">\
 						<button style="margin-left: 5px;" class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">收藏夹 <span class="caret"></span>\
 						</button>\
 						<ul class="dropdown-menu">'
 
         for (var i = 0; i < rdata.STORE.length; i++) {
-            shtml += '<li class="file-types"><div style=" padding: 3px 0;"><span class="ico ico-folder"></span><a href="javascript:;">' + rdata.STORE[i].name + '</a><span class="glyphicon glyphicon-triangle-right file-type-span" aria-hidden="true"></span></div><ul data-file-type="' + rdata.STORE[i].name + '" class="dropdown-menu-li">'
-            if (rdata.STORE[i].data.length > 0) {
-                for (var j = 0; j < rdata.STORE[i].data.length; j++) {
-                    if (rdata.STORE[i].data[j].type == "dir") {
-                        shtml += '<li title="' + rdata.STORE[i].data[j].path + '" class = "file-type-li"><div style=" padding: 3px 0;"><span class="ico ico-folder"></span><a  href="javascript:;" onclick="GetFiles(\'' + rdata.STORE[i].data[j].path + '\');">' + rdata.STORE[i].data[j].path + '</a></div></li>';
-                    }
-                    else {
-                        shtml += '<li title="' + rdata.STORE[i].data[j].path + '" class = "file-type-li"><div  style=" padding: 3px 0;"><span class="ico ico-file"></span><a href="javascript:;" onclick="openEditorView(0,\'' + rdata.STORE[i].data[j].path + '\')" >' + rdata.STORE[i].data[j].path + '</a></div></li>';
-                    }
-                }
-            }
-            else {
-                shtml += '<li><a style="padding-left: 15px;" href="javascript:;">暂无数据</a></li>';
-            }
-            shtml += '</ul>';
+            shtml += '<li class="file-types" title="'+ rdata.STORE[i].path +'"><div style="width:200px"><span class="ico '+ (rdata.STORE[i].type ==='file'?'ico-file':'ico-folder') +'"></span><a href="javascript:;"  style="display: inline-block;width:150px;overflow: hidden;text-overflow: ellipsis;vertical-align: top;" onclick="'+ (rdata.STORE[i].type ==='file'?'openEditorView(0,\''+ rdata.STORE[i].path +'\')':'GetFiles(\''+ rdata.STORE[i].path +'\')') +'">' + rdata.STORE[i].name + '</a></div>';
         }
-        shtml += '<li style="text-align: center;"><a href="javascript: ;" onclick="set_file_store(\'' + rdata.PATH + '\')">+ 管理</a></li></ul></div>'
+        shtml += '<li style="text-align: center;"><a href="javascript: ;" onclick="set_file_store(\'' + rdata.PATH + '\')">管理收藏夹</a></li></ul></div>'
 
         BarTools += shtml;
-
+        
         var copyName = getCookie('copyFileName');
         var cutName = getCookie('cutFileName');
         var isPaste = (copyName == 'null') ? cutName : copyName;
         if (isPaste != 'null' && isPaste != undefined) {
-            BarTools += ' <button onclick="javascript:PasteFile(\'' + (GetFileName(isPaste)) + '\');" class="btn btn-Warning btn-sm">' + lan.files.paste + '</button>';
+            BarTools += ' <button onclick="javascript:PasteFile(\'' + (GetFileName(isPaste)) + '\');" class="btn btn-default btn-Warning btn-sm">' + lan.files.paste + '</button>';
         }
 
         $("#Batch").html('');
@@ -598,11 +602,13 @@ function GetFiles(Path, sort) {
         if (isBatch == 1 || isBatch == '1') {
             BatchTools += ' <button onclick="javascript:BatchPaste();" class="btn btn-default btn-sm">' + lan.files.paste_all + '</button>';
         }
+
+        
         $("#Batch").html(BatchTools);
         $("#setBox").prop("checked", false);
 
         $("#BarTools").html(BarTools);
-
+        $(".oldTable").scrollTop(old_scroll_top);
         $("input[name=id]").click(function () {
             if ($(this).prop("checked")) {
                 $(this).prop("checked", true);
@@ -615,17 +621,17 @@ function GetFiles(Path, sort) {
             showSeclect()
         });
 
-        // 鼠标移入移出事件
-        $('.file-types').hover(function () {
-            // 鼠标移入时添加hover类            
-            $('.dropdown-menu-li').hide();
-            $(this).find('.dropdown-menu-li').show();
+        // // 鼠标移入移出事件
+        // $('.file-types').hover(function () {
+        //     // 鼠标移入时添加hover类            
+        //     $('.dropdown-menu-li').hide();
+        //     $(this).find('.dropdown-menu-li').show();
 
-        }, function () {
-            $('.dropdown-menu-li').hide();
-            // 鼠标移出时移出hover类
+        // }, function () {
+        //     $('.dropdown-menu-li').hide();
+        //     // 鼠标移出时移出hover类
 
-        });
+        // });
 
         $("#setBox").click(function () {
             if ($(this).prop("checked")) {
@@ -679,6 +685,22 @@ function GetFiles(Path, sort) {
         PathPlaceBtn(rdata.PATH);
         auto_table_width();
     });
+}
+function webshell_dir(path){
+    layer.confirm('目录查杀将包含子目录中的php文件，是否操作？', { title: lan.files.dir_menu_webshell, closeBtn: 2, icon: 3 }, function (index) {
+        layer.msg(lan.public.the, { icon: 16, time: 0, shade: [0.3, '#000'] });
+        $.post('/files?action=dir_webshell_check', 'path=' + path, function (rdata) {
+            layer.close(index);
+            layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 });
+        });
+    });
+}
+function php_file_webshell(file){
+	var loadT = layer.msg('正在查杀文件中，请稍后...', { icon: 16, time: 0, shade: [0.3, '#000'] });
+	$.post('/files?action=file_webshell_check','filename='+ file,function(rdata){
+		layer.close(loadT);
+        layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 });
+	})
 }
 function auto_table_width() {
     var oldTable = $(window).height() - $('#tipTools')[0].getBoundingClientRect().height - $('#filePage')[0].getBoundingClientRect().height - $('.footer')[0].getBoundingClientRect().height - 111;
@@ -757,14 +779,14 @@ function showSeclect() {
         $("#Batch").html(BatchTools);
     }
 }
-$("#tipTools").width($(".file-box")[0].clientWidth);
+$("#tipTools").width($(".file-box")[0].clientWidth-30);
 $("#PathPlaceBtn").width($(".file-box").width() - 700);
 $("#DirPathPlace input").width($(".file-box").width() - 700);
 if ($(window).width() < 1160) {
     $("#PathPlaceBtn").width(290);
 }
 window.onresize = function () {
-    $("#tipTools").width($(".file-box")[0].clientWidth);
+    $("#tipTools").width($(".file-box")[0].clientWidth-30);
     $("#PathPlaceBtn").width($(".file-box").width() - 700);
     $("#DirPathPlace input").width($(".file-box").width() - 700);
     if ($(window).width() < 1160) {
@@ -822,6 +844,9 @@ function Batch(type, access) {
         }
         Zip(names);
         return;
+    }
+    if(type == 6){
+    	webshell_dir()
     }
 
     myloadT = layer.msg("<div class='myspeed'>" + lan.public.the + "</div>", { icon: 16, time: 0, shade: [0.3, '#000'] });
@@ -1408,6 +1433,10 @@ function isVideo(fileName) {
     var exts = ['mp4', 'mpeg', 'mpg', 'mov', 'avi', 'webm', 'mkv'];
     return isExts(fileName, exts);
 }
+function isPhp(fileName){
+	var exts = ['php'];
+	return isExts(fileName,exts);
+}
 function isExts(fileName, exts) {
     var ext = fileName.split('.');
     if (ext.length < 2) return false;
@@ -1627,7 +1656,14 @@ function RClick(type, path, name, file_store) {
     };
 
     if (type == "dir") {
-        options.items.push({ text: lan.files.file_menu_del, onclick: function () { DeleteDir(path) } });
+        options.items.push(
+        	{ text: lan.files.file_menu_del, onclick: function () { DeleteDir(path) } },
+        	{ text: lan.files.dir_menu_webshell, onclick: function () { webshell_dir(path) } }
+        );
+    }
+    
+    else if(isPhp(type)){
+    	options.items.push({text: lan.files.file_menu_webshell, onclick: function() {php_file_webshell(path)}},{ text: lan.files.file_menu_edit, onclick: function () { openEditorView(0, path) } }, { text: lan.files.file_menu_down, onclick: function () { GetFileBytes(path) } }, { text: lan.files.file_menu_del, onclick: function () { DeleteFile(path) } })
     }
     //else if (isVideo(type)) {
     //    options.items.push({ text: '播放', onclick: function () { GetPlay(path) } }, { text: lan.files.file_menu_down, onclick: function () { GetFileBytes(path) } }, { text: lan.files.file_menu_del, onclick: function () { DeleteFile(path) } });
@@ -1647,37 +1683,15 @@ function RClick(type, path, name, file_store) {
 
     options.items.push({
         text: "收藏夹", onclick: function () {
-
-            var datas = []
-            for (var i = 0; i < file_store.STORE.length; i++) {
-                datas.push({ title: file_store.STORE[i].name, value: file_store.STORE[i].name })
-            }
-            var file_data = {
-                title: '加入收藏夹',
-                area: '500px',
-                list: [
-                    { name: 'path', disabled: true, width: '300px', value: path },
-                    { name: 'file_type', type: 'select', width: '300px', items: datas }
-                ],
-                btns: [
-                    bt.form.btn.close(),
-                    {
-                        title: '添加', name: 'submit', css: 'btn-success', callback: function (rdata, load) {
-                            var loading = bt.load();
-                            bt.send('add_files_store', 'files/add_files_store', rdata, function (rRet) {
-                                loading.close();
-                                bt.msg(rRet);
-                                if (rRet.status) {
-                                    load.close();
-                                    GetFiles(file_store.PATH)
-                                }
-                            })
-                        }
-                    }
-                ]
-            }
-            var bs = bt.render_form(file_data);
-            $(".bt-form" + bs).find(".info-r").css("margin-left", "15px")
+			var loading = bt.load();
+            bt.send('add_files_store', 'files/add_files_store',{path:path}, function (rRet) {
+                loading.close();
+                bt.msg(rRet);
+                if (rRet.status) {
+                    console.log(file_store.PATH);
+                    GetFiles(file_store.PATH)
+                }
+            });
         }
     })
     return options;
@@ -1759,29 +1773,17 @@ function PathLeft() {
 
 var store_type_index = 0
 //删除分类或者文件
-function del_files_store(path, obj, parent_name) {
+function del_files_store(path, obj) {
     var _item = $(obj).parents('tr').data('item')
     var action = '', msg = '';
     var data = {}
-    if (parent_name != undefined) {
-        action = 'del_files_store';
-        data['file_type'] = parent_name
-        data['path'] = _item.path;
-        msg = "是否确定删除路径【" + _item.path + "】?"
-    }
-    else {
-        action = 'del_files_store_types';
-        data['file_type'] = _item.name;
-        msg = "是否确定删除分类【" + _item.name + "】?"
-    }
+    action = 'del_files_store';
+    data['path'] = _item.path;
+    msg = "是否确定删除路径【" + _item.path + "】?"
     bt.confirm({ msg: msg, title: '提示' }, function () {
         var loading = bt.load();
         bt.send(action, 'files/' + action, data, function (rRet) {
             loading.close();
-            if (parent_name) {
-                store_type_index.close();
-            }
-
             if (rRet.status) {
                 set_file_store(path)
                 GetFiles(getCookie('Path'))
@@ -1805,7 +1807,7 @@ function set_file_store(path) {
                 closeBtn: 2,
                 shift: 5,
                 shadeClose: false,
-                content: "<div class='divtable pd15 style='padding-bottom: 0'><input name='type_name' class='bt-input-text mr5 type_name' placeholder='请填写分类名称' type='text' style='width:420px'/><button id='btn_data_store_add' class='btn btn-success btn-sm' type='button' style='margin-bottom:10px'>添加</button><table width='100%' id='stroe_tab_list' class='table table-hover'></table><div class='page sitebackup_page'></div></div>",
+                content: "<div class='divtable pd15 style='padding-bottom: 0'><table width='100%' id='stroe_tab_list' class='table table-hover'></table><div class='page sitebackup_page'></div></div>",
                 success: function () {
                     $('#btn_data_store_add').click(function () {
                         bt.send('add_files_store_types', 'files/add_files_store_types', { file_type: $(".type_name").val() }, function (rRet) {
@@ -1825,53 +1827,19 @@ function set_file_store(path) {
         else {
             reload_sort_data(path)
         }
-
         function reload_sort_data(path) {
             var _tab = bt.render({
                 table: '#stroe_tab_list',
                 columns: [
-                    { field: 'name', title: '分类名称' },
+                    { field: 'path', title: '路径' },
                     {
                         field: 'opt', align: 'right', title: '操作', templet: function (item) {
-                            var opt = ' <a class="btlink show_file_store_detail" >查看</a>'
-                            if (item.name != '默认分类') {
-                                opt += ' | <a class="btlink del_file_store" onclick="del_files_store(\'' + path + '\',this)" >删除</a>';
-                            }
-                            return opt;
+                            return '<a class="btlink del_file_store" onclick="del_files_store(\'' + path + '\',this)" >删除</a>';
                         }
                     },
                 ],
                 data: rRet
             });
-
-            $(".show_file_store_detail").click(function () {
-                var _item = $(this).parents('tr').data('item')
-                store_type_index = bt.open({
-                    type: 1,
-                    skin: 'demo-class',
-                    area: '710px',
-                    title: "管理[" + _item['name'] + ']',
-                    closeBtn: 2,
-                    shift: 5,
-                    shadeClose: false,
-                    content: "<div class='divtable pd15 style='padding-bottom: 0'><table width='100%' id='stroe_tab_list_detail' class='table table-hover'></table><div class='page sitebackup_page'></div></div>",
-                    success: function () {
-                        var _tab = bt.render({
-                            table: '#stroe_tab_list_detail',
-                            columns: [
-                                { field: 'path', title: '路径名称' },
-                                {
-                                    field: 'opt', align: 'right', title: '操作', templet: function (item) {
-                                        var opt = ' <a class="btlink del_file_store" onclick="del_files_store(\'' + path + '\',this,\'' + _item['name'] + '\')" >删除</a>'
-                                        return opt;
-                                    }
-                                },
-                            ],
-                            data: _item.data
-                        });
-                    }
-                });
-            })
         }
     })
 }

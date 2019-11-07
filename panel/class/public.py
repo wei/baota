@@ -11,7 +11,10 @@
 # 宝塔公共库
 #--------------------------------
 
-import json,os,sys,time,re,socket,importlib,binascii,base64
+import json,os,sys,time,re,socket,importlib,binascii,base64,io
+_LAN_PUBLIC = None
+_LAN_LOG = None
+_LAN_TEMPLATE = None
 
 if sys.version_info[0] == 2:
     reload(sys)
@@ -20,7 +23,7 @@ if sys.version_info[0] == 2:
 def M(table):
     import db
     sql = db.Sql()
-    return sql.table(table);
+    return sql.table(table)
 
 def HttpGet(url,timeout = 6,headers = {}):
     """
@@ -29,7 +32,6 @@ def HttpGet(url,timeout = 6,headers = {}):
     @timeout 超时时间默认60秒
     return string
     """
-
     if is_local(): return False
     home = 'www.bt.cn'
     host_home = 'data/home_host.pl'
@@ -38,37 +40,14 @@ def HttpGet(url,timeout = 6,headers = {}):
         if os.path.exists(host_home): 
             headers['host'] = home
             url = url.replace(home,readFile(host_home))
-    if sys.version_info[0] == 2:
-        try:
-            import urllib2,ssl
-            if sys.version_info[0] == 2:
-                reload(urllib2)
-                reload(ssl)
-            try:
-                ssl._create_default_https_context = ssl._create_unverified_context
-            except:pass;
-            req = urllib2.Request(url, headers = headers)
-            response = urllib2.urlopen(req,timeout = timeout,)
-            return response.read()
-        except Exception as ex:
-            if old_url.find(home) != -1: return http_get_home(old_url,timeout,str(ex))
-            if headers: return False
-            return str(ex);
-    else:
-        try:
-            import urllib.request,ssl
-            try:
-                ssl._create_default_https_context = ssl._create_unverified_context
-            except:pass;
-            req = urllib.request.Request(url,headers = headers)
-            response = urllib.request.urlopen(req,timeout = timeout)
-            result = response.read()
-            if type(result) == bytes: result = result.decode('utf-8')
-            return result
-        except Exception as ex:
-            if old_url.find(home) != -1: return http_get_home(old_url,timeout,str(ex))
-            if headers: return False
-            return str(ex)
+    
+    import http_requests
+    res = http_requests.get(url,timeout=timeout,headers = headers)
+    if res.status_code == 0:
+        if old_url.find(home) != -1: return http_get_home(old_url,timeout,res.text)
+        if headers: return False
+        return res.text
+    return res.text
 
 def http_get_home(url,timeout,ex):
     try:
@@ -115,36 +94,15 @@ def HttpPost(url,data,timeout = 6,headers = {}):
             headers['host'] = home
             url = url.replace(home,readFile(host_home))
 
-    if sys.version_info[0] == 2:
-        try:
-            import urllib,urllib2,ssl
-            try:
-                ssl._create_default_https_context = ssl._create_unverified_context
-            except:pass
-            data2 = urllib.urlencode(data)
-            req = urllib2.Request(url, data2,headers = headers)
-            response = urllib2.urlopen(req,timeout=timeout)
-            return response.read()
-        except Exception as ex:
-            if old_url.find(home) != -1: return http_post_home(old_url,data,timeout,str(ex))
-            if headers: return False
-            return str(ex);
-    else:
-        try:
-            import urllib.request,ssl
-            try:
-                ssl._create_default_https_context = ssl._create_unverified_context
-            except:pass;
-            data2 = urllib.parse.urlencode(data).encode('utf-8')
-            req = urllib.request.Request(url, data2,headers = headers)
-            response = urllib.request.urlopen(req,timeout = timeout)
-            result = response.read()
-            if type(result) == bytes: result = result.decode('utf-8')
-            return result
-        except Exception as ex:
-            if old_url.find(home) != -1: return http_post_home(old_url,data,timeout,str(ex))
-            if headers: return False
-            return str(ex);
+    import http_requests
+    res = http_requests.post(url,data=data,timeout=timeout,headers = headers)
+    if res.status_code == 0:
+        WriteLog('请求错误',res.text)
+        if old_url.find(home) != -1: return http_post_home(old_url,data,timeout,res.text)
+        if headers: return False
+        return res.text
+    return res.text
+            
 
 def http_post_home(url,data,timeout,ex):
     try:
@@ -337,14 +295,16 @@ def WriteLog(type,logMsg,args=()):
     #写日志
     #try:
     import time,db,json
-    logMessage = json.loads(readFile('BTPanel/static/language/' + get_language() + '/log.json'));
-    keys = logMessage.keys();
+    global _LAN_LOG
+    if not _LAN_LOG:
+        _LAN_LOG = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/log.json'));
+    keys = _LAN_LOG.keys();
     if logMsg in keys:
-        logMsg = logMessage[logMsg];
+        logMsg = _LAN_LOG[logMsg];
         for i in range(len(args)):
             rep = '{'+str(i+1)+'}'
             logMsg = logMsg.replace(rep,args[i]);
-    if type in keys: type = logMessage[type];
+    if type in keys: type = _LAN_LOG[type];
     sql = db.Sql()
     mDate = time.strftime('%Y-%m-%d %X',time.localtime());
     data = (type,logMsg,mDate);
@@ -393,22 +353,26 @@ def GetLan(key):
     """
     取提示消息
     """
-    log_message = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/template.json'));
-    keys = log_message.keys();
+    global _LAN_TEMPLATE
+    if not _LAN_TEMPLATE:
+        _LAN_TEMPLATE = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/template.json'));
+    keys = _LAN_TEMPLATE.keys();
     msg = None;
     if key in keys:
-        msg = log_message[key];
+        msg = _LAN_TEMPLATE[key];
     return msg;
 def getLan(key):
     return GetLan(key)
 
 def GetMsg(key,args = ()):
     try:
-        log_message = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/public.json'));
-        keys = log_message.keys();
+        global _LAN_PUBLIC
+        if not _LAN_PUBLIC:
+            _LAN_PUBLIC = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/public.json'));
+        keys = _LAN_PUBLIC.keys();
         msg = None;
         if key in keys:
-            msg = log_message[key];
+            msg = _LAN_PUBLIC[key];
             for i in range(len(args)):
                 rep = '{'+str(i+1)+'}'
                 msg = msg.replace(rep,args[i]);
@@ -446,33 +410,27 @@ def serviceReload():
 def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):
     a = ''
     e = ''
+    import subprocess,tempfile
+    
     try:
-        #通过管道执行SHELL
-        import shlex
-        import datetime
-        import subprocess
-        import time
-
-        if shell:
-            cmdstring_list = cmdstring
-        else:
-            cmdstring_list = shlex.split(cmdstring)
-        if timeout:
-            end_time = datetime.datetime.now() + datetime.timedelta(seconds=timeout)
-        sub = subprocess.Popen(cmdstring_list, cwd=cwd, stdin=subprocess.PIPE,shell=shell,bufsize=4096,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        while sub.poll() is None:
-            time.sleep(0.1)
-            if timeout:
-                if end_time <= datetime.datetime.now():
-                    raise Exception("Timeout：%s"%cmdstring)
-        a,e = sub.communicate()
-        try:
-            if type(a) == bytes: a = a.decode('utf-8')
-            if type(e) == bytes: e = e.decode('utf-8')
-        except:pass
+        rx = md5(cmdstring)
+        succ_f = tempfile.SpooledTemporaryFile(max_size=4096,mode='wb+',suffix='_succ',prefix='btex_' + rx ,dir='/dev/shm')
+        err_f = tempfile.SpooledTemporaryFile(max_size=4096,mode='wb+',suffix='_err',prefix='btex_' + rx ,dir='/dev/shm')
+        sub = subprocess.Popen(cmdstring, close_fds=True, shell=shell,bufsize=128,stdout=succ_f,stderr=err_f)
+        sub.wait()
+        err_f.seek(0)
+        succ_f.seek(0)
+        a = succ_f.read()
+        e = err_f.read()
+        if not err_f.closed: err_f.close()
+        if not succ_f.closed: succ_f.close()
     except:
-        if not a:
-            a = os.popen(cmdstring).read()
+        print(get_error_info())
+    try:
+        #编码修正
+        if type(a) == bytes: a = a.decode('utf-8')
+        if type(e) == bytes: e = e.decode('utf-8')
+    except:pass
 
     return a,e
 
@@ -589,16 +547,18 @@ def GetNumLines(path,num,p=1):
     pyVersion = sys.version_info[0]
     try:
         import cgi
-        if not os.path.exists(path): return "";
-        start_line = (p - 1) * num;
-        count = start_line + num;
+        if not os.path.exists(path): return ""
+        start_line = (p - 1) * num
+        count = start_line + num
         fp = open(path,'rb')
         buf = ""
         fp.seek(-1, 2)
         if fp.read(1) == "\n": fp.seek(-1, 2)
         data = []
+        total_len = 0
+        max_len = 1024*128
         b = True
-        n = 0;
+        n = 0
         for i in range(count):
             while True:
                 newline_pos = str.rfind(str(buf), "\n")
@@ -606,12 +566,17 @@ def GetNumLines(path,num,p=1):
                 if newline_pos != -1:
                     if n >= start_line:
                         line = buf[newline_pos + 1:]
+                        line_len = len(line)
+                        total_len += line_len
+                        sp_len = total_len - max_len
+                        if sp_len > 0:
+                            line = line[sp_len:]
                         try:
                             data.insert(0,cgi.escape(line))
                         except: pass
                     buf = buf[:newline_pos]
-                    n += 1;
-                    break;
+                    n += 1
+                    break
                 else:
                     if pos == 0:
                         b = False
@@ -627,26 +592,36 @@ def GetNumLines(path,num,p=1):
                     fp.seek(-to_read, 1)
                     if pos - to_read == 0:
                         buf = "\n" + buf
-            if not b: break;
+                if total_len >= max_len: break
+            if not b: break
         fp.close()
-    except: return ""
-    return "\n".join(data)
+        result = "\n".join(data)
+    except:
+        result = ExecShell("tail -n {} {}".format(num,path))[0]
+        if len(result) > max_len:
+            result = result[-max_len:]
+    try:
+        result = json.dumps(result)
+        return json.loads(result)
+    except:
+        result = str(result).decode('utf8')
+    return result
 
 #验证证书
 def CheckCert(certPath = 'ssl/certificate.pem'):
-    openssl = '/usr/local/openssl/bin/openssl';
-    if not os.path.exists(openssl): openssl = 'openssl';
-    certPem = readFile(certPath);
-    s = "\n-----BEGIN CERTIFICATE-----";
+    openssl = '/usr/local/openssl/bin/openssl'
+    if not os.path.exists(openssl): openssl = 'openssl'
+    certPem = readFile(certPath)
+    s = "\n-----BEGIN CERTIFICATE-----"
     tmp = certPem.strip().split(s)
     for tmp1 in tmp:
-        if tmp1.find('-----BEGIN CERTIFICATE-----') == -1:  tmp1 = s + tmp1;
-        writeFile(certPath,tmp1);
+        if tmp1.find('-----BEGIN CERTIFICATE-----') == -1:  tmp1 = s + tmp1
+        writeFile(certPath,tmp1)
         result = ExecShell(openssl + " x509 -in "+certPath+" -noout -subject")
         if result[1].find('-bash:') != -1: return True
         if len(result[1]) > 2: return False
-        if result[0].find('error:') != -1: return False;
-    return True;
+        if result[0].find('error:') != -1: return False
+    return True
 
 
 # 获取面板地址
@@ -986,7 +961,7 @@ MySQL_Opt
         mycnf = mycnf.replace('/www/server/data',newPath);
         writeFile('/etc/my.cnf',mycnf);
         
-    os.system(shellStr);
+    ExecShell(shellStr);
     WriteLog('TYPE_SOFE', 'MYSQL_CHECK_ERR');
     return True;
 
@@ -1331,28 +1306,37 @@ def get_database_character(db_name):
         return 'utf8'
 
 def en_punycode(domain):
-        tmp = domain.split('.');
-        newdomain = '';
-        for dkey in tmp:
-            #匹配非ascii字符
-            match = re.search(u"[\x80-\xff]+",dkey);
-            if not match: match = re.search(u"[\u4e00-\u9fa5]+",dkey);
-            if not match:
-                newdomain += dkey + '.';
+    if sys.version_info[0] == 2: 
+        domain = domain.encode('utf8')
+    tmp = domain.split('.')
+    newdomain = ''
+    for dkey in tmp:
+        if dkey == '*': continue
+        #匹配非ascii字符
+        match = re.search(u"[\x80-\xff]+",dkey)
+        if not match: match = re.search(u"[\u4e00-\u9fa5]+",dkey)
+        if not match:
+            newdomain += dkey + '.'
+        else:
+            if sys.version_info[0] == 2:
+                newdomain += 'xn--' + dkey.decode('utf-8').encode('punycode') + '.'
             else:
                 newdomain += 'xn--' + dkey.encode('punycode').decode('utf-8') + '.'
-        return newdomain[0:-1];
+    if tmp[0] == '*': newdomain = "*." + newdomain
+    return newdomain[0:-1]
+
+
 
 #punycode 转中文
 def de_punycode(domain):
-    tmp = domain.split('.');
-    newdomain = '';
+    tmp = domain.split('.')
+    newdomain = ''
     for dkey in tmp:
         if dkey.find('xn--') >=0:
             newdomain += dkey.replace('xn--','').encode('utf-8').decode('punycode') + '.'
         else:
             newdomain += dkey + '.'
-    return newdomain[0:-1];
+    return newdomain[0:-1]
 
 #取计划任务文件路径
 def get_cron_path():
@@ -1476,7 +1460,7 @@ def sync_date():
         new_time = int(time_str)
         time_arr = time.localtime(new_time)
         date_str = time.strftime("%Y-%m-%d %H:%M:%S", time_arr)
-        os.system('date -s "%s"' % date_str)
+        ExecShell('date -s "%s"' % date_str)
         writeFile(tip_file,str(s_time))
         return True
     except: 
@@ -1555,6 +1539,60 @@ def upload_file_url(filename):
             return False
     except:
         return False
+
+#直接请求到PHP-FPM
+#version php版本
+#uri 请求uri
+#filename 要执行的php文件
+#args 请求参数
+#method 请求方式
+def request_php(version,uri,filename,args,method='GET',pdata='',timeout=3000):
+    import fastcgi_client
+    client= fastcgi_client.fastcgi_client('/tmp/php-cgi-'+version+'.sock',None, timeout, 0)
+    if type(args) == dict: args = url_encode(args)
+    if type(pdata) == dict: pdata = url_encode(pdata)
+    params = {
+                'REQUEST_METHOD': method,
+                'SCRIPT_FILENAME': filename,
+                'SCRIPT_NAME': uri,
+                'SERVER_PROTOCOL': 'HTTP/1.1',
+                'GATEWAY_INTERFACE': 'CGI/1.1',
+                'QUERY_STRING': args,
+                'CONTENT_TYPE': 'application/x-www-form-urlencoded',
+                'CONTENT_LENGTH': len(pdata)
+            }
+    result = client.request(params,pdata)
+    return result
+
+
+def url_encode(data):
+    if type(data) == str: return data
+    import urllib
+    if sys.version_info[0] != 2:
+        pdata = urllib.parse.urlencode(data).encode('utf-8')
+    else:
+        pdata = urllib.urlencode(data)
+    return pdata
+
+
+def unicode_encode(data):
+    try:
+        if sys.version_info[0] == 2:
+            result = unicode(data,errors='ignore')
+        else:
+            result = data.encode('utf8',errors='ignore')
+        return result
+    except: return data
+
+def unicode_decode(data,charset = 'utf8'):
+    try:
+        if sys.version_info[0] == 2:
+            result = unicode(data,errors='ignore')
+        else:
+            result = data.decode('utf8',errors='ignore')
+        return result
+    except: return data
+
 
 #取通用对象
 class dict_obj:

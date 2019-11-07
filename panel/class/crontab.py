@@ -343,7 +343,8 @@ class crontab:
                     'site'  :   head + "python " + public.GetConfigValue('setup_path')+"/panel/script/backup.py site "+param['sName']+" "+str(param['save']),
                     'database': head + "python " + public.GetConfigValue('setup_path')+"/panel/script/backup.py database "+param['sName']+" "+str(param['save']),
                     'logs'  :   head + "python " + public.GetConfigValue('setup_path')+"/panel/script/logsBackup "+param['sName']+log+" "+str(param['save']),
-                    'rememory' : head + "/bin/bash " + public.GetConfigValue('setup_path') + '/panel/script/rememory.sh'
+                    'rememory' : head + "/bin/bash " + public.GetConfigValue('setup_path') + '/panel/script/rememory.sh',
+                    'webshell': head + "python " + public.GetConfigValue('setup_path') + '/panel/class/webshell_check.py site ' + param['sName'] +' ' +param['urladdress']
                     }
             if param['backupTo'] != 'localhost':
                 cfile = public.GetConfigValue('setup_path') + "/panel/plugin/" + param['backupTo'] + "/" + param['backupTo'] + "_main.py";
@@ -353,7 +354,8 @@ class crontab:
                     'site'  :   head + "python " + cfile + " site " + param['sName'] + " " + str(param['save']),
                     'database': head + "python " + cfile + " database " + param['sName'] + " " + str(param['save']),
                     'logs'  :   head + "python " + public.GetConfigValue('setup_path')+"/panel/script/logsBackup "+param['sName']+log+" "+str(param['save']),
-                    'rememory' : head + "/bin/bash " + public.GetConfigValue('setup_path') + '/panel/script/rememory.sh'
+                    'rememory' : head + "/bin/bash " + public.GetConfigValue('setup_path') + '/panel/script/rememory.sh',
+                     'webshell': head + "python " + public.GetConfigValue('setup_path') + '/panel/class/webshell_check.py site ' + param['sName'] +' ' +param['urladdress']
                     }
                 
             try:
@@ -419,8 +421,8 @@ echo "--------------------------------------------------------------------------
     def StartTask(self,get):
         echo = public.M('crontab').where('id=?',(get.id,)).getField('echo');
         execstr = public.GetConfigValue('setup_path') + '/cron/' + echo;
-        os.system('chmod +x ' + execstr)
-        os.system('nohup ' + execstr + ' >> ' + execstr + '.log 2>&1 &');
+        public.ExecShell('chmod +x ' + execstr)
+        public.ExecShell('nohup ' + execstr + ' >> ' + execstr + '.log 2>&1 &');
         return public.returnMsg(True,'CRONTAB_TASK_EXEC')
 
     #获取计划任务文件位置

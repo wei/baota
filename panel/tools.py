@@ -11,9 +11,9 @@
 # 工具箱
 #------------------------------
 import sys,os
-panelPath = '/www/server/panel/';
+panelPath = '/www/server/panel/'
 os.chdir(panelPath)
-sys.path.append(panelPath + "class/")
+sys.path.insert(0,panelPath + "class/")
 import public,time,json
 if sys.version_info[0] == 3: raw_input = input
 
@@ -35,7 +35,12 @@ m_version=$(cat /www/server/mysql/version.pl|grep -E "(5.1.|5.5.|5.6.|10.0|10.1)
 if [ "$m_version" != "" ];then
     mysql -uroot -e "UPDATE mysql.user SET password=PASSWORD('${pwd}') WHERE user='root'";
 else
-    mysql -uroot -e "update mysql.user set authentication_string=password('${pwd}') where user='root';"
+    m_version=$(cat /www/server/mysql/version.pl|grep -E "(5.7.|8.0.|10.4.)")
+    if [ "$m_version" != "" ];then
+        mysql -uroot -e "FLUSH PRIVILEGES;update mysql.user set authentication_string='' where user='root';alter user 'root'@'localhost' identified by '${pwd}';alter user 'root'@'127.0.0.1' identified by '${pwd}';FLUSH PRIVILEGES;";
+    else
+        mysql -uroot -e "update mysql.user set authentication_string=password('${pwd}') where user='root';"
+    fi
 fi
 mysql -uroot -e "FLUSH PRIVILEGES";
 pkill -9 mysqld_safe
@@ -413,6 +418,7 @@ def bt_cli(u_input = 0):
         print("(22) 显示面板错误日志      (15) 清理系统垃圾")
         print("(23) 关闭BasicAuth认证     (16) 修复面板(检查错误并更新面板文件到最新版)")
         print("(24) 关闭谷歌认证          (17) 设置日志切割是否压缩")
+        print("(25) 设置是否保存文件历史副本  (18) 设置是否自动备份面板")
         print("(0) 取消")
         print(raw_tip)
         try:
@@ -420,7 +426,7 @@ def bt_cli(u_input = 0):
             if sys.version_info[0] == 3: u_input = int(u_input)
         except: u_input = 0
 
-    nums = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,22,23,24]
+    nums = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,22,23,24,25]
     if not u_input in nums:
         print(raw_tip)
         print("已取消!")
@@ -540,6 +546,16 @@ def bt_cli(u_input = 0):
             print("|-检测到已开启gzip压缩功能,正在关闭...")
             public.writeFile(l_path,'True')
             print("|-已关闭gzip压缩")
+    elif u_input == 18:
+        l_path = '/www/server/panel/data/not_auto_backup.pl'
+        if os.path.exists(l_path):
+            print("|-检测到已关闭面板自动备份功能,正在开启...")
+            os.remove(l_path)
+            print("|-已开启面板自动备份功能")
+        else:
+            print("|-检测到已开启面板自动备份功能,正在关闭...")
+            public.writeFile(l_path,'True')
+            print("|-已开关闭面板自动备份功能")
     elif u_input == 22:
         os.system('tail -100 /www/server/panel/logs/error.log')
     elif u_input == 23:
@@ -551,6 +567,16 @@ def bt_cli(u_input = 0):
         filename = '/www/server/panel/data/two_step_auth.txt'
         if os.path.exists(filename): os.remove(filename)
         print("|-已关闭谷歌认证")
+    elif u_input == 25:
+        l_path = '/www/server/panel/data/not_file_history.pl'
+        if os.path.exists(l_path):
+            print("|-检测到已关闭文件副本功能,正在开启...")
+            os.remove(l_path)
+            print("|-已开启文件副本功能")
+        else:
+            print("|-检测到已开启文件副本功能,正在关闭...")
+            public.writeFile(l_path,'True')
+            print("|-已开关闭文件副本功能")
 
 
 

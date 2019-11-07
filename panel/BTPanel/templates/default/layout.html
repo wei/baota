@@ -8,7 +8,7 @@
     <title>{{g.title}}</title>
     <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon" />
     <link href="/static/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/site.css?f2={{g['version']}}" rel="stylesheet">
+    <link href="/static/css/site.css?version_20200103={{g['version']}}" rel="stylesheet">
     <link href="/static/codemirror/lib/codemirror.css" rel="stylesheet">
     <!--[if lte IE 9]>
     <script src="/static/js/requestAnimationFrame.js"></script>
@@ -78,8 +78,8 @@
             <script src="/static/build/addons/search/search.min.js"></script>
             <script src="/static/build/addons/winptyCompat/winptyCompat.js"></script>
             <script type="text/javascript" src="/static/js/clipboard.min.js"></script>
-            <script src="/static/js/public.js?v3={{g['version']}}"></script>
-            <script src="/static/js/public_backup.js?version={{g['version']}}"></script>
+            <script src="/static/js/public.js?version_20200103={{g['version']}}"></script>
+            <script src="/static/js/public_backup.js?version_20200103={{g['version']}}"></script>
             <script src="/static/js/bt_upload.js?version={{g['version']}}"></script>
             {% block content %}{% endblock %}
             <div class="footer bgw">{{session['brand']}}{{session['product']}} &copy;2014-{{session['yaer']}} 宝塔 (bt.cn)<a style="margin-left:20px;color:#20a53a;" href="http://www.bt.cn/bbs" target="_blank">问题求助|产品建议请上宝塔论坛</a><a style="margin-left:20px;color:#20a53a;" href="http://docs.bt.cn" target="_blank">《使用手册》</a></div>
@@ -136,9 +136,9 @@
                         msg_body += '<div class="mw-con">\
 	                                <ul class="waiting-down-list">\
 		                                <li>\
-			                                <div class="down-filse-name"><span class="fname" style="width:80%;" title="正在下载: '+ task_list[i].other + '">正在下载: ' + task_list[i].other + '</span><span style="position: absolute;left: 84%;top: 25px;color: #999;">' + task_list[i].log.pre + '%</span><span class="btlink" onclick="remove_task(' + task_list[i].id + ')" style="position: absolute;top: 25px;right: 20px;">取消</span></div>\
+			                                <div class="down-filse-name"><span class="fname" style="width:80%;" title="正在下载: '+ task_list[i].shell + '">正在下载: ' + task_list[i].shell + '</span><span style="position: absolute;left: 84%;top: 25px;color: #999;">' + task_list[i].log.pre + '%</span><span class="btlink" onclick="remove_task(' + task_list[i].id + ')" style="position: absolute;top: 25px;right: 20px;">取消</span></div>\
 			                                <div class="down-progress"><div class="done-progress" style="width:'+ task_list[i].log.pre + '%"></div></div>\
-			                                <div class="down-info"><span class="total-size"> '+ ToSize(task_list[i].log.used) + '/' + ToSize(task_list[i].log.total) + '</span><span class="speed-size">' + (task_list[i].log.speed==0?'正在连接..':ToSize(task_list[i].log.speed)) +'/s</span></div>\
+			                                <div class="down-info"><span class="total-size"> '+ task_list[i].log.used + '/' + ToSize(task_list[i].log.total) + '</span><span class="speed-size">' + (task_list[i].log.speed == 0 ? '正在连接..' : task_list[i].log.speed) + '/s</span><span style="margin-left: 20px;">预计还要: ' + task_list[i].log.time +'</span></div>\
 		                                </li>\
                                         </ul>\
                                     </div>'

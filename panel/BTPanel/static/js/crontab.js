@@ -1,4 +1,4 @@
-var num = 0;
+var num = 0,_radiox ='mail';
 //查看任务日志
 function GetLogs(id){
 	layer.msg(lan.public.the_get,{icon:16,time:0,shade: [0.3, '#000']});
@@ -607,6 +607,9 @@ function planAdd(){
 	var data= $("#set-Config").serialize() + '&sBody='+sBody + '&urladdress=' + urladdress_1;
 	if(data.indexOf('sType=path') > -1){
 		data = data.replace('&sName=&','&sName='+ encodeURIComponent($('#inputPath').val()) +'&')
+	}else if(data.indexOf('sType=webshell') > -1){
+		data = $("#set-Config").serialize() + '&urladdress=' + _radiox;
+		data = data.replace('&sName=&','&sName='+ encodeURIComponent($('#filePath').val()) +'&')
 	}
 
 	$.post('/crontab?action=AddCrontab',data,function(rdata){
@@ -734,6 +737,9 @@ $(".dropdown ul li a").click(function(){
 		case 'toUrl':
 			toUrl();
 			$(".controls").html(lan.crontab.url_address);
+			break;
+		case 'webshell':
+			webShell();
 			break;
 	}
 
@@ -910,13 +916,116 @@ function toFile(){
 
 //从脚本
 function toShell(){
-	var tBody = "<textarea class='txtsjs bt-input-text' name='sBody'></textarea>";
+	var shell_body = '';
+	var shell_name = '';
+	if($("b[val='toShell']").text() === '同步时间'){
+		shell_name = '定期同步服务器时间';
+		shell_body = 'echo "|-正在尝试从0.pool.bt.cn同步时间..";\n\
+ntpdate -u 0.pool.bt.cn\n\
+if [ $? = 1 ];then\n\
+	echo "|-正在尝试从1.pool.bt.cn同步时间..";\n\
+	ntpdate -u 1.pool.bt.cn\n\
+fi\n\
+if [ $? = 1 ];then\n\
+	echo "|-正在尝试从0.asia.pool.ntp.org同步时间..";\n\
+	ntpdate -u 0.asia.pool.ntp.org\n\
+fi\n\
+if [ $? = 1 ];then\n\
+	echo "|-正在尝试从www.bt.cn同步时间..";\n\
+	getBtTime=$(curl -sS --connect-timeout 3 -m 60 http://www.bt.cn/api/index/get_time)\n\
+	if [ "${getBtTime}" ];then	\n\
+		date -s "$(date -d @$getBtTime +"%Y-%m-%d %H:%M:%S")"\n\
+	fi\n\
+fi\n\
+echo "|-正在尝试将当前系统时间写入硬件..";\n\
+hwclock -w\n\
+date\n\
+echo "|-时间同步完成!";'
+	}
+	var tBody = "<textarea class='txtsjs bt-input-text' name='sBody' style='margin: 0px; width: 445px; height: 90px;line-height: 16px;'>"+shell_body+"</textarea>";
 	$("#implement").html(tBody);
-	$(".planname input[name='name']").removeAttr('readonly style').val("");
+	$(".planname input[name='name']").removeAttr('readonly style').val(shell_name);
 }
 
 function toPath() {
 
+}
+//木马查杀
+function webShell(){
+	var sOpt = "",sOptBody = '';
+	$.post('/crontab?action=GetDataList&type=sites',function(rdata){
+		$(".planname input[name='name']").attr('readonly','true').css({"background-color":"#f6f6f6","color":"#666"});
+		if(rdata.data.length == 0){
+			layer.msg(lan.public.list_empty,{icon:2})
+			return
+		}
+		for(var i=0;i<rdata.data.length;i++){
+			if(i==0){
+				$(".planname input[name='name']").val("木马查杀"+'['+rdata.data[i].name+']');
+			}
+			sOpt += '<li><a role="menuitem" tabindex="-1" href="javascript:;" value="'+rdata.data[i].name+'">'+rdata.data[i].name+'['+rdata.data[i].ps+']</a></li>';			
+		}	
+		sOptBody ='<div class="dropdown pull-left mr20">\
+				  <button class="btn btn-default dropdown-toggle" type="button" id="backdata" data-toggle="dropdown" style="width:auto">\
+					<b id="sName" val="'+rdata.data[0].name+'">'+rdata.data[0].name+'['+rdata.data[0].ps+']</b> <span class="caret"></span>\
+				  </button>\
+				  <ul class="dropdown-menu" role="menu" aria-labelledby="backdata">'+sOpt+'</ul>\
+                </div>'
+		setCookie('default_dir_path','/www/wwwroot/');
+		setCookie('path_dir_change','/www/wwwroot/');
+		setInterval(function(){
+			if(getCookie('path_dir_change') != getCookie('default_dir_path')){
+				var  path_dir_change = getCookie('path_dir_change')
+				$(".planname input").val('木马查杀['+getCookie('path_dir_change')+']');
+				setCookie('default_dir_path',path_dir_change);
+			}
+			$(".check_alert").click(function(){
+				 _radiox = $(this).find("input[name=alert]").val();
+			})
+		},500);
+		sOptBody += '<p class="clearfix plan">\
+            <div class="textname pull-left mr20" style="margin-left: 63px; font-size: 14px;">消息通道</div>\
+            <div class="dropdown planBackupTo pull-left mr20 message_start"></div>\
+        </p>';
+		$("#implement").html(sOptBody);
+		message_channel_start();
+		$("#implement").siblings(".controls").html("查杀站点");
+		getselectname();
+		$(".dropdown ul li a").click(function(){
+			var sName = $("#sName").attr("val");
+			if(!sName) return;
+			$(".planname input[name='name']").val("木马查杀"+'['+sName+']');
+		});	
+	})
+}
+function message_channel_start(){
+	$.post('/config?action=get_settings',function(res){
+		var wBody = "";
+		if(!res.user_mail.user_name && !res.dingding.dingding){
+			wBody = '<span style="color:red;">未设置消息通道，请前往面板设置添加消息通道配置<a href="https://www.bt.cn/bbs/thread-42312-1-1.html" target="_blank" class="bt-ico-ask" style="cursor: pointer;">?</a></span>';
+			$(".plan-submit").css({"pointer-events":"none","background-color":"#e6e6e6","color":"#333"});
+		}else if(res.user_mail.user_name && !res.dingding.dingding){
+			wBody = '<div class="check_alert" style="margin-right:20px;display: inline-block;">\
+				<input type="radio" name="alert" title="邮箱" value="mail" checked="">\
+				<label style="font-weight: normal;font-size: 14px;margin-left: 6px;display: inline;">邮箱</label>\
+			</div>'
+		}else if(!res.user_mail.user_name && res.dingding.dingding){
+			wBody = '<div class="check_alert" style="display: inline-block;">\
+				<input type="radio" name="alert" title="钉钉" value="dingding" checked="">\
+				<label style="font-weight: normal;font-size: 14px;margin-left: 6px;display: inline;">钉钉</label>\
+			</div>'
+		}else{
+			wBody ='<div class="check_alert" style="margin-right:20px;display: inline-block;">\
+				<input type="radio" name="alert" title="邮箱" value="mail" checked="">\
+				<label style="font-weight: normal;font-size: 14px;margin-left: 6px;display: inline;">邮箱</label>\
+			</div>\
+			<div class="check_alert" style="display: inline-block;">\
+				<input type="radio" name="alert" title="钉钉" value="dingding">\
+				<label style="font-weight: normal;font-size: 14px;margin-left: 6px;display: inline;">钉钉</label>\
+			</div>'
+		}
+		$(".message_start").html(wBody);
+	})
 }
 //从url
 function toUrl(){
