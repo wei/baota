@@ -46,8 +46,11 @@ def HttpGet(url,timeout = 6,headers = {}):
     if res.status_code == 0:
         if old_url.find(home) != -1: return http_get_home(old_url,timeout,res.text)
         if headers: return False
-        return res.text
-    return res.text
+        s_body = res.text
+        return s_body
+    s_body = res.text
+    del res
+    return s_body
 
 def http_get_home(url,timeout,ex):
     try:
@@ -100,8 +103,11 @@ def HttpPost(url,data,timeout = 6,headers = {}):
         WriteLog('请求错误',res.text)
         if old_url.find(home) != -1: return http_post_home(old_url,data,timeout,res.text)
         if headers: return False
-        return res.text
-    return res.text
+        s_body = res.text
+        return s_body
+    s_body = res.text
+    del res
+    return s_body
             
 
 def http_post_home(url,data,timeout,ex):
@@ -148,8 +154,8 @@ def FileMd5(filename):
     @filename 文件名
     return string(32) or False
     """
-    if not os.path.isfile(filename): return False;
-    import hashlib;
+    if not os.path.isfile(filename): return False
+    import hashlib
     my_hash = hashlib.md5()
     f = open(filename,'rb')
     while True:
@@ -158,7 +164,7 @@ def FileMd5(filename):
             break
         my_hash.update(b)
     f.close()
-    return my_hash.hexdigest();
+    return my_hash.hexdigest()
 
 
 def GetRandomString(length):
@@ -183,20 +189,20 @@ def ReturnJson(status,msg,args=()):
     @msg  返回消息
     return string(json)
     """
-    return GetJson(ReturnMsg(status,msg,args));
+    return GetJson(ReturnMsg(status,msg,args))
 
 def returnJson(status,msg,args=()):
     return ReturnJson(status,msg,args)
 
 def ReturnMsg(status,msg,args = ()):
-    log_message = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/public.json'));
-    keys = log_message.keys();
+    log_message = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/public.json'))
+    keys = log_message.keys()
     if type(msg) == str:
         if msg in keys:
-            msg = log_message[msg];
+            msg = log_message[msg]
             for i in range(len(args)):
                 rep = '{'+str(i+1)+'}'
-                msg = msg.replace(rep,args[i]);
+                msg = msg.replace(rep,args[i])
     return {'status':status,'msg':msg}
 
 def returnMsg(status,msg,args = ()):
@@ -206,7 +212,7 @@ def returnMsg(status,msg,args = ()):
 def GetFileMode(filename):
     '''取文件权限'''
     stat = os.stat(filename)
-    accept = str(oct(stat.st_mode)[-3:]);
+    accept = str(oct(stat.st_mode)[-3:])
     return accept
 
 def get_mode_and_user(path):
@@ -253,7 +259,7 @@ def ReadFile(filename,mode = 'r'):
     except Exception as ex:
         if sys.version_info[0] != 2:
             try:
-                fp = open(filename, mode,encoding="utf-8");
+                fp = open(filename, mode,encoding="utf-8")
                 f_body = fp.read()
                 fp.close()
             except Exception as ex2:
@@ -275,13 +281,13 @@ def WriteFile(filename,s_body,mode='w+'):
     return bool 若文件不存在则尝试自动创建
     """
     try:
-        fp = open(filename, mode);
+        fp = open(filename, mode)
         fp.write(s_body)
         fp.close()
         return True
     except:
         try:
-            fp = open(filename, mode,encoding="utf-8");
+            fp = open(filename, mode,encoding="utf-8")
             fp.write(s_body)
             fp.close()
             return True
@@ -295,20 +301,29 @@ def WriteLog(type,logMsg,args=()):
     #写日志
     #try:
     import time,db,json
+    username = 'system'
+    uid = 1
+    try:
+        from BTPanel import session
+        if 'username' in session:
+            username = session['username']
+            uid = session['uid']
+    except:
+        pass
     global _LAN_LOG
     if not _LAN_LOG:
-        _LAN_LOG = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/log.json'));
-    keys = _LAN_LOG.keys();
+        _LAN_LOG = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/log.json'))
+    keys = _LAN_LOG.keys()
     if logMsg in keys:
-        logMsg = _LAN_LOG[logMsg];
+        logMsg = _LAN_LOG[logMsg]
         for i in range(len(args)):
             rep = '{'+str(i+1)+'}'
-            logMsg = logMsg.replace(rep,args[i]);
-    if type in keys: type = _LAN_LOG[type];
+            logMsg = logMsg.replace(rep,args[i])
+    if type in keys: type = _LAN_LOG[type]
     sql = db.Sql()
-    mDate = time.strftime('%Y-%m-%d %X',time.localtime());
-    data = (type,logMsg,mDate);
-    result = sql.table('logs').add('type,log,addtime',data);
+    mDate = time.strftime('%Y-%m-%d %X',time.localtime())
+    data = (uid,username,type,logMsg,mDate)
+    result = sql.table('logs').add('uid,username,type,log,addtime',data)
     #except:
         #pass
 
@@ -355,12 +370,12 @@ def GetLan(key):
     """
     global _LAN_TEMPLATE
     if not _LAN_TEMPLATE:
-        _LAN_TEMPLATE = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/template.json'));
-    keys = _LAN_TEMPLATE.keys();
-    msg = None;
+        _LAN_TEMPLATE = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/template.json'))
+    keys = _LAN_TEMPLATE.keys()
+    msg = None
     if key in keys:
-        msg = _LAN_TEMPLATE[key];
-    return msg;
+        msg = _LAN_TEMPLATE[key]
+    return msg
 def getLan(key):
     return GetLan(key)
 
@@ -368,15 +383,15 @@ def GetMsg(key,args = ()):
     try:
         global _LAN_PUBLIC
         if not _LAN_PUBLIC:
-            _LAN_PUBLIC = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/public.json'));
-        keys = _LAN_PUBLIC.keys();
-        msg = None;
+            _LAN_PUBLIC = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/public.json'))
+        keys = _LAN_PUBLIC.keys()
+        msg = None
         if key in keys:
-            msg = _LAN_PUBLIC[key];
+            msg = _LAN_PUBLIC[key]
             for i in range(len(args)):
                 rep = '{'+str(i+1)+'}'
-                msg = msg.replace(rep,args[i]);
-        return msg;
+                msg = msg.replace(rep,args[i])
+        return msg
     except:
         return key
 def getMsg(key,args = ()):
@@ -385,9 +400,9 @@ def getMsg(key,args = ()):
 
 #获取Web服务器
 def GetWebServer():
-    webserver = 'nginx';
-    if not os.path.exists('/www/server/nginx/sbin/nginx'): webserver = 'apache';
-    return webserver;
+    webserver = 'nginx'
+    if not os.path.exists('/www/server/nginx/sbin/nginx'): webserver = 'apache'
+    return webserver
 
 def get_webserver():
     return GetWebServer()
@@ -398,11 +413,11 @@ def ServiceReload():
     if os.path.exists('/www/server/nginx/sbin/nginx'):
         result = ExecShell('/etc/init.d/nginx reload')
         if result[1].find('nginx.pid') != -1:
-            ExecShell('pkill -9 nginx && sleep 1');
-            ExecShell('/etc/init.d/nginx start');
+            ExecShell('pkill -9 nginx && sleep 1')
+            ExecShell('/etc/init.d/nginx start')
     else:
         result = ExecShell('/etc/init.d/httpd reload')
-    return result;
+    return result
 def serviceReload():
     return ServiceReload()
 
@@ -442,17 +457,17 @@ def GetLocalIp():
         if not ipaddress:
             url = 'http://pv.sohu.com/cityjson?ie=utf-8'
             m_str = HttpGet(url)
-            ipaddress = re.search('\d+.\d+.\d+.\d+',m_str).group(0)
+            ipaddress = re.search(r'\d+.\d+.\d+.\d+',m_str).group(0)
             WriteFile(filename,ipaddress)
         c_ip = check_ip(ipaddress)
         if not c_ip: return GetHost()
         return ipaddress
     except:
         try:
-            url = GetConfigValue('home') + '/Api/getIpAddress';
+            url = GetConfigValue('home') + '/Api/getIpAddress'
             return HttpGet(url)
         except:
-            return GetHost();
+            return GetHost()
 
 def is_ipv4(ip):
     try:
@@ -484,12 +499,12 @@ def GetHost(port = False):
     host_tmp = request.headers.get('host')
     if not host_tmp: 
         if request.url_root:
-            tmp = re.findall("(https|http)://([\w:\.-]+)",request.url_root)
+            tmp = re.findall(r"(https|http)://([\w:\.-]+)",request.url_root)
             if tmp: host_tmp = tmp[0][1]
     if not host_tmp:
         host_tmp = GetLocalIp() + ':' + readFile('data/port.pl').strip()
     try:
-        if host_tmp.find(':') == -1: host_tmp += ':80';
+        if host_tmp.find(':') == -1: host_tmp += ':80'
     except:
         host_tmp = "127.0.0.1:8888"
     h = host_tmp.split(':')
@@ -504,31 +519,31 @@ def phpReload(version):
     #重载PHP配置
     import os
     if os.path.exists('/www/server/php/' + version + '/libphp5.so'):
-        ExecShell('/etc/init.d/httpd reload');
+        ExecShell('/etc/init.d/httpd reload')
     else:
-        ExecShell('/etc/init.d/php-fpm-'+version+' reload');
+        ExecShell('/etc/init.d/php-fpm-'+version+' reload')
 
 def get_url(timeout = 0.5):
     import json
     try:
-        nodeFile = 'data/node.json';
-        node_list = json.loads(readFile(nodeFile));
+        nodeFile = 'data/node.json'
+        node_list = json.loads(readFile(nodeFile))
         mnode = None
         for node in node_list:
-            node['ping'] = get_timeout(node['protocol'] + node['address'] + ':' + node['port'] + '/check.txt');
-            if not node['ping']: continue;
-            if not mnode: mnode = node;
-            if node['ping'] < mnode['ping']: mnode = node;
+            node['ping'] = get_timeout(node['protocol'] + node['address'] + ':' + node['port'] + '/check.txt')
+            if not node['ping']: continue
+            if not mnode: mnode = node
+            if node['ping'] < mnode['ping']: mnode = node
             if mnode['ping'] < 50: break
-        return mnode['protocol'] + mnode['address'] + ':' + mnode['port'];
+        return mnode['protocol'] + mnode['address'] + ':' + mnode['port']
     except:
-        return 'http://download.bt.cn';
+        return 'http://download.bt.cn'
 
 
 #过滤输入
 def checkInput(data):
-   if not data: return data;
-   if type(data) != str: return data;
+   if not data: return data
+   if type(data) != str: return data
    checkList = [
                 {'d':'<','r':'＜'},
                 {'d':'>','r':'＞'},
@@ -539,12 +554,13 @@ def checkInput(data):
                 {'d':'<','r':'＜'}
                 ]
    for v in checkList:
-       data = data.replace(v['d'],v['r']);
-   return data;
+       data = data.replace(v['d'],v['r'])
+   return data
 
 #取文件指定尾行数
 def GetNumLines(path,num,p=1):
     pyVersion = sys.version_info[0]
+    max_len = 1024*128
     try:
         import cgi
         if not os.path.exists(path): return ""
@@ -556,7 +572,6 @@ def GetNumLines(path,num,p=1):
         if fp.read(1) == "\n": fp.seek(-1, 2)
         data = []
         total_len = 0
-        max_len = 1024*128
         b = True
         n = 0
         for i in range(count):
@@ -596,16 +611,23 @@ def GetNumLines(path,num,p=1):
             if not b: break
         fp.close()
         result = "\n".join(data)
+        if not result: raise Exception('null')
     except:
         result = ExecShell("tail -n {} {}".format(num,path))[0]
         if len(result) > max_len:
             result = result[-max_len:]
+
     try:
-        result = json.dumps(result)
-        return json.loads(result)
-    except:
-        result = str(result).decode('utf8')
-    return result
+        try:
+            result = json.dumps(result)
+            return json.loads(result).strip()
+        except:
+            if pyVersion == 2:
+                result = str(result).decode('utf8',errors='ignore')
+            else:
+                result = str(result).encode('utf-8',errors='ignore').decode("utf-8",errors="ignore")
+        return result.strip()
+    except: return ""
 
 #验证证书
 def CheckCert(certPath = 'ssl/certificate.pem'):
@@ -633,13 +655,13 @@ def getPanelAddr():
 
 #字节单位转换
 def to_size(size):
-    d = ('b','KB','MB','GB','TB');
-    s = d[0];
+    d = ('b','KB','MB','GB','TB')
+    s = d[0]
     for b in d:
-        if size < 1024: return ("%.2f" % size) + ' ' + b;
-        size = size / 1024;
-        s = b;
-    return ("%.2f" % size) + ' ' + b;
+        if size < 1024: return ("%.2f" % size) + ' ' + b
+        size = size / 1024
+        s = b
+    return ("%.2f" % size) + ' ' + b
 
 
 def checkCode(code,outime = 120):
@@ -666,19 +688,19 @@ def writeSpeed(title,used,total,speed = 0):
     if not title:
         data = {'title':None,'progress':0,'total':0,'used':0,'speed':0}
     else:
-        progress = int((100.0 * used / total));
+        progress = int((100.0 * used / total))
         data = {'title':title,'progress':progress,'total':total,'used':used,'speed':speed}
-    writeFile('/tmp/panelSpeed.pl',json.dumps(data));
-    return True;
+    writeFile('/tmp/panelSpeed.pl',json.dumps(data))
+    return True
 
 #取进度
 def getSpeed():
     import json;
-    data = readFile('/tmp/panelSpeed.pl');
+    data = readFile('/tmp/panelSpeed.pl')
     if not data: 
         data = json.dumps({'title':None,'progress':0,'total':0,'used':0,'speed':0})
-        writeFile('/tmp/panelSpeed.pl',data);
-    return json.loads(data);
+        writeFile('/tmp/panelSpeed.pl',data)
+    return json.loads(data)
 
 def downloadFile(url,filename):
     try:
@@ -697,7 +719,7 @@ def downloadHook(count, blockSize, totalSize):
 
 def get_error_info():
     import traceback
-    errorMsg = traceback.format_exc();
+    errorMsg = traceback.format_exc()
     return errorMsg
 
 def submit_error(err_msg = None):
@@ -758,21 +780,21 @@ def checkWebConfig():
             if os.path.exists(f3): os.remove(f3)
 
     if get_webserver() == 'nginx':
-        result = ExecShell("ulimit -n 8192 ; /www/server/nginx/sbin/nginx -t -c /www/server/nginx/conf/nginx.conf");
+        result = ExecShell("ulimit -n 8192 ; /www/server/nginx/sbin/nginx -t -c /www/server/nginx/conf/nginx.conf")
         searchStr = 'successful'
     else:
-        result = ExecShell("ulimit -n 8192 ; /www/server/apache/bin/apachectl -t");
+        result = ExecShell("ulimit -n 8192 ; /www/server/apache/bin/apachectl -t")
         searchStr = 'Syntax OK'
     
     if result[1].find(searchStr) == -1:
-        WriteLog("TYPE_SOFT", 'CONF_CHECK_ERR',(result[1],));
-        return result[1];
-    return True;
+        WriteLog("TYPE_SOFT", 'CONF_CHECK_ERR',(result[1],))
+        return result[1]
+    return True
 
 
 #检查是否为IPv4地址
 def checkIp(ip):
-    p = re.compile('^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$')  
+    p = re.compile(r'^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$')  
     if p.match(ip):  
         return True  
     else:  
@@ -781,11 +803,11 @@ def checkIp(ip):
 #检查端口是否合法
 def checkPort(port):
     if not re.match("^\d+$",port): return False
-    ports = ['21','25','443','8080','888','8888','8443'];
-    if port in ports: return False;
-    intport = int(port);
-    if intport < 1 or intport > 65535: return False;
-    return True;
+    ports = ['21','25','443','8080','888','8888','8443']
+    if port in ports: return False
+    intport = int(port)
+    if intport < 1 or intport > 65535: return False
+    return True
 
 #字符串取中间
 def getStrBetween(startStr,endStr,srcStr):
@@ -799,7 +821,7 @@ def getStrBetween(startStr,endStr,srcStr):
 def getCpuType():
     cpuinfo = open('/proc/cpuinfo','r').read()
     rep = "model\s+name\s+:\s+(.+)"
-    tmp = re.search(rep,cpuinfo,re.I);
+    tmp = re.search(rep,cpuinfo,re.I)
     cpuType = ''
     if tmp:
         cpuType = tmp.groups()[0]
@@ -808,26 +830,26 @@ def getCpuType():
         rep = "Model\s+name:\s+(.+)"
         tmp = re.search(rep,cpuinfo,re.I)
         if tmp: cpuType = tmp.groups()[0]
-    return cpuType;
+    return cpuType
 
 
 #检查是否允许重启
 def IsRestart():
-    num  = M('tasks').where('status!=?',('1',)).count();
-    if num > 0: return False;
-    return True;
+    num  = M('tasks').where('status!=?',('1',)).count()
+    if num > 0: return False
+    return True
 
 #加密密码字符
 def hasPwd(password):
     import crypt;
-    return crypt.crypt(password,password);
+    return crypt.crypt(password,password)
 
 def get_timeout(url,timeout=3):
     try:
-        start = time.time();
-        result = httpGet(url,timeout);
-        if result != 'True': return False;
-        return int((time.time() - start) * 1000);
+        start = time.time()
+        result = httpGet(url,timeout)
+        if result != 'True': return False
+        return int((time.time() - start) * 1000)
     except: return False
 
 def getDate(format='%Y-%m-%d %X'):
@@ -841,16 +863,16 @@ def CheckMyCnf():
     confFile = '/etc/my.cnf'
     if os.path.exists(confFile): 
         conf = readFile(confFile)
-        if conf.find('[mysqld]') != -1: return True;
-    versionFile = '/www/server/mysql/version.pl';
-    if not os.path.exists(versionFile): return False;
+        if conf.find('[mysqld]') != -1: return True
+    versionFile = '/www/server/mysql/version.pl'
+    if not os.path.exists(versionFile): return False
     
     versions = ['5.1','5.5','5.6','5.7','AliSQL']
-    version = readFile(versionFile);
+    version = readFile(versionFile)
     for key in versions:
         if key in version:
-            version = key;
-            break;
+            version = key
+            break
     
     shellStr = '''
 #!/bin/bash
@@ -956,14 +978,14 @@ MySQL_Opt
 ''' % (version,)
     #判断是否迁移目录
     if os.path.exists('data/datadir.pl'):
-        newPath = readFile('data/datadir.pl');
-        mycnf = readFile('/etc/my.cnf');
-        mycnf = mycnf.replace('/www/server/data',newPath);
-        writeFile('/etc/my.cnf',mycnf);
+        newPath = readFile('data/datadir.pl')
+        mycnf = readFile('/etc/my.cnf')
+        mycnf = mycnf.replace('/www/server/data',newPath)
+        writeFile('/etc/my.cnf',mycnf)
         
-    ExecShell(shellStr);
-    WriteLog('TYPE_SOFE', 'MYSQL_CHECK_ERR');
-    return True;
+    ExecShell(shellStr)
+    WriteLog('TYPE_SOFE', 'MYSQL_CHECK_ERR')
+    return True
 
 
 def GetSSHPort():
@@ -981,8 +1003,8 @@ def GetSSHStatus():
              status = ExecShell("service ssh status | grep -P '(dead|stop)'")
     else:
         import system
-        panelsys = system.system();
-        version = panelsys.GetSystemVersion();
+        panelsys = system.system()
+        version = panelsys.GetSystemVersion()
         if version.find(' 7.') != -1:
             status = ExecShell("systemctl status sshd.service | grep 'dead'")
         else:
@@ -1006,10 +1028,10 @@ def CheckPort(port,other=None):
 def GetToken():
     try:
         from json import loads
-        tokenFile = 'data/token.json';
-        if not os.path.exists(tokenFile): return False;
-        token = loads(readFile(tokenFile));
-        return token;
+        tokenFile = 'data/token.json'
+        if not os.path.exists(tokenFile): return False
+        token = loads(readFile(tokenFile))
+        return token
     except:
         return False
 
@@ -1017,7 +1039,7 @@ def to_btint(string):
     m_list = []
     for s in string:
         m_list.append(ord(s))
-    return m_list;
+    return m_list
 
 def load_module(pluginCode):
     from imp import new_module
@@ -1059,14 +1081,14 @@ def auth_decode(data):
     
     #解码数据
     import binascii,hashlib,urllib,hmac,json
-    tdata = binascii.unhexlify(data['data']);
+    tdata = binascii.unhexlify(data['data'])
     
     #校验signature是否正确
-    signature = binascii.hexlify(hmac.new(token['secret_key'], tdata, digestmod=hashlib.sha256).digest());
-    if signature != data['signature']: return returnMsg(False,'REQUEST_ERR');
+    signature = binascii.hexlify(hmac.new(token['secret_key'], tdata, digestmod=hashlib.sha256).digest())
+    if signature != data['signature']: return returnMsg(False,'REQUEST_ERR')
     
     #返回
-    return json.loads(urllib.unquote(tdata));
+    return json.loads(urllib.unquote(tdata))
     
 
 #数据加密
@@ -1079,17 +1101,17 @@ def auth_encode(data):
     
     #生成signature
     import binascii,hashlib,urllib,hmac,json
-    tdata = urllib.quote(json.dumps(data));
+    tdata = urllib.quote(json.dumps(data))
     #公式  hex(hmac_sha256(data))
-    pdata['signature'] = binascii.hexlify(hmac.new(token['secret_key'], tdata, digestmod=hashlib.sha256).digest());
+    pdata['signature'] = binascii.hexlify(hmac.new(token['secret_key'], tdata, digestmod=hashlib.sha256).digest())
     
     #加密数据
-    pdata['btauth_key'] = token['access_key'];
-    pdata['data'] = binascii.hexlify(tdata);
+    pdata['btauth_key'] = token['access_key']
+    pdata['data'] = binascii.hexlify(tdata)
     pdata['timestamp'] = time.time()
     
     #返回
-    return pdata;
+    return pdata
 
 #检查Token
 def checkToken(get):
@@ -1099,7 +1121,7 @@ def checkToken(get):
     tempToken = json.loads(readFile(tempFile))
     if time.time() > tempToken['timeout']: return False
     if get.token != tempToken['token']: return False
-    return True;
+    return True
 
 #获取识别码
 def get_uuid():
@@ -1117,7 +1139,7 @@ def process_exists(pname,exe = None,cmdline = None):
                 p = psutil.Process(pid)
                 if p.name() == pname: 
                     if not exe and not cmdline:
-                        return True;
+                        return True
                     else:
                         if exe:
                             if p.exe() == exe: return True
@@ -1201,7 +1223,7 @@ def sess_remove(key):
 def get_page(count,p=1,rows=12,callback='',result='1,2,3,4,5,8'):
     import page
     from BTPanel import request
-    page = page.Page();
+    page = page.Page()
     info = { 'count':count,  'row':rows,  'p':p, 'return_js':callback ,'uri':request.full_path}
     data = { 'page': page.GetPage(info,result),  'shift': str(page.SHIFT), 'row': str(page.ROW) }
     return data
@@ -1218,14 +1240,14 @@ def version():
 
 #取文件或目录大小
 def get_path_size(path):
-    if not os.path.exists(path): return 0;
+    if not os.path.exists(path): return 0
     if not os.path.isdir(path): return os.path.getsize(path)
     size_total = 0
     for nf in os.walk(path):
         for f in nf[2]:
             filename = nf[0] + '/' + f
-            if not os.path.exists(filename): continue;
-            if os.path.islink(filename): continue;
+            if not os.path.exists(filename): continue
+            if os.path.islink(filename): continue
             size_total += os.path.getsize(filename)
     return size_total
 
@@ -1289,7 +1311,7 @@ def path_safe_check(path):
     checks = ['..','./','\\','%','$','^','&','*','~','@','#']
     for c in checks:
         if path.find(c) != -1: return False
-    rep = "^[\w\s\.\/-]+$"
+    rep = r"^[\w\s\.\/-]+$"
     if not re.match(rep,path): return False
     return True
 
@@ -1298,7 +1320,7 @@ def get_database_character(db_name):
     try:
         import panelMysql
         tmp = panelMysql.panelMysql().query("show create database `%s`" % db_name.strip())
-        c_type = str(re.findall("SET\s+([\w\d-]+)\s",tmp[0][1])[0])
+        c_type = str(re.findall(r"SET\s+([\w\d-]+)\s",tmp[0][1])[0])
         c_types = ['utf8','utf-8','gbk','big5','utf8mb4']
         if not c_type.lower() in c_types: return 'utf8'
         return c_type
@@ -1378,7 +1400,7 @@ def check_ip_panel():
     if os.path.exists(ip_file):
         iplist = ReadFile(ip_file)
         if iplist:
-            iplist = iplist.strip();
+            iplist = iplist.strip()
             if not GetClientIp() in iplist.split(','): 
                 errorStr = ReadFile('./BTPanel/templates/' + GetConfigValue('template') + '/error2.html')
                 try:
@@ -1408,44 +1430,47 @@ def is_local():
 
 #自动备份面板数据
 def auto_backup_panel():
-    panel_paeh = '/www/server/panel'
-    paths = panel_paeh + '/data/not_auto_backup.pl'
-    if os.path.exists(paths): return False
-    b_path = '/www/backup/panel'
-    backup_path = b_path + '/' + format_date('%Y-%m-%d')
-    if os.path.exists(backup_path): return True
-    if os.path.getsize(panel_paeh + '/data/default.db') > 104857600 * 2: return False
-    os.makedirs(backup_path,384)
-    import shutil
-    shutil.copytree(panel_paeh + '/data',backup_path + '/data')
-    shutil.copytree(panel_paeh + '/config',backup_path + '/config')
-    time_now = time.time() - (86400 * 15)
-    for f in os.listdir(b_path):
-        try:
-            if time.mktime(time.strptime(f, "%Y-%m-%d")) < time_now: 
-                path = b_path + '/' + f
-                if os.path.exists(path): shutil.rmtree(path)
-        except: continue
+    try:
+        panel_paeh = '/www/server/panel'
+        paths = panel_paeh + '/data/not_auto_backup.pl'
+        if os.path.exists(paths): return False
+        b_path = '/www/backup/panel'
+        backup_path = b_path + '/' + format_date('%Y-%m-%d')
+        if os.path.exists(backup_path): return True
+        if os.path.getsize(panel_paeh + '/data/default.db') > 104857600 * 2: return False
+        os.makedirs(backup_path,384)
+        import shutil
+        shutil.copytree(panel_paeh + '/data',backup_path + '/data')
+        shutil.copytree(panel_paeh + '/config',backup_path + '/config')
+        shutil.copytree(panel_paeh + '/vhost',backup_path + '/vhost')
+        time_now = time.time() - (86400 * 15)
+        for f in os.listdir(b_path):
+            try:
+                if time.mktime(time.strptime(f, "%Y-%m-%d")) < time_now: 
+                    path = b_path + '/' + f
+                    if os.path.exists(path): shutil.rmtree(path)
+            except: continue
+    except:pass
 
 
 #检查端口状态
 def check_port_stat(port):
     import socket
-    localIP = '127.0.0.1';
+    localIP = '127.0.0.1'
     temp = {}
-    temp['port'] = port;
-    temp['local'] = True;
+    temp['port'] = port
+    temp['local'] = True
     try:
         s = socket.socket()
         s.settimeout(0.15)
         s.connect((localIP,port))
         s.close()
     except:
-        temp['local'] = False;
+        temp['local'] = False
         
-    result = 0;
-    if temp['local']: result +=2;
-    return result;
+    result = 0
+    if temp['local']: result +=2
+    return result
 
 
 #同步时间
@@ -1511,17 +1536,17 @@ def reload_mod(mod_name = None):
 def de_hexb(data):
     if sys.version_info[0] != 2:
         if type(data) == str: data = data.encode('utf-8')
-    pdata = base64.b64encode(data);
+    pdata = base64.b64encode(data)
     if sys.version_info[0] != 2:
         if type(pdata) == str: pdata = pdata.encode('utf-8')
-    return binascii.hexlify(pdata);
+    return binascii.hexlify(pdata)
 
 def en_hexb(data):
     if sys.version_info[0] != 2:
         if type(data) == str: data = data.encode('utf-8')
-    result = base64.b64decode(binascii.unhexlify(data));
+    result = base64.b64decode(binascii.unhexlify(data))
     if type(result) != str: result = result.decode('utf-8')
-    return result;
+    return result
 
 def upload_file_url(filename):
     try:

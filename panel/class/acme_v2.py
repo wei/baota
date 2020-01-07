@@ -206,7 +206,7 @@ class acme_v2:
         top_domain_list = ['.ac.cn', '.ah.cn', '.bj.cn', '.com.cn', '.cq.cn', '.fj.cn', '.gd.cn',
                            '.gov.cn', '.gs.cn', '.gx.cn', '.gz.cn', '.ha.cn', '.hb.cn', '.he.cn',
                            '.hi.cn', '.hk.cn', '.hl.cn', '.hn.cn', '.jl.cn', '.js.cn', '.jx.cn',
-                           '.ln.cn', '.mo.cn', '.net.cn', '.nm.cn', '.nx.cn', '.org.cn']
+                           '.ln.cn', '.mo.cn', '.net.cn', '.nm.cn', '.nx.cn', '.org.cn','my.id']
         old_domain_name = domain_name
         top_domain = "."+".".join(domain_name.rsplit('.')[-2:])
         new_top_domain = "." + top_domain.replace(".", "")
@@ -299,7 +299,14 @@ class acme_v2:
                     self.get_nonce(force=True)
                     res = self.acme_request(self._apis['newOrder'], payload)
             if not res.status_code in [201]:
-                raise Exception("订单创建失败: {}".format(res.json()))
+                a_auth = res.json()
+                ret_title = self.get_error(str(a_auth))
+                raise StopIteration(
+                        "{0} >>>> {1}".format(
+                            ret_title,
+                            json.dumps(a_auth)
+                        )
+                    )
 
         # 返回验证地址和验证
         s_json = res.json()
@@ -553,6 +560,8 @@ class acme_v2:
             return "域名%s当前被要求验证CAA记录，请手动解析CAA记录，或1小时后重新尝试申请!" % re.findall("looking up CAA for (.+)", error)
         elif error.find("Read timed out.") != -1:
             return "验证超时,请检查域名是否正确解析，若已正确解析，可能服务器与Let'sEncrypt连接异常，请稍候再重试!"
+        elif error.find('Cannot issue for') != -1:
+            return "无法为{}颁发证书，不能直接用域名后缀申请通配符证书!".format(re.findall(r'for\s+"(.+)"',error))
         elif error.find("Error creating new order") != -1:
             return "订单创建失败，请稍候重试!"
         elif error.find("Too Many Requests") != -1:
@@ -1202,7 +1211,7 @@ fullchain.pem       粘贴到证书输入框
                 msg[1] = json.loads(msg[1])
             else:
                 msg = ex
-                write_log(msg)
+                write_log(public.get_error_info())
             return public.returnMsg(False, msg)
 
     # 申请证书 - api
@@ -1342,7 +1351,7 @@ fullchain.pem       粘贴到证书输入框
                 msg[1] = json.loads(msg[1])
             else:
                 msg = ex
-                write_log(msg)
+                write_log(public.get_error_info())
             return public.returnMsg(False, msg)
 
 

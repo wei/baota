@@ -18,14 +18,25 @@ var soft = {
         }
         soft.is_install = false;
         bt.soft.get_soft_list(page, type, search, function (rdata) {
+        	console.log(rdata);
             if (rdata.pro >= 0) {
-                $("#updata_pro_info").html('');
-            } else if (rdata.pro === -2) {
-                $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong>专业版已到期，付费插件暂停使用。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_pro()" title="立即续费专业版" style="margin-left:8px">立即续费</button>');
-            } else if (rdata.pro === -1) {
-                $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong > 升级专业版，所有插件，免费使用。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_pro()" title="立即升级专业版" style="margin-left:8px">立即升级</button>\</div>');
+                $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong>当前为专业版，专业版可以免费使用专业版插件，过期时间：'+ (rdata.pro > 0 ?bt.format_data(rdata.pro, 'yyyy/MM/dd'):'永久授权') +'</strong><button style="margin-left:8px;display:'+ (rdata.pro>0?'inline-block':'none') +';" class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_pro()" title="续费专业版">立即续费</button>');
             }
-
+            if (rdata.ltd >= 0) {
+	            $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong>当前为企业版，企业版可以免费使用专业版及企业版插件，过期时间：'+ (rdata.ltd >0 ?bt.format_data(rdata.ltd, 'yyyy/MM/dd'):'永久授权') +'</strong><button style="margin-left:8px;display:'+ (rdata.ltd >0?'inline-block':'none') +';" class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_ltd()" title="续费企业版">立即续费</button>');
+            }
+            if (rdata.pro === -2) {
+                $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong>专业版已到期，付费插件暂停使用。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_pro()" title="立即续费专业版" style="margin-left:8px">立即续费</button>');
+            }
+            if(rdata.ltd === -2){
+                $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong>企业版已到期，付费插件和企业版插件暂停使用。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_ltd()" title="立即续费企业版" style="margin-left:8px">立即续费</button>');
+            }
+            if (rdata.pro === -1 && rdata.ltd === -1) {
+                $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong > 专业版可以免费使用专业版插件，企业版可以免费使用专业版及企业版插件 。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_commercial_view()" title="立即升级" style="margin-left:8px">立即升级</button></div>');
+            }
+            // if(type == 12 && rdata.ltd === -1 && rdata.pro >= 0){
+            // 	$("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong >企业版可以免费使用专业版及企业版插件。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_ltd()" title="立即升级" style="margin-left:8px">立即升级</button></div>');
+            // }
             if (type == 10) {
                 $("#updata_pro_info").html('<div class="alert alert-danger" style="margin-bottom:15px"><strong>安全提醒：第三方插件上架前，宝塔官方进行了安全审计，但可能还存在安全风险，在生产环境使用前请自行甄别 </strong><a class="btn btn-success btn-xs va0" href="https://www.bt.cn/developer/" title="免费入驻" style="margin-left: 8px" target="_blank">免费入驻</a><a class="btn btn-success btn-xs va0" href="https://www.bt.cn/bbs/forum-40-1.html" title="点击获取第三方应用" style="margin-left: 8px" target="_blank">获取第三方应用</a><input type="file" style="display:none;" accept=".zip,.tar.gz" id="update_zip" multiple="multiple"><button class="btn btn-success btn-xs" onclick="soft.update_zip_open()" style="margin-left:8px">导入插件</button></div>')
             } else if (type == 11) {
@@ -80,7 +91,7 @@ var soft = {
                                 }
                             }
                             if (rdata.apache22 && item.name.indexOf('php-') >= 0 && $.inArray(item.name, phps) == -1) click_opt = ' title="Apache2.2不兼容此版本，如需使用请切换到Apache2.4或Nginx"';
-                            return '<span ' + click_opt + ' ' + sStyle + ' ><img src="/static/img/soft_ico/ico-' + fName + '.png">' + item.title + ' ' + version + '</span>';
+                            return '<span ' + click_opt + ' ' + sStyle + ' ><img '+ (item.type === 10?'style="height:20px;width:22px"':'') +' src="/static/img/soft_ico/ico-' + fName + '.png">' + item.title + ' ' + version + '</span>';
                         }
                     },
                     {
@@ -126,10 +137,10 @@ var soft = {
                     {
                         field: 'endtime', width: 120, title: '到期时间', templet: function (item) {
                             var endtime = '--';
-                            if (item.pid > 0) {
+                            if (item.pid > 0) {  //判断是否为付费插件
                                 if (item.endtime > 0) {
-                                    if (item.type != 10) {
-                                        endtime = bt.format_data(item.endtime, 'yyyy/MM/dd') + '<a class="btlink" onclick="bt.soft.re_plugin_pay(\'' + item.title + '\',\'' + item.pid + '\',1)"> (续费)</a>';
+                                    if (item.type != 10) { //判断是否为第三方插件
+                                        endtime = bt.format_data(item.endtime, 'yyyy/MM/dd') + '<a class="btlink" onclick="bt.soft.re_plugin_pay(\'' + item.title + '\',\'' + item.pid + '\',1,'+ item.endtime +','+ rdata.pro +','+ rdata.ltd +','+ type +')"> (续费)</a>';
                                     } else {
                                         endtime = bt.format_data(item.endtime, 'yyyy/MM/dd') + '<a class="btlink" onclick="bt.soft.re_plugin_pay_other(\'' + item.title + '\',\'' + item.pid + '\',1,'+item.price+')"> (续费)</a>';
                                     }
@@ -383,7 +394,7 @@ var soft = {
                     rdata.list[i].min_image += '?t=' + new Date().format("yyyyMMdd");
                 }
                 zbody += '<tr>'
-                    + '<td><img src="' + rdata.list[i].min_image +'">' + rdata.list[i].title + '</td>'
+                    + '<td><img style="width:22px;height:20px" src="' + rdata.list[i].min_image +'">' + rdata.list[i].title + '</td>'
                     + '<td>' + rdata.list[i].version + '</td>'
                     + '<td>' + rdata.list[i].ps + '</td>'
                     + '<td>' + rdata.list[i].php + '</td>'
@@ -701,28 +712,16 @@ var soft = {
             case 'config':
                 var tabCon = $(".soft-man-con").empty();
                 tabCon.append('<p style="color: #666; margin-bottom: 7px">' + lan.bt.edit_ps + '</p>');
-                tabCon.append('<textarea class="bt-input-text" style="height: 320px; line-height:18px;" id="textBody"></textarea>')
+                tabCon.append('<div class="bt-input-text ace_config_editor_scroll" style="height: 320px;min-height:350px;line-height:18px;" id="textBody"></div>')
                 tabCon.append('<button id="OnlineEditFileBtn" class="btn btn-success btn-sm" style="margin-top:10px;">' + lan.public.save + '</button>')
                 tabCon.append(bt.render_help([lan.get('config_edit_ps', [version])]))
 
                 var fileName = bt.soft.get_config_path(version);
                 var loadT = bt.load(lan.soft.get);
-                bt.send('GetFileBody', 'files/GetFileBody', { path: fileName }, function (rdata) {
-                    loadT.close();
-                    $("#textBody").text(rdata.data);
-                    $(".CodeMirror").remove();
-                    var editor = CodeMirror.fromTextArea(document.getElementById("textBody"), {
-                        extraKeys: { "Ctrl-Space": "autocomplete" },
-                        lineNumbers: true,
-                        matchBrackets: true,
-                    });
-                    editor.focus();
-                    $(".CodeMirror-scroll").css({ "height": "350px", "margin": 0, "padding": 0 });
-                    $("#OnlineEditFileBtn").click(function () {
-                        $("#textBody").text(editor.getValue());
-                        bt.soft.save_config(fileName, editor.getValue())
-                    });
-                })
+                var config = bt.aceEditor({el:'textBody',path:fileName});
+                $("#OnlineEditFileBtn").click(function () {
+                    bt.saveEditor(config);
+                });
                 break;
             case 'change_version':
                 var _list = [];
@@ -1479,7 +1478,7 @@ var soft = {
                     con += '<button id="btn_phpinfo" class="btn btn-default btn-sm" >' + lan.soft.phpinfo + '</button>'
                     con += '<div class="php_info_group"><p>基本信息 </p>'
                     con += '<table id="tab_php_status" class="table table-hover table-bordered" style="margin:0;padding:0">';
-                    con += '<tr><td>P版本</td><td>' + php_info.phpinfo.php_version + '</td><td>安装位置</td><td>' + php_info.phpinfo.php_path + '</td></tr>'
+                    con += '<tr><td style="width:70px">PHP版本</td><td>' + php_info.phpinfo.php_version + '</td><td>安装位置</td><td>' + php_info.phpinfo.php_path + '</td></tr>'
                     con += '<tr><td>php.ini</td><td colspan="3">' + php_info.phpinfo.php_ini + '</td></tr>'
                     con += '<tr><td>已加载</td><td colspan="3">' + php_info.phpinfo.modules + '</td></tr>'
                     con += '</table></div>';
@@ -1685,48 +1684,55 @@ var soft = {
             case 'set_fpm_config':
                 bt.soft.php.get_fpm_config(version, function (rdata) {
                     var datas = {
-                        '30': {
+                        '1GB内存': {
                             max_children: 30,
                             start_servers: 5,
                             min_spare_servers: 5,
                             max_spare_servers: 20
                         },
-                        '50': {
+                        '2GB内存': {
                             max_children: 50,
+                            start_servers: 5,
+                            min_spare_servers: 5,
+                            max_spare_servers: 30
+                        },
+                        '4GB内存': {
+                            max_children: 80,
+                            start_servers: 10,
+                            min_spare_servers: 10,
+                            max_spare_servers: 30
+                        },
+                        '8GB内存': {
+                            max_children: 120,
+                            start_servers: 10,
+                            min_spare_servers: 10,
+                            max_spare_servers: 30
+                        },
+                        '16GB内存': {
+                            max_children: 200,
                             start_servers: 15,
                             min_spare_servers: 15,
-                            max_spare_servers: 35
+                            max_spare_servers: 50
                         },
-                        '100': {
-                            max_children: 100,
+                        '32GB内存': {
+                            max_children: 300,
                             start_servers: 20,
                             min_spare_servers: 20,
-                            max_spare_servers: 70
-                        },
-                        '200': {
-                            max_children: 200,
-                            start_servers: 25,
-                            min_spare_servers: 25,
-                            max_spare_servers: 150
-                        },
-                        '300': {
-                            max_children: 300,
-                            start_servers: 30,
-                            min_spare_servers: 30,
-                            max_spare_servers: 180
-                        },
-                        '500': {
-                            max_children: 500,
-                            start_servers: 35,
-                            min_spare_servers: 35,
-                            max_spare_servers: 250
+                            max_spare_servers: 50
                         }
                     }
                     var limits = [], pmList = [];
-                    for (var k in datas) limits.push({ title: k + lan.soft.concurrency, value: k });
+                    var my_selected = '';
+                    var num_max = Number(rdata.max_children);
+                    for (var k in datas) {
+                        if(datas[k].max_children === num_max){
+                            my_selected = k;
+                        }
+                        limits.push({ title: k, value: k });
+                    }
                     var _form_datas = [
                         {
-                            title: lan.soft.concurrency_type, name: 'limit', value: rdata.max_children, type: 'select', items: limits, callback: function (iKey) {
+                            title: lan.soft.concurrency_type, name: 'limit', value: my_selected, type: 'select', items: limits, callback: function (iKey) {
                                 var item = datas[iKey.val()]
                                 for (var sk in item) $('.' + sk).val(item[sk]);
                             }
@@ -1737,10 +1743,10 @@ var soft = {
                                 { title: lan.bt.dynamic, value: 'dynamic' }
                             ], ps: '*' + lan.soft.php_fpm_ps1
                         },
-                        { title: 'max_children', name: 'max_children', value: rdata.max_children, type: 'number', width: '100px', ps: '*' + lan.soft.php_fpm_ps2 },
-                        { title: 'start_servers', name: 'start_servers', value: rdata.start_servers, type: 'number', width: '100px', ps: '*' + lan.soft.php_fpm_ps3 },
-                        { title: 'min_spare_servers', name: 'min_spare_servers', value: rdata.min_spare_servers, type: 'number', width: '100px', ps: '*' + lan.soft.php_fpm_ps4 },
-                        { title: 'max_spare_servers', name: 'max_spare_servers', value: rdata.max_spare_servers, type: 'number', width: '100px', ps: '*' + lan.soft.php_fpm_ps5 },
+                        { title: 'max_children', name: 'max_children', value: rdata.max_children, type: 'number', width: '80px', ps: '*' + lan.soft.php_fpm_ps2 },
+                        { title: 'start_servers', name: 'start_servers', value: rdata.start_servers, type: 'number', width: '80px', ps: '*' + lan.soft.php_fpm_ps3 },
+                        { title: 'min_spare_servers', name: 'min_spare_servers', value: rdata.min_spare_servers, type: 'number', width: '80px', ps: '*' + lan.soft.php_fpm_ps4 },
+                        { title: 'max_spare_servers', name: 'max_spare_servers', value: rdata.max_spare_servers, type: 'number', width: '80px', ps: '*' + lan.soft.php_fpm_ps5 },
                         {
                             title: ' ', text: lan.public.save, name: 'btn_children_submit', css: 'btn-success', type: 'button', callback: function (ldata) {
                                 bt.pub.get_menm(function (memInfo) {
@@ -1787,7 +1793,19 @@ var soft = {
                         _c_form.append(_form.html)
                         clicks = clicks.concat(_form.clicks);
                     }
+                    _c_form.append('<ul class="help-info-text c7">\
+                                        <li>【最大子进程数量】越大，并发能力越强，但max_children最大不要超过5000</li>\
+                                        <li>【内存】每个PHP子进程需要20MB左右内存，过大的max_children会导致服务器不稳定</li>\
+                                        <li>【静态模式】下会始终维持设置的子进程数量，对内存开销较大，但并发能力较好</li>\
+                                        <li>【动态模式】下会按设置最大空闲进程数来收回进程，内存开销小，建议小内存机器使用</li>\
+                                        <li>【64GB内存推荐值】max_children<=1000 , start/min_spare=50 , max_spare<=200</li>\
+                                        <li>【多PHP版本】若您安装了多个PHP版本，且都在使用，建议适当降低并发配置</li>\
+                                        <li>【没有数据库】若没有安装mysql等数据库，建议设置2倍于推荐并发</li>\
+                                        <li>【注意】以上为建议配置说明，线上项目复杂多样，请根据实际情况酌情调整</li>\
+                                    </ul>')
                     tabCon.append(_c_form);
+
+                    
                     bt.render_clicks(clicks);
                 });
                 break;

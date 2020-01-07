@@ -1,5 +1,3 @@
-
-
 var site = {
     get_list: function (page, search, type) {
         if (page == undefined) page = 1;
@@ -665,47 +663,52 @@ var site = {
         show_error:function(res,auth_type){
             var area_size = '500px';
             var err_info = "";
-
-            if (!res.msg[1].challenges[1]) {
-                if (res.msg[1].challenges[0]) {
-                    res.msg[1].challenges[1] = res.msg[1].challenges[0]
-                }
-            }
-            if (res.msg[1].status === 'invalid') {
-                area_size = '600px';
-                var trs = $("#dns_txt_jx tbody tr");
-                var dns_value = "";
-
-                for (var imd = 0; imd < trs.length; imd++) {
-                    if (trs[imd].outerText.indexOf(res.msg[1].identifier.value) == -1) continue;
-                    var s_tmp = trs[imd].outerText.split("\t")
-                    if (s_tmp.length > 1) {
-                        dns_value = s_tmp[1]
-                        break;
+            if(res.msg[1].challenges === undefined){
+                err_info += "<p><span>响应状态:</span>" + res.msg[1].status + "</p>"
+                err_info += "<p><span>错误类型:</span>" + res.msg[1].type + "</p>"
+                err_info += "<p><span>错误代码:</span>" + res.msg[1].detail + "</p>"
+            }else{
+                if (!res.msg[1].challenges[1]) {
+                    if (res.msg[1].challenges[0]) {
+                        res.msg[1].challenges[1] = res.msg[1].challenges[0]
                     }
                 }
-                
-                err_info += "<p><span>验证域名:</span>" + res.msg[1].identifier.value + "</p>"
-                if(auth_type === 'dns'){
-                    var check_url = "_acme-challenge." + res.msg[1].identifier.value
-                    err_info += "<p><span>验证解析:</span>"+check_url+"</p>"
-                    err_info += "<p><span>验证内容:</span>" + dns_value + "</p>"
-                    err_info += "<p><span>错误代码:</span>" + site.html_encode(res.msg[1].challenges[1].error.detail) + "</p>"
-                }else{
-                    var check_url = "http://" + res.msg[1].identifier.value + '/.well-known/acme-challenge/' + res.msg[1].challenges[0].token
-                    err_info += "<p><span>验证URL:</span><a class='btlink' href='" + check_url+"' target='_blank'>点击查看</a></p>"
-                    err_info += "<p><span>验证内容:</span>" + res.msg[1].challenges[0].token + "</p>"
-                    err_info += "<p><span>错误代码:</span>" + site.html_encode(res.msg[1].challenges[0].error.detail) + "</p>"
-                }
-                err_info += "<p><span>验证结果:</span> <a style='color:red;'>验证失败</a></p>"
+                if (res.msg[1].status === 'invalid') {
+                    area_size = '600px';
+                    var trs = $("#dns_txt_jx tbody tr");
+                    var dns_value = "";
 
-                layer.msg('<div class="ssl-file-error"><a style="color: red;font-weight: 900;">' + res.msg[0]+ '</a>' + err_info + '</div>', {
-                    icon: 2, time: 0,
-                    shade:0.3,
-                    shadeClose: true,
-                    area: area_size
-                });
+                    for (var imd = 0; imd < trs.length; imd++) {
+                        if (trs[imd].outerText.indexOf(res.msg[1].identifier.value) == -1) continue;
+                        var s_tmp = trs[imd].outerText.split("\t")
+                        if (s_tmp.length > 1) {
+                            dns_value = s_tmp[1]
+                            break;
+                        }
+                    }
+                    
+                    err_info += "<p><span>验证域名:</span>" + res.msg[1].identifier.value + "</p>"
+                    if(auth_type === 'dns'){
+                        var check_url = "_acme-challenge." + res.msg[1].identifier.value
+                        err_info += "<p><span>验证解析:</span>"+check_url+"</p>"
+                        err_info += "<p><span>验证内容:</span>" + dns_value + "</p>"
+                        err_info += "<p><span>错误代码:</span>" + site.html_encode(res.msg[1].challenges[1].error.detail) + "</p>"
+                    }else{
+                        var check_url = "http://" + res.msg[1].identifier.value + '/.well-known/acme-challenge/' + res.msg[1].challenges[0].token
+                        err_info += "<p><span>验证URL:</span><a class='btlink' href='" + check_url+"' target='_blank'>点击查看</a></p>"
+                        err_info += "<p><span>验证内容:</span>" + res.msg[1].challenges[0].token + "</p>"
+                        err_info += "<p><span>错误代码:</span>" + site.html_encode(res.msg[1].challenges[0].error.detail) + "</p>"
+                    }
+                    err_info += "<p><span>验证结果:</span> <a style='color:red;'>验证失败</a></p>"
+                }
             }
+
+            layer.msg('<div class="ssl-file-error"><a style="color: red;font-weight: 900;">' + res.msg[0]+ '</a>' + err_info + '</div>', {
+                icon: 2, time: 0,
+                shade:0.3,
+                shadeClose: true,
+                area: area_size
+            });
         },
         ssl_result: function(res,auth_type,siteName){
             layer.close(acme.loadT);
@@ -992,6 +995,7 @@ var site = {
                                     {
                                         items: [{
                                             name: 'btn_save', text: '保存', type: 'button', callback: function (ldata) {
+                                                console.log(ret)
                                                 bt.files.set_file_body(ret.filename, ldata.dir_config, 'utf-8', function (sdata) {
                                                     if (sdata.status) load_form.close();
                                                     bt.msg(sdata);
@@ -1263,19 +1267,23 @@ var site = {
                             var spath = filename;
                             if (obj.val() != lan.site.rewritename) spath = '/www/server/panel/rewrite/' + bt.get_cookie('serverType') + '/' + obj.val() + '.conf';
                             bt.files.get_file_body(spath, function (ret) {
-                                editor.setValue(ret.data);
+                                aceEditor.ACE.setValue(ret.data);
+                                aceEditor.ACE.moveCursorTo(0, 0); 
+                                aceEditor.path = spath;
                             })
                         }
                     }
                 },
-                { items: [{ name: 'config', type: 'textarea', value: rdata.data, widht: '340px', height: '200px' }] },
+                { items: [{ name: 'config', type: 'div', value: rdata.data, widht: '340px', height: '200px' }] },
                 {
                     items: [{
                         name: 'btn_save', text: '保存', type: 'button', callback: function (ldata) {
-                            bt.files.set_file_body(filename, editor.getValue(), 'utf-8', function (ret) {
-                                if (ret.status) site.reload(4)
-                                bt.msg(ret);
-                            })
+                            // bt.files.set_file_body(filename, editor.getValue(), 'utf-8', function (ret) {
+                            //     if (ret.status) site.reload(4)
+                            //     bt.msg(ret);
+                            // })
+                            aceEditor.path = filename;
+                            bt.saveEditor(aceEditor);
                         }
                     },
                     {
@@ -1290,7 +1298,7 @@ var site = {
                                     { title: '关闭', name: 'close' },
                                     {
                                         title: '提交', name: 'submit', css: 'btn-success', callback: function (rdata, load, callback) {
-                                            bt.site.set_rewrite_tel(rdata.tempname, editor.getValue(), function (rRet) {
+                                            bt.site.set_rewrite_tel(rdata.tempname, aceEditor.ACE.getValue(), function (rRet) {
                                                 if (rRet.status) {
                                                     load.close();
                                                     site.reload(4)
@@ -1318,24 +1326,9 @@ var site = {
                 _html.append(bt.render_help(['请选择您的应用，若设置伪静态后，网站无法正常访问，请尝试设置回default', '您可以对伪静态规则进行修改，修改完后保存即可。']));
                 $('#webedit-con').append(_html);
                 bt.render_clicks(clicks);
-
-                $('textarea.config').attr('id', 'config_rewrite');
-                var editor = CodeMirror.fromTextArea(document.getElementById("config_rewrite"), {
-                    extraKeys: { "Ctrl-Space": "autocomplete" },
-                    lineNumbers: true,
-                    matchBrackets: true,
-                });
-
-                $(".CodeMirror-scroll").css({ "height": "340px", "margin": 0, "padding": 0 });
-                $(".soft-man-con .CodeMirror").css({ "height": "342px" });
-                setTimeout(function () {
-                    editor.refresh();
-                }, 250);
-
-                $('select.rewrite').trigger('change')
-
-                
-
+                $('div.config').attr('id', 'config_rewrite').css({'height':'360px','width':'540px'})
+                var aceEditor = bt.aceEditor({el:'config_rewrite',content:rdata.data});
+                $('select.rewrite').trigger('change');
             })
         },
         set_default_index: function (web) {
@@ -1363,37 +1356,16 @@ var site = {
             })
         },
         set_config: function (web) {
-            bt.site.get_site_config(web.name, function (rdata) {
-                if (!rdata.status) {
-                    bt.msg(rdata);
-                    return;
-                }
-                var datas = [
-                    { items: [{ name: 'site_config', type: 'textarea', value: rdata.data, widht: '340px', height: '200px' }] },
-                    {
-                        name: 'btn_config_submit', text: '保存', type: 'button', callback: function (ddata) {
-                            bt.site.set_site_config(web.name, editor.getValue(), rdata.encoding, function (ret) {
-                                if (ret.status) site.reload(6)
-                                bt.msg(ret);
-                            })
-                        }
-                    }
-                ]
-                var robj = $('#webedit-con');
-                for (var i = 0; i < datas.length; i++) {
-                    var _form_data = bt.render_form_line(datas[i]);
-                    robj.append(_form_data.html);
-                    bt.render_clicks(_form_data.clicks);
-                }
-                robj.append(bt.render_help([lan.site.web_config_help]));
-                $('textarea.site_config').attr('id', 'configBody');
-                var editor = CodeMirror.fromTextArea(document.getElementById("configBody"), {
-                    extraKeys: { "Ctrl-Space": "autocomplete" },
-                    lineNumbers: true,
-                    matchBrackets: true,
-                });
-                $(".CodeMirror-scroll").css({ "height": "400px", "margin": 0, "padding": 0 });
-            })
+        	var con = '<p style="color: #666; margin-bottom: 7px">提示：Ctrl+F 搜索关键字，Ctrl+S 保存，Ctrl+H 查找替换</p><div class="bt-input-text ace_config_editor_scroll" style="height: 400px; line-height:18px;" id="siteConfigBody"></div>\
+				<button id="OnlineEditFileBtn" class="btn btn-success btn-sm" style="margin-top:10px;">保存</button>\
+				<ul class="c7 ptb15">\
+					<li>此处为站点主配置文件,若您不了解配置规则,请勿随意修改.</li>\
+				</ul>';
+			$("#webedit-con").html(con);
+			var config = bt.aceEditor({el:'siteConfigBody',path:'/www/server/panel/vhost/'+bt.get_cookie('serverType')+'/'+ web.name +'.conf'})
+    		$("#OnlineEditFileBtn").click(function(e){
+				bt.saveEditor(config);
+			});
         },
         set_ssl: function (web) {
             $('#webedit-con').html("<div id='ssl_tabs'></div><div class=\"tab-con\" style=\"padding:10px 0px;\"></div>");
@@ -1564,7 +1536,7 @@ var site = {
                                     '在未指定SSL默认站点时,未开启SSL的站点使用HTTPS会直接访问到已开启SSL的站点',
                                     '如果重新申请证书时提示【订单已存在】请登录宝塔官网删除对应SSL订单',
                                 ]
-                                robj.append(bt.render_help(['已为您自动生成Let\'s Encrypt免费证书；', '如需使用其他SSL,请切换其他证书后粘贴您的KEY以及PEM内容，然后保存即可。']));
+                                robj.append(bt.render_help(['已为您自动生成Let\'s Encrypt免费证书；', '如需使用其他SSL,请切换其他证书后粘贴您的KEY以及PEM内容，然后保存即可。','如开启后无法使用HTTPS访问，请检查安全组是否正确放行443端口']));
                                 return;
                             }
                             bt.site.get_site_domains(web.id, function (ddata) {
@@ -1572,11 +1544,13 @@ var site = {
                                     '申请之前，请确保域名已解析，如未解析会导致审核失败',
                                     'Let\'s Encrypt免费证书，有效期3个月，支持多域名。默认会自动续签',
                                     '若您的站点使用了CDN或301重定向会导致续签失败',
-                                    '在未指定SSL默认站点时,未开启SSL的站点使用HTTPS会直接访问到已开启SSL的站点'
+                                    '在未指定SSL默认站点时,未开启SSL的站点使用HTTPS会直接访问到已开启SSL的站点',
+                                    '如开启后无法使用HTTPS访问，请检查安全组是否正确放行443端口'
                                 ], [
                                     '在DNS验证中，我们提供了多种自动化DNS-API，并提供了手动模式',
                                     '使用DNS接口申请证书可自动续期，手动模式下证书到期后需重新申请',
-                                    '使用【DnsPod/阿里云DNS】等接口前您需要先在弹出的窗口中设置对应接口的API'
+                                    '使用【DnsPod/阿里云DNS】等接口前您需要先在弹出的窗口中设置对应接口的API',
+                                    '如开启后无法使用HTTPS访问，请检查安全组是否正确放行443端口'
                                 ]]
                                 var datas = [
                                     {
@@ -1800,6 +1774,7 @@ var site = {
                                 '如果浏览器提示证书链不完整,请检查是否正确拼接PEM证书',
                                 'PEM格式证书 = 域名证书.crt + 根证书(root_bundle).crt',
                                 '在未指定SSL默认站点时,未开启SSL的站点使用HTTPS会直接访问到已开启SSL的站点',
+                                '如开启后无法使用HTTPS访问，请检查安全组是否正确放行443端口'
                             ]
                             robj.append(bt.render_help(helps));
 
@@ -2695,6 +2670,8 @@ var site = {
                 robj.append(_form_data.html);
                 bt.render_clicks(_form_data.clicks);
                 $('textarea[name="site_logs"]').attr('readonly', true);
+                $('textarea[name="site_logs"]').scrollTop(100000000000)
+
             })
         }
     },

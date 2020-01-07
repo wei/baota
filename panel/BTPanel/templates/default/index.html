@@ -19,7 +19,6 @@
                         </span>
                     {% endif %}
                 {% endif %}
-                <span class="bind-weixin c4"><a href="javascript:bt.weixin.open_wxapp();" class="btlink">微信</a></span>
                 <span class="ico-system">系统:</span><span id="info" style="margin-left:10px;"> {{data['lan']['S2']}}</span>&#12288;&#12288;{{data['lan']['S3']}} <span id="running">{{data['lan']['S4']}}</span>
             </div>
 			<span class="pull-right f12 c6" style="line-height:52px; margin-right:15px">
@@ -136,13 +135,13 @@
 
 
 {% block scripts %}
-
 <script type="text/javascript" src="/static/js/jquery.dragsort-0.5.2.min.js"></script>
 <script type="text/javascript" src="/static/js/echarts.min.js"></script>
-<script type="text/javascript" src="/static/js/index.js?f2={{g['version']}}"></script>
-<script type="text/javascript" src="/static/js/soft.js?version_20200103={{g['version']}}"></script>
+<script type="text/javascript" src="/static/js/index.js?f20200214={{g['version']}}"></script>
+<script type="text/javascript" src="/static/js/soft.js?version_20191219={{g['version']}}"></script>
+<script type="text/javascript" src="/static/ace/ace.js?date={{g.version}}"></script>
 <script type="text/javascript">
-	$(".btpro span").click(function(){
+	$(".btpro span").click(function(e){
         layer.confirm('切换回免费版可通过解绑账号实现', { icon: 3, btn: ['解绑账号'], closeBtn: 2, title: '是否取消授权' }, function () {
             $.post('/ssl?action=DelToken', {}, function (rdata) {
                 layer.msg(rdata.msg);
@@ -151,7 +150,9 @@
                 },2000);
             });
         });
+        e.stopPropagation();
 	})
+	setCookie('pro_end',{{data.pro_end}});
+	setCookie('ltd_end',{{data.ltd_end}});
 </script>
-
 {% endblock %}

@@ -21,7 +21,7 @@ class database(datatool.datatools):
             data_name = get['name'].strip()
             if self.CheckRecycleBin(data_name): return public.returnMsg(False,'数据库['+data_name+']已在回收站，请从回收站恢复!')
             if len(data_name) > 16: return public.returnMsg(False, 'DATABASE_NAME_LEN')
-            reg = "^[\w\.-]+$"
+            reg = r"^[\w\.-]+$"
             if not re.match(reg, data_name): return public.returnMsg(False,'DATABASE_NAME_ERR_T')
             if not hasattr(get,'db_user'): get.db_user = data_name
             username = get.db_user.strip()
@@ -624,7 +624,7 @@ SetLink
         if mysqlInfo['datadir'] == get.datadir: return public.returnMsg(False,'DATABASE_MOVE_RE')
         
         public.ExecShell('/etc/init.d/mysqld stop')
-        public.ExecShell('\cp -a -r ' + mysqlInfo['datadir'] + '/* ' + get.datadir + '/')
+        public.ExecShell('\cp -arf ' + mysqlInfo['datadir'] + '/* ' + get.datadir + '/')
         public.ExecShell('chown -R mysql.mysql ' + get.datadir)
         public.ExecShell('chmod -R 755 ' + get.datadir)
         public.ExecShell('rm -f ' + get.datadir + '/*.pid')
@@ -651,7 +651,7 @@ SetLink
     def SetMySQLPort(self,get):
         myfile = '/etc/my.cnf'
         mycnf = public.readFile(myfile)
-        rep = "port\s*=\s*([0-9]+)\s*\n"
+        rep = r"port\s*=\s*([0-9]+)\s*\n"
         mycnf = re.sub(rep,'port = ' + get.port + '\n',mycnf)
         public.writeFile(myfile,mycnf)
         public.ExecShell('/etc/init.d/mysqld restart')

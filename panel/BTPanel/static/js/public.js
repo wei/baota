@@ -1,3 +1,102 @@
+$(function(){
+    $.fn.extend({
+        fixedThead:function(options){
+            var _that = $(this);
+            var option = {
+                height:400,
+                shadow:true,
+                resize:true,
+            };
+            options = $.extend(option,options);
+            console.time('固定表头渲染时间');
+            if($(this).find('table').length === 0){
+                console.log('table固定标题失败');
+                return false;
+            }
+            var _height = $(this)[0].style.height,_table_config = _height.match(/([0-9]+)([%\w]+)/);
+            if(_table_config === null){
+                _table_config = [null,options.height,'px'];
+            }else{
+                $(this).css({
+                    'boxSizing': 'content-box',
+                    'paddingBottom':$(this).find('thead').height()
+                });
+            }
+            $(this).css({'position':'relative'});
+            var _thead = $(this).find('thead')[0].outerHTML,
+                _tbody = $(this).find('tbody')[0].outerHTML,
+                _thead_div = $('<div class="thead_div"><table class="table table-hover mb0"></table></div>'),
+                _shadow_top = $('<div class="tbody_shadow_top"></div>'),
+                _tbody_div = $('<div class="tbody_div" style="height:'+ _table_config[1] + _table_config[2] +';"><table class="table table-hover mb0" style="margin-top:-'+ $(this).find('thead').height() +'px"></table></div>'),
+                _shadow_bottom = $('<div class="tbody_shadow_bottom"></div>');
+            _thead_div.find('table').append(_thead);
+            _tbody_div.find('table').append(_thead);
+            _tbody_div.find('table').append(_tbody);
+            $(this).html('');
+            $(this).append(_thead_div);
+            $(this).append(_shadow_top);
+            $(this).append(_tbody_div);
+            $(this).append(_shadow_bottom);
+            var _table_width = _that.find('.thead_div table')[0].offsetWidth,
+                _body_width = _that.find('.tbody_div table')[0].offsetWidth,
+                _length = _that.find('tbody tr:eq(0)>td').length;
+            $(this).find('tbody tr:eq(0)>td').each(function(index,item){
+                var _item = _that.find('thead tr:eq(0)>th').eq(index);
+                if(index === (_length-1)){
+                	_item.attr('width',$(item)[0].clientWidth + (_table_width - _body_width));
+                }else{
+                	_item.attr('width',$(item)[0].offsetWidth);
+                }
+            });
+            console.timeEnd('固定表头渲染时间');
+            if(options.resize){
+                $(window).resize(function(){
+            		var _table_width = _that.find('.thead_div table')[0].offsetWidth,
+	                _body_width = _that.find('.tbody_div table')[0].offsetWidth,
+	                _length = _that.find('tbody tr:eq(0)>td').length;
+		            _that.find('tbody tr:eq(0)>td').each(function(index,item){
+		                var _item = _that.find('thead tr:eq(0)>th').eq(index);
+		                if(index === (_length-1)){
+		                	_item.attr('width',$(item)[0].clientWidth + (_table_width - _body_width));
+		                }else{
+		                	_item.attr('width',$(item)[0].offsetWidth);
+		                }
+		            });
+	            });	
+            }
+
+            if(options.shadow){
+                var table_body = $(this).find('.tbody_div')[0];
+                if(_table_config[1] >= table_body.scrollHeight){
+                    $(this).find('.tbody_shadow_top').hide();
+                    $(this).find('.tbody_shadow_bottom').hide();
+                }else{
+                    $(this).find('.tbody_shadow_top').hide();
+                    $(this).find('.tbody_shadow_bottom').show();
+                }
+                $(this).find('.tbody_div').scroll(function(e){
+                    var _scrollTop = $(this)[0].scrollTop,
+                        _scrollHeight  = $(this)[0].scrollHeight,
+                        _clientHeight = $(this)[0].clientHeight,
+                        _shadow_top = _that.find('.tbody_shadow_top'),
+                        _shadow_bottom = _that.find('.tbody_shadow_bottom');
+                    if(_scrollTop == 0){
+                        _shadow_top.hide();
+                        _shadow_bottom.show();
+                    }else if(_scrollTop > 0 && _scrollTop < (_scrollHeight - _clientHeight)){
+                        _shadow_top.show();
+                        _shadow_bottom.show();
+                    }else if(_scrollTop == (_scrollHeight - _clientHeight)){
+                        _shadow_top.show();
+                        _shadow_bottom.hide();
+                    }
+                })
+            }
+        }
+        
+    });
+}(jQuery))
+
 $(document).ready(function() {
 	$(".sub-menu a.sub-menu-a").click(function() {
 		$(this).next(".sub").slideToggle("slow").siblings(".sub:visible").slideUp("slow");
@@ -61,7 +160,7 @@ var aceEditor = {
 		Perl6: "Perl 6",
 	},
 	pathAarry:[],
-	encodingList: ['UTF-8', 'GBK', 'GB2312', 'BIG5'],
+	encodingList: ['ASCII','UTF-8', 'GBK', 'GB2312', 'BIG5'],
 	themeList: [
 		'chrome',
 		'monokai'
@@ -188,7 +287,7 @@ var aceEditor = {
 		});
 		// 底部状态栏功能按钮
 		$('.ace_conter_toolbar .pull-right span').click(function (e) {
-			var _type = $(this).attr('data-type'),_id = $(this).attr('data-id'),_item = _this.editor['ace_editor_'+_id],_icon = '<span class="icon"><i class="glyphicon glyphicon-ok" aria-hidden="true"></i></span>';
+			var _type = $(this).attr('data-type'),_item = _this.editor['ace_editor_'+_this.ace_active],_icon = '<span class="icon"><i class="glyphicon glyphicon-ok" aria-hidden="true"></i></span>';
 			$('.ace_toolbar_menu').show();
 			switch (_type) {
 				case 'cursor':
@@ -241,7 +340,7 @@ var aceEditor = {
 					$('.tabsSize [data-value="'+ _item.tabSize +'"]').addClass('active').append(_icon);
 				break;
 				case 'encoding':
-					_this.getEncodingList('UTF-8');
+					_this.getEncodingList(_item.encoding);
 					$('.ace_toolbar_menu .menu-encoding').show().siblings().hide();
 				break;
 				case 'lang':
@@ -266,7 +365,7 @@ var aceEditor = {
 		});
 		// 设置换行符
 		$('.menu-tabs').on('click','li',function(e){
-			var _val = $(this).attr('data-value');
+			var _val = $(this).attr('data-value'),_item =  _this.editor['ace_editor_'+ _this.ace_active];
 			if($(this).parent().hasClass('tabsType')){
 				_item.ace.getSession().setUseSoftTabs(_val == 'nbsp');
 				_item.softTabs = _val == 'nbsp';
@@ -282,10 +381,12 @@ var aceEditor = {
 		});
 		// 设置编码内容
 		$('.menu-encoding').on('click','li',function(e){
+			var _item = _this.editor['ace_editor_'+_this.ace_active],_icon = '<span class="icon"><i class="glyphicon glyphicon-ok" aria-hidden="true"></i></span>';
 			layer.msg('设置文件编码：' + $(this).attr('data-value'));
 			$('.ace_conter_toolbar [data-type="encoding"]').html('编码：<i>'+ $(this).attr('data-value') +'</i>');
 			$(this).addClass('active').append(_icon).siblings().removeClass('active').find('span').remove();
 			_item.encoding = $(this).attr('data-value');
+			_this.saveFileMethod(_item);
 		});
 		// 搜索内容键盘事件
 		$('.menu-files .menu-input').keyup(function () {
@@ -306,15 +407,7 @@ var aceEditor = {
 			var type =  $(this).attr('class'),editor_item =  _this.editor['ace_editor_'+ _this.ace_active];
 			switch(type){
 				case 'saveFile': //保存当时文件
-					_this.saveFileBody({
-						path: editor_item.path,
-						data: editor_item.ace.getValue(),
-						encoding: editor_item.encoding
-					}, function (res) {
-						layer.msg(res.msg, {icon: 1});
-						editor_item.fileType = 0;
-						$('.item_tab_' + editor_item.id + ' .icon-tool').attr('data-file-state', '0').removeClass('glyphicon-exclamation-sign').addClass('glyphicon-remove');
-					});
+					_this.saveFileMethod(editor_item);
 				break;
 				case 'saveFileAll': //保存全部
 					var loadT = layer.open({
@@ -658,8 +751,7 @@ var aceEditor = {
 		});
 		// 右键菜单
 		$('.ace_catalogue_list').on('mousedown','.has-children .file_fold',function(e){
-			var x = e.clientX,y = e.clientY,_left = $('.aceEditors')[0].offsetLeft,_top = $('.aceEditors')[0].offsetTop;
-			var _that = $('.ace_catalogue_list .has-children .file_fold'),_active =$('.ace_catalogue_list .has-children .file_fold.edit_file_group')
+			var x = e.clientX,y = e.clientY,_left = $('.aceEditors')[0].offsetLeft,_top = $('.aceEditors')[0].offsetTop,_that = $('.ace_catalogue_list .has-children .file_fold'),_active =$('.ace_catalogue_list .has-children .file_fold.edit_file_group');
 			if(e.which === 3){
 				if($(this).hasClass('edit_file_group')) return false;
 				$('.ace_catalogue_menu').css({'display':'block','left':x-_left,'top':y-_top});
@@ -682,7 +774,7 @@ var aceEditor = {
 				});
 			}
 		});
-		// 文件目录右键功能		
+		// 文件目录右键功能
 		$('.ace_catalogue_menu li').click(function(e){
 			_this.newly_file_type(this);
 		});
@@ -703,7 +795,6 @@ var aceEditor = {
 					_this.event_create_file({path:_path+'/'+_file_or_dir},this);
 				break;
 				case 2: //重命名
-					console.log(_this.get_file_dir(_path,1),_file_or_dir)
 					_this.event_rename_currency({sfile:_path,dfile:_this.get_file_dir(_path,1)+'/'+_file_or_dir},this);
 				break;
 			}
@@ -1229,16 +1320,7 @@ var aceEditor = {
 				mac: 'Command-S'
 			},
 			exec: function (editor) {
-				// 保存文件
-				_this.saveFileBody({
-					path: ACE.path,
-					data: editor.getValue(),
-					encoding: ACE.encoding
-				}, function (res) {
-					layer.msg(res.msg, {icon: res.status?1:2});
-					ACE.fileType = 0;
-					$('.item_tab_' + ACE.id + ' .icon-tool').attr('data-file-state', '0').removeClass('glyphicon-exclamation-sign').addClass('glyphicon-remove');
-				});
+				_this.saveFileMethod(ACE);
 			},
 			readOnly: false // 如果不需要使用只读模式，这里设置false
 		});
@@ -1256,6 +1338,18 @@ var aceEditor = {
 		});
 		this.currentStatusBar(ACE.id);
 		this.is_file_history(ACE);
+	},
+	// 保存文件方法
+	saveFileMethod:function(ACE){
+		this.saveFileBody({
+			path: ACE.path,
+			data: ACE.ace.getValue(),
+			encoding: ACE.encoding
+		}, function (res) {
+			layer.msg(res.msg, {icon: res.status?1:2});
+			ACE.fileType = 0;
+			$('.item_tab_' + ACE.id + ' .icon-tool').attr('data-file-state','0').removeClass('glyphicon-exclamation-sign').addClass('glyphicon-remove');
+		});
 	},
 	// 获取文件模型
 	getFileType: function (fileName) {
@@ -1392,7 +1486,7 @@ var aceEditor = {
 	// 保存文件内容-请求
 	saveFileBody: function (obj, callback) {
 		var loadT = layer.msg('正在保存文件内容，请稍后...', {time: 0,icon: 16,shade: [0.3, '#000']});
-		$.post("/files?action=SaveFileBody","data=" + encodeURIComponent(obj.data) + "&path=" + encodeURIComponent(obj.path) + "&encoding=" + obj.encoding, function(res) {
+		$.post("/files?action=SaveFileBody","data=" + encodeURIComponent(obj.data) + "&path=" + encodeURIComponent(obj.path) + "&encoding=" + obj.encoding.toLowerCase(), function(res) {
 			layer.close(loadT);
 			if (callback) callback(res)
 		});
@@ -1531,6 +1625,8 @@ function openEditorView(type,path){
 								switch(_type){
 									case '2':
 										aceEditor.editor = null;
+										aceEditor.editorLength = 0;
+										aceEditor.pathAarry = [];
 										layer.closeAll();
 									break;
 									case '1':
@@ -2219,20 +2315,6 @@ function divcenter() {
 	$(".layui-layer").css("left", a + "px");
 	$(".layui-layer").css("top", e + "px")
 }
-
-function btcopy(password) {
-	$("#bt_copys").attr('data-clipboard-text',password);
-	$("#bt_copys").click();
-}
-
-var clipboard = new ClipboardJS('#bt_copys');
-clipboard.on('success', function (e) {
-    layer.msg('复制成功!',{icon:1});
-});
-
-clipboard.on('error', function (e) {
-    layer.msg('复制失败，浏览器不兼容!',{icon:2});
-});
 
 function isChineseChar(b) {
 	var a = /[\u4E00-\u9FA5\uF900-\uFA2D]/;
@@ -3065,7 +3147,6 @@ function remind(a) {
 function GetReloads() {
 	var a = 0;
     var mm = $("#taskList").html()
-    console.log(lan.bt.task_list)
     if (mm == undefined || mm.indexOf(lan.bt.task_list) == -1 ) {
 		clearInterval(speed);
 		a = 0;
@@ -3217,8 +3298,98 @@ var clipboard, interval, socket, term, ssh_login,term_box;
 var pdata_socket = {
     x_http_token: document.getElementById("request_token_head").getAttribute('token')
 }
+function loadLink(arry,param,callback){
+	var ready = 0;
+	if(typeof param === 'function') callback = param
+	for(var i=0;i<arry.length;i++){
+		if(!Array.isArray(bt['loadLink'])) bt['loadLink'] = []
+		if(!is_file_existence(arry[i],false)){
+			if((arry.length -1) === i && callback) callback();
+			continue;
+		};
+		var link = document.createElement("link"),_arry_split = arry[i].split('/');
+			link.rel = "stylesheet";
+		if(typeof(callback) != "undefined"){
+		    if (link.readyState) {
+			    (function(i){
+			    	link.onreadystatechange = function () {
+			      		if (link.readyState == "loaded" || script.readyState == "complete") {
+				          link.onreadystatechange = null;
+				          bt['loadLink'].push(arry[i]);
+				          ready ++;
+				        }
+			    	};
+			    })(i);
+		    } else {
+		    	(function(i){
+					link.onload=function () {
+			        	bt['loadLink'].push(arry[i]);
+			        	ready ++;
+					};
+		    	})(i);
+			}
+		}
+		link.href = arry[i];
+		document.body.appendChild(link);
+	}
+	var time = setInterval(function(){
+		if(ready === arry.length){
+			clearTimeout(time);
+			callback();
+		}
+	},10);
+};
+function loadScript(arry,param,callback) {
+	var ready = 0;
+	if(typeof param === 'function') callback = param
+	for(var i=0;i<arry.length;i++){
+		if(!Array.isArray(bt['loadScript'])) bt['loadScript'] = []
+		if(!is_file_existence(arry[i],true)){
+			if((arry.length -1) === i && callback) callback();
+			continue;
+		};
+		var script = document.createElement("script"),_arry_split = arry[i].split('/');
+			script.type = "text/javascript";
+		if(typeof(callback) != "undefined"){
+		    if (script.readyState) {
+			    (function(i){
+			    	script.onreadystatechange = function () {
+			      		console.log(arry[i]);
+			      		if (script.readyState == "loaded" || script.readyState == "complete") {
+				          script.onreadystatechange = null;
+				          bt['loadScript'].push(arry[i]);
+				          ready ++;
+				        }
+			    	};
+			    })(i);
+		    } else {
+		    	(function(i){
+					script.onload=function () {
+			        	bt['loadScript'].push(arry[i]);
+			        	ready ++;
+					};
+		    	})(i);
+			}
+		}
+		script.src = arry[i];
+		document.body.appendChild(script);
+	}
+	var time = setInterval(function(){
+		if(ready === arry.length){
+			clearTimeout(time);
+			callback();
+		}
+	},10);
+}
 
-
+// 判断文件是否插入
+function is_file_existence(name,type){
+	var arry = type?bt.loadScript:bt.loadLink
+	for(var i=0;i<arry.length;i++){
+		if(arry[i] === name) return false
+	}
+	return true
+}
 var Term = {
     bws: null,      //websocket对象
     route: '/webssh',  //被访问的方法
@@ -3310,36 +3481,49 @@ var Term = {
     run: function (ssh_info) {
         var termCols = 100;
         var termRows = 34;
-        Term.term = new Terminal({ cols: termCols, rows: termRows, screenKeys: true, useStyle: true });
-        Term.term.setOption('cursorBlink', true);
+        var loadT = layer.msg('正在加载终端所需文件，请稍后...', { icon: 16, time: 0, shade: 0.3 });
+        loadScript([
+        	"/static/build/xterm.min.js",
+        	"/static/build/addons/attach/attach.min.js",
+        	"/static/build/addons/fit/fit.min.js",
+        	"/static/build/addons/fullscreen/fullscreen.min.js",
+        	"/static/build/addons/search/search.min.js",
+        	"/static/build/addons/winptyCompat/winptyCompat.js"
+        ],function(){
+        	layer.close(loadT);
+        	Term.term = new Terminal({ cols: termCols, rows: termRows, screenKeys: true, useStyle: true });
+	        Term.term.setOption('cursorBlink', true);
+	        Term.term_box = layer.open({
+	            type: 1,
+	            title: '宝塔终端',
+	            area: ['920px', '630px'],
+	            closeBtn: 2,
+	            shadeClose: false,
+	            content: '<link rel="stylesheet" href="/static/build/xterm.min.css" />\
+						<link rel="stylesheet" href="/static/build/addons/fullscreen/fullscreen.min.css" />\
+	            <a class="btlink" onclick="show_ssh_login(1)" style="position: fixed;margin-left: 83px;margin-top: -30px;">[设置]</a>\
+	            <div class="term-box" style="background-color:#000"><div id="term"></div></div>',
+	            cancel: function () {
+	                Term.term.destroy();
+	
+	            },
+	            success: function () {
+	                Term.term.open(document.getElementById('term'));
+	                Term.resize();
+	            }
+	        });
+	        Term.term.on('data', function (data) {
+	            try {
+	                Term.bws.send(data)
+	            } catch (e) {
+	                Term.term.write('\r\n连接丢失,正在尝试重新连接!\r\n')
+	                Term.connect()
+	            }
+	        });
+	        if (ssh_info) Term.ssh_info = ssh_info
+	        Term.connect();
+        })
 
-        Term.term_box = layer.open({
-            type: 1,
-            title: '宝塔终端',
-            area: ['920px', '630px'],
-            closeBtn: 2,
-            shadeClose: false,
-            content: '<a class="btlink" onclick="show_ssh_login(1)" style="position: fixed;margin-left: 83px;margin-top: -30px;">[设置]</a><div class="term-box" style="background-color:#000"><div id="term"></div></div>',
-            cancel: function () {
-                Term.term.destroy();
-
-            },
-            success: function () {
-                Term.term.open(document.getElementById('term'));
-                Term.resize();
-            }
-        });
-
-        Term.term.on('data', function (data) {
-            try {
-                Term.bws.send(data)
-            } catch (e) {
-                Term.term.write('\r\n连接丢失,正在尝试重新连接!\r\n')
-                Term.connect()
-            }
-        });
-        if (ssh_info) Term.ssh_info = ssh_info
-        Term.connect();
     },
     reset_login: function () {
         var ssh_info = {
