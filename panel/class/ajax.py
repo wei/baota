@@ -446,6 +446,7 @@ class ajax:
             #检查是否需要升级
             if updateInfo['version'] == web.ctx.session.version:
                 try:
+                    updateInfo['msg'] = public.httpGet('http://www.bt.cn/lib/update.txt')
                     return public.returnMsg(False,updateInfo['msg']);
                 except:
                     return public.returnMsg(False,'PANEL_UPDATE_ERR_NEW');

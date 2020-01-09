@@ -32,7 +32,7 @@ class panelSetup:
     def __init__(self):
         ua = web.ctx.env.get('HTTP_USER_AGENT').lower();
         if ua.find('spider') != -1 or ua.find('bot') != -1: raise web.redirect('https://www.baidu.com');
-        web.ctx.session.version = "5.9.0";
+        web.ctx.session.version = "5.9.2";
         if os.path.exists('data/title.pl'):
             web.ctx.session.webname = public.readFile('data/title.pl');
         

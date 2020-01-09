@@ -65,7 +65,6 @@ urls = (
     '/downloadApi' , 'panelDownloadApi',
     '/safe'     , 'panelSafe',
     '/public'   , 'panelPublic',
-    '/yield'    , 'panelYield',
     '/auth'     , 'panelAuth',
     '/wxapp'    , 'panelWxapp',
     '/vpro'     , 'panelVpro',
@@ -731,12 +730,16 @@ class panelSafe(common.panelSetup):
 class panelPluginApi(common.panelSetup):
     def GET(self):
         get = web.input();
+        if not get.name in ['psync']: return "Error!"
+        if not public.path_safe_check(get.name): return "Error"
         if not public.checkToken(get): return public.returnJson(False,'无效的Token!');
         if not self.CheckPlugin(get.name): return public.returnJson(False,'您没有权限访问当前插件!');
         return self.funObj();
     
     def POST(self):
         get = web.input(backupfile={},data=[]);
+        if not get.name in ['psync']: return "Error!"
+        if not public.path_safe_check(get.name): return "Error"
         if not public.checkToken(get): return public.returnJson(False,'无效的Token!');
         if not self.CheckPlugin(get.name): return public.returnJson(False,'您没有权限访问当前插件!');
         return self.funObj();
@@ -763,23 +766,25 @@ class panelDownloadApi(common.panelSetup):
         get = web.input()
         if not public.checkToken(get): get.filename = str(time.time());
         try:
+
             get.filename = '/www/server/panel/plugin/psync/backup/' + get.filename.encode('utf-8');
-            import os
-            fp = open(get.filename,'rb')
-            size = os.path.getsize(get.filename)
-            filename = os.path.basename(get.filename)
-            
-            #输出文件头
-            web.header("Content-Disposition", "attachment; filename=" + filename);
-            web.header("Content-Length", size);
-            web.header('Content-Type','application/octet-stream')
-            buff = 4096
-            while True:
-                fBody = fp.read(buff)
-                if fBody:
-                    yield fBody
-                else:
-                    return
+            if public.path_safe_check(get.filename): 
+                import os
+                fp = open(get.filename,'rb')
+                size = os.path.getsize(get.filename)
+                filename = os.path.basename(get.filename)
+                
+                #输出文件头
+                web.header("Content-Disposition", "attachment; filename=" + filename);
+                web.header("Content-Length", size);
+                web.header('Content-Type','application/octet-stream')
+                buff = 4096
+                while True:
+                    fBody = fp.read(buff)
+                    if fBody:
+                        yield fBody
+                    else:
+                        return
         except Exception, e:
             yield 'Error'
         finally:
@@ -819,12 +824,6 @@ class panelVpro(common.panelAdmin):
         data = {}
         return render.vpro(data)
 
-class panelTest:
-    def POST(self):
-        get = web.input(backup={},data=[]);
-        public.writeFile('test.pl',get['backup'].file.read());
-        return public.returnJson(True,'OK!')
-
 class panelPublic(common.panelSetup):
     def GET(self):
         return self.RequestFun();
@@ -843,6 +842,8 @@ class panelPublic(common.panelSetup):
             data = public.getJson(eval('pluwx.'+get.fun+'(get)'))
             return data
         
+        if not get.name in ['app']: return "Error!"
+        if not public.path_safe_check(get.name + '/' + get.fun): return "Error"
         import panelPlugin
         plu = panelPlugin.panelPlugin();
         get.s = '_check';
@@ -895,44 +896,6 @@ class panelPublic(common.panelSetup):
                 tmp['osname'] = public.readFile('/etc/issue').split()[0];
             web.ctx.session.server_os = tmp
 
-class panelYield:
-    def GET(self):
-        return self.RequestFun();
-    
-    def POST(self):
-        return self.RequestFun();
-    
-    def RequestFun(self):
-        get = web.input();
-        import panelPlugin
-        plu = panelPlugin.panelPlugin();
-        get.s = '_check';
-        get.client_ip = web.ctx.ip;
-        checks = plu.a(get)
-        if type(checks) != bool: return
-        try:
-            get.s = get.fun
-            get.filename = plu.a(get);
-            fp = open(get.filename,'rb')
-            size = os.path.getsize(get.filename)
-            filename = os.path.basename(get.filename)
-            
-            #输出文件头
-            web.header("Content-Disposition", "attachment; filename=" + filename);
-            web.header("Content-Length", size);
-            web.header('Content-Type','application/octet-stream');
-            buff = 4096;
-            while True:
-                fBody = fp.read(buff)
-                if fBody:
-                    yield fBody
-                else:
-                    return
-        except Exception, e:
-            yield 'Error'
-        finally:
-            if fp:
-                fp.close()
 
 class panelRobots:
     def GET(self):

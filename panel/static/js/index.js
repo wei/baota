@@ -473,7 +473,7 @@ function checkUpdate(){
 	$.get('/ajax?action=UpdatePanel&check=true',function(rdata){
 		layer.close(loadT);
 		if(rdata.status === false){
-			layer.confirm(rdata.msg,{title:lan.index.update_check,icon:1,closeBtn: 2,btn: [lan.public.know,lan.public.close]});
+			layer.confirm(rdata.msg,{title:lan.index.update_check,icon:rdata.status?1:2,closeBtn: 2,btn: [lan.public.know,lan.public.close]});
 			return;
 		}
 		layer.msg(rdata.msg,{icon:1});
@@ -908,5 +908,4 @@ function showDangerIP(){
 		content:'<div class="pd15 divtable" style="height:430px;overflow:auto"><table class="table table-hover"><thead><tr><th>源IP地址</th><th>用户</th><th style="text-align: right;">时间</th></tr></thead>'+body+'</table></div><p style="color:red;padding-left:12px">*以上记录来源于本服务器日志，查看命令：cat /var/log/secure</p>'
 	});
 }
-
 IsYunwei();

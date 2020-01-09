@@ -6,7 +6,7 @@
 # +-------------------------------------------------------------------
 # | Author: 黄文良 <287962566@qq.com>
 # +-------------------------------------------------------------------
-import os, sys, time,string
+import os, sys, time,string,re
 
 def M(table):
     import db
@@ -594,7 +594,8 @@ def checkInput(data):
                 ]
    for v in checkList:
        data = data.replace(v['d'],v['r']);
-   return data;
+   return data;
+
 #取文件指定尾行数
 def GetNumLines(path,num,p=1):
     try:
@@ -635,7 +636,8 @@ def GetNumLines(path,num,p=1):
             if not b: break;
         fp.close()
     except: data = []
-    return "\n".join(data)
+    return "\n".join(data)
+
 #验证证书
 def CheckCert(certPath = 'ssl/certificate.pem'):
     openssl = '/usr/local/openssl/bin/openssl';
@@ -707,5 +709,14 @@ def get_string_arr(t):
                 if s1 == s_arr[i][j]:
                     t_arr.append(str(i) + str(j))
     return t_arr
+
+#校验路径安全
+def path_safe_check(path):
+    checks = ['..','./','\\','%','$','^','&','*','~','@','#']
+    for c in checks:
+        if path.find(c) != -1: return False
+    rep = r"^[\w\s\.\/-]+$"
+    if not re.match(rep,path): return False
+    return True
     
     
