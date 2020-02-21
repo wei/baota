@@ -11,7 +11,7 @@ export default async (req, res) => {
     const data = await Promise.all(projects.map(async project => {
         return {
             name: project.alias,
-            releases: await loadCache(project.owner, project.repository, project.alias)
+            releases: await loadCache(project.owner, project.repository, project.alias) || []
         }
     }))
 

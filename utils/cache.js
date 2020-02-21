@@ -35,7 +35,7 @@ const refreshCache = async (owner, repo, alias) => {
     const data = await response.json()
 
     if (!Array.isArray(data) || data.length === 0) {
-        return
+        return []
     }
 
     const releases = data
