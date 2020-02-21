@@ -12,10 +12,10 @@
   "license": "ISC",
   "dependencies": {
     "@zeit/next-css": "^1.0.1",
-    "date-fns": "^2.2.1",
+    "date-fns": "^2.9.0",
     "isomorphic-unfetch": "^3.0.0",
-    "next": "^9.0.6",
-    "react": "^16.9.0",
-    "react-dom": "^16.9.0"
+    "next": "^9.2.2",
+    "react": "^16.12.0",
+    "react-dom": "^16.12.0"
   }
 }
