@@ -20,9 +20,11 @@ const Item = ({ value, hasAll, noNotes }) => (
 
         {value.files.map((file, i) =>
             <div key={i} className="item">
-                <div className="fileType">{file.type}: <span className="url">
-                    <a href={`/api/download/${value.owner}/${value.repo}/${value.version}/${file.id}`}>{file.name}</a>
-                </span></div>
+                <div className="fileType">
+                    <span className="url">
+                        <a href={`/api/download/${value.owner}/${value.repo}/${value.version}/${file.id}`}>{file.name}</a>
+                    </span>
+                </div>
                 <div className="size">{(file.size/1000/1000).toFixed(2)} MB</div>
             </div>
         )}

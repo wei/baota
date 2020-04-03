@@ -66,18 +66,18 @@ Get infromation in the JSON format about all projects with a single call.
 
 Get a direct proxied download link for the specific asset (can be retrieved from `/api` call).
 
-### /api/fetch/[onwer]/[repo]/[platform]/[keyword]/[version]
+### /api/fetch/[onwer]/[repo]/[keyword]/[version]
 
 Auto-guess and get a direct download link for an asset matching provided criteria.
 
-Both `platform` and `keyword` are used to search for the match inside of the asset label string.
+The `keyword` is used to search for the match inside of the asset label string.
 
 #### Examples:
 
 Assuming your asset name would look like: `myasset-win-server-v12.3.exe`, or `myasset-linux-worker-1.23.2`, both cases below would return the appropriate asset respectively:
 
-* `/api/fetch/inlife/releases/win/serv/latest`
-* `/api/fetch/inlife/nexrender/lin/worker/1.23.2`
+* `/api/fetch/inlife/releases/win-serv/latest`
+* `/api/fetch/inlife/nexrender/linux-worker/1.23.2`
 
 By default all releases are cached for 15 minutes. To bust cache (for example right after the release) you can call `GET /api?cache=bust`
 

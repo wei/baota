@@ -66,9 +66,6 @@ const refreshCache = async (owner, repo, alias) => {
             id: asset.id,
             name: asset.name,
             size: asset.size,
-            type: asset.name.indexOf('win') === -1
-                ? asset.name.indexOf('lin') === -1
-                ? 'macos' : 'linux' : 'windows'
         }))
 
         return newEntry

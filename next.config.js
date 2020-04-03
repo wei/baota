@@ -1,5 +1,5 @@
 const path    = require('path')
-const withCSS = require('@zeit/next-css')
+// const withCSS = require('@zeit/next-css')
 
 module.exports = phase => {
     const nextConfig = {
@@ -17,5 +17,5 @@ module.exports = phase => {
         },
     }
 
-    return withCSS(nextConfig)
+    return /*withCSS*/(nextConfig)
 }

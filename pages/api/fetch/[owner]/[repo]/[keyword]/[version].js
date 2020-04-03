@@ -6,7 +6,7 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN || null;
 
 export default async (req, res) => {
     const {projects} = config
-    const {owner, repo, platform, keyword, version} = req.query
+    const {owner, repo, keyword, version} = req.query
 
     const projectData = config.projects.find(project => project.alias == `${owner}/${repo}`)
 
@@ -34,7 +34,7 @@ export default async (req, res) => {
     })
 
     const file = release.files.find(file => {
-        return (file.type || file.name).indexOf(platform) !== -1 && file.name.indexOf(keyword) != -1;
+        return file.name.indexOf(keyword) != -1;
     })
 
     const result = await fetch(
