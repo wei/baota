@@ -1,6 +1,6 @@
 {
     "title": "Title",
-    "prerelases": false,
+    "prereleases": false,
     "projects": [
         {
             "owner": "username",
