@@ -4,7 +4,7 @@
 #-------------------------------------------------------------------
 # Copyright (c) 2015-2019 宝塔软件(http:#bt.cn) All rights reserved.
 #-------------------------------------------------------------------
-# Author: 黄文良 <287962566@qq.com>
+# Author: hwliang <hwl@bt.cn>
 #-------------------------------------------------------------------
 
 #------------------------------
@@ -70,7 +70,7 @@ class panelAuth:
             return data
         except:
             del(session['get_product_list'])
-            return public.returnMsg(False,'正在同步信息，请重试!')
+            return public.returnMsg(False,'正在同步信息，请重试!' + public.get_error_info())
     
     def get_plugin_info(self,pluginName):
         data = self.get_business_plugin(None)

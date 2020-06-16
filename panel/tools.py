@@ -4,7 +4,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2099 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <287962566@qq.com>
+# | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
 
 #------------------------------
@@ -155,12 +155,30 @@ history -c
 '''
     os.system(command)
     print('\t\033[1;32m[done]\033[0m')
-    public.writeFile('/www/server/panel/install.pl',"True")
+    
+    
+    print("|-请选择用户初始化方式：")
+    print("="*50)
+    print(" (1) 访问面板页面时显示初始化页面")
+    print(" (2) 首次启动时自动随机生成新帐号密码")
+    print("="*50)
+    p_input = input("请选择初始化方式(default: 1): ")
+    print(p_input)
+    if p_input in [2,'2']:
+        public.writeFile('/www/server/panel/aliyun.pl',"True")
+        s_file = '/www/server/panel/install.pl'
+        if os.path.exists(s_file): os.remove(s_file)
+        public.M('config').where("id=?",('1',)).setField('status',1)
+    else:
+        public.writeFile('/www/server/panel/install.pl',"True")
+        public.M('config').where("id=?",('1',)).setField('status',0)
     port = public.readFile('data/port.pl').strip()
-    public.M('config').where("id=?",('1',)).setField('status',0)
     print('========================================================')
     print('\033[1;32m|-面板封装成功,请不要再登陆面板做任何其它操作!\033[0m')
-    print('\033[1;41m|-面板初始化地址: http://{SERVERIP}:'+port+'/install\033[0m')
+    if not p_input in [2,'2']:
+        print('\033[1;41m|-面板初始化地址: http://{SERVERIP}:'+port+'/install\033[0m')
+    else:
+        print('\033[1;41m|-获取初始帐号密码命令:bt default \033[0m')
 
 #清空正在执行的任务
 def CloseTask():
@@ -338,8 +356,8 @@ def set_panel_username(username = None):
     import db
     sql = db.Sql()
     if username:
-        if len(username) < 5:
-            print("|-错误，用户名长度不能少于5位")
+        if len(username) < 3:
+            print("|-错误，用户名长度不能少于3位")
             return
         if username in ['admin','root']:
             print("|-错误，不能使用过于简单的用户名")
@@ -371,10 +389,10 @@ def setup_idc():
         pInfo['product'] = u'与宝塔联合定制版'
         public.writeFile(pFile,json.dumps(pInfo))
         tFile = panelPath + '/data/title.pl'
-        titleNew = (pInfo['brand'] + u'面板').encode('utf-8')
+        titleNew = pInfo['brand'] + u'面板'
         if os.path.exists(tFile):
-            title = public.readFile(tFile).strip()
-            if title == '宝塔Linux面板' or title == '': 
+            title = public.GetConfigValue('title')
+            if title == '' or title == '宝塔Linux面板': 
                 public.writeFile(tFile,titleNew)
                 public.SetConfigValue('title',titleNew)
         else:
@@ -400,7 +418,7 @@ def update_to6():
         os.system('/bin/bash ' + to_file + ' install &> /tmp/plugin_update.log 2>&1')
         print("    \033[32m[成功]\033[0m")
     print("====================================================")
-    print("\033[32m所有插件已成功升级到6.0兼容!\033[0m")
+    print("\033[32m所有插件已成功升级到最新!\033[0m")
     print("====================================================")
 
 #命令行菜单
@@ -449,12 +467,15 @@ def bt_cli(u_input = 0):
             input_pwd = raw_input("请输入新的面板密码：")
         else:
             input_pwd = input("请输入新的面板密码：")
+        if len(input_pwd.strip()) < 5:
+            print("|-错误，密码长度不能小于5位")
+            return
         set_panel_pwd(input_pwd.strip(),True)
     elif u_input == 6:
         if sys.version_info[0] == 2:
-            input_user = raw_input("请输入新的面板用户名(>5位)：")
+            input_user = raw_input("请输入新的面板用户名(>3位)：")
         else:
-            input_user = input("请输入新的面板用户名(>5位)：")
+            input_user = input("请输入新的面板用户名(>3位)：")
         set_panel_username(input_user.strip())
     elif u_input == 7:
         if sys.version_info[0] == 2:
@@ -470,7 +491,7 @@ def bt_cli(u_input = 0):
             return
 
         import re
-        rep = "^[\w@\._]+$"
+        rep = r"^[\w@\._]+$"
         if not re.match(rep, input_mysql):
             print("|-错误，密码中不能包含特殊符号")
             return
@@ -489,6 +510,9 @@ def bt_cli(u_input = 0):
         old_port = int(public.readFile('data/port.pl'))
         if old_port == input_port:
             print("|-错误，与面板当前端口一致，无需修改")
+            return
+        if input_port > 65535 or input_port < 1:
+            print("|-错误，可用端口范围在1-65535之间")
             return
 
         is_exists = public.ExecShell("lsof -i:%s|grep LISTEN|grep -v grep" % input_port)

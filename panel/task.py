@@ -109,8 +109,9 @@ def startTask():
                             ExecShell(value['execstr'])
                         end = int(time.time())
                         sql.table('tasks').where("id=?",(value['id'],)).save('status,end',('1',end))
-                        if(sql.table('tasks').where("status=?",('0')).count() < 1): 
-                            ExecShell('rm -f ' + isTask)
+                        if(sql.table('tasks').where("status=?",('0')).count() < 1):
+                            if os.path.exists(isTask): os.remove(isTask)
+                            #ExecShell('rm -f ' + isTask)
             except:
                 pass
             siteEdate()
@@ -435,19 +436,18 @@ def check_panel_ssl():
     try:
         while True:
             lets_info = public.readFile("/www/server/panel/ssl/lets.info")
-            if lets_info:
-                lets_info = loads(lets_info)
-                cert_info_file = "/www/server/panel/vhost/ssl/" + lets_info["domain"] + "/info.json"
-                cert_info = public.readFile(cert_info_file)
-                if cert_info:
-                    cert_info = loads(cert_info)
-                    if setPanelLets.setPanelLets().copy_cert(cert_info):
-                        strTime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
-                        public.writeFile("/tmp/panelSSL.pl","{} 面板证书更新成功".format(strTime))
+            if not lets_info:
+                time.sleep(600)
+                continue
+            lets_info = loads(lets_info)
+            if setPanelLets.setPanelLets().check_cert_update(lets_info['domain']):
+                strTime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
+                public.writeFile("/tmp/panelSSL.pl","{} Panel certificate updated successfully\n".format(strTime),"a+")
+                public.writeFile('/www/server/panel/data/reload.pl',"1")
             time.sleep(60)
     except:
         e = public.get_error_info()
-        public.writeFile("/tmp/panelSSL.pl", str(e))
+        public.writeFile("/tmp/panelSSL.pl", str(e),"a+")
 
 #监控面板状态
 def panel_status():
@@ -600,13 +600,38 @@ def HttpGet(url,timeout = 6,headers = {}):
         except Exception as ex:
             return str(ex)
 
-if __name__ == "__main__":
+
+#定时任务去检测邮件信息
+def send_mail_time():
+    p_path = '/www/server/panel/plugin/bt_security/'
+    p_reload = p_path + '/reload.pl'
+    if not os.path.exists(p_path):
+        return False
+    sys.path.append(p_path)
+    try:
+        import send_mail_msg
+    except:
+        return False
+    msg=send_mail_msg.webshell_check()
+    while True:
+        try:
+            if os.path.exists(p_reload):
+                public.mod_reload(send_mail_msg)
+                os.remove(p_reload)
+            msg.main()
+            time.sleep(60)
+        except:
+            time.sleep(180)
+            send_mail_time()
+
+def main():
     main_pid = 'logs/task.pid'
-    os.system("kill -9 $(cat {}) &> /dev/null".format(main_pid))
+    if os.path.exists(main_pid):
+        os.system("kill -9 $(cat {}) &> /dev/null".format(main_pid))
     pid = os.fork()
     if pid: sys.exit(0)
     
-    os.umask(0)
+    #os.umask(0)
     os.setsid()
 
     _pid = os.fork()
@@ -616,8 +641,11 @@ if __name__ == "__main__":
 
     sys.stdout.flush()
     sys.stderr.flush()
-
-    err_f = open('logs/task.log','a+')
+    task_log_file='logs/task.log'
+    if not os.path.exists(task_log_file):
+        open(task_log_file,'w+').close()
+        
+    err_f = open(task_log_file,'a+')
     os.dup2(err_f.fileno(),sys.stderr.fileno())
     err_f.close()
     public.ExecShell('rm -rf /www/server/phpinfo/*')
@@ -643,10 +671,18 @@ if __name__ == "__main__":
     p.setDaemon(True)
     p.start()
 
+    p = threading.Thread(target=send_mail_time)
+    p.setDaemon(True)
+    p.start()
+
+
     task_obj = panelTask.bt_task()
     p = threading.Thread(target=task_obj.start_task)
     p.setDaemon(True)
     p.start()
 
     startTask()
+
+if __name__ == "__main__":
+    main()
 

@@ -4,7 +4,7 @@
 #-------------------------------------------------------------------
 # Copyright (c) 2015-2017 宝塔软件(http:#bt.cn) All rights reserved.
 #-------------------------------------------------------------------
-# Author: 黄文良 <287962566@qq.com>
+# Author: hwliang <hwl@bt.cn>
 #-------------------------------------------------------------------
 
 #------------------------------
@@ -314,7 +314,7 @@ SetLink
                 result = mysql_obj.query("show databases")
                 isError=self.IsSqlError(result)
                 if  isError != None: 
-                    public.ExecShell("cd /www/server/panel && python tools.py root \"" + password + "\"")
+                    public.ExecShell("cd /www/server/panel && "+public.get_python_bin()+" tools.py root \"" + password + "\"")
                     is_modify = False
             if is_modify:
                 m_version = public.readFile(public.GetConfigValue('setup_path') + '/mysql/version.pl')
@@ -416,7 +416,7 @@ SetLink
             name=''
             if filename == 'qiniu':
                 name = public.M('backup').where(where,(id,)).getField('name')
-                public.ExecShell("python "+public.GetConfigValue('setup_path') + '/panel/script/backup_qiniu.py delete_file ' + name)
+                public.ExecShell(public.get_python_bin() + " "+public.GetConfigValue('setup_path') + '/panel/script/backup_qiniu.py delete_file ' + name)
             
             public.M('backup').where(where,(id,)).delete()
             public.WriteLog("TYPE_DATABASE", 'DATABASE_BACKUP_DEL_SUCCESS',(name,filename))
@@ -730,11 +730,19 @@ SetLink
         m_version = public.readFile('/www/server/mysql/version.pl')
         if not m_version: m_version = ''
         for g in gets:
-            if m_version.find('8.') == 0 and g in ['query_cache_type','query_cache_size']: continue
+            if m_version.find('8.') == 0 and g in ['query_cache_type','query_cache_size']: 
+                n += 1
+                continue
             s = 'M'
-            if n > 5: s = 'K'
+            if n > 5 and not g in ['key_buffer_size','query_cache_size','tmp_table_size','max_heap_table_size','innodb_buffer_pool_size','innodb_log_buffer_size']: s = 'K'
             if g in emptys: s = ''
-            rep = '\s*'+g+'\s*=\s*\d+(M|K|k|m|G)?\n'
+            if g in ['innodb_log_buffer_size']: 
+                s = 'M'
+                if int(get[g]) < 8:
+                    return public.returnMsg(False,'innodb_log_buffer_size不能小于8MB')
+            
+            rep = r'\s*'+g+r'\s*=\s*\d+(M|K|k|m|G)?\n'
+
             c = g+' = ' + get[g] + s +'\n'
             if mycnf.find(g) != -1:
                 mycnf = re.sub(rep,'\n'+c,mycnf,1)

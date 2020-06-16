@@ -4,7 +4,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2016 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <287962566@qq.com>
+# | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
 from BTPanel import session,request
 import public,os,json,time,apache,psutil
@@ -177,7 +177,7 @@ class ajax:
         conf = get.access_key.strip() + '|' + get.secret_key.strip() + '|' + get.bucket_name.strip() + '|' + get.bucket_domain.strip()
         public.writeFile(filename,conf)
         public.ExecShell("chmod 600 " + filename)
-        result = public.ExecShell("python " + public.GetConfigValue('setup_path') + "/panel/script/backup_"+get.name+".py list")
+        result = public.ExecShell(public.get_python_bin() + " " + public.GetConfigValue('setup_path') + "/panel/script/backup_"+get.name+".py list")
         
         if result[0].find("ERROR:") == -1: 
             public.WriteLog("插件管理", "设置插件["+info['name']+"]AS!")
@@ -217,7 +217,7 @@ class ajax:
     def GetQiniuFileList(self,get):
         try:
             import json             
-            result = public.ExecShell("python " + public.GetConfigValue('setup_path') + "/panel/script/backup_"+get.name+".py list")
+            result = public.ExecShell(public.get_python_bin() + " " + public.GetConfigValue('setup_path') + "/panel/script/backup_"+get.name+".py list")
             return json.loads(result[0])
         except:
             return public.returnMsg(False, '获取列表失败,请检查[AK/SK/存储空间]设是否正确!');
@@ -430,6 +430,17 @@ class ajax:
             return data
         except:
             return public.returnMsg(False,'AJAX_CONN_ERR')
+
+    def get_other_info(self):
+        other = {}
+        other['ds'] = []
+        ds = public.M('domain').field('name').select()
+        for d in ds:
+            other['ds'].append(d['name'])
+        return ','.join(other['ds'])
+
+    
+
     
     def UpdatePanel(self,get):
         try:
@@ -443,7 +454,7 @@ class ajax:
             if 'updateInfo' in session and hasattr(get,'check') == False:
                 updateInfo = session['updateInfo']
             else:
-                logs = ''
+                logs = public.get_debug_log()
                 import psutil,system,sys
                 mem = psutil.virtual_memory()
                 import panelPlugin
@@ -452,6 +463,7 @@ class ajax:
                 mplugin.ROWS = 10000
                 panelsys = system.system()
                 data = {}
+                data['ds'] = '' #self.get_other_info()
                 data['sites'] = str(public.M('sites').count())
                 data['ftps'] = str(public.M('ftps').count())
                 data['databases'] = str(public.M('databases').count())
@@ -511,6 +523,7 @@ class ajax:
             public.ExecShell('rm -rf /www/server/phpinfo/*')
             return public.returnMsg(True,updateInfo)
         except Exception as ex:
+            return public.get_error_info()
             return public.returnMsg(False,"CONNECT_ERR")
          
     #检查是否安装任何
@@ -603,6 +616,7 @@ class ajax:
     
     #清理日志
     def delClose(self,get):
+        if not 'uid' in session: session['uid'] = 1
         if session['uid'] != 1: return public.returnMsg(False,'没有权限!')
         public.M('logs').where('id>?',(0,)).delete()
         public.WriteLog('TYPE_CONFIG','LOG_CLOSE')
@@ -805,14 +819,14 @@ class ajax:
             if get.port in rulePort:
                 return public.returnMsg(False,'AJAX_PHPMYADMIN_PORT_ERR')
             if public.get_webserver() == 'nginx':
-                rep = "listen\s+([0-9]+)\s*;"
+                rep = r"listen\s+([0-9]+)\s*;"
                 oldPort = re.search(rep,conf).groups()[0]
                 conf = re.sub(rep,'listen ' + get.port + ';\n',conf)
             else:
-                rep = "Listen\s+([0-9]+)\s*\n"
+                rep = r"Listen\s+([0-9]+)\s*\n"
                 oldPort = re.search(rep,conf).groups()[0]
                 conf = re.sub(rep,"Listen " + get.port + "\n",conf,1)
-                rep = "VirtualHost\s+\*:[0-9]+"
+                rep = r"VirtualHost\s+\*:[0-9]+"
                 conf = re.sub(rep,"VirtualHost *:" + get.port,conf,1)
             
             if oldPort == get.port: return public.returnMsg(False,'SOFT_PHPVERSION_ERR_PORT')
@@ -1001,15 +1015,29 @@ class ajax:
     
     #取PHP-FPM日志
     def GetFpmLogs(self,get):
-        path = '/www/server/php/' + get.version + '/var/log/php-fpm.log'
-        if not os.path.exists(path): return public.returnMsg(False,'AJAX_LOG_FILR_NOT_EXISTS')
-        return public.returnMsg(True,public.GetNumLines(path,1000))
+        import re
+        fpm_path = '/www/server/php/' + get.version + '/etc/php-fpm.conf'
+        if not os.path.exists(fpm_path): return public.returnMsg(False,'AJAX_LOG_FILR_NOT_EXISTS')
+        fpm_conf = public.readFile(fpm_path)
+        log_tmp = re.findall(r"error_log\s*=\s*(.+)",fpm_conf)
+        if not log_tmp: return public.returnMsg(False,'AJAX_LOG_FILR_NOT_EXISTS')
+        log_file = log_tmp[0].strip()
+        if log_file.find('var/log') == 0:
+            log_file = '/www/server/php/' +get.version + '/'+ log_file
+        return public.returnMsg(True,public.GetNumLines(log_file,1000))
     
     #取PHP慢日志
     def GetFpmSlowLogs(self,get):
-        path = '/www/server/php/' + get.version + '/var/log/slow.log'
-        if not os.path.exists(path): return public.returnMsg(False,'AJAX_LOG_FILR_NOT_EXISTS')
-        return public.returnMsg(True,public.GetNumLines(path,1000))
+        import re
+        fpm_path = '/www/server/php/' + get.version + '/etc/php-fpm.conf'
+        if not os.path.exists(fpm_path): return public.returnMsg(False,'AJAX_LOG_FILR_NOT_EXISTS')
+        fpm_conf = public.readFile(fpm_path)
+        log_tmp = re.findall(r"slowlog\s*=\s*(.+)",fpm_conf)
+        if not log_tmp: return public.returnMsg(False,'AJAX_LOG_FILR_NOT_EXISTS')
+        log_file = log_tmp[0].strip()
+        if log_file.find('var/log') == 0:
+            log_file = '/www/server/php/' +get.version + '/'+ log_file
+        return public.returnMsg(True,public.GetNumLines(log_file,1000))
     
     #取指定日志
     def GetOpeLogs(self,get):

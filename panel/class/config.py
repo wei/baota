@@ -4,7 +4,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2017 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <287962566@qq.com>
+# | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
 import public,re,sys,os,nginx,apache,json,time
 try:
@@ -69,10 +69,10 @@ class config:
 
     # 添加自定义邮箱地址
     def user_mail_send(self, get):
-        if not (hasattr(get, 'email') or hasattr(get, 'stmp_pwd') or hasattr(get, 'hosts')):
+        if not (hasattr(get, 'email') or hasattr(get, 'stmp_pwd') or hasattr(get, 'hosts') or hasattr(get, 'port')):
             return public.returnMsg(False, '请填写完整信息')
         # 自定义邮件
-        self.mail.qq_stmp_insert(get.email.strip(), get.stmp_pwd.strip(), get.hosts.strip())
+        self.mail.qq_stmp_insert(get.email.strip(), get.stmp_pwd.strip(), get.hosts.strip(),get.port.strip())
         # 测试发送
         if self.mail.qq_smtp_send(get.email.strip(), '宝塔告警测试邮件', '宝塔告警测试邮件'):
             if not get.email.strip() in self.__mail_list:
@@ -82,13 +82,14 @@ class config:
         else:
             ret = []
             public.writeFile(self.__mail_config, json.dumps(ret))
-            return public.returnMsg(False, '邮件发送失败,请查看STMP密码是否正确,或者Hosts是否正确')
+            return public.returnMsg(False, '邮件发送失败,请检查信息是否正确,或者更换其他端口进行尝试')
 
     # 查看自定义邮箱配置
     def get_user_mail(self, get):
         qq_mail_info = json.loads(public.ReadFile(self.__mail_config))
         if len(qq_mail_info) == 0:
             return public.returnMsg(False, '无信息')
+        if not 'port' in qq_mail_info:qq_mail_info['port']=465
         return public.returnMsg(True, qq_mail_info)
 
 
@@ -323,7 +324,7 @@ class config:
         if get.admin_path != '/':
             if len(get.admin_path) < 6: return public.returnMsg(False,'安全入口地址长度不能小于6位!')
             if get.admin_path in admin_path_checks: return public.returnMsg(False,'该入口已被面板占用,请使用其它入口!')
-            if not re.match(r"^/[\w\./-_]+$",get.admin_path):  return public.returnMsg(False,'入口地址格式不正确,示例: /my_panel')
+            if not public.path_safe_check(get.admin_path) or get.admin_path[-1] == '.':  return public.returnMsg(False,'入口地址格式不正确,示例: /my_panel')
             if get.admin_path[0] != '/': return public.returnMsg(False,'入口地址格式不正确,示例: /my_panel')
         else:
             get.domain = public.readFile('data/domain.conf')
@@ -488,7 +489,8 @@ class config:
         min_spare_servers = get.min_spare_servers
         max_spare_servers = get.max_spare_servers
         pm = get.pm
-        
+        if not pm in ['static','dynamic','ondemand']:
+            return public.returnMsg(False,'错误的运行模式!')
         file = public.GetConfigValue('setup_path')+"/php/"+version+"/etc/php-fpm.conf"
         conf = public.readFile(file)
         
@@ -506,6 +508,10 @@ class config:
         
         rep = r"\s*pm\s*=\s*(\w+)\s*"
         conf = re.sub(rep, "\npm = "+pm+"\n", conf)
+        if pm == 'ondemand':
+            if conf.find('listen.backlog = -1') != -1:
+                rep = r"\s*listen\.backlog\s*=\s*([0-9-]+)\s*"
+                conf = re.sub(rep, "\nlisten.backlog = 8192\n", conf)
         
         public.writeFile(file,conf)
         public.phpReload(version)
@@ -999,53 +1005,16 @@ class config:
         return pluginInfo
 
     def get_token(self,get):
-        save_path = '/www/server/panel/config/api.json'
-        if not os.path.exists(save_path): 
-            data = { "open":False, "token":"", "limit_addr":[] }
-            public.WriteFile(save_path,json.dumps(data))
-            public.ExecShell("chmod 600 " + save_path)
-        data = json.loads(public.ReadFile(save_path))
-        
-        if 'token_crypt' in data:
-            data['token'] = public.de_crypt(data['token'],data['token_crypt'])
-        else:
-            data['token'] = "***********************************"
-        data['limit_addr'] = '\n'.join(data['limit_addr'])
-        return data
+        import panelApi
+        return panelApi.panelApi().get_token(get)
 
     def set_token(self,get):
-        if 'request_token' in get: return public.returnMsg(False,'不能通过API接口配置API')
-        save_path = '/www/server/panel/config/api.json'
-        data = json.loads(public.ReadFile(save_path))
-        if get.t_type == '1':
-            token = public.GetRandomString(32)
-            data['token'] = public.md5(token)
-            data['token_crypt'] = public.en_crypt(data['token'],token).decode('utf-8')
-            public.WriteLog('API配置','重新生成API-Token')
-        elif get.t_type == '2':
-            data['open'] = not data['open']
-            stats = {True:'开启',False:'关闭'}
-            public.WriteLog('API配置','%sAPI接口' % stats[data['open']])
-            token = stats[data['open']] + '成功!'
-        elif get.t_type == '3':
-            data['limit_addr'] = get.limit_addr.split('\n')
-            public.WriteLog('API配置','变更IP限制为[%s]' % get.limit_addr)
-            token ='保存成功!'
-
-        public.WriteFile(save_path,json.dumps(data))
-        public.ExecShell("chmod 600 " + save_path)
-        return public.returnMsg(True,token)
-
+        import panelApi
+        return panelApi.panelApi().set_token(get)
 
     def get_tmp_token(self,get):
-        save_path = '/www/server/panel/config/api.json'
-        if not 'request_token' in get: return public.returnMsg(False,'只能通过API接口获取临时密钥')
-        data = json.loads(public.ReadFile(save_path))
-        data['tmp_token'] = public.GetRandomString(64)
-        data['tmp_time'] = time.time()
-        public.WriteFile(save_path,json.dumps(data))
-        return public.returnMsg(True,data['tmp_token'])
-
+        import panelApi
+        return panelApi.panelApi().get_tmp_token(get)
 
     def GetNginxValue(self,get):
         n = nginx.nginx()

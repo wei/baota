@@ -13,35 +13,12 @@ var soft = {
         if (type == 0) type = bt.get_cookie('softType');
         if (page == 0) page = bt.get_cookie('p' + type);
         if (type == '11') {
-            soft.get_dep_list(1)
+            soft.get_dep_list(1);
             return;
         }
         soft.is_install = false;
         bt.soft.get_soft_list(page, type, search, function (rdata) {
-        	console.log(rdata);
-            if (rdata.pro >= 0) {
-                $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong>当前为专业版，专业版可以免费使用专业版插件，过期时间：'+ (rdata.pro > 0 ?bt.format_data(rdata.pro, 'yyyy/MM/dd'):'永久授权') +'</strong><button style="margin-left:8px;display:'+ (rdata.pro>0?'inline-block':'none') +';" class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_pro()" title="续费专业版">立即续费</button>');
-            }
-            if (rdata.ltd >= 0) {
-	            $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong>当前为企业版，企业版可以免费使用专业版及企业版插件，过期时间：'+ (rdata.ltd >0 ?bt.format_data(rdata.ltd, 'yyyy/MM/dd'):'永久授权') +'</strong><button style="margin-left:8px;display:'+ (rdata.ltd >0?'inline-block':'none') +';" class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_ltd()" title="续费企业版">立即续费</button>');
-            }
-            if (rdata.pro === -2) {
-                $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong>专业版已到期，付费插件暂停使用。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_pro()" title="立即续费专业版" style="margin-left:8px">立即续费</button>');
-            }
-            if(rdata.ltd === -2){
-                $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong>企业版已到期，付费插件和企业版插件暂停使用。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_ltd()" title="立即续费企业版" style="margin-left:8px">立即续费</button>');
-            }
-            if (rdata.pro === -1 && rdata.ltd === -1) {
-                $("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong > 专业版可以免费使用专业版插件，企业版可以免费使用专业版及企业版插件 。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_commercial_view()" title="立即升级" style="margin-left:8px">立即升级</button></div>');
-            }
-            // if(type == 12 && rdata.ltd === -1 && rdata.pro >= 0){
-            // 	$("#updata_pro_info").html('<div class="alert alert-success" style="margin-bottom:15px"><strong >企业版可以免费使用专业版及企业版插件。</strong><button class="btn btn-success btn-xs va0 updata_pro" onclick="bt.soft.updata_ltd()" title="立即升级" style="margin-left:8px">立即升级</button></div>');
-            // }
-            if (type == 10) {
-                $("#updata_pro_info").html('<div class="alert alert-danger" style="margin-bottom:15px"><strong>安全提醒：第三方插件上架前，宝塔官方进行了安全审计，但可能还存在安全风险，在生产环境使用前请自行甄别 </strong><a class="btn btn-success btn-xs va0" href="https://www.bt.cn/developer/" title="免费入驻" style="margin-left: 8px" target="_blank">免费入驻</a><a class="btn btn-success btn-xs va0" href="https://www.bt.cn/bbs/forum-40-1.html" title="点击获取第三方应用" style="margin-left: 8px" target="_blank">获取第三方应用</a><input type="file" style="display:none;" accept=".zip,.tar.gz" id="update_zip" multiple="multiple"><button class="btn btn-success btn-xs" onclick="soft.update_zip_open()" style="margin-left:8px">导入插件</button></div>')
-            } else if (type == 11) {
-                $("#updata_pro_info").html('<div class="alert alert-info" style="margin-bottom:15px"><strong>即将上线，敬请期待</strong></div>')
-            }
+            soft.set_soft_tips('#updata_pro_info',type);
             var tBody = '';
             rdata.type.unshift({ icon: 'icon', id: 0, ps: '全部', sort: 1, title: '全部' },{ icon: 'icon', id: -1, ps: '已安装', sort: 1, title: '已安装' })
             for (var i = 0; i < rdata.type.length; i++) {
@@ -140,7 +117,7 @@ var soft = {
                             if (item.pid > 0) {  //判断是否为付费插件
                                 if (item.endtime > 0) {
                                     if (item.type != 10) { //判断是否为第三方插件
-                                        endtime = bt.format_data(item.endtime, 'yyyy/MM/dd') + '<a class="btlink" onclick="bt.soft.re_plugin_pay(\'' + item.title + '\',\'' + item.pid + '\',1,'+ item.endtime +','+ rdata.pro +','+ rdata.ltd +','+ type +')"> (续费)</a>';
+                                        endtime = bt.format_data(item.endtime, 'yyyy/MM/dd') + '<a class="btlink" onclick=\'bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,plugin:true,renew:item.endtime}) +')\'> (续费)</a>';
                                     } else {
                                         endtime = bt.format_data(item.endtime, 'yyyy/MM/dd') + '<a class="btlink" onclick="bt.soft.re_plugin_pay_other(\'' + item.title + '\',\'' + item.pid + '\',1,'+item.price+')"> (续费)</a>';
                                     }
@@ -153,7 +130,7 @@ var soft = {
                                 }
                                 else if (item.endtime === -2) {
                                     if (item.type != 10) {
-                                        endtime = '已到期' + '<a class="btlink" onclick="bt.soft.re_plugin_pay(\'' + item.title + '\',\'' + item.pid + '\',1)"> (续费)</a>';
+                                        endtime = '已到期' + '<a class="btlink" onclick="bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,plugin:true,renew:item.endtime}) +')"> (续费)</a>';
                                     }else {
                                         endtime = '已到期' + '<a class="btlink" onclick="bt.soft.re_plugin_pay_other(\'' + item.title + '\',\'' + item.pid + '\',1,'+item.price+')"> (续费)</a>';
                                     }
@@ -215,7 +192,7 @@ var soft = {
                                         break;
                                 }
                                 if (item.type != 10) {
-                                    pay_opt = '<a class="btlink" onclick="bt.soft.re_plugin_pay(\'' + item.title + '\',\'' + item.pid + '\',' + re_status + ')">' + re_msg + '</a>';
+                                    pay_opt = '<a class="btlink" onclick=\'bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,plugin:true,renew:item.endtime}) +')\'>' + re_msg + '</a>';
                                 } else {
                                     pay_opt = '<a class="btlink" onclick="bt.soft.re_plugin_pay_other(\'' + item.title + '\',\'' + item.pid + '\',' + re_status + ','+item.price+')">' + re_msg + '</a>';
                                 }
@@ -246,7 +223,7 @@ var soft = {
                                                 var min_version = item.versions[i]
                                                 var ret = bt.check_version(item.version, min_version.m_version + '.' + min_version.version);
                                                 if (ret > 0) {
-                                                    if (ret == 2) option += '<a class="btlink" onclick="bt.soft.update_soft(\'' + item.name + '\',\'' + item.title + '\',\'' + min_version.m_version + '\',\'' + min_version.version + '\',\'' + min_version.update_msg.replace(/\n/g,"_bt_") + '\')" >更新</a> | ';
+                                                    if (ret == 2) option += '<a class="btlink" onclick="bt.soft.update_soft(\'' + item.name + '\',\'' + item.title + '\',\'' + min_version.m_version + '\',\'' + min_version.version + '\',\'' + min_version.update_msg.replace(/\n/g,"_bt_") + '\',\''+ item.type +'\')" >更新</a> | ';
                                                     break;
                                                 }
                                             }
@@ -254,7 +231,7 @@ var soft = {
                                         else {
                                             var min_version = item.versions[0];
                                             var cloud_version = min_version.m_version + '.' + min_version.version;
-                                            if (item.version != cloud_version) option += '<a class="btlink" onclick="bt.soft.update_soft(\'' + item.name + '\',\'' + item.title + '\',\'' + min_version.m_version + '\',\'' + min_version.version + '\',\'' + min_version.update_msg.replace(/\n/g, "_bt_") + '\')" >更新</a> | ';
+                                            if (item.version != cloud_version) option += '<a class="btlink" onclick="bt.soft.update_soft(\'' + item.name + '\',\'' + item.title + '\',\'' + min_version.m_version + '\',\'' + min_version.version + '\',\'' + min_version.update_msg.replace(/\n/g, "_bt_") + '\',\''+ item.type +'\')" >更新</a> | ';
                                         }
                                         if (item.admin) {
                                             option += '<a class="btlink" onclick="bt.soft.set_lib_config(\'' + item.name + '\',\'' + item.title + '\')">' + lan.soft.setup + '</a> | ';
@@ -284,7 +261,7 @@ var soft = {
                                         option = pay_opt;
                                     }
                                     else {
-                                        option = '<a class="btlink" onclick="bt.soft.install(\'' + item.name + '\')"  >' + lan.soft.install + '</a>';
+                                        option = '<a class="btlink" onclick="bt.soft.install(\'' + item.name + '\',this)"  >' + lan.soft.install + '</a>';
                                     }
                                 }
                             }
@@ -303,6 +280,112 @@ var soft = {
                 }, 3000);
             }
         })
+    },
+    set_soft_tips:function(el,type){
+        var tips_info = $('<div class="alert" style="margin-bottom:15px"><div class="soft_tips_text"></div><div class="btn-ground" style="display:inline-block;"></div></div>'), explain = tips_info.find('.soft_tips_text'), btn_ground = tips_info.find('.btn-ground');
+        $(el).empty();
+        type = parseInt(type);
+        if(type != 11) $(el).next('.onekey-menu-sub').remove();
+        if(type == 10){
+            explain.text('安全提醒：第三方插件上架前，宝塔官方进行了安全审计，但可能还存在安全风险，在生产环境使用前请自行甄别');
+            btn_ground = soft.render_tips_btn(btn_ground,[
+                {title:'免费入驻',href:'https://www.bt.cn/developer/',rel:'noreferrer noopener',target:'_blank',btn:'免费入驻',class:'btn btn-success btn-xs va0',style:"margin-left:10px;"},
+                {title:'点击获取第三方应用',rel:'noreferrer noopener',href:'https://www.bt.cn/bbs/forum-40-1.html',target:'_blank',btn:'获取第三方应用',class:'btn btn-success btn-xs va0 ml15',style:"margin-left:10px;"},
+                {title:'导入插件',href:'javascript:;',btn:'导入插件','class':'btn btn-success btn-xs va0 ml15','style':"margin-left:10px;",click:function(e){
+                    var input = $('<input type="file" style="display:none;" accept=".zip,.tar.gz" id="update_zip" multiple="multiple">').change(function (e) {
+                        var files =$(this)[0].files;
+                        if (files.length == 0) return;
+                        soft.update_zip(files[0]);
+                    }).click();
+                }}
+            ]);
+            $(el).append(tips_info.addClass('alert-danger'));
+        }else if(type == 11){
+            explain.text('宝塔一键部署已上线，诚邀全球优秀项目入驻(限项目官方) ');
+            btn_ground = soft.render_tips_btn(btn_ground,[
+                {title:'免费入驻',href:'https://www.bt.cn/bbs/thread-33063-1-1.html',rel:'noreferrer noopener',target:'_blank',btn:'免费入驻',class:'btn btn-success btn-xs va0',style:"margin-left:10px;"},
+                {title:'导入项目',href:'javascript:;',rel:'noreferrer noopener',btn:'导入项目',class:'btn btn-success btn-xs va0',style:"margin-left:10px;",click:soft.input_package}
+            ]);
+            $(el).append(tips_info.addClass('alert-info'));
+        }else{
+            var ltd = parseInt(bt.get_cookie('ltd_end')),pro = parseInt(bt.get_cookie('pro_end')),todayDate = parseInt(new Date().getTime()/1000),_ltd = null;
+            if((ltd > 0 && (ltd == pro || pro < 0)) || (ltd < 0 && pro >= 0) || (ltd > 0 && pro >= 0)){
+                _ltd = ((ltd > 0 && (ltd == pro || pro < 0)) || (ltd > 0 && pro >= 0))?1:0;
+                explain.html('当前为'+ (_ltd?'企业版':'专业版') +'，'+ (_ltd?'企业版':'专业版') +'可以免费使用'+ (_ltd?'专业版及企业版插件':'专业版插件') + (!(pro == 0 && ltd < 0)?('，过期时间：'+ (bt.format_data((_ltd?ltd:pro),'yyyy/MM/dd') ) +''+((((_ltd?ltd:pro) - todayDate) <= 15*24*60*60)?('，<span style="color:red">距离过期仅剩'+ Math.round(((_ltd?ltd:pro) - todayDate) / (24*60*60)) +'天</span>'):'')):'，过期时间：<span style="color: #fc6d26;font-weight: bold;">永久授权</span>'));
+            }else if(ltd == -1 && pro == -1){
+                explain.html('专业版可以免费使用专业版插件，企业版可以免费使用专业版及企业版插件。');
+            }else if(pro == 0 && ltd < 0){
+                _ltd = 2;
+                explain.html('当前为专业版，专业版可以免费使用专业版插件，过期时间：永久授权。'+(type == 12?'&nbsp;&nbsp;<span style="color:#af8e48">升级企业版，企业可以免费试用企业版插件及专业版插件。</span>':''));
+                if(type == 12){
+                    btn_ground  = soft.render_tips_btn(btn_ground,{title:'立即升级',href:'javascript:;',btn:'立即升级','class':'btn btn-success btn-xs va0 ml15','style':"margin-left:10px;",click:bt.soft.updata_ltd});
+                }
+            }else if(ltd == -2 || pro == -2){
+                _ltd = (ltd == -2)?1:0;
+                explain.html('当前为'+ (_ltd?'企业版':'专业版') +'，'+ (_ltd?'企业版':'专业版') +'可以免费使用'+ (_ltd?'专业版及企业版插件':'专业版插件') +'，<span style="color:red">'+ (_ltd?'企业版':'专业版') +'已过期</span>');
+            }
+            var btn_config = {title:null,href:'javascript:;',btn:null,'class':'btn btn-success btn-xs va0 ml15','style':"margin-left:10px;",click:null};
+            var set_btn_style = function(res){
+                if(!res.status){
+                    $.extend(btn_config,{title:'立即登录',btn:'立即登录',click:function(){
+                        bt.pub.bind_btname(function(){
+                            bt.set_cookie('bt_user_info');
+                            window.location.reload();
+                        });
+                    }});
+                }else{
+                    if(type == 12 && (ltd < 0 && pro >=0)){
+                        explain.html('企业版可以免费使用专业版及企业版插件，了解专业版和企业版的区别，请点击<a href="https://www.bt.cn/download/linux.html" target="_blank" class="btlink ml5">查看详情</a>。<a href="https://www.bt.cn/bbs/forum.php?mod=viewthread&tid=50342&page=1&extra=#pid179211" target="_blank" class="btlink ml5">《专业版升级企业版教程》</a>');
+                        $(el).append(tips_info.addClass('alert-ltd-success'));
+                        return false;
+                    }else{
+                        if(_ltd != 2){
+                            var fun = '';
+                            switch(_ltd){
+                                case null:
+                                    fun = bt.soft.updata_commercial_view
+                                    break;
+                                case 1:
+                                    fun = bt.soft.updata_ltd
+                                    break;
+                                case 0:
+                                    fun = bt.soft.updata_pro
+                                    break;
+                            }
+                            $.extend(btn_config,{title:_ltd == null?'立即购买':'立即续费',btn:_ltd == null?'立即购买':'立即续费',click:fun})
+                        }
+                    }
+                }
+                if(_ltd != 2){
+                    if(!(pro == 0 && ltd < 0)){
+                        btn_ground  = soft.render_tips_btn(btn_ground,btn_config);
+                    }
+                }
+                $(el).append(tips_info.addClass(_ltd == 1?'alert-ltd-success':'alert-success'));
+            }
+            if(!bt.get_cookie('bt_user_info')){
+                bt.pub.get_user_info(function(res){
+                    bt.set_cookie('bt_user_info',JSON.stringify(res),5*60*1000);
+                    set_btn_style(res);
+                });
+            }else{
+                set_btn_style(JSON.parse(bt.get_cookie('bt_user_info')));
+            }
+            
+        }
+    },
+    render_tips_btn:function(node,arry){
+        if(!Array.isArray(arry)) arry = [arry]
+        for(var i=0;i<arry.length;i++){
+            var item = arry[i], btn = '<a ';
+            for(var key in item){ if(key != 'click' && key != 'btn') btn += item[key]?(key+'="'+item[key]+'" '):'' }
+            btn += '>'+item['btn'] +'</a>';
+            if(item.click){
+                btn = $(btn).on('click',item.click)
+            }
+            node.append(btn);
+        }
+        return node
     },
     get_dep_list: function (p) {
         var loadT = layer.msg('正在获取列表 <img src="/static/img/ing.gif">', { icon: 16, time: 0, shade: [0.3, '#000'] });
@@ -326,6 +409,7 @@ var soft = {
         $.post('/deployment?action=GetList', pdata, function (rdata) {
             layer.close(loadT)
             var tBody = '';
+            soft.set_soft_tips('#updata_pro_info',11);
             rdata.type.unshift({ icon: 'icon', id: 0, ps: '全部', sort: 1, title: '全部' },{ icon: 'icon', id: -1, ps: '已安装', sort: 1, title: '已安装' });
             for (var i = 0; i < rdata.type.length; i++) {
                 var c = '';
@@ -335,7 +419,6 @@ var soft = {
                 tBody += '<span typeid="' + rdata.type[i].id + '" ' + c + '>' + rdata.type[i].title + '</span>';
             }
             $(".softtype").html(tBody);
-
             $(".menu-sub span").click(function () {
                 var _type = $(this).attr('typeid');
                 bt.set_cookie('softType', _type);
@@ -345,16 +428,9 @@ var soft = {
                 } else {
                     soft.get_dep_list(1);
                 }
-
             });
             if ($(".onekey-type").attr("class") === undefined) {
-
-                tbody = '<div class="alert alert-info" style="margin-bottom: 10px;">\
-                        <strong class="mr5">宝塔一键部署已上线，诚邀全球优秀项目入驻(限项目官方) </strong>\
-                        <a class="btn btn-success btn-xs mr5" href="https://www.bt.cn/bbs/thread-33063-1-1.html" target="_blank">免费入驻</a>\
-                        <a class="btn btn-success btn-xs" onclick="soft.input_package()">导入项目</a>\
-                        </div><div class="onekey-menu-sub onekey-type" style="margin-bottom:15px">';
-                
+                tbody = '<div class="onekey-menu-sub onekey-type" style="margin-bottom:15px">';
                 rdata.dep_type.unshift({ tid: 0, title: '全部' })
                 rdata.dep_type.push({ tid: 100, title: '其它' })
                 for (var i = 0; i < rdata.dep_type.length; i++) {
@@ -365,14 +441,13 @@ var soft = {
                     tbody += '<span typeid="' + rdata.dep_type[i].tid + '" ' + c + '>' + rdata.dep_type[i].title + '</span>';
                 }
                 tbody += "</div>";
-                $("#updata_pro_info").html(tbody);
+                $("#updata_pro_info").after(tbody);
                 $(".onekey-menu-sub span").click(function () {
                     setCookie('depType', $(this).attr('typeid'));
                     $(this).addClass("on").siblings().removeClass("on");
                     soft.get_dep_list(1);
                 });
             }
-            
             var zbody = '<thead>\
 			                <tr>\
 				                <th>名称</th>\
@@ -398,7 +473,7 @@ var soft = {
                     + '<td>' + rdata.list[i].version + '</td>'
                     + '<td>' + rdata.list[i].ps + '</td>'
                     + '<td>' + rdata.list[i].php + '</td>'
-                    + '<td><a class="btlink" target="_blank" href="' + rdata.list[i].official + '">' + (rdata.list[i].author == '宝塔' ? rdata.list[i].title : rdata.list[i].author) + '</a></td>'
+                    + '<td><a class="btlink" target="_blank" rel="noreferrer noopener" href="' + rdata.list[i].official + '">' + (rdata.list[i].author == '宝塔' ? rdata.list[i].title : rdata.list[i].author) + '</a></td>'
                     + '<td>' + (rdata.list[i].sort !== undefined?('<a href="javascript:;" class="btlink open_score_view" onclick="score.open_score_view('+ rdata.list[i].id +',\''+ rdata.list[i].title +'\','+ rdata.list[i].count +')" >' + (rdata.list[i].sort <= 0 || rdata.list[i].sort > 5?'无评分':rdata.list[i].sort.toFixed(1))+'</a>'):'--')
                     + '</td>'
                     + '<td class="text-right"><a href="javascript:onekeyCodeSite(\'' + rdata.list[i].name + '\',\'' + rdata.list[i].php + '\',\'' + rdata.list[i].title + '\',\'' + rdata.list[i].enable_functions + '\');" class="btlink">一键部署</a>' + remove_opt+'</td>'
@@ -714,8 +789,14 @@ var soft = {
                 tabCon.append('<p style="color: #666; margin-bottom: 7px">' + lan.bt.edit_ps + '</p>');
                 tabCon.append('<div class="bt-input-text ace_config_editor_scroll" style="height: 320px;min-height:350px;line-height:18px;" id="textBody"></div>')
                 tabCon.append('<button id="OnlineEditFileBtn" class="btn btn-success btn-sm" style="margin-top:10px;">' + lan.public.save + '</button>')
-                tabCon.append(bt.render_help([lan.get('config_edit_ps', [version])]))
-
+                var _arry = [lan.get('config_edit_ps', [version])];
+				if (data.name.indexOf('php-') >= 0){
+					_arry.push(lan.soft.config_php_tips);
+				}
+				tabCon.append(bt.render_help(_arry))
+				$('.return_php_info').click(function(){
+					$('.bt-soft-menu p:eq(12)').click();
+				});
                 var fileName = bt.soft.get_config_path(version);
                 var loadT = bt.load(lan.soft.get);
                 var config = bt.aceEditor({el:'textBody',path:fileName});
@@ -1740,7 +1821,8 @@ var soft = {
                         {
                             title: lan.soft.php_fpm_model, name: 'pm', value: rdata.pm, type: 'select', items: [
                                 { title: lan.bt.static, value: 'static' },
-                                { title: lan.bt.dynamic, value: 'dynamic' }
+                                { title: lan.bt.dynamic, value: 'dynamic' },
+                                { title:'按需', value: 'ondemand' },
                             ], ps: '*' + lan.soft.php_fpm_ps1
                         },
                         { title: 'max_children', name: 'max_children', value: rdata.max_children, type: 'number', width: '80px', ps: '*' + lan.soft.php_fpm_ps2 },
@@ -1796,9 +1878,9 @@ var soft = {
                     _c_form.append('<ul class="help-info-text c7">\
                                         <li>【最大子进程数量】越大，并发能力越强，但max_children最大不要超过5000</li>\
                                         <li>【内存】每个PHP子进程需要20MB左右内存，过大的max_children会导致服务器不稳定</li>\
-                                        <li>【静态模式】下会始终维持设置的子进程数量，对内存开销较大，但并发能力较好</li>\
-                                        <li>【动态模式】下会按设置最大空闲进程数来收回进程，内存开销小，建议小内存机器使用</li>\
-                                        <li>【64GB内存推荐值】max_children<=1000 , start/min_spare=50 , max_spare<=200</li>\
+                                        <li>【静态模式】始终维持设置的子进程数量，对内存开销较大，但并发能力较好</li>\
+                                        <li>【动态模式】按设置最大空闲进程数来收回进程，内存开销小，建议小内存机器使用</li>\
+                                        <li>【按需模式】根据访问需求自动创建进程，内存开销极小，但并发能力略差</li>\
                                         <li>【多PHP版本】若您安装了多个PHP版本，且都在使用，建议适当降低并发配置</li>\
                                         <li>【没有数据库】若没有安装mysql等数据库，建议设置2倍于推荐并发</li>\
                                         <li>【注意】以上为建议配置说明，线上项目复杂多样，请根据实际情况酌情调整</li>\
@@ -1991,18 +2073,6 @@ var soft = {
                 break;
         }
     },
-    update_zip_open: function (){
-        $("#update_zip").on("change", function () {
-            var files = $("#update_zip")[0].files;
-            if (files.length == 0) {
-                return;
-            }
-            soft.update_zip(files[0]);
-            $("#update_zip").val('')
-        });
-
-        $("#update_zip").click();
-    },
     update_zip: function (file) {
         var formData = new FormData();
         formData.append("plugin_zip", file);
@@ -2037,7 +2107,7 @@ var soft = {
                             <p><b>描述：</b>' + data.ps + '</p>\
                             <p><b>大小：</b>' + bt.format_size(data.size, true) + '</p>\
                             <p><b>作者：</b>' + data.author + '</p>\
-                            <p><b>来源：</b><a class="btlink" href="'+data.home+'" target="_blank">' + data.home + '</a></p>\
+                            <p><b>来源：</b><a class="btlink" href="'+data.home+'" target="_blank" rel="noreferrer noopener">' + data.home + '</a></p>\
                         </div>\
                         <ul class="help-info-text c7">\
                             <li style="color:red;">此为第三方开发的插件，宝塔无法验证其可靠性!</li>\
@@ -2054,8 +2124,8 @@ var soft = {
         });
     },
 
-    input_zip: function (plugin_name, tmp_path) {
-        bt.soft.show_speed_window('正在安装,这可能需要几分钟时间...',function(){
+    input_zip: function (plugin_name,tmp_path,data) {
+        bt.soft.show_speed_window({title:'正在安装第三方插件，可能需要几分钟时间，请耐心等候!',status:true},function(){
             $.post('/plugin?action=input_zip', { plugin_name: plugin_name, tmp_path: tmp_path }, function (rdata) {
                 layer.closeAll()
                 if (rdata.status) {
@@ -2204,7 +2274,7 @@ function AddSite(codename,title) {
 					 		<p><span>密码：</span><strong>" + rdata.msg.admin_password + "</strong></p>\
 					 		"
             }
-            sqlData += "<p><span>访问站点：</span><a class='btlink' href='http://" + mainDomain + rdata.msg.success_url + "' target='_blank'>http://" + mainDomain + rdata.msg.success_url + "</a></p>";
+            sqlData += "<p><span>访问站点：</span><a class='btlink' href='http://" + mainDomain + rdata.msg.success_url + "' target='_blank' rel='noreferrer noopener'>http://" + mainDomain + rdata.msg.success_url + "</a></p>";
 
             layer.open({
                 type: 1,
@@ -2417,9 +2487,9 @@ var score = {
             $('.comment_user_count').text(obj.count);
             $('.comment_num').text((res.total!==0?_average_score:0).toFixed(1));
             $('.comment_partake').text(res.total);
-            $('.comment_rate').text(res.total!==0?((((_split_score[0]+_split_score[1])/res.total).toFixed(2)*100)+'%'):'0%');
+            $('.comment_rate').text(res.total!==0?(((((_split_score[0]+_split_score[1])/res.total).toFixed(2)*100).toFixed(0))+'%'):'0%');
             for(var i=0;i<5;i++){
-                $('.comment_star_group:eq('+ i +')').find('.comment_progress .comment_progress_bgw').css('width',((_split_score[i] / res.total).toFixed(2)*100)+'%')
+                $('.comment_star_group:eq('+ i +')').find('.comment_progress .comment_progress_bgw').css('width',(((_split_score[i] / res.total).toFixed(2)*100).toFixed(0))+'%')
             }
             $('.comment_tab span:eq(1)').find('i').text(_split_score[0]+_split_score[1]);
             $('.comment_tab span:eq(2)').find('i').text(_split_score[2]+_split_score[3]);
