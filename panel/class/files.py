@@ -918,7 +918,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             return public.returnMsg(False, '该文件格式不支持在线编辑!')
         if os.path.getsize(get.path) > 3145928:
             return public.returnMsg(False, u'不能在线编辑大于3MB的文件!')
-        if not os.path.isfile(get.path):
+        if os.path.isdir(get.path):
             return public.returnMsg(False, '这不是一个文件!')
         fp = open(get.path, 'rb')
         data = {}
@@ -1429,6 +1429,9 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         isTask = '/tmp/panelTask.pl'
         execstr = "cd " + public.GetConfigValue('setup_path') + "/panel/install && /bin/bash install_soft.sh " + \
             get.type + " install " + get.name + " " + get.version
+        if public.get_webserver() == "openlitespeed":
+            execstr = "cd " + public.GetConfigValue('setup_path') + "/panel/install && /bin/bash install_soft.sh " + \
+                      get.type + " install " + get.name + "-ols " + get.version
         sql = db.Sql()
         if hasattr(get, 'id'):
             id = get.id
@@ -1487,8 +1490,20 @@ done
         get.type = '0'
         if session['server_os']['x'] != 'RHEL':
             get.type = '3'
+        if public.get_webserver() == "openlitespeed":
+            default_ext = ["bz2","calendar","sysvmsg","exif","imap","readline","sysvshm","xsl"]
+            if get.version == "73":
+                default_ext.append("opcache")
+            if not os.path.exists("/etc/redhat-release"):
+                default_ext.append("gmp")
+                default_ext.append("opcache")
+            if get.name.lower() in default_ext:
+                return public.returnMsg(False, "这是OpenLiteSpeed的默认扩展不可以卸载")
         execstr = "cd " + public.GetConfigValue('setup_path') + "/panel/install && /bin/bash install_soft.sh " + \
             get.type+" uninstall " + get.name.lower() + " " + get.version.replace('.', '')
+        if public.get_webserver() == "openlitespeed":
+            execstr = "cd " + public.GetConfigValue('setup_path') + "/panel/install && /bin/bash install_soft.sh " + \
+                      get.type + " uninstall " + get.name.lower() + "-ols " + get.version.replace('.', '')
         public.ExecShell(execstr)
         public.WriteLog('TYPE_SETUP', 'PLUGIN_UNINSTALL',
                         (get.name, get.version))

@@ -19,7 +19,9 @@ import threading
 sys.path.insert(0, '/www/server/panel/class/')
 import public
 from io import BytesIO, StringIO
-from BTPanel import session
+
+
+
 
 class ssh_terminal:
     __log_type = '宝塔终端'

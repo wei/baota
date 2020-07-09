@@ -34,7 +34,7 @@ class panelSetup:
             ua = ua.lower()
             if ua.find('spider') != -1 or ua.find('bot') != -1:
                 return redirect('https://www.baidu.com')
-        g.version = '7.3.0'
+        g.version = '7.4.0'
         g.title = public.GetConfigValue('title')
         g.uri = request.path
         if not os.path.exists('data/debug.pl'):
@@ -99,13 +99,14 @@ class panelAdmin(panelSetup):
 
     # 检查Web服务器类型
     def checkWebType(self):
-        if os.path.exists(self.setupPath + '/nginx'):
-            session['webserver'] = 'nginx'
-        else:
+        if os.path.exists('/usr/local/lsws/bin/lswsctrl'):
+            session['webserver'] = 'openlitespeed'
+        elif os.path.exists(self.setupPath + '/apache'):
             session['webserver'] = 'apache'
+        else:
+            session['webserver'] = 'nginx'
         if os.path.exists(self.setupPath+'/'+session['webserver']+'/version.pl'):
-            session['webversion'] = public.ReadFile(
-                self.setupPath+'/'+session['webserver']+'/version.pl').strip()
+            session['webversion'] = public.ReadFile(self.setupPath+'/'+session['webserver']+'/version.pl').strip()
         filename = self.setupPath+'/data/phpmyadminDirName.pl'
         if os.path.exists(filename):
             session['phpmyadminDir'] = public.ReadFile(filename).strip()

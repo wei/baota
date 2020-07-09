@@ -6,7 +6,7 @@
 # +-------------------------------------------------------------------
 # | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
-import public,re,sys,os,nginx,apache,json,time
+import public,re,sys,os,nginx,apache,json,time,ols
 try:
     import pyotp
 except:
@@ -173,7 +173,7 @@ class config:
     def setPassword(self,get):
         if get.password1 != get.password2: return public.returnMsg(False,'USER_PASSWORD_CHECK')
         if len(get.password1) < 5: return public.returnMsg(False,'USER_PASSWORD_LEN')
-        public.M('users').where("username=?",(session['username'],)).setField('password',public.md5(get.password1.strip()))
+        public.M('users').where("username=?",(session['username'],)).setField('password',public.password_salt(public.md5(get.password1.strip()),username=session['username']))
         public.WriteLog('TYPE_PANEL','USER_PASSWORD_SUCCESS',(session['username'],))
         self.reload_session()
         return public.returnMsg(True,'USER_PASSWORD_SUCCESS')
@@ -199,7 +199,7 @@ class config:
         if len(args.password) < 8: return public.returnMsg(False,'密码不能少于8位')
         pdata = {
             "username": args.username.strip(),
-            "password": public.md5(args.password.strip())
+            "password": public.password_salt(public.md5(args.password.strip()),username=args.username.strip())
         }
 
         if(public.M('users').where('username=?',(pdata['username'],)).count()):
@@ -233,7 +233,7 @@ class config:
         if 'password' in args:
             if args.password:
                 if len(args.password) < 8: return public.returnMsg(False,'密码不能少于8位')
-                pdata['password'] = public.md5(args.password.strip())
+                pdata['password'] = public.password_salt(public.md5(args.password.strip()),username=username)
 
         if(public.M('users').where('id=?',(args.id,)).update(pdata)):
             public.WriteLog('用户管理',"编辑用户{}".format(username))
@@ -379,13 +379,21 @@ class config:
         
         #设置PHP
         path = public.GetConfigValue('setup_path')+'/php/'+version+'/etc/php.ini'
-        conf = public.readFile(path)
-        rep = r"\nupload_max_filesize\s*=\s*[0-9]+M"
-        conf = re.sub(rep,r'\nupload_max_filesize = '+max+'M',conf)
-        rep = r"\npost_max_size\s*=\s*[0-9]+M"
-        conf = re.sub(rep,r'\npost_max_size = '+max+'M',conf)
-        public.writeFile(path,conf)
-        
+        ols_php_path = '/usr/local/lsws/lsphp{}/etc/php/{}.{}/litespeed/php.ini'.format(get.version, get.version[0],get.version[1])
+        if os.path.exists('/etc/redhat-release'):
+            ols_php_path = '/usr/local/lsws/lsphp' + get.version + '/etc/php.ini'
+        for p in [path,ols_php_path]:
+            if not p:
+                continue
+            if not os.path.exists(p):
+                continue
+            conf = public.readFile(p)
+            rep = r"\nupload_max_filesize\s*=\s*[0-9]+M"
+            conf = re.sub(rep,r'\nupload_max_filesize = '+max+'M',conf)
+            rep = r"\npost_max_size\s*=\s*[0-9]+M"
+            conf = re.sub(rep,r'\npost_max_size = '+max+'M',conf)
+            public.writeFile(p,conf)
+
         if public.get_webserver() == 'nginx':
             #设置Nginx
             path = public.GetConfigValue('setup_path')+'/nginx/conf/nginx.conf'
@@ -404,13 +412,20 @@ class config:
     #设置禁用函数
     def setPHPDisable(self,get):
         filename = public.GetConfigValue('setup_path') + '/php/' + get.version + '/etc/php.ini'
+        ols_php_path = '/usr/local/lsws/lsphp{}/etc/php/{}.{}/litespeed/php.ini'.format(get.version, get.version[0],get.version[1])
+        if os.path.exists('/etc/redhat-release'):
+            ols_php_path = '/usr/local/lsws/lsphp' + get.version + '/etc/php.ini'
         if not os.path.exists(filename): return public.returnMsg(False,'PHP_NOT_EXISTS')
-        phpini = public.readFile(filename)
-        rep = r"disable_functions\s*=\s*.*\n"
-        phpini = re.sub(rep, 'disable_functions = ' + get.disable_functions + "\n", phpini)
-        public.WriteLog('TYPE_PHP','PHP_DISABLE_FUNCTION',(get.version,get.disable_functions))
-        public.writeFile(filename,phpini)
-        public.phpReload(get.version)
+        for file in [filename,ols_php_path]:
+            if not os.path.exists(file):
+                continue
+            phpini = public.readFile(file)
+            rep = r"disable_functions\s*=\s*.*\n"
+            phpini = re.sub(rep, 'disable_functions = ' + get.disable_functions + "\n", phpini)
+            public.WriteLog('TYPE_PHP','PHP_DISABLE_FUNCTION',(get.version,get.disable_functions))
+            public.writeFile(file,phpini)
+            public.phpReload(get.version)
+        public.serviceReload()
         return public.returnMsg(True,'SET_SUCCESS')
     
     #设置PHP超时时间
@@ -761,8 +776,12 @@ class config:
                 {'name':'cgi.fix_pathinfo','type':0,'ps':public.getMsg('PHP_CONF_14')},
                 {'name':'date.timezone','type':3,'ps':public.getMsg('PHP_CONF_15')}
                 ]
-        phpini = public.readFile('/www/server/php/' + get.version + '/etc/php.ini')
-        
+        phpini_file = '/www/server/php/' + get.version + '/etc/php.ini'
+        if public.get_webserver() == 'openlitespeed':
+            phpini_file = '/usr/local/lsws/lsphp{}/etc/php/{}.{}/litespeed/php.ini'.format(get.version, get.version[0],get.version[1])
+            if os.path.exists('/etc/redhat-release'):
+                phpini_file = '/usr/local/lsws/lsphp' + get.version + '/etc/php.ini'
+        phpini = public.readFile(phpini_file)
         result = []
         for g in gets:
             rep = g['name'] + r'\s*=\s*([0-9A-Za-z_&/ ~]+)(\s*;?|\r?\n)'
@@ -778,6 +797,10 @@ class config:
         #取PHP配置
         get.version = get.version.replace('.','')
         file = session['setupPath'] + "/php/"+get.version+"/etc/php.ini"
+        if public.get_webserver() == 'openlitespeed':
+            file = '/usr/local/lsws/lsphp{}/etc/php/{}.{}/litespeed/php.ini'.format(get.version, get.version[0],get.version[1])
+            if os.path.exists('/etc/redhat-release'):
+                file = '/usr/local/lsws/lsphp' + get.version + '/etc/php.ini'
         phpini = public.readFile(file)
         file = session['setupPath'] + "/php/"+get.version+"/etc/php-fpm.conf"
         phpfpm = public.readFile(file)
@@ -812,22 +835,38 @@ class config:
     def SetPHPConf(self,get):
         gets = ['display_errors','cgi.fix_pathinfo','date.timezone','short_open_tag','asp_tags','max_execution_time','max_input_time','memory_limit','post_max_size','file_uploads','upload_max_filesize','max_file_uploads','default_socket_timeout','error_reporting']
         filename = '/www/server/php/' + get.version + '/etc/php.ini'
-        phpini = public.readFile(filename)
-        for g in gets:
-            try:
-                rep = g + r'\s*=\s*(.+)\r?\n'
-                val = g+' = ' + get[g] + '\n'
-                phpini = re.sub(rep,val,phpini)
-            except: continue
-        
-        public.writeFile(filename,phpini)
-        public.ExecShell('/etc/init.d/php-fpm-' + get.version + ' reload')
+        reload_str = '/etc/init.d/php-fpm-' + get.version + ' reload'
+        ols_php_path = '/usr/local/lsws/lsphp{}/etc/php/{}.{}/litespeed/php.ini'.format(get.version, get.version[0],get.version[1])
+        if os.path.exists('/etc/redhat-release'):
+            ols_php_path = '/usr/local/lsws/lsphp' + get.version + '/etc/php.ini'
+        reload_ols_str = '/usr/local/lsws/bin/lswsctl reload'
+        for p in [filename,ols_php_path]:
+            if not p:
+                continue
+            if not os.path.exists(p):
+                continue
+            phpini = public.readFile(filename)
+            for g in gets:
+                try:
+                    rep = g + r'\s*=\s*(.+)\r?\n'
+                    val = g+' = ' + get[g] + '\n'
+                    phpini = re.sub(rep,val,phpini)
+                except: continue
+
+            public.writeFile(p,phpini)
+        public.ExecShell(reload_str)
+        public.ExecShell(reload_ols_str)
         return public.returnMsg(True,'SET_SUCCESS')
     
   
  # 取Session缓存方式
     def GetSessionConf(self,get):
-        phpini = public.readFile('/www/server/php/' + get.version + '/etc/php.ini')
+        filename = '/www/server/php/' + get.version + '/etc/php.ini'
+        if public.get_webserver() == 'openlitespeed':
+            filename = '/usr/local/lsws/lsphp{}/etc/php/{}.{}/litespeed/php.ini'.format(get.version,get.version[0],get.version[1])
+            if os.path.exists('/etc/redhat-release'):
+                filename = '/usr/local/lsws/lsphp' + get.version + '/etc/php.ini'
+        phpini = public.readFile(filename)
         rep = r'session.save_handler\s*=\s*([0-9A-Za-z_& ~]+)(\s*;?|\r?\n)'
         save_handler = re.search(rep, phpini)
         if save_handler:
@@ -857,6 +896,7 @@ class config:
 
     # 设置Session缓存方式
     def SetSessionConf(self, get):
+        import glob
         g = get.save_handler
         ip = get.ip
         port = get.port
@@ -875,51 +915,68 @@ class config:
             if re.search(prep,passwd):
                 return public.returnMsg(False, '请不要输入以下特殊字符 " ~ ` / = "')
         filename = '/www/server/php/' + get.version + '/etc/php.ini'
-        phpini = public.readFile(filename)
-        rep = r'session.save_handler\s*=\s*(.+)\r?\n'
-        val = r'session.save_handler = ' + g + '\n'
-        phpini = re.sub(rep, val, phpini)
-        if g == "memcached":
-            if not re.search("memcached.so", phpini):
-                return public.returnMsg(False, '请先安装%s扩展' % g)
-            rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
-            val = r'\nsession.save_path = "%s:%s" \n' % (ip,port)
-            if re.search(rep, phpini):
-                phpini = re.sub(rep, val, phpini)
-            else:
-                phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
-        if g == "memcache":
-            if not re.search("memcache.so",phpini):
-                return public.returnMsg(False, '请先安装%s扩展' % g)
-            rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
-            val = r'\nsession.save_path = "tcp://%s:%s"\n' % (ip, port)
-            if re.search(rep, phpini):
-                phpini = re.sub(rep, val, phpini)
-            else:
-                phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
-        if g == "redis":
-            if not re.search("redis.so",phpini):
-                return public.returnMsg(False, '请先安装%s扩展' % g)
-            if passwd:
-                passwd = "?auth=" + passwd
-            else:
-                passwd = ""
-            rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
-            val = r'\nsession.save_path = "tcp://%s:%s%s"\n' % (ip, port, passwd)
-            res = re.search(rep, phpini)
-            if res:
-                phpini = re.sub(rep, val, phpini)
-            else:
-                phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
-        if g == "files":
-            rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
-            val = r'\nsession.save_path = "/tmp"\n'
-            if re.search(rep, phpini):
-                phpini = re.sub(rep, val, phpini)
-            else:
-                phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
-        public.writeFile(filename, phpini)
+        filename_ols = None
+        if os.path.exists("/usr/local/lsws"):
+            filename_ols = '/usr/local/lsws/lsphp{}/etc/php/{}.{}/litespeed/php.ini'.format(get.version, get.version[0],
+                                                                                        get.version[1])
+            if os.path.exists('/etc/redhat-release'):
+                filename_ols = '/usr/local/lsws/lsphp' + get.version + '/etc/php.ini'
+            try:
+                ols_php_os_path = glob.glob("/usr/local/lsws/lsphp{}/lib/php/20*".format(get.version))[0]
+            except:
+                ols_php_os_path = None
+            if os.path.exists("/etc/redhat-release"):
+                ols_php_os_path = '/usr/local/lsws/lsphp{}/lib64/php/modules/'.format(get.version)
+            ols_so_list = os.listdir(ols_php_os_path)
+        for f in [filename,filename_ols]:
+            if not f:
+                continue
+            phpini = public.readFile(f)
+            rep = r'session.save_handler\s*=\s*(.+)\r?\n'
+            val = r'session.save_handler = ' + g + '\n'
+            phpini = re.sub(rep, val, phpini)
+            if g == "memcached":
+                if not re.search("memcached.so", phpini) and "memcached.so" not in ols_so_list:
+                    return public.returnMsg(False, '请先安装%s扩展' % g)
+                rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
+                val = r'\nsession.save_path = "%s:%s" \n' % (ip,port)
+                if re.search(rep, phpini):
+                    phpini = re.sub(rep, val, phpini)
+                else:
+                    phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
+            if g == "memcache":
+                if not re.search("memcache.so", phpini) and "memcache.so" not in ols_so_list:
+                    return public.returnMsg(False, '请先安装%s扩展' % g)
+                rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
+                val = r'\nsession.save_path = "tcp://%s:%s"\n' % (ip, port)
+                if re.search(rep, phpini):
+                    phpini = re.sub(rep, val, phpini)
+                else:
+                    phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
+            if g == "redis":
+                if not re.search("redis.so", phpini) and "redis.so" not in ols_so_list:
+                    return public.returnMsg(False, '请先安装%s扩展' % g)
+                if passwd:
+                    passwd = "?auth=" + passwd
+                else:
+                    passwd = ""
+                rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
+                val = r'\nsession.save_path = "tcp://%s:%s%s"\n' % (ip, port, passwd)
+                res = re.search(rep, phpini)
+                if res:
+                    phpini = re.sub(rep, val, phpini)
+                else:
+                    phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
+            if g == "files":
+                rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
+                val = r'\nsession.save_path = "/tmp"\n'
+                if re.search(rep, phpini):
+                    phpini = re.sub(rep, val, phpini)
+                else:
+                    phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
+            public.writeFile(f, phpini)
         public.ExecShell('/etc/init.d/php-fpm-' + get.version + ' reload')
+        public.serviceReload()
         return public.returnMsg(True, 'SET_SUCCESS')
 
     # 获取Session文件数量
@@ -987,8 +1044,11 @@ class config:
 
     #获取配置
     def get_config(self,get):
-        if 'config' in session: return session['config']
+        if 'config' in session:
+            session['config']['distribution'] = public.get_linux_distribution()
+            return session['config']
         data = public.M('config').where("id=?",('1',)).field('webserver,sites_path,backup_path,status,mysql_root').find()
+        data['distribution'] = public.get_linux_distribution()
         return data
     
 
@@ -1031,6 +1091,38 @@ class config:
     def SetApacheValue(self,get):
         a = apache.apache()
         return a.SetApacheValue(get)
+
+    def get_ols_value(self,get):
+        a = ols.ols()
+        return a.get_value(get)
+
+    def set_ols_value(self,get):
+        a = ols.ols()
+        return a.set_value(get)
+
+    def get_ols_private_cache(self,get):
+        a = ols.ols()
+        return a.get_private_cache(get)
+
+    def get_ols_static_cache(self,get):
+        a = ols.ols()
+        return a.get_static_cache(get)
+
+    def set_ols_static_cache(self,get):
+        a = ols.ols()
+        return a.set_static_cache(get)
+
+    def switch_ols_private_cache(self,get):
+        a = ols.ols()
+        return a.switch_private_cache(get)
+
+    def set_ols_private_cache(self,get):
+        a = ols.ols()
+        return a.set_private_cache(get)
+
+    def get_ols_private_cache_status(self,get):
+        a = ols.ols()
+        return a.get_private_cache_status(get)
 
     def get_ipv6_listen(self,get):
         return os.path.exists('data/ipv6.pl')
@@ -1208,6 +1300,8 @@ class config:
         :param get:
         :return:
         '''
+        if public.get_webserver() == 'openlitespeed':
+            return public.returnMsg(False, "该功能暂时不支持OpenLiteSpeed")
         import panelSite
         site_info = public.M('sites').where('id=?', (get.id,)).field('name,path').find()
         session_path = "/www/php_session/{}".format(site_info["name"])

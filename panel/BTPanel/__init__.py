@@ -211,13 +211,22 @@ def reload_mod():
 
 @app.before_request
 def request_check():
-    #if not public.path_safe_check(request.path): return abort(404)
+    #路由和URI长度过滤
+    if len(request.path) > 64: return abort(403)
+    if len(request.url) > 1024: return abort(403)
     if request.path in ['/service_status']: return
+
+    #POST参数过滤
+    if request.path in ['/login','/safe','/hook','/public','/down','/get_app_bind_status','/check_bind']:
+        pdata = request.form.to_dict()
+        for k in pdata.keys():
+            if len(k) > 32: return abort(403)
+            if len(pdata[k]) > 128: return abort(403)
 
     if not request.path in ['/safe','/hook','/public','/mail_sys','/down']:
         ip_check = public.check_ip_panel()
         if ip_check: return ip_check
-        
+    
     if request.path.find('/static/') != -1 or request.path == '/code':
         if not 'login' in session and not 'admin_auth' in session and not 'down' in session: 
             session.clear()
@@ -296,6 +305,30 @@ def login():
     is_auth_path = False
     if admin_path != '/bt' and os.path.exists(admin_path_file) and  not 'admin_auth' in session: 
         is_auth_path = True
+
+    #登录输入验证
+    if request.method == method_post[0]:
+        v_list = ['username','password','code','vcode','cdn_url']
+        for v in v_list:
+            pv = request.form.get(v,'').strip()
+            if v == 'cdn_url': 
+                if len(pv) > 32: return public.returnMsg(False,'错误的参数长度!'),json_header
+                if not re.match(r"^[\w\.-]+$",pv): public.returnJson(False,'错误的参数格式'),json_header
+                continue
+
+            if not pv: continue
+            p_len = 32
+            if v == 'code': p_len = 4
+            if v == 'vcode': p_len = 6
+            if len(pv) != p_len:
+                return public.returnJson(False,'错误的参数长度'),json_header
+            if not re.match(r"^\w+$",pv):
+                return public.returnJson(False,'错误的参数格式'),json_header
+
+        for n in request.form.keys():
+            if not n in v_list:
+                return public.returnJson(False,'登录参数中不能有多余参数'),json_header
+        
     get = get_input()
     import userlogin
     if hasattr(get,'tmp_token'):
@@ -341,6 +374,7 @@ def login():
                 data['hosts'] = '[]'
             else:
                 data['hosts'] = json.dumps(data['hosts'])
+        data['app_login'] = os.path.exists('data/app_login.pl')
         return render_template(
             'login.html',
             data=data
@@ -364,13 +398,14 @@ def site(pdata = None):
         data['isSetup'] = True
         data['lan'] = public.getLan('site')
         if os.path.exists(public.GetConfigValue('setup_path')+'/nginx') == False \
-            and os.path.exists(public.GetConfigValue('setup_path')+'/apache') == False: 
+            and os.path.exists(public.GetConfigValue('setup_path')+'/apache') == False \
+                and os.path.exists('/usr/local/lsws') == False:
             data['isSetup'] = False
         return render_template( 'site.html',data=data)
     import panelSite
     siteObject = panelSite.panelSite()
         
-    defs = ('GetRedirectFile','SaveRedirectFile','DeleteRedirect','GetRedirectList','CreateRedirect','ModifyRedirect',
+    defs = ('get_site_domains','GetRedirectFile','SaveRedirectFile','DeleteRedirect','GetRedirectList','CreateRedirect','ModifyRedirect',
             'set_dir_auth','delete_dir_auth','get_dir_auth','modify_dir_auth_pass',
             'GetSiteLogs','GetSiteDomains','GetSecurity','SetSecurity','ProxyCache','CloseToHttps','HttpToHttps','SetEdate',
             'SetRewriteTel','GetCheckSafe','CheckSafe','GetDefaultSite','SetDefaultSite','CloseTomcat','SetTomcat','apacheAddPort',
@@ -441,18 +476,26 @@ def get_phpmyadmin_dir():
         
         phpport = '888'
         try:
-            import re;
+            import re
             if session['webserver'] == 'nginx':
                 filename =public.GetConfigValue('setup_path') + '/nginx/conf/nginx.conf'
                 conf = public.readFile(filename)
-                rep = "listen\s+([0-9]+)\s*;"
+                rep = r"listen\s+([0-9]+)\s*;"
                 rtmp = re.search(rep,conf)
                 if rtmp:
                     phpport = rtmp.groups()[0]
-            else:
+            if session['webserver'] == 'apache':
                 filename = public.GetConfigValue('setup_path') + '/apache/conf/extra/httpd-vhosts.conf'
                 conf = public.readFile(filename)
-                rep = "Listen\s+([0-9]+)\s*\n"
+                rep = r"Listen\s+([0-9]+)\s*\n"
+                rtmp = re.search(rep,conf)
+                if rtmp:
+                    phpport = rtmp.groups()[0]
+            if session['webserver'] == 'openlitespeed':
+                filename = public.GetConfigValue('setup_path') + '/panel/vhost/openlitespeed/listen/888.conf'
+                public.writeFile('/tmp/2',filename)
+                conf = public.readFile(filename)
+                rep = r"address\s*\*\:\s*(\d+)"
                 rtmp = re.search(rep,conf)
                 if rtmp:
                     phpport = rtmp.groups()[0]
@@ -491,7 +534,7 @@ def api(pdata = None):
     if comReturn: return comReturn
     import panelApi
     api_object = panelApi.panelApi()
-    defs = ('get_token','check_bind','get_bind_status','get_apps','add_bind_app','remove_bind_app','set_token','get_tmp_token','get_app_bind_status')
+    defs = ('get_token','check_bind','get_bind_status','get_apps','add_bind_app','remove_bind_app','set_token','get_tmp_token','get_app_bind_status','login_for_app')
     return publicObject(api_object,defs,None,pdata)
 
 @app.route('/get_app_bind_status',methods=method_all)
@@ -697,7 +740,8 @@ def config(pdata = None):
         if public.is_local(): data['is_local'] = 'checked'
         return render_template( 'config.html',data=data)
     import config
-    defs = ('set_coll_open','get_qrcode_data','check_two_step','set_two_step_auth','create_user','remove_user','modify_user',
+    defs = ('get_ols_private_cache_status','get_ols_value','set_ols_value','get_ols_private_cache','get_ols_static_cache','set_ols_static_cache','switch_ols_private_cache','set_ols_private_cache',
+            'set_coll_open','get_qrcode_data','check_two_step','set_two_step_auth','create_user','remove_user','modify_user',
             'get_key','get_php_session_path','set_php_session_path','get_cert_source','get_users',
             'set_local','set_debug','get_panel_error_logs','clean_panel_error_logs',
             'get_basic_auth_stat','set_basic_auth','get_cli_php_version','get_tmp_token',
@@ -831,6 +875,10 @@ def panel_public():
         if panelWaf_data.is_xss(get.__dict__):return 'ERROR'
     except:
         pass
+
+    if len("{}".format(get.__dict__)) > 1024 * 32:
+        return 'ERROR'
+
     get.client_ip = public.GetClientIp()
     if not hasattr(get,'name'): get.name = ''
     if not hasattr(get,'fun'): return abort(404)
@@ -898,7 +946,7 @@ def panel_other(name=None,fun = None,stype=None):
 
     if not name: name = 'coll'
     if not public.path_safe_check("%s/%s/%s" % (name,fun,stype)): return abort(404)
-    if name.find('./') != -1 or not re.match("^[\w-]+$",name): return abort(404)
+    if name.find('./') != -1 or not re.match(r"^[\w-]+$",name): return abort(404)
     if not name: return public.returnJson(False,'PLUGIN_INPUT_ERR'),json_header
     p_path = '/www/server/panel/plugin/' + name
     if not os.path.exists(p_path): return abort(404)
@@ -908,7 +956,7 @@ def panel_other(name=None,fun = None,stype=None):
         if stype.find('./') != -1 or not os.path.exists(p_path + '/static'): return abort(404)
         s_file = p_path + '/static/' + stype
         if s_file.find('..') != -1: return abort(404)
-        if not re.match("^[\w\./-]+$",s_file): return abort(404)
+        if not re.match(r"^[\w\./-]+$",s_file): return abort(404)
         if not public.path_safe_check(s_file): return abort(404)
         if not os.path.exists(s_file): return abort(404)
         return send_file(s_file,conditional=True,add_etags=True)
@@ -1088,6 +1136,8 @@ def download():
     comReturn = comm.local()
     if comReturn: return comReturn
     filename = request.args.get('filename')
+    if filename.find('|') != -1:
+        filename = filename.split('|')[1]
     if not filename: return public.ReturnJson(False,"INIT_ARGS_ERR"),json_header
     if filename in ['alioss','qiniu','upyun','txcos','ftp']: return panel_cloud()
     if not os.path.exists(filename): return public.ReturnJson(False,"FILE_NOT_EXISTS"),json_header
@@ -1204,17 +1254,24 @@ def panel_cloud():
     comReturn = comm.local()
     if comReturn: return comReturn
     get = get_input()
-    if not os.path.exists('plugin/' + get.filename + '/' + get.filename+'_main.py'): 
-        return public.returnJson(False,'INIT_PLUGIN_NOT_EXISTS'),json_header
-    sys.path.append('plugin/' + get.filename)
-    plugin_main = __import__(get.filename+'_main')
-    reload(plugin_main)
-    tmp = eval("plugin_main.%s_main()" % get.filename)
-    if not hasattr(tmp,'download_file'): return public.returnJson(False,'INIT_PLUGIN_NOT_DOWN_FUN'),json_header
-    if get.filename == 'ftp':
-        download_url = tmp.getFile(get.name)
+    _filename = get.filename
+    plugin_name = ""
+    if _filename.find('|') != -1:
+        plugin_name = get.filename.split('|')[1]
     else:
-        download_url = tmp.download_file(get.name)
+        plugin_name = get.filename
+
+    if not os.path.exists('plugin/' + plugin_name + '/' + plugin_name+'_main.py'): 
+        return public.returnJson(False,'INIT_PLUGIN_NOT_EXISTS'),json_header
+    sys.path.append('plugin/' + plugin_name)
+    plugin_main = __import__(plugin_name+'_main')
+    public.mod_reload(plugin_main)
+    tmp = eval("plugin_main.%s_main()" % plugin_name)
+    if not hasattr(tmp,'download_file'): return public.returnJson(False,'INIT_PLUGIN_NOT_DOWN_FUN'),json_header
+    download_url = tmp.download_file(get.name)
+    if plugin_name == 'ftp':
+        if download_url.find("ftp") != 0:download_url = "ftp://" + download_url
+    else:
         if download_url.find('http') != 0:download_url = 'http://' + download_url
     return redirect(download_url)
 

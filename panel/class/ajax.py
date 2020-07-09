@@ -546,6 +546,10 @@ class ajax:
     def GetPHPConfig(self,get):
         import re,json
         filename = public.GetConfigValue('setup_path') + '/php/' + get.version + '/etc/php.ini'
+        if public.get_webserver() == 'openlitespeed':
+            filename = '/usr/local/lsws/lsphp{}/etc/php/{}.{}/litespeed/php.ini'.format(get.version,get.version[0],get.version[1])
+            if os.path.exists('/etc/redhat-release'):
+                filename = '/usr/local/lsws/lsphp' + get.version + '/etc/php.ini'
         if not os.path.exists(filename): return public.returnMsg(False,'PHP_NOT_EXISTS')
         phpini = public.readFile(filename)
         data = {}
@@ -567,6 +571,7 @@ class ajax:
         phplib = json.loads(public.readFile('data/phplib.conf'))
         libs = []
         tasks = public.M('tasks').where("status!=?",('1',)).field('status,name').select()
+        phpini_ols = None
         for lib in phplib:
             lib['task'] = '1'
             for task in tasks:
@@ -577,10 +582,24 @@ class ajax:
                     lib['task'] = task['status']
                     lib['phpversions'] = []
                     lib['phpversions'].append(tmp1[1])
-            if phpini.find(lib['check']) == -1:
+            if public.get_webserver() == 'openlitespeed':
                 lib['status'] = False
+                get.php_version = "{}.{}".format(get.version[0],get.version[1])
+                if not phpini_ols:
+                    phpini_ols = self.php_info(get)['phpinfo']['modules'].lower()
+                    phpini_ols = phpini_ols.split()
+                for i in phpini_ols:
+                    if lib['check'][:-3].lower() == i :
+                        lib['status'] = True
+                        break
+                    if "ioncube" in lib['check'][:-3].lower() and "ioncube" == i:
+                        lib['status'] = True
+                        break
             else:
-                lib['status'] = True
+                if phpini.find(lib['check']) == -1:
+                    lib['status'] = False
+                else:
+                    lib['status'] = True
                 
             libs.append(lib)
         
@@ -602,18 +621,21 @@ class ajax:
             return True
         except:
             return False
-        
+
     #取PHPINFO信息
     def GetPHPInfo(self,get):
+        if public.get_webserver() == "openlitespeed":
+            shell_str = "/usr/local/lsws/lsphp{}/bin/php -i".format(get.version)
+            return public.ExecShell(shell_str)[0]
         sPath = '/www/server/phpinfo'
-        if os.path.exists(sPath): 
+        if os.path.exists(sPath):
             public.ExecShell("rm -rf " + sPath)
         p_file = '/dev/shm/phpinfo.php'
         public.writeFile(p_file,'<?php phpinfo(); ?>')
         phpinfo = public.request_php(get.version,'/phpinfo.php',p_file,'')
         if os.path.exists(p_file): os.remove(p_file)
-        return phpinfo.decode();         
-    
+        return phpinfo.decode()
+
     #清理日志
     def delClose(self,get):
         if not 'uid' in session: session['uid'] = 1
@@ -665,6 +687,8 @@ class ajax:
 
     # 修改php ssl端口
     def change_phpmyadmin_ssl_port(self,get):
+        if public.get_webserver() == "openlitespeed":
+            return public.returnMsg(False, 'OpenLiteSpeed 目前尚不支持该操作')
         import re
         try:
             port = int(get.port)
@@ -715,6 +739,8 @@ class ajax:
 
     # 设置phpmyadmin ssl
     def set_phpmyadmin_ssl(self,get):
+        if public.get_webserver() == "openlitespeed":
+            return public.returnMsg(False, 'OpenLiteSpeed 目前尚不支持该操作')
         if not os.path.exists("/www/server/panel/ssl/certificate.pem"):
             return public.returnMsg(False,'面板证书不存在，请申请面板证书后再试')
         if get.v == "1":
@@ -808,34 +834,44 @@ class ajax:
     
     #设置PHPMyAdmin
     def setPHPMyAdmin(self,get):
-        import re;
+        import re
         #try:
         filename = self.__get_webserver_conffile()
+        if public.get_webserver() == 'openlitespeed':
+            filename = "/www/server/panel/vhost/openlitespeed/detail/phpmyadmin.conf"
         conf = public.readFile(filename)
         if not conf: return public.returnMsg(False,'ERROR')
         if hasattr(get,'port'):
             mainPort = public.readFile('data/port.pl').strip()
             rulePort = ['80','443','21','20','8080','8081','8089','11211','6379']
+            oldPort = "888"
             if get.port in rulePort:
                 return public.returnMsg(False,'AJAX_PHPMYADMIN_PORT_ERR')
             if public.get_webserver() == 'nginx':
                 rep = r"listen\s+([0-9]+)\s*;"
                 oldPort = re.search(rep,conf).groups()[0]
                 conf = re.sub(rep,'listen ' + get.port + ';\n',conf)
-            else:
-                rep = r"Listen\s+([0-9]+)\s*\n"
+            elif public.get_webserver() == 'apache':
+                rep = "Listen\s+([0-9]+)\s*\n"
                 oldPort = re.search(rep,conf).groups()[0]
                 conf = re.sub(rep,"Listen " + get.port + "\n",conf,1)
-                rep = r"VirtualHost\s+\*:[0-9]+"
+                rep = "VirtualHost\s+\*:[0-9]+"
                 conf = re.sub(rep,"VirtualHost *:" + get.port,conf,1)
-            
+            else:
+                filename = '/www/server/panel/vhost/openlitespeed/listen/888.conf'
+                conf = public.readFile(filename)
+                reg = "address\s+\*:(\d+)"
+                tmp = re.search(reg,conf)
+                if tmp:
+                    oldPort = tmp.groups(1)
+                conf = re.sub(reg,"address *:{}".format(get.port),conf)
             if oldPort == get.port: return public.returnMsg(False,'SOFT_PHPVERSION_ERR_PORT')
             
             public.writeFile(filename,conf)
             import firewalls
             get.ps = public.getMsg('SOFT_PHPVERSION_PS')
             fw = firewalls.firewalls()
-            fw.AddAcceptPort(get);           
+            fw.AddAcceptPort(get)
             public.serviceReload()
             public.WriteLog('TYPE_SOFT','SOFT_PHPMYADMIN_PORT',(get.port,))
             get.id = public.M('firewall').where('port=?',(oldPort,)).getField('id')
@@ -849,10 +885,12 @@ class ajax:
                 conf = public.readFile(filename)
                 rep = "php-cgi.*\.sock"
                 conf = re.sub(rep,'php-cgi-' + get.phpversion + '.sock',conf,1)
-            else:
+            elif public.get_webserver() == 'apache':
                 rep = "php-cgi.*\.sock"
                 conf = re.sub(rep,'php-cgi-' + get.phpversion + '.sock',conf,1)
-                
+            else:
+                reg = '/usr/local/lsws/lsphp\d+/bin/lsphp'
+                conf = re.sub(reg,'/usr/local/lsws/lsphp{}/bin/lsphp'.format(get.phpversion),conf)
             public.writeFile(filename,conf)
             public.serviceReload()
             public.WriteLog('TYPE_SOFT','SOFT_PHPMYADMIN_PHP',(get.phpversion,))
@@ -1069,8 +1107,12 @@ class ajax:
     def php_info(self,args):
         php_version = args.php_version.replace('.','')
         php_path = '/www/server/php/'
+        if public.get_webserver() == 'openlitespeed':
+            php_path = '/usr/local/lsws/lsphp'
         php_bin = php_path + php_version + '/bin/php'
         php_ini = php_path + php_version + '/etc/php.ini'
+        if not os.path.exists('/etc/redhat-release'):
+            php_ini = php_path + php_version + '/etc/php/'+args.php_version+'/litespeed/php.ini'
         tmp = public.ExecShell(php_bin + ' /www/server/panel/class/php_info.php')[0]
         result = json.loads(tmp)
         result['phpinfo'] = {}

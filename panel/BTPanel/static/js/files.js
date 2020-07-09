@@ -160,7 +160,7 @@ var fileDrop = {
                         $('<input type="file" multiple="true" autocomplete="off" '+ (type == 'dir'?'webkitdirectory=""':'') +' />').change(function(e){
                             var files = e.target.files,arry = [];
                             for(var i=0;i<files.length;i++){
-                                if(/^\.\w*/.test(files[i].name) || /\/\.\w*/g.test(files[i].webkitRelativePath)) continue;
+                                // if(/^\.\w*/.test(files[i].name) || /\/\.\w*/g.test(files[i].webkitRelativePath)) continue;
                                 var config = {
                                     file:files[i],
                                     path: bt.get_file_path('/' + files[i].webkitRelativePath).replace('//','/') ,

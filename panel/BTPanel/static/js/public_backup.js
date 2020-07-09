@@ -728,7 +728,12 @@ var bt =
                         _html += '<div class="bt-input-text ace_config_editor_scroll mr20 ' + _name + bs + '" name="' + _name + '" style="width:' + _width + ';height:' + _height + ';line-height:22px">' + (_obj.value ? _obj.value : '') + '</div>';
                         if (_placeholder) _html += '<div class="placeholder c9" style="top: 15px; left: 15px; display: block;">' + _placeholder + '</div>';
                         break;
-                    	break;
+                    case 'switch':
+                        _html += '<div style="display: inline-block;vertical-align: middle;">\
+                            <input type="checkbox" id="' + _name + '" ' + (_obj.value==true?'checked':'') + ' class="btswitch btswitch-ios">\
+                            <label class="btswitch-btn" for="' + _name + '" style="margin-top:5px;"></label>\
+                        </div>';
+                        break;
                     default:
                         var _width = _obj.width ? _obj.width : '330px';
 
@@ -742,6 +747,7 @@ var bt =
                     if (_obj.event.callback) clicks.push({ bind: 'icon_' + _name + bs, callback: _obj.event.callback });
                 }
                 if (_obj.ps) _html += " <span class='c9 mt10'>" + _obj.ps + "</span>";
+                if (_obj.ps_help) _html += "<span class='bt-ico-ask "+_obj.name+"_help' tip='"+_obj.ps_help+"'>?</span>";
             }
             if (item.ps) _html += " <span class='c9 mt10'>" + item.ps + "</span>";
         }
@@ -4657,6 +4663,9 @@ bt.soft = {
 				case 'redis':
 					fileName = '/www/server/redis/redis.conf';
 					break;
+				case 'openlitespeed':
+                    fileName = '/usr/local/lsws/conf/httpd_config.conf';
+                    break;
 				default:
 					fileName = '/www/server/php/'+name+'/etc/php.ini';
 					break;

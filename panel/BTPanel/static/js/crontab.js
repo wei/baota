@@ -51,15 +51,19 @@ function getCronData(){
 					var s_status = '<span class="btOpen" onclick="set_task_status('+rdata[i].id+',0)" style="color:rgb(92, 184, 92);cursor:pointer" title="停用该计划任务">正常<span  class="glyphicon glyphicon-play"></span></span> ';
 					var optName = '';
 					if(rdata[i].status!=1) s_status = '<span onclick="set_task_status('+rdata[i].id+',1)"  class="btClose" style="color:red;cursor:pointer" title="启用该计划任务">停用<span style="color:rgb(255, 0, 0);" class="glyphicon glyphicon-pause"></span></span> ';
+					
 					for(var j = 0; j < res.orderOpt.length;j++){
-						if(rdata[i].backupTo == 'localhost'){
-							optName = '本地磁盘';
-						}else if(rdata[i].backupTo == res.orderOpt[j].value){
+						if(rdata[i].backupTo == res.orderOpt[j].value){
 							optName = res.orderOpt[j].name;
 						}else if(rdata[i].backupTo == ''){
 							optName = ''
 						}
-                    }
+					}
+					
+					if(rdata[i].backupTo == 'localhost'){
+						optName = '本地磁盘';
+					}
+					
 					var arrs = ['site','database','path'];
                     if ($.inArray(rdata[i].sType, arrs) == -1) optName = "--";
 					cbody += "<tr>\
@@ -788,6 +792,7 @@ $(".dropdown ul li a").click(function(){
 		case 'logs':
 			toBackup('logs');
 			$(".controls").html(lan.crontab.log_site);
+
 			break;
 		case 'toUrl':
 			toUrl();
@@ -832,17 +837,21 @@ function toBackup(type){
 				return
 			}
 			for(var i=0;i<rdata.data.length;i++){
-				if(i==0){
-					$(".planname input[name='name']").val(sMsg+'['+rdata.data[i].name+']');
+				if(type === 'logs'){
+					$(".planname input[name='name']").val(sMsg+'[ALL]');
+				}else{
+					if(i ==0){
+						$(".planname input[name='name']").val(sMsg+'['+rdata.data[i].name+']');
+					}
 				}
 				sOpt += '<li><a role="menuitem" tabindex="-1" href="javascript:;" value="'+rdata.data[i].name+'">'+rdata.data[i].name+'['+rdata.data[i].ps+']</a></li>';			
 			}	
 			sOptBody ='<div class="dropdown pull-left mr20">\
 					  <button class="btn btn-default dropdown-toggle" type="button" id="backdata" data-toggle="dropdown" style="width:auto">\
-						<b id="sName" val="'+rdata.data[0].name+'">'+rdata.data[0].name+'['+rdata.data[0].ps+']</b> <span class="caret"></span>\
+						<b id="sName" val="'+ (type === 'logs'?'ALL':rdata.data[0].name) +'">'+ (type === 'logs'?'所有':(rdata.data[0].name +'['+rdata.data[0].ps+']')) +'</b> <span class="caret"></span>\
 					  </button>\
 					  <ul class="dropdown-menu" role="menu" aria-labelledby="backdata">\
-					  <li><a role="menuitem" tabindex="-1" href="javascript:;" value="ALL">'+lan.public.all+'</a></li>\
+					 	<li><a role="menuitem" tabindex="-1" href="javascript:;" value="ALL">'+lan.public.all+'</a></li>\
 					  	'+sOpt+'\
 					  </ul>\
                     </div>'
@@ -864,10 +873,19 @@ function toBackup(type){
 			orderOpt += '<li><a role="menuitem" tabindex="-1" href="javascript:;" value="'+rdata.orderOpt[i].value+'">'+rdata.orderOpt[i].name+'</a></li>'
 		}
 		
-		
-
-		var sBody = sOptBody + '<div class="textname pull-left mr20">'+lan.crontab.backup_to+'</div>\
-					<div class="dropdown planBackupTo pull-left mr20">\
+		var save_num = 3;
+		if(type === 'logs'){
+			$('#cycle b').attr('val','day').text('每天');
+			$('.planweek').hide();
+			$('[name="hour"]').val(0);
+			$('[name="minute"]').val(1);
+			$('#implement').parent().after('<div class="clearfix plan" id="logs_tips"><span class="typename controls c4 pull-left f14 text-right mr20">提示</span><div style="line-height:34px">根据网络安全法第二十一条规定，网络日志应留存不少于六个月。</div></div>')
+			save_num = 180;
+		}else{
+			$('#logs_tips').remove();
+		}
+		var sBody = sOptBody + '<div class="textname pull-left mr20" style="display:'+ (type === 'logs'?'none':'inline-block') +'">'+lan.crontab.backup_to+'</div>\
+					<div class="dropdown planBackupTo pull-left mr20" style="display:'+ (type === 'logs'?'none':'inline-block') +'">\
 					  <button class="btn btn-default dropdown-toggle" type="button" id="excode" data-toggle="dropdown" style="width:auto;">\
 						<b val="localhost">'+lan.crontab.disk+'</b> <span class="caret"></span>\
 					  </button>\
@@ -877,7 +895,7 @@ function toBackup(type){
 					  </ul>\
 					</div>\
 					<div class="textname pull-left mr20">'+lan.crontab.save_new+'</div><div class="plan_hms pull-left mr20 bt-input-text">\
-					<span><input type="number" name="save" id="save" value="3" maxlength="4" max="100" min="1"></span>\
+					<span><input type="number" name="save" id="save" value="'+save_num+'" maxlength="4" max="100" min="1"></span>\
 					<span class="name">'+lan.crontab.save_num+'</span>\
 					</div>';
         if (sType == 'sites' && sMsg !== lan.crontab.backup_log) {
@@ -899,7 +917,6 @@ function toBackup(type){
 			$('.planname input').attr('readonly',false).removeAttr('style');
 		}
 	});
-
 }
 
 

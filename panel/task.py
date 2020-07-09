@@ -603,20 +603,19 @@ def HttpGet(url,timeout = 6,headers = {}):
 
 #定时任务去检测邮件信息
 def send_mail_time():
-    p_path = '/www/server/panel/plugin/bt_security/'
-    p_reload = p_path + '/reload.pl'
+    p_path = '/www/server/panel/data/'
+    p_reload = p_path + '/send_to_user.pl'
     if not os.path.exists(p_path):
         return False
-    sys.path.append(p_path)
     try:
-        import send_mail_msg
+        import send_to_user
     except:
         return False
-    msg=send_mail_msg.webshell_check()
+    msg=send_to_user.send_to_user()
     while True:
         try:
             if os.path.exists(p_reload):
-                public.mod_reload(send_mail_msg)
+                public.mod_reload(send_to_user)
                 os.remove(p_reload)
             msg.main()
             time.sleep(60)

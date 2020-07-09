@@ -1232,6 +1232,111 @@ var site = {
                 })
         	});
         },
+        ols_cache: function(web) {
+            bt.send('get_ols_static_cache', 'config/get_ols_static_cache', { id: web.id }, function(rdata) {
+                var clicks = [],
+                    newkey = [],
+                    newval = [],
+                    checked = false;
+                Object.keys(rdata).forEach(function(key){
+                //for (let key in rdata) {
+                    newkey.push(key);
+                    newval.push(rdata[key]);
+                });
+                var datas = [{ title: newkey[0], name: newkey[0], width: '30%', value: newval[0] },
+                        { title: newkey[1], name: newkey[1], width: '30%', value: newval[1] },
+                        { title: newkey[2], name: newkey[2], width: '30%', value: newval[2] },
+                        { title: newkey[3], name: newkey[3], width: '30%', value: newval[3] },
+                        {
+                            name: 'static_save',
+                            text: '保存',
+                            type: 'button',
+                            callback: function(ldata) {
+                                var cdata = {},
+                                    loadT = bt.load();
+                                Object.assign(cdata, ldata);
+                                delete cdata.static_save;
+                                delete cdata.maxage;
+                                delete cdata.exclude_file;
+                                delete cdata.private_save;
+                                bt.send('set_ols_static_cache', 'config/set_ols_static_cache', { values: JSON.stringify(cdata), id: web.id }, function(res) {
+                                    loadT.close();
+                                    bt.msg(res)
+                                });
+                            }
+                        },
+                        { title: 'test', name: 'test', width: '30%', value: '11' },
+                        { title: '缓存时间', name: 'maxage', width: '30%', value: '43200' },
+                        { title: '排除文件', name: 'exclude_file', width: '35%', value: 'fdas.php', },
+                        {
+                            name: 'private_save',
+                            text: '保存',
+                            type: 'button',
+                            callback: function(ldata) {
+                                var edata = {},
+                                    loadT = bt.load();
+                                if (checked) {
+                                    edata.id = web.id;
+                                    edata.max_age = parseInt($("input[name='maxage']").val());
+                                    edata.exclude_file = $("textarea[name='exclude_file']").val();
+                                    bt.send('set_ols_private_cache', 'config/set_ols_private_cache', edata, function(res) {
+                                        loadT.close();
+                                        bt.msg(res)
+                                    });
+                                }
+                            }
+                        }
+                    ],
+                    _html = $('<div class="ols"></div>');
+                for (var i = 0; i < datas.length; i++) {
+                    var _form_data = bt.render_form_line(datas[i]);
+                    _html.append(_form_data.html);
+                    clicks = clicks.concat(_form_data.clicks);
+                };
+                $('#webedit-con').append(_html);
+                $("input[name='exclude_file']").parent().removeAttr('class').html('<textarea name="exclude_file" class="bt-input-text mr5 exclude_file" style="width:35%;height: 130px;"></textarea>');
+                $("input[name='test']").parent().parent().html('<div style="padding-left: 29px;border-top: #ccc 1px dashed;margin-top: -7px;"><em style="float: left;color: #555;font-style: normal;line-height: 32px;padding-right: 2px;">私有缓存</em><div style="margin-left: 70px;padding-top: 5px;"><input class="btswitch btswitch-ios" id="ols" type="checkbox"><label class="btswitch-btn" for="ols"></label></div></div>');
+                var private = $("input[name='maxage'],textarea[name='exclude_file'],button[name='private_save']").parent().parent();
+                $("input.bt-input-text").parent().append('<span>秒</span>');
+                $("button[name='static_save']").parent().append(bt.render_help(['默认的静态文件缓存时间是604800秒', '如果要关机，请将其更改为0秒']));
+                $(".ols").append(bt.render_help(['私有缓存只支持PHP页面缓存，默认缓存时间为120秒', '排除文件仅支持以PHP为后缀的文件']));
+                private.hide();
+                var loadT = bt.load();
+                bt.send('get_ols_private_cache_status', 'config/get_ols_private_cache_status', { id: web.id }, function(kdata) {
+                    loadT.close();
+                    checked = kdata;
+                    if (kdata) {
+                        bt.send('get_ols_private_cache', 'config/get_ols_private_cache', { id: web.id }, function(fdata) {
+                            $("input[name='maxage']").val(fdata.maxage);
+                            var ss = fdata.exclude_file.join("&#13;");
+                            $("textarea[name='exclude_file']").html(ss);
+                            $("#ols").attr('checked', true);
+                            private.show();
+                        });
+                    }
+                });
+                $('#ols').on('click', function() {
+                    var loadS = bt.load();
+                    bt.send('switch_ols_private_cache', 'config/switch_ols_private_cache', { id: web.id }, function(res) {
+                        loadS.close();
+                        private.toggle();
+                        checked = private.is(':hidden') ? false : true;
+                        bt.msg(res);
+                        if (checked) {
+                            bt.send('get_ols_private_cache', 'config/get_ols_private_cache', { id: web.id }, function(fdata) {
+                                private.show();
+                                $("input[name='maxage']").val(fdata.maxage);
+                                $("textarea[name='exclude_file']").html(fdata.exclude_file.join("&#13;"));
+                            });
+                        }
+                    });
+                });
+                bt.render_clicks(clicks);
+                $("button[name='private_save']").parent().css("margin-bottom", "-13px");
+                $('.ss-text').css("margin-left", "66px");
+                $('.ols .btn-success').css("margin-left", "100px");
+            })
+        },
         limit_network: function (web) {
             bt.site.get_limitnet(web.id, function (rdata) {
                 var limits = [
@@ -1299,15 +1404,17 @@ var site = {
             var filename = '/www/server/panel/vhost/rewrite/' + web.name + '.conf';
             
             bt.site.get_rewrite_list(web.name, function (rdata) {
+                var arrs = [], webserver = bt.get_cookie('serverType');
                 if (bt.get_cookie('serverType') == 'apache') filename = rdata.sitePath + '/.htaccess';
-                var arrs = [];
+                if (webserver == 'apache' || webserver == 'openlitespeed') filename = rdata.sitePath + '/.htaccess';
+                if (webserver == 'openlitespeed') webserver = 'apache';
                 for (var i = 0; i < rdata.rewrite.length; i++) arrs.push({ title: rdata.rewrite[i], value: rdata.rewrite[i] });
 
                 var datas = [{
                     name: 'rewrite', type: 'select', width: '130px', items: arrs, callback: function (obj) {
                         if (bt.os == 'Linux') {
                             var spath = filename;
-                            if (obj.val() != lan.site.rewritename) spath = '/www/server/panel/rewrite/' + bt.get_cookie('serverType') + '/' + obj.val() + '.conf';
+                            if (obj.val() != lan.site.rewritename) spath = '/www/server/panel/rewrite/' + (webserver == 'openlitespeed'?'apache':webserver) + '/' + obj.val() + '.conf';
                             bt.files.get_file_body(spath, function (ret) {
                                 aceEditor.ACE.setValue(ret.data);
                                 aceEditor.ACE.moveCursorTo(0, 0); 
@@ -1380,7 +1487,7 @@ var site = {
                     items: [
                         { name: 'Dindex', height: '230px', width: '50%', type: 'textarea', value: rdata },
                         {
-                            name: 'btn_submit', text: '保存', type: 'button', callback: function (ddata) {
+                            name: 'btn_submit', text: '添加', type: 'button', callback: function (ddata) {
                                 var Dindex = ddata.Dindex.replace(new RegExp(/(\n)/g), ",");
                                 bt.site.set_index(web.id, Dindex, function (ret) {
                                     if (ret.status) site.reload(5)
@@ -1404,7 +1511,8 @@ var site = {
 					<li>此处为站点主配置文件,若您不了解配置规则,请勿随意修改.</li>\
 				</ul>';
 			$("#webedit-con").html(con);
-			var config = bt.aceEditor({el:'siteConfigBody',path:'/www/server/panel/vhost/'+bt.get_cookie('serverType')+'/'+ web.name +'.conf'})
+			var webserve = bt.get_cookie('serverType'),
+            config = bt.aceEditor({ el: 'siteConfigBody', path: '/www/server/panel/vhost/' + (webserve == 'openlitespeed' ? (webserve + '/detail') : webserve) + '/' + web.name + '.conf' });
     		$("#OnlineEditFileBtn").click(function(e){
 				bt.saveEditor(config);
 			});
@@ -2796,13 +2904,14 @@ var site = {
         var item = $(obj).parents('tr').data('item');
         bt.open({
             type: 1,
-            area: ['700px', '690px'],
+            area: ['700px', '722px'],
             title: lan.site.website_change + '[' + item.name + ']  --  ' + lan.site.addtime + '[' + item.addtime + ']',
             closeBtn: 2,
             shift: 0,
             content: "<div class='bt-form'><div class='bt-w-menu site-menu pull-left' style='height: 100%;'></div><div id='webedit-con' class='bt-w-con webedit-con pd15'></div></div>"
         })
         setTimeout(function () {
+            var webcache = bt.get_cookie('serverType') == 'openlitespeed' ? { title: 'LS-Cache', callback: site.edit.ols_cache } : '';
             var menus = [
                 { title: '域名管理', callback: site.edit.set_domains },
                 { title: '子目录绑定', callback: site.edit.set_dirbind },
@@ -2821,6 +2930,7 @@ var site = {
                 { title: '防盗链', callback: site.edit.set_security },
                 { title: '响应日志', callback: site.edit.get_site_logs }
             ]
+            if (webcache !== '') menus.splice(3, 0, webcache);
             for (var i = 0; i < menus.length; i++) {
                 var men = menus[i];
                 var _p = $('<p>' + men.title + '</p>');

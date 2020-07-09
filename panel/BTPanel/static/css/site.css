@@ -5427,7 +5427,7 @@ select[disabled]{
 .ace_scrollbar::-webkit-scrollbar {
 	/*滚动条整体样式*/
 	width : 15px;  /*高宽分别对应横竖滚动条的尺寸*/
-	height: 1px;
+	height: 10px;
 }
 .ace_scrollbar::-webkit-scrollbar-thumb {
 	/*滚动条里面小方块*/
@@ -5999,9 +5999,12 @@ select[disabled]{
 	margin-top: 20px;
 	position: relative;
 }
-.set_font_size input,
-.set_jump_line input{
+.set_font_size input
+{
 	width: 250px;
+}
+.set_jump_line input{
+    width: 370px;
 }
 .set_font_size .btn-save,
 .set_jump_line .btn-save{
@@ -6719,7 +6722,7 @@ select[disabled]{
 .ace_config_editor_scroll ::-webkit-scrollbar {
 	/*滚动条整体样式*/
 	width : 10px;  /*高宽分别对应横竖滚动条的尺寸*/
-	height: 1px;
+	height: 10px;
 }
 .ace_config_editor_scroll ::-webkit-scrollbar-thumb {
 	/*滚动条里面小方块*/
@@ -7215,7 +7218,7 @@ background:url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODIiIGhlaWdodD0iODIiIHh
 .dropUpLoadFile::-webkit-scrollbar {
 	/*滚动条整体样式*/
 	width : 15px;  /*高宽分别对应横竖滚动条的尺寸*/
-	height: 1px;
+	height: 10px;
 }
 .dropUpLoadFile::-webkit-scrollbar-thumb {
 	/*滚动条里面小方块*/
@@ -7429,6 +7432,8 @@ background:url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODIiIGhlaWdodD0iODIiIHh
 .upload_warning{
     color:#409EFF !important;
 }
-.ssl_tips{
-    
+.jump_tips{
+    font-size: 14px;
+    color: #fff;
+    margin-top: 10px;
 }

@@ -63,7 +63,7 @@ echo "The root password set ${pwd}  successuful"'''
 def set_panel_pwd(password,ncli = False):
     import db
     sql = db.Sql()
-    result = sql.table('users').where('id=?',(1,)).setField('password',public.md5(password))
+    result = sql.table('users').where('id=?',(1,)).setField('password',public.password_salt(public.md5(password),uid=1))
     username = sql.table('users').where('id=?',(1,)).getField('username')
     if ncli:
         print("|-用户名: " + username)

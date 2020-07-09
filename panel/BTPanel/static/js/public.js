@@ -459,15 +459,16 @@ var aceEditor = {
 				case 'jumpLine':
 					$('.ace_toolbar_menu').show().find('.menu-jumpLine').show().siblings().hide();
 					$('.set_jump_line input').val('').focus();
-					$('.set_jump_line .btn-save').unbind('click').click(function(){
-						var _jump_line = $('.set_jump_line input').val();
-						_item.ace.gotoLine(_jump_line);
-					});
-					$('.set_jump_line input').unbind('keypress keydown keyup').on('keypress keydown keyup',function(e){
+				    var _cursor = aceEditor.editor[aceEditor.ace_active].ace.selection.getCursor();
+				    $('.set_jump_line .jump_tips span:eq(0)').text(_cursor.row);
+				    $('.set_jump_line .jump_tips span:eq(1)').text(_cursor.column);
+				    $('.set_jump_line .jump_tips span:eq(2)').text(aceEditor.editor[aceEditor.ace_active].ace.session.getLength());
+					$('.set_jump_line input').unbind('keyup').on('keyup',function(e){
+					    var _val = $(this).val();
 						if((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105)){
-							var _jump_line = $('.set_jump_line input').val();
-							if(_jump_line == '' && typeof parseInt(_jump_line) != 'number') return false;
-							_item.ace.gotoLine(_jump_line);
+						    if(_val != '' && typeof parseInt(_val) == 'number'){
+						        _item.ace.gotoLine(_val);
+						    };
 						}
 					});
 				break;
@@ -1442,7 +1443,6 @@ var aceEditor = {
 		ACE.ace.getSession().selection.on('changeCursor', function(e) {
 			var _cursor = ACE.ace.selection.getCursor();
 			$('[data-type="cursor"]').html('行<i class="cursor-row">'+ (_cursor.row + 1) +'</i>,列<i class="cursor-line">'+ _cursor.column +'</i>');
-			$('.ace_toolbar_menu').hide();
 		});
 
 		// 触发修改内容
@@ -1698,7 +1698,7 @@ function openEditorView(type,path){
 	if(aceEditor.editor !== null){
 		if(aceEditor.isAceView == false){
 			aceEditor.isAceView = true;
-			$('.aceEditors .layui-layer-max').click()
+			$('.aceEditors .layui-layer-max').click();
 		}
 		aceEditor.openEditorView(path);
 		return false;
@@ -3539,7 +3539,34 @@ var Term = {
     term_box: null,
 	ssh_info: null,
 	last_body:false,
-
+	config:{
+	   cols:0,
+	   rows:0,
+	   fontSize:12
+	},
+	
+// 	缩放尺寸
+    detectZoom:(function(){
+        var ratio = 0,
+          screen = window.screen,
+          ua = navigator.userAgent.toLowerCase();
+        if (window.devicePixelRatio !== undefined) {
+          ratio = window.devicePixelRatio;
+        }
+        else if (~ua.indexOf('msie')) {
+          if (screen.deviceXDPI && screen.logicalXDPI) {
+            ratio = screen.deviceXDPI / screen.logicalXDPI;
+          }
+        }
+        else if (window.outerWidth !== undefined && window.innerWidth !== undefined) {
+          ratio = window.outerWidth / window.innerWidth;
+        }
+    
+        if (ratio){
+          ratio = Math.round(ratio * 100);
+        }
+        return ratio;
+    })(),
     //连接websocket
     connect: function () {
         if (!Term.bws || Term.bws.readyState == 3 || Term.bws.readyState == 2) {
@@ -3611,14 +3638,42 @@ var Term = {
 	},
 
     resize: function () {
-        var m_width = 100;
-        var m_height = 34;
-        Term.term.resize(m_width, m_height);
-        Term.term.scrollToBottom();
-		Term.term.focus();
+        var xterm_config =  bt.get_cookie('xterm_config');
+        if(xterm_config == null){
+            var xterm_mode = $('.xterm-text-layer'),
+            _xterm_width =  xterm_mode[0].clientWidth / 4,
+            _xterm_heigth =  xterm_mode[0].clientHeight / 4;
+            this.config.cols = parseInt(920 / _xterm_width);
+            this.config.rows = parseInt(578 / _xterm_heigth);
+            var xterm_mode_width = this.config.cols *_xterm_width,
+                xterm_mode_heigth = this.config.rows *_xterm_heigth,
+                xterm_mode_width_offset = parseInt(Math.abs((900 - xterm_mode_width)) / _xterm_width);
+            if(xterm_mode_width < 900){ 
+                this.config.cols + xterm_mode_width_offset;
+            }else{
+                this.config.cols = xterm_mode_width_offset>1?(this.config.cols - xterm_mode_width_offset) + (this.detectZoom >= 125?1:0):this.config.cols
+            }
+            bt.set_cookie('xterm_config',JSON.stringify({
+                cols:Term.config.cols,
+                rows:Term.config.rows,
+                detectZoom:Term.detectZoom
+            }));
+        }else{
+            xterm_config = JSON.parse(xterm_config);
+           if(xterm_config.detectZoom != this.detectZoom){
+               bt.set_cookie('xterm_config',null,0);
+               this.resize();
+           }else{
+               this.config.cols = xterm_config.cols;
+               this.config.rows = xterm_config.rows;
+           }
+        }
+        Term.term.resize(this.config.cols, this.config.rows);
 		setTimeout(function(){
+		    Term.term.scrollToBottom();
+	    	Term.term.focus();
 			Term.new_terminal();
-		},200);
+		},500);
     },
 
     //发送数据
@@ -3644,8 +3699,7 @@ var Term = {
         }
     },
     run: function (ssh_info) {
-        var termCols = 100;
-        var termRows = 34;
+        if(this.detectZoom <= 125){ Term.config.fontSize = 14; }
         var loadT = layer.msg('正在加载终端所需文件，请稍后...', { icon: 16, time: 0, shade: 0.3 });
         loadScript([
         	"/static/build/xterm.min.js",
@@ -3656,7 +3710,7 @@ var Term = {
         	"/static/build/addons/winptyCompat/winptyCompat.js"
         ],function(){
         	layer.close(loadT);
-        	Term.term = new Terminal({ cols: termCols, rows: termRows, screenKeys: true, useStyle: true });
+        	Term.term = new Terminal({ cols: 4, rows: 4,fontSize:Term.config.fontSize, screenKeys: true, useStyle: true });
 			Term.term.setOption('cursorBlink', true);
 			Term.last_body = false;
 	        Term.term_box = layer.open({
@@ -3665,15 +3719,17 @@ var Term = {
 	            area: ['920px', '630px'],
 	            closeBtn: 2,
 	            shadeClose: false,
+	            skin:'term_box_all',
 	            content: '<link rel="stylesheet" href="/static/build/xterm.min.css" />\
 						<link rel="stylesheet" href="/static/build/addons/fullscreen/fullscreen.min.css" />\
 	            <a class="btlink ssh-config" onclick="show_ssh_login(1)" style="position: fixed;margin-left: 83px;margin-top: -30px;">[设置]</a>\
 	            <div class="term-box" style="background-color:#000"><div id="term"></div></div>',
 	            cancel: function () {
 	                Term.term.destroy();
-	
 	            },
 	            success: function () {
+	                $('.term_box_all').css('background-color','#000');
+	                $('.term_box_all .layui-layer-content').css('overflow-x','hidden');
 	                Term.term.open(document.getElementById('term'));
 	                Term.resize();
 	            }
@@ -4023,5 +4079,3 @@ acme = {
 		});
 	}
 }
-
-
