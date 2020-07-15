@@ -1450,7 +1450,7 @@ bt.index = {
 						n = "4.4";
 						break;
 					default:
-						n = "4.7"
+						n = "4.9"
 				}
 				$("#" + r + "phpMyAdmin option[value='" + n + "']").attr("selected", "selected").siblings().removeAttr("selected");
 				$("#"+q+"phpMyAdmin").attr("data-info", "phpmyadmin " + n)
@@ -4804,10 +4804,35 @@ bt.database = {
 		})
 	},
 	open_phpmyadmin:function(name,username,password){
+
 		if($("#toPHPMyAdmin").attr('action').indexOf('phpmyadmin') == -1){
 		layer.msg(lan.database.phpmyadmin_err,{icon:2,shade: [0.3, '#000']})
 		setTimeout(function(){ window.location.href = '/soft'; },3000);
 			return;
+		}
+
+		layer.open({
+			type: 1,
+			title: "请选择访问phpMyAdmin的方式",
+			area: '600px',
+			closeBtn: 2,
+			shadeClose: false,
+			content: '<div class="change-default pd20">\
+			<button class="btn btn-default btn-sm " onclick="bt.database.submit_phpmyadmin(\''+name+'\',\''+username+'\',\''+password+'\',false)">通过面板安全访问</button>\
+			<button style="margin-left: 145px;" class="btn btn-default btn-sm" onclick="bt.database.submit_phpmyadmin(\''+name+'\',\''+username+'\',\''+password+'\',true)">通过Nginx/Apche/Ols访问</button>\
+			<ul class="help-info-text c7 plr20">\
+				<li>【通过面板安全访问】无需安装nginx/apache，由面板进行安全认证，需登录面板才能访问</li>\
+				<li>【通过Nginx/Apche/Ols访问】通过web服务器访问，由phpmyadmin进行安全认证</li>\
+				<li>若使用【通过面板安全访问】某些功能无法使用，请尝试使用另一种访问方式</li>\
+			</ul>\
+			</div>'
+		});
+	},
+	submit_phpmyadmin: function(name,username,password,pub){
+		if(pub === true){
+			$("#toPHPMyAdmin").attr('action',$("#toPHPMyAdmin").attr('public-data'))
+		}else{
+			$("#toPHPMyAdmin").attr('action','/phpmyadmin/index.php')
 		}
 		var murl = $("#toPHPMyAdmin").attr('action');
 		$("#pma_username").val(username);
@@ -4816,8 +4841,10 @@ bt.database = {
 		layer.msg(lan.database.phpmyadmin,{icon:16,shade: [0.3, '#000'],time:1000});
 		setTimeout(function(){
 			$("#toPHPMyAdmin").submit();
+			layer.closeAll();
 		},200);
 	},
+
 	input_sql:function(fileName,dataName){
 		bt.confirm({msg:lan.database.input_confirm,title:lan.database.input_title},function(index){
 			var loading = bt.load(lan.database.input_the);
@@ -4825,7 +4852,7 @@ bt.database = {
 				loading.close();
 				bt.msg(rdata);
 			})
-		});		
+		});
 	},
 	backup_data:function(id,dataname,callback){
 		var loadT = bt.load(lan.database.backup_the);

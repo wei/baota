@@ -25,7 +25,7 @@ import sys
 os.chdir('/www/server/panel')
 sys.path.append('class/')
 import http_requests as requests
-requests.DEFAULT_TYPE = 'curl'
+requests.DEFAULT_TYPE = 'python'
 import public
 
 try:

@@ -138,7 +138,7 @@ exit($header."\r\n\r\n".json_encode($body));
         if php_version.find('/www/server/php') != -1:
             result = public.ExecShell(php_version + ' ' + tmp_file + " --post='" + data + "'" )[0]
         else:
-            result = public.request_php(php_version,'/http.php',tmp_file,'','POST',{"data":data})
+            result = public.request_php(php_version,'/http.php','/dev/shm','POST',{"data":data})
 
         if os.path.exists(tmp_file): os.remove(tmp_file)
         r_body,r_headers,r_status_code = self._curl_format(result)
@@ -240,7 +240,7 @@ exit($header."\r\n\r\n".json_encode($body));
         if php_version.find('/www/server/php') != -1:
             result = public.ExecShell(php_version + ' ' + tmp_file + " --post='" + data + "'" )[0]
         else:
-            result = public.request_php(php_version,'/http.php',tmp_file,'','POST',{"data":data})
+            result = public.request_php(php_version,'/http.php','/dev/shm','POST',{"data":data})
         if os.path.exists(tmp_file): os.remove(tmp_file)
         r_body,r_headers,r_status_code = self._curl_format(result)
         return response(json.loads(r_body).strip(),r_status_code,r_headers)

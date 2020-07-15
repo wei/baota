@@ -59,6 +59,17 @@
                         <label class='btswitch-btn' for='panel_verification'></label>
                     </div>
                 </div>
+                <div class="ss-text pull-left mr50">
+                    <em title="推荐宝塔官方最新的活动和优质软件">活动推荐</em>
+                    <div class='ssh-item'>
+                        <input class='btswitch btswitch-ios' id='show_recommend' type='checkbox' 
+                        {% if data['show_recommend'] %}
+                            checked
+                        {% endif %}
+                        />
+                        <label class='btswitch-btn' for='show_recommend'></label>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="setbox bgw mtb15">
@@ -287,7 +298,7 @@
 {% block scripts %}
 	<script type="text/javascript" src="{{g.cdn_url}}/js/jquery.qrcode.min.js"></script>
 	<script src="{{g.cdn_url}}/js/config.js?version20200116={{g['version']}}"></script>
-	<script type="text/javascript">
+    <script type="text/javascript">
 		setCookie('serverType',"{{session['webserver']}}");
 	</script>
 {% endblock %}

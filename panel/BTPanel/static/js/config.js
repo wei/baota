@@ -85,15 +85,25 @@ function ClosePanel(){
 //设置自动更新
 function SetPanelAutoUpload(){
 	loadT = layer.msg(lan.public.config,{icon:16,time:0});
-	$.post('/config?action=AutoUpdatePanel','',function(rdata){
+	$.post('/config?action=AutoUpdatePanel','',function(rdata){ 
 		layer.close(loadT);
 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
 	});
 }
 
-
-
-
+$('#show_recommend').click(function(){
+	var status = !$(this).prop("checked"),that = $(this);
+	layer.confirm(status?'关闭活动推荐，将无法接受到宝塔官方推荐的活动内容？':'开启活动推荐，定期获取宝塔官方推荐的的活动内容！',{title:status?'关闭活动推荐':'开启活动推荐',closeBtn:2,icon:13,cancel:function(){
+		that.prop("checked",status);
+	}}, function() {
+		$.post('/config?action=show_recommend',function(rdata){
+			layer.msg(rdata.msg,{icon:rdata.status?1:2});
+		});
+	},function(){
+		that.prop("checked",status);
+	});
+	
+})
 $('#panel_verification').click(function(){
 	var _checked = $(this).prop('checked');
 	if(_checked){
@@ -987,7 +997,7 @@ function modify_basic_auth_to() {
 function modify_basic_auth() {
     var loadT = layer.msg('正在获取配置,请稍候...', { icon: 16, time: 0, shade: [0.3, '#000'] });
     $.post('/config?action=get_basic_auth_stat', {}, function (rdata) {
-        layer.close(loadT);
+        layer.closeAll();
         if (rdata.open) {
             show_basic_auth(rdata);
         } else {

@@ -125,7 +125,7 @@ def HttpPost(url,data,timeout = 6,headers = {}):
     import http_requests
     res = http_requests.post(url,data=data,timeout=timeout,headers = headers)
     if res.status_code == 0:
-        WriteLog('请求错误',res.text)
+        #WriteLog('请求错误',res.text)
         if old_url.find(home) != -1: return http_post_home(old_url,data,timeout,res.text)
         if headers: return False
         s_body = res.text
@@ -185,7 +185,7 @@ def Md5(strings):
         @param strings 要被处理的字符串
         @return string(32)
     """
-    if type(strings) == str:
+    if type(strings) != bytes:
         strings = strings.encode()
     import hashlib
     m = hashlib.md5()
@@ -869,9 +869,9 @@ def checkWebConfig():
     if not os.path.exists(f2 + 'btwaf'):
         f3 = f1 + 'nginx/btwaf.conf'
         if os.path.exists(f3): os.remove(f3)
-    if not os.path.exists(f2 + 'btwaf_httpd'):
-        f3 = f1 + 'apache/btwaf.conf'
-        if os.path.exists(f3): os.remove(f3)
+    # if not os.path.exists(f2 + 'btwaf_httpd'):
+    #     f3 = f1 + 'apache/btwaf.conf'
+    #     if os.path.exists(f3): os.remove(f3)
 
     if not os.path.exists(f2 + 'total'):
         f3 = f1 + 'apache/total.conf'
@@ -1683,22 +1683,11 @@ def upload_file_url(filename):
 #filename 要执行的php文件
 #args 请求参数
 #method 请求方式
-def request_php(version,uri,filename,args,method='GET',pdata='',timeout=3000):
-    import fastcgi_client
-    client= fastcgi_client.fastcgi_client('/tmp/php-cgi-'+version+'.sock',None, timeout, 0)
-    if type(args) == dict: args = url_encode(args)
+def request_php(version,uri,document_root,method='GET',pdata=b''):
+    import panelPHP
     if type(pdata) == dict: pdata = url_encode(pdata)
-    params = {
-                'REQUEST_METHOD': method,
-                'SCRIPT_FILENAME': filename,
-                'SCRIPT_NAME': uri,
-                'SERVER_PROTOCOL': 'HTTP/1.1',
-                'GATEWAY_INTERFACE': 'CGI/1.1',
-                'QUERY_STRING': args,
-                'CONTENT_TYPE': 'application/x-www-form-urlencoded',
-                'CONTENT_LENGTH': len(pdata)
-            }
-    result = client.request(params,pdata)
+    p = panelPHP.FPM('/tmp/php-cgi-'+version+'.sock',document_root)
+    result = p.load_url_public(uri,pdata,method)
     return result
 
 
@@ -1709,6 +1698,15 @@ def url_encode(data):
         pdata = urllib.parse.urlencode(data).encode('utf-8')
     else:
         pdata = urllib.urlencode(data)
+    return pdata
+
+def url_decode(data):
+    if type(data) == str: return data
+    import urllib
+    if sys.version_info[0] != 2:
+        pdata = urllib.parse.urldecode(data).encode('utf-8')
+    else:
+        pdata = urllib.urldecode(data)
     return pdata
 
 
@@ -1871,7 +1869,7 @@ def get_debug_log():
 #获取sessionid
 def get_session_id():
     from BTPanel import request
-    return request.cookies.get('BT_PANEL_6')
+    return request.cookies.get('SESSIONID','')
 
 def chdck_salt():
     '''
@@ -1889,6 +1887,16 @@ def chdck_salt():
         pdata['password'] = md5(md5(u_info['password']+'_bt.cn') + salt)
         pdata['salt'] = salt
         M('users').where('id=?',(u_info['id'],)).update(pdata)
+
+
+def get_login_token():
+    token_s = readFile('/www/server/panel/data/login_token.pl')
+    if not token_s: return GetRandomString(32)
+    return token_s
+
+def get_sess_key():
+    from BTPanel import request
+    return md5(get_login_token() + request.headers.get('User-Agent',''))
 
 
 def password_salt(password,username=None,uid=None):

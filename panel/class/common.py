@@ -29,12 +29,12 @@ class dict_obj:
 
 class panelSetup:
     def init(self):
-        ua = request.headers.get('User-Agent')
+        ua = request.headers.get('User-Agent','')
         if ua:
             ua = ua.lower()
             if ua.find('spider') != -1 or ua.find('bot') != -1:
                 return redirect('https://www.baidu.com')
-        g.version = '7.4.0'
+        g.version = '7.4.2'
         g.title = public.GetConfigValue('title')
         g.uri = request.path
         if not os.path.exists('data/debug.pl'):
@@ -157,6 +157,11 @@ class panelAdmin(panelSetup):
                     if session['login_token'] != token:
                         session.clear()
                         return redirect('/login?dologin=True')
+            if api_check:
+                filename = 'data/sess_files/' + public.get_sess_key()
+                if not os.path.exists(filename):
+                    session.clear()
+                    return redirect('/login?dologin=True')
         except:
             return public.returnMsg(False,public.get_error_info())
             session.clear()
@@ -205,7 +210,7 @@ class panelAdmin(panelSetup):
                 return redirect('/login')
             g.is_aes = True
             g.aes_key = api_config['key']
-            
+        
         request_token = public.md5(get.request_time + api_config['token'])
         if get.request_token == request_token:
             return False

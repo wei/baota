@@ -3046,142 +3046,142 @@ function listOrder(skey,type,obj){
 	}
 }
 
-//去关联列表
-function GetBtpanelList(){
-	var con ='';
-	$.post("/config?action=GetPanelList",function(rdata){
-		for(var i=0; i<rdata.length; i++){
-			con +='<h3 class="mypcip mypcipnew" style="opacity:.6" data-url="'+rdata[i].url+'" data-user="'+rdata[i].username+'" data-pw="'+rdata[i].password+'"><span class="f14 cw">'+rdata[i].title+'</span><em class="btedit" onclick="bindBTPanel(0,\'c\',\''+rdata[i].title+'\',\''+rdata[i].id+'\',\''+rdata[i].url+'\',\''+rdata[i].username+'\',\''+rdata[i].password+'\')"></em></h3>'
-		}
-		$("#newbtpc").html(con);
-		$(".mypcipnew").hover(function(){
-			$(this).css("opacity","1");
-		},function(){
-			$(this).css("opacity",".6");
-		}).click(function(){
-		$("#btpanelform").remove();
-		var murl = $(this).attr("data-url");
-		var user = $(this).attr("data-user");
-		var pw = $(this).attr("data-pw");
-		layer.open({
-		  type: 2,
-		  title: false,
-		  closeBtn: 0, //不显示关闭按钮
-		  shade: [0],
-		  area: ['340px', '215px'],
-		  offset: 'rb', //右下角弹出
-		  time: 5, //2秒后自动关闭
-		  anim: 2,
-		  content: [murl+'/login', 'no']
-		});
-			var loginForm ='<div id="btpanelform" style="display:none"><form id="toBtpanel" action="'+murl+'/login" method="post" target="btpfrom">\
-				<input name="username" id="btp_username" value="'+user+'" type="text">\
-				<input name="password" id="btp_password" value="'+pw+'" type="password">\
-				<input name="code" id="bt_code" value="12345" type="text">\
-			</form><iframe name="btpfrom" src=""></iframe></div>';
-			$("body").append(loginForm);
-			layer.msg(lan.bt.panel_open,{icon:16,shade: [0.3, '#000'],time:1000});
-			setTimeout(function(){
-				$("#toBtpanel").submit();
-			},500);
-			setTimeout(function(){
-				window.open(murl);
-			},1000);
-		});
-		$(".btedit").click(function(e){
-			e.stopPropagation();
-		});
-	})
+// //去关联列表
+// function GetBtpanelList(){
+// 	var con ='';
+// 	$.post("/config?action=GetPanelList",function(rdata){
+// 		for(var i=0; i<rdata.length; i++){
+// 			con +='<h3 class="mypcip mypcipnew" style="opacity:.6" data-url="'+rdata[i].url+'" data-user="'+rdata[i].username+'" data-pw="'+rdata[i].password+'"><span class="f14 cw">'+rdata[i].title+'</span><em class="btedit" onclick="bindBTPanel(0,\'c\',\''+rdata[i].title+'\',\''+rdata[i].id+'\',\''+rdata[i].url+'\',\''+rdata[i].username+'\',\''+rdata[i].password+'\')"></em></h3>'
+// 		}
+// 		$("#newbtpc").html(con);
+// 		$(".mypcipnew").hover(function(){
+// 			$(this).css("opacity","1");
+// 		},function(){
+// 			$(this).css("opacity",".6");
+// 		}).click(function(){
+// 		$("#btpanelform").remove();
+// 		var murl = $(this).attr("data-url");
+// 		var user = $(this).attr("data-user");
+// 		var pw = $(this).attr("data-pw");
+// 		layer.open({
+// 		  type: 2,
+// 		  title: false,
+// 		  closeBtn: 0, //不显示关闭按钮
+// 		  shade: [0],
+// 		  area: ['340px', '215px'],
+// 		  offset: 'rb', //右下角弹出
+// 		  time: 5, //2秒后自动关闭
+// 		  anim: 2,
+// 		  content: [murl+'/login', 'no']
+// 		});
+// 			var loginForm ='<div id="btpanelform" style="display:none"><form id="toBtpanel" action="'+murl+'/login" method="post" target="btpfrom">\
+// 				<input name="username" id="btp_username" value="'+user+'" type="text">\
+// 				<input name="password" id="btp_password" value="'+pw+'" type="password">\
+// 				<input name="code" id="bt_code" value="12345" type="text">\
+// 			</form><iframe name="btpfrom" src=""></iframe></div>';
+// 			$("body").append(loginForm);
+// 			layer.msg(lan.bt.panel_open,{icon:16,shade: [0.3, '#000'],time:1000});
+// 			setTimeout(function(){
+// 				$("#toBtpanel").submit();
+// 			},500);
+// 			setTimeout(function(){
+// 				window.open(murl);
+// 			},1000);
+// 		});
+// 		$(".btedit").click(function(e){
+// 			e.stopPropagation();
+// 		});
+// 	})
 	
-}
-GetBtpanelList();
-//添加面板快捷登录
-function bindBTPanel(a,type,ip,btid,url,user,pw){
-	var titleName = lan.bt.panel_add;
-	if(type == "b"){
-		btn = "<button type='button' class='btn btn-success btn-sm' onclick=\"bindBTPanel(1,'b')\">"+lan.public.add+"</button>";
-	}
-	else{
-		titleName = lan.bt.panel_edit+ip;
-		btn = "<button type='button' class='btn btn-default btn-sm' onclick=\"bindBTPaneldel('"+btid+"')\">"+lan.public.del+"</button><button type='button' class='btn btn-success btn-sm' onclick=\"bindBTPanel(1,'c','"+ip+"','"+btid+"')\" style='margin-left:7px'>"+lan.public.edit+"</button>";
-	}
-	if(url == undefined) url="http://";
-	if(user == undefined) user="";
-	if(pw == undefined) pw="";
-	if(ip == undefined) ip="";
-	if(a == 1) {
-		var gurl = "/config?action=AddPanelInfo";
-		var btaddress = $("#btaddress").val();
-		if(!btaddress.match(/^(http|https)+:\/\/([\w-]+\.)+[\w-]+:\d+/)){
-			layer.msg(lan.bt.panel_err_format+'<p>http://192.168.0.1:8888</p>',{icon:5,time:5000});
-			return;
-		}
-		var btuser = encodeURIComponent($("#btuser").val());
-		var btpassword = encodeURIComponent($("#btpassword").val());
-		var bttitle = $("#bttitle").val();
-		var data = "title="+bttitle+"&url="+encodeURIComponent(btaddress)+"&username="+btuser+"&password="+btpassword;
-		if(btaddress =="" || btuser=="" || btpassword=="" || bttitle==""){
-			layer.msg(lan.bt.panel_err_empty,{icon:8});
-			return;
-		}
-		if(type=="c"){
-			gurl = "/config?action=SetPanelInfo";
-			data = data+"&id="+btid;
-		}
-		$.post(gurl, data, function(b) {
-			if(b.status) {
-				layer.closeAll();
-				layer.msg(b.msg, {icon: 1});
-				GetBtpanelList();
-			} else {
-				layer.msg(b.msg, {icon: 2})
-			}
-		});
-		return
-	}
-	layer.open({
-		type: 1,
-		area: "400px",
-		title: titleName,
-		closeBtn: 2,
-		shift: 5,
-		shadeClose: false,
-		content: "<div class='bt-form pd20 pb70'>\
-		<div class='line'><span class='tname'>"+lan.bt.panel_address+"</span>\
-		<div class='info-r'><input class='bt-input-text' type='text' name='btaddress' id='btaddress' value='"+url+"' placeholder='"+lan.bt.panel_address+"' style='width:100%'/></div>\
-		</div>\
-		<div class='line'><span class='tname'>"+lan.bt.panel_user+"</span>\
-		<div class='info-r'><input class='bt-input-text' type='text' name='btuser' id='btuser' value='"+user+"' placeholder='"+lan.bt.panel_user+"' style='width:100%'/></div>\
-		</div>\
-		<div class='line'><span class='tname'>"+lan.bt.panel_pass+"</span>\
-		<div class='info-r'><input class='bt-input-text' type='password' name='btpassword' id='btpassword' value='"+pw+"' placeholder='"+lan.bt.panel_pass+"' style='width:100%'/></div>\
-		</div>\
-		<div class='line'><span class='tname'>"+lan.bt.panel_ps+"</span>\
-		<div class='info-r'><input class='bt-input-text' type='text' name='bttitle' id='bttitle' value='"+ip+"' placeholder='"+lan.bt.panel_ps+"' style='width:100%'/></div>\
-		</div>\
-		<div class='line'><ul class='help-info-text c7'><li>"+lan.bt.panel_ps_1+"</li><li>"+lan.bt.panel_ps_2+"</li><li>"+lan.bt.panel_ps_3+"</li></ul></div>\
-		<div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">"+lan.public.close+"</button> "+btn+"</div></div>"
-	});
-	$("#btaddress").on("input",function(){
-		var str =$(this).val();
-		var isip = /([\w-]+\.){2,6}\w+/;
-		var iptext = str.match(isip);
-		if(iptext) $("#bttitle").val(iptext[0]);
-	}).blur(function(){
-		var str =$(this).val();
-		var isip = /([\w-]+\.){2,6}\w+/;
-		var iptext = str.match(isip);
-		if(iptext) $("#bttitle").val(iptext[0]);
-	});
-}
-//删除快捷登录
-function bindBTPaneldel(id){
-	$.post("/config?action=DelPanelInfo","id="+id,function(rdata){
-		layer.closeAll();
-		layer.msg(rdata.msg,{icon:rdata.status?1:2});
-		GetBtpanelList();
-	})
-}
+// }
+// GetBtpanelList();
+// //添加面板快捷登录
+// function bindBTPanel(a,type,ip,btid,url,user,pw){
+// 	var titleName = lan.bt.panel_add;
+// 	if(type == "b"){
+// 		btn = "<button type='button' class='btn btn-success btn-sm' onclick=\"bindBTPanel(1,'b')\">"+lan.public.add+"</button>";
+// 	}
+// 	else{
+// 		titleName = lan.bt.panel_edit+ip;
+// 		btn = "<button type='button' class='btn btn-default btn-sm' onclick=\"bindBTPaneldel('"+btid+"')\">"+lan.public.del+"</button><button type='button' class='btn btn-success btn-sm' onclick=\"bindBTPanel(1,'c','"+ip+"','"+btid+"')\" style='margin-left:7px'>"+lan.public.edit+"</button>";
+// 	}
+// 	if(url == undefined) url="http://";
+// 	if(user == undefined) user="";
+// 	if(pw == undefined) pw="";
+// 	if(ip == undefined) ip="";
+// 	if(a == 1) {
+// 		var gurl = "/config?action=AddPanelInfo";
+// 		var btaddress = $("#btaddress").val();
+// 		if(!btaddress.match(/^(http|https)+:\/\/([\w-]+\.)+[\w-]+:\d+/)){
+// 			layer.msg(lan.bt.panel_err_format+'<p>http://192.168.0.1:8888</p>',{icon:5,time:5000});
+// 			return;
+// 		}
+// 		var btuser = encodeURIComponent($("#btuser").val());
+// 		var btpassword = encodeURIComponent($("#btpassword").val());
+// 		var bttitle = $("#bttitle").val();
+// 		var data = "title="+bttitle+"&url="+encodeURIComponent(btaddress)+"&username="+btuser+"&password="+btpassword;
+// 		if(btaddress =="" || btuser=="" || btpassword=="" || bttitle==""){
+// 			layer.msg(lan.bt.panel_err_empty,{icon:8});
+// 			return;
+// 		}
+// 		if(type=="c"){
+// 			gurl = "/config?action=SetPanelInfo";
+// 			data = data+"&id="+btid;
+// 		}
+// 		$.post(gurl, data, function(b) {
+// 			if(b.status) {
+// 				layer.closeAll();
+// 				layer.msg(b.msg, {icon: 1});
+// 				GetBtpanelList();
+// 			} else {
+// 				layer.msg(b.msg, {icon: 2})
+// 			}
+// 		});
+// 		return
+// 	}
+// 	layer.open({
+// 		type: 1,
+// 		area: "400px",
+// 		title: titleName,
+// 		closeBtn: 2,
+// 		shift: 5,
+// 		shadeClose: false,
+// 		content: "<div class='bt-form pd20 pb70'>\
+// 		<div class='line'><span class='tname'>"+lan.bt.panel_address+"</span>\
+// 		<div class='info-r'><input class='bt-input-text' type='text' name='btaddress' id='btaddress' value='"+url+"' placeholder='"+lan.bt.panel_address+"' style='width:100%'/></div>\
+// 		</div>\
+// 		<div class='line'><span class='tname'>"+lan.bt.panel_user+"</span>\
+// 		<div class='info-r'><input class='bt-input-text' type='text' name='btuser' id='btuser' value='"+user+"' placeholder='"+lan.bt.panel_user+"' style='width:100%'/></div>\
+// 		</div>\
+// 		<div class='line'><span class='tname'>"+lan.bt.panel_pass+"</span>\
+// 		<div class='info-r'><input class='bt-input-text' type='password' name='btpassword' id='btpassword' value='"+pw+"' placeholder='"+lan.bt.panel_pass+"' style='width:100%'/></div>\
+// 		</div>\
+// 		<div class='line'><span class='tname'>"+lan.bt.panel_ps+"</span>\
+// 		<div class='info-r'><input class='bt-input-text' type='text' name='bttitle' id='bttitle' value='"+ip+"' placeholder='"+lan.bt.panel_ps+"' style='width:100%'/></div>\
+// 		</div>\
+// 		<div class='line'><ul class='help-info-text c7'><li>"+lan.bt.panel_ps_1+"</li><li>"+lan.bt.panel_ps_2+"</li><li>"+lan.bt.panel_ps_3+"</li></ul></div>\
+// 		<div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm' onclick=\"layer.closeAll()\">"+lan.public.close+"</button> "+btn+"</div></div>"
+// 	});
+// 	$("#btaddress").on("input",function(){
+// 		var str =$(this).val();
+// 		var isip = /([\w-]+\.){2,6}\w+/;
+// 		var iptext = str.match(isip);
+// 		if(iptext) $("#bttitle").val(iptext[0]);
+// 	}).blur(function(){
+// 		var str =$(this).val();
+// 		var isip = /([\w-]+\.){2,6}\w+/;
+// 		var iptext = str.match(isip);
+// 		if(iptext) $("#bttitle").val(iptext[0]);
+// 	});
+// }
+// //删除快捷登录
+// function bindBTPaneldel(id){
+// 	$.post("/config?action=DelPanelInfo","id="+id,function(rdata){
+// 		layer.closeAll();
+// 		layer.msg(rdata.msg,{icon:rdata.status?1:2});
+// 		GetBtpanelList();
+// 	})
+// }
 
 function getSpeed(sele){
 	if(!$(sele)) return;

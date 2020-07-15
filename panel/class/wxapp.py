@@ -66,6 +66,8 @@ class ScanLogin(object):
                 public.WriteLog('TYPE_LOGIN', 'LOGIN_SUCCESS',
                                 ('微信扫码登录', public.GetClientIp()+ ":" + str(request.environ.get('REMOTE_PORT'))))
                 login_type = 'data/app_login.pl'
+                import config
+                config.config().reload_session()
                 public.writeFile(login_type,'True')
                 return public.returnMsg(True, '登录成功')
         return public.returnMsg(False, '登录失败')
@@ -87,6 +89,8 @@ class ScanLogin(object):
         sess_input_path = 'data/session_last.pl'
         public.writeFile(sess_input_path,str(int(time.time())))
         login_type = 'data/app_login.pl'
+        import config
+        config.config().reload_session()
         public.writeFile(login_type,'True')
         return public.returnMsg(True,'登录成功!')
 

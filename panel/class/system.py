@@ -643,7 +643,16 @@ class system:
             get.status = 'True'
             ajax.ajax().setPHPMyAdmin(get)
             return public.returnMsg(True,'SYS_EXEC_SUCCESS')
-        
+            
+        if get.name == 'openlitespeed':
+            if get.type == 'stop':
+                public.ExecShell('rm -f /tmp/lshttpd/*.sock* && /usr/local/lsws/bin/lswsctrl stop')
+            elif get.type == 'start':
+                public.ExecShell('rm -f /tmp/lshttpd/*.sock* && /usr/local/lsws/bin/lswsctrl start')
+            else:
+                public.ExecShell('rm -f /tmp/lshttpd/*.sock* && /usr/local/lsws/bin/lswsctrl restart')
+            return public.returnMsg(True,'SYS_EXEC_SUCCESS')
+
         #检查httpd配置文件
         if get.name == 'apache' or get.name == 'httpd':
             get.name = 'httpd'

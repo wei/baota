@@ -13,10 +13,11 @@ import time
 import re
 import uuid
 import threading
+import socket
 os.chdir('/www/server/panel/')
 sys.path.insert(0,'class/')
 import public
-from flask import Flask,current_app,session,render_template,send_file,request,redirect,g,url_for,make_response,render_template_string,abort
+from flask import Flask,current_app,session,render_template,send_file,request,redirect,g,url_for,make_response,render_template_string,abort,stream_with_context,Response as Resp
 from flask_session import Session
 try:
     from werkzeug.contrib.cache import SimpleCache
@@ -79,7 +80,7 @@ except:
 app.config['SESSION_PERMANENT'] = True
 app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_KEY_PREFIX'] = 'BT_:'
-app.config['SESSION_COOKIE_NAME'] = "BT_PANEL_6"
+app.config['SESSION_COOKIE_NAME'] = "SESSIONID"
 app.config['PERMANENT_SESSION_LIFETIME'] = 86400
 Session(app)
 
@@ -152,6 +153,46 @@ if admin_path in admin_path_checks: admin_path = '/bt'
 def service_status():
     return 'True'
 
+@app.route('/phpmyadmin',methods = method_all)
+@app.route('/phpmyadmin/',methods = method_all)
+@app.route('/phpmyadmin/<path:puri>',methods = method_all)
+def phpmyadmin(puri = None):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    import panelPHP
+    p = panelPHP.panelPHP()
+    document_root = '/www/server/phpmyadmin/pma/'
+    sock = p.start(puri,document_root,'/phpmyadmin/')
+
+    #如果是响应体则直接返回
+    if isinstance(sock,Resp):
+        return sock
+    
+    headers_data = p.get_header_data(sock)
+    status,headers,bdata = p.format_header_data(headers_data)
+    return Response(p.resp_sock(sock,bdata),headers=headers,status=status)
+
+
+@app.route('/adminer',methods = method_all)
+@app.route('/adminer/',methods = method_all)
+@app.route('/adminer/<path:puri>',methods = method_all)
+def adminer(puri = None):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    import panelPHP
+    p = panelPHP.panelPHP()
+    document_root = '/www/server/adminer/'
+    
+    sock = p.start(puri,document_root,'/adminer/')
+    
+    #如果是响应体则直接返回
+    if isinstance(sock,Resp):return sock
+    
+    headers_data = p.get_header_data(sock)
+    status,headers,bdata = p.format_header_data(headers_data)
+    return Response(p.resp_sock(sock,bdata),headers=headers,status=status)
+    
+
 @sockets.route('/webssh')
 def webssh(ws):
     if not check_login(): 
@@ -212,16 +253,22 @@ def reload_mod():
 @app.before_request
 def request_check():
     #路由和URI长度过滤
-    if len(request.path) > 64: return abort(403)
-    if len(request.url) > 1024: return abort(403)
+    if request.path.find('/adminer/') != -1:
+        return
+    if request.path.find('/phpmyadmin/') == -1:
+        if len(request.path) > 128: return abort(403)
+        if len(request.url) > 1024: return abort(403)
+    else:
+        if len(request.path) > 512: return abort(403)
+        return
     if request.path in ['/service_status']: return
 
     #POST参数过滤
     if request.path in ['/login','/safe','/hook','/public','/down','/get_app_bind_status','/check_bind']:
         pdata = request.form.to_dict()
         for k in pdata.keys():
-            if len(k) > 32: return abort(403)
-            if len(pdata[k]) > 128: return abort(403)
+            if len(k) > 48: return abort(403)
+            if len(pdata[k]) > 256: return abort(403)
 
     if not request.path in ['/safe','/hook','/public','/mail_sys','/down']:
         ip_check = public.check_ip_panel()
@@ -276,7 +323,6 @@ def home():
     data['ftpCount'] = public.M('ftps').count()
     data['databaseCount'] = public.M('databases').count()
     data['lan'] = public.GetLan('index')
-    data['724'] = public.format_date("%m%d") == '0724'
     public.auto_backup_panel()
     if not os.path.exists(licenes): return render_template( 'license.html')
     return render_template( 'index.html',data = data)
@@ -321,6 +367,7 @@ def login():
             if v == 'code': p_len = 4
             if v == 'vcode': p_len = 6
             if len(pv) != p_len:
+                if v == 'code': return public.returnJson(False,'验证码长度错误'),json_header
                 return public.returnJson(False,'错误的参数长度'),json_header
             if not re.match(r"^\w+$",pv):
                 return public.returnJson(False,'错误的参数格式'),json_header
@@ -346,10 +393,17 @@ def login():
             session.clear()
             session_path = r'/dev/shm/session_py' + str(sys.version_info[0])
             if os.path.exists(session_path): public.ExecShell("rm -f " + session_path + '/*')
+            sess_file = 'data/sess_files/' + public.get_sess_key()
+            if os.path.exists(sess_file):
+                try:
+                    os.remove(sess_file)
+                except:
+                    pass
             return redirect(login_path)
     
     if is_auth_path:
         if route_path != request.path and route_path + '/' != request.path: 
+            #return abort(404)
             data = {}
             data['lan'] = public.getLan('close')
             return render_template('autherr.html',data=data)
@@ -735,6 +789,7 @@ def config(pdata = None):
         data['basic_auth']['value'] = public.getMsg('CLOSED')
         if data['basic_auth']['open']: data['basic_auth']['value'] = public.getMsg('OPENED')
         data['debug'] = ''
+        data['show_recommend'] = not os.path.exists('data/not_recommend.pl')
         if app.config['DEBUG']: data['debug'] = 'checked'
         data['is_local'] = ''
         if public.is_local(): data['is_local'] = 'checked'
@@ -745,7 +800,7 @@ def config(pdata = None):
             'get_key','get_php_session_path','set_php_session_path','get_cert_source','get_users',
             'set_local','set_debug','get_panel_error_logs','clean_panel_error_logs',
             'get_basic_auth_stat','set_basic_auth','get_cli_php_version','get_tmp_token',
-            'set_cli_php_version','DelOldSession', 'GetSessionCount', 'SetSessionConf', 
+            'set_cli_php_version','DelOldSession', 'GetSessionCount', 'SetSessionConf', 'show_recommend',
             'GetSessionConf','get_ipv6_listen','set_ipv6_status','GetApacheValue','SetApacheValue',
             'GetNginxValue','SetNginxValue','get_token','set_token','set_admin_path','is_pro',
             'get_php_config','get_config','SavePanelSSL','GetPanelSSL','GetPHPConf','SetPHPConf',
@@ -948,7 +1003,7 @@ def panel_other(name=None,fun = None,stype=None):
     if not public.path_safe_check("%s/%s/%s" % (name,fun,stype)): return abort(404)
     if name.find('./') != -1 or not re.match(r"^[\w-]+$",name): return abort(404)
     if not name: return public.returnJson(False,'PLUGIN_INPUT_ERR'),json_header
-    p_path = '/www/server/panel/plugin/' + name
+    p_path = os.path.join('/www/server/panel/plugin/', name)
     if not os.path.exists(p_path): return abort(404)
 
     #是否响插件应静态文件
@@ -1079,7 +1134,7 @@ def install():
         if get.bt_password1 != get.bt_password2: return public.getMsg('INSTALL_PASS_CHECK')
         public.M('users').where("id=?",(1,)).save('username,password',
                                                   (get.bt_username,
-                                                   public.md5(get.bt_password1.strip())
+                                                   public.password_salt(public.md5(get.bt_password1.strip()),uid=1)
                                                    )
                                                   )
         os.remove('install.pl')
@@ -1326,7 +1381,9 @@ def get_pd():
     tmp = -1
     try:
         import panelPlugin
-        tmp1 = panelPlugin.panelPlugin().get_cloud_list()
+        get = public.dict_obj()
+        get.init = 1
+        tmp1 = panelPlugin.panelPlugin().get_cloud_list(get)
     except:
         tmp1 = None
     if tmp1:
@@ -1420,17 +1477,19 @@ def get_pd():
 
 @app.errorhandler(404)
 def notfound(e):
-    errorStr = public.ReadFile('./BTPanel/templates/' + public.GetConfigValue('template') + '/error.html')
-    try:
-        errorStr = errorStr.format(public.getMsg('PAGE_ERR_404_TITLE'),
-                                   public.getMsg('PAGE_ERR_404_H1'),
-                                   public.getMsg('PAGE_ERR_404_P1'),
-                                   public.getMsg('NAME'),
-                                   public.getMsg('PAGE_ERR_HELP'))
-    except IndexError: pass
-    return errorStr,404
+    errorStr = '''<html>
+<head><title>404 Not Found</title></head>
+<body>
+<center><h1>404 Not Found</h1></center>
+<hr><center>server</center>
+</body>
+</html>'''
+    headers={
+        "Content-Type":"text/html"
+    }
+    return Response(errorStr,status=404,headers=headers)
   
-@app.errorhandler(500)
+#@app.errorhandler(500)
 def internalerror(e):
     public.submit_error()
     errorStr = public.ReadFile('./BTPanel/templates/' + public.GetConfigValue('template') + '/error.html')

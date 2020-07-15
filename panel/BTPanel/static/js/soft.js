@@ -39,7 +39,6 @@ var soft = {
                 } else {
                     soft.get_dep_list(0);
                 }
-                
             })
             var data = rdata.list.data;
             $('#softPage').html(rdata.list.page);
@@ -166,6 +165,7 @@ var soft = {
                         field: 'status', width: 40, title: '状态', templet: function (item) {
                             var status = '';
                             if (item.setup) {
+                                if(item.name == 'phpmyadmin') item.status = 1;
                                 if (item.status) {
                                     status = '<span style="color:#20a53a" class="glyphicon glyphicon-play"></span>';
                                 }
@@ -356,7 +356,83 @@ var soft = {
                     soft.get_list(bt.get_cookie('load_page') + 'not_load', bt.get_cookie('load_type'), bt.get_cookie('load_search'));
                 }, 3000);
             }
+            if(rdata.recommend){
+                _this.render_promote_list(rdata.recommend);
+            }
         })
+    },
+    // 渲染列表
+    render_promote_list(data){
+        if($('#soft_recom_list').length > 0) $('#soft_recom_list').remove();
+        var html = $('<ul id="soft_recom_list" class="recom_list"></ul>'),that = this;
+            for(var i=0;i< data.length;i++){
+                var type = '', item = data[i];
+                switch (item.type) {
+                    case 'link': // 链接推荐
+                        type = $('<a href="'+ item.data +'" target="_blank" title="'+ (item.title || '') +'"><span>'+ (item.title || '') +'</span></a>');
+                        break;
+                    case 'soft': // 软件推荐
+                    case 'other': // 第三方推荐
+                    case 'onekey': // 一键部署推荐
+                        type = $('<a href="javascript:;" class="btlink" title="'+ (item.title || '') +'"><span>'+ (item.title || '') +'</span></a>').click(function(){
+                            that.render_promote_view(item);
+                        });
+                        break;
+                }
+                html.append($('<li><img src="'+ item.image +'"></li>').append(type));
+            }
+            $('#updata_pro_info').before(html);
+    },
+    // 渲染软件列表
+    render_promote_view(find){
+        var that = this,is_single_product = find.data.length > 1,find_data = find.data;
+        if(is_single_product){
+            layer.open({
+                title:find.title,
+                area:'800px',
+                btn:false,
+                closeBtn:2,
+                shadeClose:false,
+                content: (function(){
+                    var html = '';
+                    for(var i=0;i<find_data.length;i++){
+                        var item = find_data[i],thtml = '';
+                        if(!item.setup){
+                            thtml = '<button type="button" class="btn btn-success btn-xs" onclick="bt.soft.install(\''+ item.name +'\',this)">立即安装</button>';
+                        }else{
+                            if(item.pid != 0){
+                                if(item.endtime == 0){ //永久
+                                    thtml = '<button type="button" class="btn btn-success btn-xs" onclick="bt.soft.set_lib_config(\''+ item.name +'\',\''+ item.title +'\')">打开软件</button>';
+                                }else if(item.endtime > 0){ //已购买
+                                    thtml = '<button type="button" class="btn btn-success btn-xs" onclick="bt.soft.set_lib_config(\''+ item.name +'\',\''+ item.title +'\')">打开软件</button>';
+                                }else if(item.endtime == -1){  //未购买
+                                    thtml = '<button type="button" class="btn btn-success btn-xs" onclick=\'bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,pulgin:true,renew:item.endtime}) +');\'>立即购买</button>';
+                                }else if(item.endtime  == -2){ //已过期
+                                    thtml = '<button type="button" class="btn btn-success btn-xs" onclick=\'bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,pulgin:true,renew:item.endtime}) +');\'>立即续费</button>';
+                                }
+                            }else{
+                                thtml = '<button type="button" class="btn btn-success btn-xs" onclick="bt.soft.set_lib_config(\''+ item.name +'\',\''+ item.title +'\')">打开软件</button>';
+                            }
+                        }
+                        html += '<div class="recom_item_box">' +
+                            '<div class="recom_item_left">' +
+                                '<div class="recom_item_images"><img src="/static/img/'+(find.type == 'onekey'?'dep_ico':'soft_ico')+'/ico-'+ item.name +'.png" /></div>' +
+                                '<div class="recom_item_pay"><a href="javascript:;" class="btlink" style="color:'+(item.setup?'#20a53a':'#666')+'">'+ (item.setup?'已安装':'未安装') +'</a></div>'+
+                            '</div>' +
+                            '<div class="recom_item_right">' +
+                                '<div class="recom_item_title">' +
+                                    '<div class="recom_item_text">'+ item.title + '&nbsp;v'+ item.version +'</div>' +
+                                    '<div class="recom_item_price">￥<span>'+ item.price +'</span>/月</div>' +
+                                '</div>' +
+                                '<div class="recom_item_info" title="'+ item.ps +'">'+ item.ps +'</div>'+
+                                '<div class="recom_item_btn">'+ thtml +'</div>'+
+                            '</div>' +
+                        '</div>'
+                    }
+                    return html;
+                })(),
+            });
+        }
     },
     set_soft_tips:function(el,type){
         var tips_info = $('<div class="alert" style="margin-bottom:15px"><div class="soft_tips_text"></div><div class="btn-ground" style="display:inline-block;"></div></div>'), explain = tips_info.find('.soft_tips_text'), btn_ground = tips_info.find('.btn-ground');
@@ -859,14 +935,27 @@ var soft = {
                 ]
                 if (data.name == 'phpmyadmin') {
                     status_list = [status_list[0]];
+                }else{
+                    var btns = $('<div class="sfm-opt"></div>');
+                    for (var i = 0; i < status_list.length; i++)  btns.append('<button class="btn btn-default btn-sm" onclick="bt.pub.set_server_status(\'' + data.name + '\',\'' + status_list[i].opt + '\')">' + status_list[i].title + '</button>');
+                    tabCon.append('<p class="status">' + lan.soft.status + '：<span>' + (data.status ? lan.soft.on : lan.soft.off) + '</span><span style="color: ' + (data.status ? '#20a53a;' : 'red;') + ' margin-left: 3px;" class="glyphicon ' + (data.status ? 'glyphicon glyphicon-play' : 'glyphicon-pause') + '"></span></p');
+                    tabCon.append(btns);
                 }
-                var btns = $('<div class="sfm-opt"></div>');
-                for (var i = 0; i < status_list.length; i++)  btns.append('<button class="btn btn-default btn-sm" onclick="bt.pub.set_server_status(\'' + data.name + '\',\'' + status_list[i].opt + '\')">' + status_list[i].title + '</button>');
-                tabCon.append('<p class="status">' + lan.soft.status + '：<span>' + (data.status ? lan.soft.on : lan.soft.off) + '</span><span style="color: ' + (data.status ? '#20a53a;' : 'red;') + ' margin-left: 3px;" class="glyphicon ' + (data.status ? 'glyphicon glyphicon-play' : 'glyphicon-pause') + '"></span></p');
-                tabCon.append(btns);
-
+                if (data.name == 'phpmyadmin') {
+                    tabCon.append('<div style="margin-top:25px;">\
+                    <div class="info-r "><input type="checkbox" class="status" '+(data.status?'checked':'')+' id="pma_status" name="status" onclick="bt.pub.set_server_status(\'' + data.name + '\',\'' + (data.status?'stop':'start') + '\')" style="vertical-align: top;margin-right: 10px;"><label class="mr20" for="pma_status" style="font-weight:normal;vertical-align: sub;">启用公共访问权限</label></div>\
+                    <p style="margin-top:5px;"><span>公共访问地址: </span><a class="btlink" href="' + data.ext.url + '" target="_blank">' + data.ext.url + '</a></p>\
+                    </div>');
+                    tabCon.append('<ul class="help-info-text c7 mtb15" style="padding-top:30px">\
+                        <li>phpmyadmin启用公共访问权限可能存在安全风险，建议非必要不启用!</li>\
+                        <li>当前版本的phpmyadmin在不需要公共访问权限的情况下不再依赖nginx/apache</li>\
+                        <li>phpmyadmin的服务状态不影响通过面板（非公共）访问phpmyadmin</li>\
+                        <li>在未开启公共访问权限的情况下，由面板接管访问权限，即需登录面板才能访问</li>\
+                    </ul>');
+                }
                 var help = '<ul class="help-info-text c7 mtb15" style="padding-top:30px"><li>' + lan.soft.mysql_mem_err + '</li></ul>';
                 if (name == 'mysqld') tabCon.append(help);
+
                 break;
             case 'config':
                 var tabCon = $(".soft-man-con").empty();
@@ -2435,7 +2524,7 @@ function AddSite(codename,title) {
 					 		<p><span>密码：</span><strong>" + rdata.msg.admin_password + "</strong></p>\
 					 		"
             }
-            sqlData += "<p><span>访问站点：</span><a class='btlink' href='http://" + mainDomain + rdata.msg.success_url + "' target='_blank' rel='noreferrer noopener'>http://" + mainDomain + rdata.msg.success_url + "</a></p>";
+            sqlData += "<p><span>访问站点：</span><a class='btlink' href='http://" + mainDomain + rdata.msg.success_url + "' target='_blank' rel='noreferrer noopener'>http://" + mainDomain + (rdata.msg.success_url.indexOf('/')== 0?rdata.msg.success_url:'/'+rdata.msg.success_url) + "</a></p>";
 
             layer.open({
                 type: 1,

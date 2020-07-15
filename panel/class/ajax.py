@@ -31,10 +31,10 @@ class ajax:
             for proc in psutil.process_iter():
                 if proc.name() == "nginx":
                     self.GetProcessCpuPercent(proc.pid,process_cpu)
-            time.sleep(0.5)
+            time.sleep(0.1)
             #取Nginx负载状态
             self.CheckStatusConf()
-            result = public.ExecShell('/usr/local/curl/bin/curl -Ss http://127.0.0.1/nginx_status')[0]
+            result = public.httpGet('http://127.0.0.1/nginx_status')
             tmp = result.split()
             data = {}
             if "request_time" in tmp:
@@ -64,8 +64,8 @@ class ajax:
         #取指定PHP版本的负载状态
         try:
             version = get.version
-            uri = "/phpfpm_"+version+"_status"
-            result = public.request_php(version,uri,uri,'json')
+            uri = "/phpfpm_"+version+"_status?json"
+            result = public.request_php(version,uri,'')
             tmp = json.loads(result)
             fTime = time.localtime(int(tmp['start time']))
             tmp['start time'] = time.strftime('%Y-%m-%d %H:%M:%S',fTime)
@@ -632,7 +632,7 @@ class ajax:
             public.ExecShell("rm -rf " + sPath)
         p_file = '/dev/shm/phpinfo.php'
         public.writeFile(p_file,'<?php phpinfo(); ?>')
-        phpinfo = public.request_php(get.version,'/phpinfo.php',p_file,'')
+        phpinfo = public.request_php(get.version,'/phpinfo.php','/dev/shm')
         if os.path.exists(p_file): os.remove(p_file)
         return phpinfo.decode()
 
@@ -645,20 +645,24 @@ class ajax:
         return public.returnMsg(True,'LOG_CLOSE')
 
     def __get_webserver_conffile(self):
-        if public.get_webserver() == 'nginx':
+        webserver = public.get_webserver()
+        if webserver == 'nginx':
             filename = public.GetConfigValue('setup_path') + '/nginx/conf/nginx.conf'
+        elif webserver == 'openlitespeed':
+            filename = public.GetConfigValue('setup_path') + "/panel/vhost/openlitespeed/detail/phpmyadmin.conf"
         else:
             filename = public.GetConfigValue('setup_path') + '/apache/conf/extra/httpd-vhosts.conf'
+        
         return filename
 
     # 获取phpmyadmin ssl配置
     def get_phpmyadmin_conf(self):
         if public.get_webserver() == "nginx":
             conf_file = "/www/server/panel/vhost/nginx/phpmyadmin.conf"
-            rep = "listen\s*(\d+)"
+            rep = r"listen\s*(\d+)"
         else:
             conf_file = "/www/server/panel/vhost/apache/phpmyadmin.conf"
-            rep = "Listen\s*(\d+)"
+            rep = r"Listen\s*(\d+)"
         return {"conf_file":conf_file,"rep":rep}
 
     # 设置phpmyadmin路径
@@ -707,20 +711,20 @@ class ajax:
             if i == "nginx":
                 if not os.path.exists("/www/server/panel/vhost/apache/phpmyadmin.conf"):
                     return public.returnMsg(False, "没有找到 apache phpmyadmin ssl 配置文件，请尝试关闭ssl端口设置后再打开")
-                rep = "listen\s*([0-9]+)\s*.*;"
+                rep = r"listen\s*([0-9]+)\s*.*;"
                 oldPort = re.search(rep, conf)
                 if not oldPort:
                     return public.returnMsg(False, '没有检测到 nginx phpmyadmin监听的端口，请确认是否手动修改过文件')
                 oldPort = oldPort.groups()[0]
                 conf = re.sub(rep, 'listen ' + get.port + ' ssl;', conf)
             else:
-                rep = "Listen\s*([0-9]+)\s*\n"
+                rep = r"Listen\s*([0-9]+)\s*\n"
                 oldPort = re.search(rep, conf)
                 if not oldPort:
                     return public.returnMsg(False, '没有检测到 apache phpmyadmin监听的端口，请确认是否手动修改过文件')
                 oldPort = oldPort.groups()[0]
                 conf = re.sub(rep, "Listen " + get.port + "\n", conf, 1)
-                rep = "VirtualHost\s*\*:[0-9]+"
+                rep = r"VirtualHost\s*\*:[0-9]+"
                 conf = re.sub(rep, "VirtualHost *:" + get.port, conf, 1)
             if oldPort == get.port: return public.returnMsg(False, 'SOFT_PHPVERSION_ERR_PORT')
             public.writeFile(file, conf)
@@ -837,8 +841,6 @@ class ajax:
         import re
         #try:
         filename = self.__get_webserver_conffile()
-        if public.get_webserver() == 'openlitespeed':
-            filename = "/www/server/panel/vhost/openlitespeed/detail/phpmyadmin.conf"
         conf = public.readFile(filename)
         if not conf: return public.returnMsg(False,'ERROR')
         if hasattr(get,'port'):
@@ -852,15 +854,15 @@ class ajax:
                 oldPort = re.search(rep,conf).groups()[0]
                 conf = re.sub(rep,'listen ' + get.port + ';\n',conf)
             elif public.get_webserver() == 'apache':
-                rep = "Listen\s+([0-9]+)\s*\n"
+                rep = r"Listen\s+([0-9]+)\s*\n"
                 oldPort = re.search(rep,conf).groups()[0]
                 conf = re.sub(rep,"Listen " + get.port + "\n",conf,1)
-                rep = "VirtualHost\s+\*:[0-9]+"
+                rep = r"VirtualHost\s+\*:[0-9]+"
                 conf = re.sub(rep,"VirtualHost *:" + get.port,conf,1)
             else:
                 filename = '/www/server/panel/vhost/openlitespeed/listen/888.conf'
                 conf = public.readFile(filename)
-                reg = "address\s+\*:(\d+)"
+                reg = r"address\s+\*:(\d+)"
                 tmp = re.search(reg,conf)
                 if tmp:
                     oldPort = tmp.groups(1)
@@ -883,13 +885,13 @@ class ajax:
             if public.get_webserver() == 'nginx':
                 filename = public.GetConfigValue('setup_path') + '/nginx/conf/enable-php.conf'
                 conf = public.readFile(filename)
-                rep = "php-cgi.*\.sock"
+                rep = r"php-cgi.*\.sock"
                 conf = re.sub(rep,'php-cgi-' + get.phpversion + '.sock',conf,1)
             elif public.get_webserver() == 'apache':
-                rep = "php-cgi.*\.sock"
+                rep = r"php-cgi.*\.sock"
                 conf = re.sub(rep,'php-cgi-' + get.phpversion + '.sock',conf,1)
             else:
-                reg = '/usr/local/lsws/lsphp\d+/bin/lsphp'
+                reg = r'/usr/local/lsws/lsphp\d+/bin/lsphp'
                 conf = re.sub(reg,'/usr/local/lsws/lsphp{}/bin/lsphp'.format(get.phpversion),conf)
             public.writeFile(filename,conf)
             public.serviceReload()
@@ -897,7 +899,7 @@ class ajax:
             return public.returnMsg(True,'SOFT_PHPVERSION_SET')
         
         if hasattr(get,'password'):
-            import panelSite;
+            import panelSite
             if(get.password == 'close'):
                 return panelSite.panelSite().CloseHasPwd(get)
             else:
@@ -919,7 +921,7 @@ class ajax:
             #return public.returnMsg(False,'ERROR');
             
     def ToPunycode(self,get):
-        import re;
+        import re
         get.domain = get.domain.encode('utf8')
         tmp = get.domain.split('.')
         newdomain = ''

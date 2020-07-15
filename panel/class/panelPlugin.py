@@ -281,6 +281,9 @@ class panelPlugin:
         except:
             if os.path.exists(lcoalTmp): os.remove(lcoalTmp)
 
+        if 'init' in get:
+            if softList: return softList
+
         focre  = 0
         if hasattr(get,'force'): focre = int(get.force)
         if 'focre_cloud' in session:
@@ -291,7 +294,7 @@ class panelPlugin:
         if not 'init_cloud' in session:
                 focre = 1
                 session['init_cloud'] = True
-
+        
         if not softList or focre > 0:
             self.clean_panel_log()
             cloudUrl = public.GetConfigValue('home') + '/api/panel/get_soft_list_test'
@@ -648,6 +651,15 @@ class panelPlugin:
             if public.readFile(check_version_path).find('2.2') == 0: 
                 softList['apache22'] = True
                 softList['apache24'] = False
+        if os.path.exists('data/not_recommend.pl'):
+            if 'recommend' in softList:
+                del(softList['recommend'])
+        if 'recommend' in softList:
+            for n in range(len(softList['recommend'])):
+                if softList['recommend'][n]['type'] != 'soft': continue
+                for i in range(len(softList['recommend'][n]['data'])):
+                    check_path = '/www/server/panel/plugin/' + softList['recommend'][n]['data'][i]['name']
+                    softList['recommend'][n]['data'][i]['setup'] = os.path.exists(check_path)
 
         return softList
 
@@ -678,6 +690,7 @@ class panelPlugin:
 
         if len(indexList) >= 12: 
             softList = self.get_cloud_list(get)['list']
+            softList = self.set_coexist(softList)
             for softInfo in softList:
                 if softInfo['name'] in indexList:
                     new_softInfo = self.check_status(softInfo)
@@ -807,12 +820,15 @@ class panelPlugin:
         else:
             softInfo['version'] = ""
         if softInfo['version_coexist'] == 1:
-            self.get_icon(softInfo['name'].split('-')[0])
+            if softInfo['id'] != 10000:
+                self.get_icon(softInfo['name'].split('-')[0])
         else:
             if 'min_image' in softInfo: 
-                self.get_icon(softInfo['name'],softInfo['min_image'])
+                if softInfo['id'] != 10000:
+                    self.get_icon(softInfo['name'],softInfo['min_image'])
             else:
-                self.get_icon(softInfo['name'])
+                if softInfo['id'] != 10000:
+                    self.get_icon(softInfo['name'])
         
         if softInfo['name'].find('php-') != -1: 
             v2= softInfo['versions'][0]['m_version'].replace('.','')
@@ -865,7 +881,11 @@ class panelPlugin:
 
             if softInfo['name'] == sName: 
                 if sName == 'phpmyadmin':
+                    from BTPanel import get_phpmyadmin_dir
+                    pmd = get_phpmyadmin_dir()
                     softInfo['ext'] = self.getPHPMyAdminStatus()
+                    if softInfo['ext'] and pmd:
+                        softInfo['ext']['url'] = 'http://' + public.GetHost() + ':'+ pmd[1] + '/' + pmd[0]
                 if "php-" in sName:
                     v = softInfo["versions"][0]["m_version"]
                     v1 = v.replace(".", "")
@@ -961,7 +981,7 @@ class panelPlugin:
     def get_pids(self):
         pids = []
         for pid in os.listdir('/proc'):
-            if re.match("^\d+$",pid): pids.append(pid)
+            if re.match(r"^\d+$",pid): pids.append(pid)
         return pids
 
 
@@ -1082,7 +1102,8 @@ class panelPlugin:
                     
                 tmp = []
                 for d in data:
-                    self.get_icon(d['name'])
+                    if d['id'] != 10000:
+                        self.get_icon(d['name'])
                     if display:
                         if d['display'] == 0: continue
                     i=0
@@ -1116,14 +1137,15 @@ class panelPlugin:
     def download_icon(self,name,iconFile,downFile):
         srcIcon =  'plugin/' + name + '/icon.png'
         skey = name+'_icon'
+        #public.writeFile('/tmp/11.txt',name+'\n','a+')
         if cache.get(skey): return None
         if os.path.exists(srcIcon):
             public.ExecShell(r"\cp  -a -r " + srcIcon + " " + iconFile)
         else:
             if downFile:
-                public.ExecShell('wget -O ' + iconFile + ' ' + public.GetConfigValue('home') + downFile + '&')
+                public.ExecShell('wget -O ' + iconFile + ' ' + public.GetConfigValue('home') + downFile)
             else:
-                public.ExecShell('wget -O ' + iconFile + ' ' + public.get_url() + '/install/plugin/' + name + '/icon.png &')
+                public.ExecShell('wget -O ' + iconFile + ' ' + public.get_url() + '/install/plugin/' + name + '/icon.png')
         cache.set(skey,1,86400)
                 
     
