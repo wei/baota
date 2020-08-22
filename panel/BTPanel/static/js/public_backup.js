@@ -267,6 +267,7 @@ var bt =
 			return null;
 		}
 	},
+
 	select_path:function(id){
 		_this = this;
 		_this.set_cookie("SetName", "");
@@ -1079,7 +1080,28 @@ var bt =
 		}else{
 			ace.saveCallback(ace.ACE.getValue());
 		}
-	}
+	},
+    /**
+     * @description 遍历数组和对象
+     * @param {Array|Object} obj 遍历数组|对象
+     * @param {Function} fn 遍历对象或数组
+     * @return 当前对象
+     */
+    each: function (obj, fn) {
+        var key, that = this;
+        if (typeof fn !== 'function') return that;
+        obj = obj || [];
+        if (obj.constructor === Object) {
+            for (key in obj) {
+                if (fn.call(obj[key], key, obj[key])) break;
+            }
+        } else {
+            for (key = 0; key < obj.length; key++) {
+                if (fn.call(obj[key], key, obj[key])) break;
+            }
+        }
+        return that;
+    }
 };
 
 
@@ -4810,23 +4832,16 @@ bt.database = {
 		setTimeout(function(){ window.location.href = '/soft'; },3000);
 			return;
 		}
-
-		layer.open({
-			type: 1,
-			title: "请选择访问phpMyAdmin的方式",
-			area: '600px',
-			closeBtn: 2,
-			shadeClose: false,
-			content: '<div class="change-default pd20">\
-			<button class="btn btn-default btn-sm " onclick="bt.database.submit_phpmyadmin(\''+name+'\',\''+username+'\',\''+password+'\',false)">通过面板安全访问</button>\
-			<button style="margin-left: 145px;" class="btn btn-default btn-sm" onclick="bt.database.submit_phpmyadmin(\''+name+'\',\''+username+'\',\''+password+'\',true)">通过Nginx/Apche/Ols访问</button>\
-			<ul class="help-info-text c7 plr20">\
-				<li>【通过面板安全访问】无需安装nginx/apache，由面板进行安全认证，需登录面板才能访问</li>\
-				<li>【通过Nginx/Apche/Ols访问】通过web服务器访问，由phpmyadmin进行安全认证</li>\
-				<li>若使用【通过面板安全访问】某些功能无法使用，请尝试使用另一种访问方式</li>\
-			</ul>\
-			</div>'
-		});
+		$("#toPHPMyAdmin").attr('action',$("#toPHPMyAdmin").attr('public-data'))
+		var murl = $("#toPHPMyAdmin").attr('action');
+		$("#pma_username").val(username);
+		$("#pma_password").val(password);
+		$("#db").val(name);
+		layer.msg(lan.database.phpmyadmin,{icon:16,shade: [0.3, '#000'],time:1000});
+		setTimeout(function(){
+			$("#toPHPMyAdmin").submit();
+			layer.closeAll();
+		},200);
 	},
 	submit_phpmyadmin: function(name,username,password,pub){
 		if(pub === true){

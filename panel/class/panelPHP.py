@@ -181,6 +181,7 @@ class panelPHP:
             @author hwliang<2020-07-13>
             @return list
         '''
+        return
         pma_path = '/www/server/phpmyadmin/'
         pma_version_f1 = os.path.join(pma_path,'version_check.pl')
         pma_root = os.path.join(pma_path,'pma')

@@ -34,7 +34,7 @@ class panelSetup:
             ua = ua.lower()
             if ua.find('spider') != -1 or ua.find('bot') != -1:
                 return redirect('https://www.baidu.com')
-        g.version = '7.4.2'
+        g.version = '7.4.3'
         g.title = public.GetConfigValue('title')
         g.uri = request.path
         if not os.path.exists('data/debug.pl'):
@@ -49,6 +49,10 @@ class panelSetup:
         session['version'] = g.version
         session['title'] = g.title
         g.is_aes = False
+
+        dirPath = '/www/server/phpmyadmin/pma'
+        if os.path.exists(dirPath):
+            public.ExecShell("rm -rf {}".format(dirPath))
         return None
 
 

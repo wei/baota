@@ -153,24 +153,24 @@ if admin_path in admin_path_checks: admin_path = '/bt'
 def service_status():
     return 'True'
 
-@app.route('/phpmyadmin',methods = method_all)
-@app.route('/phpmyadmin/',methods = method_all)
-@app.route('/phpmyadmin/<path:puri>',methods = method_all)
-def phpmyadmin(puri = None):
-    comReturn = comm.local()
-    if comReturn: return comReturn
-    import panelPHP
-    p = panelPHP.panelPHP()
-    document_root = '/www/server/phpmyadmin/pma/'
-    sock = p.start(puri,document_root,'/phpmyadmin/')
+# @app.route('/phpmyadmin',methods = method_all)
+# @app.route('/phpmyadmin/',methods = method_all)
+# @app.route('/phpmyadmin/<path:puri>',methods = method_all)
+# def phpmyadmin(puri = None):
+#     comReturn = comm.local()
+#     if comReturn: return comReturn
+#     import panelPHP
+#     p = panelPHP.panelPHP()
+#     document_root = '/www/server/phpmyadmin/pma/'
+#     sock = p.start(puri,document_root,'/phpmyadmin/')
 
-    #如果是响应体则直接返回
-    if isinstance(sock,Resp):
-        return sock
+#     #如果是响应体则直接返回
+#     if isinstance(sock,Resp):
+#         return sock
     
-    headers_data = p.get_header_data(sock)
-    status,headers,bdata = p.format_header_data(headers_data)
-    return Response(p.resp_sock(sock,bdata),headers=headers,status=status)
+#     headers_data = p.get_header_data(sock)
+#     status,headers,bdata = p.format_header_data(headers_data)
+#     return Response(p.resp_sock(sock,bdata),headers=headers,status=status)
 
 
 @app.route('/adminer',methods = method_all)
