@@ -1,0 +1,63 @@
+name: Release
+
+on: 
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release Version'
+        required: true
+      date:
+        description: 'Release Date (YYYY-MM-DD)'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: release
+
+    - name: Download release zip
+      run: |
+        wget -O /tmp/LinuxPanel-${{ github.event.inputs.version }}.zip https://download.bt.cn/install/update/LinuxPanel-${{ github.event.inputs.version }}.zip
+        rm -r * || true
+        unzip /tmp/LinuxPanel-${{ github.event.inputs.version }}.zip -d ./
+
+    - name: Check-in code
+      run: |
+        export GIT_AUTHOR_DATE="${{ github.event.inputs.date }}T00:00:00+08:00"
+        export GIT_COMMITTER_DATE="${{ github.event.inputs.date }}T00:00:00+08:00"
+        git config user.name github-actions
+        git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+        
+        git add .
+        git commit -m "Release ${{ github.event.inputs.version }}" --allow-empty
+        
+        git push origin HEAD:release
+        git tag ${{ github.event.inputs.version }}
+        git push origin ${{ github.event.inputs.version }}
+        
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.event.inputs.version }}
+        release_name: Release ${{ github.event.inputs.version }}
+        body: |
+          Release ${{ github.event.inputs.version }} on ${{ github.event.inputs.date }}
+          
+          https://download.bt.cn/install/update/LinuxPanel-${{ github.event.inputs.version }}.zip
+        
+    - name: Upload Release Asset
+      id: upload_release_asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: /tmp/LinuxPanel-${{ github.event.inputs.version }}.zip
+        asset_name: LinuxPanel-${{ github.event.inputs.version }}.zip
+        asset_content_type: application/zip
