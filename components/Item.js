@@ -7,7 +7,7 @@ const IS_PRERELEASE = config.prereleases;
 const Item = ({ value, hasAll, noNotes }) => (
     <article>
         <header>
-            <div className="release"><span className="repo">{value.repo}</span><small> @ </small><small className="version">{value.version}</small></div>
+            <div className="release"><span className="repo">宝塔</span><small> @ </small><small className="version">{value.version}</small></div>
             <Link href='/[owner]/[repo]/[version]' as={`/${value.owner}/${value.repo}/${value.version}`}>
                 <a className="date">{value.notes[0].match(/\d{4}-\d{2}-\d{2}/)}</a>
             </Link>
