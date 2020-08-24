@@ -7,14 +7,9 @@ const IS_PRERELEASE = config.prereleases;
 const Item = ({ value, hasAll, noNotes }) => (
     <article>
         <header>
-            {hasAll
-                ? <Link href='/[owner]/[repo]' as={`/${value.owner}/${value.repo}`}>
-                    <a className="release">{value.owner}/<span className="repo">{value.repo}</span></a>
-                </Link>
-                : <div className="release">{value.owner}/<span className="repo">{value.repo}</span></div>
-            }
+            <div className="release"><span className="repo">{value.repo}</span><small> @ </small><small className="version">{value.version}</small></div>
             <Link href='/[owner]/[repo]/[version]' as={`/${value.owner}/${value.repo}/${value.version}`}>
-                <a className="date">{formatDistanceToNow(new Date(value.date), { addSuffix: true })}</a>
+                <a className="date">{value.notes[0].match(/\d{4}-\d{2}-\d{2}/)}</a>
             </Link>
         </header>
 
@@ -40,7 +35,7 @@ const Item = ({ value, hasAll, noNotes }) => (
 
             {!hasAll ? null :
                 <div className="all-releases">
-                    <Link href='/[owner]/[repo]' as={`/${value.owner}/${value.repo}`}><a>All Releases</a></Link>
+                    <Link href='/[owner]/[repo]' as={`/${value.owner}/${value.repo}`}><a>查看历史版本</a></Link>
                 </div>
             }
         </footer>
