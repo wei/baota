@@ -17,7 +17,7 @@ const Page = () => {
     }
 
     return (
-        <Layout title={!isLoading ? "宝塔版本" : ''}>
+        <Layout title={!isLoading ? "历史版本" : ''}>
             {isLoading && projects.length < 1 &&  <Loader />}
 
             {project && project.releases.map((release, i) =>
