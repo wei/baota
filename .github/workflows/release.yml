@@ -2,13 +2,8 @@ name: Release
 
 on: 
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release Version'
-        required: true
-      date:
-        description: 'Release Date (YYYY-MM-DD)'
-        required: true
+  schedule:
+    - cron: "*/15 * * * *"
 
 jobs:
   release:
@@ -18,46 +13,70 @@ jobs:
       with:
         ref: release
 
-    - name: Download release zip
+    - name: Check release
       run: |
-        wget -O /tmp/LinuxPanel-${{ github.event.inputs.version }}.zip https://download.bt.cn/install/update/LinuxPanel-${{ github.event.inputs.version }}.zip
+        CURRENT_DATE="$(TZ=Asia/Shanghai date +'%Y-%m-%d')"
+        LATEST_VERSION=$(curl -sL 'https://www.bt.cn/api/panel/updateLinux' | jq -r '.version')
+        ZIP_NAME="LinuxPanel-${LATEST_VERSION}.zip"
+        UPDATE_REQUIRED="false"
+        if [[ ! "$(git ls-remote origin refs/tags/${LATEST_VERSION})" ]]; then
+          UPDATE_REQUIRED="true"
+          echo "New release found: ${LATEST_VERSION}"
+        fi
+        
+        echo "CURRENT_DATE=${CURRENT_DATE}"
+        echo "LATEST_VERSION=${LATEST_VERSION}"
+        echo "ZIP_NAME=${ZIP_NAME}"
+        echo "UPDATE_REQUIRED=${UPDATE_REQUIRED}"
+        echo "::set-env name=CURRENT_DATE::${CURRENT_DATE}"
+        echo "::set-env name=LATEST_VERSION::${LATEST_VERSION}"
+        echo "::set-env name=ZIP_NAME::${ZIP_NAME}"
+        echo "::set-env name=UPDATE_REQUIRED::${UPDATE_REQUIRED}"
+
+    - name: Download release zip
+      if: ${{ env.UPDATE_REQUIRED == 'true' }}
+      run: |
+        wget -O /tmp/${{ env.ZIP_NAME }} https://download.bt.cn/install/update/${{ env.ZIP_NAME }}
         rm -r * || true
-        unzip /tmp/LinuxPanel-${{ github.event.inputs.version }}.zip -d ./
+        unzip /tmp/${{ env.ZIP_NAME }} -d ./
 
     - name: Check-in code
+      if: ${{ env.UPDATE_REQUIRED == 'true' }}
       run: |
-        export GIT_AUTHOR_DATE="${{ github.event.inputs.date }}T00:00:00+08:00"
-        export GIT_COMMITTER_DATE="${{ github.event.inputs.date }}T00:00:00+08:00"
+        export GIT_AUTHOR_DATE="${{ env.CURRENT_DATE }}T00:00:00+08:00"
+        export GIT_COMMITTER_DATE="${{ env.CURRENT_DATE }}T00:00:00+08:00"
         git config user.name github-actions
         git config user.email 41898282+github-actions[bot]@users.noreply.github.com
         
         git add .
-        git commit -m "Release ${{ github.event.inputs.version }}" --allow-empty
+        git commit -m "Release ${{ env.LATEST_VERSION }}" --allow-empty
         
         git push origin HEAD:release
-        git tag ${{ github.event.inputs.version }}
-        git push origin ${{ github.event.inputs.version }}
+        git tag ${{ env.LATEST_VERSION }}
+        git push origin ${{ env.LATEST_VERSION }}
         
     - name: Create Release
+      if: ${{ env.UPDATE_REQUIRED == 'true' }}
       id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.event.inputs.version }}
-        release_name: Release ${{ github.event.inputs.version }}
+        tag_name: ${{ env.LATEST_VERSION }}
+        release_name: Release ${{ env.LATEST_VERSION }}
         body: |
-          Release ${{ github.event.inputs.version }} on ${{ github.event.inputs.date }}
+          Release ${{ env.LATEST_VERSION }} on ${{ env.CURRENT_DATE }}
           
-          https://download.bt.cn/install/update/LinuxPanel-${{ github.event.inputs.version }}.zip
+          https://download.bt.cn/install/update/${{ env.ZIP_NAME }}
         
     - name: Upload Release Asset
+      if: ${{ env.UPDATE_REQUIRED == 'true' }}
       id: upload_release_asset
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: /tmp/LinuxPanel-${{ github.event.inputs.version }}.zip
-        asset_name: LinuxPanel-${{ github.event.inputs.version }}.zip
+        asset_path: /tmp/${{ env.ZIP_NAME }}
+        asset_name: ${{ env.ZIP_NAME }}
         asset_content_type: application/zip
