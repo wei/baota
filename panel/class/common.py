@@ -6,8 +6,7 @@
 # +-------------------------------------------------------------------
 # | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
-from flask import request, redirect, g
-from BTPanel import session, cache
+from BTPanel import session, cache , request, redirect, g
 from datetime import datetime
 import os
 import public
@@ -34,10 +33,12 @@ class panelSetup:
             ua = ua.lower()
             if ua.find('spider') != -1 or ua.find('bot') != -1:
                 return redirect('https://www.baidu.com')
-        g.version = '7.4.3'
+        g.version = '7.4.5'
         g.title = public.GetConfigValue('title')
         g.uri = request.path
-        if not os.path.exists('data/debug.pl'):
+        g.debug = os.path.exists('data/debug.pl')
+        g.pyversion = sys.version_info[0]
+        if not g.debug:
             g.cdn_url = public.get_cdn_url()
             if not g.cdn_url:
                 g.cdn_url = '/static'
@@ -53,6 +54,15 @@ class panelSetup:
         dirPath = '/www/server/phpmyadmin/pma'
         if os.path.exists(dirPath):
             public.ExecShell("rm -rf {}".format(dirPath))
+        
+        dirPath = '/www/server/adminer'
+        if os.path.exists(dirPath):
+            public.ExecShell("rm -rf {}".format(dirPath))
+        
+        dirPath = '/www/server/panel/adminer'
+        if os.path.exists(dirPath):
+            public.ExecShell("rm -rf {}".format(dirPath))
+
         return None
 
 
@@ -64,6 +74,9 @@ class panelAdmin(panelSetup):
         result = panelSetup().init()
         if result:
             return result
+        result = self.check_login()
+        if result:
+            return result
         result = self.setSession()
         if result:
             return result
@@ -71,9 +84,6 @@ class panelAdmin(panelSetup):
         if result:
             return result
         result = self.checkWebType()
-        if result:
-            return result
-        result = self.check_login()
         if result:
             return result
         result = self.checkConfig()
@@ -176,6 +186,8 @@ class panelAdmin(panelSetup):
         save_path = '/www/server/panel/config/api.json'
         if not os.path.exists(save_path):
             return redirect('/login')
+
+        
         try:
             api_config = json.loads(public.ReadFile(save_path))
         except:
@@ -186,25 +198,36 @@ class panelAdmin(panelSetup):
             return redirect('/login')
         from BTPanel import get_input
         get = get_input()
-        
-
+        client_ip = public.GetClientIp()
         if not 'client_bind_token' in get:
             if not 'request_token' in get or not 'request_time' in get:
                 return redirect('/login')
-            client_ip = public.GetClientIp()
+            
+            num_key = client_ip + '_api'
+            if not public.get_error_num(num_key,20):
+                return public.returnMsg(False,'连续20次验证失败,禁止1小时')
+
+
             if not client_ip in api_config['limit_addr']:
+                public.set_error_num(num_key)
                 return public.returnJson(False, 'IP校验失败,您的访问IP为['+client_ip+']')
         else:
+            num_key = client_ip + '_app'
+            if not public.get_error_num(num_key,20):
+                return public.returnMsg(False,'连续20次验证失败,禁止1小时')
             a_file = '/dev/shm/' + get.client_bind_token
             if not os.path.exists(a_file):
                 import panelApi
                 if not panelApi.panelApi().get_app_find(get.client_bind_token):
+                    public.set_error_num(num_key)
                     return public.returnMsg(False,'未绑定的设备')
                 public.writeFile(a_file,'')
             
             if not 'key' in api_config:
+                public.set_error_num(num_key)
                 return public.returnJson(False, '密钥校验失败')
             if not 'form_data' in get:
+                public.set_error_num(num_key)
                 return public.returnJson(False,'没有找到form_data数据')
             
             g.form_data = json.loads(public.aes_decrypt(get.form_data,api_config['key']))
@@ -217,7 +240,9 @@ class panelAdmin(panelSetup):
         
         request_token = public.md5(get.request_time + api_config['token'])
         if get.request_token == request_token:
+            public.set_error_num(num_key,True)
             return False
+        public.set_error_num(num_key)
         return public.returnJson(False, '密钥校验失败')
 
     # 检查系统配置

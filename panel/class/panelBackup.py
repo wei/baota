@@ -17,7 +17,8 @@ import re
 import time
 
 os.chdir('/www/server/panel')
-sys.path.insert(0,'class/')
+if not 'class/' in sys.path:
+    sys.path.insert(0,'class/')
 import public
 _VERSION = 1.5
 
@@ -339,10 +340,10 @@ class backup:
         if act:
             password = public.M('config').where('id=?',(1,)).getField('mysql_root')
             mycnf = public.readFile(conf_file)
-            src_dump = "[mysqldump]\n"
-            sub_dump = src_dump + "user=root\npassword=\"{}\"\n".format(password)
             if not mycnf: return False
-            mycnf = mycnf.replace(src_dump,sub_dump)
+            src_dump_re = r"\[mysqldump\][^.]"
+            sub_dump = "[mysqldump]\nuser=root\npassword=\"{}\"\n".format(password)
+            mycnf = re.sub(src_dump_re, sub_dump, mycnf)
             if len(mycnf) > 100: public.writeFile(conf_file,mycnf)
             return True
         return True

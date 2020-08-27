@@ -11,7 +11,10 @@
 # 网站管理类
 #------------------------------
 import io,re,public,os,sys,shutil,json,hashlib,socket,time
-from BTPanel import session
+try:
+    from BTPanel import session
+except:
+    pass
 from panelRedirect import  panelRedirect
 import site_dir_auth
 class panelSite(panelRedirect):
@@ -93,10 +96,10 @@ class panelSite(panelRedirect):
         for key in tmp:
             if key == port: return False
         
-        listen = "\nListen "+tmp[0]
+        listen = "\nListen "+ tmp[0] + "\n"
         listen_ipv6 = ''
         #if self.is_ipv6: listen_ipv6 = "\nListen [::]:" + port
-        allConf = allConf.replace(listen,listen + "\nListen " + port + listen_ipv6)
+        allConf = allConf.replace(listen,listen + "Listen " + port + listen_ipv6 + "\n")
         public.writeFile(filename, allConf)
         return True
     
@@ -633,7 +636,7 @@ include /www/server/panel/vhost/openlitespeed/proxy/BTSITENAME/*.conf
         public.ExecShell("rm -f " + public.GetConfigValue('logs_path') + '/' + siteName + "-*")
         
         #删除备份
-        public.ExecShell("rm -f "+session['config']['backup_path']+'/site/'+siteName+'_*')
+        #public.ExecShell("rm -f "+session['config']['backup_path']+'/site/'+siteName+'_*')
         
         #删除根目录
         if 'path' in get:
@@ -1424,10 +1427,11 @@ listener SSL443 {
     ssl_certificate    /www/server/panel/vhost/cert/%s/fullchain.pem;
     ssl_certificate_key    /www/server/panel/vhost/cert/%s/privkey.pem;
     ssl_protocols TLSv1.1 TLSv1.2%s;
-    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:HIGH:!aNULL:!MD5:!RC4:!DHE;
+    ssl_ciphers EECDH+CHACHA20:EECDH+CHACHA20-draft:EECDH+AES128:RSA+AES128:EECDH+AES256:RSA+AES256:EECDH+3DES:RSA+3DES:!MD5;
     ssl_prefer_server_ciphers on;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
+    add_header Strict-Transport-Security "max-age=31536000";
     error_page 497  https://$host$request_uri;
 """ % (get.first_domain, get.first_domain,self.get_tls13())
                 if (conf.find('ssl_certificate') != -1):
@@ -1501,7 +1505,7 @@ listener SSL443 {
     SSLEngine On
     SSLCertificateFile /www/server/panel/vhost/cert/%s/fullchain.pem
     SSLCertificateKeyFile /www/server/panel/vhost/cert/%s/privkey.pem
-    SSLCipherSuite EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH
+    SSLCipherSuite EECDH+CHACHA20:EECDH+CHACHA20-draft:EECDH+AES128:RSA+AES128:EECDH+AES256:RSA+AES256:EECDH+3DES:RSA+3DES:!MD5
     SSLProtocol All -SSLv2 -SSLv3 -TLSv1
     SSLHonorCipherOrder On
     %s
@@ -1739,6 +1743,7 @@ listener SSL443 {
         type = 0
         if os.path.exists(path + '/README'):  type = 1
         if os.path.exists(path + '/partnerOrderId'):  type = 2
+        if os.path.exists(path + '/certOrderId'):  type = 3
         csrpath = path + "/fullchain.pem"  # 生成证书路径
         keypath = path + "/privkey.pem"  # 密钥文件路径
         key = public.readFile(keypath)
@@ -1791,11 +1796,14 @@ listener SSL443 {
                     if siteName in crontab_config:
                         if 'dnsapi' in crontab_config[siteName]:
                             auth_type = 'dns'
-
-
-        return {'status': status, 'domain': domains, 'key': key, 'csr': csr, 'type': type, 'httpTohttps': toHttps,'cert_data':cert_data,'email':email,"index":index,'auth_type':auth_type}
+        
+            if os.path.exists(path + '/certOrderId'):  type = 3
+        oid = -1
+        if type == 3:
+            oid = int(public.readFile(path + '/certOrderId'))
+        return {'status': status,'oid':oid, 'domain': domains, 'key': key, 'csr': csr, 'type': type, 'httpTohttps': toHttps,'cert_data':cert_data,'email':email,"index":index,'auth_type':auth_type}
     
-    
+
     #启动站点
     def SiteStart(self,get):
         id = get.id
@@ -2888,7 +2896,7 @@ server
         if get.todomain:
             if not re.search(tod,get.todomain):
                 return public.returnMsg(False, '发送域名格式错误 ' + get.todomain)
-        else:
+        if public.get_webserver() != 'openlitespeed':
             get.todomain = "$host"
 
         # 检测目标URL格式
@@ -2943,7 +2951,8 @@ server
         error_log off;
         access_log /dev/null;
     }'''
-                ng_conf = ng_conf.replace('access_log', oldconf + "\n\taccess_log")
+                if "(gif|jpg|jpeg|png|bmp|swf)$" not in ng_conf:
+                    ng_conf = ng_conf.replace('access_log', oldconf + "\n\taccess_log")
                 public.writeFile(ng_file, ng_conf)
                 return
             sitenamelist = []
@@ -2973,7 +2982,8 @@ server
         error_log off;
         access_log /dev/null;
     }'''
-                ng_conf = ng_conf.replace('access_log', oldconf + "\n\taccess_log")
+                if "(gif|jpg|jpeg|png|bmp|swf)$" not in ng_conf:
+                    ng_conf = ng_conf.replace('access_log', oldconf + "\n\taccess_log")
                 public.writeFile(ng_file, ng_conf)
 
     # 设置apache配置

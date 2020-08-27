@@ -867,7 +867,6 @@ $(function () {
 
 function bt_init() {
     var btName = $("input[name='btusername']").val();
-    console.log(btName);
     if (!btName) {
         $('.wxapp_p .inputtxt').val("未绑定宝塔账号");
         $('.wxapp_p .modify').attr("onclick", "");

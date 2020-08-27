@@ -8,7 +8,8 @@
 # +-------------------------------------------------------------------
 import os
 import sys
-sys.path.append("class/")
+if not 'class/' in sys.path:
+    sys.path.insert(0,'class/')
 import public
 import db
 import json
@@ -44,7 +45,11 @@ class ScanLogin(object):
         cache.set(tid,public.get_session_id(),360)
         cache.set(public.get_session_id(),tid,360)
         return public.returnMsg(True, qrcode_str)
-
+    
+    #生成request_token
+    def set_request_token(self):
+        session['request_token_head'] = public.GetRandomString(48)
+    
     # 设置登录状态
     def set_login(self, get):
         session_id = public.get_session_id()
@@ -66,6 +71,7 @@ class ScanLogin(object):
                 public.WriteLog('TYPE_LOGIN', 'LOGIN_SUCCESS',
                                 ('微信扫码登录', public.GetClientIp()+ ":" + str(request.environ.get('REMOTE_PORT'))))
                 login_type = 'data/app_login.pl'
+                self.set_request_token()
                 import config
                 config.config().reload_session()
                 public.writeFile(login_type,'True')
@@ -89,6 +95,7 @@ class ScanLogin(object):
         sess_input_path = 'data/session_last.pl'
         public.writeFile(sess_input_path,str(int(time.time())))
         login_type = 'data/app_login.pl'
+        self.set_request_token()
         import config
         config.config().reload_session()
         public.writeFile(login_type,'True')
@@ -191,7 +198,7 @@ class wxapp(SelfModule, ScanLogin):
                     if type(encryption_str) == str:
                         encryption_str = encryption_str.encode()
             if get['sgin'] == public.md5(binascii.hexlify(base64.b64encode(encryption_str))):
-                if get['client_ip'] in ['118.24.150.167', '103.224.251.67', '125.88.182.170', '47.52.194.186', '39.104.53.226','119.147.144.162']:
+                if public.GetClientIp() in ['118.24.150.167', '103.224.251.67', '125.88.182.170', '47.52.194.186', '39.104.53.226','119.147.144.162']:
                     return True
             return public.returnMsg(False, '未授权')
 

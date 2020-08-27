@@ -26,10 +26,7 @@ class http:
                 from requests import get as req_get
                 return req_get(url,timeout=timeout,headers=get_headers(headers),verify=verify)
             except:
-                if sys.version_info[0] == 2:
-                    result = self._get_py2(url,timeout,headers,verify)
-                else:
-                    result = self._get_py3(url,timeout,headers,verify)
+                result = self._get_curl(url,timeout,headers,verify)
         elif type == 'curl':
             result = self._get_curl(url,timeout,headers,verify)
         elif type == 'php':
@@ -43,10 +40,7 @@ class http:
                 from requests import post as req_post
                 return req_post(url,data,timeout=timeout,headers=headers,verify=verify)
             except:
-                if sys.version_info[0] == 2:
-                    result =  self._post_py2(url,data,timeout,headers,verify)
-                else:
-                    result = self._post_py3(url,data,timeout,headers,verify)
+                result = self._post_curl(url,data,timeout,headers,verify)
         elif type == 'curl':
             result = self._post_curl(url,data,timeout,headers,verify)
         elif type == 'php':

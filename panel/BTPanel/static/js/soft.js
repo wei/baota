@@ -362,11 +362,12 @@ var soft = {
         })
     },
     // 渲染列表
-    render_promote_list(data){
+    render_promote_list:function(data){
         if($('#soft_recom_list').length > 0) $('#soft_recom_list').remove();
         var html = $('<ul id="soft_recom_list" class="recom_list"></ul>'),that = this;
-            for(var i=0;i< data.length;i++){
-                var type = '', item = data[i];
+        for(var i=0;i< data.length;i++){
+            var type = '', item = data[i];
+            (function(item){
                 switch (item.type) {
                     case 'link': // 链接推荐
                         type = $('<a href="'+ item.data +'" target="_blank" title="'+ (item.title || '') +'"><span>'+ (item.title || '') +'</span></a>');
@@ -377,14 +378,16 @@ var soft = {
                         type = $('<a href="javascript:;" class="btlink" title="'+ (item.title || '') +'"><span>'+ (item.title || '') +'</span></a>').click(function(){
                             that.render_promote_view(item);
                         });
-                        break;
+                    break;
                 }
-                html.append($('<li><img src="'+ item.image +'"></li>').append(type));
-            }
-            $('#updata_pro_info').before(html);
+                html.append($('<li></li>').append(type));
+            }(item))
+            // html.append($('<li><img src="'+ item.image +'"></li>').append(type));
+        }
+        $('#updata_pro_info').before(html);
     },
     // 渲染软件列表
-    render_promote_view(find){
+    render_promote_view:function(find){
         var that = this,is_single_product = find.data.length > 1,find_data = find.data;
         if(is_single_product){
             layer.open({

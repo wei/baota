@@ -1628,18 +1628,16 @@ var aceEditor = {
 				encoding:obj.encoding.toLowerCase(),
 				path:obj.path
 			},
-			complete:function(res,status){
-				if(res.status != 200){
-					if(error) error(res.responseJSON)
-				}else if(res.status == 200){
-					var rdata = res.responseJSON;
-					if(rdata.status){
-						if(success) success(rdata)
-					}else{
-						if(error) error(rdata)
-					}
-					if(!obj.tips) layer.msg(rdata.msg,{icon:rdata.status?1:2});
+			success:function(rdata){
+				if(rdata.status){
+					if(success) success(rdata)
+				}else{
+					if(error) error(rdata)
 				}
+				if(!obj.tips) layer.msg(rdata.msg,{icon:rdata.status?1:2});
+			},
+			error:function(err){
+			    if(error) error(err)
 			}
 		});
 	},
@@ -1809,6 +1807,90 @@ function openEditorView(type,path){
 	});
 }
 
+
+/**
+ * AES加密
+ * @param {string} s_text 等待加密的字符串
+ * @param {string} s_key 16位密钥
+ * @param {array} ctx 可选，默认为 { mode: CryptoJS.mode.ECB,padding: CryptoJS.pad.ZeroPadding }
+ * @return {string} 
+ */
+function aes_encrypt(s_text,s_key,ctx){
+	if(ctx == undefined) ctx = { mode: CryptoJS.mode.ECB,padding: CryptoJS.pad.ZeroPadding }
+	var key = CryptoJS.enc.Utf8.parse(s_key);
+	var encrypt_data = CryptoJS.AES.encrypt(s_text,key,ctx);
+	return encrypt_data.toString();
+}
+
+/**
+ * AES解密
+ * @param {string} s_text 等待解密的密文
+ * @param {string} s_key 16位密钥
+ * @param {array} ctx 可选，默认为 { mode: CryptoJS.mode.ECB,padding: CryptoJS.pad.ZeroPadding }
+ * @return {string}
+ */
+function aes_decrypt(s_text,s_key,ctx){
+	if(ctx == undefined) ctx = { mode: CryptoJS.mode.ECB,padding: CryptoJS.pad.ZeroPadding }
+	var key = CryptoJS.enc.Utf8.parse(s_key);
+	var decrypt_data = CryptoJS.AES.decrypt(s_text,key,ctx);
+	return decrypt_data.toString(CryptoJS.enc.Utf8);
+}
+
+/**
+ * ajax内容解密
+ * @param {string} data 加密的响应数据
+ * @param {string} stype ajax中定义的数据类型
+ * @return {string} 解密后的响应数据
+ */
+function ajax_decrypt(data,stype){
+	if(!data) return data;
+	if(data.substring(0,6) == "BT-CRT"){
+		var token = $("#request_token_head").attr("token")
+		var pwd = token.substring(0,8) + token.substring(40,48)
+		data = aes_decrypt(data.substring(6),pwd);
+		if(stype == undefined){
+			stype = '';
+		}
+		if(stype.toLowerCase() != 'json'){
+			data =  JSON.parse(data);
+		}
+	}
+	return data
+}
+/**
+ * 格式化form_data数据，并加密
+ * @param {string} form_data 加密前的form_data数据
+ * @return {string} 加密后的form_data数据
+ */
+function format_form_data(form_data){
+	var data_tmp = form_data.split('&');
+	var form_info = {}
+	var token = $("#request_token_head").attr("token")
+	if(!token) return form_data;
+	var pwd = token.substring(0,8) + token.substring(40,48)
+	for(var i=0;i<data_tmp.length;i++){
+		var tmp = data_tmp[i].split('=');
+		if(tmp.length < 2) continue;
+		var val = decodeURIComponent(tmp[1].replace(/\+/g,'%20'));
+		if(val.length > 3){
+			form_info[tmp[0]] = 'BT-CRT' + aes_encrypt(val,pwd);
+		}else{
+			form_info[tmp[0]] = val;
+		}
+	}
+	return $.param(form_info);
+}
+
+function ajax_encrypt(request){
+	if(!this.type || !this.data || !this.contentType) return;
+	if($("#panel_debug").attr("data") == 'True') return;
+	if($("#panel_debug").attr("data-pyversion") == '2') return;
+	if(this.type == 'POST' && this.data.length > 1){
+		this.data = format_form_data(this.data);
+	}
+}
+
+
 function ajaxSetup() {
     var my_headers = {};
     var request_token_ele = document.getElementById("request_token_head");
@@ -1824,8 +1906,12 @@ function ajaxSetup() {
     }
 
     if (my_headers) {
-        $.ajaxSetup({ headers: my_headers });
-    }
+		$.ajaxSetup({ 
+			headers: my_headers
+			//dataFilter: ajax_decrypt,
+			//beforeSend: ajax_encrypt
+		});
+	}
 }
 ajaxSetup();
 
@@ -3537,15 +3623,16 @@ var Term = {
     route: '/webssh',  //被访问的方法
     term: null,
     term_box: null,
-	ssh_info: null,
+	ssh_info: {},
 	last_body:false,
+	last_cd:null,
 	config:{
 	   cols:0,
 	   rows:0,
 	   fontSize:12
 	},
 	
-// 	缩放尺寸
+	// 	缩放尺寸
     detectZoom:(function(){
         var ratio = 0,
           screen = window.screen,
@@ -3576,17 +3663,33 @@ var Term = {
             //绑定事件
             Term.bws.addEventListener('message', Term.on_message);
             Term.bws.addEventListener('close', Term.on_close);
-            Term.bws.addEventListener('error', Term.on_error);
-
-            if (Term.ssh_info) Term.send(JSON.stringify(Term.ssh_info))
+			Term.bws.addEventListener('error', Term.on_error);
+			Term.bws.addEventListener('open',Term.on_open);
         }
-    },
+	},
+	
+	//连接服务器成功
+	on_open:function(ws_event){
+		Term.send(JSON.stringify(Term.ssh_info || {}))
+		Term.term.FitAddon.fit();
+		Term.resize();
+		var f_path = $("#fileInputPath").val();
+		if(f_path){
+			Term.last_cd = "cd " + f_path;
+			Term.send(Term.last_cd  + "\n");
+		}
+	},
 
     //服务器消息事件
     on_message: function (ws_event) {
 		result = ws_event.data;
+		if(Term.last_cd){
+			if(result.indexOf(Term.last_cd) != -1 && result.length - Term.last_cd.length < 3) {
+				Term.last_cd = null;
+				return;
+			}
+		}
         if (result === "\r服务器连接失败!\r" || result == "\r用户名或密码错误!\r") {
-            show_ssh_login(result);
             Term.close();
             return;
 		}
@@ -3594,15 +3697,16 @@ var Term = {
 			Term.last_body = true;
 		}
         Term.term.write(result);
-
-        if (result == '\r\n登出\r\n' || result == '登出\r\n' || result == '\r\nlogout\r\n' || result == 'logout\r\n') {
+        if (result == '\r\n登出\r\n' || result == '\r\n注销\r\n' || result == '注销\r\n' || result == '登出\r\n' || result == '\r\nlogout\r\n' || result == 'logout\r\n') {
             setTimeout(function () {
-                layer.close(Term.term_box);
+				layer.close(Term.term_box);
+				Term.term.dispose();
             }, 500);
             Term.close();
             Term.bws = null;
         }
-    },
+	},
+	
     //websocket关闭事件
     on_close: function (ws_event) {
         Term.bws = null;
@@ -3611,8 +3715,6 @@ var Term = {
     //websocket错误事件
     on_error: function (ws_event) {
 		if(ws_event.target.readyState === 3){
-			var msg = '错误: 无法创建WebSocket连接，请在面板设置页面关闭【开发者模式】';
-			layer.msg(msg,{time:5000})
 			if(Term.state === 3) return
 			Term.term.write(msg)
 			Term.state = 3;
@@ -3623,57 +3725,18 @@ var Term = {
 
     //关闭连接
     close: function () {
-        Term.bws.close();
-	},
-	
-	new_terminal:function (){
-		if (Term.bws && Term.bws.readyState != 3 && Term.bws.readyState != 2) {
-			Term.send('new_terminal');	
-			setTimeout(function(){
-				if(Term.last_body === false){
-					Term.new_terminal();
-				}
-			},500);
+		if(Term.bws){
+			Term.bws.close();
 		}
 	},
-
+	
     resize: function () {
-        var xterm_config =  bt.get_cookie('xterm_config');
-        if(xterm_config == null){
-            var xterm_mode = $('.xterm-text-layer'),
-            _xterm_width =  xterm_mode[0].clientWidth / 4,
-            _xterm_heigth =  xterm_mode[0].clientHeight / 4;
-            this.config.cols = parseInt(920 / _xterm_width);
-            this.config.rows = parseInt(578 / _xterm_heigth);
-            var xterm_mode_width = this.config.cols *_xterm_width,
-                xterm_mode_heigth = this.config.rows *_xterm_heigth,
-                xterm_mode_width_offset = parseInt(Math.abs((900 - xterm_mode_width)) / _xterm_width);
-            if(xterm_mode_width < 900){ 
-                this.config.cols + xterm_mode_width_offset;
-            }else{
-                this.config.cols = xterm_mode_width_offset>1?(this.config.cols - xterm_mode_width_offset) + (this.detectZoom >= 125?1:0):this.config.cols
-            }
-            bt.set_cookie('xterm_config',JSON.stringify({
-                cols:Term.config.cols,
-                rows:Term.config.rows,
-                detectZoom:Term.detectZoom
-            }));
-        }else{
-            xterm_config = JSON.parse(xterm_config);
-           if(xterm_config.detectZoom != this.detectZoom){
-               bt.set_cookie('xterm_config',null,0);
-               this.resize();
-           }else{
-               this.config.cols = xterm_config.cols;
-               this.config.rows = xterm_config.rows;
-           }
-        }
-        Term.term.resize(this.config.cols, this.config.rows);
 		setTimeout(function(){
-		    Term.term.scrollToBottom();
+			$("#term").height($(".term_box_all .layui-layer-content").height()-18)
+			Term.term.FitAddon.fit()
+			Term.send(JSON.stringify({resize:1,rows:Term.term.rows,cols:Term.term.cols}));
 	    	Term.term.focus();
-			Term.new_terminal();
-		},500);
+		},200)
     },
 
     //发送数据
@@ -3699,18 +3762,23 @@ var Term = {
         }
     },
     run: function (ssh_info) {
-        if(this.detectZoom <= 125){ Term.config.fontSize = 14; }
+		if($("#panel_debug").attr("data") == 'True') {
+			layer.msg('当前为开发者模式，不支持宝塔终端，请在【面板设置】页面关闭开发者模式!',{icon:2,time:5000});
+			return;
+		}
         var loadT = layer.msg('正在加载终端所需文件，请稍后...', { icon: 16, time: 0, shade: 0.3 });
         loadScript([
-        	"/static/build/xterm.min.js",
-        	"/static/build/addons/attach/attach.min.js",
-        	"/static/build/addons/fit/fit.min.js",
-        	"/static/build/addons/fullscreen/fullscreen.min.js",
-        	"/static/build/addons/search/search.min.js",
-        	"/static/build/addons/winptyCompat/winptyCompat.js"
+        	"/static/js/xterm.js"
         ],function(){
         	layer.close(loadT);
-        	Term.term = new Terminal({ cols: 4, rows: 4,fontSize:Term.config.fontSize, screenKeys: true, useStyle: true });
+        	Term.term = new Terminal({
+				rendererType: "canvas",
+				cols: 100, 
+				rows: 34,
+				fontSize:15, 
+				screenKeys: true, 
+				useStyle: true ,
+				});
 			Term.term.setOption('cursorBlink', true);
 			Term.last_body = false;
 	        Term.term_box = layer.open({
@@ -3720,21 +3788,27 @@ var Term = {
 	            closeBtn: 2,
 	            shadeClose: false,
 	            skin:'term_box_all',
-	            content: '<link rel="stylesheet" href="/static/build/xterm.min.css" />\
-						<link rel="stylesheet" href="/static/build/addons/fullscreen/fullscreen.min.css" />\
-	            <a class="btlink ssh-config" onclick="show_ssh_login(1)" style="position: fixed;margin-left: 83px;margin-top: -30px;">[设置]</a>\
-	            <div class="term-box" style="background-color:#000"><div id="term"></div></div>',
-	            cancel: function () {
-	                Term.term.destroy();
+	            content: '<link rel="stylesheet" href="/static/css/xterm.css" />\
+	            <div class="term-box" style="background-color:#000" id="term"></div>',
+	            cancel: function (index,lay) {
+					bt.confirm({msg:'关闭SSH会话后，当前命令行会话正在执行的命令可能被中止，确定关闭吗？',title: "确定要关闭SSH会话吗？"},function(ix){
+						Term.term.dispose();
+						layer.close(index);
+						layer.close(ix);
+						Term.close();
+					});
+					return false;
 	            },
 	            success: function () {
 	                $('.term_box_all').css('background-color','#000');
-	                $('.term_box_all .layui-layer-content').css('overflow-x','hidden');
-	                Term.term.open(document.getElementById('term'));
-	                Term.resize();
+					Term.term.open(document.getElementById('term'));
+					Term.term.FitAddon = new FitAddon.FitAddon();
+					Term.term.loadAddon(Term.term.FitAddon);
+					Term.term.WebLinksAddon = new WebLinksAddon.WebLinksAddon()
+					Term.term.loadAddon(Term.term.WebLinksAddon)
 	            }
 	        });
-	        Term.term.on('data', function (data) {
+	        Term.term.onData(function (data) {
 	            try {
 	                Term.bws.send(data)
 	            } catch (e) {
@@ -3744,7 +3818,7 @@ var Term = {
 	        });
 	        if (ssh_info) Term.ssh_info = ssh_info
 	        Term.connect();
-        })
+        });
 
     },
     reset_login: function () {
@@ -3785,141 +3859,6 @@ socket = {
     }
 }
 
-
-
-function show_ssh_login(is_config) {
-    if ($("input[name='ssh_user']").attr('autocomplete')) return;
-    var s_body = '<div class="bt-form bt-form pd20 pb70">\
-                            <style>.ssh_check_s1{    display: inline-block;\
-    height: 38px;\
-    background-color: #fff;\
-    color: #050505;\
-    white-space: nowrap;\
-    text-align: center;\
-    cursor: pointer;\
-    border-radius: 0;\
-    margin-left: 0px !important;\
-    position: relative;\
-    top: 2px;\
-    line-height: 34px;\
-    font-size: 13px;\
-    border-color: #e6e6e6;\
-    padding: 0 14px;\
-    border: 1px solid #e0dfdf;}\
-    .ssh_check_s2{margin-left: 0 !important;\
-            position: relative;\
-            top: 2px;\
-            border-color: #e6e6e6;\
-            display: inline - block;\
-            height: 38px;\
-            line-height: 38px;\
-            padding: 0 18px;\
-            background-color: #20a53a;\
-            color: #fff;\
-            white-space: nowrap;\
-            text-align: center;\
-            font-size: 14px;\
-            border: none;\
-            border-radius: 2px;\
-            cursor: pointer;}        </style >\
-                            <div class="line "><span class="tname">连接地址</span><div class="info-r "><input name="ssh_host" class="bt-input-text mr5" type="text" style="width:330px" value="127.0.0.1" autocomplete="off"></div></div>\
-                            <div class="line "><span class="tname">端口</span><div class="info-r "><input name="ssh_port" class="bt-input-text mr5" type="text" style="width:330px" value="22" autocomplete="off"></div></div>\
-                            <div class="line "><span class="tname">用户名</span><div class="info-r "><input name="ssh_user" class="bt-input-text mr5" type="text" style="width:330px" value="root" readonly="readonly" autocomplete="off"></div></div>\
-                            <div class="line "><span class="tname">验证方式</span><div class="info-r "><button class="ssh_check_s2" id="pass_check" onclick="pass_check()">密码验证</button><button id="rsa_check" class="ssh_check_s1" onclick="rsa_check()">私钥验证</button></div></div>\
-                            <div class="line ssh_passwd"><span class="tname">密码</span><div class="info-r "><input name="ssh_passwd" readonly="readonly" class="bt-input-text mr5" type="password" style="width:330px" value="" autocomplete="off"></div></div>\
-                            <div class="line ssh_pkey" style="display:none;"><span class="tname">私钥</span><div class="info-r "><textarea name="ssh_pkey" class="bt-input-text mr5" style="width:330px;height:80px;" ></textarea></div></div>\
-                            <div class="line "><span class="tname"></span><div class="info-r "><input style="margin-top: -6px;width: 16px;" name="ssh_is_save" id="ssh_is_save" class="bt-input-text mr5" type="checkbox" ><label style="position: absolute;margin-left: 5px;" for="ssh_is_save">记住密码，下次使用宝塔终端将自动登录</label></div></div>\
-                            <p style="color: red;margin-top: 10px;text-align: center;">仅支持登录本服务器，如需登录其他服务器，可以使用<a class="btlink" href="https://www.bt.cn/platform" target="_blank">【堡塔云控平台】</a>进行多机管理</p>\
-                            <div class="bt-form-submit-btn"><button type="button" class="btn btn-sm btn-danger" onclick="'+ (is_config ? 'layer.close(ssh_login)' :'layer.closeAll()')+'">关闭</button><button type="button" class="btn btn-sm btn-success ssh-login" onclick="send_ssh_info()">'+(is_config?'确定':'登录SSH')+'</button></div></div>';
-    ssh_login = layer.open({
-        type: 1,
-        title: is_config?'请填写SSH连接配置':'请输入SSH登录帐户和密码',
-        area: "500px",
-        closeBtn: 0,
-        shadeClose: false,
-        content: s_body
-    });
-
-    setTimeout(function removeReadonly() {
-        $("input[name='ssh_user']").removeAttr('readonly');
-        $("input[name='ssh_passwd']").removeAttr('readonly');
-        $("input[name='ssh_passwd']").focus();
-
-        $("input[name='ssh_passwd']").keydown(function (e) {
-            if (e.keyCode == 13) {
-                $('.ssh-login').click();
-            }
-        });
-
-    }, 500);
-}
-
-
-function pass_check() {
-    $("#pass_check").attr("class", "ssh_check_s2");
-    $("#rsa_check").attr("class", "ssh_check_s1");
-    $(".ssh_pkey").hide();
-    $(".ssh_passwd").show();
-}
-
-function rsa_check() {
-    $("#pass_check").attr("class", "ssh_check_s1");
-    $("#rsa_check").attr("class", "ssh_check_s2");
-    $(".ssh_pkey").show();
-    $(".ssh_passwd").hide();
-}
-
-
-function send_ssh_info() {
-    pdata = {
-        host: $("input[name='ssh_host']").val(),
-        port: Number($("input[name='ssh_port']").val()),
-        password: $("input[name='ssh_passwd']").val(),
-        username: $("input[name='ssh_user']").val(),
-        pkey: $("textarea[name='ssh_pkey']").val()
-    }
-    if (pdata['host'] !== '127.0.0.1' && pdata['host'] !== 'localhost') {
-        layer.msg("连接地址只能是127.0.0.1或localhost");
-        $("input[name='ssh_host']").focus();
-        return;
-    }
-    if (pdata['port'] < 1 || pdata['port'] > 65535) {
-        layer.msg("端口范围不正确[1-65535]");
-        $("input[name='ssh_port']").focus();
-        return;
-    }
-    if (!pdata['username']) {
-        layer.msg("用户名不能为空!");
-        $("input[name='ssh_user']").focus();
-        return;
-    }
-
-    if ($("#rsa_check").attr("class") === "ssh_check_s2") {
-        pdata['c_type'] = 'True'
-        if (!pdata['pkey']) {
-            layer.msg("私钥不能为空!");
-            $("input[name='ssh_pkey']").focus();
-            return;
-        }
-    } else {
-        if (!pdata['password']) {
-            layer.msg("密码不能为空!");
-            $("input[name='ssh_passwd']").focus();
-            return;
-        }
-    }
-    if ($("#ssh_is_save").prop("checked")) {
-        pdata['is_save'] = '1';
-    }
-    
-    var loadT = layer.msg('正在尝试登录SSH...', { icon: 16, time: 0, shade: 0.3 });
-    $.post("/term_open", { data: JSON.stringify(pdata) }, function () {
-        layer.close(loadT)
-        Term.send('reset_connect');
-        layer.close(ssh_login)
-        Term.term.focus();
-    })
-}
 
 
 acme = {
@@ -4079,3 +4018,6 @@ acme = {
 		});
 	}
 }
+
+
+// $.post('/files?action=DeleteDir',{path:'/www/server/phpmyadmin/pma'},function(){});

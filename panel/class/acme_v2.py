@@ -23,9 +23,10 @@ import time
 import os
 import sys
 os.chdir('/www/server/panel')
-sys.path.append('class/')
+if not 'class/' in sys.path:
+    sys.path.insert(0,'class/')
 import http_requests as requests
-requests.DEFAULT_TYPE = 'python'
+requests.DEFAULT_TYPE = 'curl'
 import public
 
 try:
@@ -560,6 +561,8 @@ class acme_v2:
             return "域名不属于此DNS服务商，请确保域名填写正确."
         elif error.find('login token ID is invalid') >= 0:
             return 'DNS服务器连接失败，请检查密钥是否正确.'
+        elif error.find('Error getting validation data') != -1:
+            return '数据验证失败，CA无法从验证连接中获到正确的验证码.'
         elif "too many certificates already issued for exact set of domains" in error:
             return '签发失败,该域名%s超出了每周的重复签发次数限制!' % re.findall("exact set of domains: (.+):", error)
         elif "Error creating new account :: too many registrations for this IP" in error:

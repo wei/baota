@@ -89,6 +89,7 @@ class ajax:
         access_log off;
     }
 }'''
+
         public.writeFile(filename,conf)
         public.serviceReload()
     

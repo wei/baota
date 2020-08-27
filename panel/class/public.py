@@ -19,6 +19,8 @@ _LAN_TEMPLATE = None
 if sys.version_info[0] == 2:
     reload(sys)
     sys.setdefaultencoding('utf8')
+else:
+    from importlib import reload
 
 def M(table):
     """
@@ -30,8 +32,9 @@ def M(table):
         ps: 默认访问data/default.db
     """
     import db
-    sql = db.Sql()
-    return sql.table(table)
+    with db.Sql() as sql:
+        #sql = db.Sql()
+        return sql.table(table)
 
 def HttpGet(url,timeout = 6,headers = {}):
     """
@@ -373,19 +376,20 @@ def WriteFile(filename,s_body,mode='w+'):
 def writeFile(filename,s_body,mode='w+'):
     return WriteFile(filename,s_body,mode)
 
-def WriteLog(type,logMsg,args=()):
+def WriteLog(type,logMsg,args=(),not_web = False):
     #写日志
     #try:
     import time,db,json
     username = 'system'
     uid = 1
-    try:
-        from BTPanel import session
-        if 'username' in session:
-            username = session['username']
-            uid = session['uid']
-    except:
-        pass
+    if not not_web:
+        try:
+            from BTPanel import session
+            if 'username' in session:
+                username = session['username']
+                uid = session['uid']
+        except:
+            pass
     global _LAN_LOG
     if not _LAN_LOG:
         _LAN_LOG = json.loads(ReadFile('BTPanel/static/language/' + GetLanguage() + '/log.json'))
@@ -1368,7 +1372,7 @@ def write_request_log(reques = None):
         log_file = getDate(format='%Y-%m-%d') + '.json'
         if not os.path.exists(log_path): os.makedirs(log_path)
 
-        from flask import request
+        from BTPanel import request
         log_data = []
         log_data.append(getDate())
         log_data.append(GetClientIp() + ':' + str(request.environ.get('REMOTE_PORT')))
@@ -1376,6 +1380,7 @@ def write_request_log(reques = None):
         log_data.append(request.full_path)
         log_data.append(request.headers.get('User-Agent'))
         WriteFile(log_path + '/' + log_file,json.dumps(log_data) + "\n",'a+')
+        rep_sys_path()
     except: pass
 
 #重载模块
@@ -1555,6 +1560,7 @@ def auto_backup_panel():
         shutil.copytree(panel_paeh + '/data',backup_path + '/data')
         shutil.copytree(panel_paeh + '/config',backup_path + '/config')
         shutil.copytree(panel_paeh + '/vhost',backup_path + '/vhost')
+        ExecShell("chmod -R 600 {path};chown -R root.root {path}".format(paht=b_path))
         time_now = time.time() - (86400 * 15)
         for f in os.listdir(b_path):
             try:
@@ -1566,9 +1572,8 @@ def auto_backup_panel():
 
 
 #检查端口状态
-def check_port_stat(port):
+def check_port_stat(port,localIP = '127.0.0.1'):
     import socket
-    localIP = '127.0.0.1'
     temp = {}
     temp['port'] = port
     temp['local'] = True
@@ -1734,7 +1739,7 @@ def import_cdn_plugin():
     try:
         import static_cdn_main
     except:
-        sys.path.insert(0,plugin_path)
+        package_path_append(plugin_path)
         import static_cdn_main
     
 
@@ -1748,6 +1753,8 @@ def get_cdn_hosts():
 
 def get_cdn_url():
     try:
+        if os.path.exists('plugin/static_cdn/not_open.pl'):
+            return False
         from BTPanel import cache
         cdn_url = cache.get('cdn_url')
         if cdn_url: return cdn_url
@@ -1916,6 +1923,73 @@ def password_salt(password,username=None,uid=None):
     salt = M('users').where('id=?',(uid,)).getField('salt')
     return md5(md5(password+'_bt.cn')+salt)
 
+def package_path_append(path):
+    if not path in sys.path:
+        sys.path.insert(0,path)
+    
+
+def rep_sys_path():
+    sys_path = []
+    for p in sys.path:
+        if p in sys_path: continue
+        sys_path.append(p)
+    sys.path = sys_path
+
+
+def get_ssh_port():
+    '''
+        @name 获取本机SSH端口
+        @author hwliang<2020-08-07>
+        @return int
+    '''
+    s_file = '/etc/ssh/sshd_config'
+    conf = readFile(s_file)
+    if not conf: conf = ''
+    rep = r"#*Port\s+([0-9]+)\s*\n"
+    tmp1 = re.search(rep,conf)
+    ssh_port = 22
+    if tmp1:
+        ssh_port = int(tmp1.groups(0)[0])
+    return ssh_port
+
+def set_error_num(key,empty = False,expire=3600):
+    '''
+        @name 设置失败次数(每调用一次+1)
+        @author hwliang<2020-08-21>
+        @param key<string> 索引
+        @param empty<bool> 是否清空计数
+        @param expire<int> 计数器生命周期(秒)
+        @return bool
+    '''
+    from BTPanel import cache
+    num = cache.get(key)
+    if not num:
+        num = 0
+    else:
+        if empty:
+            cache.delete(key)
+            return True
+    cache.set(key,num + 1,expire)
+    return True
+
+def get_error_num(key,limit=False):
+    '''
+        @name 获取失败次数
+        @author hwliang<2020-08-21>
+        @param key<string> 索引
+        @param limit<False or int> 如果为False，则直接返回失败次数，否则与失败次数比较，若大于失败次数返回True，否则返回False 
+        @return int or bool
+    '''
+    from BTPanel import cache
+    num = cache.get(key)
+    if not num: num = 0
+    if not limit: 
+        return num
+    if limit > num:
+        return True
+    return False
+
+
 #取通用对象
 class dict_obj:
     def __contains__(self, key):
@@ -1925,6 +1999,85 @@ class dict_obj:
     def __delitem__(self,key): delattr(self,key)
     def __delattr__(self, key): delattr(self,key)
     def get_items(self): return self
+
+
+
+#实例化定目录下的所有模块
+class get_modules:
+
+    def __contains__(self, key):
+        return self.get_attr(key)
+
+    def __setitem__(self, key, value):
+        setattr(self,key,value)
+
+    def get_attr(self,key):
+        '''
+            尝试获取模块，若为字符串，则尝试实例化模块，否则直接返回模块对像
+        '''
+        res = getattr(self,key)
+        if isinstance(res,str):
+            try:
+                tmp_obj = __import__(key)
+                reload(tmp_obj)
+                setattr(self,key,tmp_obj)
+                return tmp_obj
+            except:
+                raise Exception(get_error_info())
+        return res
+
+    def __getitem__(self, key):
+        return self.get_attr(key)
+
+    def __delitem__(self,key):
+        delattr(self,key)
+
+    def __delattr__(self, key):
+        delattr(self,key)
+
+    def get_items(self):
+        return self
+
+    def __init__(self,path = "class",limit = None):
+        '''
+            @name 加载指定目录下的模块
+            @author hwliang<2020-08-03>
+            @param path<string> 指定目录，可指定绝对目录，也可指定相对于/www/server/panel的相对目录 默认加载class目录
+            @param limit<string/list/tuple> 指定限定加载的模块名称，默认加载path目录下的所有模块
+            @param object
+
+            @example
+                p = get_modules('class')
+                if 'public' in p:
+                    md5_str = p.public.md5('test')
+                    md5_str = p['public'].md5('test')
+                    md5_str = getattr(p['public'],'md5')('test')
+                else:
+                    print(p.__dict__)
+        '''
+        os.chdir('/www/server/panel')
+        exp_files = ['__init__.py','__pycache__']
+        if not path in sys.path:
+            sys.path.insert(0,path)
+        for fname in os.listdir(path):
+            if fname in exp_files: continue
+            filename = '/'.join([path,fname])
+            if os.path.isfile(filename):
+                if not fname[-3:] in ['.py','.so']: continue
+                mod_name = fname[:-3]
+            else:
+                c_file = '/'.join((filename,'__init__.py'))
+                if not os.path.exists(c_file):
+                    continue
+                mod_name = fname
+            
+            if limit:
+                if not isinstance(limit,list) and not isinstance(limit,tuple):
+                    limit = (limit,)
+                if not mod_name in limit:
+                    continue
+
+            setattr(self,mod_name,mod_name)
 
 
 

@@ -4826,12 +4826,6 @@ bt.database = {
 		})
 	},
 	open_phpmyadmin:function(name,username,password){
-
-		if($("#toPHPMyAdmin").attr('action').indexOf('phpmyadmin') == -1){
-		layer.msg(lan.database.phpmyadmin_err,{icon:2,shade: [0.3, '#000']})
-		setTimeout(function(){ window.location.href = '/soft'; },3000);
-			return;
-		}
 		$("#toPHPMyAdmin").attr('action',$("#toPHPMyAdmin").attr('public-data'))
 		var murl = $("#toPHPMyAdmin").attr('action');
 		$("#pma_username").val(username);

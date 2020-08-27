@@ -7,7 +7,8 @@
 # | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
 import sys,os,re,time
-sys.path.append("class/")
+if not 'class/' in sys.path:
+    sys.path.insert(0,'class/')
 import db,public
 import json
 

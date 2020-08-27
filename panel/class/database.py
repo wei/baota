@@ -499,16 +499,17 @@ SetLink
         return public.returnMsg(True,'DATABASE_SYNC_SUCCESS',(str(n),))
     
     #配置
-    def mypass(self,act,root):
+    def mypass(self,act,password = None):
         conf_file = '/etc/my.cnf'
         public.ExecShell("sed -i '/user=root/d' {}".format(conf_file))
         public.ExecShell("sed -i '/password=/d' {}".format(conf_file))
         if act:
+            password = public.M('config').where('id=?',(1,)).getField('mysql_root')
             mycnf = public.readFile(conf_file)
-            src_dump = "[mysqldump]\n"
-            sub_dump = src_dump + "user=root\npassword=\"{}\"\n".format(root)
             if not mycnf: return False
-            mycnf = mycnf.replace(src_dump,sub_dump)
+            src_dump_re = r"\[mysqldump\][^.]"
+            sub_dump = "[mysqldump]\nuser=root\npassword=\"{}\"\n".format(password)
+            mycnf = re.sub(src_dump_re, sub_dump, mycnf)
             if len(mycnf) > 100: public.writeFile(conf_file,mycnf)
             return True
         return True

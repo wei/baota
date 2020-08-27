@@ -3,6 +3,10 @@ var fileDrop = {
     endTime:0,
     uploadLength:0, //上传数量
     splitSize: 1024 * 1024 * 2, //文件上传分片大小
+    splitEndTime: 0,
+    splitStartTime:0,
+    fileSize:0,
+    speedLastTime:0,
     filesList:[], // 文件列表数组
     errorLength:0, //上传失败文件数量
     isUpload:true, //上传状态，是否可以上传
@@ -10,6 +14,7 @@ var fileDrop = {
     isUploadNumber:800,//限制单次上传数量
     uploadAllSize:0, // 上传文件总大小
     uploadedSize:0, // 已上传文件大小
+    updateedSizeLast:0,
     topUploadedSize:0, // 上一次文件上传大小
     uploadExpectTime:0, // 预计上传时间
     initTimer:0, // 初始化计时
@@ -56,7 +61,7 @@ var fileDrop = {
     
     // 事件触发
     ev_drop:function(e){
-        if(!this.is_webkit){
+        if(!fileDrop.is_webkit){
             $('#mask_layer').hide();
             return false;
         }
@@ -119,24 +124,6 @@ var fileDrop = {
 			});
 		}
         
-    },
-    // 获取上传速度
-    get_timer_speed:function(speed){
-        var that = this,num = 0;
-        if(speed == undefined) speed = 1000
-        that.speedInterval = setInterval(function(){
-            if(that.uploadedSize - that.topUploadedSize === 0){
-                that.timerSpeed = that.timerSpeed == 0 ? 0:(parseInt(that.timerSpeed / num));
-                num += 1;
-            }else{
-                that.timerSpeed = that.uploadedSize - that.topUploadedSize;
-                num = 0;
-            }
-            that.topUploadedSize = that.uploadedSize;
-            $('.file_upload_info .uploadSpeed').text(that.to_size(isNaN(that.timerSpeed)?0:that.timerSpeed)+'/s');
-            var estimateTime = that.time(parseInt(((that.uploadAllSize - that.uploadedSize) / that.timerSpeed) * 1000))
-            if(!isNaN(that.timerSpeed)) $('.file_upload_info .uploadEstimate').text(estimateTime.indexOf('NaN') == -1?estimateTime:'0秒');
-        },speed);
     },
     // 上传视图
     dialog_view:function(config){
@@ -218,7 +205,7 @@ var fileDrop = {
                         that.upload_file();
                         that.initTimer = new Date();
                         that.uploading = true;
-                        that.get_timer_speed();
+                        //that.get_timer_speed();
                     }
                 },
                 btn2:function (index, layero){
@@ -360,6 +347,7 @@ var fileDrop = {
     },
     // 上传文件,文件开始字段，文件编号
     upload_file:function(fileStart,index){
+        
         if(fileStart == undefined && this.uploadSuspend.length == 0) fileStart = 0,index = 0;
         if(this.filesList.length === index){
             clearInterval(this.speedInterval);
@@ -368,9 +356,14 @@ var fileDrop = {
             return false;
         }
         var that = this;
+        that.splitEndTime = new Date().getTime()
+        that.get_timer_speed()
+
+        that.splitStartTime = new Date().getTime()
         var item = this.filesList[index],fileEnd = '';
         if(item == undefined) return false;
         fileEnd = Math.min(item.file.size, fileStart + this.splitSize),
+        that.fileSize = fileEnd - fileStart
         form = new FormData();
         if(fileStart == 0){
             that.startTime = new Date();
@@ -397,6 +390,7 @@ var fileDrop = {
                     }else{
                         that.uploadedSize += parseInt(fileEnd - fileStart);  
                     }
+
                     that.upload_file(data,index);
                 }else{
                     if(data.status){
@@ -409,6 +403,7 @@ var fileDrop = {
                         that.errorLength ++;
                     }
                 }
+                
             },
             error:function(e){
                 if(that.filesList[index].req_error === undefined) that.filesList[index].req_error = 1
@@ -420,9 +415,28 @@ var fileDrop = {
                 }
                 that.filesList[index].req_error += 1;
                 that.upload_file(fileStart,index)
+
+                
             }
         });
     }, 
+    // 获取上传速度
+    get_timer_speed:function(speed){
+        var done_time = new Date().getTime()
+        if(done_time - this.speedLastTime > 1000){
+            var that = this,num = 0;
+            if(speed == undefined) speed = 200
+            var s_time = (that.splitEndTime - that.splitStartTime) / 1000;
+            that.timerSpeed = (that.fileSize / s_time).toFixed(2)
+            that.updateedSizeLast = that.uploadedSize
+            if(that.timerSpeed < 2) return;
+
+            $('.file_upload_info .uploadSpeed').text(that.to_size(isNaN(that.timerSpeed)?0:that.timerSpeed)+'/s');
+            var estimateTime = that.time(parseInt(((that.uploadAllSize - that.uploadedSize) / that.timerSpeed) * 1000))
+            if(!isNaN(that.timerSpeed)) $('.file_upload_info .uploadEstimate').text(estimateTime.indexOf('NaN') == -1?estimateTime:'0秒');
+            this.speedLastTime = done_time;
+        }
+    },
     time:function(date){
         var hours = Math.floor(date / (60 * 60 * 1000));
         var minutes = Math.floor(date / (60 * 1000));
