@@ -17,6 +17,7 @@ jobs:
       run: |
         CURRENT_DATE="$(TZ=Asia/Shanghai date +'%Y-%m-%d')"
         LATEST_VERSION=$(curl -sL 'https://www.bt.cn/api/panel/updateLinux' | jq -r '.version')
+        UPDATE_MSG=$(curl -sL 'https://www.bt.cn/api/panel/updateLinux' | jq -r '.updateMsg')
         ZIP_NAME="LinuxPanel-${LATEST_VERSION}.zip"
         UPDATE_REQUIRED="false"
         if [[ ! "$(git ls-remote origin refs/tags/${LATEST_VERSION})" ]]; then
@@ -24,12 +25,19 @@ jobs:
           echo "New release found: ${LATEST_VERSION}"
         fi
         
+        # Escape multiline string for set-env
+        UPDATE_MSG="${UPDATE_MSG//'%'/'%25'}"
+        UPDATE_MSG="${UPDATE_MSG//$'\n'/'%0A'}"
+        UPDATE_MSG="${UPDATE_MSG//$'\r'/'%0D'}"
+        
         echo "CURRENT_DATE=${CURRENT_DATE}"
         echo "LATEST_VERSION=${LATEST_VERSION}"
+        echo "UPDATE_MSG=${UPDATE_MSG}"
         echo "ZIP_NAME=${ZIP_NAME}"
         echo "UPDATE_REQUIRED=${UPDATE_REQUIRED}"
         echo "::set-env name=CURRENT_DATE::${CURRENT_DATE}"
         echo "::set-env name=LATEST_VERSION::${LATEST_VERSION}"
+        echo "::set-env name=UPDATE_MSG::${UPDATE_MSG}"
         echo "::set-env name=ZIP_NAME::${ZIP_NAME}"
         echo "::set-env name=UPDATE_REQUIRED::${UPDATE_REQUIRED}"
 
@@ -65,7 +73,11 @@ jobs:
         tag_name: ${{ env.LATEST_VERSION }}
         release_name: Release ${{ env.LATEST_VERSION }}
         body: |
-          Release ${{ env.LATEST_VERSION }} on ${{ env.CURRENT_DATE }}
+          **Release ${{ env.LATEST_VERSION }}** on ${{ env.CURRENT_DATE }}
+          
+          <p>
+            ${{ env.UPDATE_MSG }}
+          </p>
           
           https://download.bt.cn/install/update/${{ env.ZIP_NAME }}
         
