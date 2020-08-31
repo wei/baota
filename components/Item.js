@@ -29,7 +29,7 @@ const Item = ({ value, hasAll, noNotes }) => (
 
             {noNotes ? null :
                 <Link href='/[owner]/[repo]/[version]' as={`/${value.owner}/${value.repo}/${value.version}`}>
-                    <a className="release-notes">Release Notes</a>
+                    <a className="release-notes">版本详情</a>
                 </Link>
             }
 

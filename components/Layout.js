@@ -33,6 +33,10 @@ export default ({title, children}) => (
                 height: 100vh;
             }
 
+            :global(a) {
+                color: white;
+            }
+
             :global(body > div) {
                 display: flex;
                 align-items: center;

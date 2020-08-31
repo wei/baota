@@ -1,10 +1,16 @@
 import Error from 'next/error'
+import MarkdownIt from 'markdown-it'
 import Item from 'components/Item'
 import Layout from 'components/Layout'
 import Loader from 'components/Loader'
 
 import {useRouter} from 'next/router'
 import {useApi} from 'utils/api'
+
+const markdownIt = MarkdownIt({
+    html: true,
+    linkify: true,
+})
 
 const Page = () => {
     const {query} = useRouter()
@@ -19,18 +25,16 @@ const Page = () => {
     }
 
     return (
-        <Layout title={!isLoading ? "Release details" : ''}>
+        <Layout title={!isLoading ? "版本详情" : ''}>
             {isLoading
                 ? <Loader />
                 : <>
                     <Item hasAll noNotes value={release} />
 
                     <section>
-                        <h2>Release notes</h2>
+                        <h2>更新日志</h2>
 
-                        <p>
-                            {release.notes.map((v, i) => <li key={i}>{v}</li>)}
-                        </p>
+                        <div dangerouslySetInnerHTML={{__html: markdownIt.render(release.notes.join('\n\n'))}}></div>
 
                         <style jsx>{`
                             h2 { margin-top: 50px; }
