@@ -25,16 +25,14 @@ jobs:
           echo "New release found: ${LATEST_VERSION}"
         fi
         
-        # Escape multiline string for set-env
-        UPDATE_MSG="${UPDATE_MSG//'%'/'%25'}"
-        UPDATE_MSG="${UPDATE_MSG//$'\n'/'%0A'}"
-        UPDATE_MSG="${UPDATE_MSG//$'\r'/'%0D'}"
-        
         echo "CURRENT_DATE=${CURRENT_DATE}" >> $GITHUB_ENV
         echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
-        echo "UPDATE_MSG=${UPDATE_MSG}" >> $GITHUB_ENV
         echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_ENV
         echo "UPDATE_REQUIRED=${UPDATE_REQUIRED}" >> $GITHUB_ENV
+        
+        echo "UPDATE_MSG<<EOF" >> $GITHUB_ENV
+        echo "${UPDATE_MSG}" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
 
     - name: Download release zip
       if: ${{ env.UPDATE_REQUIRED == 'true' }}
