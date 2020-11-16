@@ -3,7 +3,7 @@ name: Release
 on: 
   workflow_dispatch:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "0 * * * *"
 
 jobs:
   release:
@@ -30,16 +30,11 @@ jobs:
         UPDATE_MSG="${UPDATE_MSG//$'\n'/'%0A'}"
         UPDATE_MSG="${UPDATE_MSG//$'\r'/'%0D'}"
         
-        echo "CURRENT_DATE=${CURRENT_DATE}"
-        echo "LATEST_VERSION=${LATEST_VERSION}"
-        echo "UPDATE_MSG=${UPDATE_MSG}"
-        echo "ZIP_NAME=${ZIP_NAME}"
-        echo "UPDATE_REQUIRED=${UPDATE_REQUIRED}"
-        echo "::set-env name=CURRENT_DATE::${CURRENT_DATE}"
-        echo "::set-env name=LATEST_VERSION::${LATEST_VERSION}"
-        echo "::set-env name=UPDATE_MSG::${UPDATE_MSG}"
-        echo "::set-env name=ZIP_NAME::${ZIP_NAME}"
-        echo "::set-env name=UPDATE_REQUIRED::${UPDATE_REQUIRED}"
+        echo "CURRENT_DATE=${CURRENT_DATE}" >> $GITHUB_ENV
+        echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
+        echo "UPDATE_MSG=${UPDATE_MSG}" >> $GITHUB_ENV
+        echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_ENV
+        echo "UPDATE_REQUIRED=${UPDATE_REQUIRED}" >> $GITHUB_ENV
 
     - name: Download release zip
       if: ${{ env.UPDATE_REQUIRED == 'true' }}
