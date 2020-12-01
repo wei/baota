@@ -42,6 +42,9 @@ class ssh_terminal:
     _rep_ssh_config = False
     _sshd_config_backup = None
     _rep_ssh_service = False
+    _tp = None
+    _old_conf = None
+    _debug_file = 'logs/terminal.log'
 
     def connect(self):
         '''
@@ -58,56 +61,87 @@ class ssh_terminal:
         if not self._port: self._port = 22
         self.is_local()
 
+        if self._host in ['127.0.0.1','localhost']:
+            self._port = public.get_ssh_port()
 
-
-        try:
-            if self._rep_ssh_config: time.sleep(0.1)
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 8192)
-            sock.connect((self._host, self._port))
-        except Exception as e:
-            self.set_sshd_config(True)
-            return returnMsg(False,'连接目标服务器失败')
+        num = 0
+        while num < 5:
+            num +=1
+            try:
+                self.debug('正在尝试第{}次连接'.format(num))
+                if self._rep_ssh_config: time.sleep(0.1)
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(2 + num)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 8192)
+                sock.connect((self._host, self._port))
+                break
+            except Exception as e:
+                if num == 5:
+                    self.set_sshd_config(True)
+                    self.debug('重试连接失败,{}'.format(e))
+                    if self._host in ['127.0.0.1','localhost']:
+                        return returnMsg(False,'连接目标服务器失败: {}'.format("Authentication failed ," + self._user + "@" + self._host + ":" +str(self._port)))
+                    return returnMsg(False,'连接目标服务器失败, {}:{}'.format(self._host,self._port))
+                else:
+                    time.sleep(0.2)
 
 
         import paramiko
 
-        self._ssh = paramiko.Transport(sock)
+        self._tp = paramiko.Transport(sock)
 
         try:
-            self._ssh.start_client()
+            self._tp.start_client()
+            self.debug(self._pkey)
             if not self._pass and not self._pkey:
                 self.set_sshd_config(True)
                 return public.returnMsg(False,'密码或私钥不能都为空: {}:{}'.format(self._host,self._port))
-            self._ssh.banner_timeout=60
+            self._tp.banner_timeout=60
             if self._pkey:
+                self.debug('正在认证私钥')
                 if sys.version_info[0] == 2:
+                    try:
+                        self._pkey = self._pkey.encode('utf-8')
+                    except:
+                        pass
                     p_file = BytesIO(self._pkey)
                 else:
                     p_file = StringIO(self._pkey)
                 pkey = paramiko.RSAKey.from_private_key(p_file)
-                self._ssh.auth_publickey(username=self._user, key=pkey)
+                self._tp.auth_publickey(username=self._user, key=pkey)
             else:
-                self._ssh.auth_password(username=self._user, password=self._pass)
+                self.debug('正在认证密码')
+                self._tp.auth_password(username=self._user, password=self._pass)
         except Exception as e:
+            if self._old_conf:
+                s_file = '/www/server/panel/config/t_info.json'
+                if os.path.exists(s_file): os.remove(s_file)
             self.set_sshd_config(True)
-            self._ssh.close()
+            self._tp.close()
             e = str(e)
             if e.find('Authentication failed') != -1:
-                if self._host in ['127.0.0.1','localhost'] and self._pkey:
-                    return returnMsg(False,'无法完成自动认证，请将127.0.0.1添加到服务器列表，验证方式设为【密码验证】')
-                return returnMsg(False,'帐号或密码错误: {}'.format(e + "," + self._user))
+                self.debug('认证失败{}'.format(e))
+                return returnMsg(False,'帐号或密码错误: {}'.format(e + "," + self._user + "@" + self._host + ":" +str(self._port)))
             if e.find('Bad authentication type; allowed types') != -1:
+                self.debug('认证失败{}'.format(e))
+                if self._host in ['127.0.0.1','localhost'] and self._pass == 'none':
+                    return returnMsg(False,'帐号或密码错误: {}'.format("Authentication failed ," + self._user + "@" + self._host + ":" +str(self._port))) 
                 return returnMsg(False,'不支持的身份验证类型: {}'.format(e))
             if e.find('Connection reset by peer') != -1:
+                self.debug('目标服务器主动拒绝连接')
                 return returnMsg(False,'目标服务器主动拒绝连接')
             if e.find('Error reading SSH protocol banner') != -1:
+                self.debug('协议头响应超时')
                 return returnMsg(False,'协议头响应超时，与目标服务器之间的网络质量太糟糕：' + e)
             if not e:
+                self.debug('SSH协议握手超时')
                 return returnMsg(False,"SSH协议握手超时，与目标服务器之间的网络质量太糟糕")
-            return returnMsg(False,"未知错误: " + public.get_error_info())
+            err =  public.get_error_info()
+            self.debug(err)
+            return returnMsg(False,"未知错误: {}".format(err))
 
-        self._ssh = self._ssh.open_session()
+        self.debug('认证成功，正在构建会话通道')
+        self._ssh = self._tp.open_session()
         self._ssh.get_pty(term='xterm', width=100, height=34)
         self._ssh.invoke_shell()
         self._connect_time = time.time()
@@ -117,6 +151,7 @@ class ssh_terminal:
         public.WriteLog(self._log_type,'成功登录到SSH服务器 [{}:{}]'.format(self._host,self._port))
         self.history_send("登录成功\n")
         self.set_sshd_config(True)
+        self.debug('通道已构建')
         return returnMsg(True,'连接成功')
 
 
@@ -175,10 +210,25 @@ class ssh_terminal:
         '''
         
         if self._pass: return
+        if self._pkey: return
         if self._host in ['127.0.0.1','localhost']:
             try:
-                login_user = self.get_login_user()
+                self._port = public.get_ssh_port()
                 self.set_sshd_config()
+                s_file = '/www/server/panel/config/t_info.json'
+                if os.path.exists(s_file):
+                    ssh_info = json.loads(public.en_hexb(public.readFile(s_file)))
+                    self._host = ssh_info['host'].strip()
+                    if 'username' in ssh_info:
+                        self._user = ssh_info['username']
+                    if 'pkey' in ssh_info:    
+                        self._pkey = ssh_info['pkey']
+                    if 'password' in ssh_info: 
+                        self._pass = ssh_info['password']
+                    self._old_conf = True
+                    return
+
+                login_user = self.get_login_user()
                 if self._user == 'root' and login_user == 'root':
                     id_rsa_file = ['/root/.ssh/id_rsa','/root/.ssh/id_rsa_bt']
                     for ifile in id_rsa_file:
@@ -201,18 +251,22 @@ class ssh_terminal:
                             self._pkey = public.readFile(ifile)
                             return
                 
-                    _ssh_ks = home_path + '/.ssh'
-                    if not  os.path.exists(_ssh_ks):
-                        os.makedirs(_ssh_ks,384)
-                    os.system("ssh-keygen -t rsa -P '' -f {}/.ssh/id_rsa |echo y".format(home_path))
-                    pub_file = home_path + '/.ssh/id_rsa.pub'
-                    az_file = home_path + '/.ssh/authorized_keys'
-                    rsa_file = home_path + '/.ssh/id_rsa'
-                    public.ExecShell('cat {} >> {} && chmod 600 {} {}'.format(pub_file, az_file, az_file,rsa_file))
-                    os.remove(pub_file)
-                    public.ExecShell("chown -R {}:{} {}".format(self._user,self._user,_ssh_ks))
-                    public.ExecShell("chmod -R 600 {}".format(_ssh_ks))
-                    self._pkey = public.readFile(rsa_file)
+                    self._pass = 'none'
+                    return
+                    # _ssh_ks = home_path + '/.ssh'
+                    # if not  os.path.exists(_ssh_ks):
+                    #     os.makedirs(_ssh_ks,384)
+                    # os.system("ssh-keygen -t rsa -P '' -f {}/.ssh/id_rsa |echo y".format(home_path))
+                    # pub_file = home_path + '/.ssh/id_rsa.pub'
+                    # az_file = home_path + '/.ssh/authorized_keys'
+                    # rsa_file = home_path + '/.ssh/id_rsa'
+                    # public.ExecShell('cat {} >> {} && chmod 600 {} {}'.format(pub_file, az_file, az_file,rsa_file))
+                    # os.remove(pub_file)
+                    # public.ExecShell("chown -R {}:{} {}".format(self._user,self._user,_ssh_ks))
+                    # public.ExecShell("chmod -R 600 {}".format(_ssh_ks))
+                    # self._pkey = public.readFile(rsa_file)
+                    
+
             except:
                 return
 
@@ -282,6 +336,7 @@ class ssh_terminal:
             @return bool
         '''
         self.is_running(rep)
+        return False
         if rep and not self._rep_ssh_config:
             return False
 
@@ -300,6 +355,8 @@ class ssh_terminal:
                     public.writeFile(sshd_config_file,self._sshd_config_backup)
                     self.restart_ssh()
                 return True
+
+            
 
             pin = r'^\s*PubkeyAuthentication\s+(yes|no)'
             pubkey_status = re.findall(pin,sshd_config,re.I)
@@ -374,28 +431,46 @@ class ssh_terminal:
             @author hwliang<2020-08-07>
             @return void
         '''
+        n = 0
         try:
             while not self._ws.closed:
                 resp_line = self._ssh.recv(1024)
                 if not resp_line:
-                    self._ws.send('连接已断开,按回车将尝试重新连接!')
-                    self.close()
-                    return
+                    if not self._tp.is_active():
+                        self.debug('通道已断开')
+                        self._ws.send('连接已断开,按回车将尝试重新连接!')
+                        self.close()
+                        return
                 
-                if not resp_line: continue
+                if not resp_line: 
+                    n+=1
+                    if n > 5: break
+                    continue
+                n = 0
                 if self._ws.closed:
                     return
                 try:
-                    result = resp_line.decode()
+                    result = resp_line.decode('utf-8','ignore')
                 except:
-                    result = str(resp_line)
+                    try:
+                        result = resp_line.decode()
+                    except:
+                        result = str(resp_line)
+
                 self._ws.send(result)
                 
                 self.history_recv(result)
-        except:
-            self._ws.send(public.get_error_info())
+        except Exception as e:
+            e = str(e)
+            if e.find('closed') != -1:
+                self.debug('会话已中断')
+            elif not self._ws.closed:
+                self.debug('读取tty缓冲区数据发生错误,{}'.format(e))
+            
+        if self._ws.closed:
+            self.debug('客户端已主动断开连接')
         self.close()
-
+    
     def send(self):
         '''
             @name 写入数据到缓冲区
@@ -416,9 +491,18 @@ class ssh_terminal:
                 self.history_send(client_data)
         except Exception as ex:
             ex = str(ex)
+            
             if ex.find('_io.BufferedReader') != -1:
+                self.debug('从websocket读取数据发生错误，正在重新试')
                 self.send()
                 return
+            elif ex.find('closed') != -1:
+                self.debug('会话已中断')
+            else:
+                self.debug('写入数据到缓冲区发生错误: {}'.format(ex))
+
+        if self._ws.closed:
+            self.debug('客户端已主动断开连接')
         self.close()
 
 
@@ -494,10 +578,9 @@ class ssh_terminal:
         try:
             if self._ssh:
                 self._ssh.close()
-                self._ssh = None
+                #self._ssh = None
             if not self._ws.closed:
                 self._ws.close()
-                self._ws = None
         except:
             pass
 
@@ -520,6 +603,33 @@ class ssh_terminal:
         result = self.connect()
         return result
 
+
+    def heartbeat(self):
+        '''
+            @name 心跳包
+            @author hwliang<2020-09-10>
+            @return void
+        '''
+        while True:
+            time.sleep(30)
+            if self._tp.is_active():
+                self._tp.send_ignore()
+            else:
+                break
+            if not self._ws.closed:
+                self._ws.send("")
+            else:
+                break
+                
+    def debug(self,msg):
+        '''
+            @name 写debug日志
+            @author hwliang<2020-09-10>
+            @return void
+        '''
+        msg = "{} - {}:{} => {} \n".format(public.format_date(),self._host,self._port,msg)
+        public.writeFile(self._debug_file,msg,'a+')
+
     def run(self,web_socket, ssh_info=None):
         '''
             @name 启动SSH客户端对象
@@ -538,20 +648,20 @@ class ssh_terminal:
         if not self._ssh:
             if not ssh_info:
                 return
-            
             result = self.set_attr(ssh_info)
         else:
             result = returnMsg(True,'已连接')
-
         if result['status']:
             sendt = threading.Thread(target=self.send)
             recvt = threading.Thread(target=self.recv)
+            ht = threading.Thread(target=self.heartbeat)
             sendt.start()
             recvt.start()
+            ht.start()
             sendt.join()
             recvt.join()
+            ht.join()
             self.close()
-            self._ws = None
         else:
             self._ws.send(result['msg'])
 
@@ -697,7 +807,9 @@ class ssh_host_admin(ssh_terminal):
         host_path = self._save_path + args.host
         info_file = host_path +'/info.json'
         if os.path.exists(info_file):
-            return public.returnMsg(False,'指定SSH信息已经添加过了!')
+            args.new_host = args.host
+            return self.modify_host(args)
+            #return public.returnMsg(False,'指定SSH信息已经添加过了!')
         if not os.path.exists(host_path):
             os.makedirs(host_path,384)
         if not 'sort' in args: args.sort = 0
@@ -926,3 +1038,5 @@ class ssh_host_admin(ssh_terminal):
         self.save_command(command)
         public.WriteLog(self._log_type,'删除常用命令[{}]'.format(args.title))
         return public.returnMsg(True,'删除成功')
+
+

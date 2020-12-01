@@ -316,7 +316,7 @@ class bt_task:
             return public.returnMsg(False, '指定压缩格式不支持!')
 
         self.set_file_accept(dfile)
-        public.WriteLog("TYPE_FILE", 'ZIP_SUCCESS', (sfiles, dfile),not_web = self.not_web)
+        #public.WriteLog("TYPE_FILE", 'ZIP_SUCCESS', (sfiles, dfile),not_web = self.not_web)
         return public.returnMsg(True, 'ZIP_SUCCESS')
 
     # 文件解压
@@ -360,7 +360,7 @@ class bt_task:
                 user = pwd.getpwuid(os.stat(dfile).st_uid).pw_name
                 public.ExecShell("chown %s:%s %s" % (user, user, dfile))
 
-        public.WriteLog("TYPE_FILE", 'UNZIP_SUCCESS', (sfile, dfile),not_web = self.not_web)
+        #public.WriteLog("TYPE_FILE", 'UNZIP_SUCCESS', (sfile, dfile),not_web = self.not_web)
         return public.returnMsg(True, 'UNZIP_SUCCESS')
 
     # 备份网站

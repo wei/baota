@@ -342,10 +342,8 @@ def ReadFile(filename,mode = 'r'):
                 f_body = fp.read()
                 fp.close()
             except Exception as ex2:
-                WriteLog('打开文件',str(ex2))
                 return False
         else:
-            WriteLog('打开文件',str(ex))
             return False
     return f_body
 
@@ -382,6 +380,7 @@ def WriteLog(type,logMsg,args=(),not_web = False):
     import time,db,json
     username = 'system'
     uid = 1
+    tmp_msg = ''
     if not not_web:
         try:
             from BTPanel import session
@@ -402,7 +401,7 @@ def WriteLog(type,logMsg,args=(),not_web = False):
     if type in keys: type = _LAN_LOG[type]
     sql = db.Sql()
     mDate = time.strftime('%Y-%m-%d %X',time.localtime())
-    data = (uid,username,type,logMsg,mDate)
+    data = (uid,username,type,logMsg + tmp_msg,mDate)
     result = sql.table('logs').add('uid,username,type,log,addtime',data)
     #except:
         #pass
@@ -623,8 +622,10 @@ def get_url(timeout = 0.5):
         mnode1 = []
         mnode2 = []
         mnode3 = []
+        new_node_list = {}
         for node in node_list:
             node['net'],node['ping'] = get_timeout(node['protocol'] + node['address'] + ':' + node['port'] + '/net_test',1)
+            new_node_list[node['address']] = node['ping']
             if not node['ping']: continue
             if node['ping'] < 100:      #当响应时间<100ms且可用带宽大于1500KB时
                 if node['net'] > 1500:
@@ -644,6 +645,16 @@ def get_url(timeout = 0.5):
             mnode = sorted(mnode2,key= lambda  x:x['ping'],reverse=False)
         
         if not mnode: return 'http://download.bt.cn'
+
+        new_node_keys = new_node_list.keys()
+        for i in range(len(node_list)):
+            if node_list[i]['address'] in new_node_keys:
+                node_list[i]['ping'] = new_node_list[node_list[i]['address']]
+            else:
+                node_list[i]['ping'] = 500
+
+        new_node_list = sorted(node_list,key=lambda x: x['ping'],reverse=False)
+        writeFile(nodeFile,json.dumps(new_node_list))
         return mnode[0]['protocol'] + mnode[0]['address'] + ':' + mnode[0]['port']
     except:
         return 'http://download.bt.cn'
@@ -1368,17 +1379,29 @@ def get_path_size(path):
 #写关键请求日志
 def write_request_log(reques = None):
     try:
+        from BTPanel import request,g
+        if request.path in ['/service_status','/favicon.ico','/task','/system','/ajax','/control','/data','/ssl']:
+            return False
+
         log_path = '/www/server/panel/logs/request'
         log_file = getDate(format='%Y-%m-%d') + '.json'
         if not os.path.exists(log_path): os.makedirs(log_path)
-
-        from BTPanel import request
+        
         log_data = []
         log_data.append(getDate())
         log_data.append(GetClientIp() + ':' + str(request.environ.get('REMOTE_PORT')))
         log_data.append(request.method)
         log_data.append(request.full_path)
         log_data.append(request.headers.get('User-Agent'))
+        if request.method == 'POST':
+            args = str(request.form.to_dict())
+            if len(args) < 2048 and args.find('pass') == -1 and args.find('user') == -1:
+                log_data.append(args)
+            else:
+                log_data.append('{}')
+        else:
+            log_data.append('{}')
+        log_data.append(int((time.time() - g.request_time) * 1000))
         WriteFile(log_path + '/' + log_file,json.dumps(log_data) + "\n",'a+')
         rep_sys_path()
     except: pass
@@ -1876,7 +1899,32 @@ def get_debug_log():
 #获取sessionid
 def get_session_id():
     from BTPanel import request
-    return request.cookies.get('SESSIONID','')
+    session_id =  request.cookies.get('SESSIONID','')
+    return session_id
+
+#尝试自动恢复面板数据库
+def rep_default_db():
+    db_path = '/www/server/panel/data/'
+    db_file = db_path + 'default.db'
+    db_tmp_backup = db_path + 'default_' + format_date("%Y%m%d_%H%M%S") + ".db"
+
+    panel_backup = '/www/backup/panel'
+    bak_list = os.listdir(panel_backup)
+    if not bak_list: return False
+    bak_list = sorted(bak_list,reverse=True)
+    db_bak_file = ''
+    for d_name in bak_list:
+        db_bak_file = panel_backup + '/' + d_name + '/data/default.db'
+        if not os.path.exists(db_bak_file): continue
+        if os.path.getsize(db_bak_file) < 17408: continue
+        break
+
+    if not db_bak_file: return False
+    ExecShell("\cp -arf {} {}".format(db_file,db_tmp_backup))
+    ExecShell("\cp -arf {} {}".format(db_bak_file,db_file))
+    return True
+    
+    
 
 def chdck_salt():
     '''
@@ -1888,6 +1936,13 @@ def chdck_salt():
     if not M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'users','%salt%')).count():
         M('users').execute("ALTER TABLE 'users' ADD 'salt' TEXT",())
     u_list = M('users').where('salt is NULL',()).field('id,username,password,salt').select()
+    if isinstance(u_list,str):
+        if u_list.find('no such table: users') != -1:
+            rep_default_db()
+            if not M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'users','%salt%')).count():
+                M('users').execute("ALTER TABLE 'users' ADD 'salt' TEXT",())
+            u_list = M('users').where('salt is NULL',()).field('id,username,password,salt').select()
+
     for u_info in u_list:
         salt = GetRandomString(12) #12位随机
         pdata = {}
@@ -1902,8 +1957,8 @@ def get_login_token():
     return token_s
 
 def get_sess_key():
-    from BTPanel import request
-    return md5(get_login_token() + request.headers.get('User-Agent',''))
+    from BTPanel import session
+    return md5(get_login_token() + session.get('request_token_head',''))
 
 
 def password_salt(password,username=None,uid=None):
@@ -1962,6 +2017,7 @@ def set_error_num(key,empty = False,expire=3600):
         @return bool
     '''
     from BTPanel import cache
+    key = md5(key)
     num = cache.get(key)
     if not num:
         num = 0
@@ -1981,6 +2037,7 @@ def get_error_num(key,limit=False):
         @return int or bool
     '''
     from BTPanel import cache
+    key = md5(key)
     num = cache.get(key)
     if not num: num = 0
     if not limit: 
@@ -1989,6 +2046,111 @@ def get_error_num(key,limit=False):
         return True
     return False
 
+
+def get_menus():
+    '''
+        @name 获取菜单列表
+        @author hwliang<2020-08-31>
+        @return list
+    '''
+    data = json.loads(ReadFile('config/menu.json'))
+    hide_menu = ReadFile('config/hide_menu.json')
+    if hide_menu:
+        hide_menu = json.loads(hide_menu)
+        show_menu = []
+        for i in range(len(data)):
+            if data[i]['id'] in hide_menu: continue
+            show_menu.append(data[i])
+        data = show_menu
+        del(hide_menu)
+        del(show_menu)
+    menus = sorted(data, key=lambda x: x['sort'])
+    return menus
+
+
+#取CURL路径
+def get_curl_bin():
+    '''
+        @name 取CURL执行路径
+        @author hwliang<2020-09-01>
+        @return string
+    '''
+    c_bin = ['/usr/local/curl2/bin/curl','/usr/local/curl/bin/curl','/usr/bin/curl']
+    for cb in c_bin:
+        if os.path.exists(cb): return cb
+    return 'curl'
+
+
+#设置防跨站配置
+def set_open_basedir():
+    try:
+        fastcgi_file = '/www/server/nginx/conf/fastcgi.conf'
+        if os.path.exists(fastcgi_file):
+            fastcgi_body = readFile(fastcgi_file)
+            if fastcgi_body.find('bt_safe_dir') == -1:
+                fastcgi_body = fastcgi_body + "\n"+'fastcgi_param  PHP_ADMIN_VALUE    "$bt_safe_dir=$bt_safe_open";'
+                writeFile(fastcgi_file,fastcgi_body)
+
+        proxy_file = '/www/server/nginx/conf/proxy.conf'
+        if os.path.exists(proxy_file):
+            proxy_body = readFile(proxy_file)
+            if proxy_body.find('bt_safe_dir') == -1:
+                proxy_body = proxy_body + "\n"+'''map "baota_dir" $bt_safe_dir {
+    default "baota_dir";
+}
+map "baota_open" $bt_safe_open {
+    default "baota_open";
+} '''
+                writeFile(proxy_file,proxy_body)
+
+        open_basedir_path = '/www/server/panel/vhost/open_basedir/nginx'
+        if not os.path.exists(open_basedir_path):
+            os.makedirs(open_basedir_path,384)
+
+        site_list = M('sites').field('id,name,path').select()
+        for site_info in site_list:
+            set_site_open_basedir_nginx(site_info['name'])
+    except: return
+        
+
+#处理指定站点的防跨站配置 for Nginx
+def set_site_open_basedir_nginx(siteName):
+    try:
+        return
+        open_basedir_path = '/www/server/panel/vhost/open_basedir/nginx'
+        if not os.path.exists(open_basedir_path):
+            os.makedirs(open_basedir_path,384)
+        config_file = '/www/server/panel/vhost/nginx/{}.conf'.format(siteName)
+        open_basedir_file = "/".join(
+            (open_basedir_path,'{}.conf'.format(siteName))
+        )
+        if not os.path.exists(config_file): return
+        if not os.path.exists(open_basedir_file):
+            writeFile(open_basedir_file,'')
+        config_body = readFile(config_file)
+        if config_body.find(open_basedir_path) == -1:
+            config_body = config_body.replace("include enable-php","include {};\n\t\tinclude enable-php".format(open_basedir_file))
+            writeFile(config_file,config_body)
+
+        root_path = re.findall(r"root\s+(.+);",config_body)[0]
+        if not root_path: return
+        userini_file = root_path + '/.user.ini'
+        if not os.path.exists(userini_file):
+            writeFile(open_basedir_file,'')
+            return
+        userini_body = readFile(userini_file)
+        if not userini_body: return
+        if userini_body.find('open_basedir') == -1: 
+            writeFile(open_basedir_file,'')
+            return
+        
+        open_basedir_conf = re.findall("open_basedir=(.+)",userini_body)
+        if not open_basedir_conf: return
+        open_basedir_conf = open_basedir_conf[0]
+        open_basedir_body = '''set $bt_safe_dir "open_basedir";
+set $bt_safe_open "{}";'''.format(open_basedir_conf)
+        writeFile(open_basedir_file,open_basedir_body)
+    except: return
 
 #取通用对象
 class dict_obj:

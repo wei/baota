@@ -611,6 +611,7 @@ var aceEditor = {
 			e.stopPropagation();
 			e.preventDefault();
 		});
+		
 		// 禁用目录选择（文件目录）
 		$('.ace_catalogue').bind("selectstart",function(e){
 			var omitformtags = ["input", "textarea"];
@@ -677,7 +678,7 @@ var aceEditor = {
 				$(this).siblings('div').show();
 				$(this).parent().find('.search_input_view,.search_input_title').remove();
 				$(this).removeAttr('style').attr({'title':'搜索内容'}).find('.glyphicon').removeClass('glyphicon-remove').addClass('glyphicon-search').next().text("搜索");
-				$('.ace_catalogue_list').removeAttr('style')
+				$('.ace_catalogue_list').removeAttr('style');
 				$('.ace_dir_tools').removeAttr('style');
 				_this.refresh_config = {
 					el:$('.cd-accordion-menu')[0],
@@ -1416,6 +1417,7 @@ var aceEditor = {
 		};
 		var ACE = this.editor[obj.id];
 		ACE.ace.moveCursorTo(0, 0); //设置鼠标焦点
+		ACE.ace.focus();//设置焦点
 		ACE.ace.resize(); //设置自适应
 		ACE.ace.commands.addCommand({
 			name: '保存文件',
@@ -1877,6 +1879,7 @@ function format_form_data(form_data){
 		}else{
 			form_info[tmp[0]] = val;
 		}
+		
 	}
 	return $.param(form_info);
 }
@@ -1908,8 +1911,8 @@ function ajaxSetup() {
     if (my_headers) {
 		$.ajaxSetup({ 
 			headers: my_headers
-			//dataFilter: ajax_decrypt,
-			//beforeSend: ajax_encrypt
+			// dataFilter: ajax_decrypt,
+			// beforeSend: ajax_encrypt
 		});
 	}
 }
@@ -2057,11 +2060,11 @@ function ChangePath(d) {
 function GetDiskList(b) {
 	var d = "";
 	var a = "";
-	var c = "path=" + b + "&disk=True";
+	var c = "path=" + b + "&disk=True&showRow=500";
 	$.post("/files?action=GetDir", c, function(h) {
 		if(h.DISK != undefined) {
 			for(var f = 0; f < h.DISK.length; f++) {
-				a += "<dd onclick=\"GetDiskList('" + h.DISK[f].path + "')\"><span class='glyphicon glyphicon-hdd'></span>&nbsp;" + h.DISK[f].path + "</dd>"
+				a += "<dd onclick=\"GetDiskList('" + h.DISK[f].path + "')\"><span class='glyphicon glyphicon-hdd'></span>&nbsp;<span>" + h.DISK[f].path + "</span></div></dd>"
 			}
 			$("#changecomlist").html(a)
 		}
@@ -2090,7 +2093,7 @@ function GetDiskList(b) {
 						e = e.substring(0, 10) + "..."
 					}
 				}
-				d += "<tr><td title='" + g[0] + "'><span class='glyphicon glyphicon-file'></span>" + e + "</td><td>" + getLocalTime(g[2]) + "</td><td>" + g[3] + "</td><td>" + g[4] + "</td><td></td></tr>"
+				d += "<tr><td title='" + g[0] + "'><span class='glyphicon glyphicon-file'></span><span>" + e + "</span></td><td>" + getLocalTime(g[2]) + "</td><td>" + g[3] + "</td><td>" + g[4] + "</td><td></td></tr>"
 			}
 		}
 		$(".default").hide();
@@ -3671,8 +3674,8 @@ var Term = {
 	//连接服务器成功
 	on_open:function(ws_event){
 		Term.send(JSON.stringify(Term.ssh_info || {}))
-		Term.term.FitAddon.fit();
-		Term.resize();
+		// Term.term.FitAddon.fit();
+		// Term.resize();
 		var f_path = $("#fileInputPath").val();
 		if(f_path){
 			Term.last_cd = "cd " + f_path;
@@ -3683,6 +3686,12 @@ var Term = {
     //服务器消息事件
     on_message: function (ws_event) {
 		result = ws_event.data;
+		if ((result.indexOf("@127.0.0.1:") != -1 || result.indexOf("@localhost:") != -1) && result.indexOf('Authentication failed') != -1) {
+            Term.term.write(result);
+            Term.localhost_login_form();
+            Term.close();
+            return;
+        }
 		if(Term.last_cd){
 			if(result.indexOf(Term.last_cd) != -1 && result.length - Term.last_cd.length < 3) {
 				Term.last_cd = null;
@@ -3696,6 +3705,10 @@ var Term = {
 		if(result.length > 1 && Term.last_body === false){
 			Term.last_body = true;
 		}
+		
+		
+		
+		
         Term.term.write(result);
         if (result == '\r\n登出\r\n' || result == '\r\n注销\r\n' || result == '注销\r\n' || result == '登出\r\n' || result == '\r\nlogout\r\n' || result == 'logout\r\n') {
             setTimeout(function () {
@@ -3733,10 +3746,10 @@ var Term = {
     resize: function () {
 		setTimeout(function(){
 			$("#term").height($(".term_box_all .layui-layer-content").height()-18)
-			Term.term.FitAddon.fit()
+			Term.term.FitAddon.fit();
 			Term.send(JSON.stringify({resize:1,rows:Term.term.rows,cols:Term.term.cols}));
 	    	Term.term.focus();
-		},200)
+		},100)
     },
 
     //发送数据
@@ -3784,7 +3797,7 @@ var Term = {
 	        Term.term_box = layer.open({
 	            type: 1,
 	            title: '宝塔终端',
-	            area: ['920px', '630px'],
+	            area: ['930px', '640px'],
 	            closeBtn: 2,
 	            shadeClose: false,
 	            skin:'term_box_all',
@@ -3806,6 +3819,7 @@ var Term = {
 					Term.term.loadAddon(Term.term.FitAddon);
 					Term.term.WebLinksAddon = new WebLinksAddon.WebLinksAddon()
 					Term.term.loadAddon(Term.term.WebLinksAddon)
+					Term.term.focus();
 	            }
 	        });
 	        Term.term.onData(function (data) {
@@ -3840,8 +3854,115 @@ var Term = {
             Term.term.scrollToBottom();
             Term.term.focus();
         });
+    },
+    localhost_login_form:function(){
+        var template = '<div class="localhost-form-shade"><div class="localhost-form-view bt-form-2x"><div class="localhost-form-title"><i class="localhost-form_tip"></i><span style="vertical-align: middle;">无法自动认证，请填写本地服务器的登录信息!</span></div>\
+        <div class="line input_group">\
+            <span class="tname">服务器IP</span>\
+            <div class="info-r">\
+                <input type="text" name="host" class="bt-input-text mr5" style="width:240px" placeholder="输入服务器IP" value="127.0.0.1" autocomplete="off" />\
+                <input type="text" name="port" class="bt-input-text mr5" style="width:60px" placeholder="端口" value="22" autocomplete="off"/>\
+            </div>\
+        </div>\
+        <div class="line">\
+            <span class="tname">SSH账号</span>\
+            <div class="info-r">\
+                <input type="text" name="username" class="bt-input-text mr5" style="width:305px" placeholder="输入SSH账号" value="root" autocomplete="off"/>\
+            </div>\
+        </div>\
+        <div class="line">\
+            <span class="tname">验证方式</span>\
+            <div class="info-r ">\
+                <div class="btn-group">\
+                    <button type="button" tabindex="-1" class="btn btn-sm auth_type_checkbox btn-success" data-ctype="0">密码验证</button>\
+                    <button type="button" tabindex="-1" class="btn btn-sm auth_type_checkbox btn-default data-ctype="1">私钥验证</button>\
+                </div>\
+            </div>\
+        </div>\
+        <div class="line c_password_view show">\
+            <span class="tname">密码</span>\
+            <div class="info-r">\
+                <input type="text" name="password" class="bt-input-text mr5" placeholder="请输入SSH密码" style="width:305px;" value="" autocomplete="off"/>\
+            </div>\
+        </div>\
+        <div class="line c_pkey_view hidden">\
+            <span class="tname">私钥</span>\
+            <div class="info-r">\
+                <textarea rows="4" name="pkey" class="bt-input-text mr5" placeholder="请输入SSH私钥" style="width:305px;height: 80px;line-height: 18px;padding-top:10px;"></textarea>\
+            </div>\
+        </div><button type="submit" class="btn btn-sm btn-success">登录</button></div></div>';
+        $('.term-box').after(template);
+        $('.auth_type_checkbox').click(function(){
+            var index = $(this).index();
+            $(this).addClass('btn-success').removeClass('btn-default').siblings().removeClass('btn-success').addClass('btn-default')
+            switch(index){
+                case 0:
+                    $('.c_password_view').addClass('show').removeClass('hidden');
+                    $('.c_pkey_view').addClass('hidden').removeClass('show').find('input').val('');
+                break;
+                case 1:
+                    $('.c_password_view').addClass('hidden').removeClass('show').find('input').val('');
+                    $('.c_pkey_view').addClass('show').removeClass('hidden');
+                break;
+            }
+        });
+        $('.localhost-form-view > button').click(function(){
+            var form = {};
+            $('.localhost-form-view input,.localhost-form-view textarea').each(function(index,el){
+                var name = $(this).attr('name'),value = $(this).val();
+                form[name] = value;
+                switch(name){
+                    case 'port':
+                        if(!bt.check_port(value)){
+                            bt.msg({status:false,msg:'服务器端口格式错误！'});
+                            return false;
+                        }
+                    break;
+                    case 'username':
+                        if(value == ''){
+                            bt.msg({status:false,msg:'服务器用户名不能为空!'});
+                            return false;
+                        }
+                    break;
+                    case 'password':
+                        if(value == '' && $('.c_password_view').hasClass('show')){
+                            bt.msg({status:false,msg:'服务器密码不能为空!'});
+                            return false;
+                        }
+                    break;   
+                    case 'pkey':
+                        if(value == '' && $('.c_pkey_view').hasClass('show')){
+                            bt.msg({status:false,msg:'服务器秘钥不能为空!'});
+                            return false;
+                        }
+                    break;
+                }
+            });
+            form.ps = '本地服务器';
+            var loadT = bt.load('正在添加服务器信息，请稍后...');
+            bt.send('create_host','xterm/create_host',form,function(res){
+                loadT.close();
+                 bt.msg(res);
+                if(res.status){
+                    bt.msg({status:true,msg:'登录成功！'});
+                    $('.layui-layer-shade').remove();
+                    $('.term_box_all').remove();
+                    Term.term.dispose();
+    				Term.close();
+    				web_shell();
+                }
+            });
+        });
+        $('.localhost-form-view [name="password"]').keyup(function(e){
+            if(e.keyCode == 13){
+                $('.localhost-form-view > button').click();
+            }
+        }).focus()
     }
 }
+
+
+
 
 function web_shell() {
     Term.run();

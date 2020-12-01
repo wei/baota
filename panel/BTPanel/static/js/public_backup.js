@@ -37,6 +37,14 @@ var bt =
 		var check =  bt.check_exts(fileName,exts);
 		return check;
 	},
+	check_email:function(email){
+		var reg = /\w[-\w.+]*@([A-Za-z0-9][-A-Za-z0-9]+\.)+[A-Za-z]{2,14}/;
+		return reg.test(email);
+	},
+	check_phone:function(phone){
+		var reg = /^1(3|4|5|6|7|8|9)\d{9}$/;
+		return reg.test(phone);
+	},
 	check_zip : function(fileName)
 	{
 		var ext = fileName.split('.');
@@ -778,6 +786,12 @@ var bt =
                     var _width = item.width ? item.width : '330px';
                     _html += "<input name='" + _name + "' " + (item.disabled ? 'disabled' : '') + " class='bt-input-text mr5 " + _name + bs + "' " + (_placeholder ? ' placeholder="' + _placeholder + '"' : "") + " type='password' style='width:" + _width + "' value='" + (item.value ? item.value : '') + "' />";
                     break;
+                case 'textarea':
+                    var _width = item.width ? item.width : '330px';
+                    var _height = item.height ? item.height : '100px';
+                    _html += '<textarea class="bt-input-text mr20 ' + _name + bs + '"  ' + (item.disabled ? 'disabled' : '')+'  name="' + _name + '" style="width:' + _width + ';height:' + _height + ';line-height:22px">' + (item.value ? item.value : '') + '</textarea>';
+                    if (_placeholder) _html += '<div class="placeholder c9" style="top: 15px; left: 15px; display: block;">' + _placeholder + '</div>';
+                    break;
                 default:
                     var _width = item.width ? item.width : '330px';
 
@@ -1116,11 +1130,11 @@ bt.pub = {
     },
     set_data_by_key: function (tab, key, obj) {		
 		var _span = $(obj);
-		var _input = $("<input class='baktext' value='"+_span.text()+"' type='text' placeholder='"+lan.ftp.ps+"' />");
+		var _input = $("<input class='baktext' type='text' placeholder='"+lan.ftp.ps+"' />").val(_span.text())
 		_span.hide().after(_input);
 		_input.focus();
 		_input.blur(function(){
-			var item = $(this).parents('tr').data('item');	
+			var item = $(this).parents('tr').data('item');
 			var _txt = $(this);
 			var data = {table:tab,id:item.id};
 			data[key] = _txt.val()
@@ -1413,19 +1427,25 @@ bt.index = {
                 	]);
                 	form_group.checkbox();
                 	$('.layui-layer-content').css('overflow','inherit');
-                	$(".fangshi1 .bt_checkbox_group").unbind('click');
-                	$(".fangshi1").on('click','.bt_checkbox_group',function (e) {
-		                if($(this).prev().prop('checked')){
-		                	$(this).prev().removeAttr('checked').parent().siblings().find('input').prop('checked','checked');
-		                	$(this).removeClass('active').parent().siblings().find('.bt_checkbox_group').addClass('active')
-		                }else{
-		                	$(this).prev().attr('checked','checked').parent().siblings().find('input').removeAttr('checked')
-		                	$(this).addClass('active').parent().siblings().find('.bt_checkbox_group').removeClass('active')
-		                }
-		            });
-		            $(".fangshi1").on('click','span',function(){
-		            	$(this).parent().find('.bt_checkbox_group').click();
-		            })
+                	
+                	$('.fangshi1 label').click(function(){
+                	    var input = $(this).find('input'),siblings_label = input.parents('label').siblings()
+                	    input.prop('checked','checked').next().addClass('active');
+                	    siblings_label.find('input').removeAttr('checked').next().removeClass('active');
+
+                	})
+            //     	$(".fangshi1").on('click','.bt_checkbox_group',function (e) {
+		          //      if($(this).prev().prop('checked')){
+		          //      	$(this).prev().removeAttr('checked').parent().siblings().find('input').prop('checked','checked');
+		          //      	$(this).removeClass('active').parent().siblings().find('.bt_checkbox_group').addClass('active')
+		          //      }else{
+		          //      	$(this).prev().attr('checked','checked').parent().siblings().find('input').removeAttr('checked')
+		          //      	$(this).addClass('active').parent().siblings().find('.bt_checkbox_group').removeClass('active')
+		          //      }
+		          //  });
+		          //  $(".fangshi1").on('click','span',function(){
+		          //  	$(this).parent().find('.bt_checkbox_group').click();
+		          //  })
 		            var loadT = '';
 					$('.fangshi1 label').hover(function(){
 						var _title = $(this).attr('data-title'),_that = $(this);
@@ -3240,7 +3260,7 @@ bt.firewall = {
 				}
 			}
 			action = "AddAcceptPort";
-		}		
+		}
 		
 		if(ps.length < 1){
 			layer.msg(lan.firewall.ps_err,{icon:2});
@@ -4826,6 +4846,11 @@ bt.database = {
 		})
 	},
 	open_phpmyadmin:function(name,username,password){
+		if($("#toPHPMyAdmin").attr('action').indexOf('phpmyadmin') == -1){
+		layer.msg(lan.database.phpmyadmin_err,{icon:2,shade: [0.3, '#000']})
+		setTimeout(function(){ window.location.href = '/soft'; },3000);
+			return;
+		}
 		$("#toPHPMyAdmin").attr('action',$("#toPHPMyAdmin").attr('public-data'))
 		var murl = $("#toPHPMyAdmin").attr('action');
 		$("#pma_username").val(username);
@@ -4855,7 +4880,7 @@ bt.database = {
 	},
 
 	input_sql:function(fileName,dataName){
-		bt.confirm({msg:lan.database.input_confirm,title:lan.database.input_title},function(index){
+		bt.show_confirm(lan.database.input_title,'<span style="color:red;font-size:13px;">【'+dataName +'】'+lan.database.input_confirm+'</span>',function(index){
 			var loading = bt.load(lan.database.input_the);
 			bt.send('InputSql','database/InputSql',{file:fileName,name:dataName},function(rdata){
 				loading.close();
@@ -5242,9 +5267,9 @@ bt.site = {
 			if(callback) callback(rdata);
 		})
 	},
-	set_site_security:function(id,name,fix,domains,status,callback){
+	set_site_security:function(id,name,fix,domains,status,return_rule,callback){
 		var loading = bt.load(lan.site.the_msg);
-		bt.send('SetSecurity','site/SetSecurity',{id:id,name:name,fix:fix,domains:domains,status:status},function(rdata){
+		bt.send('SetSecurity','site/SetSecurity',{id:id,name:name,fix:fix,domains:domains,status:status,return_rule:return_rule},function(rdata){
 			loading.close();
 			if(callback) callback(rdata);
 		})

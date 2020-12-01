@@ -51,13 +51,13 @@ if os.path.exists(basic_auth_conf):
 app.secret_key = uuid.UUID(int=uuid.getnode()).hex[-12:]
 local_ip = None
 my_terms = {}
-app.config['SESSION_MEMCACHED'] = cache
+app.config['SESSION_MEMCACHED'] = SimpleCache()
 app.config['SESSION_TYPE'] = 'memcached'
 app.config['SESSION_PERMANENT'] = True
 app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_KEY_PREFIX'] = 'BT_:'
 app.config['SESSION_COOKIE_NAME'] = "SESSIONID"
-app.config['PERMANENT_SESSION_LIFETIME'] = 86400
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 30
 Session(app)
 
 
@@ -74,6 +74,7 @@ json_header = {'Content-Type':'application/json; charset=utf-8'}
 cache.set('p_token','bmac_' + public.Md5(public.get_mac_address()))
 admin_path_file = 'data/admin_path.pl'
 admin_path = '/'
+bind_pl = 'data/bind.pl'
 if os.path.exists(admin_path_file): admin_path = public.readFile(admin_path_file).strip()
 admin_path_checks = [
                     '/',
@@ -130,6 +131,7 @@ if admin_path in admin_path_checks: admin_path = '/bt'
 #Flask请求勾子
 @app.before_request
 def request_check():
+    g.request_time = time.time()
     #路由和URI长度过滤
     if len(request.path) > 128: return abort(403)
     if len(request.url) > 1024: return abort(403)
@@ -171,9 +173,14 @@ def request_check():
 #Flask 请求结束勾子
 @app.teardown_request
 def request_end(reques = None):
+    if request.path in ['/service_status']: return
     not_acts = ['GetTaskSpeed','GetNetWork','check_pay_status','get_re_order_status','get_order_stat']
     key = request.args.get('action')
-    if not key in not_acts and request.full_path.find('/static/') == -1: public.write_request_log()
+    if not key in not_acts and request.full_path.find('/static/') == -1:
+        public.write_request_log()
+        if 'api_request' in g:
+            if g.api_request:
+                session.clear()
 
 #Flask 404页面勾子
 @app.errorhandler(404)
@@ -185,7 +192,7 @@ def notfound(e):
 <hr><center>server</center>
 </body>
 </html>'''
-    headers={
+    headers = {
         "Content-Type":"text/html"
     }
     return Response(errorStr,status=404,headers=headers)
@@ -225,6 +232,9 @@ def home():
         public.writeFile(licenes,'True')
 
     data = {}
+    data['bind'] = False
+    if not os.path.exists('data/userInfo.json'):
+        data['bind'] = os.path.exists('data/bind.pl')
     data[public.to_string([112, 100])],data['pro_end'],data['ltd_end'] = get_pd()
     data['siteCount'] = public.M('sites').count()
     data['ftpCount'] = public.M('ftps').count()
@@ -310,6 +320,7 @@ def site(pdata = None):
             and os.path.exists(public.GetConfigValue('setup_path')+'/apache') == False \
                 and os.path.exists('/usr/local/lsws') == False:
             data['isSetup'] = False
+        is_bind()
         return render_template( 'site.html',data=data)
     import panelSite
     siteObject = panelSite.panelSite()
@@ -337,6 +348,7 @@ def ftp(pdata = None):
         data['isSetup'] = True
         if os.path.exists(public.GetConfigValue('setup_path') + '/pure-ftpd') == False: data['isSetup'] = False
         data['lan'] = public.GetLan('ftp')
+        is_bind()
         return render_template('ftp.html',data=data)
     import ftp
     ftpObject = ftp.ftp()
@@ -360,6 +372,7 @@ def database(pdata = None):
         data['isSetup'] = os.path.exists(public.GetConfigValue('setup_path') + '/mysql/bin')
         data['mysql_root'] = public.M('config').where('id=?',(1,)).getField('mysql_root')
         data['lan'] = public.GetLan('database')
+        is_bind()
         return render_template('database.html',data=data)
     import database
     databaseObject = database.database()
@@ -580,6 +593,7 @@ def soft(pdata = None):
     if request.method == method_get[0] and not pdata:
         data={}
         data['lan'] = public.GetLan('soft')
+        is_bind()
         return render_template( 'soft.html',data=data)
 
 @app.route('/config',methods=method_all)
@@ -587,6 +601,7 @@ def config(pdata = None):
     #面板设置页面
     comReturn = comm.local()
     if comReturn: return comReturn
+    
     if request.method == method_get[0] and not pdata:
         import system,wxapp,config
         c_obj = config.config()
@@ -600,9 +615,6 @@ def config(pdata = None):
         data['ipv6'] = ''
         sess_out_path = 'data/session_timeout.pl'
         if not os.path.exists(sess_out_path): public.writeFile(sess_out_path,'86400')
-        workers_p = 'data/workers.pl'
-        if not os.path.exists(workers_p): public.writeFile(workers_p,'1')
-        data['workers'] = int(public.readFile(workers_p))
         s_time_tmp = public.readFile(sess_out_path)
         if not s_time_tmp: s_time_tmp = '0'
         data['session_timeout'] = int(s_time_tmp)
@@ -616,13 +628,15 @@ def config(pdata = None):
         if app.config['DEBUG']: data['debug'] = 'checked'
         data['is_local'] = ''
         if public.is_local(): data['is_local'] = 'checked'
+        is_bind()
         return render_template( 'config.html',data=data)
+    
     import config
     defs = ('get_ols_private_cache_status','get_ols_value','set_ols_value','get_ols_private_cache','get_ols_static_cache','set_ols_static_cache','switch_ols_private_cache','set_ols_private_cache',
             'set_coll_open','get_qrcode_data','check_two_step','set_two_step_auth','create_user','remove_user','modify_user',
             'get_key','get_php_session_path','set_php_session_path','get_cert_source','get_users',
-            'set_local','set_debug','get_panel_error_logs','clean_panel_error_logs',
-            'get_basic_auth_stat','set_basic_auth','get_cli_php_version','get_tmp_token',
+            'set_local','set_debug','get_panel_error_logs','clean_panel_error_logs','get_menu_list','set_hide_menu_list',
+            'get_basic_auth_stat','set_basic_auth','get_cli_php_version','get_tmp_token','get_temp_login','set_temp_login','remove_temp_login','clear_temp_login','get_temp_login_logs',
             'set_cli_php_version','DelOldSession', 'GetSessionCount', 'SetSessionConf', 'show_recommend',
             'GetSessionConf','get_ipv6_listen','set_ipv6_status','GetApacheValue','SetApacheValue',
             'GetNginxValue','SetNginxValue','get_token','set_token','set_admin_path','is_pro',
@@ -692,7 +706,7 @@ def ssl(pdata = None):
     if comReturn: return comReturn
     import panelSSL
     toObject = panelSSL.panelSSL()
-    defs = ('RemoveCert','renew_lets_ssl','SetCertToSite','GetCertList','SaveCert','GetCert','GetCertName',
+    defs = ('check_url_txt','RemoveCert','renew_lets_ssl','SetCertToSite','GetCertList','SaveCert','GetCert','GetCertName','again_verify',
             'DelToken','GetToken','GetUserInfo','GetOrderList','GetDVSSL','Completed','SyncOrder','download_cert','set_cert','cancel_cert_order',
             'get_order_list','get_order_find','apply_order_pay','get_pay_status','apply_order','get_verify_info','get_verify_result','get_product_list','set_verify_info',
             'GetSSLInfo','downloadCRT','GetSSLProduct','Renew_SSL','Get_Renew_SSL')
@@ -772,7 +786,7 @@ def download():
     if filename.find('|') != -1:
         filename = filename.split('|')[1]
     if not filename: return public.ReturnJson(False,"INIT_ARGS_ERR"),json_header
-    if filename in ['alioss','qiniu','upyun','txcos','ftp']: return panel_cloud()
+    if filename in ['alioss','qiniu','upyun','txcos','ftp','msonedrive','gcloud_storage', 'gdrive', 'aws_s3']: return panel_cloud()
     if not os.path.exists(filename): return public.ReturnJson(False,"FILE_NOT_EXISTS"),json_header
 
     if request.args.get('play') == 'true':
@@ -785,6 +799,8 @@ def download():
         if extName in ['png','gif','jpeg','jpg']: mimetype = None
         return send_file(filename,mimetype=mimetype, 
                          as_attachment=True,
+                         add_etags=True,
+                         conditional=True,
                          attachment_filename=os.path.basename(filename),
                          cache_timeout=0)
 
@@ -837,7 +853,7 @@ def login():
     if admin_path != '/bt' and os.path.exists(admin_path_file) and  not 'admin_auth' in session: 
         is_auth_path = True
     num_key = public.md5(public.GetClientIp() + '_auth_path')
-    if not public.get_error_num(num_key,20): return public.returnMsg(False,'连续20次安全入口验证失败，禁止1小时')
+    if not public.get_error_num(num_key,20): return '连续20次安全入口验证失败，禁止1小时'
     #登录输入验证
     if request.method == method_post[0]:
         v_list = ['username','password','code','vcode','cdn_url']
@@ -876,9 +892,11 @@ def login():
             session['login'] = False
             cache.set('dologin',True)
             public.WriteLog('用户登出','客户端：{}，已手动退出面板'.format(public.GetClientIp()+ ":" + str(request.environ.get('REMOTE_PORT'))))
+            if 'tmp_login_expire' in session:
+                s_file = 'data/session/{}'.format(session['tmp_login_id'])
+                if os.path.exists(s_file):
+                    os.remove(s_file)
             session.clear()
-            session_path = r'/dev/shm/session_py' + str(sys.version_info[0])
-            if os.path.exists(session_path): public.ExecShell("rm -f " + session_path + '/*')
             sess_file = 'data/sess_files/' + public.get_sess_key()
             if os.path.exists(sess_file):
                 try:
@@ -889,11 +907,17 @@ def login():
     
     if is_auth_path:
         if route_path != request.path and route_path + '/' != request.path: 
-            public.set_error_num(num_key)
-            #return abort(404)
-            data = {}
-            data['lan'] = public.getLan('close')
-            return render_template('autherr.html',data=data)
+            referer =  request.headers.get('Referer','err')
+            referer_tmp = referer.split('/')
+            referer_path = referer_tmp[-1]
+            if referer_path == '':
+                referer_path = referer_tmp[-2]
+            if route_path != '/'+referer_path:
+                public.set_error_num(num_key)
+                #return abort(404)
+                data = {}
+                data['lan'] = public.getLan('close')
+                return render_template('autherr.html',data=data)
     session['admin_auth'] = True
     public.set_error_num(num_key,True)
     comReturn = common.panelSetup().init()
@@ -951,6 +975,8 @@ def check_bind(pdata = None):
 
 @app.route('/code')
 def code():
+    if not 'code' in session: return ''
+    if not session['code']: return ''
     #获取图片验证码
     try:
         import vilidate,time
@@ -1128,6 +1154,10 @@ def send_favicon():
 @app.route('/service_status',methods = method_get)
 def service_status():
     #检查面板当前状态
+    try:
+        if not 'login' in session: session.clear()
+    except:
+        pass
     return 'True'
 
 @app.route('/coll',methods=method_all)
@@ -1142,7 +1172,7 @@ def panel_other(name=None,fun = None,stype=None):
         args = None
     else:
         args = get_input()
-        args_list = ['mail_from','password','mail_to','subject','content','subtype']
+        args_list = ['mail_from','password','mail_to','subject','content','subtype','data']
         for k in args.__dict__:
             if not k in args_list: return abort(404)
 
@@ -1258,6 +1288,7 @@ def panel_hook():
 @app.route('/install',methods=method_all)
 def install():
     #初始化面板接口
+    if not os.path.exists('install.pl'): return redirect('/login')
     if public.M('config').where("id=?",('1',)).getField('status') == 1: 
         if os.path.exists('install.pl'): os.remove('install.pl')
         session.clear()
@@ -1432,10 +1463,7 @@ def publicObject(toObject,defs,action=None,get = None):
         
     if hasattr(toObject,'site_path_check'):
         if not toObject.site_path_check(get): return public.ReturnJson(False,'INIT_ACCEPT_NOT'),json_header
-    p = run_exec()
-    result =  p.run(toObject,defs,get)
-    del p
-    return result
+    return run_exec().run(toObject,defs,get)
 
 
 
@@ -1472,8 +1500,6 @@ def get_pd():
             tmp = public.readFile(tmp_f)
             if tmp: tmp = int(tmp)
 
-    
-        
     if ltd < 1:
         if ltd == -2:
             tmp3 = public.to_string([60, 115, 112, 97, 110, 32, 99, 108, 97, 115, 115, 61, 34, 98, 116, 108, 116, 100, 
@@ -1581,6 +1607,10 @@ def is_login(result):
             session['request_token'] = request_token
             result.set_cookie('request_token',request_token,max_age=86400*30)
     return result
+
+def is_bind():
+    if os.path.exists(bind_pl):
+        os.remove(bind_pl)
 
 #获取输入数据
 def get_input():

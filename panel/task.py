@@ -5,7 +5,7 @@
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2016 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
-# | Author: 黄文良 <2879625666@qq.com>
+# | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
 
 #------------------------------
@@ -82,6 +82,24 @@ def WriteLogs(logMsg):
     except:
         pass
 
+
+def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):
+    try:
+        global logPath
+        import shlex
+        import datetime
+        import subprocess
+        import time
+        sub = subprocess.Popen(cmdstring+' &> '+logPath, cwd=cwd, stdin=subprocess.PIPE,shell=shell,bufsize=4096)
+        
+        while sub.poll() is None:
+            time.sleep(0.1)
+                
+        return sub.returncode
+    except:
+        return None
+
+
 #任务队列 
 def startTask():
     global isTask
@@ -100,7 +118,7 @@ def startTask():
                                 argv = value['execstr'].split('|bt|')
                                 DownloadFile(argv[0],argv[1])
                             elif value['type'] == 'execshell':
-                                os.system(value['execstr'])
+                                ExecShell(value['execstr'])
                             end = int(time.time())
                             sql.table('tasks').where("id=?",(value['id'],)).save('status,end',('1',end))
                             if(sql.table('tasks').where("status=?",('0')).count() < 1):
@@ -121,7 +139,7 @@ def startTask():
 def siteEdate():
     global oldEdate
     try:
-        if not oldEdate: oldEdate = ReadFile('data/edate.pl')
+        if not oldEdate: oldEdate = ReadFile('/www/server/panel/data/edate.pl')
         if not oldEdate: oldEdate = '0000-00-00'
         mEdate = time.strftime('%Y-%m-%d',time.localtime())
         if oldEdate == mEdate: return False
@@ -382,7 +400,7 @@ def sess_expire():
             if f_time > 3600:
                 os.remove(filename)
                 continue
-            if fstat.st_size < 256:
+            if fstat.st_size < 256 and len(fname) == 32:
                 if f_time > 60 or f_num > 30:
                     os.remove(filename)
                     continue
@@ -447,25 +465,25 @@ def panel_status():
                 e_body = public.GetNumLines(log_path,10)
                 if e_body:
                     if e_body.find('PyWSGIServer.do_close') != -1 or e_body.find('Expected GET method:')!=-1 or e_body.find('Invalid HTTP method:') != -1 or e_body.find('table session') != -1:
-                        result = HttpGet(panel_url)
+                        result = public.HttpGet(panel_url)
                         if result != 'True':
                             if e_body.find('table session') != -1:
                                 sess_file = '/dev/shm/session.db'
                                 if os.path.exists(sess_file): os.remove(sess_file)
                             os.system("bash /www/server/panel/init.sh reload &")
                             time.sleep(10)
-                            result = HttpGet(panel_url)
+                            result = public.HttpGet(panel_url)
                             if result == 'True':
                                 public.WriteLog('守护程序','检查到面板服务异常,已自动恢复!',not_web = True)
 
         if n > 18000:
             n = 0
-            result = HttpGet(panel_url)
+            result = public.HttpGet(panel_url)
             if result == 'True':
                 time.sleep(10)
                 continue
             update_panel()
-            result = HttpGet(panel_url)
+            result = public.HttpGet(panel_url)
             if result == 'True':
                 public.WriteLog('守护程序','检查到面板服务异常,已自动恢复!',not_web = True)
                 time.sleep(10)

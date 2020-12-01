@@ -27,7 +27,7 @@ class system:
             session['config']['email'] = public.M('users').where("id=?",('1',)).getField('email')
         data = {}
         data = session['config']
-        data['webserver'] = session['config']['webserver']
+        data['webserver'] = public.get_webserver()
         #PHP版本
         phpVersions = ('52','53','54','55','56','70','71','72','73','74')
         
@@ -279,6 +279,9 @@ class system:
     
     def GetSystemVersion(self):
         #取操作系统版本
+        key = 'sys_version'
+        version = cache.get(key)
+        if version: return version
         import public
         version = public.readFile('/etc/redhat-release')
         if not version:
@@ -286,10 +289,15 @@ class system:
         else:
             version = version.replace('release ','').replace('Linux','').replace('(Core)','').strip()
         v_info = sys.version_info
-        return version + '(Py' + str(v_info.major) + '.' + str(v_info.minor) + '.' + str(v_info.micro) + ')'
+        version = version + '(Py' + str(v_info.major) + '.' + str(v_info.minor) + '.' + str(v_info.micro) + ')'
+        cache.set(key,version,600)
+        return version
     
     def GetBootTime(self):
         #取系统启动时间
+        key = 'sys_time'
+        sys_time = cache.get(key)
+        if sys_time: return sys_time
         import public,math
         conf = public.readFile('/proc/uptime').split()
         tStr = float(conf[0])
@@ -298,7 +306,9 @@ class system:
         days = math.floor(hours / 24)
         hours = math.floor(hours - (days * 24))
         min = math.floor(min - (days * 60 * 24) - (hours * 60))
-        return "{}天".format(int(days))
+        sys_time = "{}天".format(int(days))
+        cache.set(key,sys_time,1800)
+        return sys_time
         #return public.getMsg('SYS_BOOT_TIME',(str(int(days)),str(int(hours)),str(int(min))))
     
     def GetCpuInfo(self,interval = 1):
@@ -308,14 +318,23 @@ class system:
         c_tmp = public.readFile('/proc/cpuinfo')
         d_tmp = re.findall("physical id.+",c_tmp)
         cpuW = len(set(d_tmp))
-        used = psutil.cpu_percent(interval)
+        import threading
+        p = threading.Thread(target=self.get_cpu_percent_thead,args=(interval,))
+        p.setDaemon(True)
+        p.start()
+        
+        used = cache.get('cpu_used_all')
+        if not used: used = self.get_cpu_percent_thead(interval)
+
         used_all = psutil.cpu_percent(percpu=True)
         cpu_name = public.getCpuType() + " * {}".format(cpuW)
         return used,cpuCount,used_all,cpu_name,cpuNum,cpuW
 
-
-    def GetCpuInfo_new(self):
-        cpuCount = psutil.cpu_count()
+    def get_cpu_percent_thead(self,interval):
+        used = psutil.cpu_percent(interval)
+        cache.set('cpu_used_all',used,10)
+        return used
+        
 
     def get_cpu_percent(self):
         percent = 0.00
@@ -375,6 +394,9 @@ class system:
     
     def GetDiskInfo2(self):
         #取磁盘分区信息
+        key = 'sys_disk'
+        diskInfo = cache.get(key)
+        if diskInfo: return diskInfo
         temp = public.ExecShell("df -hT -P|grep '/'|grep -v tmpfs|grep -v 'snap/core'|grep -v udev")[0]
         tempInodes = public.ExecShell("df -i -P|grep '/'|grep -v tmpfs|grep -v 'snap/core'|grep -v udev")[0]
         temp1 = temp.split('\n')
@@ -406,6 +428,7 @@ class system:
             except Exception as ex: 
                 public.WriteLog('信息获取',str(ex))
                 continue
+        cache.set(key,diskInfo,360)
         return diskInfo
 
     #清理系统垃圾
@@ -471,28 +494,58 @@ class system:
     
     def GetNetWork(self,get=None):
         cache_timeout = 86400
-        networkIo = psutil.net_io_counters()[:4]
         otime = cache.get("otime")
-        if not otime:
-            otime = time.time()
-            cache.set('up',networkIo[0],cache_timeout)
-            cache.set('down',networkIo[1],cache_timeout)
-            cache.set('otime',otime ,cache_timeout)
-            
         ntime = time.time()
         networkInfo = {}
-        networkInfo['upTotal']   = networkIo[0]
-        networkInfo['downTotal'] = networkIo[1]
-        networkInfo['up']        = round(float(networkIo[0] -  cache.get("up")) / 1024 / (ntime - otime),2)
-        networkInfo['down']      = round(float(networkIo[1] -  cache.get("down")) / 1024 / (ntime -  otime),2)
-        networkInfo['downPackets'] =networkIo[3]
-        networkInfo['upPackets']   =networkIo[2]
-            
-        cache.set('up',networkIo[0],cache_timeout)
-        cache.set('down',networkIo[1],cache_timeout)
-        cache.set('otime', time.time(),cache_timeout)
+        networkInfo['network'] = {}
+        networkInfo['upTotal'] = 0
+        networkInfo['downTotal'] = 0
+        networkInfo['up'] = 0
+        networkInfo['down'] = 0
+        networkInfo['downPackets'] = 0
+        networkInfo['upPackets'] = 0
+        networkIo_list = psutil.net_io_counters(pernic = True)
+        for net_key in networkIo_list.keys():
+            networkIo = networkIo_list[net_key][:4]
+            up_key = "{}_up".format(net_key)
+            down_key = "{}_down".format(net_key)
+            otime_key = "otime"
+
+            if not otime:
+                otime = time.time()
+                
+                cache.set(up_key,networkIo[0],cache_timeout)
+                cache.set(down_key,networkIo[1],cache_timeout)
+                cache.set(otime_key,otime ,cache_timeout)
+                
+            networkInfo['network'][net_key] = {}
+            up = cache.get(up_key)
+            down = cache.get(down_key)
+            if not up:
+                up = networkIo[0]
+            if not down:
+                down = networkIo[1] 
+            networkInfo['network'][net_key]['upTotal']   = networkIo[0]
+            networkInfo['network'][net_key]['downTotal'] = networkIo[1]
+            networkInfo['network'][net_key]['up']        = round(float(networkIo[0] -  up) / 1024 / (ntime - otime),2)
+            networkInfo['network'][net_key]['down']      = round(float(networkIo[1] - down) / 1024 / (ntime -  otime),2)
+            networkInfo['network'][net_key]['downPackets'] =networkIo[3]
+            networkInfo['network'][net_key]['upPackets']   =networkIo[2]
+
+            networkInfo['upTotal'] += networkInfo['network'][net_key]['upTotal']
+            networkInfo['downTotal'] += networkInfo['network'][net_key]['downTotal']
+            networkInfo['up'] += networkInfo['network'][net_key]['up']
+            networkInfo['down'] += networkInfo['network'][net_key]['down']
+            networkInfo['downPackets'] += networkInfo['network'][net_key]['downPackets']
+            networkInfo['upPackets'] += networkInfo['network'][net_key]['upPackets']
+
+                            
+            cache.set(up_key,networkIo[0],cache_timeout)
+            cache.set(down_key,networkIo[1],cache_timeout)
+            cache.set(otime_key, time.time(),cache_timeout)
+
         if get != False:
-            networkInfo['cpu'] = self.GetCpuInfo(0.2)
+            networkInfo['cpu'] = self.GetCpuInfo(1)
             networkInfo['load'] = self.GetLoadAverage(get)
             networkInfo['mem'] = self.GetMemInfo(get)
             networkInfo['version'] = session['version']
@@ -503,11 +556,27 @@ class system:
         networkInfo['site_total'] = public.M('sites').count()
         networkInfo['ftp_total'] = public.M('ftps').count()
         networkInfo['database_total'] = public.M('databases').count()
+        networkInfo['system'] = self.GetSystemVersion()
+        networkInfo['installed'] = self.CheckInstalled()
+        import panelSSL
+        networkInfo['user_info'] = panelSSL.panelSSL().GetUserInfo(None)
+        networkInfo['up'] = round(float(networkInfo['up']),2)
+        networkInfo['down'] = round(float(networkInfo['down']),2)
+
         return networkInfo
         
     
     def GetNetWorkApi(self,get=None):
         return self.GetNetWork()
+
+    #检查是否安装任何
+    def CheckInstalled(self):
+        checks = ['nginx','apache','php','pure-ftpd','mysql']
+        import os
+        for name in checks:
+            filename = public.GetConfigValue('root_path') + "/server/" + name
+            if os.path.exists(filename): return True
+        return False
     
     def GetNetWorkOld(self):
         #取网络流量信息

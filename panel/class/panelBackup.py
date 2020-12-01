@@ -335,6 +335,16 @@ class backup:
     #配置
     def mypass(self,act):
         conf_file = '/etc/my.cnf'
+        conf_file_bak = '/etc/my.cnf.bak'
+        if os.path.getsize(conf_file) > 2:
+            public.writeFile(conf_file_bak,public.readFile(conf_file))
+            public.set_mode(conf_file_bak,600)
+            public.set_own(conf_file_bak,'mysql')
+        elif os.path.getsize(conf_file_bak) > 2:
+            public.writeFile(conf_file,public.readFile(conf_file_bak))
+            public.set_mode(conf_file,600)
+            public.set_own(conf_file,'mysql')
+        
         public.ExecShell("sed -i '/user=root/d' {}".format(conf_file))
         public.ExecShell("sed -i '/password=/d' {}".format(conf_file))
         if act:
@@ -397,9 +407,18 @@ class backup:
         self.echo_info("开始导出数据库：{}".format(public.format_date(times=stime)))
         if os.path.exists(dfile):
             os.remove(dfile)
-        self.mypass(True)
-        public.ExecShell("/www/server/mysql/bin/mysqldump --default-character-set="+ character +" --force --hex-blob --opt " + db_name + " 2>"+self._err_log+"| gzip > " + dfile)
-        self.mypass(False)
+        #self.mypass(True)
+        try:
+            password = public.M('config').where('id=?',(1,)).getField('mysql_root')
+            os.environ["MYSQL_PWD"] = password
+            backup_cmd = "/www/server/mysql/bin/mysqldump --default-character-set="+ character +" --force --hex-blob --opt " + db_name + " -u root" + " 2>"+self._err_log+"| gzip > " + dfile
+            public.ExecShell(backup_cmd)
+        except Exception as e:
+            raise
+        finally:
+            os.environ["MYSQL_PWD"] = ""
+        #public.ExecShell("/www/server/mysql/bin/mysqldump --default-character-set="+ character +" --force --hex-blob --opt " + db_name + " 2>"+self._err_log+"| gzip > " + dfile)
+        #self.mypass(False)
         gz_size = os.path.getsize(dfile)
         if gz_size < 400:
             self.echo_error("数据库导出失败!")

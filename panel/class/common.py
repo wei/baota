@@ -33,36 +33,36 @@ class panelSetup:
             ua = ua.lower()
             if ua.find('spider') != -1 or ua.find('bot') != -1:
                 return redirect('https://www.baidu.com')
-        g.version = '7.4.5'
+        g.version = '7.4.6'
         g.title = public.GetConfigValue('title')
         g.uri = request.path
         g.debug = os.path.exists('data/debug.pl')
         g.pyversion = sys.version_info[0]
-        if not g.debug:
-            g.cdn_url = public.get_cdn_url()
-            if not g.cdn_url:
-                g.cdn_url = '/static'
-            else:
-                g.cdn_url = '//' + g.cdn_url + '/' + g.version
-        else:
-            g.cdn_url = '/static'
-
         session['version'] = g.version
-        session['title'] = g.title
+        
+        if request.method == 'GET':
+            if not g.debug:
+                g.cdn_url = public.get_cdn_url()
+                if not g.cdn_url:
+                    g.cdn_url = '/static'
+                else:
+                    g.cdn_url = '//' + g.cdn_url + '/' + g.version
+            else:
+                g.cdn_url = '/static'
+            session['title'] = g.title
+            dirPath = '/www/server/phpmyadmin/pma'
+            if os.path.exists(dirPath):
+                public.ExecShell("rm -rf {}".format(dirPath))
+            
+            dirPath = '/www/server/adminer'
+            if os.path.exists(dirPath):
+                public.ExecShell("rm -rf {}".format(dirPath))
+            
+            dirPath = '/www/server/panel/adminer'
+            if os.path.exists(dirPath):
+                public.ExecShell("rm -rf {}".format(dirPath))
+            
         g.is_aes = False
-
-        dirPath = '/www/server/phpmyadmin/pma'
-        if os.path.exists(dirPath):
-            public.ExecShell("rm -rf {}".format(dirPath))
-        
-        dirPath = '/www/server/adminer'
-        if os.path.exists(dirPath):
-            public.ExecShell("rm -rf {}".format(dirPath))
-        
-        dirPath = '/www/server/panel/adminer'
-        if os.path.exists(dirPath):
-            public.ExecShell("rm -rf {}".format(dirPath))
-
         return None
 
 
@@ -91,10 +91,10 @@ class panelAdmin(panelSetup):
 
     # 设置基础Session
     def setSession(self):
-        session['menus'] = sorted(json.loads(public.ReadFile(
-            'config/menu.json')), key=lambda x: x['sort'])
-        session['yaer'] = datetime.now().year
-        session['download_url'] = 'http://download.bt.cn'
+        if request.method == 'GET':
+            g.menus = public.get_menus()
+            g.yaer = datetime.now().year
+
         if not 'brand' in session:
             session['brand'] = public.GetConfigValue('brand')
             session['product'] = public.GetConfigValue('product')
@@ -109,21 +109,27 @@ class panelAdmin(panelSetup):
             session['lan'] = public.GetLanguage()
         if not 'home' in session:
             session['home'] = 'http://www.bt.cn'
-        return None
+        return False
 
     # 检查Web服务器类型
     def checkWebType(self):
-        if os.path.exists('/usr/local/lsws/bin/lswsctrl'):
-            session['webserver'] = 'openlitespeed'
-        elif os.path.exists(self.setupPath + '/apache'):
-            session['webserver'] = 'apache'
-        else:
-            session['webserver'] = 'nginx'
-        if os.path.exists(self.setupPath+'/'+session['webserver']+'/version.pl'):
-            session['webversion'] = public.ReadFile(self.setupPath+'/'+session['webserver']+'/version.pl').strip()
-        filename = self.setupPath+'/data/phpmyadminDirName.pl'
-        if os.path.exists(filename):
-            session['phpmyadminDir'] = public.ReadFile(filename).strip()
+        #if request.method == 'GET':
+        if not 'webserver' in session:
+            if os.path.exists('/usr/local/lsws/bin/lswsctrl'):
+                session['webserver'] = 'openlitespeed'
+            elif os.path.exists(self.setupPath + '/apache/bin/apachectl'):
+                session['webserver'] = 'apache'
+            else:
+                session['webserver'] = 'nginx'
+        if not 'webversion' in session:
+            if os.path.exists(self.setupPath+'/'+session['webserver']+'/version.pl'):
+                session['webversion'] = public.ReadFile(self.setupPath+'/'+session['webserver']+'/version.pl').strip()
+            
+        if not 'phpmyadminDir' in session:
+            filename = self.setupPath+'/data/phpmyadminDirName.pl'
+            if os.path.exists(filename):
+                session['phpmyadminDir'] = public.ReadFile(filename).strip()
+        return False
 
     # 检查面板是否关闭
     def checkClose(self):
@@ -134,15 +140,28 @@ class panelAdmin(panelSetup):
     def check_login(self):
         try:
             api_check = True
+            g.api_request = False
             if not 'login' in session:
                 api_check = self.get_sk()
                 if api_check:
                     session.clear()
                     return api_check
+                g.api_request = True
             else:
                 if session['login'] == False:
                     session.clear()
                     return redirect('/login')
+                
+                if 'tmp_login_expire' in session:
+                    s_file = 'data/session/{}'.format(session['tmp_login_id'])
+                    if session['tmp_login_expire'] < time.time():
+                        session.clear()
+                        if os.path.exists(s_file): os.remove(s_file)
+                        return redirect('/login')
+                    if not os.path.exists(s_file):
+                        session.clear()
+                        return redirect('/login')
+                
             if api_check:
                 try:
                     sess_out_path = 'data/session_timeout.pl'
@@ -170,14 +189,13 @@ class panelAdmin(panelSetup):
                 if 'login_token' in session:
                     if session['login_token'] != token:
                         session.clear()
-                        return redirect('/login?dologin=True')
+                        return redirect('/login?dologin=True&go=1')
             if api_check:
                 filename = 'data/sess_files/' + public.get_sess_key()
                 if not os.path.exists(filename):
                     session.clear()
-                    return redirect('/login?dologin=True')
+                    return redirect('/login?dologin=True&go=2')
         except:
-            return public.returnMsg(False,public.get_error_info())
             session.clear()
             return redirect('/login')
 
@@ -205,7 +223,7 @@ class panelAdmin(panelSetup):
             
             num_key = client_ip + '_api'
             if not public.get_error_num(num_key,20):
-                return public.returnMsg(False,'连续20次验证失败,禁止1小时')
+                return public.returnJson(False,'连续20次验证失败,禁止1小时')
 
 
             if not client_ip in api_config['limit_addr']:
@@ -214,13 +232,13 @@ class panelAdmin(panelSetup):
         else:
             num_key = client_ip + '_app'
             if not public.get_error_num(num_key,20):
-                return public.returnMsg(False,'连续20次验证失败,禁止1小时')
+                return public.returnJson(False,'连续20次验证失败,禁止1小时')
             a_file = '/dev/shm/' + get.client_bind_token
             if not os.path.exists(a_file):
                 import panelApi
                 if not panelApi.panelApi().get_app_find(get.client_bind_token):
                     public.set_error_num(num_key)
-                    return public.returnMsg(False,'未绑定的设备')
+                    return public.returnJson(False,'未绑定的设备')
                 public.writeFile(a_file,'')
             
             if not 'key' in api_config:
@@ -246,7 +264,6 @@ class panelAdmin(panelSetup):
         return public.returnJson(False, '密钥校验失败')
 
     # 检查系统配置
-
     def checkConfig(self):
         if not 'config' in session:
             session['config'] = public.M('config').where("id=?", ('1',)).field(
@@ -256,6 +273,7 @@ class panelAdmin(panelSetup):
                     'users').where("id=?", ('1',)).getField('email')
             if not 'address' in session:
                 session['address'] = public.GetLocalIp()
+        return False
 
     # 获取操作系统类型
     def GetOS(self):
@@ -272,3 +290,4 @@ class panelAdmin(panelSetup):
                 tmp['x'] = 'Debian'
                 tmp['osname'] = public.ReadFile('/etc/issue').split()[0]
             session['server_os'] = tmp
+        return False

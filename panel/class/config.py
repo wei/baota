@@ -871,7 +871,7 @@ class config:
         ols_php_path = '/usr/local/lsws/lsphp{}/etc/php/{}.{}/litespeed/php.ini'.format(get.version, get.version[0],get.version[1])
         if os.path.exists('/etc/redhat-release'):
             ols_php_path = '/usr/local/lsws/lsphp' + get.version + '/etc/php.ini'
-        reload_ols_str = '/usr/local/lsws/bin/lswsctl reload'
+        reload_ols_str = '/usr/local/lsws/bin/lswsctrl restart'
         for p in [filename,ols_php_path]:
             if not p:
                 continue
@@ -960,6 +960,8 @@ class config:
             if os.path.exists("/etc/redhat-release"):
                 ols_php_os_path = '/usr/local/lsws/lsphp{}/lib64/php/modules/'.format(get.version)
             ols_so_list = os.listdir(ols_php_os_path)
+        else:
+            ols_so_list = []
         for f in [filename,filename_ols]:
             if not f:
                 continue
@@ -1078,8 +1080,11 @@ class config:
     def get_config(self,get):
         if 'config' in session:
             session['config']['distribution'] = public.get_linux_distribution()
+            session['webserver'] = public.get_webserver()
+            session['config']['webserver'] = session['webserver']
             return session['config']
         data = public.M('config').where("id=?",('1',)).field('webserver,sites_path,backup_path,status,mysql_root').find()
+        data['webserver'] = public.get_webserver()
         data['distribution'] = public.get_linux_distribution()
         return data
     
@@ -1337,8 +1342,9 @@ class config:
         import panelSite
         site_info = public.M('sites').where('id=?', (get.id,)).field('name,path').find()
         session_path = "/www/php_session/{}".format(site_info["name"])
-        if os.path.exists(session_path):
+        if not os.path.exists(session_path):
             os.makedirs(session_path)
+            public.ExecShell('chown www.www {}'.format(session_path))
         run_path = panelSite.panelSite().GetSiteRunPath(get)["runPath"]
         user_ini_file = "{site_path}{run_path}/.user.ini".format(site_path=site_info["path"], run_path=run_path)
         conf = "session.save_path={}/\nsession.save_handler = files".format(session_path)
@@ -1449,3 +1455,179 @@ class config:
         else:
             public.writeFile(pfile,'True')
         return public.returnMsg(True,'设置成功!')
+
+
+    # 获取菜单列表
+    def get_menu_list(self,get):
+        '''
+            @name 获取菜单列表
+            @author hwliang<2020-08-31>
+            @param get<dict_obj>
+            @return list
+        '''
+        menu_file = 'config/menu.json'
+        hide_menu_file = 'config/hide_menu.json'
+        data = json.loads(public.ReadFile(menu_file))
+        if not os.path.exists(hide_menu_file):
+            public.writeFile(hide_menu_file,'[]')
+        hide_menu = public.ReadFile(hide_menu_file)
+        if not hide_menu:
+            hide_menu = []
+        else:
+            hide_menu = json.loads(hide_menu)
+        result = []
+        for d in data:
+            tmp = {}
+            tmp['id'] = d['id']
+            tmp['title'] = d['title']
+            tmp['show'] = not d['id'] in hide_menu
+            tmp['sort'] = d['sort']
+            result.append(tmp)
+        
+        menus = sorted(result, key=lambda x: x['sort'])
+        return menus
+
+    
+    # 设置隐藏菜单列表
+    def set_hide_menu_list(self,get):
+        '''
+            @name 设置隐藏菜单列表
+            @author hwliang<2020-08-31>
+            @param get<dict_obj> {
+                hide_list: json<list> 所有不显示的菜单ID
+            }
+            @return dict
+        '''
+        hide_menu_file = 'config/hide_menu.json'
+        not_hide_id = ["dologin","memuAconfig","memuAsoft","memuA"] #禁止隐藏的菜单
+
+        hide_list = json.loads(get.hide_list)
+        hide_menu = []
+        for h in hide_list:
+            if h in not_hide_id:continue
+            hide_menu.append(h)
+        public.writeFile(hide_menu_file,json.dumps(hide_menu))
+        public.WriteLog('面板设置','修改面板菜单显示列表成功')
+        return public.returnMsg(True,'设置成功')
+    
+
+    #获取临时登录列表
+    def get_temp_login(self,args):
+        '''
+            @name 获取临时登录列表
+            @author hwliang<2020-09-2>
+            @return dict
+        '''
+        if 'tmp_login_expire' in session: return public.returnMsg(False,'没有权限')
+        public.M('temp_login').where('state=? and expire<?',(0,int(time.time()))).setField('state',-1)
+        callback = ''
+        if 'tojs' in args:
+            callback = args.tojs
+        p = 1
+        if 'p' in args:
+            p = int(args.p)
+        rows =12
+        if 'rows' in args:
+            rows = int(args.rows)
+        count = public.M('temp_login').count()
+        data = {}
+        page_data = public.get_page(count,p,rows,callback)
+        data['page'] = page_data['page']
+        data['data'] = public.M('temp_login').limit(page_data['shift'] + ',' + page_data['row']).order('id desc').field('id,addtime,expire,login_time,login_addr,state').select()
+        for i in range(len(data['data'])):
+            data['data'][i]['online_state'] = os.path.exists('data/session/{}'.format(data['data'][i]['id']))
+        return data
+
+    #设置临时登录
+    def set_temp_login(self,args):
+        '''
+            @name 设置临时登录
+            @author hwliang<2020-09-2>
+            @return dict
+        '''
+        if 'tmp_login_expire' in session: return public.returnMsg(False,'没有权限')
+        s_time = int(time.time())
+        public.M('temp_login').where('state=? and expire>?',(0,s_time)).delete()
+        token = public.GetRandomString(48)
+        salt = public.GetRandomString(12)
+        
+        pdata = {
+            'token': public.md5(token + salt),
+            'salt': salt,
+            'state':0,
+            'login_time':0,
+            'login_addr':'',
+            'expire':s_time + 3600,
+            'addtime':s_time
+        }
+
+        if not public.M('temp_login').count():
+            pdata['id'] = 101
+
+        if public.M('temp_login').insert(pdata):
+            public.WriteLog('面板设置','生成临时连接,过期时间:{}'.format(public.format_date(times = pdata['expire'])))
+            return {'status':True,'msg':"临时连接已生成",'token':token,'expire':pdata['expire']}
+        return public.returnMsg(False,'连接生成失败')
+
+    #删除临时登录
+    def remove_temp_login(self,args):
+        '''
+            @name 删除临时登录
+            @author hwliang<2020-09-2>
+            @param args<dict_obj>{
+                id: int<临时登录ID>
+            }
+            @return dict
+        '''
+        if 'tmp_login_expire' in session: return public.returnMsg(False,'没有权限')
+        id = int(args.id)
+        if public.M('temp_login').where('id=?',(id,)).delete():
+            public.WriteLog('面板设置','删除临时登录连接')
+            return public.returnMsg(True,'删除成功')
+        return public.returnMsg(False,'删除失败')
+
+
+    #强制弹出指定临时登录
+    def clear_temp_login(self,args):
+        '''
+            @name 强制登出
+            @author hwliang<2020-09-2>
+            @param args<dict_obj>{
+                id: int<临时登录ID>
+            }
+            @return dict
+        '''
+        if 'tmp_login_expire' in session: return public.returnMsg(False,'没有权限')
+        id = int(args.id)
+        s_file = 'data/session/{}'.format(id)
+        if os.path.exists(s_file):
+            os.remove(s_file)
+            public.WriteLog('面板设置','强制弹出临时用户：{}'.format(id))
+            return public.returnMsg(True,'已强制退出临时用户：{}'.format(id))
+        public.returnMsg(False,'指定用户当前不是登录状态!')
+
+
+    #查看临时授权操作日志
+    def get_temp_login_logs(self,args):
+        '''
+            @name 查看临时授权操作日志
+            @author hwliang<2020-09-2>
+            @param args<dict_obj>{
+                id: int<临时登录ID>
+            }
+            @return dict
+        '''
+        if 'tmp_login_expire' in session: return public.returnMsg(False,'没有权限')
+        id = int(args.id)
+        data = public.M('logs').where('uid=?',(id,)).order('id desc').select()
+        return data
+
+
+
+
+
+
+
+
+    
+

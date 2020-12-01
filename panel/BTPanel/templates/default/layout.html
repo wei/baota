@@ -69,7 +69,7 @@
                     <div id="task" class="task cw" onclick="messagebox()">0</div>
                     <h3 class="mypcip"><span class="f14 cw">{{session['address']}}</span></h3>
                     <ul class="menu">
-                        {% for menu in session['menus'] %}
+                        {% for menu in g['menus'] %}
                             {% if menu['href'] == g.uri %}
                             <li id="{{menu['id']}}" class="current"> <a class="{{menu['class']}}" href="{{menu['href']}}">{{menu['title']}}</a></li>
                             {% else %}
@@ -82,7 +82,7 @@
             <button style="display: none;" id="bt_copys" class="bt_copy" data-clipboard-text=""></button>
             <a style="display: none;" id="defaultPath">{{session['config']['sites_path']}}</a>
             {% block content %}{% endblock %}
-            <div class="footer bgw">{{session['brand']}}{{session['product']}} &copy;2014-{{session['yaer']}} 广东堡塔安全技术有限公司 (bt.cn)<a style="margin-left:20px;color:#20a53a;" href="http://www.bt.cn/bbs" target="_blank">求助|建议请上宝塔论坛</a>
+            <div class="footer bgw">{{session['brand']}}{{session['product']}} &copy;2014-{{g['yaer']}} 广东堡塔安全技术有限公司 (bt.cn)<a style="margin-left:20px;color:#20a53a;" href="http://www.bt.cn/bbs" target="_blank">求助|建议请上宝塔论坛</a>
         </div>
 	</div>
 
@@ -114,8 +114,8 @@
     <script src="{{g.cdn_url}}/js/bootstrap.min.js"></script>
     <script src="{{g.cdn_url}}/language/{{session['lan']}}/lan.js?date={{g['version']}}"></script>
 	<script src="{{g.cdn_url}}/layer/layer.js?date={{g['version']}}"></script>
-    <script src="{{g.cdn_url}}/js/public.js?version1={{g['version']}}"></script>
-    <script src="{{g.cdn_url}}/js/public_backup.js?version20200723={{g['version']}}"></script>
+    <script src="{{g.cdn_url}}/js/public.js?version20200903={{g['version']}}"></script>
+    <script src="{{g.cdn_url}}/js/public_backup.js?version20200903={{g['version']}}"></script>
 	<script src="{{g.cdn_url}}/codemirror/lib/codemirror.js?version={{g['version']}}"></script>
 
     {% block scripts %}{% endblock %}

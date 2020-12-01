@@ -7,7 +7,11 @@
 # +-------------------------------------------------------------------
 # | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
+from gevent import monkey
+monkey.patch_all()
 import os,sys,ssl
+if os.path.exists("/www/server/panel/class/BTPanel"):
+    os.system("rm -rf /www/server/panel/class/BTPanel")
 os.chdir('/www/server/panel')
 if not 'class/' in sys.path:
     sys.path.insert(0,'class/')
@@ -58,8 +62,6 @@ if __name__ == '__main__':
         if is_ssl: ssl_context=(certfile,keyfile)
         app.run(host=HOST,port=PORT,threaded=True,debug=True,ssl_context=ssl_context)
     else:
-        from gevent import monkey
-        monkey.patch_all()
         from  gevent.pywsgi import WSGIServer
         from geventwebsocket.handler import WebSocketHandler
 

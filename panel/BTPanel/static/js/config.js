@@ -1341,3 +1341,58 @@ function show_basic_auth(rdata) {
                     </div>'
     })
 }
+
+function get_panel_hide_list(){
+	var loadT = bt.load('正在获取面板菜单栏目，请稍后..'),arry = [];
+	$.post('/config?action=get_menu_list',function(rdata){
+		loadT.close();
+		$.each(rdata,function(index,item){
+			if(!item.show) arry.push(item.title)
+		});
+		$('#panel_menu_hide').val(arry.length > 0?arry.join('、'):'无隐藏栏目');
+	});
+
+}
+
+get_panel_hide_list();
+
+// 设置面板菜单显示功能
+function set_panel_ground(){
+	var loadT = bt.load('正在获取面板菜单栏目，请稍后..');
+	$.post('/config?action=get_menu_list',function(rdata){
+		var html = '',arry = ["dologin","memuAconfig","memuAsoft","memuA"],is_option = '';
+		loadT.close();
+		$.each(rdata,function(index,item){
+			is_option = '<div class="index-item" style="float:right;"><input class="btswitch btswitch-ios" id="'+ item.id +'0000" name="'+ item.id +'" type="checkbox" '+ (item.show?'checked':'') +'><label class="btswitch-btn" for="'+ item.id +'0000"></label></div>'
+			
+			if(item.id == 'dologin' || item.id == 'memuAconfig' || item.id == 'memuAsoft' || item.id == 'memuA') is_option = '不可操作';
+			html += '<tr><td>'+ item.title +'</td><td><div style="float:right;">'+ is_option +'</div></td></tr>';
+		});
+		layer.open({
+			type:1,
+			title:'设置面板菜单栏目管理',
+			area:['350px','530px'],
+			shadeClose:false,
+			closeBtn:2,
+			content:'<div class="divtable softlist" id="panel_menu_tab" style="padding: 20px 15px;"><table class="table table-hover"><thead><tr><th>菜单栏目</th><th style="text-align:right;width:120px;">是否显示</th></tr></thead><tbody>'+ html +'</tbody></table></div>',
+			success:function(){
+				$('#panel_menu_tab input').click(function(){
+					var arry = [];
+					$(this).parents('tr').siblings().each(function(index,el){
+						if($(this).find('input').length >0 && !$(this).find('input').prop('checked')){
+							arry.push($(this).find('input').attr('name'));
+						}
+					});
+					if(!$(this).prop('checked')){
+						arry.push($(this).attr('name'));
+					}
+					var loadT = bt.load('正在设置面板菜单栏目显示状态，请稍后..');
+					$.post('/config?action=set_hide_menu_list',{hide_list:JSON.stringify(arry)},function(rdata){
+						loadT.close();
+						if(!rdata.status) bt.msg(rdata);
+					});
+				});
+			}
+		});
+	});
+}

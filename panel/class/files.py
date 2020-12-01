@@ -209,10 +209,15 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             d_size = os.path.getsize(save_path)
         if d_size != int(args.f_start):
             return d_size
-        upload_files = request.files.getlist("blob")
         f = open(save_path, 'ab')
-        for tmp_f in upload_files:
-            f.write(tmp_f.read())
+        if 'b64_data' in args:
+            import base64
+            b64_data = base64.b64decode(args.b64_data)
+            f.write(b64_data)
+        else:
+            upload_files = request.files.getlist("blob")
+            for tmp_f in upload_files:
+                f.write(tmp_f.read())
         f.close()
         f_size = os.path.getsize(save_path)
         if f_size != int(args.f_size):
@@ -377,6 +382,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                     continue
                 if not os.path.exists(filename): continue
                 file_info = self.__format_stat(filename, get.path)
+                if not file_info: continue
                 r_file = file_info['name'] + ';' + str(file_info['size']) + ';' + str(file_info['mtime']) + ';' + str(
                     file_info['accept']) + ';' + file_info['user'] + ';' + file_info['link']+';' + self.get_download_id(filename) + ';' + self.is_composer_json(filename)
                 if os.path.isdir(filename):
@@ -410,15 +416,18 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         tmp_files = []
     
         for f_name in os.listdir(path):
-            if py_v == 2:
-                f_name = f_name.encode('utf-8')
-            
-            #使用.join拼接效率更高
-            filename = "/".join((path,f_name))
-            sort_key = 1
-            sort_val = None
-            #此处直接做异常处理比先判断文件是否存在更高效
             try:
+                if py_v == 2:
+                    f_name = f_name.encode('utf-8')
+                else:
+                    f_name.encode('utf-8')
+
+                #使用.join拼接效率更高
+                filename = "/".join((path,f_name))
+                sort_key = 1
+                sort_val = None
+                
+                #此处直接做异常处理比先判断文件是否存在更高效
                 if my_sort == 'name':
                     sort_key = 0
                 elif my_sort == 'size':
@@ -853,7 +862,6 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             return public.returnMsg(False, 'DIR_COPY_ERR')
 
     # 移动文件或目录
-
     def MvFile(self, get):
         if sys.version_info[0] == 2:
             get.sfile = get.sfile.encode('utf-8')
@@ -864,6 +872,9 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             return public.returnMsg(False, '不能直接操作回收站目录，请在右上角按【回收站】按钮打开')
         if not os.path.exists(get.sfile):
             return public.returnMsg(False, 'FILE_NOT_EXISTS')
+
+        if os.path.exists(get.dfile):
+            return public.returnMsg(False,'目标文件名已存在!')
 
         if get.dfile[-1] == '/':
             get.dfile = get.dfile[:-1]
@@ -877,8 +888,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             self.move(get.sfile, get.dfile)
             self.site_path_safe(get)
             if hasattr(get, 'rename'):
-                public.WriteLog(
-                    'TYPE_FILE', '[%s]重命名为[%s]' % (get.sfile, get.dfile))
+                public.WriteLog('TYPE_FILE', '[%s]重命名为[%s]' % (get.sfile, get.dfile))
                 return public.returnMsg(True, '重命名成功!')
             else:
                 public.WriteLog('TYPE_FILE', 'MOVE_SUCCESS',
@@ -932,6 +942,16 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             return public.returnMsg(False, u'不能在线编辑大于3MB的文件!')
         if os.path.isdir(get.path):
             return public.returnMsg(False, '这不是一个文件!')
+        
+        #处理my.cnf为空的情况
+        myconf_file = '/etc/my.cnf'
+        if get.path == myconf_file:
+            if os.path.getsize(myconf_file) < 10:
+                mycnf_file_bak = '/etc/my.cnf.bak'
+                if os.path.exists(mycnf_file_bak):
+                    public.writeFile(myconf_file,public.readFile(mycnf_file_bak))
+
+
         fp = open(get.path, 'rb')
         data = {}
         data['status'] = True

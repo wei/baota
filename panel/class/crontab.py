@@ -196,7 +196,9 @@ class crontab:
             (get['name'],get['type'],get['where1'],get['hour'],get['minute'],cronName,time.strftime('%Y-%m-%d %X',time.localtime()),1,get['save'],get['backupTo'],get['sType'],get['sName'],get['sBody'],get['urladdress'])
             )
         if addData>0:
-             return public.returnMsg(True,'ADD_SUCCESS')
+            result = public.returnMsg(True,'ADD_SUCCESS')
+            result['id'] = addData
+            return result
         return public.returnMsg(False,'ADD_ERROR')
     
     #构造周期
@@ -316,12 +318,15 @@ class crontab:
 
     #从crond删除
     def remove_for_crond(self,echo):
-        u_file = '/var/spool/cron/crontabs/root'
         file = self.get_cron_file()
         conf=public.readFile(file)
+        if conf.find(str(echo)) == -1: return True
         rep = ".+" + str(echo) + ".+\n"
         conf = re.sub(rep, "", conf)
-        if not public.writeFile(file,conf): return False
+        try:
+            if not public.writeFile(file,conf): return False
+        except:
+            return False
         self.CrondReload()
         return True
     

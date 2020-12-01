@@ -641,6 +641,9 @@ class ajax:
     def delClose(self,get):
         if not 'uid' in session: session['uid'] = 1
         if session['uid'] != 1: return public.returnMsg(False,'没有权限!')
+        if 'tmp_login_id' in session:
+            return public.returnMsg(False,'没有权限!')
+
         public.M('logs').where('id>?',(0,)).delete()
         public.WriteLog('TYPE_CONFIG','LOG_CLOSE')
         return public.returnMsg(True,'LOG_CLOSE')

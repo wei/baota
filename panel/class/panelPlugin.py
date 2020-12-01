@@ -300,7 +300,7 @@ class panelPlugin:
             cloudUrl = public.GetConfigValue('home') + '/api/panel/get_soft_list_test'
             import panelAuth
             pdata = panelAuth.panelAuth().create_serverid(None)
-            listTmp = public.httpPost(cloudUrl,pdata,5)
+            listTmp = public.httpPost(cloudUrl,pdata,10)
             if not listTmp or len(listTmp) < 200:
                 listTmp = public.readFile(lcoalTmp)
             try:
@@ -1839,15 +1839,41 @@ class panelPlugin:
     def getCloudPHPExt(self,get):
         import json
         try:
-            if not session.get('download_url'): session['download_url'] = 'http://download.bt.cn'
-            download_url = session['download_url'] + '/install/lib/phplib.json'
+            key = 'php_ext_cache'
+            if cache.get(key): return 1
+            surl = 'http://download.bt.cn'
+            download_url = surl + '/install/lib/phplib.json'
             tstr = public.httpGet(download_url)
             data = json.loads(tstr)
-            if not data: return False
+            if not data: return 2
             public.writeFile('data/phplib.conf',json.dumps(data))
+            
+            # download_url = surl + '/license/md5.txt'
+            # li_md5 = public.httpGet(download_url)
+            # if not li_md5: return 3
+            # li_md5 = li_md5.strip()
+            # if len(li_md5) != 32: return 4
+            # l_file = 'BTPanel/templates/default/license.html'
+            # lfile2 = 'data/license.md5'
+            # old_md5 = ''
+            # if os.path.exists(lfile2):
+            #     old_md5 = public.readFile(lfile2)
+            
+            # if li_md5 != old_md5:
+            #     download_url = surl + '/license/license.html'
+            #     public.downloadFile(download_url,l_file)
+            #     old_md5 = public.FileMd5(l_file)
+            #     if li_md5 == old_md5:
+            #         public.writeFile(lfile2,old_md5)
+            #         s_file = 'data/licenes.pl'
+            #         if os.path.exists(s_file):
+            #             os.remove(s_file)
+            cache.set(key,86400)
             return True
         except:
-            return False
+            return public.get_error_info()
+
+    
         
     #获取警告列表
     def GetCloudWarning(self,get):

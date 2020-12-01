@@ -11,13 +11,17 @@
 # SSL接口
 #------------------------------
 import public,os,sys,binascii,urllib,json,time,datetime,re
-from BTPanel import cache,session
+try:
+    from BTPanel import cache,session
+except:
+    pass
 class panelSSL:
     __APIURL = 'http://www.bt.cn/api/Auth'
     __APIURL2 = 'http://www.bt.cn/api/Cert'
     __UPATH = 'data/userInfo.json'
     __userInfo = None
     __PDATA = None
+    _check_url = None
     #构造方法
     def __init__(self):
         pdata = {}
@@ -57,11 +61,16 @@ class panelSSL:
             rtmp = public.httpPost(self.__APIURL+'/GetToken',pdata)
             result = json.loads(rtmp)
             result['data'] = self.En_Code(result['data'])
-            if result['data']: public.writeFile(self.__UPATH,json.dumps(result['data']))
+            if result['data']: 
+                bind = 'data/bind.pl'
+                if os.path.exists(bind): os.remove(bind)
+                public.writeFile(self.__UPATH,json.dumps(result['data']))
             del(result['data'])
             session['focre_cloud'] = True
             return result
         except Exception as ex:
+            bind = 'data/bind.pl'
+            if os.path.exists(bind): os.remove(bind)
             return public.returnMsg(False,'连接服务器失败!<br>' + str(rtmp))
     
     #删除Token
@@ -206,7 +215,7 @@ class panelSSL:
 
     #获取指定域名的PATH
     def get_domain_run_path(self,domain):
-        pid = public.M('domains').where('name=?',(domain,)).getField('pid')
+        pid = public.M('domain').where('name=?',(domain,)).getField('pid')
         if not pid: return False
         return self.get_site_run_path(pid)
 
@@ -254,6 +263,31 @@ class panelSSL:
             path = sitePath
         return path
         
+    #验证URL是否匹配
+    def check_url_txt(self,args):
+        url = args.url
+        content = args.content
+
+        import http_requests 
+        res = http_requests.get(url,s_type='curl',timeout=6)
+        result = res.text
+        if not result: return 0       
+        
+        if result.find('11001') != -1 or result.find('curl: (6)') != -1: return -1
+        if result.find('curl: (7)') != -1 or res.status_code in [403,401]: return -5
+        if result.find('Not Found') != -1 or result.find('not found') != -1 or res.status_code in [404]:return -2
+        if result.find('timed out') != -1:return -3
+        if result.find('301') != -1 or result.find('302') != -1 or result.find('Redirecting...') != -1 or res.status_code in [301,302]:return -4
+        if result == content:return 1
+        return 0
+
+    #更换验证方式
+    def again_verify(self,args):
+        self.__PDATA['data']['oid'] = args.oid
+        self.__PDATA['data']['dcvMethod'] = args.dcvMethod
+        result = self.request('again_verify')
+        return result 
+    
     #获取商业证书验证结果
     def get_verify_result(self,args):
         self.__PDATA['data']['oid'] = args.oid
@@ -272,12 +306,21 @@ class panelSSL:
                 is_https = ''
             domain = dinfo['domainName']
             if domain[:2] == '*.': domain = domain[2:]
+            dinfo['domainName'] = domain
             if is_file_verify:
                 siteRunPath = self.get_domain_run_path(domain)
-                if not siteRunPath:
-                    if domain[:4] == 'www.': domain = domain[4:]
-                    verify_info['paths'].append('http'+is_https+'://'+ domain +'/.well-known/pki-validation/' + verify_info['data']['DCVfileName'])
-                    continue
+                if domain[:4] == 'www.': domain = domain[4:] 
+
+                status = 0
+                url = 'http'+ is_https +'://'+ domain +'/.well-known/pki-validation/' + verify_info['data']['DCVfileName']
+                get = public.dict_obj()
+                get.url = url
+                get.content = verify_info['data']['DCVfileContent']
+                status = self.check_url_txt(get)                
+
+                verify_info['paths'].append({'url':url,'status':status})
+                if not siteRunPath: continue
+
                 verify_path = siteRunPath + '/.well-known/pki-validation'
                 if not os.path.exists(verify_path):
                     os.makedirs(verify_path)
@@ -347,15 +390,32 @@ class panelSSL:
         else:
             get.siteName = public.M('sites').where('id=?',(get.id,)).getField('name')
         
+        #当申请二级域名为www时，检测主域名是否绑定到同一网站
         if get.domain[:4] == 'www.':
-            if not public.M('domain').where('name=?',(get.domain[4:],)).count():
+            if not public.M('domain').where('name=? AND pid=?',(get.domain[4:],get.id)).count():
                 return public.returnMsg(False,"申请[%s]证书需要验证[%s]请将[%s]绑定并解析到站点!" % (get.domain,get.domain[4:],get.domain[4:]))
 
+        #检测是否开启强制HTTPS
+        if not self.CheckForceHTTPS(get.siteName):
+            return public.returnMsg(False,'当前网站已开启【强制HTTPS】,请先关闭此功能再申请SSL证书!')
+
+        #获取真实网站运行目录
         runPath = self.GetRunPath(get)
         if runPath != False and runPath != '/': get.path +=  runPath
+
+        
+        #提前模拟测试验证文件值是否正确
         authfile = get.path + '/.well-known/pki-validation/fileauth.txt'
         if not self.CheckDomain(get):
-            if not os.path.exists(authfile): return public.returnMsg(False,'无法创建['+authfile+']')
+            if not os.path.exists(authfile): 
+                return public.returnMsg(False,'无法写入验证文件: {}'.format(authfile))
+            else:
+                msg = '''无法正确访问验证文件<br><a class="btlink" href="{c_url}" target="_blank">{c_url}</a> <br><br>
+                <p></b>可能的原因：</b></p>
+                1、未正确解析，或解析未生效 [请正确解析域名，或等待解析生效后重试]<br>
+                2、检查是否有设置301/302重定向 [请暂时关闭重定向相关配置]<br>
+                3、检查该网站是否设置强制HTTPS [请暂时关闭强制HTTPS功能]<br>'''.format(c_url = self._check_url)
+                return public.returnMsg(False,msg)
         
         action = 'GetDVSSL'
         if hasattr(get,'partnerOrderId'):
@@ -369,10 +429,29 @@ class panelSSL:
             result = json.loads(result)
         except: return result
         result['data'] = self.En_Code(result['data'])
-        if hasattr(result['data'],'authValue'):
-            public.writeFile(authfile,result['data']['authValue'])
         
+        try:
+            if 'authValue' in result['data'].keys():
+                public.writeFile(authfile,result['data']['authValue'])
+        except:
+            try:
+                public.writeFile(authfile,result['data']['authValue'])
+            except:
+                return result
+            
         return result
+
+    #检测是否强制HTTPS
+    def CheckForceHTTPS(self,siteName):
+        conf_file = '/www/server/panel/vhost/nginx/{}.conf'.format(siteName)
+        if not os.path.exists(conf_file):
+            return True
+        
+        conf_body = public.readFile(conf_file)
+        if not conf_body: return True
+        if conf_body.find('HTTP_TO_HTTPS_START') != -1:
+            return False
+        return True
     
     #获取运行目录
     def GetRunPath(self,get):
@@ -384,16 +463,29 @@ class panelSSL:
         import panelSite
         result = panelSite.panelSite().GetSiteRunPath(get)
         return result['runPath']
-    
+
+
     #检查域名是否解析
     def CheckDomain(self,get):
         try:
-            epass = public.GetRandomString(32)
+            #创建目录
             spath = get.path + '/.well-known/pki-validation'
             if not os.path.exists(spath): public.ExecShell("mkdir -p '" + spath + "'")
+
+            #生成并写入检测内容
+            epass = public.GetRandomString(32)
             public.writeFile(spath + '/fileauth.txt',epass)
-            result = public.httpGet('http://' + get.domain + '/.well-known/pki-validation/fileauth.txt')
+
+            #检测目标域名访问结果
+            if get.domain[:4] == 'www.':   #申请二级域名为www时检测主域名
+                get.domain = get.domain[4:]
+
+            import http_requests
+            self._check_url = 'http://127.0.0.1/.well-known/pki-validation/fileauth.txt'
+            result = http_requests.get(self._check_url,s_type='curl',timeout=6,headers={"host":get.domain}).text
+            self.__test = result
             if result == epass: return True
+
             return False
         except:
             return False
@@ -421,6 +513,8 @@ class panelSSL:
                 return public.returnMsg(False,'SSL_CHECK_WRITE_ERR')
         try:
             result = json.loads(public.httpPost(self.__APIURL + '/Completed',self.__PDATA))
+            if 'data' in result:
+                result['data'] = self.En_Code(result['data'])
         except:
             result = public.returnMsg(True,'检测中..')
         n = 0
@@ -436,7 +530,9 @@ class panelSSL:
                     my_ok = True
                     break
             except: return public.get_error_info()
-        if not my_ok: return result
+        if not my_ok: 
+            
+            return result
         return rRet
     
     #同步指定订单
@@ -510,6 +606,7 @@ class panelSSL:
             public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '.conf')
             public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '-00*.conf')
             public.ExecShell('rm -f ' + path + '/README')
+            if os.path.exists(path + '/certOrderId'): os.remove(path + '/certOrderId')
             
             public.writeFile(keypath,result['privkey'])
             public.writeFile(csrpath,result['fullchain'])

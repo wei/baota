@@ -21,8 +21,10 @@ class userlogin:
         if self.limit_address('?') < 1: return public.returnJson(False,'LOGIN_ERR_LIMIT'),json_header
         post.username = post.username.strip()
         
+        public.chdck_salt()
         sql = db.Sql()
         user_list = sql.table('users').field('id,username,password,salt').select()
+        
         userInfo = None
         for u_info in user_list:
             if public.md5(u_info['username']) == post.username:
@@ -74,8 +76,8 @@ class userlogin:
         except Exception as ex:
             stringEx = str(ex)
             if stringEx.find('unsupported') != -1 or stringEx.find('-1') != -1: 
-                os.system("rm -f /tmp/sess_*")
-                os.system("rm -f /www/wwwlogs/*log")
+                public.ExecShell("rm -f /tmp/sess_*")
+                public.ExecShell("rm -f /www/wwwlogs/*log")
                 public.ServiceReload()
                 return public.returnJson(False,'USER_INODE_ERR'),json_header
             public.WriteLog('TYPE_LOGIN','LOGIN_ERR_PASS',('****','******',public.GetClientIp()))
@@ -85,6 +87,8 @@ class userlogin:
     def request_tmp(self,get):
         try:
             if not hasattr(get,'tmp_token'): return public.returnJson(False,'错误的参数!'),json_header
+            if len(get.tmp_token) == 48:
+                return self.request_temp(get)
             if len(get.tmp_token) != 64: return public.returnJson(False,'错误的参数!'),json_header
             if not re.match(r"^\w+$",get.tmp_token):return public.returnJson(False,'错误的参数!'),json_header
 
@@ -97,6 +101,7 @@ class userlogin:
             session['login'] = True
             session['username'] = userInfo['username']
             session['tmp_login'] = True
+            session['uid'] = userInfo['id']
             public.WriteLog('TYPE_LOGIN','LOGIN_SUCCESS',(userInfo['username'],public.GetClientIp()+ ":" + str(request.environ.get('REMOTE_PORT'))))
             self.limit_address('-')
             cache.delete('panelNum')
@@ -112,12 +117,58 @@ class userlogin:
             return redirect('/')
         except:
             return public.returnJson(False,'登录失败,' + public.get_error_info()),json_header
+
+
+    def request_temp(self,get):
+        try:
+            if not hasattr(get,'tmp_token'): return '错误的参数!'
+            if len(get.tmp_token) != 48: return '错误的参数!'
+            if not re.match(r"^\w+$",get.tmp_token):return '错误的参数!'
+            skey = public.GetClientIp() + '_temp_login'
+            if not public.get_error_num(skey,10): return '连续10次验证失败，禁止1小时'
+            s_time = int(time.time())
+            data = public.M('temp_login').where('state=? and expire>?',(0,s_time)).field('id,token,salt,expire').find()
+            if not data:
+                public.set_error_num(skey)
+                return '验证失败!'
+            if not isinstance(data,dict):
+                public.set_error_num(skey)
+                return '验证失败!'
+            r_token = public.md5(get.tmp_token + data['salt'])
+            if r_token != data['token']: 
+                public.set_error_num(skey)
+                return '验证失败!'
+            public.set_error_num(skey,True)
+            userInfo = public.M('users').where("id=?",(1,)).field('id,username').find()
+            session['login'] = True
+            session['username'] = '临时({})'.format(data['id'])
+            session['tmp_login'] = True
+            session['tmp_login_id'] = str(data['id'])
+            session['tmp_login_expire'] = time.time() + 3600
+            session['uid'] = data['id']
+            sess_path = 'data/session'
+            if not os.path.exists(sess_path):
+                os.makedirs(sess_path,384)
+            public.writeFile(sess_path + '/' + str(data['id']),'')
+            login_addr = public.GetClientIp()+ ":" + str(request.environ.get('REMOTE_PORT'))
+            public.WriteLog('TYPE_LOGIN','LOGIN_SUCCESS',(userInfo['username'],login_addr))
+            public.M('temp_login').where('id=?',(data['id'],)).update({"login_time":s_time,'state':1,'login_addr':login_addr})
+            self.limit_address('-')
+            cache.delete('panelNum')
+            cache.delete('dologin')
+            sess_input_path = 'data/session_last.pl'
+            public.writeFile(sess_input_path,str(int(time.time())))
+            self.set_request_token()
+            self.login_token()
+            self.set_cdn_host(get)
+            return redirect('/')
+        except:
+            return '登录失败，登录过程发生错误'
    
 
     def login_token(self):
         import config
         config.config().reload_session()
-        self.clear_session()
 
     def request_get(self,get):
         #if os.path.exists('/www/server/panel/install.pl'): raise redirect('/install');
@@ -239,8 +290,8 @@ class userlogin:
         except Exception as ex:
             stringEx = str(ex)
             if stringEx.find('unsupported') != -1 or stringEx.find('-1') != -1:
-                os.system("rm -f /tmp/sess_*")
-                os.system("rm -f /www/wwwlogs/*log")
+                public.ExecShell("rm -f /tmp/sess_*")
+                public.ExecShell("rm -f /www/wwwlogs/*log")
                 public.ServiceReload()
                 return public.returnJson(False,'USER_INODE_ERR'),json_header
             public.WriteLog('TYPE_LOGIN','LOGIN_ERR_PASS',('****','******',public.GetClientIp()))

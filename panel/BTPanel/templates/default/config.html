@@ -99,6 +99,7 @@
                     <p class="mtb15"><span class="set-tit text-right" title="{{data['lan']['CT10']}}">{{data['lan']['CT10']}}</span><input name="password_" class="inputtxt bt-input-text disable" type="text" value="******" disabled><span class="modify btn btn-xs btn-success" onclick="setPassword()">{{data['lan']['CY10']}}</span></p>
                     <p class="mtb15"><span class="set-tit text-right" title="{{data['lan']['CT11']}}">{{data['lan']['CT11']}}</span><input name="btusername" class="inputtxt bt-input-text disable" type="text" value="" disabled><span class="modify btn btn-xs btn-success mr5" onclick="bindBTName(2,'b')">{{data['lan']['CY11']}}</span></p>
                     <p class="mtb15 wxapp_p"><span class="set-tit text-right">微信小程序</span><input class="inputtxt bt-input-text disable" type="text" value="{{data['wx']}}" disabled><span class="modify btn btn-xs btn-success mr5" onclick="open_wxapp()">绑定</span></p>
+                    <p class="mtb15"><span class="set-tit text-right">面板菜单栏隐藏</span><input class="inputtxt bt-input-text disable" id="panel_menu_hide" type="text" disabled><span class="modify btn btn-xs btn-success mr5" onclick="set_panel_ground()">设置</span></p>
                    </form>
                 <div class="bt-submit set-submit">{{data['lan']['C4']}}</div>
             </div>
@@ -299,7 +300,7 @@
 	<script type="text/javascript" src="{{g.cdn_url}}/js/jquery.qrcode.min.js"></script>
 	<script src="{{g.cdn_url}}/js/config.js?version20200116={{g['version']}}"></script>
     <script type="text/javascript">
-		setCookie('serverType',"{{session['webserver']}}");
+        setCookie('serverType',"{{session['webserver']}}");
 	</script>
 {% endblock %}
 
