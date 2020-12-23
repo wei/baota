@@ -194,7 +194,7 @@ class panelRedirect:
             for d in json.loads(get.redirectdomain):
                 tu = self.GetToDomain(get.tourl)
                 if d == tu:
-                    return '域名 "%s" 和目标域名一致请取消选择' % (d)
+                    return public.returnMsg(False,'域名 "%s" 和目标域名一致请取消选择' % (d))
 
         if get.domainorpath == "path":
             domains = self.GetAllDomain(get.sitename)
@@ -203,7 +203,7 @@ class panelRedirect:
             for d in domains:
                 ad = "%s%s" % (d,get.redirectpath) #站点域名+重定向路径
                 if tu == ad:
-                    return '"%s" ，目标URL和被重定向路径一致请不要花样作死' % (tu)
+                    return public.returnMsg(False, '"%s" ，目标URL和被重定向路径一致会导致无限重定向！请不要花样作死' % (tu))
     #创建重定向
     def CreateRedirect(self,get):
 
@@ -363,8 +363,33 @@ class panelRedirect:
         print("修改成功")
         return public.returnMsg(True, '修改成功')
 
+    def del_redirect_multiple(self,get):
+        '''
+            @name 批量删除重定向
+            @author zhwen<2020-11-21>
+            @param site_id 1
+            @param redirectnames test,baohu
+        '''
+        redirectnames = get.redirectnames.split(',')
+        del_successfully = []
+        del_failed = {}
+        get.sitename = public.M('sites').where("id=?", (get.site_id,)).getField('name')
+        for redirectname in redirectnames:
+            get.redirectname = redirectname
+            try:
+                get.multiple = 1
+                result = self.DeleteRedirect(get,multiple=1)
+                if not result['status']:
+                    del_failed[redirectname] = result['msg']
+                    continue
+                del_successfully.append(redirectname)
+            except:
+                del_failed[redirectname]='删除时出错了，请再试一次'
+        public.serviceReload()
+        return {'status': True, 'msg': '删除重定向 [ {} ] 成功'.format(','.join(del_successfully)), 'error': del_failed,
+                'success': del_successfully}
 
-    def DeleteRedirect(self,get):
+    def DeleteRedirect(self,get,multiple=None):
         redirectconf = self.__read_config(self.__redirectfile)
         sitename = get.sitename
         redirectname = get.redirectname
@@ -377,7 +402,8 @@ class panelRedirect:
                 self.__write_config(self.__redirectfile,redirectconf)
                 self.SetRedirectNginx(get)
                 self.SetRedirectApache(get.sitename)
-                public.serviceReload()
+                if not multiple:
+                    public.serviceReload()
                 return public.returnMsg(True, '删除成功')
 
     def GetRedirectList(self,get):

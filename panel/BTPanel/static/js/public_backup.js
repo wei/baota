@@ -249,6 +249,50 @@ var bt =
 	    var num = min + Math.round(rand * range); //四舍五入
 	    return num;
 	},
+	/**
+     * @description 设置本地存储，local和session
+     * @param {String} type 存储类型，可以为空，默认为session类型。
+     * @param {String} key 存储键名
+     * @param {String} val 存储键值
+     * @return 无返回值
+     */
+    set_storage: function (type, key, val) {
+        if (type != "local" && type != "session") val = key, key = type, type = 'local';
+        window[type + 'Storage'].setItem(key, val);
+    },
+
+
+    /**
+     * @description 获取本地存储，local和session
+     * @param {String} type 存储类型，可以为空，默认为session类型。
+     * @param {String} key 存储键名
+     * @return {String} 返回存储键值
+     */
+    get_storage: function (type, key) {
+        if (type != "local" && type != "session") key = type, type = 'local';
+        return window[type + 'Storage'].getItem(key);
+    },
+
+    /**
+     * @description 删除指定本地存储，local和session
+     * @param {String} type 类型，可以为空，默认为session类型。
+     * @param {String} key 键名
+     * @return 无返回值
+     */
+    remove_storage: function (type, key) {
+        if (type != "local" && type != "session") key = type, type = 'local';
+        window[type + 'Storage'].removeItem(key);
+    },
+
+    /**
+     * @description 删除指定类型的所有存储信息储，local和session
+     * @param {String} type 类型，可以为空，默认为session类型。
+     * @return 无返回值
+     */
+    clear_storage: function (type) {
+        if (type != "local" && type != "session") key = type, type = 'local';
+        window[type + 'Storage'].clear();
+    },
 	set_cookie : function(key,val,time)
 	{
 		if(time != undefined){
@@ -275,7 +319,9 @@ var bt =
 			return null;
 		}
 	},
-
+	clear_cookie:function(key){
+	  this.set_cookie(key,'',new Date());
+	},
 	select_path:function(id){
 		_this = this;
 		_this.set_cookie("SetName", "");
@@ -293,9 +339,8 @@ var bt =
 				var path = $("#PathPlace").find("span").text();			
 				path = bt.rtrim(bt.format_path(path),'/');						
 				var back_path = bt.get_file_path(path);
-				
 				get_file_list(back_path);
-			})	
+			})
 			//选择
 			$('#bt_select').click(function(){						
 				var path = bt.format_path($("#PathPlace").find("span").text());
@@ -304,9 +349,12 @@ var bt =
 				$("."+id).val(path);
 				loadT.close();
 			})
-		},100)
-		get_file_list($("#" + id).val())
-     
+		},100);
+		var paths = $("#" + id).val();
+		if($('#defaultPath').length > 0 && $("#" + id).parents('.tab-body').length > 0){
+			paths = $('#defaultPath').text();
+		}
+		get_file_list(paths);
 		function get_file_list(path)
         {
             bt.send('GetDir', 'files/GetDir', { path: path, disk: true }, function (rdata) {
@@ -402,10 +450,10 @@ var bt =
 		var mess = layer.open({
 			type: 1,
 			title: title,
-			area: "350px",
+			area: "365px",
 			closeBtn: 2,
 			shadeClose: true,
-			content: "<div class='bt-form webDelete pd20 pb70'><p>" + msg + "</p>" + error + "<div class='vcode'>"+lan.bt.cal_msg+"<span class='text'>" + sumtext + "</span>=<input type='number' id='vcodeResult' value=''></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm bt-cancel'>"+lan.public.cancel+"</button> <button type='button' id='toSubmit' class='btn btn-success btn-sm' >"+lan.public.ok+"</button></div></div>"
+			content: "<div class='bt-form webDelete pd20 pb70'><p style='font-size:13px;word-break: break-all;margin-bottom: 5px;'>" + msg + "</p>" + error + "<div class='vcode'>"+lan.bt.cal_msg+"<span class='text'>" + sumtext + "</span>=<input type='number' id='vcodeResult' value=''></div><div class='bt-form-submit-btn'><button type='button' class='btn btn-danger btn-sm bt-cancel'>"+lan.public.cancel+"</button> <button type='button' id='toSubmit' class='btn btn-success btn-sm' >"+lan.public.ok+"</button></div></div>"
 		});
 		$("#vcodeResult").focus().keyup(function(a) {
 			if(a.keyCode == 13) {
@@ -521,7 +569,7 @@ var bt =
 	},
 	msg : function(config)
 	{		
-		var btns = new Array();  
+		var btns = [];
 		var btnObj =  {						
 			title:config.title?config.title:false,						
 			shadeClose: config.shadeClose?config.shadeClose:true,
@@ -680,7 +728,7 @@ var bt =
             _html += '<span class="tname">' + item.title + '</span>';
             is_title_css = '';
         }
-        _html += "<div class='info-r " + is_title_css + "'>";
+        _html += "<div class='info-r "+ item.class +" "+ is_title_css + "'>";
 
         var _name = item.name;
         var _placeholder = item.placeholder;
@@ -694,7 +742,7 @@ var bt =
                 if (_obj.hide) continue;
                 if (_obj.name) _name = _obj.name;
                 if (_obj.placeholder) _placeholder = _obj.placeholder;
-                if (_obj.title) _html += '<span class=" mr5">' + _obj.title + "  ";
+                if (_obj.title) _html += '<div class="inlineBlock mr5"><span class="mr5">' + _obj.title + "</span>  ";
                 switch (_obj.type) {
                     case 'select':
                         var _width = _obj.width ? _obj.width : '100px';
@@ -712,7 +760,7 @@ var bt =
                         break;
                     case 'button':
                         var _width = _obj.width ? _obj.width : '330px';
-                        _html += '<button name=\'' + _name + '\' class="btn btn-success btn-sm mr5 ml5 ' + _name + bs + '">' + _obj.text + '</button>';
+                        _html += '<button name=\'' + _name + '\' class="btn btn-success btn-sm mr5 ml5 ' + _name + bs +' '+ (_obj.class?_obj.class:'') + '">' + _obj.text + '</button>';
                         break;
                     case 'radio':
                         var _v = _obj.value === true ? 'checked' : ''
@@ -749,7 +797,7 @@ var bt =
                         _html += "<input name='" + _name + "' " + (_obj.disabled ? 'disabled' : '') + " class='bt-input-text mr5 " + _name + bs + "' " + (_placeholder ? ' placeholder="' + _placeholder + '"' : "") + " type='text' style='width:" + _width + "' value='" + (_obj.value ? _obj.value : '') + "' />";
                         break;
                 }
-                if (_obj.title) _html += '</span>';
+                if (_obj.title) _html += '</div>';
                 if (_obj.callback) clicks.push({ bind: _name + bs, callback: _obj.callback });
                 if (_obj.event) {
                     _html += '<span data-id="' + _name + bs + '" class="glyphicon cursor mr5 ' + _obj.event.css + ' icon_' + _name + bs + '" ></span>';
@@ -786,7 +834,7 @@ var bt =
                     var _width = item.width ? item.width : '330px';
                     _html += "<input name='" + _name + "' " + (item.disabled ? 'disabled' : '') + " class='bt-input-text mr5 " + _name + bs + "' " + (_placeholder ? ' placeholder="' + _placeholder + '"' : "") + " type='password' style='width:" + _width + "' value='" + (item.value ? item.value : '') + "' />";
                     break;
-                case 'textarea':
+                 case 'textarea':
                     var _width = item.width ? item.width : '330px';
                     var _height = item.height ? item.height : '100px';
                     _html += '<textarea class="bt-input-text mr20 ' + _name + bs + '"  ' + (item.disabled ? 'disabled' : '')+'  name="' + _name + '" style="width:' + _width + ';height:' + _height + ';line-height:22px">' + (item.value ? item.value : '') + '</textarea>';
@@ -1202,9 +1250,10 @@ bt.pub = {
 			if(callback) callback(rdata)
 		})
 	},
-	get_task_count:function(){
+	get_task_count:function(callback){
 		bt.send('GetTaskCount','ajax/GetTaskCount',{},function(rdata){
-			$(".task").text(rdata)
+			$(".task").text(rdata);
+			if(callback) callback(rdata);
 		})
 	},
 	check_install:function(callback){
@@ -1972,7 +2021,7 @@ bt.files = {
 		if(!path)
 		{
 			bt.msg({msg:lan.get('lack_param',['response'])});
-			return;
+
 		}
 	},	
 	get_files:function(Path,searchV,callback){
@@ -2189,7 +2238,7 @@ bt.files = {
 			});
 			bt.set_cookie('copyFileName',null);
 			bt.set_cookie('cutFileName',null);
-			return;
+
 		}
 	},
 	zip:function(dirName,submits,callback)
@@ -2214,7 +2263,7 @@ bt.files = {
 					return;
 				}
 				bt.msg(rdata);
-				if(rdata.status) if(callback) callback(rdata);;
+				if(rdata.status) if(callback) callback(rdata);
 			});
 			return;
 		}
@@ -3696,6 +3745,12 @@ bt.soft = {
 	},
 	// 产品支付视图(配置参数)
 	product_pay_view:function(config){
+	    if(!bt.get_cookie('bt_user_info')){
+	        bt.pub.bind_btname(function(){
+                window.location.reload();
+            });
+	        return false;
+	    }
 		if(typeof config == "string") config = JSON.parse(config)
 		var config = {
 			name:config.name, // 插件名称
@@ -4424,10 +4479,11 @@ bt.soft = {
                 var loadOpen = bt.open({
                     type: 1,
                     title: name + lan.soft.install_title,
-                    area: '400px',
-                    content: "<div class='bt-form pd20 c6' style='padding-bottom:50px'>\
+					area: '400px',
+					btn:[lan.public.submit,lan.public.close],
+                    content: "<div class='bt-form pd20 c6'>\
 						<div class='version line' style='padding-left:15px'>"+ lan.soft.install_version + "：" + shtml+"</div>\
-						<div class='fangshi line' style='padding-left:15px'>"+ lan.bt.install_type + "：<label data-title='" + lan.bt.install_src_title + "'>" + lan.bt.install_src + "<input type='checkbox'></label><label data-title='" + lan.bt.install_rpm_title + "'>" + lan.bt.install_rpm + "<input type='checkbox' checked></label></div>\
+						<div class='fangshi line' style='padding-left:15px;margin-bottom:0px'>"+ lan.bt.install_type + "：<label data-title='" + lan.bt.install_src_title + "'>" + lan.bt.install_src + "<input type='checkbox'></label><label data-title='" + lan.bt.install_rpm_title + "'>" + lan.bt.install_rpm + "<input type='checkbox' checked></label></div>\
 						<div class='install_modules' style='display: none;'>\
 							<div style='margin-bottom:15px;padding-top:15px;border-top:1px solid #ececec;'><button onclick=\"bt.soft.show_make_args(\'" +name+ "\')\" class='btn btn-success btn-sm'>添加自定义模块</button></div>\
 							<div class='select_modules divtable' style='margin-bottom:20px'>\
@@ -4444,40 +4500,33 @@ bt.soft = {
 								</table>\
 							</div>\
 						</div>\
-						<div class='bt-form-submit-btn'>\
-							<button type='button' class='btn btn-danger btn-sm btn-title' onclick='layer.closeAll()'>"+ lan.public.close + "</button>\
-					        <button type='button' id='bi-btn' class='btn btn-success btn-sm btn-title bi-btn'>"+ lan.public.submit + "</button>\
-				        </div>\
-				    </div>"
-                })
-
-                $('.fangshi input').click(function () {
-					$(this).attr('checked', 'checked').parent().siblings().find("input").removeAttr('checked');
-					var type = $('.fangshi input:eq(0)').prop("checked") ? '0' : '1';
-					if(type === '1') {
-						$(".install_modules").hide();
-						return;
+					</div>",
+					success:function(){
+						$('.fangshi input').click(function () {
+							$(this).attr('checked', 'checked').parent().siblings().find("input").removeAttr('checked');
+							var type = $('.fangshi input:eq(0)').prop("checked") ? '0' : '1';
+							if(type === '1') {
+								$(".install_modules").hide();
+								return;
+							}
+							if(bt.soft.check_make_is(name)){
+								$(".install_modules").show();
+								bt.soft.get_make_args(name);
+							}
+						});
+					},
+					yes:function(){
+						loadOpen.close();
+						var info = $("#SelectVersion").val().toLowerCase();
+						name = info.split(" ")[0];
+						version = info.split(" ")[1];
+						var type = $('.fangshi input:eq(0)').prop("checked") ? '0' : '1';
+						if (rdata.versions.length > 1) {
+							_this.install_soft(rdata, version, type);
+						} else {
+							_this.install_soft(rdata, rdata.versions[0].m_version, type,that);
+						}
 					}
-
-					if(bt.soft.check_make_is(name)){
-						$(".install_modules").show();
-						bt.soft.get_make_args(name);
-					}
-					
-                });
-
-                $("#bi-btn").click(function () {
-                    loadOpen.close();
-                    var info = $("#SelectVersion").val().toLowerCase();
-                    name = info.split(" ")[0];
-                    version = info.split(" ")[1];
-                    var type = $('.fangshi input:eq(0)').prop("checked") ? '0' : '1';
-                    if (rdata.versions.length > 1) {
-                        _this.install_soft(rdata, version, type);
-                    } else {
-                        _this.install_soft(rdata, rdata.versions[0].m_version, type,that);
-                    }
-                  
                 });
             }
 			else if (rdata.versions.length > 1){
@@ -4572,7 +4621,7 @@ bt.soft = {
 			}
 		});
 	},
-    install_soft: function (item, version, type,that) { //安装单版本	
+	install_soft: function (item, version, type,that) { //安装单版本
         if (type == undefined) type = 0;
         var loadT = '';
 		item.title = bt.replace_all(item.title,'-' + version,'');
@@ -4586,9 +4635,11 @@ bt.soft = {
 							bt.soft.install_other(rdata,status);
 							return;
 						}
-						layer.close(bt.soft.loadT);		
-						bt.pub.get_task_count();
-						if(soft) soft.get_list();
+						layer.close(bt.soft.loadT);
+						bt.pub.get_task_count(function(rdata){
+							if(rdata > 0 && item.type === 5) messagebox();
+						});
+						if(typeof soft != "undefined") soft.get_list();
 						bt.msg(rdata);
 					})
 				})
@@ -4628,7 +4679,7 @@ bt.soft = {
             }
         });
     },
-    update_soft: function (name,title, version, min_version,update_msg,type) {
+    update_soft: function (name,title, version, min_version,update_msg,type){
         var _this = this;
 		var msg = "<li style='color:red;'>建议您在服务器负载闲时进行软件更新.</li>";
 		if(name == 'mysql') msg = "<ul style='color:red;'><li>更新数据库有风险,建议在更新前,先备份您的数据库.</li><li>如果您的是云服务器,强烈建议您在更新前做一个快照.</li><li>建议您在服务器负载闲时进行软件更新.</li></ul>";
@@ -4640,9 +4691,12 @@ bt.soft = {
 						_this.install_other(rdata)
 						return;
 					}
+					console.log(type);
 					layer.close(bt.soft.loadT);	
-					bt.pub.get_task_count();
-					if(soft) soft.get_list();
+					bt.pub.get_task_count(function(rdata){
+						if(rdata > 0 && item.type === 5) messagebox();
+					});
+					if(typeof soft != "undefined") soft.get_list();
 					bt.msg(rdata);	
 				})
 			})
@@ -4665,7 +4719,7 @@ bt.soft = {
 				bt.send('uninstall_plugin','plugin/uninstall_plugin',{sName:name,version:version},function(rdata){
 					loadT.close();				
 					bt.pub.get_task_count();				
-					if(soft) soft.get_list();
+					if(typeof soft != "undefined") soft.get_list();
 					bt.msg(rdata);
 				})
 			})
@@ -4913,7 +4967,7 @@ bt.database = {
 
 bt.send('get_config','config/get_config',{},function(rdata){
 	bt.config = rdata;
-})
+});
 
 bt.plugin = {
 	get_plugin_byhtml:function(name,callback){
@@ -4932,8 +4986,7 @@ bt.plugin = {
 }
 
 bt.site = {
-	get_list : function(page,search,type,callback)
-	{
+	get_list : function(page,search,type,callback){
 		if(page == undefined) page = 1
 		type = type == undefined ? '&type=-1' : ('&type='+ type);
 		search = search == undefined ? '':search;
@@ -5469,6 +5522,7 @@ bt.site = {
                     }
 			    }
 			    var bs = bt.render_form(_form,function(rdata){	
+					console.log(rdata);
 				    if(callback) callback(rdata);
 			    });			
 			    $(".placeholder").click(function(){
@@ -5497,25 +5551,33 @@ bt.site = {
 			if(callback) callback(rdata);
 		})
 	},
-	stop:function(id,name){
+	stop:function(id,name,callback){
 		bt.confirm({title:'停用站点 【'+ name +'】',msg:lan.site.site_stop_txt},function(index){
 			if (index > 0) {
 				var loadT = bt.load();
 				bt.send('SiteStop','site/SiteStop',{id:id,name:name},function(ret){
 					loadT.close();
-					if(site) site.get_list();
+					if(site && typeof callback == "undefined"){
+						site.get_list();
+					}else{
+						if(callback) callback(ret);
+					}
 					bt.msg(ret);
 				});
 			}
 		});
 	},
-	start:function(id,name){
+	start:function(id,name,callback){
 		bt.confirm({title:'启动站点 【'+ name +'】',msg:lan.site.site_start_txt},function(index){
 			if (index > 0) {
 				var loadT = bt.load();
 				bt.send('SiteStart','site/SiteStart',{id:id,name:name},function(ret){
 					loadT.close();
-					if(site) site.get_list();
+					if(site && typeof callback == "undefined"){
+						site.get_list();
+					}else{
+						if(callback) callback(ret);
+					}
 					bt.msg(ret);
 				});
 			}
@@ -5541,10 +5603,11 @@ bt.site = {
 			});
 		});
 	},
-	set_endtime:function(id,dates){
+	set_endtime:function(id,dates,callback){
 		var loadT = bt.load(lan.site.saving_txt); 
 	 	bt.send('SetEdate','site/SetEdate',{id:id,edate:dates},function(rdata){
-          loadT.close();          
+		  loadT.close();
+		  if(callback) callback(rdata);        
         });
 	},
 	get_default_path:function(type,callback){
@@ -5605,8 +5668,8 @@ bt.site = {
 		})
 	},
 	delete_dir_guard:function(id,data,callback){
-		var loading = bt.load();
 		bt.show_confirm('删除['+ data +']',"你确定要删除目录保护吗",function(){
+			var loading = bt.load();
 			bt.send('delete_dir_auth','site/delete_dir_auth',{id:id,name:data},function(rdata){
 				loading.close();
 				if(callback) callback(rdata);

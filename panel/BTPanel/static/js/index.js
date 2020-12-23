@@ -66,11 +66,14 @@ if (bind_user == 'True') {
     show_force_bind();
 }
 
+
 $("select[name='network-io']").change(function(){
     var net_key = $(this).val();
     if(net_key == 'all') net_key = '';
     bt.set_cookie('network_io_key',net_key);
 });
+
+
 
 var interval_stop = false;
 var index = {
@@ -308,10 +311,11 @@ var index = {
 
             var _lval = Math.round((net.load.one / net.load.max) * 100);
             if (_lval > 100) _lval = 100;
-            index.set_val(_loadbox, { usage: _lval, items: load_arr });
+            index.set_val(_loadbox, { usage: _lval, items: load_arr })
             
             var net_key = bt.get_cookie('network_io_key');
             if(net_key){
+                console.log(net_key,net.network[net_key])
                 net.up = net.network[net_key].up;
                 net.down = net.network[net_key].down;
                 net.downTotal = net.network[net_key].downTotal;
@@ -321,20 +325,22 @@ var index = {
                 net.downAll = net.network[net_key].downTotal;
                 net.upAll = net.network[net_key].upTotal;
             }
+
             var net_option = '<option value="all">全部</option>';
             $.each(net.network,function(k,v){
                 var act = (k == net_key)?'selected':'';
                 net_option += '<option value="'+k+'" '+act+'>'+k+'</option>';
             });
+
             $('select[name="network-io"]').html(net_option);
-            
+
             _loadbox.parents('ul').data('data', net);
-
-
+            
+            
 
             //刷新流量
-            $("#upSpeed").html(net.up + ' KB');
-            $("#downSpeed").html(net.down + ' KB');
+            $("#upSpeed").html(net.up.toFixed(2) + ' KB');
+            $("#downSpeed").html(net.down.toFixed(2) + ' KB');
             $("#downAll").html(bt.format_size(net.downTotal));
             $("#upAll").html(bt.format_size(net.upTotal));
             index.net.add(net.up, net.down);
@@ -912,6 +918,7 @@ var index = {
      * @return 无返回值
     */
     reader_warning_view:function(){
+        return false;
         var that = this;
         function reader_warning_list(data){
             var html = '',scan_time = '',arry =  [['risk','风险项'],['security','无风险项'],['ignore','已忽略项']],level = [['低危','#e8d544'],['中危','#E6A23C'],['高危','red']]

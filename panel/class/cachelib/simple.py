@@ -83,15 +83,16 @@ class SimpleCache(BaseCache):
         self._cache[key] = (expires,_val)        
         try:
             if key[:4] == self.__session_key:
-                if len(_val) < 256: return True
-                if not os.path.exists(self.__session_basedir): os.makedirs(self.__session_basedir,384)
-            
-                expires = struct.pack('f',expires)
-                filename =  '/'.join((self.__session_basedir,self.md5(key)))                    
-                fp = open(filename, 'wb+')
-                fp.write(expires + _val)
-                fp.close()
-                os.chmod(filename,384)
+                if len(_val) < 1280: return True
+                from BTPanel import session
+                if 'request_token_head' in session:
+                    if not os.path.exists(self.__session_basedir): os.makedirs(self.__session_basedir,384)
+                    expires = struct.pack('f',expires)
+                    filename =  '/'.join((self.__session_basedir,self.md5(key)))                    
+                    fp = open(filename, 'wb+')
+                    fp.write(expires + _val)
+                    fp.close()
+                    os.chmod(filename,384)
         except :pass
         return True
 

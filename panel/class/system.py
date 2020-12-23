@@ -168,7 +168,7 @@ class system:
         data['pure-ftpd'] = tmp
         data['panel'] = self.GetPanelInfo()
         data['systemdate'] = public.ExecShell('date +"%Y-%m-%d %H:%M:%S %Z %z"')[0].strip();
-        
+        data['show_workorder'] = False#not os.path.exists('data/not_workorder.pl')
         return data
     
     def GetPanelInfo(self,get=None):

@@ -3,10 +3,6 @@ var fileDrop = {
     endTime:0,
     uploadLength:0, //上传数量
     splitSize: 1024 * 1024 * 2, //文件上传分片大小
-    splitEndTime: 0,
-    splitStartTime:0,
-    fileSize:0,
-    speedLastTime:0,
     filesList:[], // 文件列表数组
     errorLength:0, //上传失败文件数量
     isUpload:true, //上传状态，是否可以上传
@@ -14,7 +10,6 @@ var fileDrop = {
     isUploadNumber:800,//限制单次上传数量
     uploadAllSize:0, // 上传文件总大小
     uploadedSize:0, // 已上传文件大小
-    updateedSizeLast:0,
     topUploadedSize:0, // 上一次文件上传大小
     uploadExpectTime:0, // 预计上传时间
     initTimer:0, // 初始化计时
@@ -22,14 +17,10 @@ var fileDrop = {
     timerSpeed:0, //速度
     isLayuiDrop:false, //是否是小窗口拖拽
     uploading:false,
-    is_webkit:(function(){
-        if(navigator.userAgent.indexOf('WebKit') > -1) return true;
-        return false;
-    })(),
     init:function(){
         if($('#mask_layer').length == 0) {
-            window.UploadFiles = function(){ fileDrop.dialog_view()};
-            $("body").append($('<div class="mask_layer" id="mask_layer" style="position:fixed;top:0;left:0;right:0;bottom:0; background:rgba(255,255,255,0.6);border:3px #ccc dashed;z-index:99999999;display:none;color:#999;font-size:40px;text-align:center;overflow:hidden;"><span style="position: absolute;top: 50%;left: 50%;margin-left: -300px;margin-top: -40px;">上传文件到当前目录下'+ (!this.is_webkit?'<i style="font-size:20px;font-style:normal;display:block;margin-top:15px;color:red;">当前浏览器暂不支持拖动上传，推荐使用Chrome浏览器或WebKit内核的浏览。</i>':'') +'</span></div>'));
+             window.UploadFiles = function(){ fileDrop.dialog_view()};
+            $("body").append($('<div class="mask_layer" id="mask_layer" style="position:fixed;top:0;left:0;right:0;bottom:0; background:rgba(255,255,255,0.6);border:3px #ccc dashed;z-index:99999999;display:none;color:#999;font-size:40px;text-align:center;overflow:hidden;"><span style="position: absolute;top: 50%;left: 50%;margin-left: -200px;margin-top: -40px;">上传文件到当前目录下</span></div>'));
             this.event_relation(document.querySelector('#container'),document,document.querySelector('#mask_layer'));
         }
     },
@@ -45,8 +36,8 @@ var fileDrop = {
             }
         }
         leave.el.addEventListener("dragleave",(leave.callback != null)?leave.callback:function(e){
-            if(e.x == 0 && e.y == 0) $('#mask_layer').hide();
             e.preventDefault();
+            if(e.x == 0 && e.y == 0) $('#mask_layer').hide();
         },false);
         enter.el.addEventListener("dragenter", (enter.callback != null)?enter.callback:function(e){
             if(e.dataTransfer.items[0].kind == 'string') return false
@@ -61,10 +52,6 @@ var fileDrop = {
     
     // 事件触发
     ev_drop:function(e){
-        if(!fileDrop.is_webkit){
-            $('#mask_layer').hide();
-            return false;
-        }
         e.preventDefault();
         if(fileDrop.uploading){
         	layer.msg('正在上传文件中，请稍后...');
@@ -81,6 +68,7 @@ var fileDrop = {
             if(fileDrop.filesList[i].is_upload) fileDrop.filesList.splice(-i,1)
         }
         $('#mask_layer').hide();
+
         function update_sync(s){
             s.getFilesAndDirectories().then(function(subFilesAndDirs) {
                 return iterateFilesAndDirs(subFilesAndDirs, s.path);
@@ -99,6 +87,7 @@ var fileDrop = {
                         clearTimeout(time);
                         return false;
                     }
+                    // if(/^\.\w*/.test(filesAndDirs[i].name) ||/\/\.\w*/g.test(path)) continue; //排查隐藏文件目录和文件
                     fileDrop.filesList.push({
                         file:filesAndDirs[i],
                         path:bt.get_file_path(path +'/'+ filesAndDirs[i].name).replace('//','/'),
@@ -125,6 +114,24 @@ var fileDrop = {
 		}
         
     },
+    // 获取上传速度
+    get_timer_speed:function(speed){
+        var that = this,num = 0;
+        if(speed == undefined) speed = 1000
+        that.speedInterval = setInterval(function(){
+            if(that.uploadedSize - that.topUploadedSize === 0){
+                that.timerSpeed = that.timerSpeed == 0 ? 0:(parseInt(that.timerSpeed / num));
+                num += 1;
+            }else{
+                that.timerSpeed = that.uploadedSize - that.topUploadedSize;
+                num = 0;
+            }
+            that.topUploadedSize = that.uploadedSize;
+            $('.file_upload_info .uploadSpeed').text(that.to_size(isNaN(that.timerSpeed)?0:that.timerSpeed)+'/s');
+            var estimateTime = that.time(parseInt(((that.uploadAllSize - that.uploadedSize) / that.timerSpeed) * 1000))
+            if(!isNaN(that.timerSpeed)) $('.file_upload_info .uploadEstimate').text(estimateTime.indexOf('NaN') == -1?estimateTime:'0秒');
+        },speed);
+    },
     // 上传视图
     dialog_view:function(config){
         var that = this,html = '';
@@ -143,7 +150,7 @@ var fileDrop = {
                 btn:['开始上传','取消上传'],
                 title: '上传文件到【'+ bt.get_cookie('Path')  +'】--- 支持断点续传',
                 skin:'file_dir_uploads',
-                content:'<div style="padding:15px 15px 10px 15px;"><div class="upload_btn_groud"><div class="btn-group"><button type="button" class="btn btn-primary btn-sm upload_file_btn">上传文件</button><button type="button" class="btn btn-primary  btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span><span class="sr-only">Toggle Dropdown</span></button><ul class="dropdown-menu"><li><a href="#" data-type="file">上传文件</a></li><li><a href="#" data-type="dir">上传目录</a></li></ul></div><div class="file_upload_info" style="display:none;"><span>总进度&nbsp;<i class="uploadProgress"></i>，正在上传&nbsp;<i class="uploadNumber"></i>，</span><span style="display:none">上传失败&nbsp;<i class="uploadError"></i></span><span>上传速度&nbsp;<i class="uploadSpeed">获取中</i>，</span><span>预计上传时间&nbsp;<i class="uploadEstimate">获取中</i></span><i></i></div></div><div class="upload_file_body '+ (html==''?'active':'') +'">'+ (html!=''?('<ul class="dropUpLoadFileHead" style="padding-right:'+ (is_show?'15':'0') +'px"><li class="fileTitle"><span class="filename">文件名</span><span class="filesize">文件大小</span><span class="fileStatus">上传状态</span></li></ul><ul class="dropUpLoadFile list-list">'+ html +'</ul>'):'<span>请将需要上传的文件拖到此处'+ (!that.is_webkit?'<i style="display: block;font-style: normal;margin-top: 10px;color: red;font-size: 17px;">当前浏览器暂不支持拖动上传，推荐使用Chrome浏览器或WebKit内核的浏览。</i>':'') +'</span>') +'</div></div>',
+                content:'<div style="padding:15px 15px 10px 15px;"><div class="upload_btn_groud"><div class="btn-group"><button type="button" class="btn btn-primary btn-sm upload_file_btn">上传文件</button><button type="button" class="btn btn-primary  btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span><span class="sr-only">Toggle Dropdown</span></button><ul class="dropdown-menu"><li><a href="#" data-type="file">上传文件</a></li><li><a href="#" data-type="dir">上传目录</a></li></ul></div><div class="file_upload_info" style="display:none;"><span>总进度&nbsp;<i class="uploadProgress"></i>，正在上传&nbsp;<i class="uploadNumber"></i>，</span><span style="display:none">上传失败&nbsp;<i class="uploadError"></i></span><span>上传速度&nbsp;<i class="uploadSpeed">获取中</i>，</span><span>预计上传时间&nbsp;<i class="uploadEstimate">获取中</i></span><i></i></div></div><div class="upload_file_body '+ (html==''?'active':'') +'">'+ (html!=''?('<ul class="dropUpLoadFileHead" style="padding-right:'+ (is_show?'15':'0') +'px"><li class="fileTitle"><span class="filename">文件名</span><span class="filesize">文件大小</span><span class="fileStatus">上传状态</span></li></ul><ul class="dropUpLoadFile list-list">'+ html +'</ul>'):'<span>请将需要上传的文件拖到此处</span>') +'</div></div>',
                 success:function(){
                     $('#mask_layer').hide();
                     $('.file_dir_uploads .layui-layer-max').hide();
@@ -153,6 +160,7 @@ var fileDrop = {
                         $('<input type="file" multiple="true" autocomplete="off" '+ (type == 'dir'?'webkitdirectory=""':'') +' />').change(function(e){
                             var files = e.target.files,arry = [];
                             for(var i=0;i<files.length;i++){
+                                // if(/^\.\w*/.test(files[i].name) || /\/\.\w*/g.test(files[i].webkitRelativePath)) continue;
                                 var config = {
                                     file:files[i],
                                     path: bt.get_file_path('/' + files[i].webkitRelativePath).replace('//','/') ,
@@ -205,7 +213,7 @@ var fileDrop = {
                         that.upload_file();
                         that.initTimer = new Date();
                         that.uploading = true;
-                        //that.get_timer_speed();
+                        that.get_timer_speed();
                     }
                 },
                 btn2:function (index, layero){
@@ -347,7 +355,6 @@ var fileDrop = {
     },
     // 上传文件,文件开始字段，文件编号
     upload_file:function(fileStart,index){
-        
         if(fileStart == undefined && this.uploadSuspend.length == 0) fileStart = 0,index = 0;
         if(this.filesList.length === index){
             clearInterval(this.speedInterval);
@@ -356,14 +363,9 @@ var fileDrop = {
             return false;
         }
         var that = this;
-        that.splitEndTime = new Date().getTime()
-        that.get_timer_speed()
-
-        that.splitStartTime = new Date().getTime()
         var item = this.filesList[index],fileEnd = '';
         if(item == undefined) return false;
         fileEnd = Math.min(item.file.size, fileStart + this.splitSize),
-        that.fileSize = fileEnd - fileStart
         form = new FormData();
         if(fileStart == 0){
             that.startTime = new Date();
@@ -390,7 +392,6 @@ var fileDrop = {
                     }else{
                         that.uploadedSize += parseInt(fileEnd - fileStart);  
                     }
-
                     that.upload_file(data,index);
                 }else{
                     if(data.status){
@@ -403,7 +404,6 @@ var fileDrop = {
                         that.errorLength ++;
                     }
                 }
-                
             },
             error:function(e){
                 if(that.filesList[index].req_error === undefined) that.filesList[index].req_error = 1
@@ -415,28 +415,9 @@ var fileDrop = {
                 }
                 that.filesList[index].req_error += 1;
                 that.upload_file(fileStart,index)
-
-                
             }
         });
     }, 
-    // 获取上传速度
-    get_timer_speed:function(speed){
-        var done_time = new Date().getTime()
-        if(done_time - this.speedLastTime > 1000){
-            var that = this,num = 0;
-            if(speed == undefined) speed = 200
-            var s_time = (that.splitEndTime - that.splitStartTime) / 1000;
-            that.timerSpeed = (that.fileSize / s_time).toFixed(2)
-            that.updateedSizeLast = that.uploadedSize
-            if(that.timerSpeed < 2) return;
-
-            $('.file_upload_info .uploadSpeed').text(that.to_size(isNaN(that.timerSpeed)?0:that.timerSpeed)+'/s');
-            var estimateTime = that.time(parseInt(((that.uploadAllSize - that.uploadedSize) / that.timerSpeed) * 1000))
-            if(!isNaN(that.timerSpeed)) $('.file_upload_info .uploadEstimate').text(estimateTime.indexOf('NaN') == -1?estimateTime:'0秒');
-            this.speedLastTime = done_time;
-        }
-    },
     time:function(date){
         var hours = Math.floor(date / (60 * 60 * 1000));
         var minutes = Math.floor(date / (60 * 1000));

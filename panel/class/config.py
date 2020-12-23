@@ -524,6 +524,9 @@ class config:
         rep = r"\s*pm\s*=\s*(\w+)\s*"
         tmp = re.search(rep, conf).groups()
         data['pm'] = tmp[0]
+        data['unix'] = 'unix'
+        if not isinstance(public.get_fpm_address(version),str):
+            data['unix'] = 'tcp'
         
         return data
 
@@ -559,9 +562,19 @@ class config:
             if conf.find('listen.backlog = -1') != -1:
                 rep = r"\s*listen\.backlog\s*=\s*([0-9-]+)\s*"
                 conf = re.sub(rep, "\nlisten.backlog = 8192\n", conf)
+
+        if get.listen == 'unix':
+            listen = '/tmp/php-cgi-{}.sock'.format(version)
+        else:
+            listen = '127.0.0.1:10{}1'.format(version)
+            
+
+        rep = r'\s*listen\s*=\s*.+\s*'
+        conf = re.sub(rep, "\nlisten = "+listen+"\n", conf)
         
         public.writeFile(file,conf)
         public.phpReload(version)
+        public.sync_php_address(version)
         public.WriteLog("TYPE_PHP",'PHP_CHILDREN', (version,max_children,start_servers,min_spare_servers,max_spare_servers))
         return public.returnMsg(True, 'SET_SUCCESS')
     
@@ -571,6 +584,7 @@ class config:
         new_time = int(time_str)
         time_arr = time.localtime(new_time)
         date_str = time.strftime("%Y-%m-%d %H:%M:%S", time_arr)
+        public.writeFile('/tmp/2',str(date_str))
         public.ExecShell('date -s "%s"' % date_str)
         public.WriteLog("TYPE_PANEL", "DATE_SUCCESS")
         return public.returnMsg(True,"DATE_SUCCESS")
@@ -1342,9 +1356,8 @@ class config:
         import panelSite
         site_info = public.M('sites').where('id=?', (get.id,)).field('name,path').find()
         session_path = "/www/php_session/{}".format(site_info["name"])
-        if not os.path.exists(session_path):
+        if os.path.exists(session_path):
             os.makedirs(session_path)
-            public.ExecShell('chown www.www {}'.format(session_path))
         run_path = panelSite.panelSite().GetSiteRunPath(get)["runPath"]
         user_ini_file = "{site_path}{run_path}/.user.ini".format(site_path=site_info["path"], run_path=run_path)
         conf = "session.save_path={}/\nsession.save_handler = files".format(session_path)
@@ -1456,6 +1469,14 @@ class config:
             public.writeFile(pfile,'True')
         return public.returnMsg(True,'设置成功!')
 
+    # 是否显示工单
+    def show_workorder(self,get):
+        pfile = 'data/not_workorder.pl'
+        if os.path.exists(pfile):
+            os.remove(pfile)
+        else:
+            public.writeFile(pfile,'True')
+        return public.returnMsg(True,'设置成功!')
 
     # 获取菜单列表
     def get_menu_list(self,get):

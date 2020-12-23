@@ -261,6 +261,19 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             return '1'
         return '0'
 
+    def __check_favorite(self,filepath,favorites_info):
+        for favorite in favorites_info:
+            if filepath == favorite['path']:
+                return '1'
+        return '0'
+
+    def __check_share(self,filename):
+        my_table = 'download_token'
+        result = public.M(my_table).where('filename=?',(filename,)).getField('id')
+        if result:
+            return str(result)
+        return '0'
+
     # 取文件/目录列表
     def GetDir(self, get):
         if not hasattr(get, 'path'):
@@ -297,6 +310,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         info = {}
         info['count'] = self.GetFilesCount(get.path, search)
         info['row'] = 100
+        if 'share' in get and get.share:
+            info['row'] = 5000
         info['p'] = 1
         if hasattr(get, 'p'):
             try:
@@ -317,6 +332,9 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
 
         i = 0
         n = 0
+
+        data['STORE'] = self.get_files_store(None)
+        data['FILE_RECYCLE'] = os.path.exists('data/recycle_bin.pl')
 
         if not hasattr(get, 'reverse'):
             for filename in os.listdir(get.path):
@@ -355,11 +373,16 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                     except:
                         user = str(stat.st_uid)
                     size = str(stat.st_size)
+                    # 判断文件是否已经被收藏
+                    favorite = self.__check_favorite(filePath,data['STORE'])
                     if os.path.isdir(filePath):
-                        dirnames.append(filename+';'+size+';' +
-                                        mtime+';'+accept+';'+user+';'+link + ';' +self.get_download_id(filePath)+';'+ self.is_composer_json(filePath))
+                        dirnames.append(filename+';'+size+';' + mtime+';'+accept+';'+user+';'+link + ';' +
+                                        self.get_download_id(filePath)+';'+ self.is_composer_json(filePath)+';'
+                                        +favorite+';'+self.__check_share(filePath))
                     else:
-                        filenames.append(filename+';'+size+';'+mtime+';'+accept+';'+user+';'+link+';'+self.get_download_id(filePath))
+                        filenames.append(filename+';'+size+';'+mtime+';'+accept+';'+user+';'+link+';'
+                                         +self.get_download_id(filePath)+';' + self.is_composer_json(filePath)+';'
+                                         +favorite+';'+self.__check_share(filePath))
                     n += 1
                 except:
                     continue
@@ -383,8 +406,11 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 if not os.path.exists(filename): continue
                 file_info = self.__format_stat(filename, get.path)
                 if not file_info: continue
+                favorite = self.__check_favorite(filename, data['STORE'])
                 r_file = file_info['name'] + ';' + str(file_info['size']) + ';' + str(file_info['mtime']) + ';' + str(
-                    file_info['accept']) + ';' + file_info['user'] + ';' + file_info['link']+';' + self.get_download_id(filename) + ';' + self.is_composer_json(filename)
+                    file_info['accept']) + ';' + file_info['user'] + ';' + file_info['link']+';'\
+                         + self.get_download_id(filename) + ';' + self.is_composer_json(filename)+';'\
+                         + favorite+';'+self.__check_share(filename)
                 if os.path.isdir(filename):
                     dirnames.append(r_file)
                 else:
@@ -393,13 +419,69 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
 
             data['DIR'] = dirnames
             data['FILES'] = filenames
-
         data['PATH'] = str(get.path)
-        data['STORE'] = self.get_files_store(None)
+        for i in range(len(data['DIR'])):
+            data['DIR'][i] += ';' + self.get_file_ps( os.path.join(data['PATH'] , data['DIR'][i].split(';')[0]))
+        
+        for i in range(len(data['FILES'])):
+            data['FILES'][i] += ';' + self.get_file_ps( os.path.join(data['PATH'] , data['FILES'][i].split(';')[0]))
+        
         if hasattr(get, 'disk'):
             import system
             data['DISK'] = system.system().GetDiskInfo()
         return data
+
+
+    def get_file_ps(self,filename):
+        '''
+            @name 获取文件或目录备注
+            @author hwliang<2020-10-22>
+            @param filename<string> 文件或目录全路径
+            @return string
+        '''
+        ps_path = '/www/server/panel/data/files_ps'
+        f_key1 = '/'.join((ps_path,public.md5(filename)))
+        if os.path.exists(f_key1):
+            return public.readFile(f_key1)
+        
+        f_key2 = '/'.join((ps_path,public.md5(os.path.basename(filename))))
+        if os.path.exists(f_key2):
+            return public.readFile(f_key2)
+        return ''
+
+
+    def set_file_ps(self,args):
+        '''
+            @name 设置文件或目录备注
+            @author hwliang<2020-10-22>
+            @param filename<string> 文件或目录全路径
+            @param ps_type<int> 备注类型 0.完整路径 1.文件名称
+            @param ps_body<string> 备注内容
+            @return dict
+        '''
+        filename = args.filename.strip()
+        ps_type = int(args.ps_type)
+        ps_body = args.ps_body
+        ps_path = '/www/server/panel/data/files_ps'
+        if not os.path.exists(ps_path):
+            os.makedirs(ps_path,384)
+        if ps_type == 1:
+            f_name = os.path.basename(filename)
+        else:
+            f_name = filename
+        ps_key = public.md5(f_name)
+
+        f_key = '/'.join((ps_path,ps_key))
+        if ps_body:
+            public.writeFile(f_key,ps_body)
+            public.WriteLog('文件管理','设置文件名[{}],备注为: {}'.format(f_name,ps_body))
+        else:
+            if os.path.exists(f_key):os.remove(f_key)
+            public.WriteLog('文件管理','清除文件备注[{}]'.format(f_name))
+        return public.returnMsg(True,'设置成功')
+
+        
+
 
     def __list_dir(self, path, my_sort='name', reverse=False):
         '''
@@ -519,8 +601,10 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             link = ' -> ' + os.readlink(filename)
         tmp_path = (path + '/').replace('//', '/')
         if path and tmp_path != '/':
-            filename = filename.replace(tmp_path, '')
-        return filename + ';' + size + ';' + mtime + ';' + accept + ';' + user + ';' + link+';'+ down_url
+            filename = filename.replace(tmp_path, '',1)
+        favorite = self.__check_favorite(filename, self.get_files_store(None))
+        return filename + ';' + size + ';' + mtime + ';' + accept + ';' + user + ';' + link+';'+ down_url+';'+ \
+               self.is_composer_json(filename)+';'+favorite+';'+self.__check_share(filename)
 
     #获取指定目录下的所有视频或音频文件
     def get_videos(self,args):
@@ -562,6 +646,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if sys.version_info[0] == 2:
             get.path = get.path.encode('utf-8').strip()
         try:
+            if get.path[-1] == '.':
+                return public.returnMsg(False, '文件结尾不建议使用 "."，因为可能存在安全隐患')
             if not self.CheckFileName(get.path):
                 return public.returnMsg(False, '文件名中不能包含特殊字符!')
             if os.path.exists(get.path):
@@ -581,6 +667,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if sys.version_info[0] == 2:
             get.path = get.path.encode('utf-8').strip()
         try:
+            if get.path[-1] == '.':
+                return public.returnMsg(False, '目录结尾不建议使用 "."，因为可能存在安全隐患')
             if not self.CheckFileName(get.path):
                 return public.returnMsg(False, '目录名中不能包含特殊字符!')
             if os.path.exists(get.path):
@@ -614,7 +702,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 if not self.delete_empty(get.path):
                     return public.returnMsg(False, 'DIR_ERR_NOT_EMPTY')
 
-            if os.path.exists('data/recycle_bin.pl'):
+            if os.path.exists('data/recycle_bin.pl') and session.get('debug') != 1:
                 if self.Mv_Recycle_bin(get):
                     self.site_path_safe(get)
                     return public.returnMsg(True, 'DIR_MOVE_RECYCLE_BIN')
@@ -646,7 +734,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if get.path.find('.user.ini') != -1:
             public.ExecShell("chattr -i '"+get.path+"'")
         try:
-            if os.path.exists('data/recycle_bin.pl'):
+            if os.path.exists('data/recycle_bin.pl') and session.get('debug') != 1:
                 if self.Mv_Recycle_bin(get):
                     self.site_path_safe(get)
                     return public.returnMsg(True, 'FILE_MOVE_RECYCLE_BIN')
@@ -815,6 +903,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if sys.version_info[0] == 2:
             get.sfile = get.sfile.encode('utf-8')
             get.dfile = get.dfile.encode('utf-8')
+        if get.dfile[-1] == '.':
+            return public.returnMsg(False, '文件结尾不建议使用 "."，因为可能存在安全隐患')
         if not os.path.exists(get.sfile):
             return public.returnMsg(False, 'FILE_NOT_EXISTS')
 
@@ -843,7 +933,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             get.dfile = get.dfile.encode('utf-8')
         if not os.path.exists(get.sfile):
             return public.returnMsg(False, 'DIR_NOT_EXISTS')
-
+        if get.dfile[-1] == '.':
+            return public.returnMsg(False, '目录结尾不建议使用 "."，因为可能存在安全隐患')
         # if os.path.exists(get.dfile):
         #    return public.returnMsg(False,'DIR_EXISTS')
 
@@ -866,6 +957,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if sys.version_info[0] == 2:
             get.sfile = get.sfile.encode('utf-8')
             get.dfile = get.dfile.encode('utf-8')
+        if get.dfile[-1] == '.':
+            return public.returnMsg(False, '目录或目录结尾不建议使用 "."，因为可能存在安全隐患')
         if not self.CheckFileName(get.dfile):
             return public.returnMsg(False, '文件名中不能包含特殊字符!')
         if get.sfile == '/www/Recycle_bin':
@@ -1273,7 +1366,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             public.WriteLog('TYPE_FILE', 'FILE_ALL_ACCESS')
             return public.returnMsg(True, 'FILE_ALL_ACCESS')
         else:
-            isRecyle = os.path.exists('data/recycle_bin.pl')
+            isRecyle = os.path.exists('data/recycle_bin.pl') and session.get('debug') != 1
             path = get.path
             get.data = json.loads(get.data)
             l = len(get.data)
