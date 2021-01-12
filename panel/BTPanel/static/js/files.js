@@ -146,7 +146,7 @@ var fileDrop = {
                 type: 1,
                 closeBtn: 1,
                 maxmin:true,
-                area: ['640px','605px'],
+                area: ['590px','505px'],
                 btn:['开始上传','取消上传'],
                 title: '上传文件到【'+ bt.get_cookie('Path')  +'】--- 支持断点续传',
                 skin:'file_dir_uploads',
@@ -1226,7 +1226,7 @@ function showSeclect() {
 }
 $(window).keyup(function(e){
     var tagName = e.target.tagName.toLowerCase();
-    if(e.keyCode === 8 && tagName !== 'input' && tagName !== 'textarea'){ //判断当前键值码为space
+    if(e.keyCode === 8 && tagName !== 'input' && tagName !== 'textarea' && $(e.target).attr('data-backspace')){ //判断当前键值码为space
         if($('.aceEditors')[0] == undefined || $('.aceEditors .layui-layer-content').height() === 0){
             BackDir();
         }

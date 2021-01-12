@@ -482,10 +482,9 @@ var soft = {
             }
             var btn_config = {title:null,href:'javascript:;',btn:null,'class':'btn btn-success btn-xs va0 ml15','style':"margin-left:10px;",click:null};
             var set_btn_style = function(res){
-                if(!res.status){
+                if(!res.status || !res){
                     $.extend(btn_config,{title:'立即登录',btn:'立即登录',click:function(){
                         bt.pub.bind_btname(function(){
-                            bt.set_cookie('bt_user_info');
                             window.location.reload();
                         });
                     }});
@@ -895,7 +894,7 @@ var soft = {
                         if (item) {
                             if (item.os == undefined || item['os'] == bt.os) {
                                 if (name.indexOf("5.2") >= 0 && item.php53) continue;
-                                if (webcache && (item.type=='set_fpm_config' || item.type=='get_php_status')) continue;
+                                if (webcache && (item.type == 'set_fpm_config' || item.type == 'fpm_config' || item.type=='get_php_status')) continue;
                                 var apache24 = item.apache24 ? 'class="apache24"' : '';
                                 menu.append($('<p data-id="' + i + '" ' + apache24 + ' onclick="soft.get_tab_contents(\'' + item.type + '\',this)" >' + item.title + '</p>').data('item', item))
                             }
@@ -977,12 +976,12 @@ var soft = {
 				tabCon.append(bt.render_help(_arry))
 				$('.return_php_info').click(function(){
 					$('.bt-soft-menu p:eq(12)').click();
-				});
-                var fileName = bt.soft.get_config_path(version);
-                var loadT = bt.load(lan.soft.get);
+                });
+                var fileName = bt.soft.get_config_path(version),
+                loadT = bt.load(lan.soft.get);
                 if (data.php_ini) fileName = data.php_ini;
                 var config = bt.aceEditor({el:'textBody',path:fileName});
-                $("#OnlineEditFileBtn").click(function () {
+                $("#OnlineEditFileBtn").click(function(){
                     bt.saveEditor(config);
                 });
                 break;

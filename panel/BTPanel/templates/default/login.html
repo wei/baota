@@ -7,21 +7,15 @@
     <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon" />
     <title>{{g.title}}</title>
     <link rel="stylesheet" type="text/css" href="/static/css/login.css?date={{g.version}}">
-        <script type="text/javascript">
-        function IEVersion() {
-            // 取得浏览器的userAgent字符串
-            var userAgent = navigator.userAgent;
-            // 判断是否为小于IE11的浏览器
-            var isLessIE11 = userAgent.indexOf('compatible') > -1 && userAgent.indexOf('MSIE') > -1;
-            // 判断是否为IE的Edge浏览器
-            var isEdge = userAgent.indexOf('Edge') > -1 && !isLessIE11;
-            // 判断是否为IE11浏览器
-            var isIE11 = userAgent.indexOf('Trident') > -1 && userAgent.indexOf('rv:11.0') > -1;
+    <script type="text/javascript">
+        var ie_version = (function() {
+            var userAgent = navigator.userAgent,
+            	isLessIE11 = userAgent.indexOf('compatible') > -1 && userAgent.indexOf('MSIE') > -1,
+				isEdge = userAgent.indexOf('Edge') > -1 && !isLessIE11,
+				isIE11 = userAgent.indexOf('Trident') > -1 && userAgent.indexOf('rv:11.0') > -1;
             if (isLessIE11) {
                 var IEReg = new RegExp('MSIE (\\d+\\.\\d+);');
-                // 正则表达式匹配浏览器的userAgent字符串中MSIE后的数字部分，，这一步不可省略！！！
                 IEReg.test(userAgent);
-                // 取正则表达式中第一个小括号里匹配到的值
                 var IEVersionNum = parseFloat(RegExp['$1']);
                 if (IEVersionNum === 7) {// IE7
                     return 7
@@ -31,24 +25,22 @@
                     return 9
                 } else if (IEVersionNum === 10) { // IE10
                     return 10
-                } else {// IE版本<7
+                } else {
                     return 6
                 }
             } else if (isEdge) { // edge
-               
                 return 'edge'
             } else if (isIE11) {// IE11
                 return 11
             } else {// 不是ie浏览器
                 return -1
             }
-        }
-        if(IEVersion() > -1 && IEVersion() < 9){
+        }());
+        if(ie_version != -1 && ie_version < 9){
             window.location.href = '/tips';
         }
     </script>
 </head>
-
 <body>
     <style type="text/css">
         @media screen and (max-width: 640px) {
@@ -107,6 +99,7 @@
             width: 160px;
             margin: 0 auto;
             margin-top: 15px;
+            text-align: center;
         }
 
             .list_scan > img {
@@ -275,11 +268,11 @@
                 </form>
             </div>
             <div class="scanCode" style="display: none;">
-                <div class="titles"><span>堡塔APP/小程序扫码登录</span></div>
+                <div class="titles"><span>堡塔APP扫码登录</span></div>
                 <div class="qrCode" id="qrcode"></div>
                 <div class="scanTip">
                     <div class="list_scan">
-                        <span>打开<a href="https://www.bt.cn/bbs/thread-47408-1-1.html" target="_blank" class="btlink">堡塔APP</a>或<a href="javascript:;" class="btlink"> 宝塔小程序<div class="weChatSamll"><img src="//app.bt.cn/static/app.png"><em></em></div></a>
+                        <span>打开<a href="https://www.bt.cn/bbs/thread-47408-1-1.html" target="_blank" class="btlink">堡塔APP</a>
                         </span>
                         <div class="scan_tips"> <img src="/static/img/sCan.png" /><span>扫一扫</span></div>
                     </div>
@@ -295,15 +288,12 @@
         </div>
     </div>
     <script type="text/javascript">
-
-        if(typeof(String.prototype.trim) === "undefined")
-        {
+        if(typeof(String.prototype.trim) === "undefined"){
             String.prototype.trim = function() 
             {
                 return String(this).replace(/^\s+|\s+$/g, '');
             };
         }
-
         select_host = {
             hosts: {{data.hosts|safe}},
             my_hosts : {},
@@ -437,17 +427,17 @@
                 Wreset();
                 var setTime = '';
                 $.get('/public?name=app&fun=login_qrcode', function (res) {
-                    if (res.status) {
+                    // if (res.status) {
                         $('#qrcode').qrcode({
                             render: "canvas",
                             width: 150,
                             height: 150,
                             background: "#fefefe",
                             foreground: "#333",
-                            text: res.msg
+                            text: res.status?res.msg:'https://www.bt.cn/download/app.html'
                         });
                         $('.entrance').show();
-                    }
+                    // }
                 }).error(function (res, textStatus, errorThrown) {
                     if (res.status == 404) {
                         $('.entrance').hide();
@@ -496,7 +486,31 @@
             window.onresize = function () {
                 Wreset();
             }
-            $(function () {
+            $(function(){
+                // $('.loginform input').blur(function(){
+                //     var $this = $(this),type = $this.attr('name'),validFormTip = $this.next(),val = $this.val();
+                //     switch(type){
+                //         case 'username':
+                //             if(val == ''){
+                //                 $this.addClass('Validform_error');
+                //                 validFormTip.addClass('Validform_wrong').removeClass('Validform_right').text($this.attr('nullmsg'));
+                //             }else if(val.length < 3){
+                //                 $this.addClass('Validform_error');
+                //                 validFormTip.addClass('Validform_wrong').removeClass('Validform_right').text($this.attr('errormsg'));
+                //             }else{
+                //                 $this.removeClass('Validform_error');
+                //                 validFormTip.removeClass('Validform_wrong').addClass('Validform_right').text('');
+                //             }
+                //         break;
+                //         case 'password':
+                //             if(val == ''){
+                //                 $this.addClass('Validform_error');
+                //                 validFormTip.addClass('Validform_wrong').text($this.attr('nullmsg'));
+                //             }
+                //         break;
+                //     }
+                // });
+                // return false;
                 $(".loginform").Validform({
                     tiptype: function (msg, o, cssctl) {
                         if (!o.obj.is("form")) {

@@ -293,8 +293,7 @@ var bt =
         if (type != "local" && type != "session") key = type, type = 'local';
         window[type + 'Storage'].clear();
     },
-	set_cookie : function(key,val,time)
-	{
+	set_cookie : function(key,val,time){
 		if(time != undefined){
 			var exp = new Date();
 			exp.setTime(exp.getTime() + time);
@@ -307,8 +306,7 @@ var bt =
 		}
 		document.cookie = key + "="+ escape (val) + ";expires=" + time;
 	},
-	get_cookie : function(key)
-	{
+	get_cookie : function(key){
 		var arr,reg=new RegExp("(^| )"+key+"=([^;]*)(;|$)");
 		if(arr=document.cookie.match(reg))
 		{
@@ -1303,8 +1301,7 @@ bt.pub = {
             }
         })	
     },
-	bind_btname : function(callback)
-	{
+	bind_btname:function(callback){
 		layer.open({
 			type: 1,
 			title: '绑定宝塔官网账号',
@@ -1314,23 +1311,23 @@ bt.pub = {
 			content:'<div class="libLogin pd20" ><div class="bt-form text-center"><div class="line mb15"><h3 class="c2 f16 text-center mtb20">绑定宝塔官网账号</h3></div><div class="line"><input class="bt-input-text" name="username2" type="text" placeholder="手机" id="p1"></div><div class="line"><input autocomplete="new-password" class="bt-input-text" type="password" name="password2"  placeholder="密码" id="p2"></div><div class="line"><input class="login-button" value="登录" type="button" ></div><p class="text-right"><a class="btlink" href="https://www.bt.cn/register.html" target="_blank">未有账号，去注册</a></p></div></div>',
 			success:function(){
 			    $('.login-button').click(function(){
-    				p1 = $("#p1").val();
-    				p2 = $("#p2").val();
-    				var loadT = bt.load(lan.config.token_get);
+    				var p1 = $("#p1").val(),p2 = $("#p2").val(),loadT = bt.load(lan.config.token_get);
     				bt.send('GetToken','ssl/GetToken',"username=" + p1 + "&password=" + p2,function(rdata){
     					loadT.close();
     					bt.msg(rdata);
     					if(rdata.status) {
+    					    var username = p1 = p1.substring(0,3)+'****'+p1.substring(7,11);
+    					    bt.set_cookie('bt_user_info',JSON.stringify({data:{username:username}}));
+    					    $('.bind-user').text(username);
     						if(callback){
     							layer.closeAll();
     							callback(rdata)
-    						}
-    						else{
+    						}else{
     							window.location.reload();
     						}					
     						$("input[name='btusername']").val(p1);
     					}
-    				})	
+    				});
     			});
     			$('.libLogin input[type=password]').keyup(function(e){
     				if(e.keyCode == 13){
@@ -3594,8 +3591,7 @@ bt.soft = {
 					if(callback) callback(rdata);
 					bt.msg(rdata);
 				})
-			}
-			else{
+			}else{
 				bt.send('create_order_voucher','auth/create_order_voucher',{code:code},function(rdata){
 					loading.close();
 					if(callback){ 
@@ -3606,14 +3602,14 @@ bt.soft = {
 				})
 			}
 		},
-		create_order:function(pid,cycle,callback){
-			if(pid){				
-				bt.send('get_buy_code','auth/get_buy_code',{pid:pid,cycle:cycle},function(rdata){
+		create_order:function(config,callback){
+			if(typeof config.pid != 'undefined'){				
+				bt.send('get_buy_code','auth/get_buy_code',config,function(rdata){
 					if(callback) callback(rdata);
 				})
 			}
 			else{
-				bt.send('create_order','auth/create_order',{cycle:cycle},function(rdata){
+				bt.send('create_order','auth/create_order',config,function(rdata){
 					if(callback) callback(rdata);
 				})
 			}
@@ -3658,9 +3654,10 @@ bt.soft = {
 				</div>\
 				<div class="title-desc">\
 					<p>包含所有<b>专业版</b>功能和：</p>\
-					<p>1、socks5代理服务器</p>\
+					<p>1、提供在线客服工单协助</p>\
 					<p>2、多用户管理插件（仅可查看日志）</p>\
 					<p>3、后期还会有10+企业版专用插件</p>\
+					<p>4、官方跟进响应的QQ群（需年付）</p>\
 					<p>4、官方跟进响应的QQ群（需年付）</p>\
 					<p>5、不定期线上运维培训（需年付）</p>\
 				</div>\
@@ -3751,34 +3748,34 @@ bt.soft = {
             });
 	        return false;
 	    }
-		if(typeof config == "string") config = JSON.parse(config)
-		var config = {
-			name:config.name, // 插件名称
-			pid:config.pid, // 产品ID
-			plugin:config.plugin ||  null,// 是否为插件
-			renew:config.renew || null, // 插件续费周期，如果包含，这代表产品续费
-			active:config.active || '', // 设置默认选中产品
-			type:config.type || '',
-			limit:config.limit
-		},title = '',that = this,endTime = null;
-		config = $.extend(config,{
-			pro: parseInt(bt.get_cookie('pro_end')), // 专业版状态
-			ltd: parseInt(bt.get_cookie('ltd_end')) // 企业版状态
-		});
-		if(config.plugin){ // 条件：当前为插件
-			title = (config.renew == -1?'购买':'续费') + config.name;
-			ndTime = config.renew != -1?config.renew:null
-		}else if(config.pro == -1 && config.ltd == -1){  // 条件：专业版和企业版都没有购买过
-			title = '升级付费版，对应版本插件，免费使用';
-		}else if(config.ltd > 0){  // 条件：企业版续费
-			title = '续费' +(config.name == ''?'宝塔专业版':config.name);
-			endTime = config.ltd;
-		}else if(config.pro > 0 || config.pro == -2){  // 条件：专业版续费
-			title = '续费' + (config.name == ''?'宝塔专业版':config.name);
-			endTime = config.pro;
-		}else if(config.ltd == -2){
-			title = '续费' + (config.name == ''?'宝塔专业版':config.name);
-			endTime = config.ltd;
+		if(typeof config == "string") config = JSON.parse(config);
+		config = $.extend({
+			plugin:null,
+			renew:null,
+			active:'',
+			type:'',
+			pro: parseInt(bt.get_cookie('pro_end')),
+			ltd: parseInt(bt.get_cookie('ltd_end'))}
+			,config);
+		var title = '',that = this,endTime = null;
+		if(!config.is_alone){
+			if(config.plugin){ // 条件：当前为插件
+				title = (config.renew == -1?'购买':'续费') + config.name;
+				ndTime = config.renew != -1?config.renew:null
+			}else if(config.pro == -1 && config.ltd == -1){  // 条件：专业版和企业版都没有购买过
+				title = '升级付费版，对应版本插件，免费使用';
+			}else if(config.ltd > 0){  // 条件：企业版续费
+				title = '续费' +(config.name == ''?'宝塔专业版':config.name);
+				endTime = config.ltd;
+			}else if(config.pro > 0 || config.pro == -2){  // 条件：专业版续费
+				title = '续费' + (config.name == ''?'宝塔专业版':config.name);
+				endTime = config.pro;
+			}else if(config.ltd == -2){
+				title = '续费' + (config.name == ''?'宝塔专业版':config.name);
+				endTime = config.ltd;
+			}
+		}else{
+			title = (config.ltd>0?'续费':'购买')+'宝塔企业版';
 		}
 		bt.open({
 			type:1,
@@ -3828,11 +3825,13 @@ bt.soft = {
 					arry.push({title:'<span class="pro-font-icon"></span>',name:'',pid:'',ps:'推荐个人购买',active:  (((config.type == 8 && !config.plugin) || config.limit == 'pro' || (config.pro > 0 || config.pro == -2)) && config.ltd < 0 && (config.ltd == -2?(config.pro == -2?false:true):true))});
 				}
 			
-				if(((config.ltd > 0 || config.ltd == -2 || config.pro == -2) || (config.ltd == -1 && config.pro == -1) || config.limit == 'ltd') && (config.pro < 0 || (config.pro >= 0 && config.ltd >0))){
-					arry.push({title:'<span class="ltd-font-icon"></span>',name:'宝塔面板企业版',ps:'推荐企业购买',pid:100000032,recommend:true,active:((config.type == 12 && !config.plugin && config.ltd > 0) || config.limit == 'ltd' || (config.renew == config.ltd && config.ltd > 0)? true:false)});
+				if((((config.ltd > 0 || config.ltd == -2 || config.pro == -2) || (config.ltd == -1 && config.pro == -1) || config.limit == 'ltd') && (config.pro < 0 || (config.pro >= 0 && config.ltd >0))) || (config.is_alone && config.pid == 100000032)){
+					if(config.is_alone) arry = [];
+					arry.push({title:'<span class="ltd-font-icon"></span>',name:'宝塔面板企业版',ps:'推荐企业购买',pid:100000032,recommend:true,active:config.is_alone?true:(((config.type == 12 && !config.plugin && config.ltd > 0) || config.limit == 'ltd' || (config.renew == config.ltd && config.ltd > 0) ? true : false))});
 				}
 				if(config.type == 12 && config.pro >= 0 && config.ltd < 0) $('.pro-tips').html('温馨提示：专业版升级企业版需要手动结算当前专业版授权，<a href="https://www.bt.cn/bbs/thread-50342-1-1.html" target="_blank" class="btlink">《专业版和企业版切换教程》</a>').css('color','red');
 				$('#libPay-type .li-con').append(that.product_pay_swicth('type',arry));
+				if(config.source) bt.set_cookie('pay_source',config.source);
 				that.each(arry,function(index,item){ 
 					if(item.active){
 						that.product_pay_page_refresh($.extend({condition:1},item));
@@ -3841,214 +3840,230 @@ bt.soft = {
 			},
 			end:function(){
 				clearInterval(bt.soft.pub.wxpayTimeId);
+				bt.clear_cookie('pay_source');
 			}
 		});
 	},
-	// 产品页面刷新
-	product_pay_page_refresh:function(config){
-		var condition =  config.condition,that = this;
-		switch(condition){
-			case 1:
-			    var loadT = bt.load();
-				bt.soft.pro.get_voucher(config.pid,function(rdata){
-				    loadT.close();
-					var _arry = [{title:'微信支付',condition:2},{title:'抵扣劵',condition:3}];
-					if(rdata == null) rdata = []
-					_arry[rdata.length > 0?'1':'0'].active = true;
-					$('#libPay-mode .li-con').empty().append(
-						that.product_pay_swicth('payment',{
-							name:config.name,
-							pid:config.pid,
-							data:_arry,
-							voucher_data:rdata
-						})
-					);
-					config.condition = (rdata.length > 0?3:2)
-					if(rdata.length > 0) config.voucher_data = rdata;
-					that.product_pay_page_refresh(config);
-				});
-				break;
-			case 2:
-				$('#libPay-content .li-tit').text('开通时长');
-				if(config.pid == ''){
-					$('#libPay-tips').show();
-				}else{
-					$('#libPay-tips').hide();
+    product_cache:{}, //产品周期缓存
+    order_cache:{},
+    // 获取产品周期 ，并进行对象缓存
+    get_product_discount_cache:function(config,callback){
+        var that = this;
+        if(typeof this.product_cache[config.pid] != "undefined"){
+            if(callback) callback(this.product_cache[config.pid]);
+        }else{
+            bt.soft.pro.get_product_discount_by(config.name,function(rdata){
+                if(typeof rdata.status === "boolean"){
+                    if(!rdata.status) return false;
+                }
+                that.product_cache[config.pid] = rdata;
+                setTimeout(function(){ delete that.product_cache[config.pid] },60000);
+                if(callback) callback(rdata);
+            });
+        }
+    },
+    // 产品页面刷新
+    product_pay_page_refresh: function (config){
+        var condition = config.condition, that = this;
+        switch (condition){
+            case 1:
+                var loadT = bt.load();
+                bt.soft.pro.get_voucher(config.pid, function (rdata) {
+                    loadT.close();
+                    var _arry = [{ title: '微信支付', condition: 2 },{ title: '支付宝支付', condition: 3 }, { title: '抵扣劵', condition: 4 }];
+                    if (rdata == null) rdata = [];
+                    _arry[rdata.length > 0 ? '2' : '0'].active = true;
+                    $('#libPay-mode .li-con').empty().append(
+                        that.product_pay_swicth('payment', {
+                            name: config.name,
+                            pid: config.pid,
+                            data: _arry,
+                            voucher_data: rdata
+                        })
+                    );
+                    config.condition = (rdata.length > 0?4:2) 
+                    if (rdata.length > 0) config.voucher_data = rdata;
+                    that.product_pay_page_refresh(config);
+                });
+                break;
+            case 2:
+            case 3:
+                console.log(config)
+                $('#libPay-content .li-tit').text('开通时长');
+                config.pay = condition;
+                if (config.pid == '100000030') {
+                    $('#libPay-tips').show();
+                } else {
+                    $('#libPay-tips').hide();
+                }
+                var loadT = bt.load();
+                bt.soft.get_product_discount_cache(config,function (rdata){
+                    loadT.close();
+					var _arry = [],index = $('#libPay-content .pay-cycle-btn.active').index() || 0;
+					if(index < 0) index = 0
+                    try {
+                        delete rdata.pid
+                    } catch (error) {
+                        console.log(rdata.pid);
+                    }
+                    that.each(rdata, function (key, item) {
+                        _arry.push($.extend({ cycle: parseInt(key) }, item));
+                    });
+                    _arry[index].active = true;
+                    $('#libPay-content .li-con').empty().append(
+                        that.product_pay_swicth('time',{ name: config.name, pid: config.pid, data: _arry})
+                    );
+                    config.condition = 5;
+                    config = $.extend(config, _arry[index]);
+                    that.product_pay_page_refresh(config);
+                });
+                break;
+            case 4:
+                clearInterval(bt.soft.pub.wxpayTimeId);
+                $('#libPay-content .li-tit').text('抵扣劵列表');
+                $('#libPay-pay').removeAttr('data-qecode');
+                $('#libPay-tips').hide();
+                function callback(rdata) {
+                    if(rdata == null)  rdata = [];
+                    if(rdata.length == 0){
+                        $('#libPay-content .li-con').empty()
+                        that.product_pay_page_refresh({ condition: 6, pid: '', code: false });
+                        return false;
+                    }
+                    rdata[0].active = true;
+                    $('#libPay-content .li-con').empty().append(
+                        that.product_pay_swicth('voucher', {
+                            name: config.name,
+                            pid: config.pid,
+                            data: rdata
+                        })
+                    );
+                    config.condition = 6;
+                    that.product_pay_page_refresh($.extend(config, rdata[0]));
+                }
+                if (config.voucher_data) {
+                    callback(config.voucher_data);
+                } else {
+                    bt.soft.pro.get_voucher(config.pid, function (rdata) {
+                        callback(rdata);
+                    });
+                }
+                break;
+            case 5:
+                $('#libPay-content .li-con').css('height', 'auto');
+                $('.libPay-mask').show();
+                if($('#libPay-pay').attr('data-qecode')) {
+                    var qcode = $('#libPay-content li').eq(config.dom_index).data('qrcode-url');
+                    $('#libPay-pay').find('.sale-price').html((config.price).toFixed(2));
+                    $('#libPay-pay').find('.cost-price').css('display', (config.sprice > config.price ? 'inline-block' : 'none')).html((config.sprice).toFixed(2) + '元');
+                    $('#libPay-pay').find('#PayQcode').html('<div class="loading">加载中，请稍后...</div>');
+                    if (qcode) {
+                        $('#libPay-pay').find('#PayQcode').empty().qrcode(qcode);
+                        that.product_pay_monitor({ pid: config.pid, name: config.name });
+                        $('.libPay-mask').hide();
+                        return false;
+                    }
+                }else{
+                    $('#libPay-pay').html('<div class="cloading">加载中，请稍后...</div>');
 				}
-				var loadT = bt.load();
-				bt.soft.pro.get_product_discount_by(config.name,function(rdata){
-					loadT.close();
-					var _arry = [];
-					try {
-						delete rdata.pid
-					} catch (error) {
-						
-					}
-					that.each(rdata,function(key,item){
-						_arry.push($.extend({cycle:parseInt(key)},item));
-					});
-					_arry[0].active = true;
-					$('#libPay-content .li-con').empty().append(
-						that.product_pay_swicth('time',{
-							name:config.name,
-							pid:config.pid,
-							data:_arry
-						})
-					);
-					config.condition = 4;
-					config = $.extend(config,_arry[0]);
-					that.product_pay_page_refresh(config);
-				});
-				break;
-			case 3:
-				clearInterval(bt.soft.pub.wxpayTimeId);
-				$('#libPay-content .li-tit').text('抵扣劵列表');
-				$('#libPay-pay').removeAttr('data-wechat');
-				$('#libPay-tips').hide();
-				function callback(rdata){
-					if(rdata.length == 0){
-						$('#libPay-content .li-con').empty()
-						that.product_pay_page_refresh({condition:5,pid:'',code:false});
-						return false;
-					}
-					rdata[0].active = true;
-					$('#libPay-content .li-con').empty().append(
-						that.product_pay_swicth('voucher',{
-							name:config.name,
-							pid:config.pid,
-							data:rdata
-						})
-					);
-					config.condition = 5;
-					that.product_pay_page_refresh($.extend(config,rdata[0]));
-				}
-				if(config.voucher_data){
-					callback(config.voucher_data);
-				}else{
-					bt.soft.pro.get_voucher(config.pid,function(rdata){
-						callback(rdata);
-					});
-				}
-				break;
-			case 4:
-				$('#libPay-content .li-con').css('height','auto');
-				$('.libPay-mask').show();
-				if($('#libPay-pay').attr('data-wechat')){
-					var qcode = $('#libPay-content li').eq(config.dom_index).data('qrcode-url');
-					$('#libPay-pay').find('.sale-price').html((config.price).toFixed(2));
-					$('#libPay-pay').find('.cost-price').css('display',(config.sprice > config.price?'inline-block':'none')).html((config.sprice).toFixed(2)+'元');
-					$('#libPay-pay').find('#PayQcode').html('<div class="loading">加载中，请稍后...</div>');
-					if(qcode){
-						$('#libPay-pay').find('#PayQcode').empty().qrcode(qcode);
-						that.product_pay_monitor({pid:config.pid,name:config.name}); 
-						$('.libPay-mask').hide();
-						return false;
-					}
-				}else{
-					$('#libPay-pay').html('<div class="cloading">加载中，请稍后...</div>');
-				}
-				that.pro.create_order(config.pid,config.cycle,function(rdata){
-					if(rdata.status === false){
-						bt.set_cookie('force',1);
-						if(soft) soft.flush_cache();
-						layer.msg(rdata.msg,{icon:2});
-						return;
-					}
-					if($('#libPay-pay').attr('data-wechat')){
-						var data = $('#libPay-content li.active').data();
-						$('#libPay-pay').find('#PayQcode').empty().qrcode(rdata.msg);
-						that.product_pay_monitor({pid:config.pid,name:config.name});
-						$('#libPay-content li.active').data($.extend(data,{'qrcode-url':rdata.msg}));
-						$('.libPay-mask').hide();
-						return false;
-					}
-					$('#libPay-pay').empty().append(
-						that.product_pay_swicth('wechat',$.extend({data:rdata.msg},config))
-					).attr('data-wechat',true)
-				});
-				break;
-			case 5:
-				var _html = $('<div class="paymethod-submit text-center"></div>'),_button = $('<button class="btn btn-success btn-sm f16 '+ (config.code?'':'disabled') +'" style="width: 200px; height: 40px;">'+ (config.code?'提交':'暂无抵扣劵') +'</button>');
-				_button.click(function(ev){
-					if(!config.code){
-						layer.msg('无可用优惠券');
-						return false;
-					}
-					bt.soft.pro.create_order_voucher(config.pid,config.code,function(rdata){
-						layer.closeAll();							
-						bt.set_cookie('force',1);
-						if(soft) soft.flush_cache();
-						bt.msg(rdata);
-					});
-				});
-				$('#libPay-pay').empty().append(_html.append(_button));
-				break;
-		}
-	},
-	// 产品购买，渲染方法
-	product_pay_swicth:function(type,config){
-		var _html = '',that = this;
-		switch(type){
-			case 'type': // 产品类型（配置参数）
-				_html = $('<ul class="li-c-item"></ul>');
-				this.each(config,function(index,item){
-					_html.append($('<li class="pay-cycle-btn '+ (item.active?'active':'') +'">'+
-						(item.recommend?'<span class="recommend-pay-icon"></span>':'') +
-						'<span class="item-name pull-left">'+ item.title +'</span>'+
-						'<span class="item-info f12 pull-right c7">'+ item.ps +'</span>'+
-					'</li>').data(item).click(function(ev){
-						var data = $(this).data();
-						if(!$(this).hasClass('active')) that.product_pay_page_refresh($.extend({condition:1},data));
-						$(this).addClass('active').siblings().removeClass('active');
-						
-					}));
-				});
-			break;
-			case 'payment':// 产品付款方式
-				_html = $('<ul class="pay-btn-group"></ul>');
-				this.each(config.data,function(index,item){
-					_html.append($('<li class="pay-cycle-btn '+ (item.active?'active':'') +'" data-condition="'+ item.condition +'"><span>'+ item.title +'</span></li>').data($.extend({pid:config.pid,name:config.name},item)).click(function(ev){
-						var data = $(this).data();
-						if(!$(this).hasClass('active')) that.product_pay_page_refresh($.extend({condition:$(this).attr('data-condition')},data));
-						$(this).addClass('active').siblings().removeClass('active');
-					}));
-				});
-			break;
-			case 'time': // 产品开通时长（配置参数）
-				_html = $('<ul class="pay-btn-group"></ul>');
-				this.each(config.data,function(index,item){
-					_html.append($('<li class="pay-cycle-btn '+ (item.active?'active':'') +'"><span>'+ that.pro.conver_unit(item.cycle +'') +'</span>'+ (item.discount != 1?'<em>'+ (item.discount * 10).toFixed(1) +'折</em>':'') +'</li>').data($.extend({pid:config.pid,dom_index:index},item)).click(function(ev){
-						var data = $(this).data();
-						if(!$(this).hasClass('active')) that.product_pay_page_refresh($.extend({condition:4},data));
-						$(this).addClass('active').siblings().removeClass('active');
-					}));
-				});
-			break;
-			case 'voucher':// 产品抵扣卷（配置参数）
-				_html = $('<ul class="pay-btn-group" style="height: 240px;overflow: auto;"></ul>');
-				this.each(config.data,function(index,item){
-					_html.append($('<li class="pay-cycle-btn '+ (item.active?'active':'') +'"><span>'+ (item.unit == 'month' && item.cycle == 999?'永久':(item.cycle + that.pro.conver_unit(item.unit))) +'</span></li>').data($.extend({pid:config.pid},item)).click(function(ev){
-						var data = $(this).data();
-						$(this).addClass('active').siblings().removeClass('active');
-						that.product_pay_page_refresh($.extend({condition:5},data));
-					}));
-				});
-			break;
-			case 'wechat':// 产品支付二维码，和支付价格
-				_html = $('<div class="lib-price-box text-center">'+
-					'<span class="lib-price-name f14"><b>总计</b></span>'+
-					'<span class="price-txt"><b class="sale-price">'+ (config.price).toFixed(2) +'</b>元</span>'+
-					'<s class="cost-price" style="display: '+ (config.sprice > config.price?'inline-block':'none') +';">'+ (config.sprice).toFixed(2) +'元</s></div>'+
-					'<div class="lib-price-box text-center">'+
-					'<div class="paymethod"><div class="pay-wx" id="PayQcode"></div>'+
-					'<div class="pay-wx-info f16 text-center"><span class="wx-pay-ico mr5"></span>微信扫码支付</div></div></div>')
-				$(_html).find('#PayQcode').qrcode(config.data);
-				$('.libPay-mask').hide();
-				that.product_pay_monitor({pid:config.pid,name:config.name});
-			break;
-		}
-		return _html;
-	},
+				var paream = {pid:config.pid,cycle:config.cycle},pay_source = bt.get_cookie('pay_source');
+				if(pay_source) paream.source = bt.get_cookie('pay_source');
+				if(!paream.pid) delete paream.pid;
+                that.pro.create_order(paream,function (rdata){
+                    if (rdata.status === false){
+                        bt.set_cookie('force', 1);
+                        if (soft) soft.flush_cache();
+                        layer.msg(rdata.msg, { icon: 2 });
+                        return;
+                    }
+                    config.pay = parseInt($('#libPay-mode .pay-cycle-btn.active').data('condition'));
+                    // 二维码显示界面
+                    $('#libPay-pay').empty().append(that.product_pay_swicth((config.pay == 2?'wechat':'alipay'),$.extend({ data: config.pay == 2?rdata.msg:rdata.ali_msg }, config)));
+                });
+                break;
+            case 6:
+                var _html = $('<div class="paymethod-submit text-center"></div>'), _button = $('<button class="btn btn-success btn-sm f16 ' + (config.code ? '' : 'disabled') + '" style="width: 200px; height: 40px;">' + (config.code ? '提交' : '暂无抵扣劵') + '</button>');
+                _button.click(function (ev) {
+                    if (!config.code){
+                        layer.msg('无可用优惠券');
+                        return false;
+                    }
+                    bt.soft.pro.create_order_voucher(config.pid, config.code, function (rdata) {
+                        layer.closeAll();
+                        bt.set_cookie('force', 1);
+                        if (soft) soft.flush_cache();
+                        bt.msg(rdata);
+                    });
+                });
+                $('#libPay-pay').empty().append(_html.append(_button));
+                break;
+        }
+    },
+    // 产品购买，渲染方法
+    product_pay_swicth: function (type,config){
+        var _html = '', that = this;
+        switch (type) {
+            case 'type': // 产品类型（配置参数）
+                _html = $('<ul class="li-c-item"></ul>');
+                this.each(config, function (index, item) {
+                    _html.append($('<li class="pay-cycle-btn ' + (item.active ? 'active' : '') + '">' +
+                        (item.recommend ? '<span class="recommend-pay-icon"></span>' : '') +
+                        '<span class="item-name pull-left">' + item.title + '</span>' +
+                        '<span class="item-info f12 pull-right c7">' + item.ps + '</span>' +
+                        '</li>').data(item).click(function(ev){
+                            var data = $(this).data();
+                            if (!$(this).hasClass('active')) that.product_pay_page_refresh($.extend({ condition: 1 }, data));
+                            $(this).addClass('active').siblings().removeClass('active');
+
+                        }));
+                });
+                break;
+            case 'payment':// 产品付款方式
+                _html = $('<ul class="pay-btn-group"></ul>');
+                this.each(config.data, function (index, item) {
+                    _html.append($('<li class="pay-cycle-btn ' + (item.active ? 'active' : '') + '" data-condition="' + item.condition + '"><span>' + item.title + '</span></li>').data($.extend({ pid: config.pid, name: config.name }, item)).click(function (ev) {
+                        var data = $(this).data();
+                        if (!$(this).hasClass('active')) that.product_pay_page_refresh($.extend({ condition: $(this).attr('data-condition') }, data));
+                        $(this).addClass('active').siblings().removeClass('active');
+                    }));
+                });
+                break;
+            case 'time': // 产品开通时长（配置参数）
+                _html = $('<ul class="pay-btn-group"></ul>');
+                this.each(config.data, function (index, item) {
+                    _html.append($('<li class="pay-cycle-btn ' + (item.active ? 'active' : '') + '"><span>' + that.pro.conver_unit(item.cycle + '') + '</span>' + (item.discount != 1 ? '<em>' + (item.discount * 10).toFixed(1) + '折</em>' : '') + '</li>').data($.extend({ pid: config.pid, dom_index: index }, item)).click(function (ev) {
+                        var data = $(this).data();
+                        if (!$(this).hasClass('active')) that.product_pay_page_refresh($.extend({ condition: 5 }, data));
+                        $(this).addClass('active').siblings().removeClass('active');
+                    }));
+                });
+                break;
+            case 'voucher':// 产品抵扣卷（配置参数）
+                _html = $('<ul class="pay-btn-group"></ul>');
+                this.each(config.data, function (index, item){
+                    _html.append($('<li class="pay-cycle-btn ' + (item.active ? 'active' : '') + '"><span>' + (item.unit == 'month' && item.cycle == 999 ? '永久' : (item.cycle + that.pro.conver_unit(item.unit))) + '</span></li>').data($.extend({ pid: config.pid }, item)).click(function (ev) {
+                        var data = $(this).data();
+                        $(this).addClass('active').siblings().removeClass('active');
+                        that.product_pay_page_refresh($.extend({ condition: 6 }, data));
+                    }));
+                });
+                break;
+            case 'wechat':
+            case 'alipay':
+                _html = $('<div class="lib-price-box text-center">' +
+                    '<span class="lib-price-name f14"><b>总计</b></span>' +
+                    '<span class="price-txt"><b class="sale-price">' + (config.price).toFixed(2) + '</b>元</span>' +
+                    '<s class="cost-price" style="display: ' + (config.sprice > config.price ? 'inline-block' : 'none') + ';">' + (config.sprice).toFixed(2) + '元</s></div>' +
+                    '<div class="lib-price-box text-center">' +
+                    '<div class="paymethod"><div class="pay-wx" id="PayQcode"></div>' +
+                    '<div class="pay-wx-info f16 text-center"><span class="wx-pay-ico mr5 '+ type +'"></span><span>'+ (type == 'wechat'?'微信':'支付宝') +'扫码支付</span></div></div></div>');
+                $(_html).find('#PayQcode').qrcode(config.data);
+                $('.libPay-mask').hide();
+                that.product_pay_monitor({ pid: config.pid, name: config.name });
+                break;
+        }
+        return _html;
+    },
 	// 支付状态监听
 	product_pay_monitor:function(config){
 		var that = this;
@@ -4088,8 +4103,10 @@ bt.soft = {
 			intervalFun();
 		},2500);
 	},
-	updata_ltd:function(){
-		bt.soft.product_pay_view({name:'宝塔面板企业版',pid:100000032,limit:'ltd'});
+	updata_ltd:function(is_alone){
+		var param = {name:'宝塔面板企业版',pid:100000032,limit:'ltd'};
+		if(is_alone || false) $.extend(param,{source:5,is_alone:true});
+		bt.soft.product_pay_view(param);
 	},	
 	updata_pro:function(){
 		bt.soft.product_pay_view({name:'',pid:'',limit:'pro'});
@@ -5671,6 +5688,15 @@ bt.site = {
 		bt.show_confirm('删除['+ data +']',"你确定要删除目录保护吗",function(){
 			var loading = bt.load();
 			bt.send('delete_dir_auth','site/delete_dir_auth',{id:id,name:data},function(rdata){
+				loading.close();
+				if(callback) callback(rdata);
+			})
+		})
+	},
+	delete_php_guard:function(website,data,callback){
+		bt.show_confirm('删除PHP防护',"你确定要删除PHP防护["+ data +"]吗？",function(){
+			var loading = bt.load();
+			bt.send('del_file_deny','config/del_file_deny',{website:website,deny_name:data},function(rdata){
 				loading.close();
 				if(callback) callback(rdata);
 			})

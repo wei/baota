@@ -268,6 +268,8 @@ install_used()
         fi
         password=$(cat /dev/urandom | head -n 16 | md5sum | head -c 12)
         username=$($pythonV $panel_path/tools.py panel $password)
+        safe_path=$(cat /dev/urandom | head -n 16 | md5sum | head -c 8)
+        echo "$safe_path" > $panel_path/admin_path.pl
         echo "$password" > $panel_path/default.pl
         rm -f $panel_path/aliyun.pl
 }
@@ -304,6 +306,7 @@ case "$1" in
         		$pythonV $panel_path/tools.py cli $2
         		;;
         'default')
+                LOCAL_IP=$(ip addr | grep -E -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -E -v "^127\.|^255\.|^0\." | head -n 1)
                 port=$(cat $panel_path/data/port.pl)
                 password=$(cat $panel_path/default.pl)
                 if [ -f $panel_path/data/domain.conf ];then
@@ -322,12 +325,14 @@ case "$1" in
                 echo -e "=================================================================="
                 echo -e "\033[32mBT-Panel default info!\033[0m"
                 echo -e "=================================================================="
-                echo  "Bt-Panel-URL: $pool://$address:$port$auth_path"
+                echo  "外网面板地址: $pool://$address:$port$auth_path"
+                echo  "内网面板地址: http://${LOCAL_IP}:$port$auth_path"
+                echo -e "\033[33m*以下仅为初始默认账户密码，若无法登录请执行bt命令重置账户/密码登录\033[0m"
                 echo -e `$pythonV $panel_path/tools.py username`
                 echo -e "password: $password"
-                echo -e "\033[33mWarning:\033[0m"
-                echo -e "\033[33mIf you cannot access the panel, \033[0m"
-                echo -e "\033[33mrelease the following port (8888|888|80|443|20|21) in the security group\033[0m"
+                echo -e "\033[33mIf you cannot access the panel,\033[0m"
+                echo -e "\033[33mrelease the following panel port [${port}] in the security group\033[0m"
+                echo -e "\033[33m若无法访问面板，请检查防火墙/安全组是否有放行面板[${port}]端口\033[0m"
                 echo -e "=================================================================="
                 ;;
         *)

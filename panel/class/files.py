@@ -310,6 +310,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         info = {}
         info['count'] = self.GetFilesCount(get.path, search)
         info['row'] = 100
+        if 'disk' in get:
+            if get.disk == 'true': info['row'] = 2000
         if 'share' in get and get.share:
             info['row'] = 5000
         info['p'] = 1
@@ -931,10 +933,11 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if sys.version_info[0] == 2:
             get.sfile = get.sfile.encode('utf-8')
             get.dfile = get.dfile.encode('utf-8')
-        if not os.path.exists(get.sfile):
-            return public.returnMsg(False, 'DIR_NOT_EXISTS')
         if get.dfile[-1] == '.':
             return public.returnMsg(False, '目录结尾不建议使用 "."，因为可能存在安全隐患')
+        if not os.path.exists(get.sfile):
+            return public.returnMsg(False, 'DIR_NOT_EXISTS')
+
         # if os.path.exists(get.dfile):
         #    return public.returnMsg(False,'DIR_EXISTS')
 
@@ -958,7 +961,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             get.sfile = get.sfile.encode('utf-8')
             get.dfile = get.dfile.encode('utf-8')
         if get.dfile[-1] == '.':
-            return public.returnMsg(False, '目录或目录结尾不建议使用 "."，因为可能存在安全隐患')
+            return public.returnMsg(False, '文件结尾不建议使用 "."，因为可能存在安全隐患')
         if not self.CheckFileName(get.dfile):
             return public.returnMsg(False, '文件名中不能包含特殊字符!')
         if get.sfile == '/www/Recycle_bin':

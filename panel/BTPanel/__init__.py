@@ -247,6 +247,7 @@ def home():
     data['ftpCount'] = public.M('ftps').count()
     data['databaseCount'] = public.M('databases').count()
     data['lan'] = public.GetLan('index')
+    data['js_random'] = get_js_random()
     public.auto_backup_panel()
     if not os.path.exists(licenes): return render_template('license.html')
     return render_template('index.html', data=data)
@@ -335,6 +336,7 @@ def site(pdata=None):
         data = system.system().GetConcifInfo()
         data['isSetup'] = True
         data['lan'] = public.getLan('site')
+        data['js_random'] = get_js_random()
         if os.path.exists(public.GetConfigValue('setup_path') + '/nginx') == False \
                 and os.path.exists(public.GetConfigValue('setup_path') + '/apache') == False \
                 and os.path.exists('/usr/local/lsws') == False:
@@ -379,6 +381,7 @@ def ftp(pdata=None):
         import system
         data = system.system().GetConcifInfo()
         data['isSetup'] = True
+        data['js_random'] = get_js_random()
         if os.path.exists(public.GetConfigValue('setup_path') + '/pure-ftpd') == False: data['isSetup'] = False
         data['lan'] = public.GetLan('ftp')
         is_bind()
@@ -406,6 +409,7 @@ def database(pdata=None):
         data['isSetup'] = os.path.exists(public.GetConfigValue('setup_path') + '/mysql/bin')
         data['mysql_root'] = public.M('config').where('id=?', (1,)).getField('mysql_root')
         data['lan'] = public.GetLan('database')
+        data['js_random'] = get_js_random()
         is_bind()
         return render_template('database.html', data=data)
     import database
@@ -476,6 +480,7 @@ def firewall(pdata=None):
         import system
         data = system.system().GetConcifInfo()
         data['lan'] = public.GetLan('firewall')
+        data['js_random'] = get_js_random()
         return render_template('firewall.html', data=data)
     import firewalls
     firewallObject = firewalls.firewalls()
@@ -492,6 +497,7 @@ def ssh_security(pdata=None):
     if request.method == method_get[0] and not pdata:
         data = {}
         data['lan'] = public.GetLan('firewall')
+        data['js_random'] = get_js_random()
         return render_template('firewall.html', data=data)
     import ssh_security
     firewallObject = ssh_security.ssh_security()
@@ -603,6 +609,7 @@ def files(pdata=None):
         data = system.system().GetConcifInfo()
         data['recycle_bin'] = os.path.exists('data/recycle_bin.pl')
         data['lan'] = public.GetLan('files')
+        data['js_random'] = get_js_random()
         return render_template('files.html', data=data)
     import files
     filesObject = files.files()
@@ -634,6 +641,7 @@ def crontab(pdata=None):
         import system
         data = system.system().GetConcifInfo()
         data['lan'] = public.GetLan('crontab')
+        data['js_random'] = get_js_random()
         return render_template('crontab.html', data=data)
     import crontab
     crontabObject = crontab.crontab()
@@ -652,6 +660,7 @@ def soft(pdata=None):
         import system
         data = system.system().GetConcifInfo()
         data['lan'] = public.GetLan('soft')
+        data['js_random'] = get_js_random()
         is_bind()
         return render_template('soft.html', data=data)
 
@@ -685,7 +694,8 @@ def config(pdata=None):
         if data['basic_auth']['open']: data['basic_auth']['value'] = public.getMsg('OPENED')
         data['debug'] = ''
         data['show_recommend'] = not os.path.exists('data/not_recommend.pl')
-        data['show_workorder'] = False#not os.path.exists('data/not_workorder.pl')
+        data['show_workorder'] = not os.path.exists('data/not_workorder.pl')
+        data['js_random'] = get_js_random()
         if app.config['DEBUG']: data['debug'] = 'checked'
         data['is_local'] = ''
         if public.is_local(): data['is_local'] = 'checked'
@@ -694,6 +704,7 @@ def config(pdata=None):
 
     import config
     defs = (
+    'set_file_deny', 'del_file_deny', 'get_file_deny',
     'get_ols_private_cache_status', 'get_ols_value', 'set_ols_value', 'get_ols_private_cache', 'get_ols_static_cache',
     'set_ols_static_cache', 'switch_ols_private_cache', 'set_ols_private_cache',
     'set_coll_open', 'get_qrcode_data', 'check_two_step', 'set_two_step_auth', 'create_user', 'remove_user',
@@ -1219,6 +1230,10 @@ def panel_public():
             global admin_check_auth, admin_path, route_path, admin_path_file
             if admin_path != '/bt' and os.path.exists(admin_path_file) and not 'admin_auth' in session:
                 return 'False'
+
+        #验证是否绑定了设备
+        if not get.fun in ['blind']:
+            if not public.check_app('app'):return public.returnMsg(False,'未绑定用户!')
         import wxapp
         pluwx = wxapp.wxapp()
         checks = pluwx._check(get)
@@ -1227,8 +1242,8 @@ def panel_public():
             return public.getJson(checks), json_header
         data = public.getJson(eval('pluwx.' + get.fun + '(get)'))
         return data, json_header
-
     if get.name != 'app': return abort(404)
+    if not public.check_app('wxapp'): return public.returnMsg(False, '未绑定用户!')
     import panelPlugin
     plu = panelPlugin.panelPlugin()
     get.s = '_check'
@@ -1358,7 +1373,7 @@ def panel_other(name=None, fun=None, stype=None):
             t_body = public.readFile(t_path)
 
             # 处理模板包含
-            rep = '{%\s?include\s"(.+)"\s?%}'
+            rep = r'{%\s?include\s"(.+)"\s?%}'
             includes = re.findall(rep, t_body)
             for i_file in includes:
                 filename = p_path + '/templates/' + i_file
@@ -1726,9 +1741,17 @@ def is_login(result):
 
 
 def is_bind():
-    if os.path.exists(bind_pl):
-        os.remove(bind_pl)
-
+    pass
+    #if os.path.exists(bind_pl):
+    #    os.remove(bind_pl)
+        
+# js随机数模板使用，用于不更新版本号时更新前端文件不需要用户强制刷新浏览器
+def get_js_random():
+    js_random = public.readFile('data/js_random.pl')
+    if not js_random or js_random == '1':
+        js_random = public.GetRandomString(16)
+    public.writeFile('data/js_random.pl',js_random)
+    return js_random
 
 # 获取输入数据
 def get_input():
@@ -1791,18 +1814,33 @@ def check_token(data):
     return result
 
 
+
 # ======================公共方法区域END============================#
 
 
 # workorder load code
-try:
-    from panelWorkorder import bp_workorder, bp_workorder_socket
 
-    app.register_blueprint(bp_workorder)
-    sockets.register_blueprint(bp_workorder_socket)
-except Exception as e:
-    print(e)
-    pass
+@app.route('/workorder/<action>',methods=method_all)
+def workorder(action, pdata=None):
+
+    comReturn = comm.local()
+    if comReturn: return comReturn
+
+    import panelWorkorder
+    toObject = panelWorkorder.panelWorkorder()
+
+    defs = ("get_user_info","close", "create", "list", "get_messages", "allow")
+    result = publicObject(toObject, defs, action, pdata)
+    return result
+
+@sockets.route('/workorder_client')
+def workorder_client(ws):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+
+    import panelWorkorder
+    toObject = panelWorkorder.panelWorkorder()
+    get = get_input()
+    toObject.client(ws, get)
 
 # workorder end
-

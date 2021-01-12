@@ -91,10 +91,6 @@
                         <p class="name f15 c9">{{data['lan']['N2']}}</p>
                         <div class="val"><a class="btlink" href="/database">{{data['databaseCount']}}</a></div>
                     </li>
-                    <li class="sys-li-box ccol-xs-4 col-sm-4 col-md-4 col-lg-3 hide">
-                        <p class="name f15 c9">{{data['lan']['N4']}}</p>
-                        <div class="val"><a class="btlink warning_num" href="javascript:;" onclick="index.reader_warning_view()"><img src="/static/layer/skin/default/loading-2.gif" style="width:20px" /><span class="ml5" style="font-size:17px;vertical-align: middle;color:#aaa;">检测中</span></a></div>
-                    </li>
                 </ul>
             </div>
         </div>
@@ -115,7 +111,6 @@
             <div class="pl7">
                 <div class="bgw" style="height:491px">
                     <div class="title c6 f16 plr15">流量<span style="float: right;"><select class="bt-input-text" name="network-io" style="font-size: 12px;"></select></span></div>
-                    
                     <div class="bw-info">
                         <div class="col-sm-6 col-md-3"><p class="c9"><span class="ico-up"></span>上行</p><a id="upSpeed">{{data['lan']['S2']}}</a></div>
                         <div class="col-sm-6 col-md-3"><p class="c9"><span class="ico-down"></span>下行</p><a id="downSpeed">{{data['lan']['S2']}}</a></div>
@@ -126,22 +121,18 @@
                 </div>
             </div>
         </div>
-
     </div>
 </div>
-
 {% endblock %}
-
-
 {% block scripts %}
 <script type="text/javascript">
     var bind_user = "{{data['bind']}}"
 </script>
 <script type="text/javascript" src="{{g.cdn_url}}/js/jquery.dragsort-0.5.2.min.js"></script>
 <script type="text/javascript" src="{{g.cdn_url}}/js/echarts.min.js"></script>
-<script type="text/javascript" src="{{g.cdn_url}}/js/index.js?f2={{g['version']}}"></script>
-<script type="text/javascript" src="{{g.cdn_url}}/js/soft.js?version_20191219={{g['version']}}"></script>
-<script type="text/javascript" src="{{g.cdn_url}}/ace/ace.js?date={{g.version}}"></script>
+<script type="text/javascript" src="{{g.cdn_url}}/js/index.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+<script type="text/javascript" src="{{g.cdn_url}}/js/soft.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+<script type="text/javascript" src="{{g.cdn_url}}/ace/ace.js" defer></script>
 <script type="text/javascript">
     $(".btpro span").click(function(e){
         layer.confirm('切换回免费版可通过解绑账号实现', { icon: 3, btn: ['解绑账号'], closeBtn: 2, title: '是否取消授权' }, function () {
@@ -153,10 +144,10 @@
             });
         });
         e.stopPropagation();
-	})
+	});
     setCookie('pro_end',{{data.pro_end}});
     setCookie('ltd_end',{{data.ltd_end}});
-    bt.set_cookie('serverType', "{{session['webserver']}}");
+    setCookie('serverType', "{{session['webserver']}}");
     bt.soft.get_index_renew();
 </script>
 {% endblock %}

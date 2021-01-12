@@ -249,26 +249,8 @@ var index = {
             if(rdata.installed === false) bt.index.rec_install();
             if (rdata.user_info.status) {
                 var rdata_data = rdata.user_info.data;
-                console.log(rdata_data);
+                bt.set_cookie('bt_user_info',JSON.stringify(rdata.user_info));
                 $(".bind-user").html(rdata_data.username);
-                // bt.send('check_user_auth', 'ajax/check_user_auth', {}, function (rd) {
-                //     if (!rd.status) bt.msg(rd);
-                // });
-                // bt.weixin.get_user_info(function (rdata) {
-                //     if (!rdata.status){
-                //         bt.msg(rdata);
-                //         return;
-                //     }
-                //     if (JSON.stringify(rdata.msg) != '{}') {
-                //         var datas = rdata.msg;
-                //         for (var key in datas) {
-                //             var item = datas[key];
-                //             item.nickName
-                //             $(".bind-weixin a").text(item.nickName);
-                //             break;
-                //         }
-                //     }
-                // });
             }
             else {
                 $(".bind-weixin a").attr("href", "javascript:;");
@@ -280,7 +262,7 @@ var index = {
         setTimeout(function () { _this.interval.start(); }, 400)
         setTimeout(function () { _this.get_index_list(); }, 500)
         setTimeout(function () { _this.net.init() }, 600);
-        setTimeout(function () { _this.get_warning_list(); }, 700);
+        
 
 
         setTimeout(function () {
@@ -918,7 +900,6 @@ var index = {
      * @return 无返回值
     */
     reader_warning_view:function(){
-        return false;
         var that = this;
         function reader_warning_list(data){
             var html = '',scan_time = '',arry =  [['risk','风险项'],['security','无风险项'],['ignore','已忽略项']],level = [['低危','#e8d544'],['中危','#E6A23C'],['高危','red']]

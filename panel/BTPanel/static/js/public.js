@@ -3676,7 +3676,7 @@ var Term = {
 		Term.send(JSON.stringify(Term.ssh_info || {}))
 		// Term.term.FitAddon.fit();
 		// Term.resize();
-		var f_path = $("#fileInputPath").val();
+		var f_path = $("#fileInputPath").val() || getCookie('Path');
 		if(f_path){
 			Term.last_cd = "cd " + f_path;
 			Term.send(Term.last_cd  + "\n");
@@ -4145,11 +4145,6 @@ acme = {
 
 
 
-
-
-
-
-
 /** workorder js code **/
 
 /**
@@ -4157,14 +4152,12 @@ acme = {
 */
 function MessageBox(){
     this.bws = null; //websocket对象
-    this.route ='/client'; // 访问的方法
+    this.route ='/workorder_client'; // 访问的方法
     this.info =null; // 请求数据
 	this.host = window.location.host;
-	this.workorder_span = '/workorder';
 	this.init();
 
 }
-
 MessageBox.prototype = {
 	uid_status:false,  //用户状态
 	bt_uid:undefined,		  //当前用户id
@@ -4172,27 +4165,30 @@ MessageBox.prototype = {
 	break_line:false,         //用户异常断开标志
 	chat_status:[],  //状态信息
 	chat_list:[],    //正在进行的对话内容
-	portrait:"",      //官方头像
-	bt_yh_portrait:"",      //用户头像
+	portrait:"/static/img/ico/bt.ico",      //官方头像
+	bt_yh_portrait:"/static/img/btyonghu.png",      //用户头像
 	interface_flag:"feedback",   //页面状态
 	workorder:"",             //当前工单编号
 	ping:0,              //ping执行的线程
+	lastEditRange:0,       //定义最后光标对象
 	admian_unread_messages:[], //管理端未读消息
 	unread_messages:[], //用户端未读消息
 	history_list:[],    //工单历史记录
+	fail_send_list:[],   //发送失败列表
+	waiting_list:[],        //等待消息
+	bt_allow:false,            //是否为授权用户
     // websocket持久化连接
     connect:function(work_order2, callback){
 		var that = this;
-		console.log("调用connect")
 		var workorder = that.workorder;
 		if (that.bt_uid && that.bt_user){
 			// 判断当前websocket连接是否存在
 			if(!this.bws || this.bws.readyState == 3 || this.bws.readyState == 2){
-				var location = (window.location.protocol === 'http:' ? 'ws://' : 'wss://') + this.host +this.workorder_span + this.route +'?uid='+that.bt_uid+'&username='+that.bt_user+'&workorder='+workorder;
+				var location = (window.location.protocol === 'http:' ? 'ws://' : 'wss://') + this.host +this.route +'?uid='+that.bt_uid+'&username='+that.bt_user+'&workorder='+workorder;
 				try{
 					this.bws = new WebSocket(location);
 				}catch(err){
-					console.log("websocket连接异常！")
+					// console.log("websocket连接异常！")
 				}
 				this.bws.addEventListener('message',function(ev){that.on_message(ev)});
 				this.bws.addEventListener('close',function(ev){that.on_close(ev)});
@@ -4203,15 +4199,14 @@ MessageBox.prototype = {
 			}
 		}else{
 			// 提示用户绑定账号
-			console.log("请先绑定官网账号。")
+			// console.log("请先绑定官网账号。")
 		}
 
     },
     //连接服务器成功
     on_open:function(ws_event){
     // this.send(JSON.stringify(this.ssh_info || {}))
-        console.log("webscoket连接成功");
-        console.log(ws_event.data);
+        // console.log(ws_event.data);
     },
     //服务器消息事件
     on_message: function (ws_event){
@@ -4235,7 +4230,7 @@ MessageBox.prototype = {
 					}
 				}
 				if(window_flag){
-					console.log("数据重复");
+					// console.log("数据重复");
 				}else{
 					if (!flag && _this.interface_flag=="chat"){
 						// 显示消息
@@ -4252,7 +4247,7 @@ MessageBox.prototype = {
 						}
 						//直接进行已读未读
 						if (_result.status == 0&&_result.receiver==_this.bt_user&&_result.from_client != true){
-							if(_result.type != 3){
+							if(_result.type ==0||_result.type==1){
 								_this.unread_messages.push(result);
 							}
 						}
@@ -4269,7 +4264,7 @@ MessageBox.prototype = {
 								_this.unread_messages.push(result);
 							}
 						}else
-						if(_result.type==5||_result.type==6||_result.type==2){
+						if(_result.content=="close"||_result.type==6||_result.type==2){
 							_this.unread_messages.push(result);
 						}
 						// 没有打开聊天窗口，更新红色气泡提示
@@ -4283,8 +4278,14 @@ MessageBox.prototype = {
 						var num = 0;
 							for(var a=0;a<_this.unread_messages.length;a++){
 								var _message = JSON.parse(_this.unread_messages[a]);
-								if(_message.status==0&&_result.receiver==_this.bt_user&&_result.from_client != true){
+								if(_message.status==0&&_message.receiver==_this.bt_user&&_message.from_client != true){
 									num = num+1;
+								}else
+								if(_message.type==5||_message.type==6||_message.type==2){
+								    if(_message.content=="close"||_message.status==undefined){
+							        	num = num+1;
+								        _message.status=0
+								    }
 								}
 							}
 							if(num==0){
@@ -4293,7 +4294,7 @@ MessageBox.prototype = {
 								$('.chat-number').html(num+"条未读");
 							}
 						}catch(err){
-							console.log("工单消息与关闭冲突！")
+							// console.log("工单消息与关闭冲突！")
 						}
 
 					}
@@ -4312,14 +4313,13 @@ MessageBox.prototype = {
 				}
 			}
 		}catch(err){
-			console.log("消息格式错误！")
+			// console.log("消息格式错误！")
 		}
     },
     //websocket关闭事件
     on_close: function (ws_event) {
         this.bws = null;
-		console.log("webscoket连接断开");
-		console.log(ws_event)
+		// console.log("webscoket连接断开");
     },
     //websocket错误事件
     on_error: function (ws_event) {
@@ -4330,7 +4330,7 @@ MessageBox.prototype = {
             // Term.term.write(msg)
             // Term.state = 3;
         }else{
-            console.log(ws_event)
+            // console.log(ws_event)
         }
     },
     //发送数据
@@ -4346,7 +4346,7 @@ MessageBox.prototype = {
 
         //判断当前连接状态,如果!=1，则100ms后尝试重新发送
         if (this.bws.readyState === 1) {
-            this.bws.send(data);
+            this.send_server(that, data);
         } else {
 			if(this.state === 3) return;
             if (!num) num = 0;
@@ -4404,34 +4404,31 @@ MessageBox.prototype = {
 		document.write("<script language=javascript src='/static/js/html2canvas.min.js'><\/script>");
 		$('#feedback-box').hide();
 		$('.chat-number').hide();
-		//头像图片处理
-		var portrait_src = "/static/img/ico/bt.ico";
-		_this.imageChangBase64(portrait_src, function (base64) {
-			_this.portrait = base64;
-		},64,64);
-		var reply_portrait_src = "/static/img/btyonghu.png";
-		_this.imageChangBase64(reply_portrait_src, function (base64) {
-			_this.bt_yh_portrait = base64;
-		},64,64);
+		$('.debugs').hide();
 		//获取用户信息
-		$.ajax({
-			url: "/workorder/get_user_info",
-			contentType: "application/json",
-			dataType: 'json',
-			success: function(rdata){
-				if(rdata.status == true&&rdata.uid != undefined){
-					_this.bt_user = rdata.username,_this.bt_uid = rdata.uid;
-					_this.uid_status = true;
-					_this.init_workorder(true,_this.start_connect);
-				}
-
-			}
-		});
-
+		try{
+		    $.ajax({
+    			url: "/workorder/get_user_info",
+    			contentType: "application/json",
+    			dataType: 'json',
+    			success: function(rdata){
+    				if(rdata.status == true&&rdata.uid != undefined){
+    					_this.bt_user = rdata.username,_this.bt_uid = rdata.uid;
+						_this.uid_status = true;
+						_this.get_allow();
+    				}else{
+						$('.debugs').show();
+					}
+    			}
+    		});
+		}catch(err){
+		      $('.debugs').show();
+		}
 		// 初始化界面
 		// 查找当前正在处理的工单编号
 		// bug按钮点击
 		$('.debugs').on("click", function (e) {
+		    $(this).css({"z-index":"99999998"});
 			if (_this.bt_user != undefined && _this.bt_uid != undefined){
 				var flag = $('#feedback-box').is(":hidden");
 				if(_this.interface_flag=="feedback"){ // 工单提交界面
@@ -4444,6 +4441,9 @@ MessageBox.prototype = {
 					}else{
 						_this.create_chat_box(undefined,true,"feedback");
 						_this.feedback_chat();
+			            if(_this.bt_allow==false){
+			                _this.allow_taboo();
+			            }
 					}
 					e.stopPropagation();
 				}else
@@ -4488,12 +4488,47 @@ MessageBox.prototype = {
 		document.addEventListener(visibilityChangeEvent, onVisibilityChange);
 	},
 	/**
+	* @description 获取授权
+	*/
+	get_allow:function(){
+	    var _this = this;
+    	try{
+	    $.ajax({
+			url: "/workorder/allow",
+			contentType: "application/json",
+			dataType: 'json',
+			success: function(rdata){
+				if(rdata.status == true){
+					_this.bt_allow = rdata.status;
+					_this.init_workorder(true,_this.start_connect);
+				}
+				$('.debugs').show();
+			}
+		});
+		}catch(err){
+		    $('.debugs').show();
+		}
+	},
+	/**
+	* @description 非企业版禁止工单操作
+	*/
+	allow_taboo:function(){
+	    var _this = this;
+	    $(".history-list,.screenshot,.send-chat").attr("disabled",true);
+	    $(".chat_html").attr("contenteditable",false);
+	    $(".history-list,.screenshot").css({"cursor":"not-allowed"});
+	},
+	/**
 	* @description 回复系统消息
 	*/
 	feedback_chat:function(){
 		var _this = this;
-		_this.chat_show(JSON.stringify({"id": "feedabck", "workorder": "feedback", "content": "您好，欢迎使用堡塔在线客服系统，我们的工作时间为：周一到周六 上午10:00-下午18:00", "receiver": "admin", "type": 0}));
-		_this.chat_show(JSON.stringify({"id": "feedabck", "workorder": "feedback", "content": "请详细描述您遇到的问题，并附带截图，以便我们能更好的跟进，谢谢。", "receiver": "admin", "type": 0}));
+		_this.chat_show(JSON.stringify({"id": "feedback", "workorder": "feedback", "content": "您好，欢迎使用堡塔在线客服系统，我们的工作时间为：周一到周六 上午10:00-下午18:00", "receiver": "admin", "type": 0}));
+		if(_this.bt_allow == false){
+	    	_this.chat_show(JSON.stringify({"id": "EE", "workorder": "EE", "title":"当前未购买企业版,请开通企业版", "content": "开通企业版优势:</br>1、可以使用在线客服提交工单协助处理面板问题。</br>2、可以免费使用专业版及企业版的数十款插件。","btn":true,"btn_content":"立即开通企业版", "receiver": "admin", "type": 0}));
+		}else{
+	    	_this.chat_show(JSON.stringify({"id": "feedback", "workorder": "feedback", "content": "请详细描述您遇到的问题，并附带截图，以便我们能更好的跟进，谢谢。", "receiver": "admin", "type": 0}));
+		}
 	},
 	/**
     * @description 工单历史界面
@@ -4505,7 +4540,7 @@ MessageBox.prototype = {
 		$('#feedback-box').empty();
 		$('#feedback-box').append($('<div class="history-head">\
 			<button type="button" class="'+(back=="history"?"history-back":"chat-back")+'"><span class="glyphicon glyphicon-chevron-left"></span></button>\
-			<span class="chat-name" style="margin-left:60px;float: none;">工单历史列表</span>\
+			<span class="chat-name" style="margin-left:80px;float: none;">工单历史列表</span>\
 			</div>\
 			<div class="history-content">\
 				<div class="divtable mt10">\
@@ -4548,7 +4583,7 @@ MessageBox.prototype = {
 	    $('#feedback-box').empty();
 		$('#feedback-box').append($('<div class="chat-head">\
 			<button type="button" style="'+(back=="feedback"?"display:none":"")+'" class="history-list-back"><span class="glyphicon glyphicon-chevron-left"></span></button>\
-			<span class="'+(_this.interface_flag=="feedback"?"chat-name":(workorder==_this.workorder?"chat-name":"chat-history"))+'" >'+(_this.interface_flag=="feedback"?"在线客服":(workorder==_this.workorder?"面板Bug提交":"工单历史记录(该工单已关闭)"))+'</span>\
+			<span class="'+(_this.interface_flag=="feedback"?"chat-name":(workorder==_this.workorder?"chat-name":"chat-history"))+'" >'+(_this.interface_flag=="feedback"?"在线客服":(workorder==_this.workorder?"在线客服":"工单历史记录(该工单已关闭)"))+'</span>\
 			<button type="button" class="history-list" title="历史工单" style="'+(_this.interface_flag=="feedback"?"":(workorder==_this.workorder?"":"display:none"))+'"><span>历史工单</span></button>\
 		</div>\
 		<div class="chat-content" style="'+(_this.interface_flag=="feedback"?"":(workorder==_this.workorder?"":"height: 560px;border-radius: 0px 0px 10px 10px;"))+'">\
@@ -4558,7 +4593,7 @@ MessageBox.prototype = {
 			<div class="text-tool">\
 				<div class="tool-border">\
 					<input class="tool-input screenshot" type="button" title ="截图使用提示:&#10 1. 截图功能默认是截取整个屏幕，暂不支持选择区域截图。&#10 2. 您可以用黄色按钮高亮凸显某个区域。&#10 3. 您可以用黑色块隐藏隐私信息。" />\
-					<div class="tool-text" style="color:#20a53a">截图</div></div>\
+					<div class="tool-text" style="color:#20a53a"><img  src="/static/img/jietu.png" />截图</div></div>\
 			</div>\
 		</div>\
 		<div class="chat-bottom" style="'+(_this.interface_flag=="feedback"?"":(workorder==_this.workorder?"":"display:none"))+'">\
@@ -4567,12 +4602,12 @@ MessageBox.prototype = {
 			</div>\
 			<div class="text-button">\
 				<div class="btn-group" style="float: right;">\
-					<button type="button" class="btn btn-success  button-send send-chat" style="background-color: #01B132;outline: none;">发送消息</button>\
+					<button type="button" class="btn btn-sm btn-success  button-send send-chat" style="background-color: #01B132;outline: none;">发送消息</button>\
 				</div>\
-				<input type="button" class="btn btn-default button-size stop-chat"  style="outline: none;" value="退出会话"></button>\
+				<input type="button" class="btn btn-sm btn-danger button-size stop-chat"  style="outline: none;" value="退出会话"></button>\
 			</div>\
 		</div>'));
-		$('.screenshot,.send-chat,.stop-chat,.history-list').unbind();
+		$('.screenshot,.send-chat,.stop-chat,.history-list,.chat-content').unbind();
 		//设置不能输入
 		if(_this.interface_flag=="chat"){
 			if(_this.workorder==undefined){
@@ -4598,7 +4633,7 @@ MessageBox.prototype = {
 		$(".stop-chat").on("click", function (e) {
 			if(_this.interface_flag == "feedback"){
 				var _flag = $('#feedback-box').is(":hidden");
-				$("#feedback-box").hide(100);
+				$("#feedback-box").css("display","none");
 				$('.debugs').empty();
 				$('.debugs').append('<span>在线</br>客服</span>');
 			}else{
@@ -4606,12 +4641,36 @@ MessageBox.prototype = {
 			}
 			e.stopPropagation();
 		});
+		//开启授权
+		$(".chat-content").on("click",".open-allow",function (e) {
+		   	$("#feedback-box").css("display","none");
+			$('.debugs').empty();
+			$('.debugs').css({"z-index":"9999"});
+			$('.debugs').append('<span>在线</br>客服</span>');
+		    bt.soft.updata_ltd(true);
+		});
+// 		//重新发送
+// 		$(".chat-content").on("click",".not-send", function (e) {
+// 				layer.confirm('是否重复发送该消息', {icon: 2, title:'关闭会话',
+// 				closeBtn:2,
+// 				btn: ['确认','取消'],
+// 				zIndex:999999999 //层优先级
+// 			},function(index,layers){
+// 				layer.close(layer.index);
+// 				var _reply_box  = $(this).parents(".reply-box"),_id = _reply_box.attr("data-id"),_fail_send_list = _this.fail_send_list;
+// 				$.each(_fail_send_list,function(index,item){
+// 					if(item.id==_id){
+// 						_reply_box.remove();
+// 						_this.reply_chat_show(item);
+// 					}
+//             	});
+				
+// 			});
+// 			e.stopPropagation();
+// 		});
 		//回车发送
 		$(".chat_html").keydown(function (e) {
-			if(e.shiftKey && e.keyCode == 13) {
-				//不禁止事件冲突
-			}else
-			if(e.keyCode == 13){
+			if(e.ctrlKey==1 && e.keyCode == 13) {
 				e.preventDefault();
 				if(_this.interface_flag == "feedback"){
 					_this.add_feedback();
@@ -4622,6 +4681,55 @@ MessageBox.prototype = {
 				}
 			}
 		});
+		//图片预览
+		$(".chat_html").on("click","img",function (e) {
+		    _this.thumbnail($(this).attr("src"))
+			e.stopPropagation();
+		});
+// 		//设置本地存储
+// 		$(".chat_html").bind('input propertychange', function() {
+// 		    if(_this.interface_flag=="feedback"){
+// 		          localStorage.setItem("feedback",$(this).html());
+// 		    }
+//         });
+		//Ctrl+v
+		 var chat_html = document.getElementById("chat_html");
+        // 编辑框点击事件
+        chat_html.onclick = function() {
+            // 获取选定对象
+            var selection = getSelection()
+            // 设置最后光标对象
+    		try{
+    			 _this.lastEditRange = selection.getRangeAt(0)
+    		}catch(err){
+//    			console.log(err)
+    		}
+        }
+
+        // 编辑框按键弹起事件
+        chat_html.onkeyup = function() {
+            // 获取选定对象
+            var selection = getSelection()
+            // 设置最后光标对象
+            try{
+            	 _this.lastEditRange = selection.getRangeAt(0)
+            }catch(err){
+//            	console.log(err)
+            }
+        }
+	    document.getElementById('chat_html').addEventListener('paste',function(e){
+    		if (e.clipboardData && e.clipboardData.items) {
+            for (var i = 0, len = e.clipboardData.items.length; i < len; i++) {
+                var item = e.clipboardData.items[i];
+                if (item.kind === "string" && item.type==="text/plain") {
+                    e.preventDefault();
+	                item.getAsString(function (str) {
+                        _this.insertContent(document.getElementById("chat_html"), str)
+                    })
+                }
+            }
+        }
+        });
 		//返回列表界面
 		$('.history-list-back').on("click", function (e) {
 			var _flag = $('#feedback-box').is(":hidden");
@@ -4668,12 +4776,21 @@ MessageBox.prototype = {
 		var _this = this,
 		_feedback = $('.chat_html').html();
 		if(_feedback == ""||_feedback==null||_feedback.match(/./g)==null||_feedback.match(/^[ ]*$/)){
-			layer.tips('工单内容不能为空，请重新输入', '.stop_chat', {
+			layer.tips('工单内容不能为空，请重新输入', '.send-chat', {
 				tips: [1, '#e62214'],
 				zIndex:9999999999999 //层优先级
 			});
             return false;
 		}
+		if(_this.bt_allow==false){
+		    layer.tips('非授权用户！', '.send-chat', {
+				tips: [1, '#e62214'],
+				zIndex:9999999999999 //层优先级
+			});
+            return false;
+		}
+		_this.unread_messages=[];//清除最后的关闭信息
+		_this.chat_list=[]; //创建工单前清除chat_list防止出现数据重复
 		_this.chat_segmentation();
 	},
 	/**
@@ -4693,38 +4810,29 @@ MessageBox.prototype = {
 			});
 		}
 	},
-
-	/**
+      /**
     * @description 消息切分
     * @param {String} chat 混合类型信息
     */
-   	chat_segmentation:function(workorder){
+    chat_segmentation:function(workorder){
 		var _this = this;
-		//去除第一次加载雪花id导致重复
-		if(_this.interface_flag=="chat"){
-			var  _snowflake = new Snowflake(Number(1), Number(1), Number(0));
-			// try{
-			// 	_this.bws.send("ping");
-			// }catch(err){
-			// 	console.log("网络中断")
-			// 	return false;
-			// }
-		}
 		//信息变量
 		var html = document.getElementById("chat_html");
 		var childs = html.childNodes,text = "";
 		//反馈变量
 		var _feedback = "",image_list = [];
 		reg = new RegExp("data:image/.+;base64");
+		var exists_img = false;
 		for(var i=0;i<childs.length;i++){
 			if (childs[i].nodeName == "IMG") {
+			    exists_img = true;
 				// 发送文本消息 内容为 text
 				if (text != "" && text.trim().length>0){
 					if(_this.interface_flag == "feedback"){
 						_feedback = _feedback+text.trim();
 					}else{
-						var snow_id_text = _snowflake.nextId().toString();
-						_this.bws.send(JSON.stringify({"id":snow_id_text,"content":text.trim(),"workorder":workorder,"type":0,"from_client":true,"sender":_this.bt_user}));
+						//发送文本消息
+						_this.send_message(text.trim().replace(/\n/g,"<br>"),0);
 					}
 				}
 				// 发送图片消息 childs[i]
@@ -4735,25 +4843,28 @@ MessageBox.prototype = {
 							_this.feedback_transfer(_feedback,image_list);
 						}
 					}else{
-						var snow_id_img = _snowflake.nextId().toString();
-						_this.bws.send(JSON.stringify({"id":snow_id_img,"content":childs[i].src,"workorder":workorder,"type":1,"from_client":true,"sender":_this.bt_user}));
+						_this.send_message(childs[i].src,1);
 					}
 				}else{
 					var theImage = new Image(); theImage.src = childs[i].src;
 					_this.imageChangBase64(childs[i].src, function (base64) {
 						if(_this.interface_flag == "feedback"){
-							image_list.push(childs[i].src)
+							image_list.push(base64)
 							if(i==childs.length-1){
 								_this.feedback_transfer(_feedback,image_list);
 							}
 						}else{
-							var snow_id_img = _snowflake.nextId().toString();
-							_this.bws.send(JSON.stringify({"id":snow_id_img,"content":childs[i].src,"workorder":workorder,"type":1,"from_client":true,"sender":_this.bt_user}));
+							_this.send_message(childs[i].src,1);
 						}
 					},theImage.width,theImage.height);
-				}		
+				}
 				// 重置文字消息
 				text = "";
+			} else if (childs[i].nodeName == "BR"){
+				if(text != ""&&text !=null){
+					text = text + "<br>";
+				}
+
 			} else {
 				//(childs[i].nodeName == "#text")
 				text = text + childs[i].textContent;
@@ -4761,176 +4872,248 @@ MessageBox.prototype = {
 		}
 		if(text != "" && text.trim().length>0){
 			if(_this.interface_flag=="feedback"){
-			    _feedback = _feedback+text.trim();
+				_feedback = _feedback+text.trim();
 				_this.feedback_transfer(_feedback,image_list);
 			}else{
 				//发送文本消息
-				var snow_id_text = _snowflake.nextId().toString();
-				_this.bws.send(JSON.stringify({"id":snow_id_text,"content":text.trim(),"workorder":workorder,"type":0,"from_client":true,"sender":_this.bt_user}));
+				_this.send_message(text.trim().replace(/\n/g,"<br>"),0);
 			}
+		}else{
+		    if (!exists_img){
+			    layer.tips('不能发送空白信息,请重新输入', '.send-chat', {
+				    tips: [1, '#e62214'],
+				    zIndex:9999999999999 //层优先级add
+			    });
+			    $('.chat_html').empty();
+		    }
 		}
 	},
 	/**
-	* @description 消息展示
+    * @description 消息发送
+	* @param {String} content 消息内容
+	* @param {String} type 消息类型
+	* @param {String} id 未读消息id
+    */
+   	send_message:function(content,type,id){
+		var _this = this;
+		//去除第一次加载雪花id导致重复
+		if(_this.interface_flag=="chat"){
+			var  _snowflake = new Snowflake(Number(1), Number(1), Number(0)),workorder = _this.workorder;
+			var snow_id = _snowflake.nextId().toString();
+			if(type != 3){
+				var reply_message = {"id":snow_id,"type":type,"content":content,"workorder":workorder,"state":0};
+				_this.reply_chat_show(reply_message);
+				_this.chat_list.push(JSON.stringify(reply_message));
+			}
+			if(_this.bws){
+				try{
+					type==3?_this.send_server(_this, JSON.stringify({"id":id, "type":3,"content":content,"workorder":workorder})):_this.send_server(_this, JSON.stringify({"id":snow_id, "type":type, "content":content,"workorder":workorder,"from_client":true,"sender":_this.bt_user}));
+				}catch(err){
+					// console.log("消息发送失败")
+				}
+			}
+		}
+	},
+
+	send_server:function(that,data){
+        //如果没有连接，则尝试连接服务器
+        if (!that.bws || that.bws.readyState == 3 || that.bws.readyState == 2) {
+            this.connect(null,function(bws){
+				setTimeout(function(){
+					that.bws.send(data);
+				},200);
+			});
+			return;
+        }
+
+        //判断当前连接状态,如果!=1，则100ms后尝试重新发送
+        if (that.bws.readyState === 1) {
+            that.bws.send(data);
+        }else{
+			layer.msg('与工单服务器的连接已断开，请尝试刷新页面');
+		}
+	},
+
+	/**
+	* @description 接收消息展示
 	* @param {String} message websocket的返回的聊天信息
 	*/
 	chat_show:function(message,callback){
 		var _this = this,
 		_message = JSON.parse(message);
-		if(_this.interface_flag =="feedback"){
-			if(_message.workorder =="feedback"){
-				$('.chat-content').append('<div class="chat-dialog-box">\
-					<div class="dialog-portrait">\
-						<img src="'+_this.portrait+'" style="width: 24px;height: 24px;" />\
-					</div>\
-					<div class="dialog-triangle"></div>\
-					<div class="chat-dialog-border">\
-						<label>在线客服(系统消息)</label>\
-						<div class="dialog-text">\
-							<p>'+_message.content+'</p>\
-						</div>\
-						<label name="chat-dialog-status" id="'+_message.id+'" style="display:none;\
-						margin-top: 5px;">未读</label>\
-					</div>\
-				</div>');
-				$('.chat-content').scrollTop($(".chat-content")[0].scrollHeight);
-			}
-		}
-		if(_this.interface_flag=="chat"){
-			//异常信息
-			if(_message.type==6){
-				$('.chat-content').append('<div class="chat-system"><p>\
-					'+_message.content+'\</p></div>');
-					$('.chat-content').scrollTop($(".chat-content")[0].scrollHeight);
-					$('.screenshot').attr("disabled",true);
-					$('.text-box pre').attr("contenteditable",false);
-					$('.send-chat').css("background-color","#ffffff"),
-					$('.send-chat').css("color","#000")
-					$('.send-chat').css("disabled",true);
-					$('.send-chat').css("border-color","#ccc");
-					if(_message.workorder == _this.workorder){
-						_this.disconnect();
-					}
-			}
-			//跟进信息
-			if(_message.type =="2"){
-				$('.chat-content').append('<div class="chat-system" id="'+_message.id+'"><p>\
-				工单'+_message.content+'已跟进</p></div>');
-			}
-			//已读信息
-			if(_message.type =="3"){
-				$('#'+_message.id).html("已读");
-			}
-			//发送信息
-			if(_message.sender==_this.bt_user&&_message.from_client==true){
-				//图片信息
-				if(_message.type =="1"){
-					$('.chat-content').append('<div class="chat-reply-box">\
-						<div class="reply-portrait"><img src="'+_this.bt_yh_portrait+'" style="width: 24px;height: 24px;"  /></div>\
-						<div class="reply-text" style="background-color:#ffffff;margin-top:2px;margin-right:2px;">\
-						<p><img class="demo" onclick="box.thumbnail(\'' + _message.content + '\')" src="'+_message.content+'"/></p></div>\
-						<label name="chat-reply-status" id="'+_message.id+'" style="margin-top: 5px;margin-right: 52px;">'+(_message.status==0?"未读":"已读")+'</label>\
-						</div>');
-						$('.chat-content').scrollTop($(".chat-content")[0].scrollHeight);
-				}else
-				if(_message.type =="0"){
-					//文字信息
-					$('.chat-content').append('<div class="chat-reply-box">\
-					<div class="reply-portrait"><img src="'+_this.bt_yh_portrait+'" style="width: 24px;height: 24px;"  /></div>\
-					<div class="reply-triangle"></div>\
-					<div class="reply-text"><p>'+_message.content.replace(/(\r\n)|(\n)/g,"<br>").replace(/\s/g,"&nbsp;")+'</p></div>\
-					<label name="chat-reply-status" id="'+_message.id+'" style="margin-top: 5px;margin-right: 52px;">'+(_message.status==0?"未读":"已读")+'</label>\
-					</div>');
-					$('.chat-content').scrollTop($(".chat-content")[0].scrollHeight);
-				}
-				else if(_message.type =="5"){
-					if(_message.content=="close"){
-						$('.chat-content').append('<div  class="chat-system" id="'+_message.id+'"><p>\
-						工单已被关闭。\</p></div>');
-						$('.chat-content').scrollTop($(".chat-content")[0].scrollHeight);
-						$('.screenshot').attr("disabled",true);
-						$('.text-box pre').attr("contenteditable",false);
-						$('.send-chat').css("background-color","#ffffff");
-						$('.send-chat').css("color","#000");
-						$('.send-chat').css("disabled",true);
-						$('.send-chat').css("border-color","#ccc");
-						if(_message.workorder == _this.workorder){
-							_this.disconnect();
-						}
-					}else{
+		switch (_this.interface_flag){
+			case "feedback":
+				if(_message.workorder=="feedback")_this.system_chat(_message);
+				if(_message.workorder=="EE")_this.system_chat(_message);
+				break;
+			case "chat":
+				switch (_message.type){
+					case 0:
+						(_message.sender==_this.bt_user&&_message.from_client==true)?_this.reply_chat_show(_message):_this.dialog_chat_show(_message)
+						break;
+					case 1:
+						(_message.sender==_this.bt_user&&_message.from_client==true)?_this.reply_chat_show(_message):_this.dialog_chat_show(_message)
+						break;
+					case 2:
 						$('.chat-content').append('<div class="chat-system" id="'+_message.id+'"><p>\
-						'+_message.content+'\</p></div>');
+						您的工单已被跟进</p></div>');
 						$('.chat-content').scrollTop($(".chat-content")[0].scrollHeight);
-					}
-				}
-			}else{  //回复消息
-				if(_message.type =="5"){
-					if(_message.content=="close"){
-						$('.chat-content').append('<div  class="chat-system" id="'+_message.id+'"><p>\
-						工单已被关闭。\</p></div>');
-						$('.chat-content').scrollTop($(".chat-content")[0].scrollHeight);
+						break;
+					case 3:
+						$('#'+_message.id).html("已读");
+						break;
+					case 4:
+						break;
+					case 5:
+						_this.system_chat(_message);
+						break;
+					case 6:
+						_this.system_chat(_message);
 						$('.screenshot').attr("disabled",true);
 						$('.text-box pre').attr("contenteditable",false);
-						$('.send-chat').css("background-color","#ffffff"),$('.send-chat').css("color","#000"),
-						$('.send-chat').css("border-color","#ccc");
-						$('.send-chat').css("disabled",true);
+						$('.send-chat').css({"background-color":"#ffffff","color":"#000","border-color":"#ccc"});
+						$('.send-chat').attr("disabled",true);
 						if(_message.workorder == _this.workorder){
 							_this.disconnect();
 						}
-					}else{
-						$('.chat-content').append('<div class="chat-system"><p>'+_message.content+'</p></div>');
-						$('.chat-content').scrollTop($(".chat-content")[0].scrollHeight);
-					}
-				}else  //回复消息 图片/文字
-				if(_message.type ==1||_message.type ==0){
-					$('.chat-content').append('<div class="chat-dialog-box">\
-					<div class="dialog-portrait">\
-						<img src="'+_this.portrait+'" style="width: 24px;height: 24px;" />\
-					</div>\
-					<div class="'+(_message.type==0?"dialog-triangle":"")+'"></div>\
-					<div class="chat-dialog-border">\
-						<label style="'+(_message.type==1?"margin-left:16px":"")+'">宝塔客服 '+_message.date+'</label>\
-						<div class="dialog-text" style="'+(_message.type==1?"margin-left:16px;background-color:#ffffff;":"")+'" >\
-							<p>'+(_message.type==0?_message.content.replace(/(\r\n)|(\n)/g,"<br>").replace(/\s/g,"&nbsp;"):'<img onclick="box.thumbnail(\'' + _message.content + '\')" src="'+_message.content+'" />')+'</p>\
-						</div>\
-						<label name="chat-dialog-status" id="'+_message.id+'" style="display:none;\
-						margin-top: 5px;">未读</label>\
-					</div>\
-				</div>');
-				$('.chat-content').scrollTop($(".chat-content")[0].scrollHeight);
+						break;
+					default:
+					    var _origin_id = _message.origin_id;
+				    	$.each(_this.waiting_list,function(index,item){
+        					if(item.origin_id ==_origin_id){
+                    			$("#"+_message.origin_id).html("未读");
+                    			$("#"+_message.origin_id).attr("id",_message.id);
+                    			$("[name="+_origin_id+"]").remove();
+                    			clearInterval(item.interval);
+        					}
+                    	});
 				}
+				break;
 			}
-		}
 		if(callback) callback(this._message);
 	},
-   /**
+	/**
+	* @description 在线客服消息展示/客服消息展示
+	* @param {Object} message 消息对象
+	*/
+	dialog_chat_show:function(_message){
+		var _this = this;
+		$('.chat-content').append('<div class="chat-dialog-box">\
+			<div class="dialog-portrait">\
+				<img src="'+_this.portrait+'" class="dialog-portrait-image" />\
+			</div>\
+			<div class="'+(_message.type==0?"dialog-triangle":"")+'"></div>\
+			<div class="chat-dialog-border">\
+				<label style="'+(_message.type==1?"margin-left:16px":"")+'">宝塔客服 '+_message.date+'</label>\
+				<div class="dialog-text" style="'+(_message.type==1?"margin-left:16px;background-color:#ffffff;border: 0;":"")+'" >\
+					<pre>'+(_message.type==0?_message.content.replace(/&lt;br&gt;/g,"<br>").replace(/\s/g,"&nbsp;"):'<img onclick="box.thumbnail(\'' + _message.content + '\')" src="'+_message.content+'" />')+'</pre>\
+				</div>\
+				<label name="chat-dialog-status" id="'+_message.id+'" style="display:none;\
+				margin-top: 5px;">未读</label>\
+			</div>\
+		</div>');
+		$('.chat-content').scrollTop($(".chat-content")[0].scrollHeight);
+	},
+	/**
+	* @description  用户消息显示
+	* @param {Object} message 消息对象
+	*/
+	reply_chat_show:function(_message){
+		var _this = this;
+		var chat_waiting = '<img src="/static/img/jiazai.png" class="waiting rotate" />';
+		var chat_not_send = '<span class="glyphicon glyphicon-exclamation-sign not-send"></span>';
+		//计时器数据
+		var len = 60;
+		if(_message.sent&&_message.sent==true){
+		    
+		}else{
+			$('.chat-content').append('<div class="chat-reply-box" data-id="'+_message.id+'">\
+				<div class="reply-portrait"><img src="'+_this.bt_yh_portrait+'" class="reply-portrait-image"  /></div>\
+				<div class="'+(_message.type==0?"reply-triangle":"")+'"></div>\
+					<div class="reply-text" style="'+(_message.type==0?"":"background-color:#ffffff;margin-top:2px;margin-right:2px;")+'">\
+						<'+(_message.type==0?"pre":"p")+'>'+(_message.type==0?_message.content.replace(/&lt;br&gt;/g,"<br>").replace(/\s/g,"&nbsp;"):'<img onclick="box.thumbnail(\'' + _message.content + '\')" src="'+_message.content+'" />')+'<'+(_message.type==0?"/pre":"/p")+'>\
+					</div>\
+					<div class="message-send-state"  name="'+_message.id+'" >'+(_message.state==0?chat_waiting:"")+'</span></div>\
+					<label name="chat-reply-status" id="'+_message.id+'" style="'+(_message.type==0?"margin-top: 5px":"margin-top: -5px")+';\
+					margin-right: 62px;"">'+(_message.state==0?"发送中":(_message.status==0?"未读":"已读"))+'</label>\
+				</div>\
+			   </div>');
+			$('.chat-content').scrollTop($(".chat-content")[0].scrollHeight);
+			//设置计时器
+			if(_message.state==0){
+			    var time = setInterval(function() {
+                    len = len - 1;
+                    if (len == 0) {
+                        $("[name="+_message.id+"]").empty();
+                        $("[name="+_message.id+"]").append(chat_not_send);
+                        _this.fail_send_list.push(_message)
+                        $("#"+_message.id).html("发送失败");
+                        clearInterval(time);
+                    }
+                }, 1000);
+                    var reply_interval ={"origin_id":_message.id,"Interval":time}
+                    _this.waiting_list.push(reply_interval);
+			}
+		}
+	},
+	/**
+	* @description  系统消息/异常消息/关闭消息显示
+	* @param {Object} message 消息对象
+	*/
+	system_chat:function(message){
+		var _this = this;
+		if(message.content=="close"||message.workorder=="feedback"||message.workorder=="EE"){
+		   if(message.content=="close"){
+		       	if(message.workorder == _this.workorder){
+    					_this.disconnect();
+    				}
+    			_this.interface_flag="feedback";
+		        message.content ="您的工单已被客服关闭，如果您的问题没有得到解决，请重新发起工单，感谢您的使用！";
+		   }
+			$('.chat-content').append('<div class="chat-dialog-box">\
+				<div class="dialog-portrait">\
+					<img src="'+_this.portrait+'"class="dialog-portrait-image" />\
+				</div>\
+				<div class="dialog-triangle" style="'+(message.workorder=="EE"?"visibility:hidden":"")+'"></div>\
+				<div class="chat-dialog-border">\
+					<label>在线客服(系统消息)</label>\
+					<div class="dialog-text" style="'+(message.workorder=="EE"?"background-color:#ffffff;border-color:#dbdbdb":"")+'"><div class="dialog-text-title" style="'+(message.workorder=="EE"?"":"display:none")+'">'+(message.workorder=="EE"?message.title:"")+'</div>\
+						<pre style="'+(message.workorder=="EE"?"background-color:#ffffff":"")+'">'+message.content+'</pre>\
+						<button class="btn btn-sm btn-success dialog-button open-allow" style="'+(message.workorder=="EE"?"":"display:none")+'">'+(message.workorder=="EE"?message.btn_content:"")+'</button>\
+					</div>\
+				</div>\
+			</div>');
+		}else{
+			$('.chat-content').append('<div class="chat-system"><p>'+message.content+'</p></div>');
+			$('.chat-content').scrollTop($(".chat-content")[0].scrollHeight);
+		}
+		$('.chat-content').scrollTop($(".chat-content")[0].scrollHeight);
+	},
+   	/**
     * @description 工单提交
 	* @param {String} feedback 工单文字信息
 	* @param {String} imageList 工单图片信息
     */
 	feedback_transfer:function(feedback,imageList){
-		var _this = this;
+	var _this = this;
 		var _length = imageList.length;
 		var imgf,imgs,imgt;
 		//工单提交信息
 		$('.debugs').attr("disabled",true);
-		var contents = [];
 		var  _snowflake = new Snowflake(Number(1), Number(1), Number(0));
-		var mask =  '<div class="image-span">\
-					<span class="glyphicon glyphicon-picture"></span>\
-					<div class="image-tip">\
-						<span style="font-size: 8px;font-weight: 700;">添加截图</span>\
-					</div>\
-				</div> ';
+        var mask = '<div class="image-span">\
+					<span>+</span>\
+				</div> '
 		if(_length>=3){
 			imgf = '<img   onclick="box.thumbnail(\'' + imageList[0] + '\')" src='+imageList[0]+'>';
 			imgs = '<img   onclick="box.thumbnail(\'' + imageList[1] + '\')" src='+imageList[1]+'>';
 			imgt = '<img   onclick="box.thumbnail(\'' + imageList[2] + '\')" src='+imageList[2]+'>';
+			$('.feedback-border').css("border",0);
 		}else
 		if(_length==2){
 			imgf = '<img   onclick="box.thumbnail(\'' + imageList[0] + '\')" src='+imageList[0]+'>';
 			imgs = '<img   onclick="box.thumbnail(\'' + imageList[1] + '\')" src='+imageList[1]+'>';
-			imgt = mask;$(".imgt").hide(100);
+			imgt = mask;
 		}else
 		if(_length==1){
 			imgf = '<img   onclick="box.thumbnail(\'' + imageList[0] + '\')" src='+imageList[0]+'>';
@@ -4939,27 +5122,30 @@ MessageBox.prototype = {
 			imgf=imgs =imgt = mask;
 		}
 		$('body').append($('<div class="feedback-mask"></div>'));
-		$('body').append($('<div class="feedback-border">\
+		$('body').append($('<div class="feedback-border" style="'+(_length>0?"height:360px":"")+'">\
+		            <span class="layui-layer-setwin"><a class="layui-layer-ico layui-layer-close layui-layer-close2 feedback-close-span" ></a></span>\
 		            <div class="feedback-head"><span>工单内容确认</span></div>\
 					<div class="feedback-span"><span>您的问题是:</span></div>\
-			    	<div class="feedback-text-input" style="'+(_length<1?"height:53%":"")+'">\
+			    	<div class="feedback-text-input" style="'+(_length>0?"height:25%":"")+'">\
 						<textarea class="feedback-text">'+feedback+'</textarea>\
 					</div>\
-					<div class="feedback-span"style="margin-top: 10px;'+(_length<1?"display:none":"")+'"><span>截图信息:</span></div>\
-					<div class="feedback-text-input " style="height: 30%;'+(_length<1?"display:none":"")+'">\
-						<div class="feedback-image-box ">'+imgf+'</div>\
-						<div class="feedback-image-box " style="'+(_length<2?"display:none":"")+'">'+imgs+'</div>\
-						<div class="feedback-image-box " style="margin-right:0px;'+(_length<3?"display:none":"")+'">'+imgt+'</div>\
+					<div class="feedback-span"style="margin-top: 10px;"><span>截图信息(仅显示前三张图片):</span></div>\
+					<div class="feedback-text-input ">\
+						<div class="feedback-image-box" id="imgf" style="'+(_length>0?"border:0":"")+'">'+imgf+'</div>\
+						<div class="feedback-image-box" id="imgs" style="'+(_length==0?"display:none":(_length>1?"border:0":""))+'">'+imgs+'</div>\
+						<div class="feedback-image-box" id="imgt" style="margin-right:0px;'+(_length<2?"display:none":(_length>2?"border:0":""))+'">'+imgt+'</div>\
 					</div>\
-					<div class="feedback-span" style="'+(_length<1?"color:red;font-size: 11px;margin: 0px 12px 5px 17px;":"display:none")+'"><span>为了更好跟进您的工单，请尽可能描述清楚您的问题，并附带截图</span></div>\
-					<div class="feedback-text-input">\
-						<button type="button" class="btn btn-success feedback-button-group feedback-submit">确认提交工单</button>\
-						<button type="button" class="btn feedback-button-group feedback-close" style="right: 120px;">取消</button>\
+					<ul class="mtl0 c7" style="font-size: 12px;color: red;margin: 7px 11px 0px 19px;'+(_length==0?"":"display:none")+'">\
+            		    <li style="list-style:inside disc">为了更好跟进您的工单，请尽可能描述清楚您的问题，并附带截图</li>\
+            	    </ul>\
+					<div class="feedback-bottom">\
+						<button type="button" class="btn btn-sm btn-success feedback-button-group feedback-submit">提交工单</button>\
+						<button type="button" class="btn btn-sm btn-danger feedback-button-group feedback-close" style="right: 97px;">取消</button>\
 					</div>\
 			</div>'));
-			$(".feedback-close,.feedback-submit").unbind();
+			$(".feedback-close,.feedback-submit,.feedback-close-span,.image-span").unbind();
 			$(".feedback-text").focus();
-			$(".feedback-close").on("click", function (e) {
+			$(".feedback-close,.feedback-close-span").on("click", function (e) {
 				$('.feedback-mask').remove();
 				$('.feedback-border').remove();
 				 $(".debugs").unbind("click",_this.showChang);
@@ -4967,6 +5153,21 @@ MessageBox.prototype = {
 			});
 			$(".debugs").on("click",_this.showChang);
 			$(".feedback-submit").on("click", function (e) {
+			    var contents = [];
+			    //防止用户多次点击
+			    $(this).attr("disabled",true);
+			    var imgf_flag = $("#imgf").find("img").attr("src")?true:false; imgs_flag = $("#imgs").find("img").attr("src")?true:false; imgt_flag = $("#imgt").find("img").attr("src")?true:false;
+			    if(_length==0){
+			        imgf_flag==true?imageList.push($("#imgf").find("img").attr("src")):"";
+		            imgs_flag==true?imageList.push($("#imgs").find("img").attr("src")):"";
+		            imgt_flag==true?imageList.push($("#imgt").find("img").attr("src")):"";
+			    }else
+			    if(_length==1){
+			       imgs_flag==true?imageList.push($("#imgs").find("img").attr("src")):"";imgt_flag==true?imageList.push($("#imgt").find("img").attr("src")):"";
+			    }else
+			    if(_length==2){
+			       imgt_flag==true?imageList.push($("#imgt").find("img").attr("src")):"";
+			    }
 				var _feedback = $(".feedback-text").val();
 				if(_feedback == ""||_feedback==null||_feedback.match(/./g)==null||_feedback.match(/^[ ]*$/)){
 					layer.tips('工单内容不能为空，请重新输入', '.feedback-submit', {
@@ -4984,9 +5185,19 @@ MessageBox.prototype = {
 				_this.feedback_submit(contents);
 				e.stopPropagation();
 			});
+			$('.image-span').on("click", function (e) {
+			    var  _id = "#"+ $(this).parent().attr("id");
+				$("#feedback-box,.feedback-border,.feedback-mask").hide();
+    			$('.debugs').empty();
+    			$('.debugs').append($('<span>在线</br>客服</span>'));
+    			_this.screenshot(_id);
+    			$(this).parent().css("border",0).next().css("display","inline-block");
+    			$(this).parent().find("img")
+    			e.stopPropagation();
+			});
 	},
-	showChang:function(){
-    	$('.feedback-mask').fadeToggle(100);
+	showChang:function(index){
+        $('.feedback-mask').fadeToggle(100);
 		$('.feedback-border').fadeToggle(100);
     },
 	/**
@@ -4994,25 +5205,37 @@ MessageBox.prototype = {
     * @param {String} contents  工单信息
     */
 	feedback_submit:function(contents){
-		var _this = this;
-		$.post("/workorder/create",{contents:JSON.stringify(contents),"collect":false},function(rdata){
-			if(rdata.error_code!=undefined&&rdata.status==false){
-				if(rdata.msg==undefined) rdata.msg="工单提交错误！";
-				layer.tips(rdata.msg, '.feedback-submit', {
-					tips: [1, '#e62214'],
-					zIndex:9999999999999 //层优先级
-				});
-			}else{
-				if(rdata.workorder!==undefined||rdata.workorder!==null){
-					_this.workorder = rdata.workorder;
-					_this.init_workorder(true)
-					_this.interface_flag="chat";
-					$(".chat_html").empty();
-					$('.feedback-mask').remove();
-					$('.feedback-border').remove();
-				}
-			}
-		});
+		var _this = this
+		try{
+		    $.post("/workorder/create",{contents:JSON.stringify(contents),"collect":false},function(rdata){
+    			if(rdata.error_code!=undefined&&rdata.status==false){
+    				if(rdata.msg==undefined&&rdata.content==undefined){
+    					rdata.msg="工单提交错误！";
+    				}else
+    				if(rdata.msg==undefined){
+    					rdata.msg =	rdata.content;
+    				}
+    				layer.tips(rdata.msg, '.feedback-submit', {
+    					tips: [1, '#e62214'],
+    					zIndex:9999999999999 //层优先级
+    				});
+    				$(".feedback-submit").attr("disabled",false);
+    			}else{
+    				if(rdata.workorder!==undefined||rdata.workorder!==null){
+    					_this.workorder = rdata.workorder;
+    					_this.init_workorder(true)
+    					_this.interface_flag="chat";
+    					$(".chat_html").empty();
+    					$('.feedback-mask').remove();
+    					$('.feedback-border').remove();
+    				}
+    			}
+    		});
+		}catch(err){
+		    //防止用户多次点击
+			$(".feedback-submit").attr("disabled",false);
+		}
+		
 	},
 	/**
     * @description 查看历史工单记录
@@ -5029,12 +5252,15 @@ MessageBox.prototype = {
 			contentType: "application/json",
 			dataType: 'json',
 			success: function(rdata){
-				if(back=="history"){
-					_this.animation_change_feedback2(workorder,"history",rdata);
-				}else{
-					_this.animation_change_feedback2(workorder,"chat",rdata)
-				}
-
+			    if(rdata.status==false){
+			        return false;
+			    }else{
+			        if(back=="history"){
+    					_this.animation_change_feedback2(workorder,"history",rdata);
+    				}else{
+    					_this.animation_change_feedback2(workorder,"chat",rdata)
+    				}
+			    }
 			}
 		});
 		}else
@@ -5055,13 +5281,12 @@ MessageBox.prototype = {
 		try{
 			var rdata = JSON.parse(JSON.stringify(_this.history_list));
 		}catch(err){
-			console.log("没有历史工单！")
 		}
 		var rdata = JSON.parse(JSON.stringify(_this.history_list));
 		$('#historyTable').empty();
 		// 已关闭工单直接发起ajax请求，地址window.location/workorder/get_message?workorder=?
 		$.each(rdata,function(index,item){
-			if(back=="chat"&&JSON.parse(item).status !=2){
+			if(JSON.parse(item).status !=2){
 				return true;
 			}
 			$('#historyTable').append($(
@@ -5144,7 +5369,10 @@ MessageBox.prototype = {
 			var ctx=canvas.getContext("2d");
 			ctx.drawImage(img, 0, 0, w, h);
 			canvas.toBlob = function(blob) {
-				var url = URL.createObjectURL(blob);
+			    try{
+			        var url = URL.createObjectURL(blob);
+			    }catch(err){
+			    }
 				callback.call(this, url); //回掉函数获取Base64编码
 				canvas = null;
 			}
@@ -5153,7 +5381,11 @@ MessageBox.prototype = {
 				canvas.height = h; //指定画板的高度,自定义
 				canvas.width = w; //指定画板的宽度，自定义
 				ctx.drawImage(img, 0, 0, w, h); //参数可自定义
-				dataURL = canvas.toDataURL("image/");
+				try{
+				    dataURL = canvas.toDataURL("image/");
+				}catch(err){
+				    // console.log("格式转换错误")
+				}
 				callback.call(this, dataURL); //回掉函数获取Base64编码
 				canvas = null;
 			};
@@ -5192,7 +5424,7 @@ MessageBox.prototype = {
 			}
 			if(_this.bws&&_this.bws.readyState==1){
 				if(_message.type !=5&&_message.type !=6&&_message !=2){
-					_this.bws.send(JSON.stringify({"id":_message.id,"type":3,"content":_message.content,"workorder":_message.workorder}));
+					_this.send_message(_message.content,3,_message.id);
 				}
 			}
 			// 更新已有消息列表内的消息状态
@@ -5219,7 +5451,6 @@ MessageBox.prototype = {
 					$('.chat-number').html(num-1+"条未读");
 				}
 			}catch(err){
-				console.log("气泡数据异常！")
 			}
 		}
 		if(flag){
@@ -5273,6 +5504,78 @@ MessageBox.prototype = {
 		});
 	},
 	/**
+    * @description 光标追加位置
+    */
+	insertContent:function(element, str){
+	    var _this =this;
+	     chat_html = element
+        // 编辑框设置焦点
+        chat_html.focus()
+        // 获取选定对象
+        var selection = getSelection()
+        // 判断是否有最后光标对象存在
+        if (_this.lastEditRange) {
+            // 存在最后光标对象，选定对象清除所有光标并添加最后光标还原之前的状态
+            selection.removeAllRanges()
+            selection.addRange(_this.lastEditRange)
+        }
+        // 判断选定对象范围是编辑框还是文本节点
+        if (selection.anchorNode.nodeName != '#text') {
+            // 如果是编辑框范围。则创建表情文本节点进行插入
+            var pasted_text = document.createTextNode(str)
+            if (chat_html.childNodes.length > 0) {
+                // 如果文本框的子元素大于0，则表示有其他元素，则按照位置插入表情节点
+                for (var i = 0; i < chat_html.childNodes.length; i++) {
+                    if (i == selection.anchorOffset) {
+                        chat_html.insertBefore(pasted_text, chat_html .childNodes[i])
+                    }
+                }
+            } else {
+                // 否则直接插入一个表情元素
+                chat_html.appendChild(pasted_text)
+            }
+            // 创建新的光标对象
+            var range = document.createRange()
+            // 光标对象的范围界定为新建的表情节点
+            range.selectNodeContents(pasted_text)
+            // 光标位置定位在表情节点的最大长度
+            range.setStart(pasted_text, pasted_text.length)
+            // 使光标开始和光标结束重叠
+            range.collapse(true)
+            // 清除选定对象的所有光标对象
+            selection.removeAllRanges()
+            // 插入新的光标对象
+            selection.addRange(range)
+        } else {
+            // 如果是文本节点则先获取光标对象
+			try{
+				var range = selection.getRangeAt(0)
+			}catch(err){
+				return false;
+			}
+            // 获取光标对象的范围界定对象，一般就是textNode对象
+            var textNode = range.startContainer;
+            // 获取光标位置
+            var rangeStartOffset = range.startOffset;
+            // 文本节点在光标位置处插入新的表情内容
+            textNode.insertData(rangeStartOffset, str)
+            // 光标移动到到原来的位置加上新内容的长度
+            range.setStart(textNode, rangeStartOffset + str.length)
+            // 光标开始和光标结束重叠
+            range.collapse(true)
+            // 清除选定对象的所有光标对象
+            selection.removeAllRanges()
+            // 插入新的光标对象
+            selection.addRange(range)
+        }
+        // 无论如何都要记录最后光标对象
+		try{
+			 _this.lastEditRange = selection.getRangeAt(0)
+		}catch(err){
+//				console.log(err)
+		}
+	},
+	/**
     * @description 页面截图
     */
 	screenshot:function(callback){
@@ -5292,7 +5595,7 @@ MessageBox.prototype = {
 			<svg xmlns="https://www.w3.org/2000/svg" focusable="false" aria-label=""  viewBox="0 0 24 24" height="30" width="30" fill="#757575"><path d="M21 17h-2.58l2.51 2.56c-.18.69-.73 1.26-1.41 1.44L17 18.5V21h-2v-6h6v2zM19 7h2v2h-2V7zm2-2h-2V3.08c1.1 0 2 .92 2 1.92zm-6-2h2v2h-2V3zm4 8h2v2h-2v-2zM9 21H7v-2h2v2zM5 9H3V7h2v2zm0-5.92V5H3c0-1 1-1.92 2-1.92zM5 17H3v-2h2v2zM9 5H7V3h2v2zm4 0h-2V3h2v2zm0 16h-2v-2h2v2zm-8-8H3v-2h2v2zm0 8.08C3.9 21.08 3 20 3 19h2v2.08z"></path></svg>\          </span>\
 			<span class = "finish">完成</span>\
 		</div>');
-		html2canvas(body[0], { scrollX: 0, scrollY: 0,useCORS: true}).then(function (canvas) {
+		html2canvas(body[0], {useCORS: true,x:0,y:0,scale:1}).then(function (canvas) {
 			// canvas.width = win.innerWidth;canvas.height = win.innerHeight;
 			// $(canvas).css({ "width": win.innerWidth, "height": win.innerHeight })
 			var canvas_2d = canvas.getContext("2d");
@@ -5307,7 +5610,7 @@ MessageBox.prototype = {
 					$('.mask_select_view>div').each(function () {
 						var data = $(this).data();
 						if ($(this).hasClass('select_area')) {
-							canvas_2d.strokeStyle = "#FDD835"; // 设置矩形笔触颜色
+							canvas_2d.strokeStyle = "red"; // 设置矩形笔触颜色
 							canvas_2d.lineJoin = "round";
 							canvas_2d.lineWidth = "2";// 设置矩形笔触宽度
 							canvas_2d.strokeRect(data.left, data.top, data.width, data.height);
@@ -5319,36 +5622,45 @@ MessageBox.prototype = {
 					var image = new Image();
 					image.setAttribute("crossOrigin",'Anonymous');
 					var userAgent = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-					if(userAgent){
+		        	if(userAgent){
 						try{
-							canvas.toBlob = function(blob) {
-								var url = URL.createObjectURL(blob);
-								image.src = url;
-							}
+				            var src = canvas.toDataURL("image/png");
+				            image.setAttribute("crossOrigin",'Anonymous');
+					        image.setAttribute("src",src);
+						  //  canvas.toBlob(function(blob) {
+						  //      try{
+        //                             var url = URL.createObjectURL(blob);
+        //                             console.log("object url:" + url)
+        //                             image.setAttribute("src",url);
+						  //      }catch(err){
+						  //          console.log("err:"+err)
+						  //      }
+        //                     });
 						}catch(err){
-							console.log("操作不安全")
+							console.log("操作1不安全")
 						}
 					}else{
 						try{
 							image.src = canvas.toDataURL("image/png");
+							var url = image.src;
+							image.setAttribute("onclick",'box.thumbnail(\'' + url + '\')');
 						}catch(err){
-							console.log("操作不安全")
+							console.log("操作2不安全")
 						}
 					}
-					if(_this.interface_flag =="chat"){
-						$("#feedback-box").show();
-						$('.debugs').empty();
-						$('.debugs').append($('<span class="glyphicon glyphicon-chevron-down"></span>'));
-						$(".chat_html").append(image);
-					}else
-					if(_this.interface_flag =="feedback"){
-						$(".chat_html").append(image);
-						$('#feedback-box').show();
-						$('.debugs').empty();
-						$('.debugs').append('<span class="glyphicon glyphicon-chevron-down"></span>');
+			    	$("#feedback-box").show();
+					$('.debugs').empty();
+					$('.debugs').append($('<span class="glyphicon glyphicon-chevron-down"></span>'));
+					if(callback != undefined){
+					    $(callback).empty();
+				        $(callback).append(image)
+					    $(".feedback-border,.feedback-mask").show();
+					}else{
+					    $(".chat_html").append(image);
 					}
 				}
 			});
+			
 			$('.toolbar span:eq(0)').on('mousedown', function (e) {
 				e = e || window.event;
 				var toolbar = $('.toolbar'), toolbar_left = toolbar.offset().left, toolbar_top = toolbar.offset().top;
@@ -5407,6 +5719,9 @@ MessageBox.prototype = {
 			$(document).keyup(function (ev) {
 				if (ev.keyCode === 27) {
 					$('#mask_bgimage,.mask_view,.mask_select_view,.toolbar').remove();
+					if(callback != undefined){
+					    $(".feedback-border,.feedback-mask").show();
+					}
 				}
 			});
 			$(".finish").on("click", function (e) {
@@ -5427,8 +5742,7 @@ MessageBox.prototype = {
 			clearInterval(_this.ping);
 			_this.workorder=undefined;
 		}catch(err){
-			console.log("断开连接异常！");
-			console.log(err);
+			// console.log("断开连接异常！");
 		}
 
 	},
@@ -5436,49 +5750,196 @@ MessageBox.prototype = {
     * @description 查看缩略图
 	* @param {String} src 图片地址
     */
-	thumbnail:function(src){
-		var _this = this;
-		var theImage = new Image(); theImage.src = src;
-		if(src==undefined) return false;
-		layer.open({
-			type: 1,
-			title: false,
-			closeBtn: 2,
-			area: ['auto'],
-			zIndex:2147483647, //层优先级
-			skin: 'layui-layer-nobg', //没有背景色
-			shadeClose: true,
-			content: '<div name="thumbnail" style="width:'+(theImage.width>850?"850px":theImage.width)+'; \
-			display: block;border: none;">\
-			<img style="width:100%;z-index:2147483647" src="'+src+'">\
-			</div>'
-		});
-	},
-    /**
-     * @author chudong<2020-08-08>
-     * @param {Object} obj  需要渲染的配置对象
-     * @param {*} callback  渲染完成的回调方法
-     */
-    render_template:function(obj, callback) {
-        if (!obj.html) return '缺少模板HTML';
-        var re = /<%([^%>]+)?%>/g, reExp = /(^( )?(if|for|else|switch|case|break|{|}))(.*)?/g, code = 'var r=[];\n',
-            cursor = 0;
-        var add = function (line, js) {
-            js ? (code += line.match(reExp) ? line + '\n' : 'r.push(' + line + ');\n') :
-                (code += line != '' ? 'r.push("' + line.replace(/"/g, '\\"') + '");\n' : '');
-            return add;
-        }
-        while (match = re.exec(obj.html)) {
-            add(obj.html.slice(cursor, match.index))(match[1], true);
-            cursor = match.index + match[0].length;
-        }
-        add(obj.html.substr(cursor, obj.html.length - cursor));
-        code += 'return r.join("");';
-        if (callback) {
-            callback(new Function(code.replace(/[\r\t\n]/g, '')).apply(obj.data));
-        } else {
-            return new Function(code.replace(/[\r\t\n]/g, '')).apply(obj.data);
-        }
+   	thumbnail:function(src){
+		var that = this
+		, mask = $('<div class="preview_images_mask" style="z-index: 9999999999"><div class="preview_head"><span class="preview_title">截图</span><span class="preview_small hidden" title="缩小显示"><span class="glyphicon glyphicon-resize-small" aria-hidden="true"></span></span><span class="preview_full" title="最大化显示"><span class="glyphicon glyphicon-resize-full" aria-hidden="true"></span></span><span class="preview_close" title="关闭图片预览视图"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></span></div><div class="preview_body"><img id="preview_images" src="' + src + '"></div><div class="preview_toolbar"><a href="javascript:;" title="左旋转"><span class="glyphicon glyphicon-repeat reverse-repeat" aria-hidden="true"></span></a><a href="javascript:;" title="右旋转"><span class="glyphicon glyphicon-repeat" aria-hidden="true"></span></a><a href="javascript:;" title="放大视图"><span class="glyphicon glyphicon-zoom-in" aria-hidden="true"></span></a><a href="javascript:;" title="缩小视图"><span class="glyphicon glyphicon-zoom-out" aria-hidden="true"></span></a><a href="javascript:;" title="重置视图"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span></a><a href="javascript:;" title="图片列表"><span class="glyphicon glyphicon-list" aria-hidden="true"></span></a></div></a></div></div>')
+		, area = [window.innerWidth, window.innerHeight]
+		, images_config = {
+		natural_width: 0,
+		natural_height: 0,
+		init_width: 0,
+		init_height: 0,
+		preview_width: 0,
+		preview_height: 0,
+		current_width: 0,
+		current_height: 0,
+		current_left: 0,
+		current_top: 0,
+		rotate: 0,
+		scale: 1,
+		images_mouse: !1
+	};
+	if ($(".preview_images_mask").length > 0)
+		return $("#preview_images").attr("src",src),
+		!1;
+	function auto_images_size(transition) {
+		var rotate = Math.abs(images_config.rotate / 90)
+			, preview_width = rotate % 2 == 0 ? images_config.preview_width : images_config.preview_height
+			, preview_height = rotate % 2 == 0 ? images_config.preview_height : images_config.preview_width
+			, preview_images = $("#preview_images")
+			, css_config = {};
+		images_config.init_width = images_config.natural_width,
+		images_config.init_height = images_config.natural_height,
+		images_config.init_width > preview_width && (images_config.init_width = preview_width,
+		images_config.init_height = parseFloat((preview_width / images_config.natural_width * images_config.init_height).toFixed(2))),
+		images_config.init_height > preview_height && (images_config.init_width = parseFloat((preview_height / images_config.natural_height * images_config.init_width).toFixed(2)),
+		images_config.init_height = preview_height),
+		images_config.current_width = parseFloat(images_config.init_width * images_config.scale),
+		images_config.current_height = parseFloat(images_config.init_height * images_config.scale),
+		images_config.current_left = parseFloat(((images_config.preview_width - images_config.current_width) / 2).toFixed(2)),
+		images_config.current_top = parseFloat(((images_config.preview_height - images_config.current_height) / 2).toFixed(2)),
+		css_config = {
+			width: images_config.current_width,
+			height: images_config.current_height,
+			top: images_config.current_top,
+			left: images_config.current_left,
+			display: "inline",
+			transform: "rotate(" + images_config.rotate + "deg)",
+			opacity: 1,
+			transition: "all 400ms"
+		},
+		!1 === transition && delete css_config.transition,
+		preview_images.css(css_config)
+	}
+	$("body").css("overflow", "hidden").append(mask),
+	images_config.preview_width = mask[0].clientWidth,
+	images_config.preview_height = mask[0].clientHeight,
+	$(".preview_body img").load((function() {
+		var img = $(this)[0];
+		// $(this).attr("data-index") || $(this).attr("data-index", data.images_id),
+		images_config.natural_width = img.naturalWidth,
+		images_config.natural_height = img.naturalHeight,
+		auto_images_size(!1)
+	}
+	)),
+	$(".preview_images_mask .preview_head").on("mousedown", (function(e) {
+		e = e || window.event;
+		var drag = $(this).parent();
+		if ($("body").addClass("select"),
+		$(this).onselectstart = $(this).ondrag = function() {
+			return !1
+		}
+		,
+		!$(e.target).hasClass("preview_close")) {
+			var diffX = e.clientX - drag.offset().left
+				, diffY = e.clientY - drag.offset().top;
+			$(document).on("mousemove", (function(e) {
+				var left = (e = e || window.event).clientX - diffX
+					, top = e.clientY - diffY;
+				left < 0 ? left = 0 : left > window.innerWidth - drag.width() && (left = window.innerWidth - drag.width()),
+				top < 0 ? top = 0 : top > window.innerHeight - drag.height() && (top = window.innerHeight - drag.height()),
+				drag.css({
+					left: left,
+					top: top,
+					margin: 0
+				})
+			}
+			)).on("mouseup", (function() {
+				$(this).unbind("mousemove mouseup")
+			}
+			))
+		}
+	}
+	)),
+	$(".preview_images_mask #preview_images").on("mousedown", (function(e) {
+		e = e || window.event,
+		$(this).onselectstart =$(this).ondrag = function() {
+			return !1
+		}
+		;
+		var images = $(this)
+			, preview = $(".preview_images_mask").offset()
+			, diffX = e.clientX - preview.left
+			, diffY = e.clientY - preview.top;
+		$(".preview_images_mask").on("mousemove", (function(e) {
+			var offsetX = (e = e || window.event).clientX - preview.left - diffX, offsetY = e.clientY - preview.top - diffY, rotate = Math.abs(images_config.rotate / 90), preview_width = rotate % 2 == 0 ? images_config.preview_width : images_config.preview_height, preview_height = rotate % 2 == 0 ? images_config.preview_height : images_config.preview_width, left, top;
+			if (images_config.current_width > preview_width) {
+				var max_left = preview_width - images_config.current_width;
+				(left = images_config.current_left + offsetX) > 0 ? left = 0 : left < max_left && (left = max_left),
+				images_config.current_left = left
+			}
+			if (images_config.current_height > preview_height) {
+				var max_top = preview_height - images_config.current_height;
+				(top = images_config.current_top + offsetY) > 0 ? top = 0 : top < max_top && (top = max_top),
+				images_config.current_top = top
+			}
+			images_config.current_height > preview_height && images_config.current_top <= 0 && images_config.current_height - preview_height <= images_config.current_top && (images_config.current_top -= offsetY),
+			images.css({
+				left: images_config.current_left,
+				top: images_config.current_top
+			})
+		}
+		)).on("mouseup", (function() {
+			$(this).unbind("mousemove mouseup")
+		}
+		)).on("dragstart", (function() {
+			e.preventDefault()
+		}
+		))
+	}
+	)).on("dragstart", (function() {
+		return !1
+	}
+	)),
+	$(".preview_close").click((function(e) {
+		$(".preview_images_mask").remove()
+	}
+	)),
+	$(".preview_toolbar a").click((function() {
+		var index = $(this).index()
+			, images = $("#preview_images");
+		switch (index) {
+		case 0:
+		case 1:
+			images_config.rotate = index ? images_config.rotate + 90 : images_config.rotate - 90,
+			auto_images_size();
+			break;
+		case 2:
+		case 3:
+			if (3 == images_config.scale && 2 == index || .2 == images_config.scale && 3 == index)
+				return layer.msg(images_config.scale >= 1 ? "图像放大，已达到最大尺寸。" : "图像缩小，已达到最小尺寸。"),
+				!1;
+			images_config.scale = (2 == index ? Math.round(10 * (images_config.scale + .4)) : Math.round(10 * (images_config.scale - .4))) / 10,
+			auto_images_size();
+			break;
+		case 4:
+			var scale_offset = images_config.rotate % 360;
+			scale_offset >= 180 ? images_config.rotate += 360 - scale_offset : images_config.rotate -= scale_offset,
+			images_config.scale = 1,
+			auto_images_size()
+		}
+	}
+	)),
+	$(".preview_full,.preview_small").click((function() {
+		$(this).hasClass("preview_full") ? ($(this).addClass("hidden").prev().removeClass("hidden"),
+		images_config.preview_width = area[0],
+		images_config.preview_height = area[1],
+		mask.css({
+			width: area[0],
+			height: area[1],
+			top: 0,
+			left: 0,
+			margin: 0,
+			zIndex:9999999999
+		}).data("type", "full"),
+		auto_images_size()) : ($(this).addClass("hidden").next().removeClass("hidden"),
+		$(".preview_images_mask").removeAttr("style"),
+		images_config.preview_width = 750,
+		images_config.preview_height = 650,
+		auto_images_size())
+	}
+	)),
+	$(".preview_cut_view a").click((function() {
+		var images_src = ""
+			, preview_images = $("#preview_images")
+			, images_id = parseInt(preview_images.attr("data-index"));
+		$(this).index() ? (images_id = images_id == that.file_images_list.length - 1 ? 0 : images_id + 1,
+		images_src = that.file_images_list[images_id]) : (images_id = 0 === images_id ? that.file_images_list.length - 1 : images_id - 1,
+		images_src = that.file_images_list[images_id]),
+		preview_images.attr("data-index", images_id).attr("src", "/download?filename=" + images_src),
+		$(".preview_title").html(that.get_path_filename(images_src))
+	}
+	))
 	},
 	/**
     * @description 保持socket生命连接
@@ -5488,20 +5949,19 @@ MessageBox.prototype = {
 		var _this = this,
 		interval = 15000,i=0;
 		if (_this.bws==null || _this.bws.readyState == 3 || _this.bws.readyState == 2) {
-			console.log("重新连接");
 			_this.connect(workorder);
 			try{
-				_this.bws.send("ping");
+				_this.send_server(_this, "ping");
 			}catch(err){
-				console.log("ping-error")
+				// console.log("ping-error")
 			}
 		}
         var _ping = setInterval(function(){
             try{
 				// _this.bws.send(JSON.stringify({"id":workorder,"content":"ping","workorder":workorder,"type":5}));
-				_this.bws.send("ping");
+				_this.send_server(_this, "ping");
             } catch(err) {
-				console.log("error.");
+				// console.log("error.");
             }
 		}, interval);
 		_this.ping = _ping;
@@ -5570,4 +6030,13 @@ var Snowflake = /** @class */ (function() {
 	return Snowflake;
 }());
 /** workorder end **/
+
+
+
+
+
+
+
+
+
 

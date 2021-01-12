@@ -73,8 +73,8 @@ class SiteDirAuth:
         if not get.name:
             return public.returnMsg(False, '请输入名称')
 
-        if site_dir[0] != "/" or site_dir[-1] != "/":
-            return public.returnMsg(False, '目录格式不正确')
+        # if site_dir[0] != "/" or site_dir[-1] != "/":
+        #     return public.returnMsg(False, '目录格式不正确')
         # if site_dir[0] == "/":
         #     site_dir = site_dir[1:]
         #     if site_dir[-1] == "/":

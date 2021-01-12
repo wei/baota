@@ -1157,7 +1157,6 @@ class panelPlugin:
     def download_icon(self,name,iconFile,downFile):
         srcIcon =  'plugin/' + name + '/icon.png'
         skey = name+'_icon'
-        #public.writeFile('/tmp/11.txt',name+'\n','a+')
         if cache.get(skey): return None
         if os.path.exists(srcIcon):
             public.ExecShell(r"\cp  -a -r " + srcIcon + " " + iconFile)

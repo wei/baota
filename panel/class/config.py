@@ -584,7 +584,6 @@ class config:
         new_time = int(time_str)
         time_arr = time.localtime(new_time)
         date_str = time.strftime("%Y-%m-%d %H:%M:%S", time_arr)
-        public.writeFile('/tmp/2',str(date_str))
         public.ExecShell('date -s "%s"' % date_str)
         public.WriteLog("TYPE_PANEL", "DATE_SUCCESS")
         return public.returnMsg(True,"DATE_SUCCESS")
@@ -891,7 +890,7 @@ class config:
                 continue
             if not os.path.exists(p):
                 continue
-            phpini = public.readFile(filename)
+            phpini = public.readFile(p)
             for g in gets:
                 try:
                     rep = g + r'\s*=\s*(.+)\r?\n'
@@ -1356,8 +1355,9 @@ class config:
         import panelSite
         site_info = public.M('sites').where('id=?', (get.id,)).field('name,path').find()
         session_path = "/www/php_session/{}".format(site_info["name"])
-        if os.path.exists(session_path):
+        if not os.path.exists(session_path):
             os.makedirs(session_path)
+            public.ExecShell('chown www.www {}'.format(session_path))
         run_path = panelSite.panelSite().GetSiteRunPath(get)["runPath"]
         user_ini_file = "{site_path}{run_path}/.user.ini".format(site_path=site_info["path"], run_path=run_path)
         conf = "session.save_path={}/\nsession.save_handler = files".format(session_path)
@@ -1426,7 +1426,11 @@ class config:
             if not secret_key:
                 return public.returnMsg(False,"生成key或username失败，请检查硬盘空间是否不足或目录无法写入[ {} ]".format(self._setup_path+"/data/"))
             try:
-                data = pyotp.totp.TOTP(secret_key).provisioning_uri(username, issuer_name=local_ip)
+                try:
+                    panel_name = json.loads(public.readFile(self._setup_path+'/config/config.json'))['title']
+                except:
+                    panel_name = '宝塔Linux面板'
+                data = pyotp.totp.TOTP(secret_key).provisioning_uri(username, issuer_name=panel_name+'--'+local_ip)
                 public.writeFile(self._core_fle_path+'/qrcode.txt',str(data))
                 return public.returnMsg(True, "开启成功")
             except Exception as e:
@@ -1643,12 +1647,17 @@ class config:
         data = public.M('logs').where('uid=?',(id,)).order('id desc').select()
         return data
 
+    def get_file_deny(self,args):
+        import file_execute_deny
+        p = file_execute_deny.FileExecuteDeny()
+        return p.get_file_deny(args)
 
+    def set_file_deny(self,args):
+        import file_execute_deny
+        p = file_execute_deny.FileExecuteDeny()
+        return p.set_file_deny(args)
 
-
-
-
-
-
-    
-
+    def del_file_deny(self,args):
+        import file_execute_deny
+        p = file_execute_deny.FileExecuteDeny()
+        return p.del_file_deny(args)
