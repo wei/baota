@@ -49,6 +49,7 @@ var site_table = bt_tools.table({
             }
         },event:function(row){}}, //模拟点击误删
         {fid:'ps',title:'备注',type:'input',blur:function(row,index,ev,key,that){
+            if(row.ps == ev.target.value) return false;
             bt.pub.set_data_ps({id:row.id,table:'sites',ps:ev.target.value},function(res){
                 bt_tools.msg(res,{is_dynamic:true});
             });
@@ -70,14 +71,18 @@ var site_table = bt_tools.table({
             var _ssl = row.ssl,_info = '',_arry = [['issuer','证书品牌'],['notAfter','到期日期'],['notBefore','申请日期'],['dns','可用域名']];
             try {
                 if(typeof row.ssl.endtime != 'undefined'){
-                    if(row.ssl.endtime < 0) return '<a class="btlink bt_danger" href="javascript:;">未部署</a>';
+                    if(row.ssl.endtime < -7){
+                        return '<a class="btlink bt_warning" href="javascript:;">未部署</a>';
+                    }else if(row.ssl.endtime < 0 && row.ssl.endtime > -7){
+                        return '<a class="btlink bt_danger" href="javascript:;">已过期'+ Math. row.ssl.endtime  +'天</a>';
+                    }
                 }
             } catch (error){}
             for(var i=0;i<_arry.length;i++){
                 var item = _ssl[_arry[i][0]];
                 _info += _arry[i][1]+':'+ item + (_arry.length-1 != i?'\n':'');
             }
-            return row.ssl === -1?'<a class="btlink bt_warning" href="javascript:;">未部署</a>':'<a class="btlink" href="javascript:;" title="'+ _info +'">剩余'+ row.ssl.endtime +'天</a>';
+            return row.ssl === -1?'<a class="btlink bt_warning" href="javascript:;">未部署</a>':'<a class="btlink '+ (row.ssl.endtime < 7?'bt_danger':'') +'" href="javascript:;" title="'+ _info +'">剩余'+ row.ssl.endtime +'天</a>';
         },event:function(row,index,ev,key,that){
             site.web_edit(row);
             setTimeout(function(){
@@ -428,8 +433,7 @@ var site = {
                         {
                             field: 'ssl', title: 'SSL证书', width: 80, templet: function (item) {
                                 var _ssl = '';
-                                if (item.ssl == -1)
-                                {
+                                if (item.ssl == -1){
                                     _ssl = '<a class="ssl_tips btlink" style="color:orange;">未部署</a>';
                                 }else{
                                     var ssl_info = "证书品牌: "+item.ssl.issuer+"<br>到期日期: " + item.ssl.notAfter+"<br>申请日期: " + item.ssl.notBefore +"<br>可用域名: " + item.ssl.dns.join("/");
@@ -589,12 +593,12 @@ var site = {
                     default:"["+ config.name +"] 站点备份列表为空",//数据为空时的默认提示
                     column:[
                         {type:'checkbox',class:'',width:20},
-                        {fid:'name',title:'文件名'},
-                        {fid:'size',title:'文件大小',type:'text',template:function(row,index){
+                        {fid:'name',title:'文件名',width:320,fixed:true},
+                        {fid:'size',title:'文件大小',width:80,type:'text',template:function(row,index){
                             return bt.format_size(row.size);
                         }},
-                        {fid:'addtime',title:'备份时间'},
-                        {title:'操作',type:'group',width:150,align:'right',group:[{
+                        {fid:'addtime',width:150,title:'备份时间'},
+                        {title:'操作',type:'group',width:120,align:'right',group:[{
                             title:'下载',
                             template:function(row,index,ev,key,that){
                                 return '<a target="_blank" class="btlink" href="/download?filename=' + row.filename + '&amp;name=' + row.name +'">下载</a>';
@@ -4906,6 +4910,5 @@ var site = {
         }, 100)
     }
 }
-site.get_types();
 
 

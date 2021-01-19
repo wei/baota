@@ -27,6 +27,7 @@ class crontab:
         
         data=[]
         for i in range(len(cront)):
+            tmp = {}
             tmp=cront[i]
             if cront[i]['type']=="day":
                 tmp['type']=public.getMsg('CRONTAB_TODAY')
@@ -50,6 +51,10 @@ class crontab:
             elif cront[i]['type']=="month":
                 tmp['type']=public.getMsg('CRONTAB_MONTH')
                 tmp['cycle']=public.getMsg('CRONTAB_MONTH_CYCLE',(str(cront[i]['where1']),str(cront[i]['where_hour']),str(cront[i]['where_minute'])))
+
+            log_file = '/www/server/cron/{}.log'.format(tmp['echo'])
+            if os.path.exists(log_file):
+                tmp['addtime'] = public.format_date(times=int(os.path.getmtime(log_file)))
             data.append(tmp)
         return data
 

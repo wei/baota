@@ -229,8 +229,8 @@ def systemTask():
                 
                 tmp['upTotal']      += networkIo[0]
                 tmp['downTotal']    += networkIo[1]
-                tmp['downPackets'][k] = round(float((networkIo[1] - network_down[k]) / 1024),2)
-                tmp['upPackets'][k] = round(float((networkIo[0] - network_up[k]) / 1024),2)
+                tmp['downPackets'][k] = round(float((networkIo[1] - network_down[k]) / 1024)/5,2)
+                tmp['upPackets'][k] = round(float((networkIo[0] - network_up[k]) / 1024)/5,2)
                 tmp['up']           += tmp['upPackets'][k]
                 tmp['down']         += tmp['downPackets'][k]
 
@@ -281,8 +281,7 @@ def systemTask():
                     data = (cpuInfo['used'],cpuInfo['mem'],addtime)
                     sql.table('cpuio').add('pro,mem,addtime',data)
                     sql.table('cpuio').where("addtime<?",(deltime,)).delete()
-                    
-                    data = (networkInfo['up'] / 5,networkInfo['down'] / 5,networkInfo['upTotal'],networkInfo['downTotal'],dumps(networkInfo['downPackets']),dumps(networkInfo['upPackets']),addtime)
+                    data = (networkInfo['up'],networkInfo['down'],networkInfo['upTotal'],networkInfo['downTotal'],dumps(networkInfo['downPackets']),dumps(networkInfo['upPackets']),addtime)
                     sql.table('network').add('up,down,total_up,total_down,down_packets,up_packets,addtime',data)
                     sql.table('network').where("addtime<?",(deltime,)).delete()
                     if os.path.exists('/proc/diskstats') and disk_ios:

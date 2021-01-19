@@ -2,7 +2,7 @@ function show_force_bind(){
     layer.open({
         type: 1,
         title: '绑定宝塔官网账号',
-        area: ['420px', '400px'],
+        area: ['420px', '425px'],
         closeBtn: 2,
         shadeClose: false,
         content: '<div class="libLogin pd20">\
@@ -15,6 +15,7 @@ function show_force_bind(){
                     <div class="line"><input autocomplete="new-password" class="bt-input-text" type="password" name="password2"  placeholder="密码" id="p2"></div>\
                     <div class="line" style="margin-top: 15px;"><input class="login-button" value="登录" type="button" ></div>\
                     <p class="text-right"><a class="btlink" href="https://www.bt.cn/register.html" target="_blank">未有账号，免费注册</a></p>\
+                    <p class="text-center" style="margin-top:30px">一个账号可以绑定多台宝塔面板</p>\
                 </div>\
             </div>',
         success: function () {
