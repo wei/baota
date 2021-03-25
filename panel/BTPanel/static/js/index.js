@@ -2,7 +2,7 @@ function show_force_bind(){
     layer.open({
         type: 1,
         title: '绑定宝塔官网账号',
-        area: ['420px', '425px'],
+        area: ['420px', '400px'],
         closeBtn: 2,
         shadeClose: false,
         content: '<div class="libLogin pd20">\
@@ -15,7 +15,6 @@ function show_force_bind(){
                     <div class="line"><input autocomplete="new-password" class="bt-input-text" type="password" name="password2"  placeholder="密码" id="p2"></div>\
                     <div class="line" style="margin-top: 15px;"><input class="login-button" value="登录" type="button" ></div>\
                     <p class="text-right"><a class="btlink" href="https://www.bt.cn/register.html" target="_blank">未有账号，免费注册</a></p>\
-                    <p class="text-center" style="margin-top:30px">一个账号可以绑定多台宝塔面板</p>\
                 </div>\
             </div>',
         success: function () {
@@ -263,7 +262,7 @@ var index = {
         setTimeout(function () { _this.interval.start(); }, 400)
         setTimeout(function () { _this.get_index_list(); }, 500)
         setTimeout(function () { _this.net.init() }, 600);
-        
+        setTimeout(function () { _this.get_warning_list(); }, 700);
 
 
         setTimeout(function () {
@@ -918,7 +917,21 @@ var index = {
                                 scan_time = items.check_time;
                                 htmls += '<li class="module_details_item">'+
                                     '<div class="module_details_head">'+
-                                        '<span class="module_details_title">'+ items.ps +'<i>（&nbsp;检测时间：'+ (that.get_simplify_time(items.check_time) || '刚刚') +'，耗时：'+ ( items.taking>1?( items.taking +'秒'):((items.taking * 1000).toFixed(2) +'毫秒')) +'&nbsp;）</i></span>'+
+                                        '<span class="module_details_title"><span title="'+ items.ps +'">'+ items.ps +'</span><i>（&nbsp;检测时间：'+ (that.get_simplify_time(items.check_time) || '刚刚') +'，耗时：'+ ( items.taking>1?( items.taking +'秒'):((items.taking * 1000).toFixed(2) +'毫秒')) +'&nbsp;，等级：'+                                         (function(level){
+                                            var level_html = '';
+                                            switch(level){
+                                                case 3:
+                                                    level_html += '<span style="color:red">高危</span>';
+                                                break;
+                                                case 2:
+                                                    level_html += '<span style="color:#E6A23C">中危</span>';
+                                                break;
+                                                case 1:
+                                                    level_html += '<span style="color:#e8d544">低危</span>';
+                                                break;
+                                            }
+                                            return level_html;
+                                        }(items.level))+'）</i></span>'+
                                         '<span class="operate_tools">'+ (item[0] != 'security'?('<a href="javascript:;" class="btlink cut_details">详情</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="javascript:;" data-model="'+ items.m_name +'" data-title="'+ items.title +'" '+ (item[0]=='ignore'?'class=\"btlink\"':'') +' data-type="'+item[0]+'">'+ (item[0] != 'ignore'?'忽略':'移除忽略') +'</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="javascript:;" class="btlink" data-model="'+ items.m_name +'" data-title="'+ items.title +'">检测</a>'):'<a href="javascript:;" class="btlink cut_details">详情</a>') +'</span>' +
                                     '</div>'+
                                     '<div class="module_details_body">'+

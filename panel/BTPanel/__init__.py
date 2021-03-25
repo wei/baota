@@ -12,7 +12,8 @@ import os
 import time
 import re
 import uuid
-os.chdir('/www/server/panel')
+if not os.name in ['nt']:
+    os.chdir('/www/server/panel')
 if not 'class/' in sys.path:
     sys.path.insert(0, 'class/')
 
@@ -69,6 +70,7 @@ method_all = ['GET', 'POST']
 method_get = ['GET']
 method_post = ['POST']
 json_header = {'Content-Type': 'application/json; charset=utf-8'}
+text_header = {'Content-Type': 'text/plain; charset=utf-8'}
 cache.set('p_token', 'bmac_' + public.Md5(public.get_mac_address()))
 admin_path_file = 'data/admin_path.pl'
 admin_path = '/'
@@ -142,7 +144,7 @@ def request_check():
         for k in pdata.keys():
             if len(k) > 48: return abort(403)
             if len(pdata[k]) > 256: return abort(403)
-
+    if session.get('debug') == 1: return
     if not request.path in ['/safe', '/hook', '/public', '/mail_sys', '/down']:
         ip_check = public.check_ip_panel()
         if ip_check: return ip_check
@@ -328,7 +330,7 @@ def site(pdata=None):
     'GetRedirectFile', 'SaveRedirectFile', 'DeleteRedirect', 'GetRedirectList', 'CreateRedirect', 'ModifyRedirect',
     'set_dir_auth', 'delete_dir_auth', 'get_dir_auth', 'modify_dir_auth_pass', 'export_domains', 'import_domains',
     'GetSiteLogs', 'GetSiteDomains', 'GetSecurity', 'SetSecurity', 'ProxyCache', 'CloseToHttps', 'HttpToHttps',
-    'SetEdate',
+    'SetEdate','get_site_errlog',
     'SetRewriteTel', 'GetCheckSafe', 'CheckSafe', 'GetDefaultSite', 'SetDefaultSite', 'CloseTomcat', 'SetTomcat',
     'apacheAddPort',
     'AddSite', 'GetPHPVersion', 'SetPHPVersion', 'DeleteSite', 'AddDomain', 'DelDomain', 'GetDirBinding',
@@ -420,6 +422,73 @@ def message(action=None):
     defs = (
     'get_messages', 'get_message_find', 'create_message', 'status_message', 'remove_message', 'get_messages_all')
     return publicObject(message_object, defs, action, None)
+
+@app.route('/colony/<module>/<action>',methods=method_all)
+def colony_route(module = 'index',action = None):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    if module in ['os','sys','public']:
+        return public.returnJson(False,'指定模块不存在!'),json_header 
+    act_temp = action.split('.')
+    action = act_temp[0]
+    if len(act_temp) == 1: act_temp.append('json')
+    act_type = act_temp[1].lower()
+    if not act_type in ['json','html','text','txt']:
+        return public.returnJson(False,'不支持的响应格式声明'),json_header
+
+    #URI输入检测
+    if module[:2] == '__' or module[-2:] == '__' or not re.match(r"^\w+$",action):
+        return public.returnJson(False,'错误的模块名称!'),json_header
+    
+    if action[:2] == '__' or action[-2:] == '__' or not re.match(r"^\w+$",action):
+        return public.returnJson(False,'错误的方法名称!'),json_header
+
+    import colony
+
+    #实例化指定模块，并检测模块或方法是否存在
+    if not module in colony.__dict__.keys():
+        return public.returnJson(False,'指定模块不存在!'),json_header
+    obj = eval('colony.{module}.{module}()'.format(module=module))
+    act = getattr(obj,action,None)
+    if act is None:
+        return public.returnJson(False,'指定方法不存在!'),json_header
+    #执行指定方法
+    try:
+        result = act(get_input())
+    except:
+        return public.get_error_info(),text_header
+
+    #响应执行结果
+    result_type = type(result)
+    if result_type in [Response,Resp]:
+        return result
+    try:
+        if act_type == 'json':
+            return public.GetJson(result),json_header
+        elif act_type == 'html':
+            template_name = '{}_{}.html'.format(module,action)
+            template_file = 'BTPanel/templates/colony/{}'.format(template_name)
+            if not os.path.exists(template_file):
+                return public.returnJson(False,'没有找到指定模板文件!'),json_header
+            try:
+                return render_template(template_name,data=result)
+            except:
+                return public.get_error_info(),text_header
+        elif act_type in ['text','txt']:
+            try:
+                if result_type == bytes:
+                    result = result.decode('utf-8')
+                elif result_type in [int,float,list,dict,tuple]:
+                    result = str(result)
+                return result,text_header
+            except:
+                return str(result),text_header
+        else:
+            return public.GetJson(result),json_header
+
+    except:
+        return public.returnJson(False,'错误的响应格式!'),json_header
+
 
 
 @app.route('/api', methods=method_all)
@@ -575,7 +644,7 @@ def files(pdata=None):
             'UploadFile', 'GetDir', 'CreateFile', 'CreateDir', 'DeleteDir', 'DeleteFile', 'get_download_url_list',
             'remove_download_url', 'modify_download_url',
             'CopyFile', 'CopyDir', 'MvFile', 'GetFileBody', 'SaveFileBody', 'Zip', 'UnZip', 'get_download_url_find',
-            'set_file_ps',
+            'set_file_ps','CreateLink',
             'SearchFiles', 'upload', 'read_history', 're_history', 'auto_save_temp', 'get_auto_save_body', 'get_videos',
             'GetFileAccess', 'SetFileAccess', 'GetDirSize', 'SetBatchData', 'BatchPaste', 'install_rar',
             'get_path_size',
@@ -747,9 +816,9 @@ def ssl(pdata=None):
     import panelSSL
     toObject = panelSSL.panelSSL()
     defs = ('check_url_txt', 'RemoveCert', 'renew_lets_ssl', 'SetCertToSite', 'GetCertList', 'SaveCert', 'GetCert',
-            'GetCertName', 'again_verify',
+            'GetCertName', 'again_verify','cancel_cert_order','get_cert_admin','apply_order_ca',
             'DelToken', 'GetToken', 'GetUserInfo', 'GetOrderList', 'GetDVSSL', 'Completed', 'SyncOrder',
-            'download_cert', 'set_cert', 'cancel_cert_order',
+            'download_cert', 'set_cert', 'cancel_cert_order','ApplyDVSSL','apply_cert_order_pay',
             'get_order_list', 'get_order_find', 'apply_order_pay', 'get_pay_status', 'apply_order', 'get_verify_info',
             'get_verify_result', 'get_product_list', 'set_verify_info',
             'GetSSLInfo', 'downloadCRT', 'GetSSLProduct', 'Renew_SSL', 'Get_Renew_SSL')
@@ -904,7 +973,7 @@ def login():
     if admin_path != '/bt' and os.path.exists(admin_path_file) and not 'admin_auth' in session:
         is_auth_path = True
     num_key = public.md5(public.GetClientIp() + '_auth_path')
-    if not public.get_error_num(num_key, 20): return '连续20次安全入口验证失败，禁止1小时'
+    #if not public.get_error_num(num_key, 20): return '连续20次安全入口验证失败，禁止1小时'
     # 登录输入验证
     if request.method == method_post[0]:
         v_list = ['username', 'password', 'code', 'vcode', 'cdn_url']
@@ -966,7 +1035,8 @@ def login():
                 referer_path = referer_tmp[-2]
             if route_path != '/' + referer_path:
                 public.set_error_num(num_key)
-                # return abort(404)
+                # return make_response('',101,headers = {})
+                # return '',101
                 data = {}
                 data['lan'] = public.getLan('close')
                 return render_template('autherr.html', data=data)

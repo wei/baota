@@ -207,14 +207,14 @@ class panelSite(panelRedirect):
     {{
         expires      30d;
         error_log /dev/null;
-        access_log off;
+        access_log /dev/null;
     }}
     
     location ~ .*\\.(js|css)?$
     {{
         expires      12h;
         error_log /dev/null;
-        access_log off; 
+        access_log /dev/null; 
     }}
     access_log  {log_path}/{site_name}.log;
     error_log  {log_path}/{site_name}.error.log;
@@ -940,7 +940,8 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
             reg = "^([\w\-\*]{1,100}\.){1,4}([\w\-]{1,24}|[\w\-]{1,24}\.[\w\-]{1,24})$"
             if not re.match(reg, get.domain): return public.returnMsg(False,'SITE_ADD_DOMAIN_ERR_FORMAT')
             
-            if len(domain) == 2: get.port = domain[1]
+            if len(domain) == 2:
+                get.port = domain[1]
             if get.port == "": get.port = "80"
 
             if not public.checkPort(get.port): return public.returnMsg(False,'SITE_ADD_DOMAIN_ERR_POER')
@@ -963,10 +964,12 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
                 if self._check_ols_ssl(get.webname):
                     get.port='443'
                     self.openlitespeed_domain(get)
-                    get.port='80'
+                    get.port = '80'
             except:
                 pass
-                        
+
+            #检查实际端口
+            if len(domain) == 2: get.port = domain[1]
             
             #添加放行端口
             if get.port != '80':
@@ -1027,8 +1030,8 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
         listen_conf = public.readFile(listen_file)
         try:
             get.webname = json.loads(get.webname)
-            get.domain = get.webname['domain']
-            get.webname = get.webname['domain'] + "," + ",".join(get.webname["domainlist"])
+            get.domain = get.webname['domain'].replace('\r', '')
+            get.webname = get.domain + "," + ",".join(get.webname["domainlist"])
             if get.webname[-1] == ',':
                 get.webname = get.webname[:-1]
         except:
@@ -1046,7 +1049,7 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
                     listen_conf = re.sub(rep, new_map, listen_conf)
             else:
                 domains = get.webname.strip().split(',')
-                map_tmp = '\tmap\t{d} {d}\n'.format(d=domains[0])
+                map_tmp = '\tmap\t{d} {d}'.format(d=domains[0])
                 listen_rep = "secure\s*0"
                 listen_conf = re.sub(listen_rep,"secure 0\n"+map_tmp,listen_conf)
         else:
@@ -1056,7 +1059,7 @@ listener Default%s{
     secure 0
     map %s %s
 }
-""" % (get.port,get.port,get.webname,get.domain)
+""" % (get.port, get.port, get.domain, get.webname)
         # 保存配置文件
         public.writeFile(listen_file, listen_conf)
         return True
@@ -1645,6 +1648,7 @@ listener SSL443 {
         public.writeFile(listen_conf, conf)
 
     def _get_ap_static_security(self,ap_conf):
+        if not ap_conf: return ''
         ap_static_security = re.search('#SECURITY-START(.|\n)*#SECURITY-END',ap_conf)
         if ap_static_security:
             return ap_static_security.group()
@@ -2511,13 +2515,13 @@ server
     {
         expires      30d;
         error_log /dev/null;
-        access_log off; 
+        access_log /dev/null; 
     }
     location ~ .*\\.(js|css)?$
     {
         expires      12h;
         error_log /dev/null;
-        access_log off; 
+        access_log /dev/null; 
     }
     access_log %s.log;
     error_log  %s.error.log;
@@ -3310,13 +3314,13 @@ server
     {
         expires      30d;
         error_log /dev/null;
-        access_log off;
+        access_log /dev/null;
     }
     location ~ .*\\.(js|css)?$
     {
         expires      12h;
         error_log /dev/null;
-        access_log off;
+        access_log /dev/null;
     }'''
                 if "(gif|jpg|jpeg|png|bmp|swf)$" not in ng_conf:
                     ng_conf = ng_conf.replace('access_log', oldconf + "\n\taccess_log")
@@ -3341,13 +3345,13 @@ server
     {
         expires      30d;
         error_log /dev/null;
-        access_log off;
+        access_log /dev/null;
     }
     location ~ .*\\.(js|css)?$
     {
         expires      12h;
         error_log /dev/null;
-        access_log off;
+        access_log /dev/null;
     }'''
                 if "(gif|jpg|jpeg|png|bmp|swf)$" not in ng_conf:
                     ng_conf = ng_conf.replace('access_log', oldconf + "\n\taccess_log")
@@ -4127,7 +4131,7 @@ location %s
         
         if get.siteName == 'phpmyadmin': 
             get.configFile = self.setupPath + '/apache/conf/extra/httpd-vhosts.conf'
-            if os.path.exists(self.sitePath + '/panel/vhost/apache/phpmyadmin.conf'):
+            if os.path.exists(self.setupPath + '/panel/vhost/apache/phpmyadmin.conf'):
                 get.configFile = self.setupPath + '/panel/vhost/apache/phpmyadmin.conf'
         else:
             get.configFile = self.setupPath + '/panel/vhost/apache/' + get.siteName + '.conf'
@@ -4678,6 +4682,18 @@ RewriteRule \.(BTPFILE)$    /404.html   [R,NC]
             logPath = '/www/wwwlogs/' + get.siteName + '-access_log'
         else:
             logPath = '/www/wwwlogs/' + get.siteName + '_ols.access_log'
+        if not os.path.exists(logPath): return public.returnMsg(False,'日志为空')
+        return public.returnMsg(True,public.GetNumLines(logPath,1000))
+
+    #取网站错误日志
+    def get_site_errlog(self,get):
+        serverType = public.get_webserver()
+        if serverType == "nginx":
+            logPath = '/www/wwwlogs/' + get.siteName + '.error.log'
+        elif serverType == 'apache':
+            logPath = '/www/wwwlogs/' + get.siteName + '-error_log'
+        else:
+            logPath = '/www/wwwlogs/' + get.siteName + '_ols.error_log'
         if not os.path.exists(logPath): return public.returnMsg(False,'日志为空')
         return public.returnMsg(True,public.GetNumLines(logPath,1000))
 

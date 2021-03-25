@@ -8,22 +8,12 @@
 # +-------------------------------------------------------------------
 from BTPanel import session, cache , request, redirect, g
 from datetime import datetime
+from public import dict_obj
 import os
 import public
 import json
 import sys
 import time
-
-
-class dict_obj:
-    def __contains__(self, key):
-        return getattr(self, key, None)
-
-    def __setitem__(self, key, value): setattr(self, key, value)
-    def __getitem__(self, key): return getattr(self, key, None)
-    def __delitem__(self, key): delattr(self, key)
-    def __delattr__(self, key): delattr(self, key)
-    def get_items(self): return self
 
 
 class panelSetup:
@@ -34,7 +24,7 @@ class panelSetup:
             if ua.find('spider') != -1 or ua.find('bot') != -1:
                 return redirect('https://www.baidu.com')
         
-        g.version = '7.5.1'
+        g.version = '7.5.2'
         g.title = public.GetConfigValue('title')
         g.uri = request.path
         g.debug = os.path.exists('data/debug.pl')
@@ -51,20 +41,26 @@ class panelSetup:
             else:
                 g.cdn_url = '/static'
             session['title'] = g.title
-            dirPath = '/www/server/phpmyadmin/pma'
-            if os.path.exists(dirPath):
-                public.ExecShell("rm -rf {}".format(dirPath))
-            
-            dirPath = '/www/server/adminer'
-            if os.path.exists(dirPath):
-                public.ExecShell("rm -rf {}".format(dirPath))
-            
-            dirPath = '/www/server/panel/adminer'
-            if os.path.exists(dirPath):
-                public.ExecShell("rm -rf {}".format(dirPath))
             
         g.is_aes = False
+        self.other_import()
         return None
+
+
+    def other_import(self):
+        g.o = public.readFile('data/o.pl')
+        g.other_css = []
+        g.other_js = []
+        if g.o:
+            s_path = 'BTPanel/static/other/{}'
+            css_name = "css/{}.css".format(g.o)
+            css_file = s_path.format(css_name)          
+            if os.path.exists(css_file): g.other_css.append('/static/other/{}'.format(css_name))
+            
+            js_name = "js/{}.js".format(g.o)
+            js_file = s_path.format(js_name)
+            if os.path.exists(js_file): g.other_js.append('/static/other/{}'.format(js_name))
+
 
 
 class panelAdmin(panelSetup):

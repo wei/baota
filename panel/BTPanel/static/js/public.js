@@ -706,13 +706,17 @@ var aceEditor = {
 		
 		// 当前根目录操作，新建文件或目录
 		$('.ace_dir_tools').on('click','.folder_down_up li',function(e){
-			var _type = parseInt($(this).attr('data-type'));
+			var _type = parseInt($(this).attr('data-type')),element = $('.cd-accordion-menu'),group = 0;
+			if($('.file_fold.bg').length > 0 && $('.file_fold.bg').data('file') != 'files'){
+				element = $('.file_fold.bg');
+				group = parseInt($('.file_fold.bg').data('group'));
+			}
 			switch(_type){
 				case 2:
-					_this.newly_file_type_dom($('.cd-accordion-menu'),0,0);
+					_this.newly_file_type_dom(element,group,0);
 				break;
 				case 3:
-					_this.newly_file_type_dom($('.cd-accordion-menu'),0,1);
+					_this.newly_file_type_dom(element,group,1);
 				break;
 			}
 			_this.refresh_config = {
@@ -955,7 +959,7 @@ var aceEditor = {
 				$('.file_fold .newly_file_input').focus();
 			break;
 			case 5:
-				GetFileBytes(_path);
+				window.open('/download?filename=' + encodeURIComponent(_path));
 			break;
 			case 6:
 				var is_files =  _active.attr('data-file') === 'Files'
@@ -1534,6 +1538,7 @@ var aceEditor = {
 		    }
 		}
 		if(!this.editor[id].historys_file) $('[data-menu-path="'+ (this.editor[id].path) +'"]').find('.file_fold').removeClass('active bg');
+		this.editor[id].ace.destroy();
 		delete this.editor[id];
 		if(this.editorLength === 0){
 			this.ace_active = '';
@@ -2153,7 +2158,7 @@ function NewDelFile(c) {
 				icon: 2
 			})
 		}
-		GetDiskList(a)
+		this.get_file_list(a);
 	})
 }
 
@@ -4145,7 +4150,6 @@ acme = {
 
 
 
-
 /** workorder js code **/
 
 /**
@@ -4153,11 +4157,9 @@ acme = {
 */
 function MessageBox(){
     this.bws = null; //websocket对象
+    this.route ='/workorder_client'; // 访问的方法
     this.info =null; // 请求数据
-	this.host = window.location.hostname;
-	this.port = window.location.port;
-	this.websocket_server = (window.location.protocol === 'http:' ? 'ws://' : 'wss://') + this.host + ":" + this.port;
-	this.http_server = window.location.protocol + "//" + this.host + ":" + this.port;
+	this.host = window.location.host;
 	this.init();
 
 }
@@ -4180,7 +4182,6 @@ MessageBox.prototype = {
 	fail_send_list:[],   //发送失败列表
 	waiting_list:[],        //等待消息
 	bt_allow:false,            //是否为授权用户
-	content_count:0,          //限制重连次数
     // websocket持久化连接
     connect:function(work_order2, callback){
 		var that = this;
@@ -4188,7 +4189,7 @@ MessageBox.prototype = {
 		if (that.bt_uid && that.bt_user){
 			// 判断当前websocket连接是否存在
 			if(!this.bws || this.bws.readyState == 3 || this.bws.readyState == 2){
-				var location = that.websocket_server +'/workorder_client?uid='+that.bt_uid+'&username='+that.bt_user+'&workorder='+workorder;
+				var location = (window.location.protocol === 'http:' ? 'ws://' : 'wss://') + this.host +this.route +'?uid='+that.bt_uid+'&username='+that.bt_user+'&workorder='+workorder;
 				try{
 					this.bws = new WebSocket(location);
 				}catch(err){
@@ -4365,7 +4366,7 @@ MessageBox.prototype = {
 		var _this = this;
 		// 查找当前正在处理的工单编号
 		$.ajax({
-			url: _this.http_server + "/workorder/list",
+			url: "/workorder/list",
 			contentType: "application/json",
 			dataType: 'json',
 			success: function(rdata){
@@ -4412,7 +4413,7 @@ MessageBox.prototype = {
 		//获取用户信息
 		try{
 		    $.ajax({
-    			url: _this.http_server + "/workorder/get_user_info",
+    			url: "/workorder/get_user_info",
     			contentType: "application/json",
     			dataType: 'json',
     			success: function(rdata){
@@ -4498,7 +4499,7 @@ MessageBox.prototype = {
 	    var _this = this;
     	try{
 	    $.ajax({
-			url: _this.http_server + "/workorder/allow",
+			url: "/workorder/allow",
 			contentType: "application/json",
 			dataType: 'json',
 			success: function(rdata){
@@ -4668,7 +4669,7 @@ MessageBox.prototype = {
 // 						_this.reply_chat_show(item);
 // 					}
 //             	});
-
+				
 // 			});
 // 			e.stopPropagation();
 // 		});
@@ -4922,18 +4923,14 @@ MessageBox.prototype = {
 	send_server:function(that,data){
         //如果没有连接，则尝试连接服务器
         if (!that.bws || that.bws.readyState == 3 || that.bws.readyState == 2) {
-			if(that.content_count==20){
-				clearInterval(that.ping);
-				that.content_count=0;
-			}else{
-				this.connect(null,function(bws){
-					setTimeout(function(){
-						that.bws.send(data);
-					},200);
-				});
-				return;
-			}
+            this.connect(null,function(bws){
+				setTimeout(function(){
+					that.bws.send(data);
+				},200);
+			});
+			return;
         }
+
         //判断当前连接状态,如果!=1，则100ms后尝试重新发送
         if (that.bws.readyState === 1) {
             that.bws.send(data);
@@ -5033,7 +5030,7 @@ MessageBox.prototype = {
 		//计时器数据
 		var len = 60;
 		if(_message.sent&&_message.sent==true){
-
+		    
 		}else{
 			$('.chat-content').append('<div class="chat-reply-box" data-id="'+_message.id+'">\
 				<div class="reply-portrait"><img src="'+_this.bt_yh_portrait+'" class="reply-portrait-image"  /></div>\
@@ -5198,7 +5195,9 @@ MessageBox.prototype = {
 				$("#feedback-box,.feedback-border,.feedback-mask").hide();
     			$('.debugs').empty();
     			$('.debugs').append($('<span>在线</br>客服</span>'));
-				_this.screenshot(_id);
+    			_this.screenshot(_id);
+    			$(this).parent().css("border",0).next().css("display","inline-block");
+    			$(this).parent().find("img")
     			e.stopPropagation();
 			});
 	},
@@ -5213,7 +5212,7 @@ MessageBox.prototype = {
 	feedback_submit:function(contents){
 		var _this = this
 		try{
-		    $.post(_this.http_server + "/workorder/create",{contents:JSON.stringify(contents),"collect":false},function(rdata){
+		    $.post("/workorder/create",{contents:JSON.stringify(contents),"collect":false},function(rdata){
     			if(rdata.error_code!=undefined&&rdata.status==false){
     				if(rdata.msg==undefined&&rdata.content==undefined){
     					rdata.msg="工单提交错误！";
@@ -5241,7 +5240,7 @@ MessageBox.prototype = {
 		    //防止用户多次点击
 			$(".feedback-submit").attr("disabled",false);
 		}
-
+		
 	},
 	/**
     * @description 查看历史工单记录
@@ -5260,7 +5259,7 @@ MessageBox.prototype = {
 			success: function(rdata){
 			    if(rdata.status==false){
 			        return false;
-			    }else if(rdata.length >0){
+			    }else{
 			        if(back=="history"){
     					_this.animation_change_feedback2(workorder,"history",rdata);
     				}else{
@@ -5488,7 +5487,7 @@ MessageBox.prototype = {
 				_this.feedback_chat();
 				return false;
 			}
-			$.post(_this.http_server+"/workorder/close",{workorder:workorder},function(rdata){
+			$.post("workorder/close",{workorder:workorder},function(rdata){
 				if(rdata.status){
 					if(_this.workorder !=undefined){
 						_this.disconnect();
@@ -5586,220 +5585,155 @@ MessageBox.prototype = {
     */
 	screenshot:function(callback){
 		var _this = this;
-		   var body = $('body'), win = $(window)[0],count=0,action_list = [],action_index=0;
-            body.append('<div id="mask_bgimage" style="width:' + win.innerWidth + 'px;height:' + win.innerHeight + 'px"></div>\
-	        <div class="mask_view"></div>\
-	        <div class="mask_select_view"></div>\
-	        <div class="toolbar" style="right:10px;bottom:10px;">\
-				<span class="toolbar-action" title="完成"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 1024 1024" width="24" height="24" t="1610701034537" p-id="5958" version="1.1"><path fill="#20a53a" d="M 431.47 793.782 c -11.365 0 -22.332 -4.378 -30.589 -12.286 l -235.495 -225.535 c -17.64 -16.894 -18.245 -44.891 -1.35 -62.528 c 16.894 -17.64 44.891 -18.245 62.532 -1.351 l 201.055 192.552 l 364.692 -443.171 c 15.519 -18.86 43.39 -21.567 62.253 -6.049 c 18.861 15.519 21.568 43.39 6.048 62.251 l -394.992 479.993 c -7.821 9.504 -19.248 15.319 -31.534 16.047 c -0.874 0.052 -1.748 0.078 -2.621 0.078 Z" p-id="5959" /></svg>完成</span>\
-				<span class="toolbar-action" title="取消"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 1024 1024" width="24" height="24" t="1610701804956" p-id="2830" version="1.1"><path fill="#d81e06" d="M 767.98 815.98 c -12.31 0 -24.56 -4.69 -33.94 -14.06 l -512 -512 c -18.75 -18.75 -18.75 -49.12 0 -67.88 s 49.13 -18.75 67.88 0 l 512 512 c 18.75 18.75 18.75 49.12 0 67.88 c -9.38 9.38 -21.63 14.06 -33.94 14.06 Z" p-id="2831" /><path fill="#d81e06" d="M 255.98 815.98 c -12.31 0 -24.56 -4.69 -33.94 -14.06 c -18.75 -18.75 -18.75 -49.12 0 -67.88 l 512 -512 c 18.75 -18.75 49.12 -18.75 67.88 0 s 18.75 49.12 0 67.88 l -512 512 c -9.38 9.38 -21.63 14.06 -33.94 14.06 Z" p-id="2832" /></svg>取消</span>\
-				<span class="toolbar-action" title="撤销"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 1024 1024" width="24" height="24" t="1610704690782" p-id="7830" version="1.1"><path fill="#2c2c2c" d="M 648 307.2 H 217.6 l 128 -128 c 12.8 -12.8 12.8 -32 0 -44.8 c -12.8 -12.8 -32 -12.8 -44.8 0 L 118.4 315.2 c -6.4 6.4 -9.6 14.4 -9.6 22.4 s 3.2 16 9.6 22.4 l 180.8 180.8 c 12.8 12.8 32 12.8 44.8 0 c 12.8 -12.8 12.8 -32 0 -44.8 L 219.2 371.2 H 648 c 120 0 216 96 216 216 s -96 216 -216 216 H 320 c -17.6 0 -32 14.4 -32 32 s 14.4 32 32 32 h 328 c 155.2 0 280 -124.8 280 -280 s -124.8 -280 -280 -280 Z" p-id="7831" /></svg>撤销</span>\
-				<label>|</label>\
-				<span class="toolbar-tool " title="隐藏"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 1024 1024" width="24" height="24" t="1610702201413" p-id="4401" version="1.1"><path fill="#2c2c2c" d="M 64 64 h 896 v 896 H 64 Z" p-id="4402" /></svg>隐藏</span>\
-				<span class="toolbar-tool active" title="选择"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 1024 1024" width="24" height="24" t="1610702696041" p-id="5890" version="1.1"><path fill="#d81e06" d="M 898.59 839.44 c 0 32.9 -26.67 59.56 -59.56 59.56 H 183.88 c -32.9 0 -59.56 -26.66 -59.56 -59.56 V 184.29 c 0 -32.9 26.66 -59.56 59.56 -59.56 h 655.15 c 32.9 0 59.56 26.66 59.56 59.56 v 655.15 Z M 839.03 65.17 H 183.88 c -65.78 0 -119.12 53.34 -119.12 119.12 v 655.15 c 0 65.79 53.34 119.12 119.12 119.12 h 655.15 c 65.79 0 119.12 -53.33 119.12 -119.12 V 184.29 c 0 -65.78 -53.33 -119.12 -119.12 -119.12 Z" p-id="5891" /></svg>选择</span>\
-				<span class="move-span" title="移动"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 1024 1024" width="24" height="24" t="1610702869832" p-id="6930" version="1.1"><path fill="#515151" d="M 384 768 C 348.654 768 320 796.654 320 832 C 320 867.346 348.654 896 384 896 C 419.346 896 448 867.346 448 832 C 448 796.654 419.346 768 384 768 Z M 384 448 C 348.654 448 320 476.654 320 512 C 320 547.346 348.654 576 384 576 C 419.346 576 448 547.346 448 512 C 448 476.654 419.346 448 384 448 Z M 384 128 C 348.654 128 320 156.654 320 192 C 320 227.346 348.654 256 384 256 C 419.346 256 448 227.346 448 192 C 448 156.654 419.346 128 384 128 Z M 640 768 C 604.654 768 576 796.654 576 832 C 576 867.346 604.654 896 640 896 C 675.346 896 704 867.346 704 832 C 704 796.654 675.346 768 640 768 Z M 640 448 C 604.654 448 576 476.654 576 512 C 576 547.346 604.654 576 640 576 C 675.346 576 704 547.346 704 512 C 704 476.654 675.346 448 640 448 Z M 640 128 C 604.654 128 576 156.654 576 192 C 576 227.346 604.654 256 640 256 C 675.346 256 704 227.346 704 192 C 704 156.654 675.346 128 640 128 Z" p-id="6931" /></svg>移动</span>\
-			</div>');
-            html2canvas(body[0], {useCORS: true,x:0,y:0,scale:1}).then(function (canvas) {
-				// canvas.width = win.innerWidth;canvas.height = win.innerHeight;
-				// $(canvas).css({ "width": win.innerWidth, "height": win.innerHeight })
-				var canvas_2d = canvas.getContext("2d");
-				$('.debugs').hide();
-				$('#mask_bgimage').css({ "width": win.innerWidth, "height": win.innerHeight }).empty().append(canvas);
-				$('.toolbar,.mask_view').show();
-				$('.toolbar span').click(function () {
-					var index = $(this).index();
-					if (index == 4 || index == 5) {
-						$(this).addClass('active').siblings().removeClass('active');
-					} else if (index == 0) {
-						var arry = [], scroll_top = $('#mask_bgimage').scrollTop();
-						$('.mask_select_view>div').each(function () {
-							var data = $(this).data();
-							if ($(this).hasClass('select_area')) {
-								canvas_2d.strokeStyle = "red"; // 设置矩形笔触颜色
-								canvas_2d.lineJoin = "round";
-								canvas_2d.lineWidth = "2";// 设置矩形笔触宽度
-								canvas_2d.strokeRect(data.left, data.top, data.width, data.height);
-							}else {
-								canvas_2d.fillStyle = "#333";
-								canvas_2d.fillRect(data.left, data.top, data.width, data.height);
-							}
-						});
-						action_list = [];
-						var image = new Image();
-						image.setAttribute("crossOrigin",'Anonymous');
-						var userAgent = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-						if(userAgent){
-							try{
-								var src = canvas.toDataURL("image/png");
-								image.setAttribute("crossOrigin",'Anonymous');
-								image.setAttribute("src",src);
-							  //  canvas.toBlob(function(blob) {
-							  //      try{
-			//                             var url = URL.createObjectURL(blob);
-			//                             console.log("object url:" + url)
-			//                             image.setAttribute("src",url);
-							  //      }catch(err){
-							  //          console.log("err:"+err)
-							  //      }
-			//                     });
-							}catch(err){
-								console.log("操作1不安全")
-							}
-						}else{
-							try{
-								image.src = canvas.toDataURL("image/png");
-								var url = image.src;
-								image.setAttribute("onclick",'box.thumbnail(\'' + url + '\')');
-							}catch(err){
-								console.log("操作2不安全")
-							}
+		body = $('body'), win = $(window)[0];
+		body.append('<div id="mask_bgimage" style="width:' + win.innerWidth + 'px;height:' + win.innerHeight + 'px"></div>\
+		<div class="mask_view"></div>\
+		<div class="mask_select_view"></div>\
+		<div class="toolbar" style="right:10px;bottom:10px;">\
+			<span title="移动工具条"><svg xmlns="https://www.w3.org/2000/svg" focusable="false" aria-label="Drag" fill="#BDBDBD" height="56" width="16" viewBox="-2 2 12 12"><circle cx="1.5" cy="1.5" r="1.5"></circle><circle cx="1.5" cy="7.5" r="1.5"></circle><circle cx="1.5" cy="13.5" r="1.5"></circle><circle cx="6.5" cy="1.5" r="1.5"></circle><circle cx="6.5" cy="7.5" r="1.5"></circle><circle cx="6.5" cy="13.5" r="1.5"></circle></svg></span>\
+			<span title="突显问题" class="active">\
+			<svg xmlns="https://www.w3.org/2000/svg" focusable="false" viewBox="0 0 24 24" height="30" width="30" fill="#FDD835"><path d="M3 3h18v18H3z"></path></svg>\
+			<svg xmlns="https://www.w3.org/2000/svg" focusable="false" aria-label=""  viewBox="0 0 24 24" height="30" width="30" fill="#757575"><path d="M21 17h-2.58l2.51 2.56c-.18.69-.73 1.26-1.41 1.44L17 18.5V21h-2v-6h6v2zM19 7h2v2h-2V7zm2-2h-2V3.08c1.1 0 2 .92 2 1.92zm-6-2h2v2h-2V3zm4 8h2v2h-2v-2zM9 21H7v-2h2v2zM5 9H3V7h2v2zm0-5.92V5H3c0-1 1-1.92 2-1.92zM5 17H3v-2h2v2zM9 5H7V3h2v2zm4 0h-2V3h2v2zm0 16h-2v-2h2v2zm-8-8H3v-2h2v2zm0 8.08C3.9 21.08 3 20 3 19h2v2.08z"></path></svg>\
+			</span>\
+			<span title="隐藏敏感信息">\
+			<svg xmlns="https://www.w3.org/2000/svg" focusable="false" viewBox="0 0 24 24" height="30" width="30"><path d="M3 3h18v18H3z"></path></svg>\
+			<svg xmlns="https://www.w3.org/2000/svg" focusable="false" aria-label=""  viewBox="0 0 24 24" height="30" width="30" fill="#757575"><path d="M21 17h-2.58l2.51 2.56c-.18.69-.73 1.26-1.41 1.44L17 18.5V21h-2v-6h6v2zM19 7h2v2h-2V7zm2-2h-2V3.08c1.1 0 2 .92 2 1.92zm-6-2h2v2h-2V3zm4 8h2v2h-2v-2zM9 21H7v-2h2v2zM5 9H3V7h2v2zm0-5.92V5H3c0-1 1-1.92 2-1.92zM5 17H3v-2h2v2zM9 5H7V3h2v2zm4 0h-2V3h2v2zm0 16h-2v-2h2v2zm-8-8H3v-2h2v2zm0 8.08C3.9 21.08 3 20 3 19h2v2.08z"></path></svg>\          </span>\
+			<span class = "finish">完成</span>\
+		</div>');
+		html2canvas(body[0], {useCORS: true,x:0,y:0,scale:1}).then(function (canvas) {
+			// canvas.width = win.innerWidth;canvas.height = win.innerHeight;
+			// $(canvas).css({ "width": win.innerWidth, "height": win.innerHeight })
+			var canvas_2d = canvas.getContext("2d");
+			$('#mask_bgimage').css({ "width": win.innerWidth, "height": win.innerHeight }).empty().append(canvas);
+			$('.toolbar,.mask_view').show();
+			$('.toolbar span').click(function () {
+				var index = $(this).index();
+				if (index == 1 || index == 2) {
+					$(this).addClass('active').siblings().removeClass('active');
+				} else if (index == 3) {
+					var arry = [], scroll_top = $('#mask_bgimage').scrollTop();
+					$('.mask_select_view>div').each(function () {
+						var data = $(this).data();
+						if ($(this).hasClass('select_area')) {
+							canvas_2d.strokeStyle = "red"; // 设置矩形笔触颜色
+							canvas_2d.lineJoin = "round";
+							canvas_2d.lineWidth = "2";// 设置矩形笔触宽度
+							canvas_2d.strokeRect(data.left, data.top, data.width, data.height);
+						} else {
+							canvas_2d.fillStyle = "#333";
+							canvas_2d.fillRect(data.left, data.top, data.width, data.height);
 						}
-						$(".feedback-border,.feedback-mask").show();
-						$('#mask_bgimage,.mask_view,.mask_select_view,.toolbar').remove();
-						$("#feedback-box").show();
-						$('.debugs').empty();
-						$('.debugs').append($('<span class="glyphicon glyphicon-chevron-down"></span>'));
-						$('.debugs').show();
-						if(callback != undefined){
-							$(callback).empty();
-							$(callback).append(image);
-							$(callback).css("border",0).next().css("display","inline-block");
-						}else{
-							$(".chat_html").append(image);
+					});
+					var image = new Image();
+					image.setAttribute("crossOrigin",'Anonymous');
+					var userAgent = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+		        	if(userAgent){
+						try{
+				            var src = canvas.toDataURL("image/png");
+				            image.setAttribute("crossOrigin",'Anonymous');
+					        image.setAttribute("src",src);
+						  //  canvas.toBlob(function(blob) {
+						  //      try{
+        //                             var url = URL.createObjectURL(blob);
+        //                             console.log("object url:" + url)
+        //                             image.setAttribute("src",url);
+						  //      }catch(err){
+						  //          console.log("err:"+err)
+						  //      }
+        //                     });
+						}catch(err){
+							console.log("操作1不安全")
 						}
-						
-                    }else if(index==1){
-						action_list = [];
-						$('#mask_bgimage,.mask_view,.mask_select_view,.toolbar').remove();
-						$("#feedback-box").show();
-						$('.debugs').empty();
-						$('.debugs').append($('<span class="glyphicon glyphicon-chevron-down"></span>'));
-						$('.debugs').show();
-    					if(callback != undefined){
-    					    $(".feedback-border,.feedback-mask").show();
-    					}
-					}else if(index==2){
-						if(action_list.length==0){
-							action_list = [];
-							$("#feedback-box").show();
-    						$('.debugs').empty();
-    						$('.debugs').append($('<span class="glyphicon glyphicon-chevron-down"></span>'));
-    						$('.debugs').show();
-    						$('#mask_bgimage,.mask_view,.mask_select_view,.toolbar').remove();
-        					if(callback != undefined){
-        					    $(".feedback-border,.feedback-mask").show();
-        					}
-						}else{
-							var data = action_list.pop();
-							if(data.action=="remove"){
-								select_view = $('<div data-count="'+data.name+'"  id="'+data.name+'" class="'+data.class_name+' show"  style="'+(data.class_name=="select_ban" ? 'z-index:99999999;' : 'z-index:3;')+'">' + (data.class_name=="select_area" ? '<canvas></canvas>':'') + '</div>');
-								 $('.mask_select_view').append(select_view);
-								if(data.class_name=="select_area") select_canvas = select_view.find('canvas')[0].getContext('2d');
-								select_view.css({ left: data.left + 'px', top: data.top + 'px', width: data.width+4 + 'px', height: data.height+4 + 'px',
-												}).data({ left: data.left, top: data.top, width: data.width, height: data.height });
-								select_view.find('canvas').attr({ width: (data.width) + 'px', height: (data.height) + 'px' });
-								if (data.class_name=="select_area") select_canvas.drawImage(canvas, data.left + 2, data.top + 2, data.width, data.height, 0, 0, data.width, data.height); //复制画布内容
-							}else{
-								$("#"+data.count).remove();
-							}
-							
+					}else{
+						try{
+							image.src = canvas.toDataURL("image/png");
+							var url = image.src;
+							image.setAttribute("onclick",'box.thumbnail(\'' + url + '\')');
+						}catch(err){
+							console.log("操作2不安全")
 						}
 					}
-                });
-				//工具栏移动
-                $('.move-span').on('mousedown', function (e) {
-                    e = e || window.event;
-                    var toolbar = $('.toolbar'), toolbar_left = toolbar.offset().left, toolbar_top = toolbar.offset().top;
-                    $(document).on('mousemove', function (ev) {
-                        var win = $(window)[0], win_height = win.innerHeight, win_width = win.innerWidth,
-                            offsetX = ev.clientX - e.clientX, offsetY = ev.clientY - e.clientY, config = { right: 'inline', bottom: 'inline' };
-                        config.left = toolbar_left + offsetX;
-                        config.top = toolbar_top + offsetY;
-                        if (config.left <= 0) {
-                            config.left = 0;
-                        } else if (win_width <= (config.left + toolbar[0].clientWidth)) {
-                            config.left = win_width - toolbar[0].clientWidth;
-                        }
-                        if (config.top <= 0) {
-                            config.top = 0;
-                        } else if (win_height <= (config.top + toolbar[0].clientHeight)) {
-                            config.top = win_height - toolbar[0].clientHeight;
-                        }
-                        toolbar.css(config);
-                    });
-                    $(document).on('mouseup', function (ev) {
-                        $(this).unbind('mousemove mouseup');
-                    });
-                    e.stopPropagation();
-                    e.preventDefault();
-                });
-				//绘制文本框
-                $('.mask_select_view').on('mousedown', function (ev) {
-                    var x = ev.clientX, y = ev.clientY, width = 0, height = 0, _index = $('.toolbar-tool.active').index();
-                    select_view = $('<div data-count="box-'+count+'" id="box-'+count+'" class="' + (_index==4 ? 'select_ban' :(_index==5 ? 'select_area' : '')) + ' show"  style="'+(_index==4 ? 'z-index:99999999;' : 'z-index:3;')+'">' + (_index==5 ? '<canvas></canvas>' :'') + '</div>');
-                    if (_index==5) select_canvas = select_view.find('canvas')[0].getContext('2d');
-                    $(this).append(select_view);
-                    $(this).on('mousemove', function (ev) {
-                        var move_x = ev.clientX, move_y = ev.clientY, left = (x > move_x ? move_x : null || x < move_x ? x : null), top = (y > move_y ? move_y : null || y < move_y ? y : null);
-						width = Math.abs(x - move_x), height = Math.abs(y - move_y);
-                        if (width > 10 && height > 10) {
-                            select_view.css({ left: left + 'px', top: top + 'px', width: width+4 + 'px', height: height+4 + 'px' }).data({ left: left, top: top, width: width+4, height: height+4 });
-							select_view.find('canvas').attr({ width: (width) + 'px', height: (height) + 'px' });
-                            if (_index==5) select_canvas.drawImage(canvas, left + 2, top + 2, width, height, 0, 0, width, height); //复制画布内容
-                        }
-                    });
-                    $(this).on('mouseup', function (ev) {
-                        var up_x = ev.clientX, up_y = ev.clientY;
-                        if (width < 10 && height < 10){
-							select_view.remove();
-						}else{
-							select_view.each(function () {
-								var _data = $(this).data();
-								_data.name = select_view.attr("data-count");
-								_data.action = "append";
-								$(this).hasClass('select_area')?_data.class_name ="select_area":_data.class_name = "select_ban";
-								action_list.push(_data);
-							});
-							count = count+1,action_index=action_index+1;
-						} 
-                        $(this).unbind('mousemove mouseup');
-                        select_view.append('<div class="close_area"></div>');
-						
-						
-                    });
-                    select_view.on('click', '.close_area', function () {
-						$(this).parent().each(function () {
-							var _data = {};
-							_data.left = parseInt($(this).css("left")),_data.top= parseInt($(this).css("top")),
-							_data.width = parseInt($(this).css("width")),_data.height = parseInt($(this).css("height")),
-							_data.name = $(this).attr("data-count");
-							_data.action = "remove";
-							$(this).hasClass('select_area')?_data.class_name ="select_area":_data.class_name = "select_ban";
-							action_list.push(_data);
-						});
-                        $(this).parent().remove();
-                    });
-                    select_view.on('mousemove', function (ev) {
-                        ev.stopPropagation();
-                    });
-                    ev.stopPropagation();
-                    ev.preventDefault();
-                });
-				//Esc退出
-                $(document).keyup(function (ev) {
-                    if (ev.keyCode === 27) {
-						action_list = [];
-                        $('#mask_bgimage,.mask_view,.mask_select_view,.toolbar').remove();
-                        $("#feedback-box").show();
-						$('.debugs').empty();
-						$('.debugs').append($('<span class="glyphicon glyphicon-chevron-down"></span>'));
-						$('.debugs').show();
-    					if(callback != undefined){
-    					    $(".feedback-border,.feedback-mask").show();
-    					}
-                    }
-                });
-            });
+			    	$("#feedback-box").show();
+					$('.debugs').empty();
+					$('.debugs').append($('<span class="glyphicon glyphicon-chevron-down"></span>'));
+					if(callback != undefined){
+					    $(callback).empty();
+				        $(callback).append(image)
+					    $(".feedback-border,.feedback-mask").show();
+					}else{
+					    $(".chat_html").append(image);
+					}
+				}
+			});
+			
+			$('.toolbar span:eq(0)').on('mousedown', function (e) {
+				e = e || window.event;
+				var toolbar = $('.toolbar'), toolbar_left = toolbar.offset().left, toolbar_top = toolbar.offset().top;
+				$(document).on('mousemove', function (ev) {
+					var win = $(window)[0], win_height = win.innerHeight, win_width = win.innerWidth,
+						offsetX = ev.clientX - e.clientX, offsetY = ev.clientY - e.clientY, config = { right: 'inline', bottom: 'inline' };
+					config.left = toolbar_left + offsetX;
+					config.top = toolbar_top + offsetY;
+					if (config.left <= 0) {
+						config.left = 0;
+					} else if (win_width <= (config.left + toolbar[0].clientWidth)) {
+						config.left = win_width - toolbar[0].clientWidth;
+					}
+					if (config.top <= 0) {
+						config.top = 0;
+					} else if (win_height <= (config.top + toolbar[0].clientHeight)) {
+						config.top = win_height - toolbar[0].clientHeight;
+					}
+					toolbar.css(config);
+				});
+				$(document).on('mouseup', function (ev) {
+					$(this).unbind('mousemove mouseup');
+				});
+				e.stopPropagation();
+				e.preventDefault();
+			});
+			$('.mask_select_view').on('mousedown', function (ev) {
+				var x = ev.clientX, y = ev.clientY, width = 0, height = 0, status = $('.toolbar span.active').index() === 1;
+				select_view = $('<div class="' + (status ? 'select_area' : 'select_ban') + ' show"  style="'+(status ? 'z-index:3;' : 'z-index:9999999;')+'">' + (status ? '<canvas></canvas>' : '') + '</div>');
+				if (status) select_canvas = select_view.find('canvas')[0].getContext('2d');
+				$(this).append(select_view);
+				$(this).on('mousemove', function (ev) {
+					var move_x = ev.clientX, move_y = ev.clientY, left = (x > move_x ? move_x : null || x < move_x ? x : null), top = (y > move_y ? move_y : null || y < move_y ? y : null);
+					width = Math.abs(x - move_x), height = Math.abs(y - move_y);
+					if (width > 10 && height > 10) {
+						select_view.css({ left: left + 'px', top: top + 'px', width: width + 4 + 'px', height: height + 4 +'px' }).data({ left: left, top: top, width: width, height: height });
+						select_view.find('canvas').attr({ width: (width) + 'px', height: (height) + 'px' });
+						if (status) select_canvas.drawImage(canvas, left + 2, top + 2, width, height, 0, 0, width, height); //复制画布内容
+					}
+				});
+				$(this).on('mouseup', function (ev) {
+					var up_x = ev.clientX, up_y = ev.clientY;
+					if (width < 10 && height < 10) select_view.remove();
+					$(this).unbind('mousemove mouseup');
+					select_view.append('<div class="close_area"></div>');
+				});
+				select_view.on('click', '.close_area', function () {
+					$(this).parent().remove();
+				});
+				select_view.on('mousemove', function (ev) {
+					ev.stopPropagation();
+				});
+				ev.stopPropagation();
+				ev.preventDefault();
+			});
+			$(document).keyup(function (ev) {
+				if (ev.keyCode === 27) {
+					$('#mask_bgimage,.mask_view,.mask_select_view,.toolbar').remove();
+					if(callback != undefined){
+					    $(".feedback-border,.feedback-mask").show();
+					}
+				}
+			});
+			$(".finish").on("click", function (e) {
+				$('#mask_bgimage,.mask_view,.mask_select_view,.toolbar').remove();
+				e.stopPropagation();
+			});
+		});
 	},
 	/**
     * @description 关闭工单关闭线程
@@ -6101,6 +6035,7 @@ var Snowflake = /** @class */ (function() {
 	return Snowflake;
 }());
 /** workorder end **/
+
 
 
 

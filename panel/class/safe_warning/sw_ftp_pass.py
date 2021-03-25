@@ -85,7 +85,7 @@ def is_strong_password(password):
         if re.search(reg, password):
             grade += 1
 
-    if grade == 4 or (grade == 3 and len(password) >= 9):
+    if grade == 4 or (grade >= 2 and len(password) >= 9):
         return True
     return False
 

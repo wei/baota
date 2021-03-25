@@ -2584,7 +2584,14 @@ function AddSite(codename,title) {
 					 		<p><span>用户：</span><strong>" + ret.databaseUser + "</strong></p>\
 					 		<p><span>密码：</span><strong>" + ret.databasePass + "</strong></p>\
 					 		"
+        }else{
+            sqlData = "<p class='p1'>数据库账号资料</p>\
+					 		<p><span>数据库名：</span><strong>数据库创建失败,请检查是否存在同名数据库!</strong></p>\
+					 		<p><span>用户：</span><strong>数据库创建失败,请检查是否存在同名数据库!</strong></p>\
+                             <p><span>密码：</span><strong>数据库创建失败,请检查是否存在同名数据库!</strong></p>\
+                            "
         }
+
         var pdata = 'dname=' + codename + '&site_name=' + mainDomain + '&php_version=' + php_version;
         var loadT = layer.msg('<div class="depSpeed">正在提交 <img src="/static/img/ing.gif"></div>', { icon: 16, time: 0, shade: [0.3, "#000"] });
 
