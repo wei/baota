@@ -121,7 +121,8 @@ admin_path_checks = [
     '/api',
     '/tips',
     '/message',
-    '/warning'
+    '/warning',
+    '/bind'
 ]
 if admin_path in admin_path_checks: admin_path = '/bt'
 
@@ -145,6 +146,19 @@ def request_check():
             if len(k) > 48: return abort(403)
             if len(pdata[k]) > 256: return abort(403)
     if session.get('debug') == 1: return
+    
+
+    if app.config['BASIC_AUTH_OPEN']:
+        if request.path in ['/public', '/download', '/mail_sys', '/hook', '/down', '/check_bind',
+                            '/get_app_bind_status']: return
+        auth = request.authorization
+        if not comm.get_sk(): return
+        if not auth: return send_authenticated()
+        tips = '_bt.cn'
+        if public.md5(auth.username.strip() + tips) != app.config['BASIC_AUTH_USERNAME'] \
+                or public.md5(auth.password.strip() + tips) != app.config['BASIC_AUTH_PASSWORD']:
+            return send_authenticated()
+    
     if not request.path in ['/safe', '/hook', '/public', '/mail_sys', '/down']:
         ip_check = public.check_ip_panel()
         if ip_check: return ip_check
@@ -160,16 +174,9 @@ def request_check():
         if request.args.get('action') in not_networks:
             return public.returnJson(False, 'INIT_REQUEST_CHECK_LOCAL_ERR'), json_header
 
-    if app.config['BASIC_AUTH_OPEN']:
-        if request.path in ['/public', '/download', '/mail_sys', '/hook', '/down', '/check_bind',
-                            '/get_app_bind_status']: return
-        auth = request.authorization
-        if not comm.get_sk(): return
-        if not auth: return send_authenticated()
-        tips = '_bt.cn'
-        if public.md5(auth.username.strip() + tips) != app.config['BASIC_AUTH_USERNAME'] \
-                or public.md5(auth.password.strip() + tips) != app.config['BASIC_AUTH_PASSWORD']:
-            return send_authenticated()
+    if request.path in ['/','/site','/ftp','/database','/soft','/control','/firewall','/files','/xterm','/crontab','/config']:
+        if not public.is_bind():
+            return redirect('/bind',302)
 
 
 # Flask 请求结束勾子
@@ -247,11 +254,20 @@ def xterm():
     return publicObject(ssh_host_admin, defs, None)
 
 
+@app.route('/bind', methods=method_get)
+def bind():
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    if public.is_bind(): return redirect('/',302)
+    data = {}
+    g.title = '请先绑定宝塔帐号'
+    return render_template('bind.html', data=data)
+
+
 @sockets.route('/work_order')
 def work_order(ws):
     comReturn = comm.local()
     if comReturn: return comReturn
-
 
 @sockets.route('/webssh')
 def webssh(ws):
@@ -301,7 +317,6 @@ def webssh(ws):
         ws.close()
     return 'False'
 
-
 @app.route('/site', methods=method_all)
 def site(pdata=None):
     # 网站管理
@@ -316,7 +331,7 @@ def site(pdata=None):
         data['js_random'] = get_js_random()
         if os.path.exists(public.GetConfigValue('setup_path') + '/nginx') == False \
                 and os.path.exists(public.GetConfigValue('setup_path') + '/apache') == False \
-                and os.path.exists('/usr/local/lsws') == False:
+                and os.path.exists('/usr/local/lsws/bin/lswsctrl') == False:
             data['isSetup'] = False
         is_bind()
         return render_template('site.html', data=data)
@@ -546,7 +561,7 @@ def ssh_security(pdata=None):
     firewallObject = ssh_security.ssh_security()
     defs = ('san_ssh_security', 'set_password', 'set_sshkey', 'stop_key', 'get_config',
             'stop_password', 'get_key', 'return_ip', 'add_return_ip', 'del_return_ip', 'start_jian', 'stop_jian',
-            'get_jian', 'get_logs')
+            'get_jian', 'get_logs','set_root','stop_root')
     return publicObject(firewallObject, defs, None, pdata)
 
 
@@ -647,7 +662,7 @@ def files(pdata=None):
             'set_file_ps','CreateLink',
             'SearchFiles', 'upload', 'read_history', 're_history', 'auto_save_temp', 'get_auto_save_body', 'get_videos',
             'GetFileAccess', 'SetFileAccess', 'GetDirSize', 'SetBatchData', 'BatchPaste', 'install_rar',
-            'get_path_size',
+            'get_path_size','get_file_attribute','get_file_hash',
             'DownloadFile', 'GetTaskSpeed', 'CloseLogs', 'InstallSoft', 'UninstallSoft', 'SaveTmpFile',
             'get_composer_version', 'exec_composer', 'update_composer',
             'GetTmpFile', 'del_files_store', 'add_files_store', 'get_files_store', 'del_files_store_types',
@@ -747,7 +762,7 @@ def config(pdata=None):
     'getFpmConfig', 'setFpmConfig', 'setPHPMaxTime', 'syncDate', 'setPHPDisable', 'SetControl',
     'ClosePanel', 'AutoUpdatePanel', 'SetPanelLock', 'return_mail_list', 'del_mail_list', 'add_mail_address',
     'user_mail_send', 'get_user_mail', 'set_dingding', 'get_dingding', 'get_settings', 'user_stmp_mail_send',
-    'user_dingding_send'
+    'user_dingding_send','get_login_send','set_login_send','clear_login_send','get_login_log','login_ipwhite'
     )
     return publicObject(config.config(), defs, None, pdata)
 
@@ -883,7 +898,7 @@ def auth(pdata=None):
     if comReturn: return comReturn
     import panelAuth
     toObject = panelAuth.panelAuth()
-    defs = ('get_re_order_status_plugin', 'create_plugin_other_order', 'get_order_stat',
+    defs = ('get_plugin_remarks','get_re_order_status_plugin', 'create_plugin_other_order', 'get_order_stat',
             'get_voucher_plugin', 'create_order_voucher_plugin', 'get_product_discount_by',
             'get_re_order_status', 'create_order_voucher', 'create_order', 'get_order_status',
             'get_voucher', 'flush_pay_status', 'create_serverid', 'check_serverid',
@@ -958,6 +973,7 @@ def panel_cloud():
 
 
 route_path = os.path.join(admin_path, '')
+if not route_path: route_path = '/'
 if route_path[-1] == '/': route_path = route_path[:-1]
 if route_path[0] != '/': route_path = '/' + route_path
 
@@ -1155,11 +1171,14 @@ def down(token=None, fname=None):
             args = get_input()
             if 'file_password' in args:
                 if not re.match(r"^\w+$", args.file_password):
-                    return public.ReturnJson(False, '密码错误!'), json_header
+                    return public.ReturnJson(False, '密码错误-1!'), json_header
                 if re.match(r"^\d+$", args.file_password):
-                    args.file_password += '.0'
+                    args.file_password = str(int(args.file_password))
+                    args.file_password += ".0"
+                    
+
                 if args.file_password != str(find['password']):
-                    return public.ReturnJson(False, '密码错误!'), json_header
+                    return public.ReturnJson(False, '密码错误-2!'), json_header
                 session[token] = 1
                 session['down'] = True
             else:
@@ -1317,6 +1336,10 @@ def panel_other(name=None, fun=None, stype=None):
     if name != "mail_sys" or fun != "send_mail_http.json":
         comReturn = comm.local()
         if comReturn: return comReturn
+        if fun:
+            if fun.find('.json') != -1:
+                if 'request_token' in session and 'login' in session:
+                    if not check_csrf(): return public.ReturnJson(False, 'INIT_CSRF_ERR'), json_header
         args = None
     else:
         args = get_input()
@@ -1337,7 +1360,10 @@ def panel_other(name=None, fun=None, stype=None):
     if name.find('./') != -1 or not re.match(r"^[\w-]+$", name): return abort(404)
     if not name: return public.returnJson(False, 'PLUGIN_INPUT_ERR'), json_header
     p_path = os.path.join('/www/server/panel/plugin/', name)
-    if not os.path.exists(p_path): return abort(404)
+    if not os.path.exists(p_path): 
+        if name == 'btwaf' and fun == 'index':
+            return  render_template('error3.html',data={}) 
+        return abort(404)
 
     # 是否响插件应静态文件
     if fun == 'static':
@@ -1370,6 +1396,8 @@ def panel_other(name=None, fun=None, stype=None):
                 pass
             plu = eval('plugin_main.' + name + '_main()')
             if not hasattr(plu, fun):
+                if name == 'btwaf' and fun == 'index':
+                    return  render_template('error3.html',data={}) 
                 return public.returnJson(False, 'PLUGIN_NOT_FUN'), json_header
 
         # 执行插件方法
@@ -1388,7 +1416,8 @@ def panel_other(name=None, fun=None, stype=None):
             data = panelPHP.panelPHP(name).exec_php_script(args)
 
         r_type = type(data)
-        if r_type == Response: return data
+        if r_type == Response:
+            return data
 
         # 处理响应
         if stype == 'json':  # 响应JSON

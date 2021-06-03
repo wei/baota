@@ -24,7 +24,7 @@ class panelSetup:
             if ua.find('spider') != -1 or ua.find('bot') != -1:
                 return redirect('https://www.baidu.com')
         
-        g.version = '7.5.2'
+        g.version = '7.6.0'
         g.title = public.GetConfigValue('title')
         g.uri = request.path
         g.debug = os.path.exists('data/debug.pl')
@@ -96,7 +96,7 @@ class panelAdmin(panelSetup):
             session['brand'] = public.GetConfigValue('brand')
             session['product'] = public.GetConfigValue('product')
             session['rootPath'] = '/www'
-            session['download_url'] = 'http://download.bt.cn'
+            session['download_url'] = public.GetConfigValue('download')
             session['setupPath'] = session['rootPath'] + '/server'
             session['logsPath'] = '/www/wwwlogs'
             session['yaer'] = datetime.now().year
@@ -105,7 +105,7 @@ class panelAdmin(panelSetup):
         if not 'lan' in session:
             session['lan'] = public.GetLanguage()
         if not 'home' in session:
-            session['home'] = 'http://www.bt.cn'
+            session['home'] = public.GetConfigValue('home')
         return False
 
     # 检查Web服务器类型
@@ -276,15 +276,29 @@ class panelAdmin(panelSetup):
     def GetOS(self):
         if not 'server_os' in session:
             tmp = {}
-            if os.path.exists('/etc/redhat-release'):
+            issue_file = '/etc/issue'
+            redhat_release = '/etc/redhat-release'
+            if os.path.exists(redhat_release):
                 tmp['x'] = 'RHEL'
-                tmp['osname'] = public.ReadFile(
-                    '/etc/redhat-release').split()[0]
+                tmp['osname'] = self.get_osname(redhat_release)
             elif os.path.exists('/usr/bin/yum'):
                 tmp['x'] = 'RHEL'
-                tmp['osname'] = public.ReadFile('/etc/issue').split()[0]
-            elif os.path.exists('/etc/issue'):
+                tmp['osname'] = self.get_osname(issue_file)
+            elif os.path.exists(issue_file):
                 tmp['x'] = 'Debian'
-                tmp['osname'] = public.ReadFile('/etc/issue').split()[0]
+                tmp['osname'] = self.get_osname(issue_file)
             session['server_os'] = tmp
         return False
+
+
+    def get_osname(self,i_file):
+        '''
+            @name 从指定文件中获取系统名称
+            @author hwliang<2021-04-07>
+            @param i_file<string> 指定文件全路径
+            @return string
+        '''
+        if not os.path.exists(i_file): return ''
+        issue_str = public.ReadFile(i_file).strip()
+        if issue_str: return issue_str.split()[0]
+        return ''

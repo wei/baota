@@ -305,7 +305,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if get.path == '':
             get.path = '/www'
         if not os.path.exists(get.path):
-            return public.ReturnMsg(False, '指定目录不存在!')
+            get.path = '/www/wwwroot'
+            #return public.ReturnMsg(False, '指定目录不存在!')
         if get.path == '/www/Recycle_bin':
             return public.returnMsg(False, '此为回收站目录，请在右上角按【回收站】按钮打开')
         if not os.path.isdir(get.path):
@@ -1379,6 +1380,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
     def CloseLogs(self, get):
         get.path = public.GetConfigValue('root_path')
         public.ExecShell('rm -f '+public.GetConfigValue('logs_path')+'/*')
+        public.ExecShell('rm -rf '+public.GetConfigValue('logs_path')+'/history_backups/*')
+        public.ExecShell('rm -f '+public.GetConfigValue('logs_path')+'/pm2/*.log')
         if public.get_webserver() == 'nginx':
             public.ExecShell(
                 'kill -USR1 `cat '+public.GetConfigValue('setup_path')+'/nginx/logs/nginx.pid`')
@@ -1470,7 +1473,21 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             return public.returnMsg(False, '操作失败,请重新操作')
         myfiles = json.loads(session['selected']['data'])
         l = len(myfiles)
+        
         if get.type == '1':
+
+            for key in myfiles:
+                if sys.version_info[0] == 2:
+                    sfile = session['selected']['path'] + \
+                        '/' + key.encode('utf-8')
+                    dfile = get.path + '/' + key.encode('utf-8')
+                else:
+                    sfile = session['selected']['path'] + '/' + key
+                    dfile = get.path + '/' + key
+
+                if dfile.find(sfile) == 0:
+                    return public.returnMsg(False,'错误的复制逻辑，从{}复制到{}有包含关系，存在无限循环复制风险!'.format(sfile,dfile))
+
             for key in myfiles:
                 i += 1
                 public.writeSpeed(key, i, l)
@@ -1538,11 +1555,6 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                     os.remove(sfile)
         return True
 
-
-    #创建软链
-    def create_link(self,args):
-        pass
-
     # 复制目录
     def copytree(self, sfile, dfile):
         if sfile == dfile:
@@ -1550,6 +1562,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if not os.path.exists(dfile):
             os.makedirs(dfile)
         for f_name in os.listdir(sfile):
+            if not f_name.strip(): continue
+            if f_name.find('./') != -1: continue
             src_filename = (sfile + '/' + f_name).replace('//', '/')
             dst_filename = (dfile + '/' + f_name).replace('//', '/')
             mode_info = public.get_mode_and_user(src_filename)
@@ -2010,7 +2024,13 @@ cd %s
             return public.returnMsg(False,'指定地址不存在!')
         pdata = {}
         if 'expire' in get: pdata['expire'] = get.expire
-        if 'password' in get: pdata['password'] = get.password
+        if 'password' in get:
+            pdata['password'] = get.password
+            if len(pdata['password']) < 4 and len(pdata['password']) > 0:
+                return public.returnMsg(False,'提取密码长度不能小于4位')
+            if not re.match('^\w+$',pdata['password']):
+                return public.returnMsg(False,'提取密码中不能带有特殊符号')
+        
         if 'ps' in get: pdata['ps'] = get.ps
         public.M(my_table).where('id=?',(id,)).update(pdata)
         return public.returnMsg(True,'修改成功!')
@@ -2033,6 +2053,9 @@ cd %s
         }
         if len(pdata['password']) < 4 and len(pdata['password']) > 0:
             return public.returnMsg(False,'提取密码长度不能小于4位')
+
+        if not re.match('^\w+$',pdata['password']):
+            return public.returnMsg(False,'提取密码中不能带有特殊符号')
         #更新 or 插入
         token = public.M(my_table).where('filename=?',(get.filename,)).getField('token')
         if token:
@@ -2052,7 +2075,7 @@ cd %s
         php_vs = ["80","74","73","72","71","70","56","55","54","53"]
         if php_version:
             if php_version != 'auto':
-                if not php_version in php_vs: return False
+                if not php_version in php_vs: return ''
             else:
                 php_version = None
         
@@ -2067,7 +2090,7 @@ cd %s
                 php_v = pv
                 break
         #如果没安装直接返回False
-        if not php_v: return False
+        if not php_v: return ''
         #处理PHP-CLI-INI配置文件
         php_ini = '/www/server/panel/tmp/composer_php_cli_'+php_v+'.ini'
         if not os.path.exists(php_ini):
@@ -2093,8 +2116,12 @@ cd %s
     # 安装composer
     def get_composer_bin(self):
         composer_bin = '/usr/bin/composer'
+        download_addr = 'wget -O {} {}/install/src/composer.phper -T 5'.format(composer_bin,public.get_url())
         if not os.path.exists(composer_bin): 
-            public.ExecShell('wget -O {} {}/install/src/composer.phper -T 5'.format(composer_bin,public.get_url()))
+            public.ExecShell(download_addr)
+        elif os.path.getsize(composer_bin) < 100:
+            public.ExecShell(download_addr)
+        
         public.ExecShell('chmod +x {}'.format(composer_bin))
         if not os.path.exists(composer_bin): 
             return False
@@ -2114,8 +2141,11 @@ cd %s
         php_bin = self.__get_php_bin(php_version)
         if not php_bin: 
             return public.returnMsg(False,'没有找到可用的PHP版本，或指定PHP版本未安装!')
-        if not os.path.exists(get.path + '/composer.json'): 
-            return public.returnMsg(False,'指定目录中没有找到composer.json配置文件!')
+        get.composer_cmd = get.composer_cmd.strip()
+        if get.composer_cmd == '':
+            if not os.path.exists(get.path + '/composer.json'): 
+                return public.returnMsg(False,'指定目录中没有找到composer.json配置文件!')
+        
         log_file = '/tmp/composer.log'
         user = ''
         if 'user' in get:
@@ -2130,14 +2160,21 @@ cd %s
         #设置指定源
         if 'repo' in get:
             if get.repo != 'repos.packagist':
-                public.ExecShell('{}{} {} config -g repo.packagist composer {}'.format(user,php_bin,composer_bin,get.repo))
+                public.ExecShell('export COMPOSER_HOME=/tmp && {}{} {} config -g repo.packagist composer {}'.format(user,php_bin,composer_bin,get.repo))
             else:
-                public.ExecShell('{}{} {} config -g --unset repos.packagist'.format(user,php_bin,composer_bin))
+                public.ExecShell('export COMPOSER_HOME=/tmp && {}{} {} config -g --unset repos.packagist'.format(user,php_bin,composer_bin))
         #执行composer命令
-        composer_exec_str = '{} {} {} -vvv'.format(php_bin,composer_bin,get.composer_args)
-        
+        if not get.composer_cmd:
+            composer_exec_str = '{} {} {} -vvv'.format(php_bin,composer_bin,get.composer_args)
+        else:
+            if get.composer_cmd.find('composer ') == 0 or get.composer_cmd.find('/usr/bin/composer ') == 0:
+                composer_cmd = get.composer_cmd.replace('composer ','').replace('/usr/bin/composer ','')
+                composer_exec_str = '{} {} {} -vvv'.format(php_bin,composer_bin,composer_cmd)
+            else:
+                composer_exec_str = '{} {} {} {} -vvv'.format(php_bin,composer_bin,get.composer_args,get.composer_cmd)
+
         if os.path.exists(log_file): os.remove(log_file)
-        public.ExecShell("cd {} && {}nohup {} &> {} && echo 'BT-Exec-Completed' >> {}  && rm -rf /home/www &".format(get.path,user,composer_exec_str,log_file,log_file))
+        public.ExecShell("cd {} && export COMPOSER_HOME=/tmp && {} nohup {} &> {} && echo 'BT-Exec-Completed' >> {}  && rm -rf /home/www &".format(get.path,user,composer_exec_str,log_file,log_file))
         public.WriteLog('Composer',"在目录：{}，执行composer {}".format(get.path,get.composer_args))
         return public.returnMsg(True,'命令已发送!')
 
@@ -2153,7 +2190,8 @@ cd %s
             if not result: raise Exception('empty!')
         except:
             php_bin = self.__get_php_bin()
-            composer_exec_str = php_bin + ' ' + composer_bin +' --version 2>/dev/null|grep \'Composer version\'|awk \'{print $3}\''
+            if not php_bin:  return public.returnMsg(False,'没有找到可用的PHP版本!')
+            composer_exec_str = 'export COMPOSER_HOME=/tmp && ' + php_bin + ' ' + composer_bin +' --version 2>/dev/null|grep \'Composer version\'|awk \'{print $3}\''
             result = public.ExecShell(composer_exec_str)[0].strip()
 
         data = public.returnMsg(True,result)
@@ -2174,15 +2212,15 @@ cd %s
         if not composer_bin: 
             return public.returnMsg(False,'没有找到可用的composer!')
         php_bin = self.__get_php_bin()
-
+        if not php_bin:  return public.returnMsg(False,'没有找到可用的PHP版本!')
         #设置指定源
         # if 'repo' in get:
         #     if get.repo:
         #         public.ExecShell('{} {} config -g repo.packagist composer {}'.format(php_bin,composer_bin,get.repo))
 
         version1 = self.get_composer_version(get)['msg']
-        composer_exec_str = '{} {} self-update -vvv'.format(php_bin,composer_bin)
-        public.ExecShell(composer_exec_str)[0]
+        composer_exec_str = 'export COMPOSER_HOME=/tmp && {} {} self-update -vvv'.format(php_bin,composer_bin)
+        public.ExecShell(composer_exec_str)
         version2 = self.get_composer_version(get)['msg']
         if version1 == version2:
             msg = "当前已经是最新版本，无需升级!"
@@ -2191,5 +2229,109 @@ cd %s
             public.WriteLog('Composer',msg)
         return public.returnMsg(True,msg)
 
-        
+    # 计算文件HASH
+    def get_file_hash(self,args=None,filename=None):
+        if not filename: filename = args.filename
+        import hashlib
+        md5_obj = hashlib.md5()
+        sha1_obj = hashlib.sha1()
+        f = open(filename,'rb')
+        while True:
+            b = f.read(8096)
+            if not b :
+                break
+            md5_obj.update(b)
+            sha1_obj.update(b)
+        f.close()
+        return {'md5':md5_obj.hexdigest(),'sha1':sha1_obj.hexdigest()}
+
+
+    # 取历史副本
+    def get_history_info(self, filename):
+        try:
+            save_path = ('/www/backup/file_history/' +
+                         filename).replace('//', '/')
+            if not os.path.exists(save_path):
+                return []
+            result = []
+            for f in  sorted(os.listdir(save_path)):
+                f_name = (save_path + '/' + f).replace('//', '/')
+                pdata = {}
+                pdata['md5'] = public.FileMd5(f_name)
+                f_stat = os.stat(f_name)
+                pdata['st_mtime'] = int(f)
+                pdata['st_size'] = f_stat.st_size
+                pdata['history_file'] = f_name
+                result.append(pdata)
+            return result
+        except:
+            return []
+
+    #获取文件扩展名
+    def get_file_ext(self,filename):
+        ss_exts = ['tar.gz','tar.bz2','tar.bz']
+        for s in ss_exts:
+            e_len = len(s)
+            f_len = len(filename)
+            if f_len < e_len: continue
+            if filename[-e_len:] == s:
+                return s
+        if filename.find('.') == -1: return ''
+        return filename.split('.')[-1]
+
+
+    # 取所属用户或组
+    def get_mode_user(self,uid):
+        import pwd
+        try:
+            return pwd.getpwuid(uid).pw_name
+        except:
+            return uid
+
+
+    # 取指定文件属性
+    def get_file_attribute(self,args):
+        filename = args.filename.strip()
+        if not os.path.exists(filename):
+            return public.returnMsg(False,'指定文件不存在!')
+        attribute = {}
+        attribute['name'] = os.path.basename(filename)
+        attribute['path'] = os.path.dirname(filename)
+        f_stat = os.stat(filename)
+        attribute['st_atime'] = int(f_stat.st_atime)   # 最后访问时间
+        attribute['st_mtime'] = int(f_stat.st_mtime)   # 最后修改时间
+        attribute['st_ctime'] = int(f_stat.st_ctime)   # 元数据修改时间/权限或数据者变更时间
+        attribute['st_size'] = f_stat.st_size          # 文件大小(bytes)
+        attribute['st_gid'] = f_stat.st_gid            # 用户组id
+        attribute['st_uid'] = f_stat.st_uid            # 用户id
+        attribute['st_nlink'] = f_stat.st_nlink        #  inode 的链接数
+        attribute['st_ino'] = f_stat.st_ino            #  inode 的节点号
+        attribute['st_mode'] = f_stat.st_mode          #  inode 保护模式
+        attribute['st_dev'] = f_stat.st_dev            #  inode 驻留设备
+        attribute['user'] = self.get_mode_user(f_stat.st_uid)   # 所属用户
+        attribute['group'] = self.get_mode_user(f_stat.st_gid)  # 所属组
+        attribute['mode'] = str(oct(f_stat.st_mode)[-3:])         # 文件权限号
+        attribute['md5'] = '大于100M或目录不计算'                        # 文件MD5
+        attribute['sha1'] = '大于100M或目录不计算'                       # 文件sha1
+        attribute['is_dir'] = os.path.isdir(filename)   # 是否为目录
+        attribute['is_link'] = os.path.islink(filename)  # 是否为链接文件
+        if attribute['is_link']:
+            attribute['st_type'] = '链接文件'
+        elif attribute['is_dir']:
+            attribute['st_type'] = '文件夹'
+        else:
+             attribute['st_type'] = self.get_file_ext(filename)
+        attribute['history'] = []
+        if f_stat.st_size < 104857600 and not attribute['is_dir']:
+            hash_info = self.get_file_hash(filename=filename)
+            attribute['md5'] = hash_info['md5']     
+            attribute['sha1'] = hash_info['sha1']
+            attribute['history'] = self.get_history_info(filename) # 历史文件
+        return attribute
+
+
+
+
+
+
 

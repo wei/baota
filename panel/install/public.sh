@@ -10,7 +10,7 @@ export LANG=en_US.UTF-8
 export LANGUAGE=en_US:en
 
 get_node_url(){
-	nodes=(http://dg2.bt.cn http://dg1.bt.cn http://123.129.198.197 http://103.224.251.67 http://125.88.182.172:5880 http://45.76.53.20 http://119.188.210.21:5880 http://120.206.184.160 http://113.107.111.78 http://128.1.164.196 http://183.235.223.101:3389);
+	nodes=(http://dg2.bt.cn http://dg1.bt.cn http://node.aapanel.com http://180.101.160.68:5880 http://123.129.198.197 http://158.247.208.19 http://103.224.251.67:5880 http://113.107.111.78 http://128.1.164.196 http://36.133.1.8:5880);
 	tmp_file1=/dev/shm/net_test1.pl
 	tmp_file2=/dev/shm/net_test2.pl
 	[ -f "${tmp_file1}" ] && rm -f ${tmp_file1}
@@ -126,7 +126,7 @@ GetSysInfo(){
 	elif [ "${PM}" = "apt-get" ]; then
 		SYS_VERSION=$(cat /etc/issue)
 	fi
-	SYS_INFO=$(uname -a)
+	SYS_INFO=$(uname -msr)
 	SYS_BIT=$(getconf LONG_BIT)
 	MEM_TOTAL=$(free -m|grep Mem|awk '{print $2}')
 	CPU_INFO=$(getconf _NPROCESSORS_ONLN)
@@ -144,8 +144,25 @@ else
 	cpuCore="1"
 fi
 GetPackManager
+
+if [ -d "/www/server/phpmyadmin/pma" ];then
+	rm -rf /www/server/phpmyadmin/pma
+	EN_CHECK=$(cat /www/server/panel/config/config.json |grep English)
+	if [ "${EN_CHECK}" ];then
+		curl http://download.bt.cn/install/update6_en.sh|bash
+	else
+		curl http://download.bt.cn/install/update6.sh|bash
+	fi
+	echo > /www/server/panel/data/restart.pl
+fi
+
 if [ ! $NODE_URL ];then
-	echo '正在选择下载节点...';
+	EN_CHECK=$(cat /www/server/panel/config/config.json |grep English)
+	if [ -z "${EN_CHECK}" ];then
+		echo '正在选择下载节点...';
+	else
+		echo "selecting download node...";
+	fi
 	get_node_url
 	bt_check
 fi
