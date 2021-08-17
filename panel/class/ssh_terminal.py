@@ -45,6 +45,7 @@ class ssh_terminal:
     _tp = None
     _old_conf = None
     _debug_file = 'logs/terminal.log'
+    _s_code = None
 
     def connect(self):
         '''
@@ -123,8 +124,16 @@ class ssh_terminal:
 
                 self._tp.auth_publickey(username=self._user, key=pkey)
             else:
-                self.debug('正在认证密码')
-                self._tp.auth_password(username=self._user, password=self._pass)
+                try:
+                    self._tp.auth_none(self._user)
+                except Exception as e:
+                    e = str(e)
+                    if e.find('keyboard-interactive') >= 0:
+                        self._auth_interactive()
+                    else:
+                        self.debug('正在认证密码')
+                        self._tp.auth_password(username=self._user, password=self._pass)
+                # self._tp.auth_password(username=self._user, password=self._pass)
         except Exception as e:
             if self._old_conf:
                 s_file = '/www/server/panel/config/t_info.json'
@@ -132,6 +141,11 @@ class ssh_terminal:
             self.set_sshd_config(True)
             self._tp.close()
             e = str(e)
+            if e.find('websocket error!') != -1:
+                return returnMsg(True,'连接成功')
+            if e.find('Authentication timeout') != -1:
+                self.debug("认证超时{}".format(e))
+                return returnMsg(False,'认证超时,请按回车重试!{}'.format(e))
             if e.find('Authentication failed') != -1:
                 self.debug('认证失败{}'.format(e))
                 return returnMsg(False,'帐号或密码错误: {}'.format(e + "," + self._user + "@" + self._host + ":" +str(self._port)))
@@ -166,6 +180,41 @@ class ssh_terminal:
         self.set_sshd_config(True)
         self.debug('通道已构建')
         return returnMsg(True,'连接成功')
+
+
+    def _auth_interactive(self):
+        self.debug('正在二次认证 Verification Code')
+        
+        self.brk = False
+        def handler(title, instructions, prompt_list):
+            if not self._ws:  raise public.PanelError('websocket error!')
+            if instructions:
+                self._ws.send(instructions)
+            if title:
+                self._ws.send(title)
+            resp = []
+            for pr in prompt_list:
+                if str(pr[0]).strip() == "Password:":
+                    resp.append(self._pass)
+                elif str(pr[0]).strip() == "Verification code:":
+                    #获取前段传入的验证码
+                    self._ws.send("Verification code# ")
+                    self._s_code = True
+                    code = ""
+                    while True:
+                        data = self._ws.receive()
+                        if data.find('"resize":1') != -1:
+                            self.resize(data)
+                            continue
+                        self._ws.send(data)
+                        if data in ["\n","\r"]: break
+                        code += data
+                    resp.append(code)
+                    self._ws.send("\n")
+            self._s_code = None
+            return tuple(resp)
+        self._tp.auth_interactive(self._user, handler)
+
 
 
     def get_login_user(self):
@@ -349,7 +398,6 @@ class ssh_terminal:
             @return bool
         '''
         self.is_running(rep)
-        return False
         if rep and not self._rep_ssh_config:
             return False
 
@@ -492,8 +540,12 @@ class ssh_terminal:
         '''
         try:
             while not self._ws.closed:
+                if self._s_code:
+                    time.sleep(0.1)
+                    continue
                 client_data = self._ws.receive()
                 if not client_data: continue
+                if client_data == '{}': continue
                 if len(client_data) > 10:
                     if client_data.find('{"host":"') != -1:
                         continue
@@ -613,8 +665,11 @@ class ssh_terminal:
             self._pkey = ssh_info['pkey']
         if 'password' in ssh_info: 
             self._pass = ssh_info['password']
-        
-        result = self.connect()
+        try:
+            result = self.connect()
+        except Exception as ex:
+            if str(ex).find("NoneType") == -1:
+                raise public.PanelError(ex)
         return result
 
 

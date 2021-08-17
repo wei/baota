@@ -282,14 +282,7 @@ class system:
         key = 'sys_version'
         version = cache.get(key)
         if version: return version
-        import public
-        version = public.readFile('/etc/redhat-release')
-        if not version:
-            version = public.readFile('/etc/issue').strip().split("\n")[0].replace('\\n','').replace('\l','').strip()
-        else:
-            version = version.replace('release ','').replace('Linux','').replace('(Core)','').strip()
-        v_info = sys.version_info
-        version = version + '(Py' + str(v_info.major) + '.' + str(v_info.minor) + '.' + str(v_info.micro) + ')'
+        version = public.get_os_version()
         cache.set(key,version,600)
         return version
     
@@ -374,9 +367,13 @@ class system:
     
     def GetMemInfo(self,get=None):
         #取内存信息
+        skey = 'memInfo'
+        memInfo = cache.get(skey)
+        if memInfo: return memInfo
         mem = psutil.virtual_memory()
         memInfo = {'memTotal':int(mem.total/1024/1024),'memFree':int(mem.free/1024/1024),'memBuffers':int(mem.buffers/1024/1024),'memCached':int(mem.cached/1024/1024)}
         memInfo['memRealUsed'] = memInfo['memTotal'] - memInfo['memFree'] - memInfo['memBuffers'] - memInfo['memCached']
+        cache.set(skey,memInfo,60)
         return memInfo
     
     def GetDiskInfo(self,get=None):
@@ -627,8 +624,11 @@ class system:
 
 
     def get_cpu_times(self):
-        data = {}
+        skey = 'cpu_times'
+        data = cache.get(skey)
+        if data:return data
         try:
+            data = {}
             cpu_times_p  = psutil.cpu_times_percent()
             data['user'] = cpu_times_p.user
             data['nice'] = cpu_times_p.nice
@@ -650,8 +650,9 @@ class system:
                 except:
                     continue
                 data['总进程数'] += 1
-            
-        except: pass
+                
+            cache.set(skey,data,60)
+        except: return None
         return data
 
 
@@ -922,39 +923,11 @@ class system:
         return self.GetMemInfo()
     
     #重启面板     
-    def ReWeb(self,get):
-        #s = time.time()
-        #if not self.shell: self.connect_ssh()
-        #self.shell.send("nohup /etc/init.d/bt restart && sleep 1 && /etc/init.d/bt start > /dev/null &\n")
-        #public.ExecShell("nohup sleep 2 && /etc/init.d/bt restart 2>&1 >/dev/null &")
-        
+    def ReWeb(self,get):        
         public.ExecShell("/etc/init.d/bt start")
         public.writeFile('data/restart.pl','True')
         return public.returnMsg(True,'面板已重启')
 
-    def connect_ssh(self):
-        import paramiko
-        self.ssh = paramiko.SSHClient()
-        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        try:
-            self.ssh.connect('127.0.0.1', public.GetSSHPort())
-        except:
-            if public.GetSSHStatus():
-                try:
-                    self.ssh.connect('localhost', public.GetSSHPort())
-                except:
-                    return False
-            import firewalls
-            fw = firewalls.firewalls()
-            get = public.dict_obj()
-            get.status = '0'
-            fw.SetSshStatus(get)
-            self.ssh.connect('127.0.0.1', public.GetSSHPort())
-            get.status = '1'
-            fw.SetSshStatus(get)
-        self.shell = self.ssh.invoke_shell(term='xterm', width=100, height=29)
-        self.shell.setblocking(0)
-        return True
     
     #修复面板
     def RepPanel(self,get):
@@ -968,9 +941,4 @@ class system:
         public.ExecShell("wget -O update.sh " + public.get_url() + "/install/update6.sh && bash update.sh")
         self.ReWeb(None)
         return True
-        
-        
-        
-        
-        
         

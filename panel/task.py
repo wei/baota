@@ -333,6 +333,8 @@ def systemTask():
                         lpro = 100
                     sql.table('load_average').add('pro,one,five,fifteen,addtime', (
                         lpro, load_average['one'], load_average['five'], load_average['fifteen'], addtime))
+                    sql.table('load_average').where(
+                            "addtime<?", (deltime,)).delete()
                     sql.close()
 
                     lpro = None
@@ -632,7 +634,7 @@ def check_panel_msg():
     python_bin = get_python_bin()
     while True:
         os.system('{} /www/server/panel/script/check_msg.py &'.format(python_bin))
-        time.sleep(600)
+        time.sleep(3600)
 
 
 def main():

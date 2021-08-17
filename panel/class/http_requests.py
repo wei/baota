@@ -14,22 +14,33 @@ import os,sys,re
 import ssl
 import public
 import json
+import socket
+import requests
+import requests.packages.urllib3.util.connection as urllib3_conn
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+old_family = urllib3_conn.allowed_gai_family
 
 class http:
-    def __init__(self):
-        pass
-
     def get(self,url,timeout = 60,headers = {},verify = False,type = 'python'):
+        global old_family
         url = self.quote(url)
         if type == 'python':
+            
             try:
-                import requests
-                from requests.packages.urllib3.exceptions import InsecureRequestWarning
-                requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-                from requests import get as req_get
-                return req_get(url,timeout=timeout,headers=get_headers(headers),verify=verify)
+                # 默认使用IPv4
+                urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
+                result = requests.get(url,timeout=timeout,headers=get_headers(headers),verify=verify)
             except:
-                result = self._get_curl(url,timeout,headers,verify)
+                try:
+                    # IPV6？
+                    urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
+                    result = requests.get(url,timeout=timeout,headers=get_headers(headers),verify=verify)
+                except:
+                    # 使用CURL
+                    result = self._get_curl(url,timeout,headers,verify)
+            urllib3_conn.allowed_gai_family = old_family
+
         elif type == 'curl':
             result = self._get_curl(url,timeout,headers,verify)
         elif type == 'php':
@@ -42,16 +53,22 @@ class http:
         return result
 
     def post(self,url,data,timeout = 60,headers = {},verify = False,type = 'python'):
+        global old_family
         url = self.quote(url)
         if type == 'python':
             try:
-                import requests
-                from requests.packages.urllib3.exceptions import InsecureRequestWarning
-                requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-                from requests import post as req_post
-                return req_post(url,data,timeout=timeout,headers=headers,verify=verify)
+                urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
+                result = requests.post(url,data,timeout=timeout,headers=headers,verify=verify)
             except:
-                result = self._post_curl(url,data,timeout,headers,verify)
+                try:
+                    # IPV6？
+                    urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
+                    result = requests.post(url,data,timeout=timeout,headers=headers,verify=verify)
+                except:
+                    # 使用CURL
+                    result = self._post_curl(url,data,timeout,headers,verify)
+            urllib3_conn.allowed_gai_family = old_family
+        
         elif type == 'curl':
             result = self._post_curl(url,data,timeout,headers,verify)
         elif type == 'php':
@@ -62,6 +79,27 @@ class http:
             else:
                 result = self._post_py3(url,data,timeout,headers,verify)
         return result
+
+
+    def download_file(self,url,filename,data = None,timeout = 1800,speed_file='/dev/shm/download_speed.pl'):
+        '''
+            @name 下载文件
+            @author hwliang<2021-07-08>
+            @param url<string> 下载地址
+            @param filename<string> 保存路径
+            @param data<dict> POST参数，不传则使用GET方法，否则使用POST方法
+            @param timeout<int> 超时时间,默认1800秒
+            @param speed_file<string> 
+        '''
+        headers = public.get_requests_headers()
+        if data is None:
+            res = requests.get(url,headers=headers,timeout=timeout,stream=True)
+        else:
+            res = requests.post(url,data,headers=headers,timeout=timeout,stream=True)
+        with open(filename,"wb") as f:
+            for _chunk in res.iter_content(chunk_size=8192):
+                f.write(_chunk)
+
 
     #POST请求 Python2
     def _post_py2(self,url,data,timeout,headers,verify):
@@ -275,7 +313,7 @@ exit($header."\r\n\r\n".json_encode($body));
 
     #取CURL路径
     def _curl_bin(self):
-        c_bin = ['/usr/local/curl2/bin/curl','/usr/local/curl/bin/curl','/usr/bin/curl']
+        c_bin = ['/usr/local/curl2/bin/curl','/usr/local/curl/bin/curl','/usr/local/bin/curl','/usr/bin/curl']
         for cb in c_bin:
             if os.path.exists(cb): return cb
         return 'curl'
@@ -396,7 +434,7 @@ class response:
             return self.text
 
 DEFAULT_HEADERS = {"Content-type":"application/x-www-form-urlencoded","User-Agent":"BT-Panel"}
-s_types = ['python','php','curl']
+s_types = ['python','php','curl','src']
 DEFAULT_TYPE = 'python'
 __version__ = 1.0
 

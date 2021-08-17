@@ -37,8 +37,16 @@ def control_init():
 )'''
         sql.execute(csql,())
     if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'sites','%type_id%')).count():
-        public.M('sites').execute("alter TABLE sites add edate integer DEFAULT '0000-00-00'",())
         public.M('sites').execute("alter TABLE sites add type_id integer DEFAULT 0",())
+
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'sites','%edate%')).count():
+        public.M('sites').execute("alter TABLE sites add edate integer DEFAULT '0000-00-00'",())
+
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'sites','%project_type%')).count():
+        public.M('sites').execute("alter TABLE sites add project_type STRING DEFAULT 'PHP'",())
+
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'sites','%project_config%')).count():
+        public.M('sites').execute("alter TABLE sites add project_config STRING DEFAULT '{}'",())
 
     sql = db.Sql()
     if not sql.table('sqlite_master').where('type=? AND name=?', ('table', 'site_types')).count():
@@ -137,6 +145,9 @@ def control_init():
     public.ExecShell("chmod -R  600 /www/server/panel/data;chmod -R  600 /www/server/panel/config;chmod -R  700 /www/server/cron;chmod -R  600 /www/server/cron/*.log;chown -R root:root /www/server/panel/data;chown -R root:root /www/server/panel/config;chown -R root:root /www/server/phpmyadmin;chmod -R 755 /www/server/phpmyadmin")
     if os.path.exists("/www/server/mysql"):
         public.ExecShell("chown mysql:mysql /etc/my.cnf;chmod 600 /etc/my.cnf")
+    public.ExecShell("rm -rf /www/server/panel/temp/*")
+    if not public.is_debug():
+        public.ExecShell("rm -f /www/server/panel/class/pluginAuth.py")
     stop_path = '/www/server/stop'
     if not os.path.exists(stop_path):
         os.makedirs(stop_path)
@@ -150,6 +161,7 @@ def control_init():
         public.ExecShell("rm -rf /www/server/panel/adminer")
     if os.path.exists('/dev/shm/session.db'):
         os.remove('/dev/shm/session.db')
+    
     #disable_putenv('putenv')
     #clean_session()
     #set_crond()
@@ -169,12 +181,52 @@ def control_init():
     # public.set_open_basedir()
     clear_fastcgi_safe()
     update_py37()
-    
-    
+    run_script()
+
+def write_run_script_log(_log,rn='\n'):
+    _log_file = '/www/server/panel/logs/run_script.log'
+    public.writeFile(_log_file,_log + rn,'a+')
 
 
-
+def run_script():
+    run_tip = '/dev/shm/bt.pl'
+    if os.path.exists(run_tip): return
+    public.writeFile(run_tip,str(time.time()))
+    uptime = int(public.readFile('/proc/uptime').split()[0])
+    if uptime > 1800: return
+    run_config ='/www/server/panel/data/run_config'
+    script_logs = '/www/server/panel/logs/script_logs'
+    if not os.path.exists(run_config):
+        os.makedirs(run_config,384)
+    if not os.path.exists(script_logs):
+        os.makedirs(script_logs,384)
     
+    for sname in os.listdir(run_config):
+        script_conf_file = '{}/{}'.format(run_config,sname)
+        if not os.path.exists(script_conf_file): continue
+        script_info = json.loads(public.readFile(script_conf_file))
+        exec_log_file = '{}/{}'.format(script_logs,sname)
+
+        if not os.path.exists(script_info['script_file']) \
+            or script_info['script_file'].find('/www/server/panel/plugin/') != 0 \
+                or not re.match('^\w+$',script_info['script_file']): 
+            os.remove(script_conf_file)
+            if os.path.exists(exec_log_file): os.remove(exec_log_file)
+            continue
+
+
+        if script_info['script_type'] == 'python':
+            _bin = public.get_python_bin()
+        elif script_info['script_type'] == 'bash':
+            _bin = '/usr/bin/bash'
+            if not os.path.exists(_bin): _bin = 'bash'
+        
+        exec_script = 'nohup {} {} &> {} &'.format(_bin,script_info['script_file'],exec_log_file)
+        public.ExecShell(exec_script)
+        script_info['last_time'] = time.time()
+        public.writeFile(script_conf_file,json.dumps(script_info))
+
+
 def clear_fastcgi_safe():
     try:
         fastcgifile = '/www/server/nginx/conf/fastcgi.conf'

@@ -161,6 +161,23 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             if text2.find(rep) != -1: text2 = text2.replace(rep,reps[rep])
         return text2
 
+    # 名称输入系列化
+    def xssdecode(self,text):
+        try:
+            cs = {"&quot":'"',"&#x27":"'"}
+            for c in cs.keys():
+                text = text.replace(c,cs[c])
+
+            str_convert = text
+            if sys.version_info[0] == 3:
+                import html
+                text2 = html.unescape(str_convert)
+            else:
+                text2 = cgi.unescape(str_convert)
+            return text2
+        except:
+            return text
+
     # 上传文件
     def UploadFile(self, get):
         from werkzeug.utils import secure_filename
@@ -295,6 +312,13 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             return str(result)
         return '0'
 
+
+    def __filename_flater(self,filename):
+        ms = {";":""}
+        for m in ms.keys():
+            filename = filename.replace(m,ms[m])
+        return filename
+
     # 取文件/目录列表
     def GetDir(self, get):
         if not hasattr(get, 'path'):
@@ -304,6 +328,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             get.path = get.path.encode('utf-8')
         if get.path == '':
             get.path = '/www'
+        get.path = self.xssdecode(get.path)
         if not os.path.exists(get.path):
             get.path = '/www/wwwroot'
             #return public.ReturnMsg(False, '指定目录不存在!')
@@ -367,6 +392,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 if search:
                     if filename.lower().find(search) == -1:
                         continue
+
                 i += 1
                 if n >= page.ROW:
                     break
@@ -400,11 +426,11 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                     # 判断文件是否已经被收藏
                     favorite = self.__check_favorite(filePath,data['STORE'])
                     if os.path.isdir(filePath):
-                        dirnames.append(filename+';'+size+';' + mtime+';'+accept+';'+user+';'+link + ';' +
+                        dirnames.append(self.__filename_flater(filename)+';'+size+';' + mtime+';'+accept+';'+user+';'+link + ';' +
                                         self.get_download_id(filePath)+';'+ self.is_composer_json(filePath)+';'
                                         +favorite+';'+self.__check_share(filePath))
                     else:
-                        filenames.append(filename+';'+size+';'+mtime+';'+accept+';'+user+';'+link+';'
+                        filenames.append(self.__filename_flater(filename)+';'+size+';'+mtime+';'+accept+';'+user+';'+link+';'
                                          +self.get_download_id(filePath)+';' + self.is_composer_json(filePath)+';'
                                          +favorite+';'+self.__check_share(filePath))
                     n += 1
@@ -431,7 +457,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 file_info = self.__format_stat(filename, get.path)
                 if not file_info: continue
                 favorite = self.__check_favorite(filename, data['STORE'])
-                r_file = file_info['name'] + ';' + str(file_info['size']) + ';' + str(file_info['mtime']) + ';' + str(
+                r_file = self.__filename_flater(file_info['name']) + ';' + str(file_info['size']) + ';' + str(file_info['mtime']) + ';' + str(
                     file_info['accept']) + ';' + file_info['user'] + ';' + file_info['link']+';'\
                          + self.get_download_id(filename) + ';' + self.is_composer_json(filename)+';'\
                          + favorite+';'+self.__check_share(filename)
@@ -463,6 +489,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             @param filename<string> 文件或目录全路径
             @return string
         '''
+        
         ps_path = '/www/server/panel/data/files_ps'
         f_key1 = '/'.join((ps_path,public.md5(filename)))
         if os.path.exists(f_key1):
@@ -471,6 +498,30 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         f_key2 = '/'.join((ps_path,public.md5(os.path.basename(filename))))
         if os.path.exists(f_key2):
             return public.readFile(f_key2)
+
+        pss = {
+            '/www/server/data':'此为MySQL数据库默认数据目录，请勿删除!',
+            '/www/server/mysql':'MySQL程序目录',
+            '/www/server/redis':'Redis程序目录',
+            '/www/server/mongodb':'MongoDB程序目录',
+            '/www/server/nvm':'PM2/NVM/NPM程序目录',
+            '/www/server/pass':'网站BasicAuth认证密码存储目录',
+            '/www/server/speed':'网站加速数据目录',
+            '/www/server/docker':'Docker插件程序与数据目录',
+            '/www/server/total':'网站监控报表数据目录',
+            '/www/server/btwaf':'WAF防火墙数据目录',
+            '/www/server/pure-ftpd':'ftp程序目录',
+            '/www/server/phpmyadmin':'phpMyAdmin程序目录',
+            '/www/server/rar':'rar扩展库目录，删除后将失去对RAR压缩文件的支持',
+            '/www/server/stop':'网站停用页面目录,请勿删除!',
+            '/www/server/nginx':'Nginx程序目录',
+            '/www/server/apache':'Apache程序目录',
+            '/www/server/cron':'计划任务脚本与日志目录',
+            '/www/server/php':'PHP目录，所有PHP版本的解释器都在此目录下',
+            '/www/server/tomcat':'Tomcat程序目录',
+            '/www/php_session':'PHP-SESSION隔离目录'
+        }
+        if filename in pss:  return pss[filename]
         return ''
 
 
@@ -506,6 +557,13 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
 
         
 
+    def check_file_sort(self,sort):
+        """
+        @校验排序字段
+        """    
+        slist = ['name','size','mtime','accept','user']
+        if sort in slist: return sort
+        return 'name'
 
     def __list_dir(self, path, my_sort='name', reverse=False):
         '''
@@ -520,7 +578,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             return []
         py_v = sys.version_info[0]
         tmp_files = []
-    
+        
+        
         for f_name in os.listdir(path):
             try:
                 if py_v == 2:
@@ -547,9 +606,11 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             except:
                 continue
             #使用list[tuple]排序效率更高
+            # if f_name and sort_val:
             tmp_files.append((f_name,sort_val))
-            
-        tmp_files = sorted(tmp_files, key=lambda x: x[sort_key], reverse=reverse)
+        try:
+            tmp_files = sorted(tmp_files, key=lambda x: x[sort_key], reverse=reverse)
+        except:pass
         return tmp_files
 
     def __format_stat(self, filename, path):
@@ -1076,10 +1137,13 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
     def GetFileBody(self, get):
         if sys.version_info[0] == 2:
             get.path = get.path.encode('utf-8')
+
+        get.path = self.xssdecode(get.path)
         if not os.path.exists(get.path):
             if get.path.find('rewrite') == -1:
                 return public.returnMsg(False, 'FILE_NOT_EXISTS', (get.path,))
             public.writeFile(get.path, '')
+
         if self.__get_ext(get.path) in ['gz', 'zip', 'rar', 'exe', 'db', 'pdf', 'doc', 'xls', 'docx', 'xlsx', 'ppt', 'pptx', '7z', 'bz2', 'png', 'gif', 'jpg', 'jpeg', 'bmp', 'icon', 'ico', 'pyc', 'class', 'so', 'pyd']:
             return public.returnMsg(False, '该文件格式不支持在线编辑!')
         if os.path.getsize(get.path) > 3145928:
@@ -1303,6 +1367,11 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
     def Zip(self, get):
         if not 'z_type' in get:
             get.z_type = 'rar'
+
+        if get.z_type == 'rar':
+            if os.uname().machine == 'aarch64':
+                return public.returnMsg(False,'RAR组件不支持aarch64平台')
+        
         import panelTask
         task_obj = panelTask.bt_task()
         task_obj.create_task('压缩文件', 3, get.path, json.dumps(
@@ -2053,8 +2122,8 @@ cd %s
         }
         if len(pdata['password']) < 4 and len(pdata['password']) > 0:
             return public.returnMsg(False,'提取密码长度不能小于4位')
-
-        if not re.match('^\w+$',pdata['password']):
+        
+        if not re.match('^\w+$',pdata['password']) and pdata['password']:
             return public.returnMsg(False,'提取密码中不能带有特殊符号')
         #更新 or 插入
         token = public.M(my_table).where('filename=?',(get.filename,)).getField('token')
@@ -2288,12 +2357,34 @@ cd %s
         except:
             return uid
 
+    # 取lsattr
+    def get_lsattr(self,filename):
+        if os.path.isfile(filename):
+            return public.ExecShell('lsattr {}'.format(filename))[0].split(' ')[0]
+        else:
+            s_name = os.path.basename(filename)
+            s_path = os.path.dirname(filename)
+
+            try:
+                res = public.ExecShell('lsattr {}'.format(s_path))[0].strip()
+                for s in res.split('\n'):
+                    if not s: continue
+                    lsattr_info = s.split()
+                    if not lsattr_info: continue
+                    if filename == lsattr_info[1]:
+                        return lsattr_info[0]
+            except: 
+                raise public.PanelError(lsattr_info)
+                
+        return '--------------e----'
+
 
     # 取指定文件属性
     def get_file_attribute(self,args):
         filename = args.filename.strip()
         if not os.path.exists(filename):
             return public.returnMsg(False,'指定文件不存在!')
+            
         attribute = {}
         attribute['name'] = os.path.basename(filename)
         attribute['path'] = os.path.dirname(filename)
@@ -2313,6 +2404,7 @@ cd %s
         attribute['mode'] = str(oct(f_stat.st_mode)[-3:])         # 文件权限号
         attribute['md5'] = '大于100M或目录不计算'                        # 文件MD5
         attribute['sha1'] = '大于100M或目录不计算'                       # 文件sha1
+        attribute['lsattr'] = self.get_lsattr(filename)
         attribute['is_dir'] = os.path.isdir(filename)   # 是否为目录
         attribute['is_link'] = os.path.islink(filename)  # 是否为链接文件
         if attribute['is_link']:
@@ -2329,9 +2421,21 @@ cd %s
             attribute['history'] = self.get_history_info(filename) # 历史文件
         return attribute
 
+    def files_search(self,args):
+        import panelSearch
+        adad=panelSearch.panelSearch()
+        return adad.get_search(args)
 
 
+    def files_replace(self,args):
+        import panelSearch
+        adad=panelSearch.panelSearch()
+        return adad.get_replace(args)
 
+    def get_replace_logs(self,args):
+        import panelSearch
+        adad=panelSearch.panelSearch()
+        return adad.get_replace_logs(args)
 
 
 

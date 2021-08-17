@@ -20,6 +20,7 @@ class panelPlugin:
     __link = 'config/link.json'
     __product_list = None
     __plugin_list = None
+    __exists_names = {}
     pids = None
     ROWS = 15
     
@@ -831,10 +832,8 @@ class panelPlugin:
             if not softInfo['fpm']: 
                 softInfo['status'] = True
             elif softInfo['status'] and os.path.exists(pid_file):
-                if not self.pids: self.pids = psutil.pids()
                 try:
-                    if not int(public.readFile(pid_file)) in self.pids:
-                        softInfo['status'] = False
+                    softInfo['status'] = public.pid_exists(int(public.readFile(pid_file)))
                 except:
                     if os.path.exists(pid_file): 
                         os.remove(pid_file)
@@ -844,10 +843,10 @@ class panelPlugin:
             if not softInfo['status']: softInfo['status'] = self.process_exists('mariadbd')
         if softInfo['name'] == 'phpmyadmin': softInfo['status'] = self.get_phpmyadmin_stat()
         if softInfo['name'] == 'openlitespeed':
-            if public.ExecShell('ps aux|grep openlitespeed|grep -v "grep"')[0]:
-                softInfo['status'] = True
-            else:
-                softInfo['status'] = False
+            pid_file = '/run/openlitespeed.pid'
+            if os.path.exists(pid_file):
+                pid = int(public.readFile(pid_file))
+                softInfo['status'] = public.pid_exists(pid)
         return softInfo
 
     def get_php_status(self,phpversion):
@@ -1001,8 +1000,23 @@ class panelPlugin:
 
 
     #进程是否存在
-    def process_exists(self,pname,exe = None):
-        if not self.pids: self.pids = psutil.pids() #self.get_pids() #
+    def process_exists(self,pname,exe = None):        
+        if pname in ['mysqld','mariadbd']:
+            datadir = public.get_datadir()
+            if datadir:
+                pid_file = "{}/{}.pid".format(datadir,public.get_hostname())
+                if os.path.exists(pid_file):
+                    pid = int(public.readFile(pid_file))
+                    status = public.pid_exists(pid)
+                    if status: return status
+
+        if pname in ['php-fpm'] and exe:
+            pid_file = exe.replace('sbin/php-fpm','/var/run/php-fpm.pid')
+            if os.path.exists(pid_file):
+                pid = int(public.readFile(pid_file))
+                return public.pid_exists(pid)
+        
+        if not self.pids: self.pids = psutil.pids()
         for pid in self.pids:
             try:
                 l = '/proc/%s/exe' % pid
@@ -1023,7 +1037,8 @@ class panelPlugin:
                     if not exe:
                         return True
                     else:
-                        if p_exe == exe: return True
+                        if p_exe == exe:
+                            return True
             except: continue
         return False
 

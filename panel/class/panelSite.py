@@ -478,7 +478,9 @@ include /www/server/panel/vhost/openlitespeed/proxy/BTSITENAME/*.conf
 
         get.path = self.__get_site_format_path(get.path)
         
-        if not public.check_site_path(get.path): return public.returnMsg(False,'请不要将网站根目录设置到系统关键目录中')
+        if not public.check_site_path(get.path): 
+            a,c = public.get_sys_path()
+            return public.returnMsg(False,'请不要将网站根目录设置到以下关键目录中: <br>{}'.format("<br>".join(a+c)))
         try:
             siteMenu = json.loads(get.webname)
         except:
@@ -514,9 +516,9 @@ include /www/server/panel/vhost/openlitespeed/proxy/BTSITENAME/*.conf
         #if siteMenu['count']:
         #    domain            = get.domain.replace(' ','')
         #表单验证
-        if not files.files().CheckDir(self.sitePath) or not self.__check_site_path(self.sitePath): return public.returnMsg(False,'PATH_ERROR')
+        if not self.__check_site_path(self.sitePath): return public.returnMsg(False,'PATH_ERROR')
         if len(self.phpVersion) < 2: return public.returnMsg(False,'SITE_ADD_ERR_PHPEMPTY')
-        reg = r"^([\w\-\*]{1,100}\.){1,4}([\w\-]{1,24}|[\w\-]{1,24}\.[\w\-]{1,24})$"
+        reg = r"^([\w\-\*]{1,100}\.){1,10}([\w\-]{1,24}|[\w\-]{1,24}\.[\w\-]{1,24})$"
         if not re.match(reg, self.siteName): return public.returnMsg(False,'SITE_ADD_ERR_DOMAIN')
         if self.siteName.find('*') != -1: return public.returnMsg(False,'SITE_ADD_ERR_DOMAIN_TOW')
         if self.sitePath[-1] == '.':return public.returnMsg(False, '网站目录结尾不可以是 "."')
@@ -950,7 +952,7 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
             get.domain = self.ToPunycode(domain[0]).lower()
             get.port = '80'
             
-            reg = "^([\w\-\*]{1,100}\.){1,4}([\w\-]{1,24}|[\w\-]{1,24}\.[\w\-]{1,24})$"
+            reg = r"^([\w\-\*]{1,100}\.){1,10}([\w\-]{1,24}|[\w\-]{1,24}\.[\w\-]{1,24})$"
             if not re.match(reg, get.domain): return public.returnMsg(False,'SITE_ADD_DOMAIN_ERR_FORMAT')
             
             if len(domain) == 2:
@@ -1584,11 +1586,20 @@ listener Default%s{
     #获取TLS1.3标记
     def get_tls13(self):
         nginx_bin = '/www/server/nginx/sbin/nginx'
-        nginx_v = public.ExecShell(nginx_bin + ' -V 2>&1|grep version:')[0]
-        nginx_v = re.search('nginx/1\.1(5|6|7|8|9).\d',nginx_v)
-        openssl_v = public.ExecShell(nginx_bin + ' -V 2>&1|grep OpenSSL')[0].find('OpenSSL 1.1.') != -1
-        if nginx_v and openssl_v:
-            return ' TLSv1.3'
+        nginx_v = public.ExecShell(nginx_bin + ' -V 2>&1')[0]
+        nginx_v_re = re.findall("nginx/(\d\.\d+).+OpenSSL\s+(\d\.\d+)",nginx_v,re.DOTALL)
+        if nginx_v_re:
+            if nginx_v_re[0][0] in ['1.8','1.9','1.7','1.6','1.5','1.4']:
+                return ''
+            if float(nginx_v_re[0][0]) >= 1.15 and float(nginx_v_re[0][-1]) >= 1.1:
+                return ' TLSv1.3'
+        else:
+            _v = re.search('nginx/1\.1(5|6|7|8|9).\d',nginx_v)
+            if not _v: 
+                _v = re.search('nginx/1\.2\d\.\d',nginx_v)
+            openssl_v = public.ExecShell(nginx_bin + ' -V 2>&1|grep OpenSSL')[0].find('OpenSSL 1.1.') != -1
+            if _v and openssl_v:
+                return ' TLSv1.3'
         return ''
   
     # 获取apache反向代理
@@ -2824,9 +2835,10 @@ server
         Path = self.GetPath(get.path)
         if Path == "" or id == '0': return public.returnMsg(False,  "DIR_EMPTY")
         
-        import files
-        if not files.files().CheckDir(Path) or not self.__check_site_path(Path): return public.returnMsg(False,  "PATH_ERROR")
-        if not public.check_site_path(Path): return public.returnMsg(False,'请不要将网站根目录设置到系统关键目录中')
+        if not self.__check_site_path(Path): return public.returnMsg(False,  "PATH_ERROR")
+        if not public.check_site_path(Path):
+            a,c = public.get_sys_path()
+            return public.returnMsg(False,'请不要将网站根目录设置到以下关键目录中: <br>{}'.format("<br>".join(a+c)))
         
         SiteFind = public.M("sites").where("id=?",(id,)).field('path,name').find()
         if SiteFind["path"] == Path: return public.returnMsg(False,  "SITE_PATH_ERR_RE")
@@ -3357,8 +3369,8 @@ server
             return public.returnMsg(False, "代理目录不能有以下特殊符号 ?,=,[,],),(,*,&,^,%,$,#,@,!,~,`,{,},>,<,\,',\"]")
         # 检测发送域名格式
         if get.todomain:
-            if not re.search(tod,get.todomain):
-                return public.returnMsg(False, '发送域名格式错误 ' + get.todomain)
+            if re.search("[\}\{\#\;\"\']+",get.todomain):
+                return public.returnMsg(False, '发送域名格式错误:'+get.todomain+'<br>不能存在以下特殊字符【 }  { # ; \" \' 】 ')
         if public.get_webserver() != 'openlitespeed' and not get.todomain:
             get.todomain = "$host"
 
@@ -3630,7 +3642,11 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
                     ng_conf = re.sub("location\s+\~\*\s+\\\.\(gif.*\n\{\s*proxy_pass\s+%s.*" % (php_pass_proxy),
                                      "location ~* \.(gif|png|jpg|css|js|woff|woff2)$\n{\n\tproxy_pass %s;" % php_pass_proxy,ng_conf)
 
-                    ng_conf = re.sub("\sHost\s+%s" % '\\' + conf[i]["todomain"]," Host "+get.todomain,ng_conf)
+                    backslash = ""
+                    if "Host $host" in ng_conf:
+                        backslash = "\\"
+
+                    ng_conf = re.sub("\sHost\s+%s" % backslash + conf[i]["todomain"], " Host " + get.todomain, ng_conf)
                     cache_rep = r"proxy_cache_valid\s+200\s+304\s+301\s+302\s+\d+m;((\n|.)+expires\s+\d+m;)*"
                     if int(get.cache) == 1:
                         if re.search(cache_rep,ng_conf):
@@ -4885,3 +4901,95 @@ RewriteRule \.(BTPFILE)$    /404.html   [R,NC]
     def modify_dir_auth_pass(self,get):
         sd = site_dir_auth.SiteDirAuth()
         return sd.modify_dir_auth_pass(get)
+        
+    def _check_path_total(self,path, limit):
+        """
+        根据路径获取文件/目录大小
+        @path 文件或者目录路径
+        return int 
+        """
+       
+        if not os.path.exists(path): return 0
+        if not os.path.isdir(path): return os.path.getsize(path)
+        size_total = 0
+        for nf in os.walk(path):
+            for f in nf[2]:
+                filename = nf[0] + '/' + f
+                if not os.path.exists(filename): continue
+                if os.path.islink(filename): continue
+                size_total += os.path.getsize(filename)
+                if size_total >= limit: return limit                    
+        return size_total
+  
+    def get_average_num(self,slist):
+        """
+        @获取平均值
+        """
+        count = len(slist)      
+        limit_size = 1 * 1024 * 1024        
+        if count <= 0: return limit_size
+        print(slist)
+        if len(slist) > 1:            
+            slist = sorted(slist)
+            limit_size =int((slist[0] + slist[-1])/2 * 0.85)
+        return limit_size  
+
+
+    def check_del_data(self,get):
+        """
+        @删除前置检测
+        @ids = [1,2,3]
+        """
+        ids = json.loads(get['ids'])
+        slist = {}
+        result = []
+
+        import database
+        db_data = database.database().get_database_size(None)
+
+        limit_size = 50 * 1024 * 1024
+        f_list_size = [];db_list_size = []
+        for id in ids:
+            data = public.M('sites').where("id=?",(id,)).field('id,name,path,addtime').find();
+            if not data: continue            
+
+            addtime = public.to_date(times = data['addtime'])
+            
+            data['st_time'] = addtime
+            data['limit'] = False
+            data['backup_count'] = public.M('backup').where("pid=? AND type=?",(data['id'],'0')).count()
+            f_size = self._check_path_total(data['path'],limit_size)
+            data['total'] = f_size
+            data['score'] = 0
+
+            #目录太小不计分
+            if f_size > 0:
+                f_list_size.append(f_size)
+                
+                # 10k 目录不参与排序
+                if f_size > 10 * 1024: data['score'] = int(time.time() - addtime) + f_size
+
+            if data['total'] >= limit_size: data['limit'] = True
+            data['database'] = False
+
+            find = public.M('databases').field('id,pid,name,ps,addtime').where('pid=?',(data['id'],)).find()
+            if find: 
+                db_addtime = public.to_date(times = find['addtime'])     
+
+                data['database'] = db_data[find['name']]
+                data['database']['st_time'] = db_addtime
+                
+                db_score = 0;
+                db_size = data['database']['total']                                  
+       
+                if db_size > 0: 
+                    db_list_size.append(db_size)
+                    if db_size > 50 * 1024: db_score += int(time.time() - db_addtime) + db_size
+
+                data['score'] += db_score
+            result.append(data)
+
+        slist['data'] = sorted(result,key= lambda  x:x['score'],reverse=True)
+        slist['file_size'] = self.get_average_num(f_list_size)  
+        slist['db_size'] = self.get_average_num(db_list_size)
+        return slist

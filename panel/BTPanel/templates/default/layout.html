@@ -143,6 +143,7 @@
 	{% endfor %}
 	{% block scripts %} {% endblock %}
 	<script type="text/javascript">
+        var recycle_bin_db_open = !!{{g['recycle_bin_db_open']}},recycle_bin_open = !!{{g['recycle_bin_open']}}
 	    $("#setBox").click(function () {
 	        if ($(this).prop("checked")) {
 	            $("input[name=id]").prop("checked", true);

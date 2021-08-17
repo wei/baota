@@ -90,6 +90,18 @@ class config:
             return public.returnMsg(False, '无信息')
         if not 'port' in qq_mail_info:qq_mail_info['port']=465
         return public.returnMsg(True, qq_mail_info)
+        
+    #清空数据
+    def set_empty(self,get):
+        type=get.type.strip()
+        if type=='dingding':
+            ret = []
+            public.writeFile(self.__dingding_config, json.dumps(ret))
+            return public.returnMsg(True, '清空成功')
+        else:
+            ret = []
+            public.writeFile(self.__mail_config, json.dumps(ret))
+            return public.returnMsg(True, '清空成功')
 
 
     # 用户自定义邮件发送
@@ -131,7 +143,7 @@ class config:
     def set_dingding(self, get):
         if not (hasattr(get, 'url') or hasattr(get, 'atall')):
             return public.returnMsg(False, '请填写完整信息')
-        if get.atall:
+        if get.atall=='True' or  get.atall=='1':
             get.atall = 'True'
         else: get.atall = 'False'
         self.mail.dingding_insert(get.url.strip(), get.atall)
@@ -167,7 +179,8 @@ class config:
         userInfo = public.M('users').where("id=?",(1,)).field('username,password').find()
         token = public.Md5(userInfo['username'] + '/' + userInfo['password'])
         public.writeFile('/www/server/panel/data/login_token.pl',token)
-
+        skey = 'login_token'
+        cache.set(skey,token)
         sess_path = 'data/sess_files'
         if not os.path.exists(sess_path):
             os.makedirs(sess_path,384)
@@ -1692,7 +1705,7 @@ class config:
     def get_login_send(self,get):
         result={}
         import time
-        time.sleep(0.5)
+        time.sleep(0.01)
         if os.path.exists('/www/server/panel/data/login_send_mail.pl'):
             result['mail']=True
         else:

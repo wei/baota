@@ -1,72 +1,82 @@
 var soft = {
-    is_install: false,
-    is_setup:false,
-    is_setup_name:"",
-    refresh_data:[],
-    get_list: function (page, type, search) {
-        if (page == undefined || page == 'null' || page == 'undefined') page = 0;
-        if (type == undefined || type == 'null' || type == 'undefined') type = 0;
-        if (!search) search = $("#SearchValue").val();
-        if (search == undefined || search == 'null' || search == 'undefined' || search == '') search = undefined;
-        var _this = this;
-        var istype = getCookie('softType');
-        if (istype == 'undefined' || istype == 'null' || !istype) {
-            istype = 0;
+  is_install: false,
+  is_setup: false,
+  is_setup_name: "",
+  refresh_data: [],
+  get_list: function (page, type, search) {
+    if (page == undefined || page == 'null' || page == 'undefined') page = 0;
+    if (type == undefined || type == 'null' || type == 'undefined') type = 0;
+    if (!search) search = $("#SearchValue").val();
+    if (search == undefined || search == 'null' || search == 'undefined' || search == '') search = undefined;
+    var _this = this, commonly_software = $('#commonly_software');
+    var istype = getCookie('softType');
+    if (istype == 'undefined' || istype == 'null' || !istype) {
+      istype = 0;
+    }
+    if (type == 0) type = bt.get_cookie('softType');
+    if (page == 0) page = bt.get_cookie('p' + type);
+    if (type == '11') {
+      soft.get_dep_list(1);
+      commonly_software.hide();
+      return;
+    }
+    bt.soft.get_soft_list(page, type, search, function (rdata) {
+      soft.set_soft_tips(rdata, type);
+      var tBody = '';
+      rdata.type.unshift({icon: 'icon', id: 0, ps: '全部', sort: 1, title: '全部'}, {
+        icon: 'icon',
+        id: -1,
+        ps: '已安装',
+        sort: 1,
+        title: '已安装'
+      })
+      for (var i = 0; i < rdata.type.length; i++) {
+        var c = '';
+        if (istype == rdata.type[i].id) {
+          c = 'class="on"';
         }
-        if (type == 0) type = bt.get_cookie('softType');
-        if (page == 0) page = bt.get_cookie('p' + type);
-        if (type == '11') {
-            soft.get_dep_list(1);
-            return;
+        tBody += '<span typeid="' + rdata.type[i].id + '" ' + c + '>' + rdata.type[i].title + '</span>';
+      }
+      if (page) bt.set_cookie('p' + type, page);
+      $(".softtype").html(tBody);
+      $(".menu-sub span").click(function () {
+        var _type = $(this).attr('typeid');
+        bt.set_cookie('softType', _type);
+        $(this).addClass("on").siblings().removeClass("on");
+        console.log(commonly_software)
+        if (_type !== '11') {
+          soft.get_list(0, _type);
+          commonly_software.show();
+        } else {
+          soft.get_dep_list(0);
+          commonly_software.hide();
         }
-        bt.soft.get_soft_list(page, type, search, function (rdata) {
-            soft.set_soft_tips('#updata_pro_info',type);
-            var tBody = '';
-            rdata.type.unshift({ icon: 'icon', id: 0, ps: '全部', sort: 1, title: '全部' },{ icon: 'icon', id: -1, ps: '已安装', sort: 1, title: '已安装' })
-            for (var i = 0; i < rdata.type.length; i++) {
-                var c = '';
-                if (istype == rdata.type[i].id) {
-                    c = 'class="on"';
-                }
-                tBody += '<span typeid="' + rdata.type[i].id + '" ' + c + '>' + rdata.type[i].title + '</span>';
-            }
-            if (page) bt.set_cookie('p' + type, page);
-            $(".softtype").html(tBody);
-            $(".menu-sub span").click(function () {
-                var _type = $(this).attr('typeid');
-                bt.set_cookie('softType', _type);
-                $(this).addClass("on").siblings().removeClass("on");
-                if (_type !== '11') {
-                    soft.get_list(0, _type);
-                } else {
-                    soft.get_dep_list(0);
-                }
-            })
-            var data = rdata.list.data;
-            $('#softPage').html(rdata.list.page);
-            if(data.length>0){
-                for(var i = 0; i < data.length; i++){
-                    if(data[i].task =='-1'){
-                        soft.is_setup = true;
-                        soft.is_setup_name = data[i].name;
-                        break;
-                    }else{
-                        soft.is_setup = false;
-                        soft.is_install = false;
-                        soft.is_setup_name = "";
-                    }
-                }
-            }
-            if(soft.is_setup==true&&soft.is_setup_name != ""){
-               _this.soft_setup_find();
-            }
-            // if(soft.refresh_data.length==0){
-                
-            // }else
-            // if(JSON.stringify(data) !=JSON.stringify(soft.refresh_data)){
-            //     _this.refresh_table(page, type, search, rdata);
-            //     soft.refresh_data = data;
-            // }
+      })
+      var data = rdata.list.data;
+      $('#softPage').html(rdata.list.page);
+      if (data.length > 0) {
+        for (var i = 0; i < data.length; i++) {
+          if (data[i].task == '-1') {
+            soft.is_setup = true;
+            soft.is_setup_name = data[i].name;
+            break;
+          } else {
+            soft.is_setup = false;
+            soft.is_install = false;
+            soft.is_setup_name = "";
+          }
+        }
+      }
+      if (soft.is_setup == true && soft.is_setup_name != "") {
+        _this.soft_setup_find();
+      }
+      // if(soft.refresh_data.length==0){
+
+      // }else
+      // if(JSON.stringify(data) !=JSON.stringify(soft.refresh_data)){
+      //     _this.refresh_table(page, type, search, rdata);
+      //     soft.refresh_data = data;
+      // }
 
             _this.refresh_table(page, type, search, rdata);
             soft.refresh_data = data;
@@ -191,11 +201,11 @@ var soft = {
                 }:''),
                 {
                     field: 'endtime', width: 120, title: '到期时间', templet: function (item) {
-                        var endtime = '--';
+                        var endtime = '--',ps = item.ps.replace(/</g, '#1').replace(/>/g, '#2').replace(/"/g, '#3').replace(/'/g, '#4');
                         if (item.pid > 0) {  //判断是否为付费插件
                             if (item.endtime > 0) {
                                 if (item.type != 10) { //判断是否为第三方插件
-                                    endtime = bt.format_data(item.endtime, 'yyyy/MM/dd') + '<a class="btlink" onclick=\'bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,plugin:true,renew:item.endtime}) +')\'> (续费)</a>';
+                                    endtime = bt.format_data(item.endtime, 'yyyy/MM/dd') + '<a class="btlink" onclick=\'bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,plugin:true,renew:item.endtime,ps:ps}) +')\'> (续费)</a>';
                                 } else {
                                     endtime = bt.format_data(item.endtime, 'yyyy/MM/dd') + '<a class="btlink" onclick="bt.soft.re_plugin_pay_other(\'' + item.title + '\',\'' + item.pid + '\',1,'+item.price+')"> (续费)</a>';
                                 }
@@ -208,7 +218,7 @@ var soft = {
                             }
                             else if (item.endtime === -2) {
                                 if (item.type != 10) {
-                                    endtime = '已到期' + '<a class="btlink" onclick="bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,plugin:true,renew:item.endtime}) +')"> (续费)</a>';
+                                    endtime = '已到期' + '<a class="btlink" onclick="bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,plugin:true,renew:item.endtime,ps: ps}) +')"> (续费)</a>';
                                 }else {
                                     endtime = '已到期' + '<a class="btlink" onclick="bt.soft.re_plugin_pay_other(\'' + item.title + '\',\'' + item.pid + '\',1,'+item.price+')"> (续费)</a>';
                                 }
@@ -255,9 +265,7 @@ var soft = {
                 },
                 {
                     field: 'opt', width: 120, title: '操作', align: 'right', templet: function (item) {
-                        var option = '';
-
-                        var pay_opt = '';
+                        var option = '',pay_opt = '',ps = item.ps.replace(/</g, '#1').replace(/>/g, '#2').replace(/"/g, '#3').replace(/'/g, '#4')
                         if (item.endtime < 0 && item.pid > 0) {
                             var re_msg = '';
                             var re_status = 0;
@@ -271,7 +279,7 @@ var soft = {
                                     break;
                             }
                             if (item.type != 10) {
-                                pay_opt = '<a class="btlink" onclick=\'bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,plugin:true,renew:item.endtime}) +')\'>' + re_msg + '</a>';
+                                pay_opt = '<a class="btlink" onclick=\'bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,plugin:true,renew:item.endtime,ps:ps}) +')\'>' + re_msg + '</a>';
                             } else {
                                 pay_opt = '<a class="btlink" onclick="bt.soft.re_plugin_pay_other(\'' + item.title + '\',\'' + item.pid + '\',' + re_status + ','+item.price+')">' + re_msg + '</a>';
                             }
@@ -449,7 +457,7 @@ var soft = {
                 content: (function(){
                     var html = '';
                     for(var i=0;i<find_data.length;i++){
-                        var item = find_data[i],thtml = '';
+                        var item = find_data[i],thtml = '',ps = item.ps.replace(/</g, '\<').replace(/>/g, '\>').replace(/"/g, '\"').replace(/'/g, '\'');
                         if(!item.setup){
                             thtml = '<button type="button" class="btn btn-success btn-xs" onclick="bt.soft.install(\''+ item.name +'\',this)">立即安装</button>';
                         }else{
@@ -459,9 +467,9 @@ var soft = {
                                 }else if(item.endtime > 0){ //已购买
                                     thtml = '<button type="button" class="btn btn-success btn-xs" onclick="bt.soft.set_lib_config(\''+ item.name +'\',\''+ item.title +'\')">打开软件</button>';
                                 }else if(item.endtime == -1){  //未购买
-                                    thtml = '<button type="button" class="btn btn-success btn-xs" onclick=\'bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,pulgin:true,renew:item.endtime}) +');\'>立即购买</button>';
+                                    thtml = '<button type="button" class="btn btn-success btn-xs" onclick=\'bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,pulgin:true,renew:item.endtime,ps:ps}) +');\'>立即购买</button>';
                                 }else if(item.endtime  == -2){ //已过期
-                                    thtml = '<button type="button" class="btn btn-success btn-xs" onclick=\'bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,pulgin:true,renew:item.endtime}) +');\'>立即续费</button>';
+                                    thtml = '<button type="button" class="btn btn-success btn-xs" onclick=\'bt.soft.product_pay_view('+ JSON.stringify({name:item.title,pid:item.pid,type:item.type,pulgin:true,renew:item.endtime,ps:ps}) +');\'>立即续费</button>';
                                 }
                             }else{
                                 thtml = '<button type="button" class="btn btn-success btn-xs" onclick="bt.soft.set_lib_config(\''+ item.name +'\',\''+ item.title +'\')">打开软件</button>';
@@ -487,119 +495,128 @@ var soft = {
             });
         }
     },
-    set_soft_tips:function(el,type){
-        bt.send('get_plugin_remarks','auth/get_plugin_remarks',{},function(pro_info){
-            var pro_introduce = '<div class="pro_introduce">';
-            $.each(pro_info.list,function(index,item){
-                pro_introduce += '<div style="display:inline-block;height:30px;line-height:30px;margin-right: 30px;">\
-                    <span class="glyphicon glyphicon-ok"></span>\
-                    <span>'+ item +'</span>\
-                </div>'
-                })
-            pro_introduce+='</div>'
-            var tips_info = $('<div class="alert" style="margin-bottom:15px"><div class="soft_tips_text"></div><div class="btn-ground" style="display:inline-block;"></div></div>'), explain = tips_info.find('.soft_tips_text'), btn_ground = tips_info.find('.btn-ground');
-            $(el).empty();
-            type = parseInt(type);
-            if(type != 11) $(el).next('.onekey-menu-sub').remove();
-            if(type == 10){
-                explain.text('安全提醒：第三方插件上架前，宝塔官方进行了安全审计，但可能还存在安全风险，在生产环境使用前请自行甄别');
-                btn_ground = soft.render_tips_btn(btn_ground,[
-                    {title:'免费入驻',href:'https://www.bt.cn/developer/',rel:'noreferrer noopener',target:'_blank',btn:'免费入驻',class:'btn btn-success btn-xs va0',style:"margin-left:10px;"},
-                    {title:'点击获取第三方应用',rel:'noreferrer noopener',href:'https://www.bt.cn/bbs/forum-40-1.html',target:'_blank',btn:'获取第三方应用',class:'btn btn-success btn-xs va0 ml15',style:"margin-left:10px;"},
-                    {title:'导入插件',href:'javascript:;',btn:'导入插件','class':'btn btn-success btn-xs va0 ml15','style':"margin-left:10px;",click:function(e){
-                        var input = $('<input type="file" style="display:none;" accept=".zip,.tar.gz" id="update_zip" multiple="multiple">').change(function (e) {
-                            var files =$(this)[0].files;
-                            if (files.length == 0) return;
-                            soft.update_zip(files[0]);
-                        }).click();
-                    }}
-                ]);
-                $(el).append(tips_info.addClass('alert-danger'));
-            }else if(type == 11){
-                explain.text('宝塔一键部署已上线，诚邀全球优秀项目入驻(限项目官方) ');
-                btn_ground = soft.render_tips_btn(btn_ground,[
-                    {title:'免费入驻',href:'https://www.bt.cn/bbs/thread-33063-1-1.html',rel:'noreferrer noopener',target:'_blank',btn:'免费入驻',class:'btn btn-success btn-xs va0',style:"margin-left:10px;"},
-                    {title:'导入项目',href:'javascript:;',rel:'noreferrer noopener',btn:'导入项目',class:'btn btn-success btn-xs va0',style:"margin-left:10px;",click:soft.input_package}
-                ]);
-                $(el).append(tips_info.addClass('alert-info'));
-            }else{
-                var ltd = parseInt(bt.get_cookie('ltd_end')),pro = parseInt(bt.get_cookie('pro_end')),todayDate = parseInt(new Date().getTime()/1000),_ltd = null;
-                if((ltd > 0 && (ltd == pro || pro < 0)) || (ltd < 0 && pro >= 0) || (ltd > 0 && pro >= 0)){
-                    _ltd = ((ltd > 0 && (ltd == pro || pro < 0)) || (ltd > 0 && pro >= 0))?1:0;
-                    explain.html('当前为'+ (_ltd?'企业版':'专业版') +'，'+ (_ltd?'企业版':'专业版') +'可以免费使用'+ (_ltd?'专业版及企业版插件':'专业版插件') + (!(pro == 0 && ltd < 0)?('，过期时间：'+ (bt.format_data((_ltd?ltd:pro),'yyyy/MM/dd') ) +''+((((_ltd?ltd:pro) - todayDate) <= 15*24*60*60)?('，<span style="color:red">距离过期仅剩'+ Math.round(((_ltd?ltd:pro) - todayDate) / (24*60*60)) +'天</span>'):'')):'，过期时间：<span style="color: #fc6d26;font-weight: bold;">永久授权</span>'));
-                }else if(ltd == -1 && pro == -1){
-                    explain.html('<div class="pro_introduce_content"><div class="pro_ic_title" style="line-height: 40px;font-weight: 700">企业版：'+pro_introduce+'</div>');
-                    $(el).append(tips_info.addClass('showprofun'));
-                    // if(type == 12){
 
-                    //     $('#soft_recom_list').hide();
-                    // }else{
-                    //     explain.html('专业版可以免费使用专业版插件，企业版可以免费使用专业版及企业版插件。');
-                    // }
-                }else if(pro == 0 && ltd < 0){
-                    _ltd = 2;
-                    explain.html('当前为专业版，专业版可以免费使用专业版插件，过期时间：永久授权。'+(type == 12?'&nbsp;&nbsp;<span style="color:#af8e48">升级企业版，企业可以免费试用企业版插件及专业版插件。</span>':''));
-                    if(type == 12){
-                        btn_ground  = soft.render_tips_btn(btn_ground,{title:'立即升级',href:'javascript:;',btn:'立即升级','class':'btn btn-success btn-xs va0 ml15','style':"margin-left:10px;",click:bt.soft.updata_ltd});
-                    }
-                }else if(ltd == -2 || pro == -2){
-                    _ltd = (ltd == -2)?1:0;
-                    explain.html('当前为'+ (_ltd?'企业版':'专业版') +'，'+ (_ltd?'企业版':'专业版') +'可以免费使用'+ (_ltd?'专业版及企业版插件':'专业版插件') +'，<span style="color:red">'+ (_ltd?'企业版':'专业版') +'已过期</span>');
-                }
-                var btn_config = {title:null,href:'javascript:;',btn:null,'class':'btn btn-success btn-xs va0 ml15','style':"margin-left:10px;",click:null};
-                var set_btn_style = function(res){
-                    if(!res.status || !res){
-                        $.extend(btn_config,{title:'立即登录',btn:'立即登录',click:function(){
-                            bt.pub.bind_btname(function(){
-                                window.location.reload();
-                            });
-                        }});
-                    }else{
-                        if(type == 12 && (ltd < 0 && pro >=0)){
-                            explain.html('企业版可以免费使用专业版及企业版插件，了解专业版和企业版的区别，请点击<a href="https://www.bt.cn/download/linux.html" target="_blank" class="btlink ml5">查看详情</a>。<a href="https://www.bt.cn/bbs/forum.php?mod=viewthread&tid=50342&page=1&extra=#pid179211" target="_blank" class="btlink ml5">《专业版升级企业版教程》</a>');
-                            $(el).append(tips_info.addClass('alert-ltd-success'));
-                            return false;
-                        }else{
-                            if(_ltd != 2){
-                                var fun = '';
-                                switch(_ltd){
-                                    case null:
-                                        fun = bt.soft.updata_ltd
-                                        break;
-                                    case 1:
-                                        fun = bt.soft.updata_ltd
-                                        break;
-                                    case 0:
-                                        fun = bt.soft.updata_pro
-                                        break;
-                                }
-                                $.extend(btn_config,{title:_ltd == null?'立即购买':'立即续费',btn:_ltd == null?'立即购买':'立即续费',click:fun})
-                            }
-                        }
-                    }
-                    if(_ltd != 2){
-                        if(!(pro == 0 && ltd < 0)){
-                            btn_ground  = soft.render_tips_btn(btn_ground,btn_config);
-                        }
-                    }
-                    $(el).append(tips_info.addClass(_ltd == 1?'alert-ltd-success':'alert-success'));
-                    tips_info.append('<span class="ml5"><a href="'+pro_info.kf+'" target="_blank" class="btlink"><img src="https://pub.idqqimg.com/qconn/wpa/button/button_old_41.gif" style="margin-right:5px;margin-left:3px;vertical-align: -1px;">售前客服: '+pro_info.kfqq+'</a></span>')
-                }
-                var bt_user_info = bt.get_cookie('bt_user_info');
-                if(!bt_user_info){
-                    bt.pub.get_user_info(function(res){
-                        if(!res.status){
-                             set_btn_style(false);
-                            return false;
-                        }
-                        bt.set_cookie('bt_user_info',JSON.stringify(res),300000);
-                        set_btn_style(res);
-                    });
-                }else{
-                    set_btn_style(JSON.parse(bt.get_cookie('bt_user_info')));
-                }
-            }
-        });
+/**
+   * @description 设置软件信息
+   * @param {object} rdata 软件列表请求数据
+   * @param {string} type 列表类型
+   */
+  set_soft_tips: function (rdata, type) {
+    type = parseInt(type);
+    var remarks = rdata.remarks,
+        tips_info = $('<div class="alert ltd" style="margin-bottom:15px"><div class="soft_tips_text"></div><div class="btn-ground" style="display:inline-block;margin:0;"></div><div class="close_recommend hide"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span><span>关闭推荐</span></div></div>'),
+        explain = tips_info.find('.soft_tips_text'), btn_ground = tips_info.find('.btn-ground'), el = '#updata_pro_info'
+    $(el).empty();
+    if (type !== 11) $(el).next('.onekey-menu-sub').remove();
+    if (type === 10) {
+      explain.text('安全提醒：第三方插件上架前，宝塔官方进行了安全审计，但可能还存在安全风险，在生产环境使用前请自行甄别');
+      btn_ground = soft.render_tips_btn(btn_ground, [
+        {
+          title: '免费入驻',
+          href: 'https://www.bt.cn/developer/',
+          rel: 'noreferrer noopener',
+          target: '_blank',
+          btn: '免费入驻',
+          class: 'btn btn-success btn-xs va0',
+          style: "margin-left:10px;"
+        },
+        {
+          title: '点击获取第三方应用',
+          rel: 'noreferrer noopener',
+          href: 'https://www.bt.cn/bbs/forum-40-1.html',
+          target: '_blank',
+          btn: '获取第三方应用',
+          class: 'btn btn-success btn-xs va0 ml15',
+          style: "margin-left:10px;"
+        },
+        {
+          title: '导入插件',
+          href: 'javascript:;',
+          btn: '导入插件',
+          'class': 'btn btn-success btn-xs va0 ml15',
+          'style': "margin-left:10px;",
+          click: function (e) {
+            var input = $('<input type="file" style="display:none;" accept=".zip,.tar.gz" id="update_zip" multiple="multiple">').change(function (e) {
+              var files = $(this)[0].files;
+              if (files.length === 0) return;
+              soft.update_zip(files[0]);
+            }).click();
+          }
+        }
+      ]);
+      $(el).append(tips_info.addClass('alert-danger'));
+    } else if (type === 11) {
+      explain.text('宝塔一键部署已上线，诚邀全球优秀项目入驻(限项目官方) ');
+      btn_ground = soft.render_tips_btn(btn_ground, [
+        {
+          title: '免费入驻',
+          href: 'https://www.bt.cn/bbs/thread-33063-1-1.html',
+          rel: 'noreferrer noopener',
+          target: '_blank',
+          btn: '免费入驻',
+          class: 'btn btn-success btn-xs va0',
+          style: "margin-left:10px;"
+        },
+        {
+          title: '导入项目',
+          href: 'javascript:;',
+          rel: 'noreferrer noopener',
+          btn: '导入项目',
+          class: 'btn btn-success btn-xs va0',
+          style: "margin-left:10px;",
+          click: soft.input_package
+        }
+      ]);
+      $(el).append(tips_info.addClass('alert-info'));
+    } else {
+      if (bt.get_cookie('productPurchase') != null) return false
+      var pro_introduce = '<div class="pro_introduce">', genre = false, is_buy = false, advantage_list = [];
+      tips_info.removeClass('ltd')
+      if (rdata.ltd > 0 || type === 12) {
+        genre = false
+      } else if (rdata.pro >= 0 || type === 8) {
+        genre = true
+      }
+      if (rdata.ltd > 0 || rdata.pro >= 0) is_buy = true
+      if (type === 12 && rdata.ltd < 0) is_buy = false
+      genre ? tips_info.removeClass('ltd') : tips_info.addClass('ltd');
+      advantage_list = genre ? remarks.pro_list : remarks.list;
+      $.each(advantage_list, function (index, item) {
+        pro_introduce += '<div class="item"><span class="success_icon"></span><span>' + item + '</span></div>'
+      })
+      pro_introduce += '</div>'
+
+      // 显示优势介绍
+      var time = genre ? rdata.pro : rdata.ltd,newDate = parseInt(new Date().getTime() / 1000),countTime = Math.ceil((time - newDate) / 86400);
+      explain.html('<div class="pro_introduce_content"><div class="pro_ic_title"><span class="advantage">' + bt.os + (genre ? '专业版' : '企业版') + '优势 </span><span class="renew_info">' +
+          '<span '+ ((countTime <= 7 && countTime >=0)?'style="color:red;"':'') +'>' + (is_buy ? ('过期时间：' +
+              (function () {
+                var title = bt.format_data(time, 'yyyy-MM-dd');
+                if (countTime <= 7) title += ' (还有'+ countTime +'天到期，请及时续费)';
+                if (genre && rdata.pro === 0) title = '永久授权';
+                return title;
+              }())) : '')
+          + '</span><span class="ml5"><a href="' + remarks.kf + '" target="_blank" class="btlink"><img src="https://pub.idqqimg.com/qconn/wpa/button/button_old_41.gif" style="margin-right:5px;margin-left:3px;vertical-align: -1px;">客服QQ: ' + remarks.kfqq + '</a></span></div>' + pro_introduce + '</div>');
+      var btn = $('<a title="' + ('立即' + (is_buy ? '续费' : '购买')) + '" href="javascript:;" class="btn btn-success btn-xs va0 ml15" style="margin-left:10px;">' + ('立即' + (is_buy ? '续费' : '购买')) + '</a>')
+      bt.set_cookie('soft_remarks', JSON.stringify(remarks))
+      bt.set_cookie('ltd_end', rdata.ltd)
+      bt.set_cookie('pro_end', rdata.pro)
+      btn.on('click', function () {
+        genre ? bt.soft.updata_pro() : bt.soft.updata_ltd()
+      })
+      if (genre && rdata.pro === 0) {
+        tips_info.find('.soft_tips_text').css('left', '30px')
+        btn = '';
+      }
+      tips_info.addClass('showprofun').find('.btn-ground').append(btn)
+      $(el).on('click', '.close_recommend', function () {
+        $('#updata_pro_info').html('')
+        layer.msg('已关闭活动推荐，30分钟内将不再显示！', {icon: 0})
+        bt.set_cookie('productPurchase', 1, 1800000)
+      })
+      $(el).append(tips_info);
+    }
+
     },
     render_tips_btn:function(node,arry){
         if(!Array.isArray(arry)) arry = [arry]
