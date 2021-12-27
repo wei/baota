@@ -438,9 +438,9 @@ def bt_cli(u_input = 0):
         print("(7) 强制修改MySQL密码      (14) 查看面板默认信息")
         print("(22) 显示面板错误日志      (15) 清理系统垃圾")
         print("(23) 关闭BasicAuth认证     (16) 修复面板(检查错误并更新面板文件到最新版)")
-        print("(24) 关闭谷歌认证          (17) 设置日志切割是否压缩")
+        print("(24) 关闭动态口令认证          (17) 设置日志切割是否压缩")
         print("(25) 设置是否保存文件历史副本  (18) 设置是否自动备份面板")
-        print("(0) 取消")
+        print("(0) 取消                   (29) 取消访问设置验证")
         print(raw_tip)
         try:
             u_input = input("请输入命令编号：")
@@ -495,7 +495,7 @@ def bt_cli(u_input = 0):
     except: pass
 
 
-    nums = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,22,23,24,25]
+    nums = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,22,23,24,25,29]
     if not u_input in nums:
         print(raw_tip)
         print("已取消!")
@@ -504,7 +504,10 @@ def bt_cli(u_input = 0):
     print(raw_tip)
     print("正在执行(%s)..." % u_input)
     print(raw_tip)
-
+    if u_input == 29:
+        os.system("rm -rf /www/server/panel/data/ssl_verify_data.pl")
+        os.system("/etc/init.d/bt restart")
+        print("|-已关闭访问设备验证")
     if u_input == 1:
         os.system("/etc/init.d/bt restart")
     elif u_input == 2:
@@ -595,7 +598,7 @@ def bt_cli(u_input = 0):
         auth_file = 'data/admin_path.pl'
         if os.path.exists(auth_file): os.remove(auth_file)
         os.system("/etc/init.d/bt reload")
-        print("|-已取消入口限制")
+        print("|-已取消入口限制,请在URL地址中增加/login访问面板")
     elif u_input == 12:
         auth_file = 'data/domain.conf'
         if os.path.exists(auth_file): os.remove(auth_file)

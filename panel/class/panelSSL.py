@@ -66,7 +66,7 @@ class panelSSL:
             if result['data']: 
                 result['data']['serverid'] = data['serverid']
                 public.writeFile(self.__UPATH,json.dumps(result['data']))
-                
+                public.flush_plugin_list()
             del(result['data'])
             session['focre_cloud'] = True
             return result
@@ -219,6 +219,10 @@ class panelSSL:
             else:
                 if domain[:4] == 'www.': domain = domain[:4]
                 verify_info['hosts'].append(verify_info['host'] + '.' + domain)
+                if 'auth_to' in args:   
+                    root,zone = public.get_root_domain(domain)
+                    res = self.create_dns_record(args['auth_to'],verify_info['host'] + '.' + root,verify_info['value'])
+                    print(res)
         return verify_info
 
     #处理验证信息
@@ -227,12 +231,13 @@ class panelSSL:
         is_file_verify = 'fileName' in verify_info
         verify_info['paths'] = []
         verify_info['hosts'] = []
+        print(verify_info)
         for domain in verify_info['domains']:
             if domain[:2] == '*.': domain = domain[2:]
             if is_file_verify:
                 siteRunPath = self.get_domain_run_path(domain)
                 if not siteRunPath:
-                    if domain[:4] == 'www.': domain = domain[4:]
+                    #if domain[:4] == 'www.': domain = domain[4:]
                     verify_info['paths'].append(verify_info['path'].replace('example.com',domain))
                     continue
                 verify_path = siteRunPath + '/.well-known/pki-validation'
@@ -242,8 +247,12 @@ class panelSSL:
                 if os.path.exists(verify_file): continue
                 public.writeFile(verify_file,verify_info['content'])
             else:
-                if domain[:4] == 'www.': domain = domain[4:]
+                #if domain[:4] == 'www.': domain = domain[4:]
                 verify_info['hosts'].append(verify_info['host'] + '.' + domain)
+                
+                if 'auth_to' in args:       
+                    root,zone = public.get_root_domain(domain)
+                    self.create_dns_record(args['auth_to'],verify_info['host'] + '.' + root,verify_info['value'])
         return verify_info
 
 
@@ -342,9 +351,12 @@ class panelSSL:
             if domain[:2] == '*.': domain = domain[2:]
             dinfo['domainName'] = domain
             if is_file_verify:
-                siteRunPath = self.get_domain_run_path(domain)
-                if domain[:4] == 'www.': domain = domain[4:] 
-
+                #判断是否是Springboot 项目
+                if public.M('sites').where('id=?',(public.M('domain').where('name=?',(dinfo['domainName'])).getField('pid'),)).getField('project_type') == 'Java':
+                    siteRunPath='/www/wwwroot/java_node_ssl'
+                else:
+                    siteRunPath = self.get_domain_run_path(domain)
+                #if domain[:4] == 'www.': domain = domain[4:]
                 status = 0
                 url = 'http'+ is_https +'://'+ domain +'/.well-known/pki-validation/' + verify_info['data']['DCVfileName']
                 get = public.dict_obj()
@@ -362,10 +374,13 @@ class panelSSL:
                 if os.path.exists(verify_file): continue
                 public.writeFile(verify_file,verify_info['data']['DCVfileContent'])
             else:
-                if domain[:4] == 'www.': domain = domain[4:]
+                #if domain[:4] == 'www.': domain = domain[4:]
+                domain,subb = public.get_root_domain(domain)
+                dinfo['domainName'] = domain
                 verify_info['hosts'].append(verify_info['data']['DCVdnsHost'] + '.' + domain)
 
         return verify_info
+
 
     #取消订单
     def cancel_cert_order(self,args):
@@ -386,7 +401,6 @@ class panelSSL:
         result = self.request('get_cert_admin')
         return result
 
-    
     def ApplyDVSSL(self,get):        
 
         """
@@ -410,10 +424,16 @@ class panelSSL:
         if get.domain[:4] == 'www.':
             if not public.M('domain').where('name=? AND pid=?',(get.domain[4:],get.id)).count():
                 return public.returnMsg(False,"申请[%s]证书需要验证[%s]请将[%s]绑定并解析到站点!" % (get.domain,get.domain[4:],get.domain[4:]))
-                   
-
-        runPath = self.GetRunPath(get);
-
+        #判断是否是Java项目
+        if public.M('sites').where('id=?',(get.id,)).getField('project_type') == 'Java':
+            get.path='/www/wwwroot/java_node_ssl/'
+            runPath=''
+        #判断是否是Node项目
+        elif public.M('sites').where('id=?',(get.id,)).getField('project_type') == 'Node':
+            get.path=public.M('sites').where('id=?',(get.id,)).getField('path')
+            runPath=''
+        else:
+            runPath = self.GetRunPath(get)
         if runPath != False and runPath != '/': get.path +=  runPath;
         authfile = get.path + '/.well-known/pki-validation/fileauth.txt';
         if not self.CheckDomain(get):
@@ -463,6 +483,8 @@ class panelSSL:
         if result['status'] == True:
             self.__PDATA['data'] = {}
             args['oid'] = pdata['oid']
+            if 'auth_to' in pdata:                
+                args['auth_to'] = pdata['auth_to']
             result['verify_info'] = self.get_verify_info(args)
         return result
     
@@ -625,7 +647,10 @@ class panelSSL:
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data'])
         if hasattr(get,'siteName'):
             get.path = public.M('sites').where('name=?',(get.siteName,)).getField('path')
-            runPath = self.GetRunPath(get)
+            if public.M('sites').where('id=?',(public.M('domain').where('name=?',(get.siteName)).getField('pid'),)).getField('project_type') == 'Java':
+                runPath='/www/wwwroot/java_node_ssl'
+            else:
+                runPath = self.GetRunPath(get)
             if runPath != False and runPath != '/': get.path +=  runPath
             tmp = public.httpPost(self.__APIURL + '/SyncOrder',self.__PDATA)
             try:
@@ -635,7 +660,11 @@ class panelSSL:
 
             sslInfo['data'] = self.En_Code(sslInfo['data'])
             try:
-                spath = get.path + '/.well-known/pki-validation'
+                
+                if public.M('sites').where('id=?',(public.M('domain').where('name=?',(get.siteName)).getField('pid'),)).getField('project_type') == 'Java':
+                    spath = '/www/wwwroot/java_node_ssl/.well-known/pki-validation'
+                else:
+                    spath = get.path + '/.well-known/pki-validation'
                 if not os.path.exists(spath): public.ExecShell("mkdir -p '" + spath + "'")
                 public.writeFile(spath + '/fileauth.txt',sslInfo['data']['authValue'])
             except:
@@ -740,7 +769,7 @@ class panelSSL:
             public.writeFile(keypath,result['privkey'])
             public.writeFile(csrpath,result['fullchain'])
             import panelSite
-            panelSite.panelSite().SetSSLConf(get)
+            return panelSite.panelSite().SetSSLConf(get)
             public.serviceReload()
             return public.returnMsg(True,'SET_SUCCESS')
         except Exception as ex:
@@ -799,27 +828,88 @@ class panelSSL:
         return data
     
     #获取证书名称
-    def GetCertName(self,get):            
-        try:
-            openssl = '/usr/local/openssl/bin/openssl'
-            if not os.path.exists(openssl): openssl = 'openssl'
-            result = public.ExecShell(openssl + " x509 -in "+get.certPath+" -noout -subject -enddate -startdate -issuer")
-            tmp = result[0].split("\n")
-            data = {}
-            data['subject'] = tmp[0].split('=')[-1]
-            data['notAfter'] = self.strfToTime(tmp[1].split('=')[1])
-            data['notBefore'] = self.strfToTime(tmp[2].split('=')[1])
-            if tmp[3].find('O=') == -1:
-                data['issuer'] = tmp[3].split('CN=')[-1]
-            else:
-                data['issuer'] = tmp[3].split('O=')[-1].split(',')[0]
-            if data['issuer'].find('/') != -1: data['issuer'] = data['issuer'].split('/')[0]
-            result = public.ExecShell(openssl + " x509 -in "+get.certPath+" -noout -text|grep DNS")
-            data['dns'] = result[0].replace('DNS:','').replace(' ','').strip().split(',')
-            return data
-        except:
-            print(public.get_error_info())
+    def GetCertName(self,get):  
+        return self.get_cert_init(get.certPath)
+        # try:
+        #     openssl = '/usr/local/openssl/bin/openssl'
+        #     if not os.path.exists(openssl): openssl = 'openssl'
+        #     result = public.ExecShell(openssl + " x509 -in "+get.certPath+" -noout -subject -enddate -startdate -issuer")
+        #     tmp = result[0].split("\n")
+        #     data = {}
+        #     data['subject'] = tmp[0].split('=')[-1]
+        #     data['notAfter'] = self.strfToTime(tmp[1].split('=')[1])
+        #     data['notBefore'] = self.strfToTime(tmp[2].split('=')[1])
+        #     if tmp[3].find('O=') == -1:
+        #         data['issuer'] = tmp[3].split('CN=')[-1]
+        #     else:
+        #         data['issuer'] = tmp[3].split('O=')[-1].split(',')[0]
+        #     if data['issuer'].find('/') != -1: data['issuer'] = data['issuer'].split('/')[0]
+        #     result = public.ExecShell(openssl + " x509 -in "+get.certPath+" -noout -text|grep DNS")
+        #     data['dns'] = result[0].replace('DNS:','').replace(' ','').strip().split(',')
+        #     return data
+        # except:
+        #     print(public.get_error_info())
+        #     return None
+
+
+    # 获取指定证书基本信息
+    def get_cert_init(self, pem_file):
+        if not os.path.exists(pem_file):
             return None
+        try:
+            import OpenSSL
+            result = {}
+            x509 = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_PEM, public.readFile(pem_file))
+            # 取产品名称
+            issuer = x509.get_issuer()
+            result['issuer'] = ''
+            if hasattr(issuer, 'CN'):
+                result['issuer'] = issuer.CN
+            if not result['issuer']:
+                is_key = [b'0', '0']
+                issue_comp = issuer.get_components()
+                if len(issue_comp) == 1:
+                    is_key = [b'CN', 'CN']
+                for iss in issue_comp:
+                    if iss[0] in is_key:
+                        result['issuer'] = iss[1].decode()
+                        break
+            # 取到期时间
+            result['notAfter'] = self.strf_date(
+                bytes.decode(x509.get_notAfter())[:-1])
+            # 取申请时间
+            result['notBefore'] = self.strf_date(
+                bytes.decode(x509.get_notBefore())[:-1])
+            # 取可选名称
+            result['dns'] = []
+            for i in range(x509.get_extension_count()):
+                s_name = x509.get_extension(i)
+                if s_name.get_short_name() in [b'subjectAltName', 'subjectAltName']:
+                    s_dns = str(s_name).split(',')
+                    for d in s_dns:
+                        result['dns'].append(d.split(':')[1])
+            subject = x509.get_subject().get_components()
+            # 取主要认证名称
+            if len(subject) == 1:
+                result['subject'] = subject[0][1].decode()
+            else:
+                if not result['dns']:
+                    for sub in subject:
+                        if sub[0] == b'CN':
+                            result['subject'] = sub[1].decode()
+                            break
+                    result['dns'].append(result['subject'])
+                else:
+                    result['subject'] = result['dns'][0]
+            return result
+        except: 
+            return None
+    
+
+    # 转换时间
+    def strf_date(self, sdate):
+        return time.strftime('%Y-%m-%d', time.strptime(sdate, '%Y%m%d%H%M%S'))
     
     #转换时间
     def strfToTime(self,sdate):
@@ -889,3 +979,126 @@ class panelSSL:
             else:
                 result['err_list'].append({"siteName":siteName,"msg":ret['msg']})
         return result
+
+
+    def renew_cert_order(self,args):
+        '''
+            @name 续签商用证书
+            @author cjx
+            @version 1.0
+        '''
+        pdata = json.loads(args.pdata)        
+        self.__PDATA['data'] = pdata
+
+        result = self.request('renew_cert_order')
+        if result['status'] == True:
+            self.__PDATA['data'] = {}
+            args['oid'] = result['oid']
+            result['verify_info'] = self.get_verify_info(args)
+        return result
+
+
+    def GetAuthToken(self,get):
+        """
+        登录官网获取Token
+        @get.username 官网手机号
+        @get.password 官网账号密码
+        """
+        rtmp = ""
+        data = {}
+        data['username'] = get.username;
+        data['password'] = public.md5(get.password);        
+        data['serverid'] = panelAuth().get_serverid()
+
+        if 'code' in get: data['code'] = get.code;
+        if 'token' in get: data['token'] = get.token;
+
+        pdata = {}
+        pdata['data'] = self.De_Code(data);
+        try:
+            rtmp = public.httpPost(self.__APIURL+'/GetAuthToken',pdata) 
+            result = json.loads(rtmp);           
+            result['data'] = self.En_Code(result['data']);
+            if not result['status']: return result
+
+            if result['data']: 
+                result['data']['serverid'] = data['serverid']
+                public.writeFile(self.__UPATH,json.dumps(result['data']));
+                if os.path.exists('data/bind_path.pl'): os.remove('data/bind_path.pl')
+                public.flush_plugin_list()
+            del(result['data']);
+            session['focre_cloud'] = True       
+            return result;
+        except Exception as ex:
+            print(rtmp)
+            return public.returnMsg(False,'连接服务器失败!<br>' + rtmp)
+
+    def GetBindCode(self,get):
+        """
+        获取验证码
+        """
+        rtmp = ""
+        data = {}
+        data['username'] = get.username
+        data['token'] = get.token;
+        pdata = {}
+        pdata['data'] = self.De_Code(data);
+        try:
+            rtmp = public.httpPost(self.__APIURL+'/GetBindCode',pdata)  
+            result = json.loads(rtmp);           
+            return result;
+        except Exception as ex:
+            return public.returnMsg(False,'连接服务器失败!<br>' + rtmp)
+            
+            
+    # 解析DNSAPI信息
+    def get_dnsapi(self, auth_to):
+        tmp = auth_to.split('|')
+        dns_name = tmp[0]
+        key = "None"
+        secret = "None"
+        if len(tmp) < 3:          
+            dnsapi_config = json.loads(public.readFile('{}/config/dns_api.json'.format(public.get_panel_path())))               
+            for dc in dnsapi_config:              
+                if dc['name'] != dns_name:
+                    continue
+                if not dc['data']:
+                    continue
+                key = dc['data'][0]['value']
+                secret = dc['data'][1]['value']
+        else:
+            key = tmp[1]
+            secret = tmp[2]
+        return dns_name, key, secret
+
+    #获取dnsapi对象
+    def get_dns_class(self,auth_to):
+        try:
+            import panelDnsapi
+            dns_name, key, secret = self.get_dnsapi(auth_to)     
+            dns_class = getattr(panelDnsapi, dns_name)(key, secret)
+            dns_class._type = 1
+            return dns_class
+        except :
+            return None
+        
+    # 解析域名
+    def create_dns_record(self, auth_to, domain, dns_value):
+        # 如果为手动解析
+        if auth_to == 'dns': 
+            return None
+        dns_class = self.get_dns_class(auth_to)
+        if not dns_class: 
+            return public.returnMsg(False,"操作失败，请检查密钥是否正确.")
+            
+        #申请钱删除caa记录
+        root,zone = public.get_root_domain(domain)
+        try:
+            dns_class.remove_record(public.de_punycode(root),'@','CAA')   
+        except :pass        
+        try:
+            dns_class.create_dns_record(public.de_punycode(domain), dns_value) 
+            return public.returnMsg(True,'添加成功')
+        except :
+            return public.returnMsg(False,public.get_error_info())
+

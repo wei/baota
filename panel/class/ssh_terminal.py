@@ -46,6 +46,7 @@ class ssh_terminal:
     _old_conf = None
     _debug_file = 'logs/terminal.log'
     _s_code = None
+    _last_num = 0
 
     def connect(self):
         '''
@@ -545,7 +546,7 @@ class ssh_terminal:
                     continue
                 client_data = self._ws.receive()
                 if not client_data: continue
-                if client_data == '{}': continue
+                if client_data is '{}': continue
                 if len(client_data) > 10:
                     if client_data.find('{"host":"') != -1:
                         continue
@@ -581,7 +582,7 @@ class ssh_terminal:
         #处理TAB补登
         if self._last_cmd_tip == 1:
             if not recv_data.startswith('\r\n'):
-                self._last_cmd += recv_data.replace('\u0007','').strip()
+                self._last_cmd += recv_data.replace('\u0007','').replace("\x07","").strip()
             self._last_cmd_tip = 0
 
         #上下切换命令
@@ -605,19 +606,33 @@ class ssh_terminal:
         if send_data in ["\x1b[A","\x1b[B"]:
             self._last_cmd_tip = 2
             return
+
+        #左移光标
+        if send_data in ["\x1b[C"]:
+            self._last_num -= 1
+            return
+        
+        # 右移光标
+        if send_data in ["\x1b[D"]:
+            self._last_num += 1
+            return
         
         #退格
         if send_data == "\x7f":
             self._last_cmd = self._last_cmd[:-1]
             return
 
+        
         #过滤特殊符号
-        if send_data in ["\x1b[C","\x1b[D","\x1b[K","\x07","\x08","\x03","\x01","\x02","\x04","\x05","\x06","\u0007"]:
+        if send_data in ["\x1b[C","\x1b[D","\x1b[K","\x07","\x08","\x03","\x01","\x02","\x04","\x05","\x06","\x1bOB","\x1bOA","\x1b[8P","\x1b","\x1b[4P","\x1b[6P","\x1b[5P"]:
             return
         
         #Tab补全处理
-        if send_data == '\t':
+        if send_data == "\t":
             self._last_cmd_tip = 1
+            return
+        
+        if str(send_data).find("\x1b") != -1:
             return
 
         if send_data[-1] in ['\r','\n']:
@@ -626,12 +641,15 @@ class ssh_terminal:
             public.writeFile(his_file, json.dumps(his_shell) + "\n","a+")
             self._last_cmd = ""
 
-            #超过5M则保留最新的200行
-            if os.stat(his_file).st_size > 5242880:
-                his_tmp = public.GetNumLines(his_file,200)
+            #超过50M则保留最新的20000行
+            if os.stat(his_file).st_size > 52428800:
+                his_tmp = public.GetNumLines(his_file,20000)
                 public.writeFile(his_file, his_tmp)
         else:
-            self._last_cmd += send_data
+            if self._last_num >= 0:
+                self._last_cmd += send_data
+            else:
+                self._last_cmd.insert(len(self._last_cmd) + self._last_num, send_data)
     
 
     def close(self):
@@ -697,6 +715,7 @@ class ssh_terminal:
             @return void
         '''
         msg = "{} - {}:{} => {} \n".format(public.format_date(),self._host,self._port,msg)
+        self.history_send(msg)
         public.writeFile(self._debug_file,msg,'a+')
 
     def run(self,web_socket, ssh_info=None):

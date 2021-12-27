@@ -29,7 +29,7 @@ class system:
         data = session['config']
         data['webserver'] = public.get_webserver()
         #PHP版本
-        phpVersions = ('52','53','54','55','56','70','71','72','73','74')
+        phpVersions = public.get_php_versions()
         
         data['php'] = []
         
@@ -390,13 +390,16 @@ class system:
             diskInfo.append(tmp)
         return diskInfo
     
-    def GetDiskInfo2(self):
+    def GetDiskInfo2(self, human=True):
         
         #取磁盘分区信息
         key = 'sys_disk'
         diskInfo = cache.get(key)
         if diskInfo: return diskInfo
-        temp = public.ExecShell("df -hT -P|grep '/'|grep -v tmpfs|grep -v 'snap/core'|grep -v udev")[0]
+        if human:
+            temp = public.ExecShell("df -hT -P|grep '/'|grep -v tmpfs|grep -v 'snap/core'|grep -v udev")[0]
+        else:
+            temp = public.ExecShell("df -T -P|grep '/'|grep -v tmpfs|grep -v 'snap/core'|grep -v udev")[0]
         tempInodes = public.ExecShell("df -i -P|grep '/'|grep -v tmpfs|grep -v 'snap/core'|grep -v udev")[0]
         temp1 = temp.split('\n')
         tempInodes1 = tempInodes.split('\n')

@@ -1,20 +1,11 @@
 {% extends "layout.html" %}
 {% block content %}
-<link rel="stylesheet" href="{{g.cdn_url}}/ace/styles/icons.css">
+<link rel="stylesheet" href="{{g.cdn_url}}/editor/styles/icons.css">
+<link rel="stylesheet" href="{{g.cdn_url}}/css/xterm.css">
 <link rel="stylesheet" type="text/css" href="{{g.cdn_url}}/css/files_style.min.css">
 <style id="file_list_info">.file_checkbox{width:40px !important;}.file_name{width:300px !important;}.file_ps{width:200px !important;}.file_size{width:100px !important;}.file_mtime{width:180px !important;}.file_user{width:80px !important;}.file_accept{width:80px !important;}.file_operation{width:220px !important;}.file_table_view.list_view .file_list_content .file_tr{width:auto;}.file_table_view.list_view .file_list_content{width:auto;}</style>
 <div class="main-content">
     <a style="display: none;" id="recycle_bin" data="{{data['recycle_bin']}}"></a>
-	<div class="bt_file_updated">
-		<div class="updated_icon">
-			<div class="btn download">
-				<div class="cloud">
-					<div class="file"></div>
-				</div>
-			</div>
-		</div>S
-		<div class="updated_title">松开鼠标即可上传文件或文件夹</div>
-	</div>
 	<!-- aceEditors -->
 	<div class="file_bodys">
 		<div class="file_path_views">
@@ -31,7 +22,7 @@
 			<div class="search_path_views">
                 <input type="text" placeholder="搜索文件/目录" class="file_search_input">
                 <button type="submit" class="path_btn"><i class="iconfont icon-search"></i></button>
-                <div class="file_search_config">
+                <div class="file_search_config" draggable="false">
                     <div id="search_all" class="file_search_checked"></div>
                     <label for="search_all">包含子目录</label>
                 </div>
@@ -58,6 +49,11 @@
 					</ul>
 				</div>
 			</div>
+			<div class="nav_group">
+                <div class="nav_btn replace_content">
+                    <span class="nav_btn_title">文件查找</span>
+                </div>
+            </div>
 			<div class="nav_group">
 				<div class="nav_btn favorites_file_path">
 					<span class="nav_btn_title" data-menu="favorites">收藏夹</span><i class="iconfont icon-xiala"></i>
@@ -324,6 +320,10 @@
                 <div class="ace_conter_tips"><div class="tips"></div></div>
                 <div class="ace_editor_main_storey"></div>
                 <div class="ace_conter_editor"></div>
+                // 编辑器终端
+                <div class="term-parent">
+                    <div class="term-content" id="termContent"></div>
+                </div>
                 <div class="ace_conter_toolbar">
                     <div class="pull-left size_ellipsis">
                         <span data-type="path" class="size_ellipsis"></span>
@@ -673,7 +673,11 @@
     <script type="text/javascript" src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
     <script type="text/javascript" src="{{g.cdn_url}}/js/clipboard.min.js" defer></script>
     <script type="text/javascript" src="{{g.cdn_url}}/js/polyfill.js"></script>
-    <script type="text/javascript" src="{{g.cdn_url}}/ace/ace.js" defer></script>
-    <script type="text/javascript" src="{{g.cdn_url}}/ace/ext-language_tools.js" defer></script>
-    <script type="text/javascript" src="{{g.cdn_url}}/js/files.min.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/editor/ace.js" defer></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/editor/ext-language_tools.js" defer></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/js/xterm.js" defer></script>
+    <!--<script type="text/javascript" src="{{g.cdn_url}}/js/files.min.js?version={{g['version']}}&repair={{data['js_random']}}"></script>-->
+    <script type="text/javascript" src="{{g.cdn_url}}/js/files.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+    <script type="text/javascript"
+  src="{{g.cdn_url}}/js/upload-drog.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 {% endblock %}

@@ -14,9 +14,10 @@ import threading
 import time
 import re
 import uuid
-
+import psutil
+panel_path = '/www/server/panel'
 if not os.name in ['nt']:
-    os.chdir('/www/server/panel')
+    os.chdir(panel_path)
 if not 'class/' in sys.path:
     sys.path.insert(0, 'class/')
 
@@ -42,6 +43,7 @@ if not hooks:
 # import db
 dns_client = None
 app.config['DEBUG'] = os.path.exists('data/debug.pl')
+app.config['SSL'] = os.path.exists('data/ssl.pl')
 
 # 设置BasicAuth
 basic_auth_conf = 'config/basic_auth.json'
@@ -56,7 +58,7 @@ if os.path.exists(basic_auth_conf):
         pass
 
 # 初始化SESSION服务
-app.secret_key = uuid.UUID(int=uuid.getnode()).hex[-12:]
+app.secret_key = public.md5(str(os.uname()) + str(psutil.boot_time())) # uuid.UUID(int=uuid.getnode()).hex[-12:]
 local_ip = None
 my_terms = {}
 app.config['SESSION_MEMCACHED'] = SimpleCache(1000,86400)
@@ -66,6 +68,13 @@ app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_KEY_PREFIX'] = 'BT_:'
 app.config['SESSION_COOKIE_NAME'] = public.md5(app.secret_key)
 app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 30
+if app.config['SSL']:
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SECURE'] = True
+else:
+    app.config['SESSION_COOKIE_SAMESITE'] = None
+
+    
 Session(app)
 
 import common
@@ -128,7 +137,8 @@ admin_path_checks = [
     '/tips',
     '/message',
     '/warning',
-    '/bind'
+    '/bind',
+    '/daily'
 ]
 if admin_path in admin_path_checks: admin_path = '/bt'
 
@@ -185,6 +195,11 @@ def request_check():
             
         if not public.is_bind():
             return redirect('/bind',302)
+        if public.is_error_path():
+            return redirect('/error',302)
+        if not request.path in ['/config']:
+            if session.get('password_expire',False):
+                return redirect('/modify_password',302)
 
 
 # Flask 请求结束勾子
@@ -207,13 +222,29 @@ def error_404(e):
 <head><title>404 Not Found</title></head>
 <body>
 <center><h1>404 Not Found</h1></center>
-<hr><center>server</center>
+<hr><center>nginx</center>
 </body>
 </html>'''
     headers = {
         "Content-Type": "text/html"
     }
     return Response(errorStr, status=404, headers=headers)
+
+
+# Flask 403页面勾子
+@app.errorhandler(403)
+def error_403(e):
+    errorStr = '''<html>
+<head><title>403 Forbidden</title></head>
+<body>
+<center><h1>403 Forbidden</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>'''
+    headers = {
+        "Content-Type": "text/html"
+    }
+    return Response(errorStr, status=403, headers=headers)
 
 
 # Flask 500页面勾子
@@ -236,11 +267,11 @@ REQUEST_FORM: {request_form}
     full_path = request.full_path,
     request_form = request.form.to_dict(),
     user_agent = request.headers.get('User-Agent'),
-    panel_version = public.get_panel_version(),
+    panel_version = public.version(),
     os_version = public.get_os_version()
 )
 
-    result = public.readFile('/www/server/panel/BTPanel/templates/default/panel_error.html').format(error_title=error_info.split("\n")[-1],request_info = request_info,error_msg=error_info)
+    result = public.readFile(public.get_panel_path() + '/BTPanel/templates/default/panel_error.html').format(error_title=error_info.split("\n")[-1],request_info = request_info,error_msg=error_info)
     return Resp(result,500)
 
 # ===================================Flask HOOK========================#
@@ -299,6 +330,22 @@ def bind():
     g.title = '请先绑定宝塔帐号'
     return render_template('bind.html', data=data)
 
+@app.route('/error', methods=method_get)
+def error():
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    data = {}
+    g.title = '服务器错误!!!!'
+    return render_template('block_error.html', data=data)
+
+@app.route('/modify_password', methods=method_get)
+def modify_password():
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    # if not session.get('password_expire',False): return redirect('/',302)
+    data = {}
+    g.title = '密码已过期，请修改!'
+    return render_template('modify_password.html', data=data)
 
 
 
@@ -324,8 +371,8 @@ def site(pdata=None):
     siteObject = panelSite.panelSite()
 
     defs = (
-    'upload_csv', 'create_website_multiple', 'del_redirect_multiple', 'del_proxy_multiple', 'delete_dir_auth_multiple','check_del_data',
-    'delete_dir_bind_multiple', 'delete_domain_multiple', 'set_site_etime_multiple',
+    'upload_csv', 'create_website_multiple', 'del_redirect_multiple', 'del_proxy_multiple', 'delete_dir_auth_multiple',
+    'delete_dir_bind_multiple', 'delete_domain_multiple', 'set_site_etime_multiple','check_del_data',
     'set_site_php_version_multiple', 'delete_website_multiple', 'set_site_status_multiple', 'get_site_domains',
     'GetRedirectFile', 'SaveRedirectFile', 'DeleteRedirect', 'GetRedirectList', 'CreateRedirect', 'ModifyRedirect',
     'set_dir_auth', 'delete_dir_auth', 'get_dir_auth', 'modify_dir_auth_pass', 'export_domains', 'import_domains',
@@ -665,7 +712,7 @@ def files(pdata=None):
             'DownloadFile', 'GetTaskSpeed', 'CloseLogs', 'InstallSoft', 'UninstallSoft', 'SaveTmpFile',
             'get_composer_version', 'exec_composer', 'update_composer',
             'GetTmpFile', 'del_files_store', 'add_files_store', 'get_files_store', 'del_files_store_types',
-            'add_files_store_types', 'exec_git',
+            'add_files_store_types', 'exec_git','upload_file_exists',
             'RemoveTask', 'ActionTask', 'Re_Recycle_bin', 'Get_Recycle_bin', 'Del_Recycle_bin', 'Close_Recycle_bin',
             'Recycle_bin', 'file_webshell_check', 'dir_webshell_check','files_search','files_replace','get_replace_logs'
             )
@@ -729,6 +776,7 @@ def config(pdata=None):
         if c_obj.get_ipv6_listen(None): data['ipv6'] = 'checked'
         if c_obj.get_token(None)['open']: data['api'] = 'checked'
         data['basic_auth'] = c_obj.get_basic_auth_stat(None)
+        data['status_code'] = c_obj.get_not_auth_status()
         data['basic_auth']['value'] = public.getMsg('CLOSED')
         if data['basic_auth']['open']: data['basic_auth']['value'] = public.getMsg('OPENED')
         data['debug'] = ''
@@ -747,21 +795,22 @@ def config(pdata=None):
     'get_ols_private_cache_status', 'get_ols_value', 'set_ols_value', 'get_ols_private_cache', 'get_ols_static_cache',
     'set_ols_static_cache', 'switch_ols_private_cache', 'set_ols_private_cache',
     'set_coll_open', 'get_qrcode_data', 'check_two_step', 'set_two_step_auth', 'create_user', 'remove_user',
-    'modify_user',
+    'modify_user','set_click_logs',
     'get_key', 'get_php_session_path', 'set_php_session_path', 'get_cert_source', 'get_users',
     'set_local', 'set_debug', 'get_panel_error_logs', 'clean_panel_error_logs', 'get_menu_list', 'set_hide_menu_list',
     'get_basic_auth_stat', 'set_basic_auth', 'get_cli_php_version', 'get_tmp_token', 'get_temp_login', 'set_temp_login',
     'remove_temp_login', 'clear_temp_login', 'get_temp_login_logs',
     'set_cli_php_version', 'DelOldSession', 'GetSessionCount', 'SetSessionConf', 'show_recommend', 'show_workorder',
     'GetSessionConf', 'get_ipv6_listen', 'set_ipv6_status', 'GetApacheValue', 'SetApacheValue',
-    'GetNginxValue', 'SetNginxValue', 'get_token', 'set_token', 'set_admin_path', 'is_pro',
+    'GetNginxValue', 'SetNginxValue', 'get_token', 'set_token', 'set_admin_path', 'is_pro','set_not_auth_status',
     'get_php_config', 'get_config', 'SavePanelSSL', 'GetPanelSSL', 'GetPHPConf', 'SetPHPConf',
     'GetPanelList', 'AddPanelInfo', 'SetPanelInfo', 'DelPanelInfo', 'ClickPanelInfo', 'SetPanelSSL',
     'SetTemplates', 'Set502', 'setPassword', 'setUsername', 'setPanel', 'setPathInfo', 'setPHPMaxSize',
     'getFpmConfig', 'setFpmConfig', 'setPHPMaxTime', 'syncDate', 'setPHPDisable', 'SetControl',
     'ClosePanel', 'AutoUpdatePanel', 'SetPanelLock', 'return_mail_list', 'del_mail_list', 'add_mail_address',
     'user_mail_send', 'get_user_mail', 'set_dingding', 'get_dingding', 'get_settings', 'user_stmp_mail_send',
-    'user_dingding_send','get_login_send','set_login_send','set_empty','clear_login_send','get_login_log','login_ipwhite'
+    'user_dingding_send','get_login_send','set_login_send','set_empty','clear_login_send','get_login_log','login_ipwhite',
+    'set_ssl_verify','get_ssl_verify','get_password_config','set_password_expire','set_password_safe'
     )
     return publicObject(config.config(), defs, None, pdata)
 
@@ -777,7 +826,7 @@ def ajax(pdata=None):
             'check_user_auth', 'to_not_beta', 'get_beta_logs', 'apple_beta', 'GetApacheStatus', 'GetCloudHtml',
             'get_load_average', 'GetOpeLogs', 'GetFpmLogs', 'GetFpmSlowLogs', 'SetMemcachedCache', 'GetMemcachedStatus',
             'GetRedisStatus', 'GetWarning', 'SetWarning', 'CheckLogin', 'GetSpeed', 'GetAd', 'phpSort', 'ToPunycode',
-            'GetBetaStatus', 'SetBeta', 'setPHPMyAdmin', 'delClose', 'KillProcess', 'GetPHPInfo', 'GetQiniuFileList',
+            'GetBetaStatus', 'SetBeta', 'setPHPMyAdmin', 'delClose', 'KillProcess', 'GetPHPInfo', 'GetQiniuFileList','get_process_tops','get_process_cpu_high',
             'UninstallLib', 'InstallLib', 'SetQiniuAS', 'GetQiniuAS', 'GetLibList', 'GetProcessList', 'GetNetWorkList',
             'GetNginxStatus', 'GetPHPStatus', 'GetTaskCount', 'GetSoftList', 'GetNetWorkIo', 'GetDiskIo', 'GetCpuIo',
             'CheckInstalled', 'UpdatePanel', 'GetInstalled', 'GetPHPConfig', 'SetPHPConfig')
@@ -834,8 +883,8 @@ def ssl(pdata=None):
             'DelToken', 'GetToken', 'GetUserInfo', 'GetOrderList', 'GetDVSSL', 'Completed', 'SyncOrder',
             'download_cert', 'set_cert', 'cancel_cert_order','ApplyDVSSL','apply_cert_order_pay',
             'get_order_list', 'get_order_find', 'apply_order_pay', 'get_pay_status', 'apply_order', 'get_verify_info',
-            'get_verify_result', 'get_product_list', 'set_verify_info',
-            'GetSSLInfo', 'downloadCRT', 'GetSSLProduct', 'Renew_SSL', 'Get_Renew_SSL')
+            'get_verify_result', 'get_product_list', 'set_verify_info','renew_cert_order',
+            'GetSSLInfo', 'downloadCRT', 'GetSSLProduct', 'Renew_SSL', 'Get_Renew_SSL','GetAuthToken','GetBindCode')
     get = get_input()
 
     if get.action == 'download_cert':
@@ -855,7 +904,7 @@ def task(pdata=None):
     if comReturn: return comReturn
     import panelTask
     toObject = panelTask.bt_task()
-    defs = ('get_task_lists', 'remove_task', 'get_task_find')
+    defs = ('get_task_lists', 'remove_task', 'get_task_find', "get_task_log_by_id")
     result = publicObject(toObject, defs, None, pdata)
     return result
 
@@ -873,7 +922,7 @@ def plugin(pdata=None):
     'check_deps', 'flush_cache', 'GetCloudWarning', 'install', 'unInstall', 'getPluginList', 'getPluginInfo','repair_plugin','upgrade_plugin',
     'get_make_args', 'add_make_args','input_package','export_zip','get_download_speed','get_usually_plugin','get_plugin_upgrades','close_install',
     'getPluginStatus', 'setPluginStatus', 'a', 'getCloudPlugin', 'getConfigHtml', 'savePluginSort', 'del_make_args',
-    'set_make_args')
+    'set_make_args','get_cloud_list_status','is_verify_unbinding')
     return publicObject(pluginObject, defs, None, pdata)
 
 
@@ -937,7 +986,7 @@ def download():
                          cache_timeout=0)
 
 
-@app.route('/cloud', methods=method_get)
+@app.route('/cloud', methods=method_all)
 def panel_cloud():
     # 从对像存储下载备份文件接口
     comReturn = comm.local()
@@ -962,6 +1011,35 @@ def panel_cloud():
         if download_url.find("ftp") != 0: download_url = "ftp://" + download_url
     else:
         if download_url.find('http') != 0: download_url = 'http://' + download_url
+    
+    if "toserver" in get and get.toserver=="true":
+        download_dir = "/tmp/"
+        if "download_dir" in get:
+            download_dir = get.download_dir
+        local_file = os.path.join(download_dir, get.name)
+        
+        input_from_local = False
+        if "input_from_local" in get:
+            input_from_local = True if get.input_from_local == "true" else False
+        
+        if input_from_local:
+            if os.path.isfile(local_file):
+                return {
+                    "status": True,
+                    "msg": "文件已存在，将优先从本地恢复。",
+                    "task_id": -1,
+                    "local_file": local_file
+                }
+        from panelTask import bt_task
+        task_obj = bt_task()
+        task_id = task_obj.create_task('下载文件', 1, download_url, local_file)
+        return {
+            "status": True,
+            "msg": "下载任务创建成功。",
+            "local_file": local_file,
+            "task_id": task_id
+        }
+    
     return redirect(download_url)
 
 
@@ -1037,6 +1115,7 @@ def login():
                     os.remove(sess_file)
                 except:
                     pass
+            g.dologin = True
             return redirect(login_path)
 
     if is_auth_path:
@@ -1047,7 +1126,9 @@ def login():
             if referer_path == '':
                 referer_path = referer_tmp[-2]
             if route_path != '/' + referer_path:
-                return render_template('autherr.html')
+                g.auth_error = True
+                # return render_template('autherr.html')
+                return public.error_not_login(None)
 
     session['admin_auth'] = True
     comReturn = common.panelSetup().init()
@@ -1059,7 +1140,8 @@ def login():
 
     if request.method == method_get[0]:
         result = userlogin.userlogin().request_get(get)
-        if result: return result
+        if result:             
+            return result
         data = {}
         data['lan'] = public.GetLan('login')
         data['hosts'] = '[]'
@@ -1071,9 +1153,7 @@ def login():
             else:
                 data['hosts'] = json.dumps(data['hosts'])
         data['app_login'] = os.path.exists('data/app_login.pl')
-        return render_template(
-            'login.html',
-            data=data)
+        return render_template('login.html',data=data)
 
 
 @app.route('/close', methods=method_get)
@@ -1117,7 +1197,7 @@ def code():
     try:
         import vilidate, time
     except:
-        public.ExecShell("pip install Pillow==5.4.1 -I")
+        public.ExecShell("pip install Pillow -I")
         return "Pillow not install!"
     code_time = cache.get('codeOut')
     if code_time: return u'Error: Don\'t request validation codes frequently'
@@ -1212,9 +1292,10 @@ def down(token=None, fname=None):
             mimetype = "application/octet-stream"
             extName = filename.split('.')[-1]
             if extName in ['png', 'gif', 'jpeg', 'jpg']: mimetype = None
+            b_name = os.path.basename(filename)
             return send_file(filename, mimetype=mimetype,
                              as_attachment=True,
-                             attachment_filename=os.path.basename(filename),
+                             attachment_filename=b_name,
                              cache_timeout=0)
     except:
         return abort(404)
@@ -1222,58 +1303,31 @@ def down(token=None, fname=None):
 
 @app.route('/public', methods=method_all)
 def panel_public():
-    # 小程序控制接口
     get = get_input()
-    try:
-        import panelWaf
-        panelWaf_data = panelWaf.panelWaf()
-        if panelWaf_data.is_sql(get.__dict__): return 'ERROR'
-        if panelWaf_data.is_xss(get.__dict__): return 'ERROR'
-    except:
-        pass
-    
-    #获取ping测试
-    if 'get_ping' in get:
-        try:
-            import panelPing
-            p = panelPing.Test()
-            get = p.check(get)
-            if not get: return 'ERROR'
-            result = getattr(p,get['act'])(get)
-            result_type = type(result)
-            if str(result_type).find('Response') != -1: return result
-            return public.getJson(result),json_header
-        except:
-            return public.returnJson(False,public.get_error_info())
-
     if len("{}".format(get.__dict__)) > 1024 * 32:
         return 'ERROR'
-
     get.client_ip = public.GetClientIp()
     num_key = get.client_ip + '_wxapp'
     if not public.get_error_num(num_key, 10):
         return public.returnMsg(False, '连续10次认证失败，禁止1小时')
     if not hasattr(get, 'name'): get.name = ''
-    if not hasattr(get, 'fun'): return abort(404)
-    if not public.path_safe_check("%s/%s" % (get.name, get.fun)): return abort(404)
-    if get.fun in ['scan_login', 'login_qrcode', 'set_login', 'is_scan_ok', 'blind', 'static']:
+    if not hasattr(get, 'fun'): return abort(403)
+    if not public.path_safe_check("%s/%s" % (get.name, get.fun)): return abort(403)
+    if get.fun in ['login_qrcode', 'is_scan_ok','set_login','static']:
         if get.fun == 'static':
             if not 'filename' in get: return abort(404)
             if not public.path_safe_check("%s" % (get.filename)): return abort(404)
+            if not re.match(r'^[\w\./_-]+$',get.filename): return abort(404)
             s_file = '/www/server/panel/BTPanel/static/' + get.filename
             if s_file.find('..') != -1 or s_file.find('./') != -1: return abort(404)
             if not os.path.exists(s_file): return abort(404)
             return send_file(s_file, conditional=True, add_etags=True)
-
         # 检查是否验证过安全入口
-        if get.fun in ['login_qrcode', 'is_scan_ok']:
-            global admin_check_auth, admin_path, route_path, admin_path_file
-            if admin_path != '/bt' and os.path.exists(admin_path_file) and not 'admin_auth' in session:
-                return 'False'
-
+        global admin_check_auth, admin_path, route_path, admin_path_file
+        if admin_path != '/bt' and os.path.exists(admin_path_file) and not 'admin_auth' in session:
+            return abort(403)
         #验证是否绑定了设备
-        if not get.fun in ['blind']:
-            if not public.check_app('app'):return public.returnMsg(False,'未绑定用户!')
+        if not public.check_app('app'):return public.returnMsg(False,'未绑定用户!')
         import wxapp
         pluwx = wxapp.wxapp()
         checks = pluwx._check(get)
@@ -1282,43 +1336,39 @@ def panel_public():
             return public.getJson(checks), json_header
         data = public.getJson(eval('pluwx.' + get.fun + '(get)'))
         return data, json_header
-    if get.name != 'app': return abort(404)
-    if not public.check_app('wxapp'): return public.returnMsg(False, '未绑定用户!')
-    import panelPlugin
-    plu = panelPlugin.panelPlugin()
-    get.s = '_check'
-    checks = plu.a(get)
-    if type(checks) != bool or not checks:
-        public.set_error_num(num_key)
-        return public.getJson(checks), json_header
-    get.s = get.fun
-    comm.setSession()
-    comm.init()
-    comm.checkWebType()
-    comm.GetOS()
-    result = plu.a(get)
-    # session.clear()
-    public.set_error_num(num_key, True)
-    return public.getJson(result), json_header
+    else:
+        return abort(404)
 
 
 @app.route('/favicon.ico', methods=method_get)
 def send_favicon():
     # 图标
+    comReturn = comm.local()
+    if comReturn: return abort(404)
     s_file = '/www/server/panel/BTPanel/static/favicon.ico'
     if not os.path.exists(s_file): return abort(404)
     return send_file(s_file, conditional=True, add_etags=True)
 
 
-@app.route('/service_status', methods=method_get)
-def service_status():
-    # 检查面板当前状态
-    try:
-        if not 'login' in session: session.clear()
-    except:
-        pass
-    return 'True'
-
+# @app.route('/service_status', methods=method_get)
+# def service_status():
+#     # 检查面板当前状态
+#     try:
+#         if not 'login' in session: session.clear()
+#     except:
+#         pass
+#     return 'True'
+@app.route('/btwaf_error', methods=method_get)
+def btwaf_error():
+    # 图标
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    get=get_input()
+    p_path = os.path.join('/www/server/panel/plugin/', "btwaf")
+    if not os.path.exists(p_path): 
+        if get.name == 'btwaf' and get.fun == 'index':
+            return  render_template('error3.html',data={})
+    return  render_template('error3.html',data={})
 
 @app.route('/coll', methods=method_all)
 @app.route('/coll/', methods=method_all)
@@ -1326,6 +1376,8 @@ def service_status():
 @app.route('/<name>/<fun>/<path:stype>', methods=method_all)
 def panel_other(name=None, fun=None, stype=None):
     # 插件接口
+    if public.is_error_path():
+        return redirect('/error',302)
     if name != "mail_sys" or fun != "send_mail_http.json":
         comReturn = comm.local()
         if comReturn: return comReturn
@@ -1415,7 +1467,9 @@ def panel_other(name=None, fun=None, stype=None):
             p = Plugin(name)
             if not p.isdef(fun): return public.returnMsg(False,'PLUGIN_INPUT_C',(fun,))
             data =  p.exec_fun(args)
-        except:
+        except Exception as ex:
+            if name == 'btwaf' and fun == 'index' and str(ex).find('未购买') != -1:
+                return  render_template('error3.html',data={}) 
             return public.get_error_object(None,plugin_name=name)
 
         r_type = type(data)
@@ -1431,7 +1485,6 @@ def panel_other(name=None, fun=None, stype=None):
             if not os.path.exists(t_path):
                 return public.returnJson(False, 'PLUGIN_NOT_TEMPLATE'), json_header
             t_body = public.readFile(t_path)
-
             # 处理模板包含
             rep = r'{%\s?include\s"(.+)"\s?%}'
             includes = re.findall(rep, t_body)
@@ -1441,17 +1494,16 @@ def panel_other(name=None, fun=None, stype=None):
                 if os.path.exists(filename):
                     i_body = public.readFile(filename)
                 t_body = re.sub(rep.replace('(.+)', i_file), i_body, t_body)
-
             return render_template_string(t_body, data=data)
         else:  # 直接响应插件返回值,可以是任意flask支持的响应类型
             r_type = type(data)
             if r_type == dict:
+                if name == 'btwaf' and 'msg' in data:
+                    return  render_template('error3.html',data={"error_msg":data['msg']})
                 return public.returnJson(False, public.getMsg('PUBLIC_ERR_RETURN').format(r_type)), json_header
             return data
     except:
-        error_info = public.get_error_info()
-        public.submit_error(error_info)
-        return error_info.replace('\n', '<br>\n')
+        return public.get_error_object(None, plugin_name=name)
 
 
 @app.route('/hook', methods=method_all)
@@ -1698,7 +1750,7 @@ def get_pd():
     try:
         import panelPlugin
         get = public.dict_obj()
-        get.init = 1
+        # get.init = 1
         tmp1 = panelPlugin.panelPlugin().get_cloud_list(get)
     except:
         tmp1 = None
@@ -1713,7 +1765,8 @@ def get_pd():
             if not os.path.exists(tmp_f): public.writeFile(tmp_f, '-1')
             tmp = public.readFile(tmp_f)
             if tmp: tmp = int(tmp)
-
+    if not ltd: ltd = -1
+    if tmp is None: tmp = -1
     if ltd < 1:
         if ltd == -2:
             tmp3 = public.to_string([60, 115, 112, 97, 110, 32, 99, 108, 97, 115, 115, 61, 34, 98, 116, 108, 116, 100,
@@ -1824,7 +1877,16 @@ def is_login(result):
             result = make_response(result)
             request_token = public.GetRandomString(48)
             session['request_token'] = request_token
-            result.set_cookie('request_token', request_token, max_age=86400 * 30)
+            samesite = app.config['SESSION_COOKIE_SAMESITE']
+            secure = app.config['SESSION_COOKIE_SECURE']
+            if app.config['SSL'] and request.full_path.find('/login?tmp_token=') == 0:
+                samesite = 'None'
+                secure = True
+            result.set_cookie('request_token', request_token, 
+            max_age=86400 * 30,
+            samesite= samesite,
+            secure=secure
+            )
     return result
 
 
@@ -1928,10 +1990,10 @@ def workorder_client(ws):
     comReturn = comm.local()
     if comReturn: return comReturn
 
-    # get = ws.receive()
-    # get = json.loads(get)
-    # if not check_csrf_websocket(ws,get):
-    #     return
+    get = ws.receive()
+    get = json.loads(get)
+    if not check_csrf_websocket(ws,get):
+        return
 
     import panelWorkorder
     toObject = panelWorkorder.panelWorkorder()
@@ -1982,7 +2044,7 @@ def ws_panel_thread(get):
     get.mod_name = get.mod_name.strip()
     get.def_name = get.def_name.strip()
     check_str = '{}{}'.format(get.mod_name,get.def_name)
-    if not re.match(r"^\w+$",check_str) or get.mod_name in ['public','common','db','db_mysql','downloadFile','jobs']:
+    if not re.match("^\w+$",check_str) or get.mod_name in ['public','common','db','db_mysql','downloadFile','jobs']:
         get._ws.send(public.getJson(public.return_status_code(1000,'不安全的mod_name,def_name参数内容')))
         return
     if not hasattr(get,'args'):
@@ -2124,7 +2186,9 @@ def sock_recv(cmdstring,ws):
         sock_pids[p.pid] = ws
         kill_closed()
         while p.poll() is None:
-            ws.send(p.stdout.readline().decode())
+            send_line = p.stdout.readline().decode()
+            if not send_line or send_line.find('tail: ') != -1: continue
+            ws.send(send_line)
         ws.send(p.stdout.read().decode())
     except:
         kill_closed()
@@ -2234,3 +2298,17 @@ def webssh(ws):
 
 
 # ---------------------    websocket END    -------------------------- #
+
+@app.route("/daily", methods=method_all)
+def daily():
+    """面板日报数据"""
+
+    comReturn = comm.local()
+    if comReturn: return comReturn
+
+    import panelDaily
+    toObject = panelDaily.panelDaily()
+
+    defs = ("get_app_usage", "get_daily_data", "get_daily_list")
+    result = publicObject(toObject, defs)
+    return result

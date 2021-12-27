@@ -138,7 +138,7 @@ class firewalls:
 
         import time
         port = get.port
-        ps = get.ps
+        ps = public.xssencode(get.ps)
         is_exists = public.M('firewall').where("port=? or port=?",(port,src_port)).count()
         if is_exists: return public.returnMsg(False,'端口已经放行过了!')
         notudps = ['80','443','8888','888','39000:40000','21','22']
@@ -305,7 +305,6 @@ class firewalls:
                 else:
                     status = public.ExecShell("/etc/init.d/sshd status | grep -e 'stopped' -e '已停'|grep -v grep")
             
-    #       return status;
             if len(status[0]) > 3:
                 status = False
             else:

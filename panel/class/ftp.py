@@ -23,7 +23,8 @@ class ftp:
             if not os.path.exists('/www/server/pure-ftpd/sbin/pure-ftpd'): return public.returnMsg(False,'请先到软件商店安装Pure-FTPd服务')
             import files,time
             fileObj=files.files()
-            if re.search("\W + ",get['ftp_username']): return {'status':False,'code':501,'msg':public.getMsg('FTP_USERNAME_ERR_T')}
+            get['ftp_username'] = get['ftp_username'].strip()
+            if re.search("\W+",get['ftp_username']): return {'status':False,'code':501,'msg':public.getMsg('FTP_USERNAME_ERR_T')}
             if len(get['ftp_username']) < 3: return {'status':False,'code':501,'msg':public.getMsg('FTP_USERNAME_ERR_LEN')}
             if not fileObj.CheckDir(get['path']): return {'status':False,'code':501,'msg':public.getMsg('FTP_USERNAME_ERR_DIR')}
             if public.M('ftps').where('name=?',(get.ftp_username.strip(),)).count(): return public.returnMsg(False,'FTP_USERNAME_ERR_EXISTS',(get.ftp_username,))

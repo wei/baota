@@ -214,6 +214,37 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 return False
         return True
 
+    # 上传前检查文件是否存在
+    def upload_file_exists(self,args):
+        '''
+            @name 上传前检查文件是否存在
+            @author hwliang<2021-11-3>
+            @param filename<string> 文件名
+            @return dict
+        '''
+        filename = args.filename.strip()
+        if not os.path.exists(filename):
+            return public.returnMsg(False,'指定文件不存在')
+        file_info = {}
+        _stat = os.stat(filename)
+        file_info['size'] = _stat.st_size
+        file_info['mtime'] = int(_stat.st_mtime)
+        file_info['isfile'] = os.path.isfile(filename)
+        return public.returnMsg(True,file_info)
+
+
+    def get_real_len(self,string):
+        '''
+            @name 获取含中文的字符串字精确长度
+            @author hwliang<2021-11-3>
+            @param string<str>
+            @return int
+        '''
+        real_len = len(string)
+        for s in string:
+            if '\u2E80' <= s <= '\uFE4F':
+                real_len += 1
+        return real_len
 
     # 上传文件2
     def upload(self, args):
@@ -226,9 +257,12 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if sys.version_info[0] == 2:
             args.f_name = args.f_name.encode('utf-8')
             args.f_path = args.f_path.encode('utf-8')
+        try:
+            if self.get_real_len(args.f_name) > 128: return public.returnMsg(False,'文件名长度超过128个字节')
+        except:
+            pass
+        if not self.f_name_check(args.f_name): return public.returnMsg(False,'文件名中包含特殊字符!')
 
-        
-        if not self.f_name_check(args.f_name): return public.returnMsg(False,'文件名中不能包含特殊字符!')
 
         if args.f_path == '/':
             return public.returnMsg(False,'不能直接上传文件到系统根目录!')
@@ -247,16 +281,21 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             d_size = os.path.getsize(save_path)
         if d_size != int(args.f_start):
             return d_size
-        f = open(save_path, 'ab')
-        if 'b64_data' in args:
-            import base64
-            b64_data = base64.b64decode(args.b64_data)
-            f.write(b64_data)
-        else:
-            upload_files = request.files.getlist("blob")
-            for tmp_f in upload_files:
-                f.write(tmp_f.read())
-        f.close()
+        try:
+            f = open(save_path, 'ab')
+            if 'b64_data' in args:
+                import base64
+                b64_data = base64.b64decode(args.b64_data)
+                f.write(b64_data)
+            else:
+                upload_files = request.files.getlist("blob")
+                for tmp_f in upload_files:
+                    f.write(tmp_f.read())
+            f.close()
+        except Exception as ex:
+            ex = str(ex)
+            if ex.find('No space left on device') != -1:
+                return public.returnMsg(False, '磁盘空间不足')
         f_size = os.path.getsize(save_path)
         if f_size != int(args.f_size):
             return f_size
@@ -328,6 +367,11 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             get.path = get.path.encode('utf-8')
         if get.path == '':
             get.path = '/www'
+
+        # 转换包含~的路径
+        if get.path.find('~') != -1:
+            get.path = os.path.expanduser(get.path)
+
         get.path = self.xssdecode(get.path)
         if not os.path.exists(get.path):
             get.path = '/www/wwwroot'
@@ -336,9 +380,11 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             return public.returnMsg(False, '此为回收站目录，请在右上角按【回收站】按钮打开')
         if not os.path.isdir(get.path):
             get.path = os.path.dirname(get.path)
+        
 
         if not os.path.isdir(get.path):
             return public.returnMsg(False, '这不是一个目录!')
+            
 
         import pwd
         dirnames = []
@@ -536,7 +582,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         '''
         filename = args.filename.strip()
         ps_type = int(args.ps_type)
-        ps_body = args.ps_body
+        ps_body = public.xssencode(args.ps_body)
         ps_path = '/www/server/panel/data/files_ps'
         if not os.path.exists(ps_path):
             os.makedirs(ps_path,384)
@@ -551,8 +597,9 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             public.writeFile(f_key,ps_body)
             public.WriteLog('文件管理','设置文件名[{}],备注为: {}'.format(f_name,ps_body))
         else:
-            if os.path.exists(f_key):os.remove(f_key)
-            public.WriteLog('文件管理','清除文件备注[{}]'.format(f_name))
+            if os.path.exists(f_key):
+                os.remove(f_key)
+                public.WriteLog('文件管理','清除文件备注[{}]'.format(f_name))
         return public.returnMsg(True,'设置成功')
 
         
@@ -813,12 +860,14 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             if os.path.exists('data/recycle_bin.pl') and session.get('debug') != 1:
                 if self.Mv_Recycle_bin(get):
                     self.site_path_safe(get)
+                    self.remove_file_ps(get)
                     return public.returnMsg(True, 'DIR_MOVE_RECYCLE_BIN')
 
             import shutil
             shutil.rmtree(get.path)
             self.site_path_safe(get)
             public.WriteLog('TYPE_FILE', 'DIR_DEL_SUCCESS', (get.path,))
+            self.remove_file_ps(get)
             return public.returnMsg(True, 'DIR_DEL_SUCCESS')
         except:
             return public.returnMsg(False, 'DIR_DEL_ERR')
@@ -845,13 +894,25 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             if os.path.exists('data/recycle_bin.pl') and session.get('debug') != 1:
                 if self.Mv_Recycle_bin(get):
                     self.site_path_safe(get)
+                    self.remove_file_ps(get)
                     return public.returnMsg(True, 'FILE_MOVE_RECYCLE_BIN')
             os.remove(get.path)
             self.site_path_safe(get)
             public.WriteLog('TYPE_FILE', 'FILE_DEL_SUCCESS', (get.path,))
+            self.remove_file_ps(get)
             return public.returnMsg(True, 'FILE_DEL_SUCCESS')
         except:
             return public.returnMsg(False, 'FILE_DEL_ERR')
+
+
+    def remove_file_ps(self,get):
+        '''
+            @name 删除文件或目录的备注信息
+        '''
+        get.filename = get.path
+        get.ps_body = ''
+        get.ps_type = '0'
+        self.set_file_ps(get)
 
     # 移动到回收站
     def Mv_Recycle_bin(self, get):
@@ -912,6 +973,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 tmp2 = tmp1[len(tmp1)-1].split('_t_')
                 tmp['rname'] = file
                 tmp['dname'] = file.replace('_bt_', '/').split('_t_')[0]
+                if tmp['dname'].find('@') != -1:
+                    tmp['dname'] = "BTDB_" + tmp['dname'][5:].replace('@',"\\u").encode().decode("unicode_escape")
                 tmp['name'] = tmp2[0]
                 tmp['time'] = int(float(tmp2[1]))
                 if os.path.islink(fname):
@@ -923,6 +986,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 else:
                     tmp['size'] = os.path.getsize(fname)
                 if os.path.isdir(fname):
+                    if file[:5] == 'BTDB_':
+                        tmp['size'] =  public.get_path_size(fname)
                     data['dirs'].append(tmp)
                 else:
                     data['files'].append(tmp)
@@ -1200,6 +1265,12 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if not os.path.exists(get.path):
             if get.path.find('.htaccess') == -1:
                 return public.returnMsg(False, 'FILE_NOT_EXISTS')
+
+        nginx_conf_path = public.get_vhost_path() + '/nginx/'
+        if get.path.find(nginx_conf_path) != -1:
+            if get.data.find('#SSL-START') != -1 and get.data.find('#SSL-END') != -1:
+                if get.data.find('#error_page 404/404.html;') == -1:
+                    return public.returnMsg(False,'配置文件保存失败：<p style="color:red;">请勿修改SSL相关配置中注释的404规则</p><p>要修改404配置，找到以下配置位置：</p><pre>#ERROR-PAGE-START  错误页配置</pre>')
 
         his_path = '/www/backup/file_history/'
         if get.path.find(his_path) != -1:
@@ -1493,6 +1564,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             get.data = json.loads(get.data)
             l = len(get.data)
             i = 0
+            args = public.dict_obj()
             for key in get.data:
                 try:
                     if sys.version_info[0] == 2:
@@ -1521,12 +1593,18 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                             self.Mv_Recycle_bin(get)
                         else:
                             os.remove(filename)
+                    args.path = filename
+                    self.remove_file_ps(args)
                 except:
                     continue
                 public.writeSpeed(None, 0, 0)
             self.site_path_safe(get)
-            public.WriteLog('TYPE_FILE', 'FILE_ALL_DEL')
-            return public.returnMsg(True, 'FILE_ALL_DEL')
+            if not isRecyle:
+                public.WriteLog('TYPE_FILE', 'FILE_ALL_DEL')
+                return public.returnMsg(True, 'FILE_ALL_DEL')
+            else:
+                public.WriteLog('TYPE_FILE', '已批量将{}个文件或目录移动到回收站'.format(i))
+                return public.returnMsg(True, '已批量将{}个文件或目录移动到回收站'.format(i))
 
     # 批量粘贴
     def BatchPaste(self, get):
@@ -2141,7 +2219,7 @@ cd %s
 
     #取PHP-CLI执行命令
     def __get_php_bin(self,php_version=None):
-        php_vs = ["80","74","73","72","71","70","56","55","54","53"]
+        php_vs = public.get_php_versions(True)
         if php_version:
             if php_version != 'auto':
                 if not php_version in php_vs: return ''

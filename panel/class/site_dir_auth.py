@@ -286,6 +286,8 @@ class SiteDirAuth:
         :param get:
         :return:
         '''
+        if not hasattr(get,"password") or not get.password or not hasattr(get,"username") or not get.username:
+            return public.returnMsg(False, '请输入账号或密码')
         name = get.name
         site_info = self.get_site_info(get.id)
         site_name = site_info["site_name"]

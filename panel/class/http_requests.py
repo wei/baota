@@ -19,27 +19,25 @@ import requests
 import requests.packages.urllib3.util.connection as urllib3_conn
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-old_family = urllib3_conn.allowed_gai_family
 
 class http:
     def get(self,url,timeout = 60,headers = {},verify = False,type = 'python'):
-        global old_family
         url = self.quote(url)
         if type == 'python':
-            
+            # old_family = urllib3_conn.allowed_gai_family
             try:
                 # 默认使用IPv4
-                urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
-                result = requests.get(url,timeout=timeout,headers=get_headers(headers),verify=verify)
+                # urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
+                return requests.get(url,timeout=timeout,headers=get_headers(headers),verify=verify)
             except:
                 try:
                     # IPV6？
-                    urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
-                    result = requests.get(url,timeout=timeout,headers=get_headers(headers),verify=verify)
+                    # urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
+                    return requests.get(url,timeout=timeout,headers=get_headers(headers),verify=verify)
                 except:
                     # 使用CURL
                     result = self._get_curl(url,timeout,headers,verify)
-            urllib3_conn.allowed_gai_family = old_family
+            # urllib3_conn.allowed_gai_family = old_family
 
         elif type == 'curl':
             result = self._get_curl(url,timeout,headers,verify)
@@ -53,21 +51,21 @@ class http:
         return result
 
     def post(self,url,data,timeout = 60,headers = {},verify = False,type = 'python'):
-        global old_family
         url = self.quote(url)
         if type == 'python':
+            # old_family = urllib3_conn.allowed_gai_family
             try:
-                urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
-                result = requests.post(url,data,timeout=timeout,headers=headers,verify=verify)
+                # urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
+                return requests.post(url,data,timeout=timeout,headers=headers,verify=verify)
             except:
                 try:
                     # IPV6？
-                    urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
-                    result = requests.post(url,data,timeout=timeout,headers=headers,verify=verify)
+                    # urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
+                    return requests.post(url,data,timeout=timeout,headers=headers,verify=verify)
                 except:
                     # 使用CURL
                     result = self._post_curl(url,data,timeout,headers,verify)
-            urllib3_conn.allowed_gai_family = old_family
+            # urllib3_conn.allowed_gai_family = old_family
         
         elif type == 'curl':
             result = self._post_curl(url,data,timeout,headers,verify)
@@ -91,6 +89,9 @@ class http:
             @param timeout<int> 超时时间,默认1800秒
             @param speed_file<string> 
         '''
+        import requests
+        from requests.packages.urllib3.exceptions import InsecureRequestWarning
+        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
         headers = public.get_requests_headers()
         if data is None:
             res = requests.get(url,headers=headers,timeout=timeout,stream=True)
@@ -297,7 +298,7 @@ exit($header."\r\n\r\n".json_encode($body));
 
     #取可用的PHP版本
     def _get_php_version(self):
-        php_versions = ['52','53','54','55','56','70','71','72','73','74','80']
+        php_versions = public.get_php_versions()
         php_path = '/www/server/php/{}/sbin/php-fpm'
         php_sock = '/tmp/php-cgi-{}.sock'
         for pv in php_versions:

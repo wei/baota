@@ -25,7 +25,7 @@ class data:
     '''
     def setPs(self,get):
         id = get.id
-        if public.M(get.table).where("id=?",(id,)).setField('ps',get.ps):
+        if public.M(get.table).where("id=?",(id,)).setField('ps',public.xssencode(get.ps)):
             return public.returnMsg(True,'EDIT_SUCCESS');    
         return public.returnMsg(False,'EDIT_ERROR')
     
@@ -181,39 +181,40 @@ class data:
      * @return Json  page.分页数 , count.总行数   data.取回的数据
     '''
     def getData(self,get):
+        try:
+            table = get.table
+            data = self.GetSql(get)
+            SQL = public.M(table)
         
-        table = get.table
-        data = self.GetSql(get)
-        SQL = public.M(table)
-    
-        if table == 'backup':
-            import os
-            for i in range(len(data['data'])):
-                if data['data'][i]['size'] == 0:
-                    if os.path.exists(data['data'][i]['filename']): data['data'][i]['size'] = os.path.getsize(data['data'][i]['filename'])
-    
-        elif table == 'sites' or table == 'databases':
-            type = '0'
-            if table == 'databases': type = '1'
-            for i in range(len(data['data'])):
-                data['data'][i]['backup_count'] = SQL.table('backup').where("pid=? AND type=?",(data['data'][i]['id'],type)).count()
-            if table == 'sites':
+            if table == 'backup':
+                import os
                 for i in range(len(data['data'])):
-                    data['data'][i]['domain'] = SQL.table('domain').where("pid=?",(data['data'][i]['id'],)).count()
-                    data['data'][i]['ssl'] = self.get_site_ssl_info(data['data'][i]['name'])
-                    data['data'][i]['php_version'] = self.get_php_version(data['data'][i]['name'])
-                    if not data['data'][i]['status'] in ['0','1',0,1]:
-                        data['data'][i]['status'] = '1'
-        elif table == 'firewall':
-            for i in range(len(data['data'])):
-                if data['data'][i]['port'].find(':') != -1 or data['data'][i]['port'].find('.') != -1 or data['data'][i]['port'].find('-') != -1:
-                    data['data'][i]['status'] = -1
-                else:
-                    data['data'][i]['status'] = self.CheckPort(int(data['data'][i]['port']))
-            
-        #返回
-        return data
-
+                    if data['data'][i]['size'] == 0:
+                        if os.path.exists(data['data'][i]['filename']): data['data'][i]['size'] = os.path.getsize(data['data'][i]['filename'])
+        
+            elif table == 'sites' or table == 'databases':
+                type = '0'
+                if table == 'databases': type = '1'
+                for i in range(len(data['data'])):
+                    data['data'][i]['backup_count'] = SQL.table('backup').where("pid=? AND type=?",(data['data'][i]['id'],type)).count()
+                if table == 'sites':
+                    for i in range(len(data['data'])):
+                        data['data'][i]['domain'] = SQL.table('domain').where("pid=?",(data['data'][i]['id'],)).count()
+                        data['data'][i]['ssl'] = self.get_site_ssl_info(data['data'][i]['name'])
+                        data['data'][i]['php_version'] = self.get_php_version(data['data'][i]['name'])
+                        if not data['data'][i]['status'] in ['0','1',0,1]:
+                            data['data'][i]['status'] = '1'
+            elif table == 'firewall':
+                for i in range(len(data['data'])):
+                    if data['data'][i]['port'].find(':') != -1 or data['data'][i]['port'].find('.') != -1 or data['data'][i]['port'].find('-') != -1:
+                        data['data'][i]['status'] = -1
+                    else:
+                        data['data'][i]['status'] = self.CheckPort(int(data['data'][i]['port']))
+                
+            #返回
+            return data
+        except:
+            return public.get_error_info()
     
     '''
      * 取数据库行
@@ -285,14 +286,18 @@ class data:
                         where += " or id=" + str(pid)
                     else:
                         where += "id=" + str(pid)
+                
+        if get.table == 'sites':
+            if where:
+                where = "({}) AND project_type='PHP'".format(where)
+            else:
+                where = "project_type='PHP'"
 
-        if get.table == 'sites' and hasattr(get,'type'):
-            if get.type != '-1':
-                type_where = "type_id=%s" % get.type
-                if where == '': 
-                    where = type_where
-                else:
-                    where += " and " + type_where
+            if hasattr(get,'type'):
+                if get.type != '-1':
+                    where += " AND type_id={}".format(get.type)
+
+            
         
         field = self.GetField(get.table)
         #实例化数据库对象
@@ -341,7 +346,7 @@ class data:
         except:
             return ''
         wheres = {
-            'sites'     :   "id='"+search+"' or name like '%"+search+"%' or status like '%"+search+"%' or ps like '%"+search+"%'",
+            'sites'     :   "id='"+search+"' or name like '%"+search+"%' or ps like '%"+search+"%'",
             'ftps'      :   "id='"+search+"' or name like '%"+search+"%' or ps like '%"+search+"%'",
             'databases' :   "id='"+search+"' or name like '%"+search+"%' or ps like '%"+search+"%'",
             'logs'      :   "uid='"+search+"' or username='"+search+"' or type like '%"+search+"%' or log like '%"+search+"%' or addtime like '%"+search+"%'",

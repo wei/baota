@@ -55,7 +55,7 @@ class panelMessage:
             data['os'] = self.os
             sUrl = public.GetConfigValue('home') + '/api/wpanel/get_messages'
             import http_requests
-            # http_requests.DEFAULT_TYPE = 'src'
+            http_requests.DEFAULT_TYPE = 'src'
             info = http_requests.post(sUrl,data).json()
             # info = json.loads(public.httpPost(sUrl,data))
             for x in info:          

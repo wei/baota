@@ -42,7 +42,7 @@ class panelAuth:
         serverid_file = 'data/sid.pl'
         if os.path.exists(serverid_file) and not force:
             serverid = public.readFile(serverid_file)
-            if re.match(r"^\w{64}$",serverid): return serverid
+            if re.match("^\w{64}$",serverid): return serverid
         s1 = self.get_mac_address() + self.get_hostname()
         s2 = self.get_cpuname()
         serverid = public.md5(s1) + public.md5(s2)
@@ -141,16 +141,16 @@ class panelAuth:
         if 'source' in get: params['source'] = get.source
 
 
-        key = '{}_{}_get_buy_code'.format(params['pid'], params['cycle'])
-        data = cache.get(key)
-        if data: return data
+        # key = '{}_{}_get_buy_code'.format(params['pid'], params['cycle'])
+        # data = cache.get(key)
+        # if data: return data
 
         data = self.send_cloud('create_order', params)
         if not data: return public.returnMsg(False, '连接服务器失败!')
-        cache.set(key, data, 120)
-        try:
-            cache.set('{}_buy_code_id'.format(data['data']['oid']), key, 120)
-        except:pass
+        # cache.set(key, data, 120)
+        # try:
+        #     cache.set('{}_buy_code_id'.format(data['data']['oid']), key, 120)
+        # except:pass
         return data
 
     # def check_pay_status(self,get):
@@ -252,6 +252,8 @@ class panelAuth:
             else:
                 params['uid'] = userInfo['uid']
                 params['serverid'] = userInfo['serverid']
+                params['access_key'] = userInfo['access_key']
+
             result = public.httpPost(cloudURL + module,params)
             result = json.loads(result.strip())
             if not result: return None
@@ -269,6 +271,7 @@ class panelAuth:
             else:
                 params['uid'] = userInfo['uid']
                 params['serverid'] = userInfo['serverid']
+                params['access_key'] = userInfo['access_key']
             result = public.httpPost(cloudURL + module,params)
             
             result = json.loads(result)
@@ -339,7 +342,7 @@ class panelAuth:
         params = {}
         params['status'] = get.status
         data = self.send_cloud_wpanel('set_user_adviser',params)
-        if not data: return public.returnMsg(False,'连接服务器失败!')
+        if not data: return public.returnMsg(False,'连接服务器失败!');
         return data
         
     def send_cloud_wpanel(self,module,params):

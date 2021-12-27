@@ -559,10 +559,14 @@
 			})
 		},
 		clear_logs_files:function(){
-			bt.firewall.clear_logs_files(function(rdata){
-				$("#logSize").text(rdata);						
-				bt.msg({msg:lan.firewall.empty,icon:1});
-			})
+		    console.log(1);
+		    bt.show_confirm('', '', function () {
+		        console.log(1);
+		        bt.firewall.clear_logs_files(function(rdata){
+    				$("#logSize").text(rdata);						
+    				bt.msg({msg:lan.firewall.empty,icon:1});
+    			})
+		    })
 		},
 		add_accept_port:function(){
 			var type = $("#firewalldType").val();
