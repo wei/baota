@@ -20,7 +20,13 @@ class userlogin:
         self.error_num(False)
         if self.limit_address('?') < 1: return public.returnJson(False,'LOGIN_ERR_LIMIT'),json_header
         post.username = post.username.strip()
-        
+
+        # 核验用户名密码格式
+        if len(post.username) != 32: return public.returnMsg(False,'USER_INODE_ERR'),json_header
+        if len(post.password) != 32: return public.returnMsg(False,'USER_INODE_ERR'),json_header
+        if not re.match(r"^\w+$",post.username): return public.returnMsg(False,'USER_INODE_ERR'),json_header
+        if not re.match(r"^\w+$",post.password): return public.returnMsg(False,'USER_INODE_ERR'),json_header
+
         public.chdck_salt()
         sql = db.Sql()
         user_list = sql.table('users').field('id,username,password,salt').select()
@@ -32,6 +38,7 @@ class userlogin:
         if 'code' in session:
             if session['code'] and not 'is_verify_password' in session:
                 if not hasattr(post, 'code'): return public.returnJson(False,'验证码不能为空!'),json_header
+                if not re.match(r"^\w+$",post.code): return public.returnJson(False,'CODE_ERR'),json_header
                 if not public.checkCode(post.code):
                     public.WriteLog('TYPE_LOGIN','LOGIN_ERR_CODE',('****','****',public.GetClientIp()))
                     return public.returnJson(False,'CODE_ERR'),json_header
@@ -52,9 +59,10 @@ class userlogin:
                 session['password_expire'] = True
 
             #登陆告警
-            public.run_thread(public.login_send_body,("账号密码",userInfo['username'],public.GetClientIp(),str(request.environ.get('REMOTE_PORT'))))
+            public.run_thread(public.login_send_body,("账号密码",userInfo['username'],public.GetClientIp(),str(int(request.environ.get('REMOTE_PORT')))))
             # public.login_send_body("账号密码",userInfo['username'],public.GetClientIp(),str(request.environ.get('REMOTE_PORT')))
             if hasattr(post,'vcode'):
+                if not re.match(r"^\d+$",post.vcode): return public.returnJson(False,'验证码格式错误'),json_header
                 if self.limit_address('?',v="vcode") < 1: return public.returnJson(False,'您多次验证失败，禁止10分钟'),json_header
                 import pyotp
                 secret_key = public.readFile(_key_file)

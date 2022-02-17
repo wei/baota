@@ -501,8 +501,21 @@ class backup:
             os.makedirs(dpath,384)
 
         error_msg = ""
-        import panelMysql
-        if not self._db_mysql:self._db_mysql = panelMysql.panelMysql()
+        # ----- 判断是否为远程数据库START  @author hwliang<2021-01-08>--------
+        db_find = public.M('databases').where("name=?",(db_name,)).find()
+        conn_config = {}
+        self._db_mysql = public.get_mysql_obj(db_name)
+        is_cloud_db = db_find['db_type'] in ['1',1,'2',2]
+        if is_cloud_db: 
+            # 连接远程数据库
+            if db_find['sid']:
+                conn_config = public.M('database_servers').where('id=?',db_find['sid']).find()
+                if not 'db_name' in conn_config: conn_config['db_name'] = None
+            else:
+                conn_config = json.loads(db_find['conn_config'])
+            conn_config['db_port'] = str(int(conn_config['db_port']))
+            self._db_mysql.set_host(conn_config['db_host'],int(conn_config['db_port']),conn_config['db_name'],conn_config['db_user'],conn_config['db_password'])
+        # ----- 判断是否为远程数据库END @author hwliang<2021-01-08>------------
         d_tmp = self._db_mysql.query("select sum(DATA_LENGTH)+sum(INDEX_LENGTH) from information_schema.tables where table_schema='%s'" % db_name)
         try:
             p_size = self.map_to_list(d_tmp)[0][0]
@@ -543,10 +556,17 @@ class backup:
         if os.path.exists(dfile):
             os.remove(dfile)
         #self.mypass(True)
+        mysqldump_bin = public.get_mysqldump_bin()
         try:
-            password = public.M('config').where('id=?',(1,)).getField('mysql_root')
-            os.environ["MYSQL_PWD"] = password
-            backup_cmd = "/www/server/mysql/bin/mysqldump -E -R --default-character-set="+ character +" --force --hex-blob --opt " + db_name + " -u root" + " 2>"+self._err_log+"| gzip > " + dfile
+            if not is_cloud_db:
+                # 本地数据库 @author hwliang<2021-01-08>
+                password = public.M('config').where('id=?',(1,)).getField('mysql_root')
+                os.environ["MYSQL_PWD"] = str(password)
+                backup_cmd = mysqldump_bin + " -E -R --default-character-set="+ character +" --force --hex-blob --opt " + db_name + " -u root -p" + str(password) + " 2>"+self._err_log+"| gzip > " + dfile
+            else:
+                # 远程数据库 @author hwliang<2021-01-08>
+                os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
+                backup_cmd = mysqldump_bin + " -h " + conn_config['db_host'] + " -P " + str(conn_config['db_port']) + " -E -R --default-character-set="+ character +" --force --hex-blob --opt " + db_name + " -u " + str(conn_config['db_user']) + " -p"+str(conn_config['db_password'])+" 2>"+self._err_log+"| gzip > " + dfile
             public.ExecShell(backup_cmd)
         except Exception as e:
             raise
@@ -832,13 +852,12 @@ class backup:
         except Exception as e:
             print(e)
         return False
+
     def save_backup_status(self, status, target="", msg=""):
         """保存备份的状态"""
         try:
             if not self.cron_info:
                 return
-            print("cron info:")
-            print(self.cron_info)
             cron_id = self.cron_info["id"]
             sql = public.M("system").dbfile("system").table("backup_status")
             sql.add("id,target,status,msg,addtime", (cron_id, target, status, msg, time.time(),))

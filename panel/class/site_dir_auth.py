@@ -62,38 +62,35 @@ class SiteDirAuth:
         :param get:
         :return:
         '''
+        param = self.__check_param(get)
+        if not param['status']:
+            return param
+        param = param['msg']
+        password = param['password']
+        username = param['username']
         name = get.name
         site_dir = get.site_dir
         if public.get_webserver() == "openlitespeed":
             return public.returnMsg(False,"OpenLiteSpeed is currently not supported")
-        if not hasattr(get,"password") or not get.password or not hasattr(get,"username") or not get.username:
-            return public.returnMsg(False, '请输入账号或密码')
         if not get.site_dir:
             return public.returnMsg(False, '请输入需要保护的目录')
         if not get.name:
             return public.returnMsg(False, '请输入名称')
-
-        # if site_dir[0] != "/" or site_dir[-1] != "/":
-        #     return public.returnMsg(False, '目录格式不正确')
-        # if site_dir[0] == "/":
-        #     site_dir = site_dir[1:]
-        #     if site_dir[-1] == "/":
-        #         site_dir = site_dir[:-1]
-        passwd = public.hasPwd(get.password)
+        passwd = public.hasPwd(password)
         site_info = self.get_site_info(get.id)
         site_name = site_info["site_name"]
         if self._check_site_authorization(site_name):
             return public.returnMsg(False, '已经设置站点密码保护，请取消后再设置 站点配置 --> 站点目录 --> 密码访问')
         if self._check_dir_auth(site_name, name,site_dir):
             return public.returnMsg(False, '目录已经保护')
-        auth = "{user}:{passwd}".format(user=get.username,passwd=passwd)
+        auth = "{user}:{passwd}".format(user=username,passwd=passwd)
         auth_file = '{setup_path}/pass/{site_name}'.format(setup_path=self.setup_path,site_name=site_name)
         if not os.path.exists(auth_file):
             os.makedirs(auth_file)
         auth_file = auth_file+"/{}.pass".format(name)
         public.writeFile(auth_file,auth)
         # 配置独立认证文件
-        self.set_dir_auth_file(site_info["site_path"],site_name,name,get.username,site_dir,auth_file)
+        self.set_dir_auth_file(site_info["site_path"],site_name,name,username,site_dir,auth_file)
         # 配置站点主文件
         result = self.set_conf(site_name,"create")
         if result:
@@ -200,9 +197,9 @@ class SiteDirAuth:
             public.writeFile(conf_file,conf)
 
     # 设置apache配置
-    def set_conf(self,site_name,act):
+    def set_conf(self, site_name, act):
         for i in ["nginx", "apache"]:
-            dir_auth_file = "%s/panel/vhost/%s/dir_auth/%s/*.conf" % (self.setup_path,i,site_name,)
+            dir_auth_file = "%s/panel/vhost/%s/dir_auth/%s/*.conf" % (self.setup_path, i, site_name,)
             file = self.setup_path + "/panel/vhost/{}/".format(i) + site_name + ".conf"
             shutil.copyfile(file, '/tmp/{}_file_bk.conf'.format(i))
 
@@ -210,10 +207,10 @@ class SiteDirAuth:
                 conf = public.readFile(file)
                 if i == "apache":
                     if act == "create":
-                        rep = "combined(\n|.)+IncludeOptional.*\/dir_auth\/.*conf"
-                        rep1 = "combined"
-                        if not re.search(rep,conf):
-                            conf = conf.replace(rep1, rep1 + "\n\t#Directory protection rules, do not manually delete\n\tIncludeOptional {}".format(dir_auth_file))
+                        rep = "IncludeOptional.*\/dir_auth\/.*conf(\n|.)+<\/VirtualHost>"
+                        rep1 = "</VirtualHost>"
+                        if not re.search(rep, conf):
+                            conf = conf.replace(rep1,"\n\t#Directory protection rules, do not manually delete\n\tIncludeOptional {}\n</VirtualHost>".format(dir_auth_file))
                     else:
                         rep = "\n*#Directory protection rules, do not manually delete\n+\s+IncludeOptional[\s\w\/\.\*]+"
                         conf = re.sub(rep, '', conf)
@@ -222,8 +219,8 @@ class SiteDirAuth:
                     if act == "create":
                         rep = "#SSL-END(\n|.)+include.*\/dir_auth\/.*conf;"
                         rep1 = "#SSL-END"
-                        if not re.search(rep,conf):
-                            conf = conf.replace(rep1, rep1 + "\n\t#Directory protection rules, do not manually delete\n\tinclude {};".format(dir_auth_file))
+                        if not re.search(rep, conf):
+                            conf = conf.replace(rep1,rep1 + "\n\t#Directory protection rules, do not manually delete\n\tinclude {};".format(dir_auth_file))
                     else:
                         rep = "\n*#Directory protection rules, do not manually delete\n+\s+include[\s\w\/\.\*]+;"
                         conf = re.sub(rep, '', conf)
@@ -286,13 +283,17 @@ class SiteDirAuth:
         :param get:
         :return:
         '''
-        if not hasattr(get,"password") or not get.password or not hasattr(get,"username") or not get.username:
-            return public.returnMsg(False, '请输入账号或密码')
+        param = self.__check_param(get)
+        if not param['status']:
+            return param
+        param = param['msg']
+        password = param['password']
+        username = param['username']
         name = get.name
         site_info = self.get_site_info(get.id)
         site_name = site_info["site_name"]
-        passwd = public.hasPwd(get.password)
-        auth = "{user}:{passwd}".format(user=get.username,passwd=passwd)
+        passwd = public.hasPwd(password)
+        auth = "{user}:{passwd}".format(user=username,passwd=passwd)
         auth_file = '{setup_path}/pass/{site_name}/{name}.pass'.format(setup_path=self.setup_path,site_name=site_name,name=name)
         public.writeFile(auth_file,auth)
         public.serviceReload()
@@ -315,3 +316,27 @@ class SiteDirAuth:
         if site_name in conf:
             return {site_name:conf[site_name]}
         return {}
+
+    def __check_param(self, get):
+        values = {}
+        if hasattr(get, "password"):
+            if not get.password:
+                return public.returnMsg(False, '请输入密码!')
+            password = get.password.strip()
+            if len(password) < 3:
+                return public.returnMsg(False, '密码不能少于3位')
+            if re.search('\s', password):
+                return public.returnMsg(False, '密码不能存在空格')
+            values['password'] = password
+
+        if hasattr(get, "username"):
+            if not get.username:
+                return public.returnMsg(False, '请输入用户!')
+            username = get.username.strip()
+            if len(username) < 3:
+                return public.returnMsg(False, '账号不能少于3位')
+            if re.search('\s', username):
+                return public.returnMsg(False, '账号不能存在空格')
+            values['username'] = username
+
+        return public.returnMsg(True, values)

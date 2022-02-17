@@ -112,7 +112,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             siteName = find['name']
             sitePath = find['path']
             if public.get_webserver() == 'nginx':
-                filename = '/www/server/panel/vhost/nginx/' + siteName + '.conf'
+                filename = public.get_vhost_path() + '/nginx/' + siteName + '.conf'
                 if os.path.exists(filename):
                     conf = public.readFile(filename)
                     rep = '\s*root\s+(.+);'
@@ -120,7 +120,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                     if tmp1:
                         path = tmp1.groups()[0]
             else:
-                filename = '/www/server/panel/vhost/apache/' + siteName + '.conf'
+                filename = public.get_vhost_path() + '/apache/' + siteName + '.conf'
                 if os.path.exists(filename):
                     conf = public.readFile(filename)
                     rep = '\s*DocumentRoot\s*"(.+)"\s*\n'
@@ -362,7 +362,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
     def GetDir(self, get):
         if not hasattr(get, 'path'):
             # return public.returnMsg(False,'错误的参数!')
-            get.path = '/www/wwwroot'
+            get.path = public.get_site_path() #'/www/wwwroot'
         if sys.version_info[0] == 2:
             get.path = get.path.encode('utf-8')
         if get.path == '':
@@ -374,7 +374,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
 
         get.path = self.xssdecode(get.path)
         if not os.path.exists(get.path):
-            get.path = '/www/wwwroot'
+            get.path = public.get_site_path()
             #return public.ReturnMsg(False, '指定目录不存在!')
         if get.path == '/www/Recycle_bin':
             return public.returnMsg(False, '此为回收站目录，请在右上角按【回收站】按钮打开')
@@ -536,7 +536,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             @return string
         '''
         
-        ps_path = '/www/server/panel/data/files_ps'
+        ps_path = public.get_panel_path() + '/data/files_ps'
         f_key1 = '/'.join((ps_path,public.md5(filename)))
         if os.path.exists(f_key1):
             return public.readFile(f_key1)
@@ -582,8 +582,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         '''
         filename = args.filename.strip()
         ps_type = int(args.ps_type)
-        ps_body = public.xssencode(args.ps_body)
-        ps_path = '/www/server/panel/data/files_ps'
+        ps_body = public.xssencode2(args.ps_body)
+        ps_path = public.get_panel_path() + '/data/files_ps'
         if not os.path.exists(ps_path):
             os.makedirs(ps_path,384)
         if ps_type == 1:
@@ -674,7 +674,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
 
     def SearchFiles(self, get):
         if not hasattr(get, 'path'):
-            get.path = '/www/wwwroot'
+            get.path = public.get_site_path()
         if sys.version_info[0] == 2:
             get.path = get.path.encode('utf-8')
         if not os.path.exists(get.path):
@@ -1252,6 +1252,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 get.path = get.filename
             data['historys'] = self.get_history(get.path)
             data['auto_save'] = self.get_auto_save(get.path)
+            data['st_mtime'] = str(int(os.stat(get.path).st_mtime))
             return data
         except Exception as ex:
             return public.returnMsg(False, u'文件编码不被兼容，无法正确读取文件!' + str(ex))
@@ -1272,6 +1273,10 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 if get.data.find('#error_page 404/404.html;') == -1:
                     return public.returnMsg(False,'配置文件保存失败：<p style="color:red;">请勿修改SSL相关配置中注释的404规则</p><p>要修改404配置，找到以下配置位置：</p><pre>#ERROR-PAGE-START  错误页配置</pre>')
 
+        if 'st_mtime' in get:
+            st_mtime = str(int(os.stat(get.path).st_mtime))
+            if st_mtime != get['st_mtime']: return public.returnMsg(False,'保存失败，{}文件已发生改变，请刷新内容后重新修改.'.format(get.path))
+        
         his_path = '/www/backup/file_history/'
         if get.path.find(his_path) != -1:
             return public.returnMsg(False, '不能直接修改历史副本!')
@@ -1337,7 +1342,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
 
     # 保存历史副本
     def save_history(self, filename):
-        if os.path.exists('/www/server/panel/data/not_file_history.pl'):
+        if os.path.exists(public.get_panel_path()+'/data/not_file_history.pl'):
             return True
         try:
             his_path = '/www/backup/file_history/'
@@ -1925,7 +1930,7 @@ cd %s
 
     # 保存草稿
     def SaveTmpFile(self, get):
-        save_path = '/www/server/panel/temp'
+        save_path = public.get_panel_path() + '/temp'
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         get.path = os.path.join(save_path, public.Md5(get.path) + '.tmp')
@@ -1935,7 +1940,7 @@ cd %s
     # 获取草稿
     def GetTmpFile(self, get):
         self.CleanOldTmpFile()
-        save_path = '/www/server/panel/temp'
+        save_path = public.get_panel_path() + '/temp'
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         src_path = get.path
@@ -1952,7 +1957,7 @@ cd %s
     def CleanOldTmpFile(self):
         if 'clean_tmp_file' in session:
             return True
-        save_path = '/www/server/panel/temp'
+        save_path = public.get_panel_path() + '/temp'
         max_time = 86400 * 30
         now_time = time.time()
         for tmpFile in os.listdir(save_path):
@@ -1975,8 +1980,8 @@ cd %s
 
     # 安装rar组件
     def install_rar(self, get):
-        unrar_file = '/www/server/rar/unrar'
-        rar_file = '/www/server/rar/rar'
+        unrar_file = public.get_setup_path() + '/rar/unrar'
+        rar_file = public.get_setup_path() + '/rar/rar'
         bin_unrar = '/usr/local/bin/unrar'
         bin_rar = '/usr/local/bin/rar'
         if os.path.exists(unrar_file) and os.path.exists(bin_unrar):
@@ -1995,8 +2000,8 @@ cd %s
         tmp_file = '/tmp/bt_rar.tar.gz'
         public.ExecShell('wget -O ' + tmp_file + ' ' + download_url)
         if os.path.exists(unrar_file):
-            public.ExecShell("rm -rf /www/server/rar")
-        public.ExecShell("tar xvf " + tmp_file + ' -C /www/server/')
+            public.ExecShell("rm -rf {}".format(rar_file))
+        public.ExecShell("tar xvf " + tmp_file + ' -C {}'.format(public.get_setup_path()))
         if os.path.exists(tmp_file):
             os.remove(tmp_file)
         if not os.path.exists(unrar_file):
@@ -2240,15 +2245,13 @@ cd %s
         if not php_v: return ''
         #处理PHP-CLI-INI配置文件
         php_ini = '/www/server/panel/tmp/composer_php_cli_'+php_v+'.ini'
-        if not os.path.exists(php_ini):
-            #如果不存在，则从PHP安装目录下复制一份
-            src_php_ini = php_path + php_v + '/etc/php.ini'
-            import shutil
-            shutil.copy(src_php_ini,php_ini)
-            #解除所有禁用函数
-            php_ini_body = public.readFile(php_ini)
-            php_ini_body = re.sub(r"disable_functions\s*=.*","disable_functions = ",php_ini_body)
-            public.writeFile(php_ini,php_ini_body)
+        src_php_ini = php_path + php_v + '/etc/php.ini'
+        import shutil
+        shutil.copy(src_php_ini,php_ini)
+        #解除所有禁用函数
+        php_ini_body = public.readFile(php_ini)
+        php_ini_body = re.sub(r"disable_functions\s*=.*","disable_functions = ",php_ini_body)
+        public.writeFile(php_ini,php_ini_body)
         return php_path + php_v + '/bin/php -c ' + php_ini
 
 
@@ -2462,7 +2465,6 @@ cd %s
         filename = args.filename.strip()
         if not os.path.exists(filename):
             return public.returnMsg(False,'指定文件不存在!')
-            
         attribute = {}
         attribute['name'] = os.path.basename(filename)
         attribute['path'] = os.path.dirname(filename)

@@ -1,9 +1,44 @@
-$('.footer').css('position', 'inherit');  //日报悬浮调整
+$('.footer').css({
+  'position': 'inherit',
+  'padding-left': '180px'
+});  //日报悬浮调整
 var controlObj = {
   // 监控
   conTrolView: {
     init: function () {
       var that = this;
+      var networkType = bt.get_cookie('network-unitType')
+      if (!networkType) {
+        bt.set_cookie('network-unitType', 'KB/s')
+        networkType = 'KB/s'
+      }
+      var diskType = bt.get_cookie('disk-unitType')
+      if (!diskType) {
+        bt.set_cookie('disk-unitType', 'MB/s')
+        diskType = 'MB/s'
+      }
+
+      $(".network-unit .picker-text-list").text(networkType);
+      $(".disk-unit .picker-text-list").text(diskType);
+      $(".network-unit .select-list-item li:contains(" + networkType + ")").addClass("active");
+      $(".disk-unit .select-list-item :contains(" + diskType + ")").addClass("active");
+      $(".bt-crontab-select-button").on('click', '.select-picker-search', function () {
+        $(this).next().toggle();
+        if ($(this).parent().hasClass('network-unit')) {
+          $(".disk-unit .select-list-item").hide();
+        } else {
+          $(".network-unit .select-list-item").hide();
+        }
+      });
+      $(".bt-crontab-select-button").on('click', '.select-list-item li', function () {
+        var _button = $(this).parents('.bt-crontab-select-button');
+        $(this).addClass('active').siblings().removeClass('active');
+        _button.find('.picker-text-list').text($(this).text());
+        _button.find(".select-list-item").toggle();
+        var cookie_type = $(this).parents('.bgw').find('.searcTime .time_range_submit').attr('data-type');
+        setCookie(cookie_type + '-unitType', $(this).attr('data-attr'));
+        $(this).parents('.bgw').find('.searcTime .gt.on').click();
+      });
       // 默认显示7天周期图表
       setTimeout(function () {
         that.Wday(0, 'getload');
@@ -45,7 +80,6 @@ var controlObj = {
         $(this).addClass("on").siblings().removeClass("on");
         $(this).siblings('.ss').children('.on').removeClass('on');
       });
-
 
       $('.time_range_submit').click(function () {
         $(this).parents(".searcTime").find("span").removeClass("on");
@@ -183,7 +217,7 @@ var controlObj = {
     * 获取默认echart配置
     */
     get_default_option: function (startTime, endTime) {
-      var intervalNum = this.get_interval_num(startTime, endTime);
+      var interval = ((endTime - startTime) / 3) * 1000;
       return {
         tooltip: {
           trigger: 'axis',
@@ -191,9 +225,13 @@ var controlObj = {
             type: 'cross'
           }
         },
+        grid: {
+          bottom: 80
+        },
         xAxis: {
           type: 'time',
-          minInterval: intervalNum,
+          boundaryGap: ['1%', '0%'],
+          minInterval: interval,
           axisLine: {
             lineStyle: {
               color: "#666"
@@ -201,7 +239,7 @@ var controlObj = {
           },
           axisLabel: {
             formatter: function (value) {
-              return bt.format_data(value / 1000, 'MM/dd hh:mm');
+              return bt.format_data(value / 1000, 'MM/dd\nhh:mm');
             }
           }
         },
@@ -227,6 +265,7 @@ var controlObj = {
             zoomLock: true
           },
           {
+            bottom: 10,
             start: 0,
             end: 100,
             handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
@@ -244,55 +283,41 @@ var controlObj = {
     },
 
     /**
-    * 获取间隔时间
-    * @param {*} startTime 开始时间
-    * @param {*} endTime 结束时间
-    * @returns 
-    */
-    get_interval_num: function (startTime, endTime) {
-      var hour = (endTime - startTime) / 3600;
-      hour = Math.floor(hour);
-      if (hour < 12) {
-        return 3 * 3600 * 1000;
-      } else if (hour <= 24) {
-        return 4 * 3600 * 1000;
-      }
-      var day = hour / 24;
-      day = Math.floor(day);
-      if (day <= 4) {
-        return 1 * 24 * 3600 * 1000;
-      } else if (day <= 7) {
-        return 2 * 24 * 3600 * 1000;
-      } else {
-        return 10 * 24 * 3600 * 1000;
-      }
-    },
-
-    /**
     * 补全数据
     * @param {*} rdata 
     */
     set_data: function (data, startTime, endTime) {
+      if (data.length <= 0) return;
       var time;
-      if ((endTime - startTime) >= 24 * 3600 - 1) {
-        var min = data[0];
-        console.log(min, '-------------', data, startTime, endTime)
-        min.addtime = min.addtime.replace(/([0-9]{2}\/[0-9]{2}).{1}[0-9:]*/, '$1 00:00');
-        data.unshift(min);
-      }
+      // var min = data[0];
+      // min.addtime = min.addtime.replace(/([0-9]{2}\/[0-9]{2}).{1}[0-9:]*/, '$1 00:00');
+      // data.unshift(min);
+      // for (var key in data[0]) {
+      //   if (key == 'addtime') continue;
+      //   data[0][key] = 0;
+      // }
+
       for (var i = 0; i < data.length; i++) {
         if (typeof data[i].addtime === "number") continue;
-        time = this.get_time(data[i].addtime);
+        time = this.get_time(data[i].addtime, data[data.length - 1].addtime);
         data[i].addtime = time;
       }
     },
 
-    get_time: function (date) {
+    get_time: function (date, endDate) {
+      var endMonth = endDate.split(' ')[0].split('/');
+      endMonth = parseInt(endMonth);
+
       var today = new Date();
       var str = date.split(' ');
       var dateStr = str[0].split('/');
       var timeStr = str[1].split(':');
-      var newDate = new Date(today.getFullYear(), dateStr[0] - 1, dateStr[1], timeStr[0], timeStr[1]);
+      var month = parseInt(dateStr[0]);
+      var year = today.getFullYear();
+      if (month > endMonth) {
+        year -= 1;
+      }
+      var newDate = new Date(year, month - 1, dateStr[1], timeStr[0], timeStr[1]);
       return newDate.getTime();
     },
 
@@ -305,20 +330,21 @@ var controlObj = {
         var xData = [];
         var yData = [];
         //var zData = [];
-
-        for (var i = 0; i < rdata.length; i++) {
-          // xData.push(rdata[i].addtime);
-          // yData.push(rdata[i].pro);
-          // zData.push(rdata[i].mem);
-          yData.push([rdata[i].addtime, rdata[i].pro]);
+        if (rdata.length > 0) {
+          for (var i = 0; i < rdata.length; i++) {
+            // xData.push(rdata[i].addtime);
+            // yData.push(rdata[i].pro);
+            // zData.push(rdata[i].mem);
+            yData.push([rdata[i].addtime, rdata[i].pro]);
+          }
+          var startTime = rdata[0].addtime / 1000;
+          var endTime = rdata[rdata.length - 1].addtime / 1000;
+          var option = that.get_cpu_option(startTime, endTime, yData);
+          myChartCpu.setOption(option);
+          window.addEventListener("resize", function () {
+            myChartCpu.resize();
+          });
         }
-        var startTime = rdata[0].addtime / 1000;
-        var endTime = rdata[rdata.length - 1].addtime / 1000;
-        var option = that.get_cpu_option(startTime, endTime, yData);
-        myChartCpu.setOption(option);
-        window.addEventListener("resize", function () {
-          myChartCpu.resize();
-        });
       });
     },
 
@@ -361,20 +387,21 @@ var controlObj = {
         var xData = [];
         //var yData = [];
         var zData = [];
-
-        for (var i = 0; i < rdata.length; i++) {
-          // xData.push(rdata[i].addtime);
-          // yData.push(rdata[i].pro);
-          // zData.push(rdata[i].mem);
-          zData.push([rdata[i].addtime, rdata[i].mem]);
+        if (rdata.length > 0) {
+          for (var i = 0; i < rdata.length; i++) {
+            // xData.push(rdata[i].addtime);
+            // yData.push(rdata[i].pro);
+            // zData.push(rdata[i].mem);
+            zData.push([rdata[i].addtime, rdata[i].mem]);
+          }
+          var startTime = rdata[0].addtime / 1000;
+          var endTime = rdata[rdata.length - 1].addtime / 1000;
+          option = that.get_mem_option(startTime, endTime, zData);
+          myChartMen.setOption(option);
+          window.addEventListener("resize", function () {
+            myChartMen.resize();
+          });
         }
-        var startTime = rdata[0].addtime / 1000;
-        var endTime = rdata[rdata.length - 1].addtime / 1000;
-        option = that.get_mem_option(startTime, endTime, zData);
-        myChartMen.setOption(option);
-        window.addEventListener("resize", function () {
-          myChartMen.resize();
-        });
       })
     },
 
@@ -464,13 +491,15 @@ var controlObj = {
         } else {
           $('#diskview').next().find('.select-list-item li').eq(1).show();
         }
-        var startTime = rdata[0].addtime / 1000;
-        var endTime = rdata[rdata.length - 1].addtime / 1000;
-        var option = that.get_disk_option(_unit, startTime, endTime, rData, wData);
-        myChartDisk.setOption(option);
-        window.addEventListener("resize", function () {
-          myChartDisk.resize();
-        });
+        if (rdata.length > 0) {
+          var startTime = rdata[0].addtime / 1000;
+          var endTime = rdata[rdata.length - 1].addtime / 1000;
+          var option = that.get_disk_option(_unit, startTime, endTime, rData, wData);
+          myChartDisk.setOption(option);
+          window.addEventListener("resize", function () {
+            myChartDisk.resize();
+          });
+        }
       })
     },
 
@@ -602,13 +631,15 @@ var controlObj = {
         } else {
           $('#network').next().find('.select-list-item li').eq(1).show();
         }
-        var startTime = rdata[0].addtime / 1000;
-        var endTime = rdata[rdata.length - 1].addtime / 1000;
-        var option = that.get_network_option(_unit, startTime, endTime, yData, zData);
-        myChartNetwork.setOption(option);
-        window.addEventListener("resize", function () {
-          myChartNetwork.resize();
-        });
+        if (rdata.length > 0) {
+          var startTime = rdata[0].addtime / 1000;
+          var endTime = rdata[rdata.length - 1].addtime / 1000;
+          var option = that.get_network_option(_unit, startTime, endTime, yData, zData);
+          myChartNetwork.setOption(option);
+          window.addEventListener("resize", function () {
+            myChartNetwork.resize();
+          });
+        }
       })
     },
 
@@ -676,6 +707,7 @@ var controlObj = {
           aData.push(rdata[i].five);
           bData.push(rdata[i].fifteen);
         }
+        var interval = ((e - b) / 3) * 1000;
         option = {
           tooltip: {
             trigger: 'axis'
@@ -689,6 +721,7 @@ var controlObj = {
             type: 'category',
             boundaryGap: false,
             data: xData,
+            minInterval: interval,
             axisLine: {
               lineStyle: {
                 color: "#666"
@@ -814,13 +847,15 @@ var controlObj = {
           aData.push([rdata[i].addtime, rdata[i].five]);
           bData.push([rdata[i].addtime, rdata[i].fifteen]);
         }
-        var startTime = rdata[0].addtime / 1000;
-        var endTime = rdata[rdata.length - 1].addtime / 1000;
-        var option = that.get_load_option(startTime, endTime, yData, zData, aData, bData);
-        myChartgetload.setOption(option);
-        window.addEventListener("resize", function () {
-          myChartgetload.resize();
-        })
+        if (rdata.length > 0) {
+          var startTime = rdata[0].addtime / 1000;
+          var endTime = rdata[rdata.length - 1].addtime / 1000;
+          var option = that.get_load_option(startTime, endTime, yData, zData, aData, bData);
+          myChartgetload.setOption(option);
+          window.addEventListener("resize", function () {
+            myChartgetload.resize();
+          });
+        }
       })
     },
 
@@ -829,7 +864,7 @@ var controlObj = {
     */
     get_load_option: function (startTime, endTime, yData, zData, aData, bData) {
       var option = this.get_default_option(startTime, endTime);
-      var intervalNum = this.get_interval_num(startTime, endTime);
+      var interval = ((endTime - startTime) / 3) * 1000;
       option.tooltip.formatter = function (config) {
         var line = config[0].axisValueLabel,
           line_color = '';
@@ -877,14 +912,14 @@ var controlObj = {
       // 直角坐标系内绘图网格
       option.grid = [
         {
-          top: '60px',
           left: '5%',
+          bottom: 80,
           right: '55%',
           width: '40%',
           height: 'auto'
         },
         {
-          top: '60px',
+          bottom: 80,
           left: '55%',
           width: '40%',
           height: 'auto'
@@ -894,7 +929,8 @@ var controlObj = {
       option.xAxis = [
         {
           type: 'time',
-          minInterval: intervalNum,
+          boundaryGap: ['1%', '0%'],
+          minInterval: interval,
           axisLine: {
             lineStyle: {
               color: "#666"
@@ -902,14 +938,15 @@ var controlObj = {
           },
           axisLabel: {
             formatter: function (value) {
-              return bt.format_data(value / 1000, 'MM/dd hh:mm');
+              return bt.format_data(value / 1000, 'MM/dd\nhh:mm');
             }
           }
         },
         {
           type: 'time',
           gridIndex: 1,
-          minInterval: intervalNum,
+          boundaryGap: ['1%', '0%'],
+          minInterval: interval,
           axisLine: {
             lineStyle: {
               color: "#666"
@@ -917,7 +954,7 @@ var controlObj = {
           },
           axisLabel: {
             formatter: function (value) {
-              return bt.format_data(value / 1000, 'MM/dd hh:mm');
+              return bt.format_data(value / 1000, 'MM/dd\nhh:mm');
             }
           }
         }
@@ -927,9 +964,14 @@ var controlObj = {
           scale: true,
           name: '资源使用率',
           boundaryGap: [0, '100%'],
-          // y轴网格显示
           min: 0,
-          max: 100,
+          max: function (value) {
+            // 最大值超过80
+            if(value.max == 100 || (value.max + 20 > 100)) return 100;
+            // 小于80取当前最大值的首位数字
+            return parseInt((value.max + 10).toString().slice(0,1) + '0')
+          },
+          // y轴网格显示
           splitLine: {
             show: true,
             lineStyle: {

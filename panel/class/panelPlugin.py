@@ -7,7 +7,7 @@
 # Author: hwliang <hwl@bt.cn>
 #-------------------------------------------------------------------
 import public,os,sys,json,time,psutil,re,shutil,requests
-from BTPanel import plugin, session,cache,send_file
+from BTPanel import session,cache,send_file
 from pluginAuth import Plugin
 if sys.version_info[0] == 3: from importlib import reload
 class mget: pass
@@ -892,7 +892,7 @@ class panelPlugin:
             return public.returnMsg(True,'PLUGIN_UNINSTALL')
         else:
             if pluginInfo['name'] == 'mysql':
-                if public.M('databases').count() > 0: return public.returnMsg(False,"数据库列表非空，为了您的数据安全，请先<span style='color:red;'>备份所有数据库数据</span>后删除现有数据库<br>强制卸载命令：rm -rf /www/server/mysql")
+                if public.M('databases').where('db_type=?',0).count() > 0: return public.returnMsg(False,"本地数据库列表非空，为了您的数据安全，请先<span style='color:red;'>备份所有本地数据库数据</span>后删除现有本地数据库<br>强制卸载命令：rm -rf /www/server/mysql")
             get.type = '0'
             if session['server_os']['x'] != 'RHEL': get.type = '3'
             get.sName = get.sName.lower()
@@ -928,6 +928,11 @@ class panelPlugin:
             softList = Plugin(False).get_plugin_list(force)
             cache.set(skey,softList,3600)
             self.clean_panel_log()
+            if 'ip' in softList:
+                if public.is_ipv6(softList['ip']):
+                    public.writeFile('data/v4.pl',' -6 ')
+                else:
+                    public.writeFile('data/v4.pl',' -4 ')
         sType = 0
         try:
             if hasattr(get,'type'): sType = int(get['type'])
@@ -1502,16 +1507,24 @@ class panelPlugin:
 
     #取phpmyadmin状态
     def get_phpmyadmin_stat(self):
-        if public.get_webserver() == 'nginx':
+        webserver = public.get_webserver()
+        if webserver == 'nginx':
             filename = public.GetConfigValue('setup_path') + '/nginx/conf/nginx.conf'
-        elif public.get_webserver() == 'apache':
+        elif webserver == 'apache':
             filename = public.GetConfigValue('setup_path') + '/apache/conf/extra/httpd-vhosts.conf'
         else:
             filename = "/www/server/panel/vhost/openlitespeed/detail/phpmyadmin.conf"
         if not os.path.exists(filename): return False
         conf = public.readFile(filename)
         if not conf: return False
-        return conf.find('/www/server/stop') == -1
+        is_start = conf.find('/www/server/stop') == -1
+        if is_start: 
+            if webserver == 'nginx':
+                is_start = conf.find('allow 127.0.0.1;') == -1
+            elif webserver == 'apache':
+                is_start = conf.find('Allow from 127.0.0.1 ::1 localhost') == -1
+        return is_start
+
 
     #获取指定软件信息
     def get_soft_find(self,get = None):
@@ -1653,15 +1666,21 @@ class panelPlugin:
             if datadir:
                 pid_file = "{}/{}.pid".format(datadir,public.get_hostname())
                 if os.path.exists(pid_file):
-                    pid = int(public.readFile(pid_file))
-                    status = public.pid_exists(pid)
-                    if status: return status
+                    try:
+                        pid = int(public.readFile(pid_file))
+                        status = public.pid_exists(pid)
+                        if status: return status
+                    except:
+                        return False
 
         if pname in ['php-fpm'] and exe:
             pid_file = exe.replace('sbin/php-fpm','/var/run/php-fpm.pid')
             if os.path.exists(pid_file):
-                pid = int(public.readFile(pid_file))
-                return public.pid_exists(pid)
+                try:
+                    pid = int(public.readFile(pid_file))
+                    return public.pid_exists(pid)
+                except:
+                    return False
         
         if not self.pids: self.pids = psutil.pids()
         for pid in self.pids:
@@ -1805,10 +1824,12 @@ class panelPlugin:
     def get_icon(self,name,downFile = None):
         iconFile = 'BTPanel/static/img/soft_ico/ico-' + name + '.png'
         if not os.path.exists(iconFile):
-            self.download_icon(name,iconFile,downFile)
+            public.run_thread(self.download_icon,(name,iconFile,downFile))
         else:
             size = os.path.getsize(iconFile)
-            if size == 0: self.download_icon(name,iconFile,downFile)
+            if size == 0: 
+                public.run_thread(self.download_icon,(name,iconFile,downFile))
+                # self.download_icon(name,iconFile,downFile)
         
     #下载图标
     def download_icon(self,name,iconFile,downFile):
@@ -1819,9 +1840,9 @@ class panelPlugin:
             public.ExecShell(r"\cp  -a -r " + srcIcon + " " + iconFile)
         else:
             if downFile:
-                public.ExecShell('wget -O ' + iconFile + ' ' + public.GetConfigValue('home') + downFile)
+                public.ExecShell('wget -O ' + iconFile + ' ' + public.GetConfigValue('home') + downFile + " &")
             else:
-                public.ExecShell('wget -O ' + iconFile + ' ' + public.get_url() + '/install/plugin/' + name + '/icon.png')
+                public.ExecShell('wget -O ' + iconFile + ' ' + public.get_url() + '/install/plugin/' + name + '/icon.png' + " &")
         cache.set(skey,1,86400)
                 
     

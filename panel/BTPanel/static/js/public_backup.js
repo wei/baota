@@ -11,11 +11,15 @@ var bt = {
     return reg.test(ip);
   },
   // 验证域名列表
-  check_domain_list: function (domainInfo) {
+  check_domain_list: function (domainInfo, isPort) {
     var domainList = domainInfo.trim().replace(' ', '').split("\n");
     for (var i = 0; i < domainList.length; i++) {
       var item = domainList[i];
-      if (!bt.check_domain(item)) {
+      if (isPort && !bt.check_domain_port(item)) {
+        bt.msg({ status: false, msg: '第' + (i + 1) + '行【' + item + '】域名格式错误' });
+        return false;
+      }
+      if (!isPort && !bt.check_domain(item)) {
         bt.msg({ status: false, msg: '第' + (i + 1) + '行【' + item + '】域名格式错误' });
         return false;
       }
@@ -38,6 +42,10 @@ var bt = {
   check_domain: function (domain) //验证域名
   {
     var reg = /^([\w\u4e00-\u9fa5\-\*]{1,100}\.){1,10}([\w\u4e00-\u9fa5\-]{1,24}|[\w\u4e00-\u9fa5\-]{1,24}\.[\w\u4e00-\u9fa5\-]{1,24})$/;
+    return reg.test(bt.strim(domain));
+  },
+  check_domain_port: function (domain) { //验证域名带端口号
+    var reg = /^([\w\u4e00-\u9fa5\-\*]{1,100}\.){1,10}([\w\u4e00-\u9fa5\-]{1,24}|[\w\u4e00-\u9fa5\-]{1,24}\.[\w\u4e00-\u9fa5\-]{1,24})(:([1-9]|[1-9]\d|[1-9]\d{2}|[1-9]\d{3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5]))?$/;
     return reg.test(bt.strim(domain));
   },
   check_img: function (fileName) //验证是否图片
@@ -211,11 +219,11 @@ var bt = {
       "S": data.getMilliseconds() //millisecond
     }
     if (/(y+)/.test(format)) format = format.replace(RegExp.$1,
-      (data.getFullYear() + "").substr(4 - RegExp.$1.length));
+        (data.getFullYear() + "").substr(4 - RegExp.$1.length));
     for (var k in o)
       if (new RegExp("(" + k + ")").test(format))
         format = format.replace(RegExp.$1,
-          RegExp.$1.length == 1 ? o[k] : ("00" + o[k]).substr(("" + o[k]).length));
+            RegExp.$1.length == 1 ? o[k] : ("00" + o[k]).substr(("" + o[k]).length));
 
     return format;
   },
@@ -399,7 +407,9 @@ var bt = {
       disk: true
     }, function (rdata) {
       var d = '',
-        a = '';
+          a = '';
+
+      rdata.PATH = bt.rtrim(rdata.PATH, '/');
       if (rdata.DISK != undefined) {
         for (var f = 0; f < rdata.DISK.length; f++) {
           a += "<dd class=\"bt_open_dir\" path =\"" + rdata.DISK[f].path + "\"><span class='glyphicon glyphicon-hdd'></span>&nbsp;" + rdata.DISK[f].path + "</dd>"
@@ -432,6 +442,7 @@ var bt = {
               e = e.substring(0, 10) + "..."
             }
           }
+          
           d += "<tr><td>" + ((type === 'all' || type === 'file') ? '<input type=\"checkbox\" />' : '') + "<td class=\"bt_open_dir\" title='" + g[0] + "' data-type=\"files\" path =\"" + rdata.PATH + "/" + g[0] + "\"><span class='glyphicon glyphicon-file'></span><span>" + e + "</span></td><td>" + bt.format_data(g[2]) + "</td><td>" + g[3] + "</td><td>" + g[4] + "</td></tr>"
         }
       }
@@ -511,13 +522,13 @@ var bt = {
   },
   show_confirm: function (title, msg, callback, error) {
     var d = Math.round(Math.random() * 9 + 1),
-      c = Math.round(Math.random() * 9 + 1),
-      t = d + " + " + c,
-      e = d + c;
+        c = Math.round(Math.random() * 9 + 1),
+        t = d + " + " + c,
+        e = d + c;
 
     function submit (index, layero) {
       var a = $("#vcodeResult"),
-        val = a.val().replace(/ /g, "");
+          val = a.val().replace(/ /g, "");
       if (val == undefined || val == "") {
         layer.msg(lan.bt.cal_err);
         return
@@ -796,9 +807,9 @@ var bt = {
   },
   render_form_line: function (item, bs, form) {
     var clicks = [],
-      _html = '',
-      _hide = '',
-      is_title_css = ' ml0';
+        _html = '',
+        _hide = '',
+        is_title_css = ' ml0';
     if (!bs) bs = '';
     if (item.title) {
       _html += '<span class="tname">' + item.title + '</span>';
@@ -983,7 +994,10 @@ var bt = {
         title: data.title,
         closeBtn: 2,
         content: _form.prop("outerHTML"),
-        end: data.end ? data.end : false
+        end: data.end ? data.end : false,
+        success:function(){
+          if(data.yes) data.yes()
+        }
       })
       setTimeout(function () {
         bt.render_clicks(clicks, loadOpen, callback);
@@ -1169,23 +1183,23 @@ var bt = {
   // ACE编辑配置文件
   aceEditor: function (obj) {
     var aEditor = {
-      ACE: ace.edit(obj.el, {
-        theme: "ace/theme/chrome", //主题
-        mode: "ace/mode/" + (obj.mode || 'nginx'), // 语言类型
-        wrap: true,
-        showInvisibles: false,
-        showPrintMargin: false,
-        showFoldWidgets: false,
-        useSoftTabs: true,
-        tabSize: 2,
-        showPrintMargin: false,
-        readOnly: false
-      }),
-      path: obj.path,
-      content: '',
-      saveCallback: obj.saveCallback
-    },
-      _this = this;
+          ACE: ace.edit(obj.el, {
+            theme: "ace/theme/chrome", //主题
+            mode: "ace/mode/" + (obj.mode || 'nginx'), // 语言类型
+            wrap: true,
+            showInvisibles: false,
+            showPrintMargin: false,
+            showFoldWidgets: false,
+            useSoftTabs: true,
+            tabSize: 2,
+            showPrintMargin: false,
+            readOnly: false
+          }),
+          path: obj.path,
+          content: '',
+          saveCallback: obj.saveCallback
+        },
+        _this = this;
     $('#' + obj.el).css('fontSize', '12px');
     aEditor.ACE.commands.addCommand({
       name: '保存文件',
@@ -1495,42 +1509,42 @@ bt.pub = {
         n += '<option value="' + u[p] + '" ' + m + ">" + u[p] + "</option>"
       }
       var aceEditor = {},
-        r = bt.open({
-          type: 1,
-          shift: 5,
-          closeBtn: 1,
-          area: ["90%", "90%"],
-          shade: false,
-          title: lan.bt.edit_title + "[" + fileName + "]",
-          btn: [lan['public'].save, lan['public'].close],
-          content: '<form class="bt-form pd20 pb70"><div class="line"><p style="color:red;margin-bottom:10px">' + lan.bt.edit_ps +
-            '		<select class="bt-input-text" name="encoding" style="width: 74px;position: absolute;top: 31px;right: 19px;height: 22px;z-index: 9999;border-radius: 0;">' +
-            n + '</select></p><div class="mCustomScrollbar bt-input-text ace_config_editor_scroll" id="textBody" style="width:100%;margin:0 auto;line-height: 1.8;position: relative;top: 10px;"></div></div></form>',
-          yes: function (layer, index) {
-            bt.saveEditor(aceEditor);
-          },
-          btn2: function (layer, index) {
-            r.close();
-          },
-          success: function () {
-            var q = $(window).height() * 0.9;
-            $("#textBody").height(q - 160);
-            aceEditor = bt.aceEditor({
-              el: 'textBody',
-              content: rdata.data,
-              mode: 'html',
-              saveCallback: function (val) {
-                bt.send('SaveFileBody', 'files/SaveFileBody', {
-                  path: fileName,
-                  encoding: $('[name="encoding"] option:selected').val(),
-                  data: val
-                }, function (rdata) {
-                  bt.msg(rdata);
-                });
-              }
-            });
-          }
-        })
+          r = bt.open({
+            type: 1,
+            shift: 5,
+            closeBtn: 1,
+            area: ["90%", "90%"],
+            shade: false,
+            title: lan.bt.edit_title + "[" + fileName + "]",
+            btn: [lan['public'].save, lan['public'].close],
+            content: '<form class="bt-form pd20 pb70"><div class="line"><p style="color:red;margin-bottom:10px">' + lan.bt.edit_ps +
+                '		<select class="bt-input-text" name="encoding" style="width: 74px;position: absolute;top: 31px;right: 19px;height: 22px;z-index: 9999;border-radius: 0;">' +
+                n + '</select></p><div class="mCustomScrollbar bt-input-text ace_config_editor_scroll" id="textBody" style="width:100%;margin:0 auto;line-height: 1.8;position: relative;top: 10px;"></div></div></form>',
+            yes: function (layer, index) {
+              bt.saveEditor(aceEditor);
+            },
+            btn2: function (layer, index) {
+              r.close();
+            },
+            success: function () {
+              var q = $(window).height() * 0.9;
+              $("#textBody").height(q - 160);
+              aceEditor = bt.aceEditor({
+                el: 'textBody',
+                content: rdata.data,
+                mode: 'html',
+                saveCallback: function (val) {
+                  bt.send('SaveFileBody', 'files/SaveFileBody', {
+                    path: fileName,
+                    encoding: $('[name="encoding"] option:selected').val(),
+                    data: val
+                  }, function (rdata) {
+                    bt.msg(rdata);
+                  });
+                }
+              });
+            }
+          })
 
     })
   }
@@ -1596,14 +1610,14 @@ bt.index = {
           $('.layui-layer-content').css('overflow', 'inherit');
           $('.fangshi1 label').click(function () {
             var input = $(this).find('input'),
-              siblings_label = input.parents('label').siblings()
+                siblings_label = input.parents('label').siblings()
             input.prop('checked', 'checked').next().addClass('active');
             siblings_label.find('input').removeAttr('checked').next().removeClass('active');
           });
           var loadT = '';
           $('.fangshi1 label').hover(function () {
             var _title = $(this).attr('data-title'),
-              _that = $(this);
+                _that = $(this);
             loadT = setTimeout(function () {
               layer.tips(_title, _that[0], {
                 tips: [1, '#20a53a'], //还可配置颜色
@@ -2084,26 +2098,26 @@ bt.recycle_bin = {
           title: lan.files.recycle_bin_type1,
           click: 'bt.recycle_bin.open_recycle_bin(1)'
         },
-        {
-          title: lan.files.recycle_bin_type2,
-          click: 'bt.recycle_bin.open_recycle_bin(2)'
-        },
-        {
-          title: lan.files.recycle_bin_type3,
-          click: 'bt.recycle_bin.open_recycle_bin(3)'
-        },
-        {
-          title: lan.files.recycle_bin_type4,
-          click: 'bt.recycle_bin.open_recycle_bin(4)'
-        },
-        {
-          title: lan.files.recycle_bin_type5,
-          click: 'bt.recycle_bin.open_recycle_bin(5)'
-        },
-        {
-          title: lan.files.recycle_bin_type6,
-          click: 'bt.recycle_bin.open_recycle_bin(6)'
-        }
+          {
+            title: lan.files.recycle_bin_type2,
+            click: 'bt.recycle_bin.open_recycle_bin(2)'
+          },
+          {
+            title: lan.files.recycle_bin_type3,
+            click: 'bt.recycle_bin.open_recycle_bin(3)'
+          },
+          {
+            title: lan.files.recycle_bin_type4,
+            click: 'bt.recycle_bin.open_recycle_bin(4)'
+          },
+          {
+            title: lan.files.recycle_bin_type5,
+            click: 'bt.recycle_bin.open_recycle_bin(5)'
+          },
+          {
+            title: lan.files.recycle_bin_type6,
+            click: 'bt.recycle_bin.open_recycle_bin(6)'
+          }
         ];
         var m_html = '';
         for (var i = 0; i < menus.length; i++) {
@@ -2117,34 +2131,34 @@ bt.recycle_bin = {
             field: 'name',
             title: lan.files.recycle_bin_th1
           },
-          {
-            field: 'dname',
-            title: lan.files.recycle_bin_th2
-          },
-          {
-            field: 'size',
-            title: lan.files.recycle_bin_th3,
-            templet: function (item) {
-              return bt.format_size(item.size)
-            }
-          },
-          {
-            field: 'time',
-            title: lan.files.recycle_bin_th4,
-            templet: function (item) {
-              return bt.format_data(item.time);
-            }
-          },
-          {
-            field: 'opt',
-            title: lan.files.recycle_bin_th5,
-            align: 'right',
-            templet: function (item) {
-              var opt = '<a class="btlink" href="javascript:;" onclick="bt.recycle_bin.re_recycle_bin(\'' + item.rname + '\',' + type + ')">恢复</a> | ';
-              opt += '<a class="btlink" href="javascript:;" onclick="bt.recycle_bin.del_recycle_bin(\'' + item.rname + '\',' + type + ',\'' + item.name + '\')">永久删除</a>';
-              return opt;
-            }
-          },
+            {
+              field: 'dname',
+              title: lan.files.recycle_bin_th2
+            },
+            {
+              field: 'size',
+              title: lan.files.recycle_bin_th3,
+              templet: function (item) {
+                return bt.format_size(item.size)
+              }
+            },
+            {
+              field: 'time',
+              title: lan.files.recycle_bin_th4,
+              templet: function (item) {
+                return bt.format_data(item.time);
+              }
+            },
+            {
+              field: 'opt',
+              title: lan.files.recycle_bin_th5,
+              align: 'right',
+              templet: function (item) {
+                var opt = '<a class="btlink" href="javascript:;" onclick="bt.recycle_bin.re_recycle_bin(\'' + item.rname + '\',' + type + ')">恢复</a> | ';
+                opt += '<a class="btlink" href="javascript:;" onclick="bt.recycle_bin.del_recycle_bin(\'' + item.rname + '\',' + type + ',\'' + item.name + '\')">永久删除</a>';
+                return opt;
+              }
+            },
           ],
           data: data
         });
@@ -2470,15 +2484,15 @@ bt.files = {
       area: '650px',
       title: lan.files.zip_title,
       content: '<div class="bt-form pd20 pb70">' +
-        '<div class="line noborder">' +
-        '<input type="text" class="form-control" id="sfile" value="' + param + '" placeholder="" style="display:none" />' +
-        '<span>' + lan.files.zip_to + '</span><input type="text" class="bt-input-text" id="dfile" value="' + dirName + ext + '" placeholder="' + lan.files.zip_to + '" style="width: 75%; display: inline-block; margin: 0px 10px 0px 20px;" /><span class="glyphicon glyphicon-folder-open cursor" onclick="ChangePath(\'dfile\')"></span>' +
-        '</div>' +
-        '<div class="bt-form-submit-btn">' +
-        '<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">' + lan['public'].close + '</button>' +
-        '<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title"' + lan.files.file_menu_zip + '</button>' +
-        '</div>' +
-        '</div>'
+          '<div class="line noborder">' +
+          '<input type="text" class="form-control" id="sfile" value="' + param + '" placeholder="" style="display:none" />' +
+          '<span>' + lan.files.zip_to + '</span><input type="text" class="bt-input-text" id="dfile" value="' + dirName + ext + '" placeholder="' + lan.files.zip_to + '" style="width: 75%; display: inline-block; margin: 0px 10px 0px 20px;" /><span class="glyphicon glyphicon-folder-open cursor" onclick="ChangePath(\'dfile\')"></span>' +
+          '</div>' +
+          '<div class="bt-form-submit-btn">' +
+          '<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">' + lan['public'].close + '</button>' +
+          '<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title"' + lan.files.file_menu_zip + '</button>' +
+          '</div>' +
+          '</div>'
     });
 
     setTimeout(function () {
@@ -2524,19 +2538,19 @@ bt.files = {
       area: '490px',
       title: lan.files.unzip_title,
       content: '<div class="bt-form pd20 pb70">' +
-        '<div class="line unzipdiv">' +
-        '<span class="tname">' + lan.files.unzip_name + '</span><input type="text" class="bt-input-text" id="sfile" value="' + fileName + '" placeholder="' + lan.files.unzip_name_title + '" style="width:330px" /></div>' +
-        '<div class="line"><span class="tname">' + lan.files.unzip_to + '</span><input type="text" class="bt-input-text" id="dfile" value="' + path + '" placeholder="' + lan.files.unzip_to + '" style="width:330px" /></div>' + umpass +
-        '<div class="line"><span class="tname">' + lan.files.unzip_coding + '</span><select class="bt-input-text" name="coding">' +
-        '<option value="UTF-8">UTF-8</option>' +
-        '<option value="gb18030">GBK</option>' +
-        '</select>' +
-        '</div>' +
-        '<div class="bt-form-submit-btn">' +
-        '<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">' + lan['public'].close + '</button>' +
-        '<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title" >' + lan.files.file_menu_unzip + '</button>' +
-        '</div>' +
-        '</div>'
+          '<div class="line unzipdiv">' +
+          '<span class="tname">' + lan.files.unzip_name + '</span><input type="text" class="bt-input-text" id="sfile" value="' + fileName + '" placeholder="' + lan.files.unzip_name_title + '" style="width:330px" /></div>' +
+          '<div class="line"><span class="tname">' + lan.files.unzip_to + '</span><input type="text" class="bt-input-text" id="dfile" value="' + path + '" placeholder="' + lan.files.unzip_to + '" style="width:330px" /></div>' + umpass +
+          '<div class="line"><span class="tname">' + lan.files.unzip_coding + '</span><select class="bt-input-text" name="coding">' +
+          '<option value="UTF-8">UTF-8</option>' +
+          '<option value="gb18030">GBK</option>' +
+          '</select>' +
+          '</div>' +
+          '<div class="bt-form-submit-btn">' +
+          '<button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">' + lan['public'].close + '</button>' +
+          '<button type="button" id="ReNameBtn" class="btn btn-success btn-sm btn-title" >' + lan.files.file_menu_unzip + '</button>' +
+          '</div>' +
+          '</div>'
     });
     setTimeout(function () {
 
@@ -2721,30 +2735,30 @@ bt.files = {
           _this.copy_file(path)
         }
       },
-      {
-        text: lan.files.file_menu_mv,
-        onclick: function () {
-          _this.cut_file(path)
+        {
+          text: lan.files.file_menu_mv,
+          onclick: function () {
+            _this.cut_file(path)
+          }
+        },
+        {
+          text: lan.files.file_menu_rename,
+          onclick: function () {
+            _this.rename(path, name)
+          }
+        },
+        {
+          text: lan.files.file_menu_auth,
+          onclick: function () {
+            _this.set_chmod(0, path)
+          }
+        },
+        {
+          text: lan.files.file_menu_zip,
+          onclick: function () {
+            _this.zip(path)
+          }
         }
-      },
-      {
-        text: lan.files.file_menu_rename,
-        onclick: function () {
-          _this.rename(path, name)
-        }
-      },
-      {
-        text: lan.files.file_menu_auth,
-        onclick: function () {
-          _this.set_chmod(0, path)
-        }
-      },
-      {
-        text: lan.files.file_menu_zip,
-        onclick: function () {
-          _this.zip(path)
-        }
-      }
 
       ]
     };
@@ -2939,7 +2953,7 @@ bt.crontab = {
   // 执行计划任务请求
   start_task_send: function (id, name) {
     var that = this,
-      loading = bt.load();
+        loading = bt.load();
     bt.send('start_task_send', 'crontab/StartTask', {
       id: id
     }, function (rdata) {
@@ -2966,7 +2980,7 @@ bt.crontab = {
   // 设置计划任务状态
   set_crontab_status: function (id, status, callback) {
     var that = this,
-      loading = bt.load();
+        loading = bt.load();
     bt.confirm({
       title: '提示',
       msg: status ? '计划任务暂停后将无法继续运行，您真的要停用这个计划任务吗？' : '该计划任务已停用，是否要启用这个计划任务？'
@@ -2988,7 +3002,7 @@ bt.crontab = {
   // 编辑计划任务
   edit_crontab: function (id, data) {
     var that = this,
-      loading = bt.load('提交数据中...');
+        loading = bt.load('提交数据中...');
     bt.send('edit_crontab', 'crontab/modify_crond', data, function (rdata) {
       loading.close();
       if (rdata.status) {
@@ -3021,12 +3035,12 @@ bt.crontab = {
           shadeClose: false,
           closeBtn: 1,
           content: '<div class="setchmod bt-form pd20 pb70">' +
-            '<pre class="crontab-log" style="overflow: auto; border: 0px none; line-height:28px;padding: 15px; margin: 0px; height: 405px; background-color: rgb(51,51,51);color:#f1f1f1;font-family: \"微软雅黑\"">' + (rdata.msg == '' ? '当前日志为空' : rdata.msg) + '</pre>' +
-            '<div class="bt-form-submit-btn" style="margin-top: 0px;">' +
-            '<button type="button" class="layui-btn layui-btn-sm" onclick="bt.crontab.del_logs_crontab(' + id + ')">' + lan['public'].empty + '</button>' +
-            '<button type="button" class="layui-btn layui-btn-sm layui-btn-primary" onclick="layer.closeAll()">' + lan['public'].close + '</button>' +
-            '</div>' +
-            '</div>'
+              '<pre class="crontab-log" style="overflow: auto; border: 0px none; line-height:28px;padding: 15px; margin: 0px; height: 405px; background-color: rgb(51,51,51);color:#f1f1f1;font-family: \"微软雅黑\"">' + (rdata.msg == '' ? '当前日志为空' : rdata.msg) + '</pre>' +
+              '<div class="bt-form-submit-btn" style="margin-top: 0px;">' +
+              '<button type="button" class="layui-btn layui-btn-sm" onclick="bt.crontab.del_logs_crontab(' + id + ')">' + lan['public'].empty + '</button>' +
+              '<button type="button" class="layui-btn layui-btn-sm layui-btn-primary" onclick="layer.closeAll()">' + lan['public'].close + '</button>' +
+              '</div>' +
+              '</div>'
         })
         setTimeout(function () {
           var div = document.getElementsByClassName('crontab-log')[0]
@@ -3039,7 +3053,7 @@ bt.crontab = {
   // 删除计划任务日志
   del_logs_crontab: function (id, name) {
     var that = this,
-      loading = bt.load();
+        loading = bt.load();
     bt.send('del_logs_crontab', 'crontab/DelLogs', {
       id: id
     }, function (rdata) {
@@ -3084,7 +3098,7 @@ bt.crontab = {
   // 添加计划任务请求
   add_control_send: function (data) {
     var that = this,
-      loading = bt.load('提交数据中...');
+        loading = bt.load('提交数据中...');
     bt.send('addCrontab', 'crontab/AddCrontab', data, function (rdata) {
       loading.close();
       if (rdata.status) {
@@ -4076,7 +4090,7 @@ bt.soft = {
         $('#messageError').show().html(html);
         $('.set_messages_status').click(function () {
           var data = $(this).parent().data(),
-            that = this;
+              that = this;
           bt.soft.set_product_renew_status({
             id: data.id,
             state: 0
@@ -4120,8 +4134,8 @@ bt.soft = {
   // 产品支付视图(配置参数)
   product_pay_view: function (config) {
     var bt_user_info = bt.get_cookie('bt_user_info'),
-      ltd_end = bt.get_cookie('ltd_end'),
-      pro_end = bt.get_cookie('pro_end');
+        ltd_end = bt.get_cookie('ltd_end'),
+        pro_end = bt.get_cookie('pro_end');
     // 判断登录
     if (!bt_user_info) {
       bt.pub.bind_btname(function () {
@@ -4148,7 +4162,7 @@ bt.soft = {
       skin: 'libPay-view',
       area: ['1000px', '650px'],
       shadeClose: false,
-      content: '<div class="libPay-content-box ' + (config.source ? 'sourceTips' : '') + '">\
+      content: '<div class="libPay-content-box" ' + (config.totalNum ? 'data-index="'+config.totalNum+'"' : '') + '>\
                 <div class="libPay-menu ' + (config.plugin ? 'is_plugin' : '') + '">\
                     ' + (config.plugin ? '<div class="libPay-menu-type lib_plugin"><p>' + config.name + '</p><p>' + config.name + '</p></div>' : '') + '\
                     <div class="libPay-menu-type lib_pro" >\
@@ -4165,7 +4179,7 @@ bt.soft = {
                     </div>\
                 </div>\
                 <div id="pay_product_view">\
-                    <div class="libVoucher-loading"><p><img src="/static/layer/skin/default/loading-2.gif"></p><p>正在获取数据，请稍候...</p></div>\
+                    <div class="libVoucher-loading"><p><img src="/static/images/loading-2.gif"></p><p>正在获取数据，请稍候...</p></div>\
                     <div class="libPay-layer-item">\
                         <div class="libPay-line-item proS" id="libPay-theme-tips">\
                             <p>企业版特权:</p>\
@@ -4190,7 +4204,7 @@ bt.soft = {
                                 </div>\
                             </div>\
                             <div class="libPay-qcode-right">\
-                                <div class="libPay-loading"><p><img src="/static/layer/skin/default/loading-2.gif"></p><p>正在生成订单,请稍候...</p></div>\
+                                <div class="libPay-loading"><p><img src="/static/images/loading-2.gif"></p><p>正在生成订单,请稍候...</p></div>\
                                 <div class= "libPaycode-box">\
                                     <div class="pay-wx" style="height:155px;width: 155px" id="PayQcode" ></div>\
                                     <div class="payqcode-box" >\
@@ -4227,7 +4241,7 @@ bt.soft = {
                 </div>\
             </div>',
       success: function (indexs, layers) {
-        var loadT = bt.load('正在获取产品推荐信息，请稍后...');
+        var loadT = bt.load('正在获取产品推荐信息，请稍候...');
         bt.send('get_plugin_remarks', 'auth/get_plugin_remarks', {}, function (res) {
           loadT.close()
           //初始化
@@ -4268,7 +4282,7 @@ bt.soft = {
             ps: config.ps
           })
           $('.libPay-menu .libPay-menu-type').each(function (index) {
-            $(this).data('data', arry[index])
+            $(this).data('data',arry[index])
           })
           $(".libPay-menu .libPay-menu-type").click(function () {
             var _item = $(this).data('data');
@@ -4278,9 +4292,9 @@ bt.soft = {
           //100000000表示获取所有抵扣券
           bt.soft.pro.get_voucher(100000000, function (rdata) {
             var tab_list = $(".libPay-menu .libPay-menu-type"),
-              item = arry[rdata.length > 0 ? (tab_list.length - 1) : 0], is_coupon = false;
+                item = arry[rdata.length > 0 ? (tab_list.length - 1) : 0], is_coupon = false;
             $(".libVoucher-loading").hide()
-            tab_list.last().data('data', {
+            tab_list.last().data('data',{
               type: 'ver',
               data: rdata
             })
@@ -4308,8 +4322,8 @@ bt.soft = {
   //获取付款周期
   get_product_change: function (idx, btype) {
     var that = this,
-      _pro_end = bt.get_cookie('pro_end'),
-      _ltd_end = bt.get_cookie('ltd_end')
+        _pro_end = bt.get_cookie('pro_end'),
+        _ltd_end = bt.get_cookie('ltd_end')
 
     clearInterval(bt.soft.pub.wxpayTimeId);
     $('.libPay-layer-item').eq(btype === 'ver' ? 1 : 0).addClass('aShow').siblings().removeClass('aShow');
@@ -4329,8 +4343,8 @@ bt.soft = {
 
       that.get_product_discount_cache(_data, function (rdata) {
         var _ul = $("#libPay-theme-price ul").empty(),
-          num = 0,
-          html = '';
+            num = 0,
+            html = '';
         for (var keys in rdata) {
           var item = rdata[keys];
           if (typeof item === 'object') {
@@ -4398,7 +4412,7 @@ bt.soft = {
                 return false;
               }
               var _pro_end = bt.get_cookie('pro_end'),
-                _ltd_end = bt.get_cookie('ltd_end')
+                  _ltd_end = bt.get_cookie('ltd_end')
 
               bt.soft.pro.create_order_voucher(s_data.product_id, s_data.code, function (rdata) {
                 layer.closeAll();
@@ -4435,25 +4449,30 @@ bt.soft = {
   create_pay_code: function (idx) {
     $('.pay-cycle-btns').eq(idx).addClass('active').siblings().removeClass('active');
     var that = this,
-      _product = $('.libPay-menu-type.active').data('data'),
-      _cycle = $(".pay-cycle-btns.active").data('data'),
-      _source = 0,
-      _locahostURL = window.location.pathname;
+        _product = $('.libPay-menu-type.active').data('data'),
+        _cycle = $(".pay-cycle-btns.active").data('data'),
+        _source = 0,
+        _locahostURL = window.location.pathname;
+    var pay_source = parseInt(bt.get_cookie('pay_source') || 0)
     switch (_locahostURL) {
       case '/':
-        _source = 21
+        if($('.btpro-gray').length == 1){  //是否免费版
+          _source = 27;
+        }else{
+          _source = 28;
+        }
         break;
       case '/control':
         _source = 22
         break;
       case '/soft':
-        _source = 24;
-        if ($('.libPay-content-box').hasClass('sourceTips')) _source = 23;
+        _source = $('.libPay-content-box').data('index');
         break;
       case '/btwaf/index':
         _source = 25
         break;
     };
+    if(_source && !pay_source) bt.set_cookie('pay_source', _source);
 
     $(".wx-pay-ico").hide()
     $(".libPay-loading").show();
@@ -4467,17 +4486,17 @@ bt.soft = {
     that.pro.create_order({
       pid: _product.pid,
       cycle: _cycle.cycle,
-      source: _source
+      source: pay_source || _source
     }, function (rdata) {
       var start = that.pay_loading.get('start')
       var end = that.pay_loading.set('end')
       if (end < start) return
 
       $(".libPay-loading").hide()
-      var active_idx = $('.pay-cycle-btns.active').index(), active_product = $('.libPay-menu-type.active').data('data');
+      var active_idx = $('.pay-cycle-btns.active').index(),active_product = $('.libPay-menu-type.active').data('data');
 
       //判断创建订单完成后，前端选择的产品和周期是否发生改变
-      if ((idx != active_idx || _product.pid != active_product.pid) && active_product.type != 'ver') {
+      if ((idx != active_idx || _product.pid != active_product.pid) && active_product.type != 'ver'){
         that.create_pay_code(active_idx)
         return
       }
@@ -4510,8 +4529,8 @@ bt.soft = {
   },
   show_pay_code: function (idx) {
     var _data = $(".pay-radio-type").data('data'),
-      _cycle = $(".pay-cycle-btns.active").data('data'),
-      _obj = $(".libPay-content-box .pay-type-btn").eq(idx)
+        _cycle = $(".pay-cycle-btns.active").data('data'),
+        _obj = $(".libPay-content-box .pay-type-btn").eq(idx)
 
     if (!_data) return
 
@@ -4520,12 +4539,12 @@ bt.soft = {
     $('.libPaycode-pro-cylce').text('低至' + (_cycle.price / (_cycle.cycle / 12 * 365)).toFixed(2) + "元 / 天")
 
     switch (idx) {
-      //微信支付
+        //微信支付
       case 0:
         $('#PayQcode').empty().qrcode(_data.msg);
         $(".payqcode-box span").removeClass('alipay').addClass('wechat')
         break;
-      //支付宝支付
+        //支付宝支付
       case 1:
         $('#PayQcode').empty().qrcode(_data.ali_msg);
         $(".payqcode-box span").removeClass('wechat').addClass('alipay')
@@ -4623,13 +4642,13 @@ bt.soft = {
     }, 2500);
   },
 
-  updata_ltd: function (is_alone) {
+  updata_ltd: function (is_alone,num) {
     var param = {
       name: '宝塔面板企业版',
       pid: 100000032,
-      source: 5,
       limit: 'ltd'
     };
+    if(num) param['totalNum'] = num
     if (is_alone || false) $.extend(param, {
       source: 5,
       is_alone: true
@@ -4637,13 +4656,14 @@ bt.soft = {
     bt.soft.product_pay_view(param);
   },
 
-  updata_pro: function () {
-    bt.soft.product_pay_view({
-      name: '',
-      pid: '',
-      source: 5,
+  updata_pro: function (num) {
+    var param = {
+      name: '宝塔面板专业版',
+      pid: 100000011,
       limit: 'pro'
-    });
+    }
+    if(num) param['totalNum'] = num
+    bt.soft.product_pay_view(param);
   },
   //遍历数组和对象
   each: function (obj, fn) {
@@ -5048,7 +5068,7 @@ bt.soft = {
   install: function (name, that) {
     var _this = this;
     if (bt.soft.is_install) {
-      layer.msg('正在安装其他软件，请稍后操作！', { icon: 0 });
+      layer.msg('正在安装其他软件，请稍候操作！', { icon: 0 });
       return false;
     }
     _this.get_soft_find(name, function (rdata) {
@@ -5164,19 +5184,19 @@ bt.soft = {
         closeBtn: 0,
         skin: 'soft_download_speed',
         content: '<div class="message-list" style="padding: 12px 15px;">' +
-          '<div class="mw-con">' +
-          '<ul class="waiting-down-list">' +
-          '<li>' +
-          '<div class="down-filse-name">' +
-          '<span class="fname" style="width:80%;" title="">正在下载' + param.name + ' ' + param.version + '.' + param.min_version + '，请稍后...</span>' +
-          '<span style="width: 20%;display: inline-block;vertical-align: top;text-align: right;" data-name="down_pre">0%</span></div>' +
-          '<div class="down-progress">' +
-          '<div class="done-progress" data-name="progress" style="width:0%"></div></div>' +
-          '<div class="down-info"><span class="total-size" data-name="size">0 KB/0 KB</span><span  class="speed-size" data-name="speed">0K/s</span><span style="margin-left: 20px;" data-name="time">预计还要: -- 秒</span></div>' +
-          '</li>' +
-          '</ul>' +
-          '</div>' +
-          '</div>',
+            '<div class="mw-con">' +
+            '<ul class="waiting-down-list">' +
+            '<li>' +
+            '<div class="down-filse-name">' +
+            '<span class="fname" style="width:80%;" title="">正在下载' + param.name + ' ' + param.version + '.' + param.min_version + '，请稍候...</span>' +
+            '<span style="width: 20%;display: inline-block;vertical-align: top;text-align: right;" data-name="down_pre">0%</span></div>' +
+            '<div class="down-progress">' +
+            '<div class="done-progress" data-name="progress" style="width:0%"></div></div>' +
+            '<div class="down-info"><span class="total-size" data-name="size">0 KB/0 KB</span><span  class="speed-size" data-name="speed">0K/s</span><span style="margin-left: 20px;" data-name="time">预计还要: -- 秒</span></div>' +
+            '</li>' +
+            '</ul>' +
+            '</div>' +
+            '</div>',
         success: function (layero, index) {
           that.monitor_soft_download_speed(param, callback, true)
         }
@@ -5259,7 +5279,7 @@ bt.soft = {
 
     layer.closeAll();
     bt.soft.loadT = layer.open({
-      title: config.title || '正在执行安装脚本，请稍后...',
+      title: config.title || '正在执行安装脚本，请稍候...',
       type: 1,
       closeBtn: false,
       maxmin: true,
@@ -5309,9 +5329,9 @@ bt.soft = {
       }
     }
     var that = this,
-      install_info = item.install_version,
-      version = install_info.m_version,
-      min_version = install_info.version;
+        install_info = item.install_version,
+        version = install_info.m_version,
+        min_version = install_info.version;
     layer.closeAll()
     item.title = bt.replace_all(item.title, '-' + version, '');
     if (item.type === 10 || (item.type === 5 && item.versions.length < 2)) {
@@ -5337,7 +5357,7 @@ bt.soft = {
    */
 
   get_install_plugin: function (item) {
-    var plugin_info = bt.load('正在获取插件安装信息，请稍后<img src="/static/img/ing.gif" />');
+    var plugin_info = bt.load('正在获取插件安装信息，请稍候<img src="/static/img/ing.gif" />');
     bt.send('install_plugin', 'plugin/install_plugin', {
       sName: item.name,
       version: item.install_version.m_version,
@@ -5377,7 +5397,7 @@ bt.soft = {
   show_plugin_info: function (data, is_beta) {
     layer.closeAll();
     var loadT = null,
-      title = ''
+        title = ''
     if (typeof is_beta === "undefined") is_beta = false
 
     switch (data.install_opt) {
@@ -5392,7 +5412,7 @@ bt.soft = {
         title = '修复'
         break;
     }
-    var loadT = bt.load('正在获取插件版本信息，请稍后...');
+    var loadT = bt.load('正在获取插件版本信息，请稍候...');
     if (data === 'error') return false;
     bt.send('get_plugin_upgrades', 'plugin/get_plugin_upgrades', {
       plugin_name: data.name,
@@ -5425,7 +5445,7 @@ bt.soft = {
         content: '<style>\
                         .install-three-plugin{padding:30px 45px;}\
                         .install-header-title{text-align:center;}\
-                        .install-header-title .install-icon{background: url("/static/layer/skin/default/icon.png") no-repeat;height: 30px;width: 30px;display: inline-block;vertical-align: middle;}\
+                        .install-header-title .install-icon{background: url("/static/images/icon.png") no-repeat;height: 30px;width: 30px;display: inline-block;vertical-align: middle;}\
                         .install-header-title .install-tips{display: inline-block;height: 30px;line-height: 30px;font-size: 17px;vertical-align: middle;padding-left: 10px;color: #333;}\
                         .install-header-title .install-tips span{display: inline-block;max-width: 155px;text-overflow: ellipsis;white-space: pre;overflow: hidden;vertical-align: bottom;}\
                         .plugin-title{height: 40px;line-height: 20px;padding:10px;color: #444;margin: 5px 0;}\
@@ -5462,15 +5482,15 @@ bt.soft = {
                             <table class="table table-hover ' + (JSON.stringify(data.dependnet) === '{}' ? 'hide' : '') + '">\
                                 <thead><tr><th>依赖软件</th><th>安装状态</th><th style="text-align: right;">操作</th></tr></thead>\
                                 <tbody>' +
-          (function () {
-            var html = '';
-            for (var dataKey in data.dependnet) {
-              var item = data.dependnet[dataKey]
-              html += '<tr><td>' + dataKey + '</td><td>' + (item ? '<span style="color:#20a532"><span class="glyphicon glyphicon-ok mr5"></span><span>已安装</span></span>' : '<span style="color:#FF9C00"><span class="glyphicon glyphicon-remove mr5"></span><span>未安装</span></span>') + '</td><td style="text-align: right;">' + (item ? '--' : '<a href="javascript:;" class="btlink">立即安装</a>') + '</td><tr>'
-            }
-            return html;
-          }()) +
-          '</tbody></table>' + (false ? ('<div style="margin: 15px 5px">' + '<div class="checkbox-btn"><i class="cust—checkbox cursor-pointer checkbox-btn-safety mr10"></i><span style="font-weight: 500;color:red">当前操作存在安全风险，请点击进行二次确认后，继续操作？</span></div></div>') : '') + '</div>\
+            (function () {
+              var html = '';
+              for (var dataKey in data.dependnet) {
+                var item = data.dependnet[dataKey]
+                html += '<tr><td>' + dataKey + '</td><td>' + (item ? '<span style="color:#20a532"><span class="glyphicon glyphicon-ok mr5"></span><span>已安装</span></span>' : '<span style="color:#FF9C00"><span class="glyphicon glyphicon-remove mr5"></span><span>未安装</span></span>') + '</td><td style="text-align: right;">' + (item ? '--' : '<a href="javascript:;" class="btlink">立即安装</a>') + '</td><tr>'
+              }
+              return html;
+            }()) +
+            '</tbody></table>' + (false ? ('<div style="margin: 15px 5px">' + '<div class="checkbox-btn"><i class="cust—checkbox cursor-pointer checkbox-btn-safety mr10"></i><span style="font-weight: 500;color:red">当前操作存在安全风险，请点击进行二次确认后，继续操作？</span></div></div>') : '') + '</div>\
                     <ul class="help-info-text c7">\
                         <li >插件来源【' + data.author + '】，网址 <a href="' + data.home + '" target="_blank" class="btlink" style="text-decoration: revert;">' + data.home + '</a></li>\
                         <li>如果已存在此插件，文件将被替换！</li>\
@@ -5495,22 +5515,22 @@ bt.soft = {
                 shadeClose: false,
                 zIndex: 1989101,
                 content: '<div class="bt-form-conter pd20">' +
-                  '<div class="item_box" style="height:315px;overflow: auto;">' +
-                  (function () {
-                    var html = '';
-                    for (var i = 0; i < res.length; i++) {
-                      var item = res[i];
-                      html += '<div class="item_list">' +
-                        '<span class="index_acive"></span>' +
-                        '<div class="index_date">' + bt.format_data(item.update_time) + '</div>' +
-                        '<div class="index_title">' + data.title + item.m_version + '.' + item.version + '- ' + (item.beta ? '测试版' : '正式版') + '</div>' +
-                        '<div class="index_conter">' + (item.update_msg.replace(/\n/g, '</br>') || '无') + '</div>' +
-                        '</div>'
-                    }
-                    return html
-                  }()) +
-                  '</div>' +
-                  '</div>'
+                    '<div class="item_box" style="height:315px;overflow: auto;">' +
+                    (function () {
+                      var html = '';
+                      for (var i = 0; i < res.length; i++) {
+                        var item = res[i];
+                        html += '<div class="item_list">' +
+                            '<span class="index_acive"></span>' +
+                            '<div class="index_date">' + bt.format_data(item.update_time) + '</div>' +
+                            '<div class="index_title">' + data.title + item.m_version + '.' + item.version + '- ' + (item.beta ? '测试版' : '正式版') + '</div>' +
+                            '<div class="index_conter">' + (item.update_msg.replace(/\n/g, '</br>') || '无') + '</div>' +
+                            '</div>'
+                      }
+                      return html
+                    }()) +
+                    '</div>' +
+                    '</div>'
               })
             })
           })
@@ -5549,13 +5569,13 @@ bt.soft = {
         shift: 5,
         btn: ['确认', '取消'],
         content: '<div class="bt-form webDelete pd20">' +
-          '<p style="font-size:13px;word-break: break-all;margin-bottom: 15px;padding:5px;"><span style="color:red;font-size:14px;">' + data.force_message + '</span></p>' +
-          '<div class="vcode" style="padding: 4px 50px;height: auto;line-height: 40px;">计算结果：<span class="text"></span>=<input type="number" id="vsResult" value="" style="height: 30px;padding-left: 10px;width: 60px;border: 1px solid #888;border-radius: 2px;outline: none;"></div>' +
-          '</div>',
+            '<p style="font-size:13px;word-break: break-all;margin-bottom: 15px;padding:5px;"><span style="color:red;font-size:14px;">' + data.force_message + '</span></p>' +
+            '<div class="vcode" style="padding: 4px 50px;height: auto;line-height: 40px;">计算结果：<span class="text"></span>=<input type="number" id="vsResult" value="" style="height: 30px;padding-left: 10px;width: 60px;border: 1px solid #888;border-radius: 2px;outline: none;"></div>' +
+            '</div>',
         success: function (layers, indexs) {
           var num1 = bt.get_random_num(1, 9),
-            num2 = bt.get_random_num(1, 9),
-            vsResult = $('#vsResult');
+              num2 = bt.get_random_num(1, 9),
+              vsResult = $('#vsResult');
           if (num1 === num2) num2 = num1 + 1
           $('.vcode .text').text(num1 + ' + ' + num2);
           vsResult.data('value', num1 + num2);
@@ -5574,7 +5594,7 @@ bt.soft = {
         },
         yes: function (indexs) {
           var $vcode = $('#vsResult'),
-            data = $vcode.data()
+              data = $vcode.data()
           if (parseInt($vcode.val()) !== data.value) {
             layer.msg('计算结果错误，请重新计算！', {
               icon: 2
@@ -5593,7 +5613,7 @@ bt.soft = {
    * @description 插件管理
    */
   plugin_toolbox_info: function (name, title, version, is_beta) {
-    var loadT = bt.load('获取插件信息，请稍后...')
+    var loadT = bt.load('获取插件信息，请稍候...')
     if (!name) return;
     bt.send('get_plugin_upgrades', 'plugin/get_plugin_upgrades', {
       plugin_name: name,
@@ -5601,8 +5621,8 @@ bt.soft = {
     }, function (rdata) {
       loadT.close()
       var info = {},
-        beta = {},
-        tls = {};
+          beta = {},
+          tls = {};
       var last_info = rdata[rdata.length - 1]
       beta = (last_info.beta ? last_info : {});
       tls = rdata[0];
@@ -5626,23 +5646,23 @@ bt.soft = {
         shadeClose: false,
         btn: false,
         content: '<style>' +
-          '.plugin_toolbox{padding: 35px;}' +
-          '.plugin_toolbox .alert i{font-style: normal;font-weight: 600;color: red;padding:0 2px;}' +
-          '.cut_plugin_version{background: #f5f6fa;border-radius: 4px;padding: 20px;margin-bottom: 15px;height: 200px;width: 100%;border: 1px solid #efefef;}' +
-          '.plugin_title_info{font-weight: 600;height: 25px;}' +
-          '.plugin_title_info span{color:#666;font-size: 13px;}' +
-          '.plugin_title_info>span:nth-child(1) span{color:#20a53a;}' +
-          '.plugin_title_info>span:nth-child(1){font-weight: 600;float: left;}' +
-          '.plugin_title_info span:nth-child(2){font-weight: 600;float: right;}' +
-          '.plugin_content_info{font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;color: #888;clear: both;padding: 0;font-size: 13px;color: #555;border: 0;background: none;margin-top: 15px;}' +
-          '.plugin_content_info{margin: 0 auto;height: 140px;line-height:24px}' +
-          '.cutPlugin{height: 38px;width:180px;}' +
-          '</style>' +
-          '<div class="plugin_toolbox">' +
-          '<div class="alert alert-success" role="alert"><span>提示：如果当前插件<i>出现异常错误</i>或<i>无法使用</i>，请尝试点击</span><button class="btn btn-success btn-xs ml5 repairPlugin">修复插件</button></div>' +
-          (JSON.stringify(beta) === '{}' || is_beta ? '' : '<div class="cut_plugin_version "><div class="plugin_title_info ' + (info.beta === 2 ? 'hide' : '') + '"><span>最新' + (!is_beta ? '测试版' : '正式版') + '：<span>' + title + 'v' + info.m_version + '.' + info.version + '</span></span><span>更新时间：' + bt.format_data(info.update_time, 'yyyy-MM-dd') + '</span></div><pre class="plugin_content_info">' + (info.beta === 2 ? '无版本信息' : info.update_msg) + '</pre></div>' +
-            '<div class="text-center"><button class="btn btn-success btn-xs ' + (info.beta === 2 ? 'hide' : '') + ' cutPlugin">切换' + (!is_beta ? '测试版' : '正式版') + '</button></div>') +
-          '</div>',
+            '.plugin_toolbox{padding: 35px;}' +
+            '.plugin_toolbox .alert i{font-style: normal;font-weight: 600;color: red;padding:0 2px;}' +
+            '.cut_plugin_version{background: #f5f6fa;border-radius: 4px;padding: 20px;margin-bottom: 15px;height: 200px;width: 100%;border: 1px solid #efefef;}' +
+            '.plugin_title_info{font-weight: 600;height: 25px;}' +
+            '.plugin_title_info span{color:#666;font-size: 13px;}' +
+            '.plugin_title_info>span:nth-child(1) span{color:#20a53a;}' +
+            '.plugin_title_info>span:nth-child(1){font-weight: 600;float: left;}' +
+            '.plugin_title_info span:nth-child(2){font-weight: 600;float: right;}' +
+            '.plugin_content_info{font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;color: #888;clear: both;padding: 0;font-size: 13px;color: #555;border: 0;background: none;margin-top: 15px;}' +
+            '.plugin_content_info{margin: 0 auto;height: 140px;line-height:24px}' +
+            '.cutPlugin{height: 38px;width:180px;}' +
+            '</style>' +
+            '<div class="plugin_toolbox">' +
+            '<div class="alert alert-success" role="alert"><span>提示：如果当前插件<i>出现异常错误</i>或<i>无法使用</i>，请尝试点击</span><button class="btn btn-success btn-xs ml5 repairPlugin">修复插件</button></div>' +
+            (JSON.stringify(beta) === '{}' || is_beta ? '' : '<div class="cut_plugin_version "><div class="plugin_title_info ' + (info.beta === 2 ? 'hide' : '') + '"><span>最新' + (!is_beta ? '测试版' : '正式版') + '：<span>' + title + 'v' + info.m_version + '.' + info.version + '</span></span><span>更新时间：' + bt.format_data(info.update_time, 'yyyy-MM-dd') + '</span></div><pre class="plugin_content_info">' + (info.beta === 2 ? '无版本信息' : info.update_msg) + '</pre></div>' +
+                '<div class="text-center"><button class="btn btn-success btn-xs ' + (info.beta === 2 ? 'hide' : '') + ' cutPlugin">切换' + (!is_beta ? '测试版' : '正式版') + '</button></div>') +
+            '</div>',
         success: function (layers, indexs) {
           $('.repairPlugin').click(function () {
             layer.closeAll()
@@ -5787,7 +5807,7 @@ bt.soft = {
    */
   update_soft_request: function (name, title, version, min_version) {
     var _this = this,
-      type = bt.get_cookie('softType')
+        type = bt.get_cookie('softType')
 
     if (type !== '5' && type !== 5) bt.soft.monitor_soft_download_speed({
       plugin_name: name,
@@ -6014,8 +6034,9 @@ bt.database = {
       }, 100)
     })
   },
-  add_database: function (callback) {
+  add_database: function (cloudList,callback) {
     bt.data.database.data_add.list[2].items[0].value = bt.get_random(16);
+    bt.data.database.data_add.list[5].items[0].items = cloudList;
     bt.render_form(bt.data.database.data_add, function (rdata) {
       if (callback) callback(rdata);
     });
@@ -6028,9 +6049,9 @@ bt.database = {
       if (callback) callback(rdata);
     })
   },
-  sync_database: function (callback) {
+  sync_database: function (sid,callback) {
     var loadT = bt.load(lan.database.sync_the);
-    bt.send('SyncGetDatabases', 'database/SyncGetDatabases', {}, function (rdata) {
+    bt.send('SyncGetDatabases', 'database/SyncGetDatabases', {sid:sid}, function (rdata) {
       loadT.close();
       if (callback) callback(rdata);
       bt.msg(rdata);
@@ -6103,7 +6124,7 @@ bt.database = {
       })
     });
   },
-  backup_data: function (id, dataname, callback) {
+  backup_data: function (id, callback) {
     var loadT = bt.load(lan.database.backup_the);
     bt.send('ToBackup', 'database/ToBackup', {
       id: id
@@ -7107,14 +7128,14 @@ bt.form = {
           title: '本地服务器',
           value: '127.0.0.1'
         },
-        {
-          title: '所有人(不安全)',
-          value: '%'
-        },
-        {
-          title: '指定IP',
-          value: 'ip'
-        }
+          {
+            title: '所有人(不安全)',
+            value: '%'
+          },
+          {
+            title: '指定IP',
+            value: 'ip'
+          }
         ],
         callback: function (obj) {
           var subid = obj.attr('name') + '_subid';
@@ -7188,54 +7209,67 @@ bt.data = {
             $('input[name="db_user"]').val(obj.val());
           }
         },
-        {
-          name: 'codeing',
-          type: 'select',
-          width: '27%',
-          items: [{
-            title: 'utf-8',
-            value: 'utf8'
-          },
           {
-            title: 'utf8mb4',
-            value: 'utf8mb4'
-          },
-          {
-            title: 'gbk',
-            value: 'gbk'
-          },
-          {
-            title: 'big5',
-            value: 'big5'
-          },
-          ]
-        }
+            name: 'codeing',
+            type: 'select',
+            width: '27%',
+            items: [{
+              title: 'utf-8',
+              value: 'utf8'
+            },
+              {
+                title: 'utf8mb4',
+                value: 'utf8mb4'
+              },
+              {
+                title: 'gbk',
+                value: 'gbk'
+              },
+              {
+                title: 'big5',
+                value: 'big5'
+              },
+            ]
+          }
         ]
       },
-      {
-        title: '用户名',
-        name: 'db_user',
-        placeholder: '数据库用户',
-        width: '65%'
-      },
-      bt.form.item.password,
-      {
-        title: '类型',
-        name: 'dtype',
-        type: 'select',
-        disabled: (bt.contains(bt.get_cookie('serverType'), 'nginx') || bt.contains(bt.get_cookie('serverType'), 'apache') ? true : false),
-        items: [{
-          title: 'MySQL',
-          value: 'MySQL'
+        {
+          title: '用户名',
+          name: 'db_user',
+          placeholder: '数据库用户',
+          width: '65%'
         },
+        bt.form.item.password,
         {
-          title: 'SQLServer',
-          value: 'SQLServer'
+          title: '类型',
+          name: 'dtype',
+          type: 'select',
+          disabled: (bt.contains(bt.get_cookie('serverType'), 'nginx') || bt.contains(bt.get_cookie('serverType'), 'apache') ? true : false),
+          items: [{
+            title: 'MySQL',
+            value: 'MySQL'
+          },
+            {
+              title: 'SQLServer',
+              value: 'SQLServer'
+            }
+          ]
+        },
+        bt.form.item.data_access,
+        {
+          title:'添加至',
+          items:[{
+            name:'sid',
+            type: 'select',
+            width: '65%',
+            items: []
+          }]
         }
-        ]
-      },
-      bt.form.item.data_access
       ],
+      yes:function(){
+
+        $('[name=sid]').after('<a class="btlink" onclick="layer.closeAll();database.get_cloud_server_list()" style="margin-left: 10px;">管理远程服务器</a>')
+      },
       btns: [
         bt.form.btn.close(),
         bt.form.btn.submit('提交', function (rdata, load, callback) {
@@ -7259,7 +7293,7 @@ bt.data = {
         name: 'name',
         hide: true
       },
-      bt.form.item.data_access
+        bt.form.item.data_access
       ],
       btns: [
         bt.form.btn.close(),
@@ -7288,43 +7322,43 @@ bt.data = {
         name: 'id',
         hide: true
       },
-      {
-        title: '用户名',
-        name: 'name',
-        disabled: true
-      },
-      {
-        title: '密码',
-        name: 'password',
-        items: [{
-          type: 'text',
-          event: {
-            css: 'glyphicon-repeat',
-            callback: function (obj) {
-              bt.refresh_pwd(16, obj);
+        {
+          title: '用户名',
+          name: 'name',
+          disabled: true
+        },
+        {
+          title: '密码',
+          name: 'password',
+          items: [{
+            type: 'text',
+            event: {
+              css: 'glyphicon-repeat',
+              callback: function (obj) {
+                bt.refresh_pwd(16, obj);
+              }
             }
-          }
-        }]
-      },
+          }]
+        },
       ],
       btns: [{
         title: '关闭',
         name: 'close'
       },
-      {
-        title: '提交',
-        name: 'submit',
-        css: 'btn-success',
-        callback: function (rdata, load, callback) {
-          var loading = bt.load();
-          bt.send('ResDatabasePassword', 'database/ResDatabasePassword', rdata, function (rRet) {
-            loading.close();
-            bt.msg(rRet);
-            if (rRet.status) load.close();
-            if (callback) callback(rRet);
-          })
+        {
+          title: '提交',
+          name: 'submit',
+          css: 'btn-success',
+          callback: function (rdata, load, callback) {
+            var loading = bt.load();
+            bt.send('ResDatabasePassword', 'database/ResDatabasePassword', rdata, function (rRet) {
+              loading.close();
+              bt.msg(rRet);
+              if (rRet.status) load.close();
+              if (callback) callback(rRet);
+            })
+          }
         }
-      }
       ]
     }
   },
@@ -7366,245 +7400,245 @@ bt.data = {
           placeholder: '每行填写一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88'
         }]
       },
-      {
-        title: '备注',
-        name: 'ps',
-        placeholder: '网站备注'
-      },
-      {
-        title: '根目录',
-        name: 'path',
-        items: [{
-          type: 'text',
-          width: '330px',
-          event: {
-            css: 'glyphicon-folder-open',
+        {
+          title: '备注',
+          name: 'ps',
+          placeholder: '网站备注'
+        },
+        {
+          title: '根目录',
+          name: 'path',
+          items: [{
+            type: 'text',
+            width: '330px',
+            event: {
+              css: 'glyphicon-folder-open',
+              callback: function (obj) {
+                bt.select_path(obj);
+              }
+            }
+          }]
+        },
+        {
+          title: 'FTP',
+          items: [{
+            name: 'ftp',
+            type: 'select',
+            items: [{
+              value: 'false',
+              title: '不创建'
+            },
+              {
+                value: 'true',
+                title: '创建'
+              }
+            ],
             callback: function (obj) {
-              bt.select_path(obj);
-            }
-          }
-        }]
-      },
-      {
-        title: 'FTP',
-        items: [{
-          name: 'ftp',
-          type: 'select',
-          items: [{
-            value: 'false',
-            title: '不创建'
-          },
-          {
-            value: 'true',
-            title: '创建'
-          }
-          ],
-          callback: function (obj) {
-            var subid = obj.attr('name') + '_subid';
-            $('#' + subid).remove();
-            if (obj.val() == 'true') {
-              var _bs = obj.parents('div.bt-form').attr('data-id');
-              var ftp_user = $('textarea[name="webname"]').data('ftp');
-              var item = {
-                title: 'FTP设置',
-                items: [{
-                  name: 'ftp_username',
-                  title: '用户名',
-                  width: '173px',
-                  value: ftp_user
-                },
-                {
-                  name: 'ftp_password',
-                  title: '密码',
-                  width: '173px',
-                  value: bt.get_random(16)
+              var subid = obj.attr('name') + '_subid';
+              $('#' + subid).remove();
+              if (obj.val() == 'true') {
+                var _bs = obj.parents('div.bt-form').attr('data-id');
+                var ftp_user = $('textarea[name="webname"]').data('ftp');
+                var item = {
+                  title: 'FTP设置',
+                  items: [{
+                    name: 'ftp_username',
+                    title: '用户名',
+                    width: '173px',
+                    value: ftp_user
+                  },
+                    {
+                      name: 'ftp_password',
+                      title: '密码',
+                      width: '173px',
+                      value: bt.get_random(16)
+                    }
+                  ],
+                  ps: '创建站点的同时，为站点创建一个对应FTP帐户，并且FTP目录指向站点所在目录。'
                 }
-                ],
-                ps: '创建站点的同时，为站点创建一个对应FTP帐户，并且FTP目录指向站点所在目录。'
-              }
-              var _tr = bt.render_form_line(item)
+                var _tr = bt.render_form_line(item)
 
-              obj.parents('div.line').append('<div class="line" id=' + subid + '>' + _tr.html + '</div>');
-            }
-          }
-        }]
-      },
-      {
-        title: '数据库',
-        items: [{
-          name: 'sql',
-          type: 'select',
-          items: [{
-            value: 'false',
-            title: '不创建'
-          },
-          {
-            value: 'MySQL',
-            title: 'MySQL'
-          },
-          {
-            value: 'SQLServer',
-            title: 'SQLServer'
-          }
-          ],
-          callback: function (obj) {
-            var subid = obj.attr('name') + '_subid';
-            $('#' + subid).remove();
-            if (obj.val() != 'false') {
-              if (bt.os == 'Linux' && obj.val() == 'SQLServer') {
-                obj.val('false');
-                bt.msg({
-                  msg: 'Linux暂不支持SQLServer!',
-                  icon: 2
-                });
-                return;
+                obj.parents('div.line').append('<div class="line" id=' + subid + '>' + _tr.html + '</div>');
               }
-              var _bs = obj.parents('div.bt-form').attr('data-id');
-              var data_user = $('textarea[name="webname"]').data('database');
-              var item = {
-                title: '数据库设置',
-                items: [{
-                  name: 'datauser',
-                  title: '用户名',
-                  width: '173px',
-                  value: data_user
+            }
+          }]
+        },
+        {
+          title: '数据库',
+          items: [{
+            name: 'sql',
+            type: 'select',
+            items: [{
+              value: 'false',
+              title: '不创建'
+            },
+              {
+                value: 'MySQL',
+                title: 'MySQL'
+              },
+              {
+                value: 'SQLServer',
+                title: 'SQLServer'
+              }
+            ],
+            callback: function (obj) {
+              var subid = obj.attr('name') + '_subid';
+              $('#' + subid).remove();
+              if (obj.val() != 'false') {
+                if (bt.os == 'Linux' && obj.val() == 'SQLServer') {
+                  obj.val('false');
+                  bt.msg({
+                    msg: 'Linux暂不支持SQLServer!',
+                    icon: 2
+                  });
+                  return;
+                }
+                var _bs = obj.parents('div.bt-form').attr('data-id');
+                var data_user = $('textarea[name="webname"]').data('database');
+                var item = {
+                  title: '数据库设置',
+                  items: [{
+                    name: 'datauser',
+                    title: '用户名',
+                    width: '173px',
+                    value: data_user
+                  },
+                    {
+                      name: 'datapassword',
+                      title: '密码',
+                      width: '173px',
+                      value: bt.get_random(16)
+                    }
+                  ],
+                  ps: '创建站点的同时，为站点创建一个对应的数据库帐户，方便不同站点使用不同数据库。'
+                }
+                var _tr = bt.render_form_line(item)
+                obj.parents('div.line').append('<div class="line" id=' + subid + '>' + _tr.html + '</div>');
+              }
+            }
+          },
+            {
+              name: 'codeing',
+              type: 'select',
+              items: [{
+                value: 'utf8',
+                title: 'utf-8'
+              },
+                {
+                  value: 'utf8mb4',
+                  title: 'utf8mb4'
                 },
                 {
-                  name: 'datapassword',
-                  title: '密码',
-                  width: '173px',
-                  value: bt.get_random(16)
+                  value: 'gbk',
+                  title: 'gbk'
+                },
+                {
+                  value: 'big5',
+                  title: 'big5'
                 }
-                ],
-                ps: '创建站点的同时，为站点创建一个对应的数据库帐户，方便不同站点使用不同数据库。'
-              }
-              var _tr = bt.render_form_line(item)
-              obj.parents('div.line').append('<div class="line" id=' + subid + '>' + _tr.html + '</div>');
+              ]
+            }
+          ]
+        },
+        {
+          title: '程序类型',
+          type: 'select',
+          name: 'type',
+          disabled: (bt.contains(bt.get_cookie('serverType'), 'IIS') ? false : true),
+          items: [{
+            value: 'PHP',
+            title: 'PHP'
+          },
+            {
+              value: 'Asp',
+              title: 'Asp'
+            },
+            {
+              value: 'Aspx',
+              title: 'Aspx'
+            },
+          ],
+          callback: function (obj) {
+            if (obj.val() == 'Asp' || obj.val() == 'Aspx') {
+              obj.parents('div.line').next().hide();
+            } else {
+              obj.parents('div.line').next().show();
             }
           }
         },
         {
-          name: 'codeing',
+          title: 'PHP版本',
+          name: 'version',
           type: 'select',
           items: [{
-            value: 'utf8',
-            title: 'utf-8'
-          },
-          {
-            value: 'utf8mb4',
-            title: 'utf8mb4'
-          },
-          {
-            value: 'gbk',
-            title: 'gbk'
-          },
-          {
-            value: 'big5',
-            title: 'big5'
-          }
+            value: '00',
+            title: '纯静态'
+          }]
+        }, {
+          title: '网站分类',
+          name: 'type_id',
+          type: 'select',
+          items: [
+
           ]
         }
-        ]
-      },
-      {
-        title: '程序类型',
-        type: 'select',
-        name: 'type',
-        disabled: (bt.contains(bt.get_cookie('serverType'), 'IIS') ? false : true),
-        items: [{
-          value: 'PHP',
-          title: 'PHP'
-        },
-        {
-          value: 'Asp',
-          title: 'Asp'
-        },
-        {
-          value: 'Aspx',
-          title: 'Aspx'
-        },
-        ],
-        callback: function (obj) {
-          if (obj.val() == 'Asp' || obj.val() == 'Aspx') {
-            obj.parents('div.line').next().hide();
-          } else {
-            obj.parents('div.line').next().show();
-          }
-        }
-      },
-      {
-        title: 'PHP版本',
-        name: 'version',
-        type: 'select',
-        items: [{
-          value: '00',
-          title: '纯静态'
-        }]
-      }, {
-        title: '网站分类',
-        name: 'type_id',
-        type: 'select',
-        items: [
-
-        ]
-      }
       ],
       btns: [{
         title: '关闭',
         name: 'close'
       },
-      {
-        title: '提交',
-        name: 'submit',
-        css: 'btn-success',
-        callback: function (rdata, load, callback) {
-          var loading = bt.load();
-          if (!rdata.webname) {
-            bt.msg({
-              msg: '主域名格式不正确',
-              icon: 2
-            });
-            return;
-          }
-          var webname = bt.replace_all(rdata.webname, 'http:\\/\\/', '');
-          webname = bt.replace_all(webname, 'https:\\/\\/', '');
-          var arrs = webname.split('\n');
-          var list = [];
-          var domain_name, port;
-          for (var i = 0; i < arrs.length; i++) {
-            if (arrs[i]) {
-              var temp = arrs[i].split(':');
-              var item = {};
-              item['name'] = temp[0]
-              item['port'] = temp.length > 1 ? temp[1] : 80;
-              if (!bt.check_domain(item.name)) {
-                bt.msg({
-                  msg: lan.site.domain_err_txt,
-                  icon: 2
-                })
-                return;
-              }
-              if (i > 0) {
-                list.push(arrs[i]);
-              } else {
-                domain_name = item.name;
-                port = item.port;
+        {
+          title: '提交',
+          name: 'submit',
+          css: 'btn-success',
+          callback: function (rdata, load, callback) {
+            var loading = bt.load();
+            if (!rdata.webname) {
+              bt.msg({
+                msg: '主域名格式不正确',
+                icon: 2
+              });
+              return;
+            }
+            var webname = bt.replace_all(rdata.webname, 'http:\\/\\/', '');
+            webname = bt.replace_all(webname, 'https:\\/\\/', '');
+            var arrs = webname.split('\n');
+            var list = [];
+            var domain_name, port;
+            for (var i = 0; i < arrs.length; i++) {
+              if (arrs[i]) {
+                var temp = arrs[i].split(':');
+                var item = {};
+                item['name'] = temp[0]
+                item['port'] = temp.length > 1 ? temp[1] : 80;
+                if (!bt.check_domain(item.name)) {
+                  bt.msg({
+                    msg: lan.site.domain_err_txt,
+                    icon: 2
+                  })
+                  return;
+                }
+                if (i > 0) {
+                  list.push(arrs[i]);
+                } else {
+                  domain_name = item.name;
+                  port = item.port;
+                }
               }
             }
+            var domain = {};
+            domain['domain'] = domain_name;
+            domain['domainlist'] = list;
+            domain['count'] = list.length;
+            rdata.webname = JSON.stringify(domain);
+            rdata.port = port;
+            bt.send('AddSite', 'site/AddSite', rdata, function (rRet) {
+              loading.close();
+              if (rRet.siteStatus) load.close();
+              if (callback) callback(rRet);
+            })
           }
-          var domain = {};
-          domain['domain'] = domain_name;
-          domain['domainlist'] = list;
-          domain['count'] = list.length;
-          rdata.webname = JSON.stringify(domain);
-          rdata.port = port;
-          bt.send('AddSite', 'site/AddSite', rdata, function (rRet) {
-            loading.close();
-            if (rRet.siteStatus) load.close();
-            if (callback) callback(rRet);
-          })
         }
-      }
       ]
     }
   },
@@ -7623,54 +7657,54 @@ bt.data = {
           }
         }
       },
-      {
-        title: '密码',
-        name: 'ftp_password',
-        items: [{
-          type: 'text',
-          width: '330px',
-          value: bt.get_random(16),
-          event: {
-            css: 'glyphicon-repeat',
-            callback: function (obj) {
-              bt.refresh_pwd(16, obj);
+        {
+          title: '密码',
+          name: 'ftp_password',
+          items: [{
+            type: 'text',
+            width: '330px',
+            value: bt.get_random(16),
+            event: {
+              css: 'glyphicon-repeat',
+              callback: function (obj) {
+                bt.refresh_pwd(16, obj);
+              }
             }
-          }
-        }]
-      },
-      {
-        title: '根目录',
-        name: 'path',
-        items: [{
-          type: 'text',
-          event: {
-            css: 'glyphicon-folder-open',
-            callback: function (obj) {
-              bt.select_path(obj);
+          }]
+        },
+        {
+          title: '根目录',
+          name: 'path',
+          items: [{
+            type: 'text',
+            event: {
+              css: 'glyphicon-folder-open',
+              callback: function (obj) {
+                bt.select_path(obj);
+              }
             }
-          }
-        }]
-      }
+          }]
+        }
       ],
       btns: [{
         title: '关闭',
         name: 'close'
       },
-      {
-        title: '提交',
-        name: 'submit',
-        css: 'btn-success',
-        callback: function (rdata, load, callback) {
-          var loading = bt.load();
-          if (!rdata.ps) rdata.ps = rdata.ftp_username;
-          bt.send('AddUser', 'ftp/AddUser', rdata, function (rRet) {
-            loading.close();
-            if (rRet.status) load.close();
-            if (callback) callback(rRet);
-            bt.msg(rRet);
-          })
+        {
+          title: '提交',
+          name: 'submit',
+          css: 'btn-success',
+          callback: function (rdata, load, callback) {
+            var loading = bt.load();
+            if (!rdata.ps) rdata.ps = rdata.ftp_username;
+            bt.send('AddUser', 'ftp/AddUser', rdata, function (rRet) {
+              loading.close();
+              if (rRet.status) load.close();
+              if (callback) callback(rRet);
+              bt.msg(rRet);
+            })
+          }
         }
-      }
       ]
     },
     set_port: {
@@ -7686,20 +7720,20 @@ bt.data = {
         title: '关闭',
         name: 'close'
       },
-      {
-        title: '提交',
-        name: 'submit',
-        css: 'btn-success',
-        callback: function (rdata, load, callback) {
-          var loading = bt.load();
-          bt.send('setPort', 'ftp/setPort', rdata, function (rRet) {
-            loading.close();
-            if (rRet.status) load.close();
-            if (callback) callback(rRet);
-            bt.msg(rRet);
-          })
+        {
+          title: '提交',
+          name: 'submit',
+          css: 'btn-success',
+          callback: function (rdata, load, callback) {
+            var loading = bt.load();
+            bt.send('setPort', 'ftp/setPort', rdata, function (rRet) {
+              loading.close();
+              if (rRet.status) load.close();
+              if (callback) callback(rRet);
+              bt.msg(rRet);
+            })
+          }
         }
-      }
       ]
     },
     set_password: {
@@ -7710,51 +7744,52 @@ bt.data = {
         name: 'id',
         hide: true
       },
-      {
-        title: '用户名',
-        name: 'ftp_username',
-        disabled: true
-      },
-      {
-        title: '密码',
-        name: 'new_password',
-        items: [{
-          type: 'text',
-          event: {
-            css: 'glyphicon-repeat',
-            callback: function (obj) {
-              bt.refresh_pwd(16, obj);
+        {
+          title: '用户名',
+          name: 'ftp_username',
+          disabled: true
+        },
+        {
+          title: '密码',
+          name: 'new_password',
+          items: [{
+            type: 'text',
+            event: {
+              css: 'glyphicon-repeat',
+              callback: function (obj) {
+                bt.refresh_pwd(16, obj);
+              }
             }
-          }
-        }]
-      },
+          }]
+        },
       ],
       btns: [{
         title: '关闭',
         name: 'close'
       },
-      {
-        title: '提交',
-        name: 'submit',
-        css: 'btn-success',
-        callback: function (rdata, load, callback) {
-          bt.confirm({
-            msg: lan.ftp.pass_confirm,
-            title: lan.ftp.stop_title
-          }, function () {
-            var loading = bt.load();
-            bt.send('SetUserPassword', 'ftp/SetUserPassword', rdata, function (rRet) {
-              loading.close();
-              if (rRet.status) load.close();
-              if (callback) callback(rRet);
-              bt.msg(rRet);
+        {
+          title: '提交',
+          name: 'submit',
+          css: 'btn-success',
+          callback: function (rdata, load, callback) {
+            bt.confirm({
+              msg: lan.ftp.pass_confirm,
+              title: lan.ftp.stop_title
+            }, function () {
+              var loading = bt.load();
+              bt.send('SetUserPassword', 'ftp/SetUserPassword', rdata, function (rRet) {
+                loading.close();
+                if (rRet.status) load.close();
+                if (callback) callback(rRet);
+                bt.msg(rRet);
+              })
             })
-          })
+          }
         }
-      }
       ]
     }
   }
+  
 }
 var form_group = {
   select_all: function (_arry) {
@@ -7765,22 +7800,22 @@ var form_group = {
   select: function (elem) {
     $(elem).after('<div class="bt_select_group"><div class="bt_select_active"><span class="select_val default">请选择</span><span class="glyphicon glyphicon-triangle-bottom" aria-hidden="true"></span> </div><ul class="bt_select_ul"></ul></div>');
     var _html = '',
-      select_el = $(elem),
-      select_group = select_el.next(),
-      select_ul = select_group.find('.bt_select_ul'),
-      select_val = select_group.find('.select_val'),
-      select_icon = select_group.find('.glyphicon');
+        select_el = $(elem),
+        select_group = select_el.next(),
+        select_ul = select_group.find('.bt_select_ul'),
+        select_val = select_group.find('.select_val'),
+        select_icon = select_group.find('.glyphicon');
     php_data = {
-      '4.0': ['5.2', '5.3', '5.4', '5.5', '5.6', '7.0', '7.1', '7.2', '7.3', '7.4'],
-      '4.4': ['5.4', '5.5', '5.6', '7.0', '7.1', '7.2', '7.3'],
-      '4.9': ['5.6', '7.0', '7.1', '7.2', '7.3', '7.4', '8.0'],
-      '5.0': ['7.2', '7.3', '7.4', '8.0'],
-      '5.1': ['7.2', '7.3', '7.4', '8.0']
+      '4.0': [ '5.2', '5.3', '5.4', '5.5', '5.6', '7.0', '7.1', '7.2', '7.3', '7.4' ],
+      '4.4': [ '5.4', '5.5', '5.6', '7.0', '7.1', '7.2', '7.3' ],
+      '4.9': [ '5.6', '7.0', '7.1', '7.2', '7.3', '7.4', '8.0' ],
+      '5.0': [ '7.2', '7.3', '7.4', '8.0' ],
+      '5.1': [ '7.2', '7.3', '7.4', '8.0' ]
     };
     select_el.find('option').each(function (index, el) {
       var active = select_el.val() === $(el).val(),
-        _val = $(el).val(),
-        _name = $(el).text();
+          _val = $(el).val(),
+          _name = $(el).text();
       _html += '<li data-val="' + _val + '" class="' + (active ? 'active' : '') + '">' + _name + '</li>';
       if (active) {
         select_val.text(_name);
@@ -7811,7 +7846,7 @@ var form_group = {
 
     $(elem).next('.bt_select_group').on('click', '.bt_select_ul li', function () {
       var _val = $(this).attr('data-val'),
-        _name = $(this).text();
+          _name = $(this).text();
       $(this).addClass('active').siblings().removeClass('active');
       _val !== '' ? select_val.removeClass('default') : select_val.addClass('default');
       select_val.text(_name);
@@ -7832,8 +7867,8 @@ var form_group = {
           }
         }
         var _select_html = '',
-          _ul_html = '',
-          $select_ul;
+            _ul_html = '',
+            $select_ul;
         $.each(php_my_admin_data, function (index, item) {
           _select_html += '<option value="' + item + '">phpMyAdmin ' + item + '</option>';
           _ul_html += '<li data-val="' + item + '" class="">phpMyAdmin ' + item + '</li>';
@@ -7888,7 +7923,197 @@ var form_group = {
       }
     });
   },
+
 }
+
+var dynamic = {
+  loadList: [],
+  fileFunList: {},
+  load: false,
+  callback: null,
+
+  // 初始化执行
+  execution: function () {
+    for (var i = 0; i < this.loadList.length; i++) {
+      var fileName = this.loadList[i];
+      if (fileName in this.fileFunList) this.fileFunList[fileName]()
+    }
+  },
+
+  /**
+   * @description 动态加载js,css文件
+   * @param url {string|array} 文件路径或文件数组
+   * @param fn {function|undefined} 回调函数
+   */
+  require: function (url, fn, config) {
+    var urlList = url, total = 0, num = 0, that = this;
+    if (!Array.isArray(url)) urlList = [url];
+    total = urlList.length;
+    this.load = true;
+    this.fileFunList = {};
+    function createElement (url) {
+      var element = null;
+      if (url.indexOf('.js') > -1) {
+        element = document.createElement('script')
+        element.type = 'text/javascript'
+        element.src = bt.url_merge('/vue/' + url)
+      } else if (url.indexOf('.css') > -1) {
+        element = document.createElement('link')
+        element.rel = 'stylesheet'
+        element.href = bt.url_merge('/vue/' + url)
+      }
+      return element
+    }
+    for (var i = 0; i < urlList.length; i++) {
+      var item = urlList[i], dirArray = item.split('/'), filName = dirArray[dirArray.length - 1].split('.')[0]
+      if (this.loadList.indexOf(filName) > -1) break;
+      this.loadList.push(filName);
+      (function (url) {
+        var element = createElement(url);
+        if (element.readyState) {
+          element.onreadystatechange = function (ev) {
+            if (element.readyState === 'loaded' || element.readyState === 'complete') {
+              element.onreadystatechange = null
+              num++;
+              if (total === num) {
+                that.execution()
+                if (fn) {
+                  fn.call(that)
+                }
+                that.load = false;
+              }
+            }
+          };
+        } else {
+          element.onload = function (ev) {
+            that.loadList[filName] = that.fn
+            num++;
+            if (total === num) {
+              that.execution()
+              if (fn) {
+                fn.call(that)
+              }
+              that.load = false;
+            }
+          }
+        }
+        document.getElementsByTagName('head')[0].appendChild(element);
+      }(item))
+    }
+  },
+  /**
+   * @description 执行延迟文件内容执行
+   * @param fileName {string} 文件名称，不要加文件后缀
+   * @param callback {function} 回调行数
+   */
+  delay: function delay (fileName, callback) {
+    if (!this.load) {
+      callback()
+      return false
+    }
+    this.fileFunList[fileName] = callback
+  },
+
+}
+
+bt.public = {
+    
+  // 设置目录配额
+  modify_path_quota:function (data,callback) {
+    var loadT = bt.load('正在设置目录配额，请稍候...')
+    $.post('/project/quota/modify_path_quota',data,function (res) {
+      loadT.close()
+      if(callback) callback(res)
+    })
+  },
+
+  // 设置mysql配额
+  modify_mysql_quota:function (data,callback) {
+    var loadT = bt.load('正在设置MySql配额，请稍候...')
+    $.post('/project/quota/modify_mysql_quota',data,function (res) {
+      loadT.close()
+      if(callback) callback(res)
+    })
+  },
+
+  /**
+   * @description 获取quoto容量
+  */
+
+  get_quota_config:function (type) {
+    return {
+      fid: 'quota',
+      title:'容量',
+      width: 80,
+      template:function(row,index){
+        var quota = row.quota;
+        if(!quota.size) return '<a href="javascript:;" class="btlink">未配置</a>'
+        var size = quota.size * 1024 * 1024;
+        var speed = ((quota.used / size) * 100).toFixed(2)
+        var quotaFull = false
+        if(quota.size > 0 && quota.used >= (size)) quotaFull = true;
+        return '<div class=""><div class="progress mb0 cursor" style="height:12px;line-height:12px;vertical-align:middle;border-radius:2px;margin-top:3px;" title="当前已用容量：'+ (quotaFull?'已用完':bt.format_size(quota.used)) +'\n当前容量配额：'+ bt.format_size(size) +'\n点击修改容量配额">'+
+          '<div class="progress-bar progress-bar-'+ (speed >= 90?'danger':'success') +'" style="height:15px;line-height:15px;width: '+ speed +'%;display: inline-block;" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>'+
+        '</div>'
+      },
+      event:function(row, index, ev){
+        var quota = row.quota;
+        var size = quota.size * 1024 * 1024
+        var usedList = bt.format_size(quota.used).split(' ');
+        var quotaFull = false
+        if(quota.size > 0 && quota.used >= (size)) quotaFull = true;
+        layer.open({
+          type:1,
+          title:'【'+ row.name + '】'+ (type == 'site'?'网站':(type == 'ftp'?'FTP':'数据库')) +'配额容量',
+          area:'400px',
+          closeBtn:2,
+          btn:['保存','取消'],
+          content:'<div class="bt-form pd20"><div class="line">'+
+            '<span class="tname" style="width:120px">当前已用容量</span>'+
+            '<div class="info-r" style="maring-right:120px">' +
+              '<input type="text" name="used" disabled placeholder="" class="bt-input-text mr10 " style="width:120px;" value="'+ (!quotaFull?(quota.size != 0?usedList[0]:0):'容量已用完') +'" /><span>'+ (!quotaFull?(quota.size != 0?usedList[1]:'MB'):'') +'</span>'+
+            '</div>'+
+              '<span class="tname" style="width:120px">配额容量</span>'+
+              '<div class="info-r" style="maring-right:120px">'+
+                '<input type="text" name="quota_size" placeholder="" class="bt-input-text mr10 " style="width:120px;" value="'+ quota.size +'" /><span>MB</span>'+
+              '</div>'+
+            '</div>'+
+            '<ul class="help-info-text c7">'+
+              '<li style="color:red;">温馨提示：此功能为企业版专享功能</li>'+
+              '<li class="'+ (type == "database"?'hide':'') +'">需要XFS文件系统，且包含prjquota挂载参数才能使用</li>'+
+              '<li class="'+ (type == "database"?'hide':'') +'">fstab配置示例：/dev/vdc1 /data xfs defaults,prjquota 0 0</li>'+
+              '<li class="'+ (type == "database"?'':'hide') +'">使用面板导入或使用root账号导入，不受配额影响</li>'+
+              '<li>配额容量：如需取消容量配额，请设为“0”</li>'+
+            '</ul>'+
+          '</div>',
+          yes:function (indexs) { 
+            var quota_size = $('[name="quota_size"]').val()
+            if(type === 'site' || type === 'ftp'){
+              bt.public.modify_path_quota({data:JSON.stringify({size:quota_size,path:row.path})},function (res) {
+                if(res.status){
+                  bt.msg(res)
+                  layer.close(indexs)
+                  setTimeout(function () { location.reload() },200)
+                }else{
+                  layer.msg(res.msg,{ icon:res.status?1:2, area:'650px',time:0,shade:.3,closeBtn:2})
+                }
+              })
+            }else{
+              bt.public.modify_mysql_quota({data:JSON.stringify({size:quota_size,db_name:row.name})},function (res) {
+                bt.msg(res)
+                if(res.status){
+                  layer.close(indexs)
+                  setTimeout(function () { location.reload() },200)
+                }
+              })
+            }
+          }
+        })
+      }
+    }
+  }
+}
+
 
 var dynamic = {
   loadList: [],

@@ -42,10 +42,16 @@ class FileExecuteDeny:
         if not conf:
             return False
         data = re.findall('BEGIN_DENY_.*',conf)
-        deny_name = [i.split('_')[-1] for i in data]
+        deny_name = []
+        for i in data:
+            tmp = i.split('_')
+            if len(tmp) > 2:
+                deny_name.append('_'.join(tmp[2:]))
+            else:
+                deny_name.append(tmp[-1])
         result = []
         for i in deny_name:
-            reg = '#BEGIN_DENY_{}\n\s*location\s*\~\*\s*\^(.*)\.\*.*\((.*)\)\$'.format(i)
+            reg = '#BEGIN_DENY_{}\n\s*location\s*\~\*\s*\^(.*)\.\*.*\((.*)\)\$'.format(i.replace("|","\|"))
             deny_directory = re.search(reg,conf).groups()[0]
             deny_suffix = re.search(reg,conf).groups()[1]
             result.append({'name':i,'dir':deny_directory,'suffix':deny_suffix})
@@ -56,10 +62,16 @@ class FileExecuteDeny:
         if not conf:
             return False
         data = re.findall('BEGIN_DENY_.*',conf)
-        deny_name = [i.split('_')[-1] for i in data]
+        deny_name = []
+        for i in data:
+            tmp = i.split('_')
+            if len(tmp) > 2:
+                deny_name.append('_'.join(tmp[2:]))
+            else:
+                deny_name.append(tmp[-1])
         result = []
         for i in deny_name:
-            reg = '#BEGIN_DENY_{}\n\s*<Directory\s*\~\s*"(.*)\.\*.*\((.*)\)\$'.format(i)
+            reg = '#BEGIN_DENY_{}\n\s*<Directory\s*\~\s*"(.*)\.\*.*\((.*)\)\$'.format(i.replace("|","\|"))
             deny_directory = re.search(reg,conf).groups()[0]
             deny_suffix = re.search(reg,conf).groups()[1]
             result.append({'name':i,'dir':deny_directory,'suffix':deny_suffix})
@@ -70,10 +82,16 @@ class FileExecuteDeny:
         if not conf:
             return False
         data = re.findall('BEGIN_DENY_.*',conf)
-        deny_name = [i.split('_')[-1] for i in data]
+        deny_name = []
+        for i in data:
+            tmp = i.split('_')
+            if len(tmp) > 2:
+                deny_name.append('_'.join(tmp[2:]))
+            else:
+                deny_name.append(tmp[-1])
         result = []
         for i in deny_name:
-            reg = '#BEGIN_DENY_{}\n\s*rules\s*RewriteRule\s*\^(.*)\.\*.*\((.*)\)\$'.format(i)
+            reg = '#BEGIN_DENY_{}\n\s*rules\s*RewriteRule\s*\^(.*)\.\*.*\((.*)\)\$'.format(i.replace("|","\|"))
             deny_directory = re.search(reg, conf).groups()[0]
             deny_suffix = re.search(reg,conf).groups()[1]
             result.append({'name':i,'dir':deny_directory,'suffix':deny_suffix})

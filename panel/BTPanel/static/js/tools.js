@@ -768,10 +768,12 @@ var bt_tools = {
               template = '<div class="bt_batch"><label><i class="cust—checkbox cursor-pointer checkbox_' + this.random + '" data-checkbox="all"></i><input type="checkbox" lass="cust—checkbox-input" /></label>' + (typeof item.config != 'undefined' ? '<button class="btn btn-default btn-sm set_batch_option bt-disabled">批量' + item.config.title + '</button>' : '<div class="bt_table_select_group bt-disabled not-select"><span class="bt_select_value"><span class="bt_select_tips">请选择批量操作<em></em></span><span class="glyphicon glyphicon-triangle-bottom ml5"></span></span><ul class="bt_selects ">' + _html + '</ul></div><button class="btn btn-default btn-sm set_batch_option bt-disabled" >' + item.buttonValue + '</button>') + '</div>';
               break;
             case 'page':
-              this.config.page = item;
-              var pageNumber = bt.get_cookie('page_number');
-              if (this.config.cookiePrefix && pageNumber) this.config.page.number = pageNumber;
-              template = this.$reader_page(this.config.page, '<div><span class="Pcurrent">1</span><span class="Pcount">共0条数据</span></div>');
+              this.config.page = item
+              // var pageNumber = bt.get_cookie('page_number')
+              var pageNumber = this.$get_page_number();
+              // if (this.config.cookiePrefix && pageNumber) this.config.page.number = pageNumber
+              if (pageNumber) this.config.page.number = pageNumber;
+              template = this.$reader_page(this.config.page, '<div><span class="Pcurrent">1</span><span class="Pcount">共0条数据</span></div>')
               break;
           }
           if (template) {
@@ -824,7 +826,7 @@ var bt_tools = {
         $page.find('a').addClass('page_link_' + this.random);
         template += $page.html();
         if (config.numberStatus) {
-          var className = 'page_select_' + this.random, number = bt.get_cookie('page_number');
+          var className = 'page_select_' + this.random, number = _that.$get_page_number();
           template += '<select class="page_select_number ' + className + '">';
           $.each(config.numberList, function (index, item) {
             template += '<option value="' + item + '" ' + ((number || config.number) == item ? 'selected' : '') + '>' + item + '条/页</option>';
@@ -947,12 +949,13 @@ var bt_tools = {
           $(_that.config.el).on(item.eventType || 'click', '.' + key, function (ev) {
             var index = $(this).parents('tr').index(),
               data1 = $(this).data(),
-              arry = [];
+              arry = [],
+              column_data = _that.config.column[$(this).parents('td').index()];
             switch (item.type) {
               case 'rows':
                 _that.event_rows_model = {
                   el: $(this),
-                  model: _that.config.column[$(this).parents('td').index()],
+                  model: column_data,
                   rows: _that.data[index],
                   index: index
                 }
@@ -1045,7 +1048,7 @@ var bt_tools = {
                 break;
               case 'page_select':
                 var limit = parseInt($(this).val());
-                bt.set_cookie('page_number', limit);
+                _that.$set_page_number(limit);
                 _that.config.page.number = limit;
                 _that.config.page.page = 1;
                 _that.$refresh_table_list(true);
@@ -1075,7 +1078,7 @@ var bt_tools = {
               case 'eye_open_password':
                 if ($(this).hasClass('glyphicon-eye-open')) {
                   $(this).addClass('glyphicon-eye-close').removeClass('glyphicon-eye-open');
-                  $(this).prev().text(_that.data[index].password);
+                  $(this).prev().text(_that.data[index][column_data.fid]);
                 } else {
                   $(this).addClass('glyphicon-eye-open').removeClass('glyphicon-eye-close');
                   $(this).prev().html('<i>**********</i>');
@@ -1083,7 +1086,7 @@ var bt_tools = {
                 return false;
                 break;
               case 'copy_password':
-                bt.pub.copy_pass(_that.data[index].password);
+                bt.pub.copy_pass(_that.data[index][column_data.fid]);
                 return false;
                 break;
             }
@@ -1121,12 +1124,33 @@ var bt_tools = {
       },
 
       /**
+       * @description 获取分页条数
+       * @return 返回分页条数
+       */
+      $get_page_number: function () {
+        var name = this.config.pageName;
+        if (name) {
+          return bt.get_cookie(name + '_page_number');
+        }
+      },
+
+      /**
+       * @description 设置分页条数
+       * @param {object} limit 分页条数
+       * @return void
+       */
+      $set_page_number: function (limit) {
+        var name = this.config.pageName;
+        if (name) bt.set_cookie(name + '_page_number', limit);
+      },
+
+      /**
        * @description 请求数据，
        * @param {object} param 参数和请求路径
        * @return void
        */
       $http: function (success) {
-        var page_number = bt.get_cookie('page_number'),
+        var page_number = this.$get_page_number(),
           that = this,
           param = {},
           config = this.config,
@@ -1134,10 +1158,12 @@ var bt_tools = {
           _search = config.search,
           _sort = config.sort || {};
         if (_page) {
-          if (page_number) _page.number = page_number
-          param[_page.numberParam] = _page.number, param[_page.pageParam] = _page.page;
-          bt.set_cookie('page_number', _page.number);
+          if (page_number && !_page.number) _page.number = page_number
+          if (_page.defaultNumber) _page.number = _page.defaultNumber
+          param[_page.numberParam] = _page.number, param[_page.pageParam] = _page.page
+          // bt.set_cookie('page_number', _page.number)
         }
+        
         if (_search) param[_search.searchParam] = _search.value;
         if (this.config.beforeRequest) {
           config.param = this.config.beforeRequest($.extend(config.param, param, _sort));
@@ -1274,7 +1300,7 @@ var bt_tools = {
           that.$check_event_bind(item.name, event_group)
         }
         html += '<div class="' + (item.dispaly || 'inlineBlock') + ' ' + _that.$verify(item.hide, 'hide', true) + ' ' + (item['class'] || '') + '">';
-        var _value = typeof that.data[item.name] !== "undefined" && that.data[item.name] != '' ? that.data[item.name] : (item.value || '')
+        var _value = typeof that.data[item.name] !== "undefined" && that.data[item.name] !== '' ? that.data[item.name] : (item.value || '')
         switch (item.type) {
           case 'text': // 文本选择
           case 'checkbox': // 复选框
@@ -2242,7 +2268,6 @@ var bt_tools = {
           this.fragment.splice(0, 150)
           this.el.html(this.fragment.join(''))
         } else {
-          console.log(data)
           this.el.append(rdata)
         }
         this.el.scrollTop(this.el[0].scrollHeight)

@@ -6,6 +6,7 @@
 # +-------------------------------------------------------------------
 # | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
+import base64
 import public,re,sys,os,nginx,apache,json,time,ols
 try:
     import pyotp
@@ -361,6 +362,8 @@ class config:
 
     
     def setPassword(self,get):
+        get.password1 = public.url_decode(get.password1)
+        get.password2 = public.url_decode(get.password2)
         if get.password1 != get.password2: return public.returnMsg(False,'USER_PASSWORD_CHECK')
         if len(get.password1) < 5: return public.returnMsg(False,'USER_PASSWORD_LEN')
         if not self.check_password_safe(get.password1): return public.returnMsg(False,'密码复杂度验证失败，要求：长度大于8位，数字、大写字母、小写字母、特殊字符最少3项组合')
@@ -377,6 +380,8 @@ class config:
         return public.returnMsg(True,'USER_PASSWORD_SUCCESS')
     
     def setUsername(self,get):
+        get.username1 = public.url_decode(get.username1)
+        get.username2 = public.url_decode(get.username2)
         if get.username1 != get.username2: return public.returnMsg(False,'USER_USERNAME_CHECK')
         if len(get.username1) < 3: return public.returnMsg(False,'USER_USERNAME_LEN')
         public.M('users').where("username=?",(session['username'],)).setField('username',get.username1.strip())
@@ -392,6 +397,8 @@ class config:
 
     # 创建新用户
     def create_user(self,args):
+        args.username = public.url_decode(args.username)
+        args.password = public.url_decode(args.password)
         if session['uid'] != 1: return public.returnMsg(False,'没有权限!')
         if len(args.username) < 2: return public.returnMsg(False,'用户名不能少于2位')
         if len(args.password) < 8: return public.returnMsg(False,'密码不能少于8位')
@@ -425,11 +432,13 @@ class config:
         username = public.M('users').where('id=?',(args.id,)).getField('username')
         pdata = {}
         if 'username' in args:
+            args.username = public.url_decode(args.username)
             if len(args.username) < 2: return public.returnMsg(False,'用户名不能少于2位')
             pdata['username'] = args.username.strip()
 
         if 'password' in args:
             if args.password:
+                args.password = public.url_decode(args.password)
                 if len(args.password) < 8: return public.returnMsg(False,'密码不能少于8位')
                 pdata['password'] = public.password_salt(public.md5(args.password.strip()),username=username)
 
@@ -485,8 +494,8 @@ class config:
             isReWeb = True
         
         if get.webname != session['title']: 
-            session['title'] = public.xssencode(get.webname)
-            public.SetConfigValue('title',public.xssencode(get.webname))
+            session['title'] = public.xssencode2(get.webname)
+            public.SetConfigValue('title',public.xssencode2(get.webname))
 
         limitip = public.readFile('data/limitip.conf')
         if get.limitip != limitip: 
@@ -909,17 +918,48 @@ class config:
                 g.rm_ssl = True
                 return public.returnMsg(True,'PANEL_SSL_CLOSE')
             else:
-                public.ExecShell('pip install cffi')
-                public.ExecShell('pip install cryptography')
-                public.ExecShell('pip install pyOpenSSL')
-                try:
-                    if not self.CreateSSL(): return public.returnMsg(False,'PANEL_SSL_ERR')
+                # public.ExecShell('pip install cffi')
+                # public.ExecShell('pip install cryptography')
+                # public.ExecShell('pip install pyOpenSSL')
+                if get.cert_type in [2,'2']:
+                    result = self.SavePanelSSL(get)
+                    if not result['status']: return result
                     public.writeFile(sslConf,'True')
-                except:
-                    return public.returnMsg(False,'PANEL_SSL_ERR')
+                else:
+                    try:
+                        if not self.CreateSSL(): return public.returnMsg(False,'PANEL_SSL_ERR')
+                        public.writeFile(sslConf,'True')
+                    except:
+                        return public.returnMsg(False,'PANEL_SSL_ERR')
                 return public.returnMsg(True,'PANEL_SSL_OPEN')
     #自签证书
     def CreateSSL(self):
+        userInfo = public.get_user_info()
+        if userInfo:
+            domains = []
+            req_host = public.GetHost()
+            server_ip = public.get_ip()
+            domains.append(req_host)
+            if server_ip != req_host and not server_ip in ['127.0.0.1','::1','localhost']:
+                domains.append(server_ip)
+            pdata = {
+                "action":"get_domain_cert",
+                "company":"宝塔面板",
+                "domain":','.join(domains),
+                "uid":userInfo['uid'],
+                "access_key":userInfo['access_key'],
+                "panel":1
+            }
+            cert_api = 'https://api.bt.cn/bt_cert'
+            result = json.loads(public.httpPost(cert_api,{'data': json.dumps(pdata)}))
+            if 'status' in result:
+                if result['status']:
+                    public.writeFile('ssl/certificate.pem',result['cert'])
+                    public.writeFile('ssl/privateKey.pem',result['key'])
+                    public.writeFile('ssl/baota_root.pfx',base64.b64decode(result['pfx']),'wb+')
+                    public.writeFile('ssl/root_password.pl',result['password'])
+                    return True
+
         if os.path.exists('ssl/input.pl'): return True
         import OpenSSL
         key = OpenSSL.crypto.PKey()
@@ -934,6 +974,7 @@ class config:
         cert.sign( key, 'md5' )
         cert_ca = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
         private_key = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
+
         if len(cert_ca) > 100 and len(private_key) > 100:
             public.writeFile('ssl/certificate.pem',cert_ca,'wb+')
             public.writeFile('ssl/privateKey.pem',private_key,'wb+')
@@ -1024,6 +1065,8 @@ class config:
             if os.path.exists('/etc/redhat-release'):
                 phpini_file = '/usr/local/lsws/lsphp' + get.version + '/etc/php.ini'
         phpini = public.readFile(phpini_file)
+        if not phpini:
+            return public.returnMsg(False,"读取PHP配置文件出错，请尝试重新安装这个PHP！")
         result = []
         for g in gets:
             rep = g['name'] + r'\s*=\s*([0-9A-Za-z_&/ ~]+)(\s*;?|\r?\n)'
@@ -1266,8 +1309,30 @@ class config:
     #获取面板证书
     def GetPanelSSL(self,get):
         cert = {}
-        cert['privateKey'] = public.readFile('ssl/privateKey.pem')
-        cert['certPem'] = public.readFile('ssl/certificate.pem')
+        key_file = 'ssl/privateKey.pem'
+        cert_file = 'ssl/certificate.pem'
+        if not os.path.exists(key_file):
+            self.CreateSSL()
+        cert['privateKey'] = public.readFile(key_file)
+        cert['certPem'] = public.readFile(cert_file)
+        cert['download_root'] = False
+        cert['info'] = {}
+        if not cert['privateKey']:
+            cert['privateKey'] = ''
+            cert['certPem'] = ''
+        else:
+            cert['info'] = public.get_cert_data(cert_file)
+            if not cert['info']:
+                self.CreateSSL()
+                cert['info'] = public.get_cert_data(cert_file)
+            if cert['info']:
+                if cert['info']['issuer'] == '宝塔面板':
+                    if os.path.exists('ssl/baota_root.pfx'):
+                        cert['download_root'] = True
+                        cert['root_password'] = public.readFile('ssl/root_password.pl')
+                
+
+        
         cert['rep'] = os.path.exists('ssl/input.pl')
         return cert
     
@@ -1283,19 +1348,24 @@ class config:
             public.writeFile(certPath,get.certPem)
         if not public.CheckCert(checkCert): return public.returnMsg(False,'证书错误,请检查!')
         public.writeFile('ssl/input.pl','True')
+        public.writeFile('data/reload.pl','True')
         return public.returnMsg(True,'证书已保存!')
 
 
     #获取配置
     def get_config(self,get):
+        data = {}
         if 'config' in session:
             session['config']['distribution'] = public.get_linux_distribution()
             session['webserver'] = public.get_webserver()
             session['config']['webserver'] = session['webserver']
-            return session['config']
-        data = public.M('config').where("id=?",('1',)).field('webserver,sites_path,backup_path,status,mysql_root').find()
+            data = session['config']
+        if not data:
+            data = public.M('config').where("id=?",('1',)).field('webserver,sites_path,backup_path,status,mysql_root').find()
         data['webserver'] = public.get_webserver()
         data['distribution'] = public.get_linux_distribution()
+        data['request_iptype'] = self.get_request_iptype()
+        data['request_type'] = self.get_request_type()
         return data
     
 
@@ -1431,6 +1501,8 @@ class config:
         public.ExecShell("ln -sf %s %s" % (php_fpm_src,php_fpm))
         public.ExecShell("ln -sf %s %s" % (php_pecl_src,php_pecl))
         public.ExecShell("ln -sf %s %s" % (php_pear_src,php_pear))
+        import jobs
+        jobs.set_php_cli_env()
         if is_chattr != -1:  public.ExecShell('chattr +i /usr/bin')
         public.WriteLog('面板设置','设置PHP-CLI版本为: %s' % get.php_version)
         return public.returnMsg(True,'设置成功!')
@@ -2047,7 +2119,7 @@ class config:
             return public.returnMsg(False,'状态码范围错误!')
         
         public.save_config('abort',get.status_code)
-        public.WriteLog('面板设置','将未授权响应状态码设置为:'.format(get.status_code))
+        public.WriteLog('面板设置','将未授权响应状态码设置为:{}'.format(get.status_code))
         return public.returnMsg(True,'设置成功!')
 
     def get_not_auth_status(self):
@@ -2061,3 +2133,70 @@ class config:
             return status_code
         except:
             return 0
+
+    def get_request_iptype(self,get = None):
+        '''
+            @name 获取云端请求线路
+            @author hwliang<2022-02-09>
+            @return auto/ipv4/ipv6        
+        '''
+
+        v4_file = '{}/data/v4.pl'.format(public.get_panel_path())
+        if not os.path.exists(v4_file): return 'auto'
+        iptype = public.readFile(v4_file).strip()
+        if not iptype: return 'auto'
+        if iptype == '-4': return 'ipv4'
+        return 'ipv6'
+
+    
+    def set_request_iptype(self,get):
+        '''
+            @name 设置云端请求线路
+            @author hwliang<2022-02-09>
+            @param iptype<str> auto/ipv4/ipv6
+            @return dict
+        '''
+        v4_file = '{}/data/v4.pl'.format(public.get_panel_path())
+        if not 'iptype' in get:
+            return public.returnMsg(False,'参数错误!')
+        if get.iptype == 'auto':
+            public.writeFile(v4_file,' ')
+        elif get.iptype == 'ipv4':
+            public.writeFile(v4_file,' -4 ')
+        else:
+            public.writeFile(v4_file,' -6 ')
+        public.WriteLog('面板设置','将云端请求线路设置为:{}'.format(get.iptype))
+        return public.returnMsg(True,'设置成功!')
+
+
+    def get_request_type(self,get= None):
+        '''
+            @name 获取云端请求方式
+            @author hwliang<2022-02-09>
+            @return python/curl/php        
+        '''
+        http_type_file = '{}/data/http_type.pl'.format(public.get_panel_path())
+        if not os.path.exists(http_type_file): return 'python'
+        http_type = public.readFile(http_type_file).strip()
+        if not http_type:
+            os.remove(http_type_file)
+            return 'python'
+        return http_type
+
+    
+    def set_request_type(self,get):
+        '''
+            @name 设置云端请求方式
+            @author hwliang<2022-02-09>
+            @param http_type<str> python/curl/php
+            @return dict
+        '''
+        http_type_file = '{}/data/http_type.pl'.format(public.get_panel_path())
+        if not 'http_type' in get:
+            return public.returnMsg(False,'参数错误!')
+        if get.http_type == 'php':
+            if not os.listdir('{}/php'.format(public.get_setup_path())): return public.returnMsg(False,'没有可用的PHP版本!')
+
+        public.writeFile(http_type_file,get.http_type)
+        public.WriteLog('面板设置','将云端请求方式设置为:{}'.format(get.http_type))
+        return public.returnMsg(True,'设置成功!')

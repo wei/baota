@@ -22,3 +22,4 @@ if [ "$actionType" == 'install' ];then
 	bash lib.sh
 fi
 bash $name.sh $actionType $version
+echo '|-Successify --- 命令已执行! ---'

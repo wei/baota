@@ -1,5 +1,9 @@
-
-if (bind_user == 'True') new BindAccount().installBindUser();
+try {
+  if (bind_user == 'True'){
+    var bindAccount = new BindAccount();
+    bindAccount.installBindUser();
+  }
+} catch (error) {}
 
 $("select[name='network-io'],select[name='disk-io']").change(function () {
   var key = $(this).val(), type = $(this).attr('name')
@@ -295,8 +299,9 @@ var index = {
           bt.system.re_memory(function (res) {
             that.next().show()
             clearInterval(setInter)
+            var memory = data.memRealUsed - res.memRealUsed
             option.series[0].detail = $.extend(option.series[0].detail, {
-              formatter: "已释放\n" + bt.format_size(data.memRealUsed - res.memRealUsed),
+              formatter: "已释放\n" + bt.format_size(memory > 0 ? memory : 0) + "",
               lineHeight: 18,
               padding: [5, 0]
             })
@@ -342,11 +347,12 @@ var index = {
       else {
         $(".bind-weixin a").attr("href", "javascript:;");
         $(".bind-weixin a").click(function () {
+
           bt.msg({ msg: '请先绑定宝塔账号!', icon: 2 });
         })
       }
     })
-    setTimeout(function () { _this.get_index_list() }, 400)
+    // setTimeout(function () { _this.get_index_list() }, 400)
     setTimeout(function () { _this.net.init() }, 500);
     setTimeout(function () { _this.iostat.init() }, 500);
     setTimeout(function () { _this.get_warning_list() }, 600);
@@ -420,7 +426,7 @@ var index = {
       // 动态添加磁盘，并赋值disk_view
       if (_this.chart_view.disk == undefined) {
         for (var i = 0; i < res.disk.length; i++) {
-          var diskHtml = "<li class='rank col-xs-6 col-sm-3 col-md-3 col-lg-2 mtb20 circle-box text-center'><div id='diskName" + i + "'></div><div class='chart-li' id='diskChart" + i + "'></div><div id='disk" + i + "'></div></li>";
+          var diskHtml = "<li class='rank col-xs-6 col-sm-3 col-md-3 col-lg-2 mtb20 circle-box text-center'><div id='diskName" + i + "' class='diskName'></div><div class='chart-li' id='diskChart" + i + "'></div><div id='disk" + i + "'></div></li>";
           $("#systemInfoList").append(diskHtml);
           _this.disk_view.push(echarts.init(document.querySelector("#diskChart" + i)));
         }
@@ -605,7 +611,7 @@ var index = {
       this.series_option.series[0].detail.color = this.chart_json.disk[i].color
       this.chart_view.disk[i].setOption(this.series_option, true)
       $("#disk" + i).text(this.chart_result.disk[i].size[1] + " / " + this.chart_result.disk[i].size[0])
-      $("#diskName" + i).text(this.chart_result.disk[i].path)
+      $("#diskName" + i).text(this.chart_result.disk[i].path).attr('title', this.chart_result.disk[i].path)
     }
   },
   /**
@@ -667,6 +673,8 @@ var index = {
       var rlen = rdata.length;
       var clickName = '';
       var setup_length = 0;
+      var softboxsum = 12;
+      var softboxcon = '';
       for (var i = 0; i < rlen; i++) {
         if (rdata[i].setup) {
           setup_length++;
@@ -697,15 +705,41 @@ var index = {
         }
       }
       $("#indexsoft").html(con);
+            
+      // 推荐安装软件
+      try {
+        var recomConfig = product_recommend.get_recommend_type(1)
+        if(recomConfig){
+          var pay_status = product_recommend.get_pay_status();
+          for (var i = 0; i < recomConfig['list'].length; i++) {
+            const item = recomConfig['list'][i];
+            if(setup_length > softboxsum) break;
+            if(pay_status.is_pay && item['install']) continue;
+            softboxcon += '<div class="col-sm-3 col-md-3 col-lg-3">\
+              <div class="recommend-soft recom-iconfont">\
+                <div class="product-close hide">关闭推荐</div>\
+                <div class="images"><img src="/static/img/soft_ico/ico-'+ item['name'] +'.png"></div>\
+                <div class="product-name">'+ item['title'] +'</div>\
+                <div class="product-pay-btn">\
+                '+ ((item['isBuy'] && !item['install'])?
+                '<button class="btn btn-sm btn-success" style="margin-left:0;" onclick="bt.soft.install(\''+ item['name'] +'\')">立即安装</button>':
+                '<a class="btn btn-sm btn-default mr5 '+ (!item.preview?'hide':'') +'" href="'+ item.preview +'" target="_blank">预览</a><button type="submit" class="btn btn-sm btn-success" onclick=\"product_recommend.pay_product_sign(\'ltd\','+ item.pay +')\">购买</button>') +'\
+                </div>\
+              </div>\
+            </div>'
+            setup_length ++;
+          }
+        }
+      } catch (error) {
+        console.log(error)
+      }
       //软件位置移动
-      var softboxsum = 12;
-      var softboxcon = '';
       if (setup_length <= softboxsum) {
         for (var i = 0; i < softboxsum - setup_length; i++) {
           softboxcon += '<div class="col-sm-3 col-md-3 col-lg-3 no-bg"></div>'
-        }
-        $("#indexsoft").append(softboxcon);
+        }  
       }
+      $("#indexsoft").append(softboxcon);
       $("#indexsoft").dragsort({ dragSelector: ".spanmove", dragBetween: true, dragEnd: saveOrder, placeHolderTemplate: "<div class='col-sm-3 col-md-3 col-lg-3 dashed-border'></div>" });
 
       function saveOrder () {
@@ -716,7 +750,7 @@ var index = {
     })
   },
   check_update: function () {
-    var _load = bt.load('正在获取更新内容，请稍后...');
+    var _load = bt.load('正在获取更新内容，请稍候...');
     bt.system.check_update(function (rdata) {
       _load.close();
       if (rdata.status === false) {
@@ -1152,7 +1186,7 @@ var index = {
         '</div>',
       success: function () {
         $('.warning_again_scan').click(function () {
-          var loadT = layer.msg('正在重新检测安全风险，请稍后...', { icon: 16 });
+          var loadT = layer.msg('正在重新检测安全风险，请稍候...', { icon: 16 });
           that.get_warning_list(true, function () {
             layer.msg('扫描成功', { icon: 1 });
             reader_warning_list(that.warning_list);
@@ -1235,7 +1269,7 @@ var index = {
    * @return 无返回值
   */
   waring_check_find: function (model_name, callback) {
-    var loadT = layer.msg('正在检测指定模块，请稍后...', { icon: 16, time: 0 });
+    var loadT = layer.msg('正在检测指定模块，请稍候...', { icon: 16, time: 0 });
     bt.send('check_find', 'warning/check_find', { m_name: model_name }, function (res) {
       bt.msg(res);
       if (res.status !== false) {
@@ -1252,15 +1286,86 @@ var index = {
    * @return 无返回值
   */
   warning_set_ignore: function (model_name, callback) {
-    var loadT = layer.msg('正在设置模块状态，请稍后...', { icon: 16, time: 0 });
+    var loadT = layer.msg('正在设置模块状态，请稍候...', { icon: 16, time: 0 });
     bt.send('set_ignore', 'warning/set_ignore', { m_name: model_name }, function (res) {
       bt.msg(res);
       if (res.status !== false) {
         if (callback) callback(res);
       }
     });
-  }
+  },
+  /**
+   * @description 获取当前的产品状态
+   */
+   get_product_status: function () {
+    // var loadT = layer.msg('正在获取产品状态，请稍候...', { icon: 16, time: 0 })
+    bt.send('get_pd', 'ajax/get_pd', {}, function (res) {
+      $('.btpro-gray').replaceWith($(res[0]));
+      bt.set_cookie('pro_end', res[1]);
+      bt.set_cookie('ltd_end', res[2]);
+      if(res[1] === 0){
+        $(".btpro span").click(function(e){
+          layer.confirm('切换回免费版可通过解绑账号实现', { icon: 3, btn: ['解绑账号'], closeBtn: 2, title: '是否取消授权' }, function () {
+              $.post('/ssl?action=DelToken', {}, function (rdata) {
+                  layer.msg(rdata.msg);
+                  setTimeout(function () {
+                      window.location.reload();
+                  },2000);
+              });
+          });
+          e.stopPropagation();
+        });
+      }
+    })
+  },
+    /**
+   * @description 推荐进阶版产品
+  */
+     recommend_paid_version: function () {
+      try {
+        var recomConfig = product_recommend.get_recommend_type(0)
+        var pay_status = product_recommend.get_pay_status()
+        var is_pay = pay_status.is_pay;
+        var advanced =  pay_status.advanced;
+        var end_time = pay_status.end_time;
+        var html = '',list_html = '';
+        if(!is_pay) advanced = ''; //未购买的时候，使用推荐内容
+        if(recomConfig){
+          var item = recomConfig;
+          for (let j = 0; j < item['ps'].length; j++) {
+            const element = item['ps'][j];
+            list_html += '<div class="item">'+ element +'</div>';
+          }
+          var pay_html = '';
+          if(is_pay){
+            pay_html = '<div class="product-buy '+ (advanced || item.name) +'-type">到期时间：<span>'+ (end_time === 0?'永久授权':(end_time === -2?'已过期':bt.format_data(end_time,'yyyy-MM-dd')) + '&nbsp;&nbsp;<a class="btlink" href="javascript:;" onclick="product_recommend.pay_product_sign(\''+ advanced +'\','+ item.pay +')">续费</a>') +'</span></div>'
+          }else{
+            pay_html = '<div class="product-buy"><button type="button" class="btn btn-xs btn-success" onclick="product_recommend.pay_product_sign(\''+ (advanced || item.name) +'\','+ item.pay +')">立即购买</button></div>'
+          }
+          html = '<div class="conter-box bgw">\
+            <div class="recommend-top pd15 '+ (is_pay?( advanced +'-bg'):'') +'">'+ (!is_pay?pay_html:'') +'<div class="product-ico '+ (advanced || item.name) +''+ (!is_pay?'-pay':'') +'-ico"></div>' + (is_pay?pay_html:'') +'\
+              <div class="product-label">'+ list_html +'</div>\
+            </div>\
+          </div>'
+          $('#home-recommend').html(html)
+        }
+      } catch (error) {
+        console.log(error)
+      }
+    },
+    /**
+     * @description 推荐任务管理器
+    */
+    recommend_task_manager: function () {
+      
+    }
 }
+index.get_product_status();
 index.get_init();
 index.consultancy_services()
 //setTimeout(function () { index.get_cloud_list() }, 800);
+
+product_recommend.init(function(){
+  index.recommend_paid_version()
+  index.get_index_list();
+})

@@ -100,8 +100,6 @@ def DownloadHook(count, blockSize, totalSize):
     pre = pre1
 
 # 写输出日志
-
-
 def WriteLogs(logMsg):
     try:
         global logPath
@@ -351,6 +349,8 @@ def systemTask():
                         lpro = 100
                     sql.table('load_average').add('pro,one,five,fifteen,addtime', (lpro, load_average['one'], load_average['five'], load_average['fifteen'], addtime))
                     sql.table('load_average').where("addtime<?", (deltime,)).delete()
+                    sql.table('process_high_percent').where("addtime<?", (deltime,)).delete()
+                    sql.table('process_tops').where("addtime<?", (deltime,)).delete()
                     sql.close()
                     
                     lpro = None
@@ -430,6 +430,7 @@ def check502():
     try:
         phpversions = public.get_php_versions()
         for version in phpversions:
+            if version in ['52','5.2']: continue
             php_path = '/www/server/php/' + version + '/sbin/php-fpm'
             if not os.path.exists(php_path):
                 continue
@@ -441,8 +442,6 @@ def check502():
         logging.info(ex)
 
 # 处理指定PHP版本
-
-
 def startPHPVersion(version):
     try:
         fpm = '/etc/init.d/php-fpm-'+version
@@ -463,17 +462,17 @@ def startPHPVersion(version):
         pid = '/www/server/php/'+version+'/var/run/php-fpm.pid'
         os.system('pkill -9 php-fpm-'+version)
         time.sleep(0.5)
-        if not os.path.exists(cgi):
-            os.system('rm -f ' + cgi)
-        if not os.path.exists(pid):
-            os.system('rm -f ' + pid)
+        if os.path.exists(cgi):
+            os.remove(cgi)
+        if os.path.exists(pid):
+            os.remove(pid)
         os.system(fpm + ' start')
         if checkPHPVersion(version):
             return True
-
         # 检查是否正确启动
         if os.path.exists(cgi):
             return True
+        return False
     except Exception as ex:
         logging.info(ex)
         return True
@@ -484,6 +483,10 @@ def checkPHPVersion(version):
     try:
         cgi_file = '/tmp/php-cgi-{}.sock'.format(version)
         if os.path.exists(cgi_file):
+            init_file = '/etc/init.d/php-fpm-{}'.format(version)
+            if os.path.exists(init_file):
+                init_body = public.ReadFile(init_file)
+                if not init_body: return True
             uri = "/phpfpm_"+version+"_status?json"
             result = public.request_php(version, uri, '')
             loads(result)
@@ -499,12 +502,16 @@ def check502Task():
         while True:
             check502()
             sess_expire()
+            mysql_quota_check()
             time.sleep(600)
     except Exception as ex:
         logging.info(ex)
         time.sleep(600)
         check502Task()
 
+# MySQL配额检查
+def mysql_quota_check():
+    os.system(get_python_bin() +" /www/server/panel/script/mysql_quota.py > /dev/null")
 
 # session过期处理
 def sess_expire():
@@ -537,10 +544,10 @@ def check_panel_ssl():
         while True:
             lets_info = ReadFile("/www/server/panel/ssl/lets.info")
             if not lets_info:
-                time.sleep(600)
+                time.sleep(3600)
                 continue
             os.system(get_python_bin() + " /www/server/panel/script/panel_ssl_task.py > /dev/null")
-            time.sleep(60)
+            time.sleep(3600)
     except Exception as e:
         public.writeFile("/tmp/panelSSL.pl", str(e), "a+")
 
@@ -549,7 +556,7 @@ def panel_status():
     time.sleep(1)
     panel_pid = get_panel_pid()
     while True:
-        time.sleep(5)
+        time.sleep(30)
         if not panel_pid:
             panel_pid = get_panel_pid()
         if not panel_pid:
@@ -580,8 +587,6 @@ def service_panel(action='reload'):
         os.system("bash /www/server/panel/init.sh {} &".format(action))
 
 # 重启面板服务
-
-
 def restart_panel_service():
     rtips = 'data/restart.pl'
     reload_tips = 'data/reload.pl'
@@ -595,8 +600,6 @@ def restart_panel_service():
         time.sleep(1)
 
 # 取面板pid
-
-
 def get_panel_pid():
     pid = ReadFile('/www/server/panel/logs/panel.pid')
     if pid:

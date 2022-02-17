@@ -720,7 +720,7 @@ var aceEditor = {
           group = group - 1;
         }
       }
-      console.log(element)
+      // console.log(element)
       switch (_type) {
         case 2:
           _this.newly_file_type_dom(element, group, 0);
@@ -824,7 +824,7 @@ var aceEditor = {
         _path = $('.has-children .file_fold.bg').parent().attr('data-menu-path'),
         _type = parseInt($(this).parent().parent().attr('data-edit'));
       if ($(this).parent().parent().parent().attr('data-menu-path') === undefined && parseInt($(this).parent().parent().attr('data-group')) === 1) {
-        console.log('根目录')
+        // console.log('根目录')
         _path = $('.ace_catalogue_title').attr('title');
       }
       // 			return false;
@@ -922,7 +922,7 @@ var aceEditor = {
       _group = parseInt(_active.attr('data-group')),
       _path = _active.parent().attr('data-menu-path'), //当前文件夹新建
       _this = this;
-    console.log(_type);
+    // console.log(_type);
     switch (_type) {
       case 0: //刷新目录
         _active.next().empty();
@@ -1052,7 +1052,7 @@ var aceEditor = {
   },
   // 重命名请求
   rename_currency_req: function (obj, callback) {
-    var loadT = layer.msg('正在重命名文件或目录，请稍后...', { time: 0, icon: 16, shade: [0.3, '#000'] });
+    var loadT = layer.msg('正在重命名文件或目录，请稍候...', { time: 0, icon: 16, shade: [0.3, '#000'] });
     $.post("/files?action=MvFile", {
       sfile: obj.sfile,
       dfile: obj.dfile,
@@ -1064,7 +1064,7 @@ var aceEditor = {
   },
   // 创建文件事件
   create_file_req: function (obj, callback) {
-    var loadT = layer.msg('正在新建文件，请稍后...', { time: 0, icon: 16, shade: [0.3, '#000'] });
+    var loadT = layer.msg('正在新建文件，请稍候...', { time: 0, icon: 16, shade: [0.3, '#000'] });
     $.post("/files?action=CreateFile", {
       path: obj.path
     }, function (res) {
@@ -1074,7 +1074,7 @@ var aceEditor = {
   },
   // 创建目录请求
   create_dir_req: function (obj, callback) {
-    var loadT = layer.msg('正在新建目录，请稍后...', { time: 0, icon: 16, shade: [0.3, '#000'] });
+    var loadT = layer.msg('正在新建目录，请稍候...', { time: 0, icon: 16, shade: [0.3, '#000'] });
     $.post("/files?action=CreateDir", {
       path: obj.path
     }, function (res) {
@@ -1084,7 +1084,7 @@ var aceEditor = {
   },
   // 删除文件请求
   del_file_req: function (obj, callback) {
-    var loadT = layer.msg('正在删除文件，请稍后...', { time: 0, icon: 16, shade: [0.3, '#000'] });
+    var loadT = layer.msg('正在删除文件，请稍候...', { time: 0, icon: 16, shade: [0.3, '#000'] });
     $.post("/files?action=DeleteFile", {
       path: obj.path
     }, function (res) {
@@ -1094,7 +1094,7 @@ var aceEditor = {
   },
   // 删除目录请求
   del_dir_req: function (obj, callback) {
-    var loadT = layer.msg('正在删除文件目录，请稍后...', { time: 0, icon: 16, shade: [0.3, '#000'] });
+    var loadT = layer.msg('正在删除文件目录，请稍候...', { time: 0, icon: 16, shade: [0.3, '#000'] });
     $.post("/files?action=DeleteDir", {
       path: obj.path
     }, function (res) {
@@ -1104,7 +1104,7 @@ var aceEditor = {
   },
   // 临时文件保存
   auto_save_temp: function (obj, callback) {
-    // var loadT = layer.msg('正在新建目录，请稍后...',{time: 0,icon: 16,shade: [0.3, '#000']});
+    // var loadT = layer.msg('正在新建目录，请稍候...',{time: 0,icon: 16,shade: [0.3, '#000']});
     $.post("/files?action=auto_save_temp", {
       filename: obj.filename,
       body: obj.body
@@ -1115,7 +1115,7 @@ var aceEditor = {
   },
   // 获取临时文件内容
   get_auto_save_body: function (obj, callback) {
-    var loadT = layer.msg('正在获取自动保存文件信息，请稍后...', { time: 0, icon: 16, shade: [0.3, '#000'] });
+    var loadT = layer.msg('正在获取自动保存文件信息，请稍候...', { time: 0, icon: 16, shade: [0.3, '#000'] });
     $.post("/files?action=get_auto_save_body", {
       filename: obj.filename
     }, function (res) {
@@ -1194,7 +1194,7 @@ var aceEditor = {
   },
   // 恢复文件历史
   recovery_file_history: function (obj, callback) {
-    var loadT = layer.msg('正在恢复历史文件，请稍后...', { time: 0, icon: 16, shade: [0.3, '#000'] });
+    var loadT = layer.msg('正在恢复历史文件，请稍候...', { time: 0, icon: 16, shade: [0.3, '#000'] });
     $.post("/files?action=re_history", {
       filename: obj.filename,
       history: obj.history
@@ -1205,7 +1205,7 @@ var aceEditor = {
   },
   // 获取文件列表
   get_file_dir_list: function (obj, callback) {
-    var loadT = layer.msg('正在获取文件列表，请稍后...', { time: 0, icon: 16, shade: [0.3, '#000'] }), _this = this;
+    var loadT = layer.msg('正在获取文件列表，请稍候...', { time: 0, icon: 16, shade: [0.3, '#000'] }), _this = this;
     if (obj['p'] === undefined) obj['p'] = 1;
     if (obj['showRow'] === undefined) obj['showRow'] = 200;
     if (obj['sort'] === undefined) obj['sort'] = 'name';
@@ -1219,7 +1219,7 @@ var aceEditor = {
   },
   // 获取历史文件
   get_file_history: function (obj, callback) {
-    var loadT = layer.msg('正在获取历史文件内容，请稍后...', { time: 0, icon: 16, shade: [0.3, '#000'] }), _this = this;
+    var loadT = layer.msg('正在获取历史文件内容，请稍候...', { time: 0, icon: 16, shade: [0.3, '#000'] }), _this = this;
     $.post("/files?action=read_history", { filename: obj.filename, history: obj.history }, function (res) {
       layer.close(loadT);
       if (callback) callback(res);
@@ -1476,8 +1476,8 @@ var aceEditor = {
       layer.msg('当前文件未修改，无需保存!');
       return false;
     }
-    $('.item_tab_' + ACE.id + ' .icon-tool').attr('title', '保存文件中，请稍后..').removeClass('glyphicon-exclamation-sign').addClass('glyphicon-repeat');
-    layer.msg('保存文件中，请稍后<img src="/static/img/ns-loading.gif" style="width:15px;margin-left:5px">', { icon: 0 });
+    $('.item_tab_' + ACE.id + ' .icon-tool').attr('title', '保存文件中，请稍候..').removeClass('glyphicon-exclamation-sign').addClass('glyphicon-repeat');
+    layer.msg('保存文件中，请稍候<img src="/static/img/ns-loading.gif" style="width:15px;margin-left:5px">', { icon: 0 });
     this.saveFileBody({
       path: ACE.path,
       data: ACE.ace.getValue(),
@@ -1617,7 +1617,7 @@ var aceEditor = {
   getFileList: function () { },
   // 获取文件内容-请求
   getFileBody: function (obj, callback) {
-    var loadT = layer.msg('正在获取文件内容，请稍后...', { time: 0, icon: 16, shade: [0.3, '#000'] }), _this = this;
+    var loadT = layer.msg('正在获取文件内容，请稍候...', { time: 0, icon: 16, shade: [0.3, '#000'] }), _this = this;
     $.post("/files?action=GetFileBody", "path=" + encodeURIComponent(obj.path), function (res) {
       layer.close(loadT);
       if (!res.status) {
@@ -1660,7 +1660,7 @@ var aceEditor = {
   },
   // 	保存ace配置
   saveAceConfig: function (data, callback) {
-    var loadT = layer.msg('正在设置配置文件，请稍后...', { time: 0, icon: 16, shade: [0.3, '#000'] }), _this = this;
+    var loadT = layer.msg('正在设置配置文件，请稍候...', { time: 0, icon: 16, shade: [0.3, '#000'] }), _this = this;
     this.saveFileBody({
       path: '/www/server/panel/BTPanel/static/editor/ace.editor.config.json',
       data: JSON.stringify(data),
@@ -1674,7 +1674,7 @@ var aceEditor = {
   },
   // 获取配置文件
   getAceConfig: function (callback) {
-    var loadT = layer.msg('正在获取配置文件，请稍后...', { time: 0, icon: 16, shade: [0.3, '#000'] }), _this = this;
+    var loadT = layer.msg('正在获取配置文件，请稍候...', { time: 0, icon: 16, shade: [0.3, '#000'] }), _this = this;
     this.getFileBody({ path: '/www/server/panel/BTPanel/static/editor/ace.editor.config.json' }, function (rdata) {
       layer.close(loadT);
       _this.setStorage('aceConfig', JSON.stringify(rdata.data));
@@ -1722,6 +1722,7 @@ function openEditorView (type, path, callback) {
     type: 1,
     maxmin: true,
     shade: false,
+    anim:-1,
     area: ['80%', '80%'],
     title: "在线文本编辑器",
     skin: 'aceEditors',
@@ -1908,7 +1909,7 @@ function ajax_encrypt (request) {
   }
 }
 
-
+var gl_error_body = '';
 function ajaxSetup () {
   var my_headers = {};
   var request_token_ele = document.getElementById("request_token_head");
@@ -1944,7 +1945,7 @@ function ajaxSetup () {
 
         error_key = 'We need to make sure this has a favicon so that the debugger does';
         error_find = jqXHR.responseText.indexOf(error_key)
-        if (jqXHR.status == 500 && (jqXHR.responseText.indexOf('运行时发生错误') != -1 || error_find != -1)) {
+        if (jqXHR.status == 500 && jqXHR.responseText.indexOf('运行时发生错误') != -1) {
           if (jqXHR.responseText.indexOf('请先绑定宝塔帐号!') != -1) {
             if ($('.libLogin').length > 0 || $('.radio_account_view').length > 0) return false;
             bt.pub.bind_btname(function () {
@@ -1952,23 +1953,9 @@ function ajaxSetup () {
             });
             return;
           }
-          if (error_find != -1) {
-            var error_body = jqXHR.responseText.split('<!--')[2].replace('-->', '')
-            var tmp = error_body.split('During handling of the above exception, another exception occurred:')
-            error_body = tmp[tmp.length - 1];
-            var error_msg = '<div>\
-						<h3 style="margin-bottom: 10px;">出错了，面板运行时发生错误！</h3>\
-						<pre style="height:635px;word-wrap: break-word;white-space: pre-wrap;margin: 0 0 0px">'+ error_body.trim() + '</pre>\
-						<ul class="help-info-text">\
-							<li style="list-style: none;"><b>很抱歉，面板运行时意外发生错误，请尝试按以下顺序尝试解除此错误：</b></li>\
-							<li style="list-style: none;">1、在[首页]右上角点击修复面板，并退出面板重新登录。</li>\
-							<li style="list-style: none;">2、如上述尝试未能解除此错误，请截图此窗口到宝塔论坛发贴寻求帮助, 论坛地址：<a class="btlink" href="https://www.bt.cn/bbs" target="_blank">https://www.bt.cn/bbs</a></li>\
-						</ul>\
-					</div>'
-
-          } else {
-            var error_msg = jqXHR.responseText;
-          }
+          gl_error_body = jqXHR.responseText;
+          error_msg = jqXHR.responseText.split('<h4 style="font-size: none;">')[1].split("</h4>")[0].replace("面板运行时发生错误:",'').replace("public.PanelError:",'').trim();
+          error_msg += "<br><a class='btlink' onclick='show_error_message()'> >>点击查看详情</a>";
           $(".layui-layer-padding").parents('.layer-anim').remove();
           $(".layui-layer-shade").remove();
           setTimeout(function () {
@@ -1976,10 +1963,10 @@ function ajaxSetup () {
               title: false,
               content: error_msg,
               closeBtn: 2,
-              area: ["1200px", "800px"],
               btn: false,
               shadeClose: false,
               shade: 0.3,
+              icon:2,
               success: function () {
                 $('pre').scrollTop(100000000000)
               }
@@ -1987,12 +1974,47 @@ function ajaxSetup () {
           }, 100)
         }
       }
-      // dataFilter: ajax_decrypt,
-      // beforeSend: ajax_encrypt
     });
   }
 }
 ajaxSetup();
+
+
+function show_error_message() {
+    if (error_find != -1) {
+        var error_body = gl_error_body.split('<!--')[2].replace('-->', '')
+        var tmp = error_body.split('During handling of the above exception, another exception occurred:')
+        error_body = tmp[tmp.length - 1];
+        var error_msg = '<div>\
+        <h3 style="margin-bottom: 10px;">出错了，面板运行时发生错误！</h3>\
+        <pre style="height:635px;word-wrap: break-word;white-space: pre-wrap;margin: 0 0 0px">'+ error_body.trim() + '</pre>\
+        <ul class="help-info-text">\
+          <li style="list-style: none;"><b>很抱歉，面板运行时意外发生错误，请尝试按以下顺序尝试解除此错误：</b></li>\
+          <li style="list-style: none;">1、在[首页]右上角点击修复面板，并退出面板重新登录。</li>\
+          <li style="list-style: none;">2、如上述尝试未能解除此错误，请截图此窗口到宝塔论坛发贴寻求帮助, 论坛地址：<a class="btlink" href="https://www.bt.cn/bbs" target="_blank">https://www.bt.cn/bbs</a></li>\
+        </ul>\
+      </div>'
+
+    } else {
+        var error_msg = gl_error_body;
+    }
+    $(".layui-layer-padding").parents('.layer-anim').remove();
+    $(".layui-layer-shade").remove();
+    setTimeout(function () {
+      layer.open({
+        title: false,
+        content: error_msg,
+        closeBtn: 2,
+        area: ["1200px", "810px"],
+        btn: false,
+        shadeClose: false,
+        shade: 0.3,
+        success: function () {
+          $('pre').scrollTop(100000000000)
+        }
+      });
+    }, 100)
+}
 
 function RandomStrPwd (b) {
   b = b || 32;
@@ -3388,11 +3410,10 @@ function messagebox () {
             reader_message_list()
             break;
           case 2:
-            var loadT = bt.load('正在获取执行日志，请稍后...')
+            var loadT = bt.load('正在获取执行日志，请稍候...')
             bt.send('GetExecLog', 'files/GetExecLog', {}, function (res) {
               loadT.close();
               var exec_log = $('#execLog');
-              console.log(exec_log)
               exec_log.html(res)
               exec_log[0].scrollTop = exec_log[0].scrollHeight
             })
@@ -3405,7 +3426,7 @@ function messagebox () {
       }, 1000)
       reader_message_list()
     }
-  });
+  })
 }
 
 
@@ -3443,7 +3464,7 @@ function message_box () {
 
 function get_message_data (page, callback) {
   if (typeof page === "function") callback = page, page = 1;
-  var loadT = bt.load('正在获取消息列表，请稍后...');
+  var loadT = bt.load('正在获取消息列表，请稍候...');
   bt.send("getData", "data/getData", {
     tojs: 'reader_message_list',
     table: 'tasks',
@@ -3506,27 +3527,36 @@ function reader_realtime_tasks (refresh) {
       html = '<div style="padding:5px;">当前没有任务！</div><div style="position: fixed;bottom: 15px;">若任务长时间未执行，请尝试在首页点【重启面板】来重置任务队列</div>'
       command_install_list.html(html)
     } else {
-      var shell = '', message_split = message.split("\n");
+      var shell = '', message_split = message.split("\n"), del_task = '<a style="color:green" onclick="RemoveTask($id)" href="javascript:;">' + lan.public.del + '</a>', loading_img = "<img src='" + loading + "'/>";
       for (var j = 0; j < message_split.length; j++) {
         shell += message_split[j] + "</br>";
       }
       if (command_install_list.find('li').length) {
         if (command_install_list.find('li').length > res.task.length) command_install_list.find('li:eq(0)').remove();
-        if (task[0].status !== '0' && !command_install_list.find('pre').length) command_install_list.find('li:eq(0)').append('<pre class=\'cmd command_output_pre\'>' + shell + '</pre>')
-        messageBoxWssock.el = command_install_list.find('pre');
+        if(task[0].status === '-1'){
+          var is_scan = task[0].name.indexOf("扫描") !== -1;
+          command_install_list.find('li:eq(0) .state').html((is_scan ? lan.bt.task_scan : lan.bt.task_install) + ' ' + loading_img + ' | ' + del_task.replace('$id', task[0].id));
+        }
+        if (task[0].status !== '0' && !command_install_list.find('pre').length){
+          command_install_list.find('li:eq(0)').append('<pre class=\'cmd command_output_pre\'>' + shell + '</pre>')
+          messageBoxWssock.el = command_install_list.find('pre');
+        }
       } else {
         for (var i = 0; i < task.length; i++) {
-          var item = task[i], task_html = '', del_task = '<a style="color:green" onclick="RemoveTask(' + item.id + ')" href="javascript:;">' + lan.public.del + '</a>', loading_img = "<img src='" + loading + "'/>";
+          var item = task[i], task_html = '';
           if (item.status === '-1' && item.type === 'download') {
             task_html = "<div class='line-progress' style='width:" + message.pre + "%'></div><span class='titlename'>" + item.name + "<a style='margin-left:130px;'>" + (ToSize(message.used) + "/" + ToSize(message.total)) + "</a></span><span class='com-progress'>" + message.pre + "%</span><span class='state'>" + lan.bt.task_downloading + " " + loading_img + " | " + del_task + "</span>";
           } else {
             task_html += '<span class="titlename">' + item.name + '</span>';
             task_html += '<span class="state">';
-            if (item.status !== "-1") {
-              task_html += lan.bt.task_sleep + ' | ' + del_task;
-            } else {
-              var is_scan = item.name.indexOf("扫描") !== -1;
-              task_html += (is_scan ? lan.bt.task_scan : lan.bt.task_install) + ' ' + loading_img + ' | ' + del_task;
+            switch(item.status){
+              case '0':
+                task_html += lan.bt.task_sleep + ' | ' + del_task.replace('$id', item.id);
+                break
+              case '-1':
+                var is_scan = item.name.indexOf("扫描") !== -1;
+                task_html += (is_scan ? lan.bt.task_scan : lan.bt.task_install) + ' ' + loading_img + ' | ' + del_task;
+                break
             }
             task_html += "</span>";
             if (item.type !== "download" && item.status === "-1") {
@@ -3559,8 +3589,7 @@ function reader_realtime_tasks (refresh) {
               }, 100)
             }
           }
-        }
-        );
+        });
       }
     }
   })
@@ -3803,7 +3832,7 @@ var Term = {
       Term.term.write(msg)
       Term.state = 3;
     } else {
-      console.log(ws_event)
+      // console.log(ws_event)
     }
   },
 
@@ -3846,7 +3875,7 @@ var Term = {
     }
   },
   run: function (ssh_info) {
-    var loadT = layer.msg('正在加载终端所需文件，请稍后...', { icon: 16, time: 0, shade: 0.3 });
+    var loadT = layer.msg('正在加载终端所需文件，请稍候...', { icon: 16, time: 0, shade: 0.3 });
     loadScript([
       "/static/js/xterm.js"
     ], function () {
@@ -4006,7 +4035,7 @@ var Term = {
         }
       });
       form.ps = '本地服务器';
-      var loadT = bt.load('正在添加服务器信息，请稍后...');
+      var loadT = bt.load('正在添加服务器信息，请稍候...');
       bt.send('create_host', 'xterm/create_host', form, function (res) {
         loadT.close();
         bt.msg(res);
@@ -4720,6 +4749,7 @@ MessageBox.prototype = {
       $('.debugs').empty();
       $('.debugs').css({ "z-index": "9999" });
       $('.debugs').append('<span>在线</br>客服</span>');
+      bt.set_cookie('pay_source',37)
       bt.soft.updata_ltd(true);
     });
     // 		//重新发送
@@ -5710,7 +5740,7 @@ MessageBox.prototype = {
               //      }
               //                     });
             } catch (err) {
-              console.log("操作1不安全")
+              // console.log("操作1不安全")
             }
           } else {
             try {
@@ -5718,7 +5748,7 @@ MessageBox.prototype = {
               var url = image.src;
               image.setAttribute("onclick", 'box.thumbnail(\'' + url + '\')');
             } catch (err) {
-              console.log("操作2不安全")
+              // console.log("操作2不安全")
             }
           }
           $("#feedback-box").show();
@@ -6163,9 +6193,8 @@ BindAccount.prototype = {
     }
     _this.element.getVerifyCode.on("click", function () {
       if ($(this).hasClass('active')) return;
-      _this.getBindCode(_this.verifyParam, function (res) {
-        if (res.status) _this.countDown(60)
-      });
+      _this.countDown(60);
+      _this.getBindCode(_this.verifyParam);
     });
   },
 
@@ -6234,7 +6263,7 @@ BindAccount.prototype = {
    */
   getAuthToken: function (param) {
     var _this = this;
-    var loadT = bt.load(lan.config.token_get);
+    var loadT = bt.load('正在绑定堡塔账号，请稍候...');
     bt.send('GetAuthToken', 'ssl/GetAuthToken', param, function (rdata) {
       loadT.close();
       if (rdata.status) {
@@ -6291,11 +6320,149 @@ BindAccount.prototype = {
    * @returns void
    */
   getBindCode: function (param, callback) {
-    var loadT = bt.load('获取验证码，请稍后...');
+    var loadT = bt.load('获取验证码，请稍候...');
     bt.send('GetBindCode', 'ssl/GetBindCode', param, function (rdata) {
       loadT.close();
       bt.msg(rdata);
       if (callback) callback(rdata);
+    })
+  }
+}
+
+var product_recommend = {
+  data:null,
+  /**
+   * @description 初始化
+   */
+  init:function(callback){
+    var _this = this;
+    if(location.pathname.indexOf('bind') > -1) return;
+    this.get_product_type(function (rdata) {
+      _this.data = rdata
+      if(callback) callback(rdata)
+    })
+  },
+  /**
+   * @description 获取推荐类型
+   * @param {object} type 参数{type:类型}
+   */
+  get_recommend_type:function(type){
+    var config = null,pathname = location.pathname.replace('/','') || 'home';
+    for (let i = 0; i < this.data.length; i++) {
+      const item = this.data[i];
+      if(item.type == type && item.show) config = item
+    }
+    return config
+  },
+
+  /**
+   * @description 或指定版本事件
+   * @param {} name 
+   */
+  get_version_event:function (item,param) {
+    var pay_status = this.get_pay_status();
+    bt.soft.get_soft_find(item.name,function(res){
+      if((res.type === 12 && pay_status.is_pay && pay_status.advanced !== 'ltd') || !pay_status.is_pay){
+        product_recommend.recommend_product_view(item)
+      }else if(!res.setup){
+        bt.soft.install(item.name)
+      }else{
+        bt.plugin.get_plugin_byhtml(item.name,function(html){
+          if(typeof html === "string"){
+            layer.open({ 
+              type:1,
+              shade:0,
+              skin:'hide',
+              content:html, 
+              success:function(){
+                var is_event = false;
+                for (var i = 0; i < item.eventList.length; i++) {
+                  var data = item.eventList[i];
+                  var oldVersion = data.version.replace('.',''),newVersion = res.version.replace('.','');
+                  if(newVersion <= oldVersion){
+                    is_event = true
+                    setTimeout(function () {                                                                                                                                                                                                                                                                                                                                                                                     
+                      new Function(data.event.replace('$siteName',param))() 
+                    },100)
+                    break; 
+                  }
+                }
+                if(!is_event) new Function(item.eventList[item.eventList.length - 1].event.replace('$siteName',param))() 
+              }
+            })
+          }
+        })
+      }
+
+    })
+  },
+  /**
+   * @description 获取支付状态
+   */
+  get_pay_status:function(){
+    var pro_end = parseInt(bt.get_cookie('pro_end') || -1);
+    var ltd_end = parseInt(bt.get_cookie('ltd_end')  || -1); 
+    var is_pay = pro_end >= -1 && ltd_end > -1; // 是否购买付费版本
+    var advanced = 'ltd'; // 已购买，企业版优先显示
+    if(pro_end === -2 || pro_end > -1) advanced = 'pro';
+    if(ltd_end === -2 || ltd_end > -1) advanced = 'ltd';
+    var end_time = advanced === 'ltd'? ltd_end:pro_end; // 到期时间
+    return { advanced: advanced, is_pay:is_pay,  end_time:end_time };
+  },
+
+  pay_product_sign:function (type,source) {
+    bt.set_cookie('pay_source',source)
+    bt.soft['updata_'+ type ]()
+  },
+  /**
+   * @description 获取项目类型
+   * @param {Function} callback 回调函数
+   */
+  get_product_type:function(callback){
+    bt.send('get_pay_type','ajax/get_pay_type',{},(rdata)=>{
+      bt.set_storage('session','get_pay_type',JSON.stringify(rdata))
+      if(callback) callback(rdata)
+    })
+  },
+  /**
+   * @description 推荐购买产品
+   * @param {Object} pay_id 购买的入口id
+  */
+  recommend_product_view: function (config) {
+    var name = config.name.split('_')[0];
+    var status = this.get_pay_status();
+    bt.open({
+      title:false,
+      area:'650px',
+      btn:false,
+      content:'<div class="ptb15" style="display: flex;">\
+        <div class="product_view"><img src="/static/images/recommend/'+ name +'.png"/></div>\
+        <div class="product_describe ml10">\
+          <div class="describe_title">'+ config.pluginName +'</div>\
+          <div class="describe_ps">'+ config.ps +'</div>\
+          <div class="product_describe_btn">\
+            <a class="btn btn-default mr10 btn-sm productPreview '+ (!config.preview?'hide':'') +'" href="'+ config.preview +'" target="_blank">产品预览</a><button class="btn btn-success btn-sm buyNow">立即购买</button>\
+          </div>\
+        </div>\
+      </div>',
+      success:function () {
+        // 产品预览
+        $('.product_view img').click(function () {
+          layer.open({
+            type:1,
+            title:'查看图片',
+            area:['650px','450px'],
+            closeBtn:2,
+            btn:false,
+            content:'<img src="/static/images/recommend/'+ name +'.png" style="width:100%" />'
+          })
+        })
+        // 立即购买
+        $('.buyNow').click(function(){
+          bt.set_cookie('pay_source',config.pay)
+          bt.soft['updata_' + status.advanced]()
+        })
+      }
     })
   }
 }

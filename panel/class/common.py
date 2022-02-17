@@ -27,7 +27,7 @@ class panelSetup:
             if ua.find('spider') != -1 or g.ua.find('bot') != -1:
                 return redirect('https://www.baidu.com')
         
-        g.version = '7.8.0'
+        g.version = '7.9.0'
         g.title = public.GetConfigValue('title')
         g.uri = request.path
         g.debug = os.path.exists('data/debug.pl')
@@ -202,6 +202,8 @@ class panelAdmin(panelSetup):
         save_path = '/www/server/panel/config/api.json'
         if not os.path.exists(save_path):
             return public.error_not_login('/login')
+
+        
         try:
             api_config = json.loads(public.ReadFile(save_path))
         except:
@@ -222,7 +224,7 @@ class panelAdmin(panelSetup):
                 return public.returnJson(False,'连续20次验证失败,禁止1小时')
 
 
-            if not client_ip in api_config['limit_addr']:
+            if not public.is_api_limit_ip(api_config['limit_addr'],client_ip): #client_ip in api_config['limit_addr']:
                 public.set_error_num(num_key)
                 return public.returnJson(False, 'IP校验失败,您的访问IP为['+client_ip+']')
         else:
@@ -248,7 +250,7 @@ class panelAdmin(panelSetup):
             
             get = get_input()
             if not 'request_token' in get or not 'request_time' in get:
-                return  redirect('/login')
+                return  public.error_not_login('/login')
             g.is_aes = True
             g.aes_key = api_config['key']
         

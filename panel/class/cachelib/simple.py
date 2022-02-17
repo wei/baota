@@ -130,3 +130,4 @@ class SimpleCache(BaseCache):
  
         m.update(strings.encode('utf-8'))
         return m.hexdigest()
+

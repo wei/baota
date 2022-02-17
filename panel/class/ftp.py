@@ -23,8 +23,7 @@ class ftp:
             if not os.path.exists('/www/server/pure-ftpd/sbin/pure-ftpd'): return public.returnMsg(False,'请先到软件商店安装Pure-FTPd服务')
             import files,time
             fileObj=files.files()
-            get['ftp_username'] = get['ftp_username'].strip()
-            if re.search("\W+",get['ftp_username']): return {'status':False,'code':501,'msg':public.getMsg('FTP_USERNAME_ERR_T')}
+            if re.search("\W + ",get['ftp_username']): return {'status':False,'code':501,'msg':public.getMsg('FTP_USERNAME_ERR_T')}
             if len(get['ftp_username']) < 3: return {'status':False,'code':501,'msg':public.getMsg('FTP_USERNAME_ERR_LEN')}
             if not fileObj.CheckDir(get['path']): return {'status':False,'code':501,'msg':public.getMsg('FTP_USERNAME_ERR_DIR')}
             if public.M('ftps').where('name=?',(get.ftp_username.strip(),)).count(): return public.returnMsg(False,'FTP_USERNAME_ERR_EXISTS',(get.ftp_username,))
@@ -36,7 +35,7 @@ class ftp:
             public.ExecShell('chown www.www ' + get.path)
             public.ExecShell(self.__runPath + '/pure-pw useradd ' + username + ' -u www -d ' + get.path + '<<EOF \n' + password + '\n' + password + '\nEOF')
             self.FtpReload()
-            ps=get['ps']
+            ps = public.xssencode2(get['ps'])
             if get['ps']=='': ps= public.getMsg('INPUT_PS');
             addtime=time.strftime('%Y-%m-%d %X',time.localtime())
             

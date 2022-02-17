@@ -6,7 +6,7 @@
 # +-------------------------------------------------------------------
 # | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
-from BTPanel import session,request
+from BTPanel import session,request,cache
 import public,os,json,time,apache,psutil
 class ajax:
 
@@ -958,12 +958,44 @@ class ajax:
                 return panelSite.panelSite().SetHasPwd(get)
         
         if hasattr(get,'status'):
-            if conf.find(public.GetConfigValue('setup_path') + '/stop') != -1:
-                conf = conf.replace(public.GetConfigValue('setup_path') + '/stop',public.GetConfigValue('setup_path') + '/phpmyadmin')
+            pma_path = public.GetConfigValue('setup_path') + '/phpmyadmin'
+            stop_path = public.GetConfigValue('setup_path') + '/stop'
+
+
+            webserver = public.get_webserver()
+            if conf.find(stop_path) != -1:
+                conf = conf.replace(stop_path,pma_path)
                 msg = public.getMsg('START')
+            
+            if webserver == 'nginx':
+                sub_string = '''{};
+        allow 127.0.0.1;
+        allow ::1;
+        deny all'''.format(pma_path)
+                if conf.find(sub_string) != -1:
+                    conf = conf.replace(sub_string,pma_path)
+                    msg = public.getMsg('START')
+                else:
+                    conf = conf.replace(pma_path,sub_string)
+                    msg = public.getMsg('STOP')
+            elif webserver == 'apache':
+                src_string = 'AllowOverride All'
+                sub_string = '''{}
+        Deny from all
+        Allow from 127.0.0.1 ::1 localhost'''.format(src_string,pma_path)
+                if conf.find(sub_string) != -1:
+                    conf = conf.replace(sub_string,src_string)
+                    msg = public.getMsg('START')
+                else:
+                    conf = conf.replace(src_string,sub_string)
+                    msg = public.getMsg('STOP')
             else:
-                conf = conf.replace(public.GetConfigValue('setup_path') + '/phpmyadmin',public.GetConfigValue('setup_path') + '/stop')
-                msg = public.getMsg('STOP')
+                if conf.find(stop_path) != -1:
+                    conf = conf.replace(stop_path,pma_path)
+                    msg = public.getMsg('START')
+                else:
+                    conf = conf.replace(pma_path,stop_path)
+                    msg = public.getMsg('STOP')
             
             public.writeFile(filename,conf)
             public.serviceReload()
@@ -1135,6 +1167,108 @@ class ajax:
     def GetOpeLogs(self,get):
         if not os.path.exists(get.path): return public.returnMsg(False,'AJAX_LOG_FILR_NOT_EXISTS')
         return public.returnMsg(True,public.GetNumLines(get.path,1000))
+
+    def get_pd(self,get):
+        from BTPanel import cache
+        tmp = -1
+        try:
+            import panelPlugin
+            # get = public.dict_obj()
+            # get.init = 1
+            tmp1 = panelPlugin.panelPlugin().get_cloud_list(get)
+        except:
+            tmp1 = None
+        if tmp1:
+            tmp = tmp1[public.to_string([112, 114, 111])]
+            ltd = tmp1.get('ltd', -1)
+        else:
+            ltd = -1
+            tmp4 = cache.get(public.to_string([112, 95, 116, 111, 107, 101, 110]))
+            if tmp4:
+                tmp_f = public.to_string([47, 116, 109, 112, 47]) + tmp4
+                if not os.path.exists(tmp_f): public.writeFile(tmp_f, '-1')
+                tmp = public.readFile(tmp_f)
+                if tmp: tmp = int(tmp)
+        if not ltd: ltd = -1
+        if tmp is None: tmp = -1
+        if ltd < 1:
+            if ltd == -2:
+                tmp3 = public.to_string([60, 115, 112, 97, 110, 32, 99, 108, 97, 115, 115, 61, 34, 98, 116, 108, 116, 100,
+                                        45, 103, 114, 97, 121, 34, 62, 60, 115, 112, 97, 110, 32, 115, 116, 121, 108, 101,
+                                        61, 34, 99, 111, 108, 111, 114, 58, 32, 35, 102, 99, 54, 100, 50, 54, 59, 102, 111,
+                                        110, 116, 45, 119, 101, 105, 103, 104, 116, 58, 32, 98, 111, 108, 100, 59, 109, 97,
+                                        114, 103, 105, 110, 45, 114, 105, 103, 104, 116, 58, 53, 112, 120, 34, 62, 24050,
+                                        36807,
+                                        26399, 60, 47, 115, 112, 97, 110, 62, 60, 97, 32, 99, 108, 97, 115, 115, 61, 34,
+                                        98, 116,
+                                        108, 105, 110, 107, 34, 32, 111, 110, 99, 108, 105, 99, 107, 61, 34, 98, 116, 46,
+                                        115, 111,
+                                        102, 116, 46, 117, 112, 100, 97, 116, 97, 95, 108, 116, 100, 40, 41, 34, 62, 32493,
+                                        36153, 60, 47, 97, 62, 60, 47, 115, 112, 97, 110, 62])
+            elif tmp == -1:
+                tmp3 = public.to_string([60, 115, 112, 97, 110, 32, 99, 108, 97, 115, 115, 61, 34, 98,
+                                        116, 112, 114, 111, 45, 102, 114, 101, 101, 34, 32, 111, 110, 99, 108, 105, 99,
+                                        107,
+                                        61, 34, 98, 116, 46, 115, 111, 102, 116, 46, 117, 112, 100, 97, 116, 97, 95, 99,
+                                        111, 109, 109, 101, 114, 99, 105, 97, 108, 95, 118, 105, 101, 119, 40, 41, 34,
+                                        32, 116, 105, 116, 108, 101, 61, 34, 28857, 20987, 21319, 32423, 21040,
+                                        21830, 19994, 29256, 34, 62, 20813, 36153, 29256, 60, 47, 115, 112, 97, 110, 62])
+            elif tmp == -2:
+                tmp3 = public.to_string([60, 115, 112, 97, 110, 32, 99, 108, 97, 115, 115, 61, 34, 98, 116,
+                                        112, 114, 111, 45, 103, 114, 97, 121, 34, 62, 60, 115, 112, 97, 110, 32,
+                                        115, 116, 121, 108, 101, 61, 34, 99, 111, 108, 111, 114, 58, 32, 35,
+                                        102, 99, 54, 100, 50, 54, 59, 102, 111, 110, 116, 45, 119, 101, 105, 103,
+                                        104, 116, 58, 32, 98, 111, 108, 100, 59, 109, 97, 114, 103, 105, 110, 45,
+                                        114, 105, 103, 104, 116, 58, 53, 112, 120, 34, 62, 24050, 36807, 26399,
+                                        60, 47, 115, 112, 97, 110, 62, 60, 97, 32, 99, 108, 97, 115, 115, 61, 34,
+                                        98, 116, 108, 105, 110, 107, 34, 32, 111, 110, 99, 108, 105, 99, 107, 61,
+                                        34, 98, 116, 46, 115, 111, 102, 116, 46, 117, 112, 100, 97, 116, 97, 95,
+                                        112, 114, 111, 40, 41, 34, 62, 32493, 36153, 60, 47, 97, 62, 60,
+                                        47, 115, 112, 97, 110, 62])
+            if tmp >= 0 and ltd in [-1, -2]:
+                if tmp == 0:
+                    tmp2 = public.to_string([27704, 20037, 25480, 26435])
+                    tmp3 = public.to_string([60, 115, 112, 97, 110, 32, 99, 108, 97, 115, 115, 61, 34, 98, 116,
+                                            112, 114, 111, 34, 62, 123, 48, 125, 60, 115, 112, 97, 110, 32, 115, 116,
+                                            121, 108, 101, 61, 34, 99, 111, 108, 111, 114, 58, 32, 35, 102, 99, 54, 100,
+                                            50, 54, 59, 102, 111, 110, 116, 45, 119, 101, 105, 103, 104, 116,
+                                            58, 32, 98, 111, 108, 100, 59, 34, 62, 123, 49, 125, 60, 47, 115,
+                                            112, 97, 110, 62, 60, 47, 115, 112, 97, 110, 62]).format(
+                        public.to_string([21040, 26399, 26102, 38388, 65306]), tmp2)
+                else:
+                    tmp2 = time.strftime(public.to_string([37, 89, 45, 37, 109, 45, 37, 100]), time.localtime(tmp))
+                    tmp3 = public.to_string([60, 115, 112, 97, 110, 32, 99, 108, 97, 115, 115, 61, 34, 98, 116,
+                                            112, 114, 111, 34, 62, 21040, 26399, 26102, 38388, 65306, 60, 115, 112,
+                                            97, 110, 32, 115, 116, 121, 108, 101, 61, 34, 99, 111, 108, 111, 114,
+                                            58, 32, 35, 102, 99, 54, 100, 50, 54, 59, 102, 111, 110, 116, 45, 119,
+                                            101, 105, 103, 104, 116, 58, 32, 98, 111, 108, 100, 59, 109, 97, 114,
+                                            103, 105, 110, 45, 114, 105, 103, 104, 116, 58, 53, 112, 120, 34, 62, 123,
+                                            48, 125, 60, 47, 115, 112, 97, 110, 62, 60, 97, 32, 99, 108, 97, 115,
+                                            115, 61, 34, 98, 116, 108, 105, 110, 107, 34, 32, 111, 110, 99, 108, 105, 99,
+                                            107, 61, 34, 98, 116, 46, 115, 111, 102, 116, 46, 117, 112, 100, 97,
+                                            116, 97, 95, 112, 114, 111, 40, 41, 34, 62, 32493, 36153, 60, 47, 97, 62, 60,
+                                            47, 115, 112, 97, 110, 62]).format(tmp2)
+            else:
+                tmp3 = public.to_string([60, 115, 112, 97, 110, 32, 99, 108, 97, 115, 115, 61, 34, 98, 116, 112,
+                                        114, 111, 45, 103, 114, 97, 121, 34, 32, 111, 110, 99, 108, 105, 99, 107,
+                                        61, 34, 98, 116, 46, 115, 111, 102, 116, 46, 117, 112, 100, 97, 116, 97,
+                                        95, 112, 114, 111, 40, 41, 34, 32, 116, 105, 116, 108, 101, 61, 34, 28857,
+                                        20987, 21319, 32423, 21040, 19987, 19994, 29256, 34, 62, 20813, 36153,
+                                        29256, 60, 47, 115, 112, 97, 110, 62])
+        else:
+            tmp3 = public.to_string([60, 115, 112, 97, 110, 32, 99, 108, 97, 115, 115, 61, 34, 98, 116, 108, 116,
+                                    100, 34, 62, 21040, 26399, 26102, 38388, 65306, 60, 115, 112, 97, 110, 32, 115, 116,
+                                    121, 108, 101, 61, 34, 99, 111, 108, 111, 114, 58, 32, 35, 102, 99, 54, 100, 50,
+                                    54, 59, 102, 111, 110, 116, 45, 119, 101, 105, 103, 104, 116, 58, 32, 98, 111,
+                                    108, 100, 59, 109, 97, 114, 103, 105, 110, 45, 114, 105, 103, 104, 116, 58, 53,
+                                    112, 120, 34, 62, 123, 125, 60, 47, 115, 112, 97, 110, 62, 60, 97, 32, 99, 108,
+                                    97, 115, 115, 61, 34, 98, 116, 108, 105, 110, 107, 34, 32, 111, 110, 99, 108, 105,
+                                    99, 107, 61, 34, 98, 116, 46, 115, 111, 102, 116, 46, 117, 112, 100, 97, 116, 97,
+                                    95, 108, 116, 100, 40, 41, 34, 62, 32493, 36153, 60, 47, 97, 62, 60, 47, 115,
+                                    112, 97, 110, 62]).format(
+                time.strftime(public.to_string([37, 89, 45, 37, 109, 45, 37, 100]), time.localtime(ltd)))
+
+        return tmp3, tmp, ltd
     
     #检查用户绑定是否正确
     def check_user_auth(self,get):
@@ -1190,4 +1324,78 @@ class ajax:
         s_body = public.ExecShell("tail -n {} {}".format(args.num,args.filename))[0]
         return public.returnMsg(True,s_body)
         
+    def log_analysis(self,get):
+        import log_analysis
+        log_analysis=log_analysis.log_analysis()
+        return log_analysis.log_analysis(get)
+
+
+    def speed_log(self,get):
+        import log_analysis
+        log_analysis=log_analysis.log_analysis()
+        return log_analysis.speed_log(get)
+
+
+
+    def get_result(self,get):
+        import log_analysis
+        log_analysis=log_analysis.log_analysis()
+        return log_analysis.get_result(get)
+
+    def get_detailed(self,get):
+        import log_analysis
+        log_analysis=log_analysis.log_analysis()
+        return log_analysis.get_detailed(get)
+
+
+
+    def get_pay_type(self,get):
+        """
+            @name 获取推荐列表
+        """
+        spath = '{}/data/pay_type.json'.format(public.get_panel_path())
+        down = cache.get('pay_type')
+        if not down:
+            public.run_thread(public.downloadFile,(public.get_url() + '/install/lib/pay_type.json',spath))
+            cache.set('pay_type',1,86400)
+        try:
+            data = json.loads(public.readFile("data/pay_type.json"))
+        except :
+            data = {}
         
+        for item in data:
+            if 'list' in item:
+                item['list'] = self.__get_home_list(item['list'])    
+                if item['type'] == 1:
+                    if len(item['list']) > 4: item['list'] = item['list'][:4]                        
+        return data
+
+
+    def __get_home_list(self,sList):  
+        """
+            @name 获取首页软件列表推荐
+        """
+        import panelPlugin       
+        plu_panel =  panelPlugin.panelPlugin()
+        plugin_list = plu_panel.get_cloud_list()
+        nList = []
+        webserver = public.get_webserver()       
+        try:
+            indexList = json.loads(public.readFile("config/index.json"))
+        except :indexList = []
+        for x in sList:
+            for plugin_info in plugin_list['list']:
+                if x['name'] == plugin_info['name']:
+                    if plugin_info['endtime'] >= 0:
+                        x['isBuy'] = True
+                
+            if not 'dependent' in x: 
+                nList.append(x)
+                continue
+
+            if x['dependent'] == webserver:
+                if not x['name'] in indexList: 
+                    info = plu_panel.get_soft_find(x['name'])
+                    if info:x['install'] = info['setup']
+                    nList.append(x)                
+        return nList

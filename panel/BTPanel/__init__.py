@@ -74,7 +74,7 @@ if app.config['SSL']:
 else:
     app.config['SESSION_COOKIE_SAMESITE'] = None
 
-    
+
 Session(app)
 
 import common
@@ -148,12 +148,14 @@ if admin_path in admin_path_checks: admin_path = '/bt'
 # Flask请求勾子
 @app.before_request
 def request_check():
+    if request.method not in ['GET','POST']:return abort(404)
     g.request_time = time.time()
     # 路由和URI长度过滤
     if len(request.path) > 256: return abort(403)
     if len(request.url) > 1024: return abort(403)
 
     if request.path in ['/service_status']: return
+    # if request.path.find('/phpmyadmin_') == 0: return
 
     # POST参数过滤
     if request.path in ['/login', '/safe', '/hook', '/public', '/down', '/get_app_bind_status', '/check_bind']:
@@ -188,11 +190,7 @@ def request_check():
         if request.args.get('action') in not_networks:
             return public.returnJson(False, 'INIT_REQUEST_CHECK_LOCAL_ERR'), json_header
 
-    if request.path in ['/','/site','/ftp','/database','/soft','/control','/firewall','/files','/xterm','/crontab','/config']:
-        licenes = 'data/licenes.pl'
-        if request.path in ['/'] and not os.path.exists(licenes):
-            return
-            
+    if request.path in ['/site','/ftp','/database','/soft','/control','/firewall','/files','/xterm','/crontab','/config']:
         if not public.is_bind():
             return redirect('/bind',302)
         if public.is_error_path():
@@ -287,20 +285,23 @@ def home():
     licenes = 'data/licenes.pl'
     if 'license' in args:
         public.writeFile(licenes, 'True')
-
+    if not os.path.exists(licenes): return render_template('license.html')
+    if not public.is_bind():
+        return redirect('/bind',302)
+    
     import system
     data = system.system().GetConcifInfo()
     data['bind'] = False
     if not os.path.exists('data/userInfo.json'):
         data['bind'] = os.path.exists('data/bind.pl')
+    # data[public.to_string([112, 100])], data['pro_end'], data['ltd_end'] = get_pd()
     data[public.to_string([112, 100])], data['pro_end'], data['ltd_end'] = get_pd()
     data['siteCount'] = public.M('sites').count()
     data['ftpCount'] = public.M('ftps').count()
     data['databaseCount'] = public.M('databases').count()
     data['lan'] = public.GetLan('index')
     data['js_random'] = get_js_random()
-    public.auto_backup_panel()
-    if not os.path.exists(licenes): return render_template('license.html')
+    public.run_thread(public.auto_backup_panel)
     return render_template('index.html', data=data)
 
 
@@ -372,7 +373,7 @@ def site(pdata=None):
 
     defs = (
     'upload_csv', 'create_website_multiple', 'del_redirect_multiple', 'del_proxy_multiple', 'delete_dir_auth_multiple',
-    'delete_dir_bind_multiple', 'delete_domain_multiple', 'set_site_etime_multiple','check_del_data',
+    'delete_dir_bind_multiple', 'delete_domain_multiple', 'set_site_etime_multiple','check_del_data','set_https_mode','get_https_mode',
     'set_site_php_version_multiple', 'delete_website_multiple', 'set_site_status_multiple', 'get_site_domains',
     'GetRedirectFile', 'SaveRedirectFile', 'DeleteRedirect', 'GetRedirectList', 'CreateRedirect', 'ModifyRedirect',
     'set_dir_auth', 'delete_dir_auth', 'get_dir_auth', 'modify_dir_auth_pass', 'export_domains', 'import_domains',
@@ -439,8 +440,8 @@ def database(pdata=None):
     import database
     databaseObject = database.database()
     defs = ('GetdataInfo','check_del_data','get_database_size', 'GetInfo', 'ReTable', 'OpTable', 'AlTable', 'GetSlowLogs', 'GetRunStatus',
-            'SetDbConf', 'GetDbStatus', 'BinLog', 'GetErrorLog', 'GetMySQLInfo', 'SetDataDir', 'SetMySQLPort',
-            'AddDatabase', 'DeleteDatabase', 'SetupPassword', 'ResDatabasePassword', 'ToBackup', 'DelBackup',
+            'SetDbConf', 'GetDbStatus', 'BinLog', 'GetErrorLog', 'GetMySQLInfo', 'SetDataDir', 'SetMySQLPort','AddCloudDatabase',
+            'AddDatabase', 'DeleteDatabase', 'SetupPassword', 'ResDatabasePassword', 'ToBackup', 'DelBackup','AddCloudServer','GetCloudServer','RemoveCloudServer','ModifyCloudServer',
             'InputSql', 'SyncToDatabases', 'SyncGetDatabases', 'GetDatabaseAccess', 'SetDatabaseAccess')
     return publicObject(databaseObject, defs, None, pdata)
 
@@ -575,7 +576,7 @@ def firewall(pdata=None):
     import firewalls
     firewallObject = firewalls.firewalls()
     defs = ('GetList', 'AddDropAddress', 'DelDropAddress', 'FirewallReload', 'SetFirewallStatus',
-            'AddAcceptPort', 'DelAcceptPort', 'SetSshStatus', 'SetPing', 'SetSshPort', 'GetSshInfo')
+            'AddAcceptPort', 'DelAcceptPort', 'SetSshStatus', 'SetPing', 'SetSshPort', 'GetSshInfo','SetFirewallStatus')
     return publicObject(firewallObject, defs, None, pdata)
 
 
@@ -684,6 +685,21 @@ def project(mod_name,def_name):
     get.def_name = def_name
 
     return publicObject(project_obj,defs,None,get)
+
+@app.route('/dbmodel/<mod_name>/<def_name>', methods=method_all)
+def dbmodel(mod_name,def_name):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    from panelDatabaseController import DatabaseController
+    database_obj = DatabaseController()
+    defs = ('model',)
+    get = get_input()
+    get.action = 'model'
+    get.mod_name = mod_name
+    get.def_name = def_name
+
+    return publicObject(database_obj,defs,None,get)
+
 
 
 @app.route('/files', methods=method_all)
@@ -799,7 +815,7 @@ def config(pdata=None):
     'get_key', 'get_php_session_path', 'set_php_session_path', 'get_cert_source', 'get_users',
     'set_local', 'set_debug', 'get_panel_error_logs', 'clean_panel_error_logs', 'get_menu_list', 'set_hide_menu_list',
     'get_basic_auth_stat', 'set_basic_auth', 'get_cli_php_version', 'get_tmp_token', 'get_temp_login', 'set_temp_login',
-    'remove_temp_login', 'clear_temp_login', 'get_temp_login_logs',
+    'remove_temp_login', 'clear_temp_login', 'get_temp_login_logs','set_request_iptype','set_request_type',
     'set_cli_php_version', 'DelOldSession', 'GetSessionCount', 'SetSessionConf', 'show_recommend', 'show_workorder',
     'GetSessionConf', 'get_ipv6_listen', 'set_ipv6_status', 'GetApacheValue', 'SetApacheValue',
     'GetNginxValue', 'SetNginxValue', 'get_token', 'set_token', 'set_admin_path', 'is_pro','set_not_auth_status',
@@ -822,14 +838,14 @@ def ajax(pdata=None):
     if comReturn: return comReturn
     import ajax
     ajaxObject = ajax.ajax()
-    defs = ('get_lines', 'php_info', 'change_phpmyadmin_ssl_port', 'set_phpmyadmin_ssl', 'get_phpmyadmin_ssl',
+    defs = ('get_lines', 'php_info', 'change_phpmyadmin_ssl_port', 'set_phpmyadmin_ssl', 'get_phpmyadmin_ssl','get_pd','get_pay_type',
             'check_user_auth', 'to_not_beta', 'get_beta_logs', 'apple_beta', 'GetApacheStatus', 'GetCloudHtml',
             'get_load_average', 'GetOpeLogs', 'GetFpmLogs', 'GetFpmSlowLogs', 'SetMemcachedCache', 'GetMemcachedStatus',
             'GetRedisStatus', 'GetWarning', 'SetWarning', 'CheckLogin', 'GetSpeed', 'GetAd', 'phpSort', 'ToPunycode',
             'GetBetaStatus', 'SetBeta', 'setPHPMyAdmin', 'delClose', 'KillProcess', 'GetPHPInfo', 'GetQiniuFileList','get_process_tops','get_process_cpu_high',
             'UninstallLib', 'InstallLib', 'SetQiniuAS', 'GetQiniuAS', 'GetLibList', 'GetProcessList', 'GetNetWorkList',
             'GetNginxStatus', 'GetPHPStatus', 'GetTaskCount', 'GetSoftList', 'GetNetWorkIo', 'GetDiskIo', 'GetCpuIo',
-            'CheckInstalled', 'UpdatePanel', 'GetInstalled', 'GetPHPConfig', 'SetPHPConfig')
+            'CheckInstalled', 'UpdatePanel', 'GetInstalled', 'GetPHPConfig', 'SetPHPConfig','log_analysis','speed_log','get_result','get_detailed')
 
     return publicObject(ajaxObject, defs, None, pdata)
 
@@ -1108,6 +1124,7 @@ def login():
                 s_file = 'data/session/{}'.format(session['tmp_login_id'])
                 if os.path.exists(s_file):
                     os.remove(s_file)
+            del(session['request_token_head'])
             session.clear()
             sess_file = 'data/sess_files/' + public.get_sess_key()
             if os.path.exists(sess_file):
@@ -1115,6 +1132,8 @@ def login():
                     os.remove(sess_file)
                 except:
                     pass
+            sess_tmp_file = public.get_full_session_file()
+            if os.path.exists(sess_tmp_file): os.remove(sess_tmp_file)
             g.dologin = True
             return redirect(login_path)
 
@@ -1168,13 +1187,21 @@ def close():
 @app.route('/tips', methods=method_get)
 def tips():
     # 提示页面
+    get=get_input()
+    if len(get.__dict__.keys()) > 1:return abort(404)
     return render_template('tips.html')
 
 
 @app.route('/get_app_bind_status', methods=method_all)
 def get_app_bind_status(pdata=None):
     # APP绑定状态查询
-    if not public.check_app('app_bind'):return public.returnMsg(False, '未开启API')
+    if not public.check_app('app_bind'):return abort(404)
+    get = get_input()
+    if len(get.__dict__.keys()) > 2: return '存在无意义参数!'
+    v_list = ['bind_token','data']
+    for n in get.__dict__.keys():
+        if not n in v_list:
+            return public.returnJson(False, '不能存在多余参数'), json_header
     import panelApi
     api_object = panelApi.panelApi()
     return json.dumps(api_object.get_app_bind_status(get_input())), json_header
@@ -1183,16 +1210,24 @@ def get_app_bind_status(pdata=None):
 @app.route('/check_bind', methods=method_all)
 def check_bind(pdata=None):
     # APP绑定查询
-    if not public.check_app('app_bind'):return public.returnMsg(False, '未开启API')
+    if not public.check_app('app_bind'):return abort(404)
+    get = get_input()
+    if len(get.__dict__.keys()) > 4: return '存在无意义参数!'
+    v_list = ['bind_token','client_brand','client_model','data']
+    for n in get.__dict__.keys():
+        if not n in v_list:
+            return public.returnJson(False, '不能存在多余参数'), json_header
     import panelApi
     api_object = panelApi.panelApi()
     return json.dumps(api_object.check_bind(get_input())), json_header
 
 
-@app.route('/code')
+@app.route('/code',methods=method_get)
 def code():
     if not 'code' in session: return ''
     if not session['code']: return ''
+    get=get_input()
+    if len(get.__dict__.keys()) > 2: return '存在无意义参数!'
     # 获取图片验证码
     try:
         import vilidate, time
@@ -1231,7 +1266,11 @@ def down(token=None, fname=None):
         if len(token) != 12: return abort(404)
         if not request.args.get('play') in ['true', None, '']:
             return abort(404)
-
+        args = get_input()
+        v_list = ['fname', 'play', 'file_password','data']
+        for n in args.__dict__.keys():
+            if not n in v_list:
+                return public.returnJson(False, '不能存在多余参数'), json_header
         if not re.match(r"^\w+$", token): return abort(404)
         find = public.M('download_token').where('token=?', (token,)).find()
 
@@ -1240,7 +1279,6 @@ def down(token=None, fname=None):
 
         if not os.path.exists(find['filename']): return abort(404)
         if find['password'] and not token in session:
-            args = get_input()
             if 'file_password' in args:
                 if not re.match(r"^\w+$", args.file_password):
                     return public.ReturnJson(False, '密码错误-1!'), json_header
@@ -1306,13 +1344,33 @@ def panel_public():
     get = get_input()
     if len("{}".format(get.__dict__)) > 1024 * 32:
         return 'ERROR'
+
+    #获取ping测试
+    if 'get_ping' in get:
+        try:
+            import panelPing
+            p = panelPing.Test()
+            get = p.check(get)
+            if not get: return 'ERROR'
+            result = getattr(p,get['act'])(get)
+            result_type = type(result)
+            if str(result_type).find('Response') != -1: return result
+            return public.getJson(result),json_header
+        except:
+            return public.returnJson(False,public.get_error_info())
+    
+    v_list = ['fun', 'name','filename', 'data','secret_key']
+    for n in get.__dict__.keys():
+        if not n in v_list:
+            return abort(404)
+
     get.client_ip = public.GetClientIp()
     num_key = get.client_ip + '_wxapp'
     if not public.get_error_num(num_key, 10):
         return public.returnMsg(False, '连续10次认证失败，禁止1小时')
     if not hasattr(get, 'name'): get.name = ''
-    if not hasattr(get, 'fun'): return abort(403)
-    if not public.path_safe_check("%s/%s" % (get.name, get.fun)): return abort(403)
+    if not hasattr(get, 'fun'): return abort(404)
+    if not public.path_safe_check("%s/%s" % (get.name, get.fun)): return abort(404)
     if get.fun in ['login_qrcode', 'is_scan_ok','set_login','static']:
         if get.fun == 'static':
             if not 'filename' in get: return abort(404)
@@ -1325,7 +1383,7 @@ def panel_public():
         # 检查是否验证过安全入口
         global admin_check_auth, admin_path, route_path, admin_path_file
         if admin_path != '/bt' and os.path.exists(admin_path_file) and not 'admin_auth' in session:
-            return abort(403)
+            return abort(404)
         #验证是否绑定了设备
         if not public.check_app('app'):return public.returnMsg(False,'未绑定用户!')
         import wxapp
@@ -1375,6 +1433,8 @@ def btwaf_error():
 @app.route('/<name>/<fun>', methods=method_all)
 @app.route('/<name>/<fun>/<path:stype>', methods=method_all)
 def panel_other(name=None, fun=None, stype=None):
+    if not public.is_bind():
+        return redirect('/bind',302)
     # 插件接口
     if public.is_error_path():
         return redirect('/error',302)
@@ -1407,7 +1467,15 @@ def panel_other(name=None, fun=None, stype=None):
     p_path = os.path.join('/www/server/panel/plugin/', name)
     if not os.path.exists(p_path): 
         if name == 'btwaf' and fun == 'index':
-            return  render_template('error3.html',data={}) 
+            pdata = {}
+            from pluginAuth import Plugin
+            plugin_list = Plugin(False).get_plugin_list()
+            for p in plugin_list['list']:
+                if p['name'] in ['btwaf']:
+                    if p['endtime'] != 0 and p['endtime'] < time.time():
+                        pdata['error_msg'] = 1
+                        break
+            return  render_template('error3.html',data=pdata)
         return abort(404)
 
     # 是否响插件应静态文件
@@ -1511,10 +1579,9 @@ def panel_hook():
     # webhook接口
     get = get_input()
     if not os.path.exists('plugin/webhook'):
-        return public.getJson(public.returnMsg(False, 'INIT_WEBHOOK_ERR'))
+        return abort(404)
     public.package_path_append('plugin/webhook')
     import webhook_main
-    session.clear()
     return public.getJson(webhook_main.webhook_main().RunHook(get))
 
 
@@ -1561,6 +1628,8 @@ def install():
 @app.route('/robots.txt', methods=method_all)
 def panel_robots():
     # 爬虫规则响应接口
+    get=get_input()
+    if len(get.__dict__.keys()) > 1:return abort(404)
     robots = '''User-agent: *
 Disallow: /
 '''
@@ -1747,13 +1816,13 @@ def check_login(http_token=None):
 def get_pd():
     # 获取授权信息
     tmp = -1
-    try:
-        import panelPlugin
-        get = public.dict_obj()
-        # get.init = 1
-        tmp1 = panelPlugin.panelPlugin().get_cloud_list(get)
-    except:
-        tmp1 = None
+    # try:
+    #     import panelPlugin
+    #     get = public.dict_obj()
+    #     # get.init = 1
+    #     tmp1 = panelPlugin.panelPlugin().get_cloud_list(get)
+    # except:
+    tmp1 = None
     if tmp1:
         tmp = tmp1[public.to_string([112, 114, 111])]
         ltd = tmp1.get('ltd', -1)
@@ -1851,7 +1920,7 @@ def send_authenticated():
     # 发送http认证信息
     request_host = public.GetHost()
     result = Response('', 401, {'WWW-Authenticate': 'Basic realm="%s"' % request_host.strip()})
-    if not 'login' in session and not 'admin_auth' in session: session.clear()
+    # if not 'login' in session and not 'admin_auth' in session: session.clear()
     return result
 
 
@@ -2225,6 +2294,7 @@ def check_csrf_websocket(ws,args):
         @return void
     '''
     if g.is_aes: return True
+    if public.is_debug(): return True
     is_success = True
     if not 'x-http-token' in args: 
         is_success = False
@@ -2233,7 +2303,7 @@ def check_csrf_websocket(ws,args):
         if session['request_token_head'] != args['x-http-token']: 
             is_success = False
 
-    if is_success:
+    if is_success and 'request_token' in session:
         cookie_token = request.cookies.get('request_token')
         if cookie_token != session['request_token']: 
             is_success = False
@@ -2312,3 +2382,46 @@ def daily():
     defs = ("get_app_usage", "get_daily_data", "get_daily_list")
     result = publicObject(toObject, defs)
     return result
+
+@app.route('/phpmyadmin/<path:path_full>',methods=method_all)
+def pma_proxy(path_full = None):
+    '''
+        @name phpMyAdmin代理
+        @author hwliang<2022-01-19>
+        @return Response
+    '''
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    cache_key = 'pmd_port_path'
+    pmd = cache.get(cache_key)
+    if not pmd:
+        pmd = get_phpmyadmin_dir()
+        if not pmd: return '未安装phpMyAdmin,请到【软件商店】页面安装!'
+        cache.set(cache_key,pmd,10)
+    proxy_url = 'http://127.0.0.1:{}/{}/'.format(pmd[1],pmd[0]) + request.full_path.replace('/phpmyadmin/','')
+    from panelHttpProxy import HttpProxy
+    px = HttpProxy()
+    return px.proxy(proxy_url)
+
+@app.route('/p/<int:port>',methods=method_all)
+@app.route('/p/<int:port>/',methods=method_all)
+@app.route('/p/<int:port>/<path:full_path>',methods=method_all)
+def proxy_port(port,full_path=None):
+    '''
+        @name 代理指定端口
+        @author hwliang<2022-01-19>
+        @return Response
+    '''
+    
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    full_path = request.full_path.replace('/p/{}/'.format(port),'').replace('/p/{}'.format(port),'')
+    uri = '{}/{}'.format(port,full_path)
+    uri = uri.replace('//','/')
+    proxy_url = 'http://127.0.0.1:{}'.format(uri)
+    from panelHttpProxy import HttpProxy
+    px = HttpProxy()
+    return px.proxy(proxy_url)
+
+    
+

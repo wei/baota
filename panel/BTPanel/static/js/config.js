@@ -204,7 +204,7 @@ $('#panel_verification').click(function () {
             });
             return false;
           }
-          var loadT = layer.msg('正在开启动态口令认证，请稍后...', {
+          var loadT = layer.msg('正在开启动态口令认证，请稍候...', {
             icon: 16,
             time: 0,
             shade: [0.3, '#000']
@@ -240,7 +240,7 @@ $('#panel_verification').click(function () {
         $('#panel_verification').prop('checked', !_checked);
       }
     }, function () {
-      var loadT = layer.msg('正在关闭动态口令认证，请稍后...', {
+      var loadT = layer.msg('正在关闭动态口令认证，请稍候...', {
         icon: 16,
         time: 0,
         shade: [0.3, '#000']
@@ -1271,7 +1271,7 @@ var weChat = {
   // 获取二维码
   getQRCode: function () {
     var _this = this;
-    var qrLoading = layer.msg('正在获取二维码,请稍后...', {
+    var qrLoading = layer.msg('正在获取二维码,请稍候...', {
       time: 0,
       shade: [0.4, '#fff'],
       icon: 16
@@ -1291,7 +1291,7 @@ var weChat = {
           _this.verifyBdinding();
         }, 2000);
       } else {
-        layer.msg('无法获取二维码，请稍后重试', {
+        layer.msg('无法获取二维码，请稍候重试', {
           icon: 2
         });
       }
@@ -1683,7 +1683,7 @@ function set_panel_report () {
 					                        </div>\
 					                        <div class="page" id="server_table_page"></div>\
 				                        </div>\
-				                        <ul class="mtl0 c7" style="font-size: 13px;position:absolute;bottom:0;padding-right: 40px;">\
+				                        <ul class="mtl0 c7" style="font-size: 13px;position:absolute;left:15px;bottom:15px;padding-right: 40px;">\
                                 		   <li style="list-style:inside disc">邮箱通道和钉钉通道只能同时开启一个</li>\
                                     	</ul>\
 	                				</div>\
@@ -1704,7 +1704,7 @@ function set_panel_report () {
 						                        </div>\
 					                        </div>\
 				                        </div>\
-				                          <ul class="mtl0 c7" style="font-size: 13px;position:absolute;bottom:0;padding-right: 40px;">\
+				                          <ul class="mtl0 c7" style="font-size: 13px;position:absolute;left:15px;bottom:15px;padding-right: 40px;">\
                                 		   <li style="list-style:inside disc">只允许设置ipv4白名单</li>\
                                     	</ul>\
 		            				</div>\
@@ -1932,7 +1932,7 @@ function open_three_channel_auth () {
 									</div>\
 									<div class="line">\
 										<div class="divtable">\
-											<table class="table table-hover" width="100%" cellspacing="0" cellpadding="0" border="0"><thead><tr><th>邮箱</th><th width="80px">操作</th></tr></thead></table>\
+											<table class="table table-hover" width="100%" cellspacing="0" cellpadding="0" border="0"><thead><tr><th>邮箱</th><th class="text-right" width="80px">操作</th></tr></thead></table>\
 											<table class="table table-hover"><tbody id="receive_table"></tbody></table>\
 										</div>\
 									</div>\
@@ -2242,7 +2242,7 @@ function get_receive_list () {
 					</tr>'
       }
     } else {
-      _html = '<tr><td colspan="2">暂无数据</td></tr>'
+      _html = '<tr><td class="text-center" colspan="2">暂无数据</td></tr>';
     }
     $('#receive_table').html(_html);
   })
@@ -2250,21 +2250,26 @@ function get_receive_list () {
 }
 
 function del_email (mail) {
-  var loadT = layer.msg('正在删除【' + mail + '】中,请稍候...', {
-    icon: 16,
-    time: 0,
-    shade: [0.3, '#000']
-  }),
-    _this = this;
-  $.post('/config?action=del_mail_list', {
-    email: mail
-  }, function (rdata) {
-    layer.close(loadT);
-    layer.msg(rdata.msg, {
-      icon: rdata.status ? 1 : 2
-    })
-    _this.get_receive_list()
-  })
+  bt.confirm({
+    title: '删除邮箱【' + mail + '】',
+    msg: '您真的要删除这个邮箱吗？'
+  }, function () {
+    var loadT = layer.msg('正在删除【' + mail + '】中,请稍候...', {
+      icon: 16,
+      time: 0,
+      shade: [0.3, '#000']
+    }),
+      _this = this;
+    $.post('/config?action=del_mail_list', {
+      email: mail
+    }, function (rdata) {
+      layer.close(loadT);
+      layer.msg(rdata.msg, {
+        icon: rdata.status ? 1 : 2
+      })
+      _this.get_receive_list()
+    });
+  });
 }
 // 设置钉钉
 function SetChannelDing () {
@@ -2333,7 +2338,7 @@ function show_basic_auth (rdata) {
 }
 
 function get_panel_hide_list () {
-  var loadT = bt.load('正在获取面板菜单栏目，请稍后..'),
+  var loadT = bt.load('正在获取面板菜单栏目，请稍候..'),
     arry = [];
   $.post('/config?action=get_menu_list', function (rdata) {
     loadT.close();
@@ -2349,7 +2354,7 @@ get_panel_hide_list();
 
 // 设置面板菜单显示功能
 function set_panel_ground () {
-  var loadT = bt.load('正在获取面板菜单栏目，请稍后..');
+  var loadT = bt.load('正在获取面板菜单栏目，请稍候..');
   $.post('/config?action=get_menu_list', function (rdata) {
     var html = '',
       arry = ["dologin", "memuAconfig", "memuAsoft", "memuA"],
@@ -2379,7 +2384,7 @@ function set_panel_ground () {
           if (!$(this).prop('checked')) {
             arry.push($(this).attr('name'));
           }
-          var loadT = bt.load('正在设置面板菜单栏目显示状态，请稍后..');
+          var loadT = bt.load('正在设置面板菜单栏目显示状态，请稍候..');
           $.post('/config?action=set_hide_menu_list', {
             hide_list: JSON.stringify(arry)
           }, function (rdata) {
@@ -2399,7 +2404,7 @@ function set_panel_ground () {
  * @returns void
  */
 function get_temp_login (data, callback) {
-  var loadT = bt.load('获取临时授权列表，请稍后...');
+  var loadT = bt.load('获取临时授权列表，请稍候...');
   bt.send('get_temp_login', 'config/get_temp_login', data, function (res) {
     if (res.status === false) {
       layer.closeAll();
@@ -2417,7 +2422,7 @@ function get_temp_login (data, callback) {
  * @returns void
  */
 function set_temp_login (callback) {
-  var loadT = bt.load('正在设置临时链接，请稍后...');
+  var loadT = bt.load('正在设置临时链接，请稍候...');
   bt.send('set_temp_login', 'config/set_temp_login', {}, function (res) {
     loadT.close();
     if (callback) callback(res)
@@ -2431,7 +2436,7 @@ function set_temp_login (callback) {
  * @returns void
  */
 function remove_temp_login (data, callback) {
-  var loadT = bt.load('正在删除临时授权记录，请稍后...');
+  var loadT = bt.load('正在删除临时授权记录，请稍候...');
   bt.send('remove_temp_login', 'config/remove_temp_login', {
     id: data.id
   }, function (res) {
@@ -2446,7 +2451,7 @@ function remove_temp_login (data, callback) {
  * @returns void
  */
 function clear_temp_login (data, callback) {
-  var loadT = bt.load('正在强制用户登出，请稍后...');
+  var loadT = bt.load('正在强制用户登出，请稍候...');
   bt.send('clear_temp_login', 'config/clear_temp_login', {
     id: data.id
   }, function (res) {
@@ -2506,7 +2511,7 @@ function reader_temp_list (data, callback) {
  * @returns void
  */
 function get_temp_login_logs (data, callback) {
-  var loadT = bt.load('正在获取操作日志，请稍后...');
+  var loadT = bt.load('正在获取操作日志，请稍候...');
   bt.send('clear_temp_login', 'config/get_temp_login_logs', {
     id: data.id
   }, function (res) {

@@ -48,6 +48,19 @@ def control_init():
     if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'sites','%project_config%')).count():
         public.M('sites').execute("alter TABLE sites add project_config STRING DEFAULT '{}'",())
 
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'backup','%ps%')).count():
+        public.M('backup').execute("alter TABLE backup add ps STRING DEFAULT '无'",())
+
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'databases','%db_type%')).count():
+        public.M('databases').execute("alter TABLE databases add db_type integer DEFAULT '0'",())
+    
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'databases','%conn_config%')).count():
+        public.M('databases').execute("alter TABLE databases add conn_config STRING DEFAULT '{}'",())
+    
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'databases','%sid%')).count():
+        public.M('databases').execute("alter TABLE databases add sid integer DEFAULT 0",())
+    
+
     sql = db.Sql()
     if not sql.table('sqlite_master').where('type=? AND name=?', ('table', 'site_types')).count():
         csql = '''CREATE TABLE IF NOT EXISTS `site_types` (
@@ -93,6 +106,18 @@ def control_init():
 `login_addr` REAL,
 `logout_time` INTEGER,
 `expire` INTEGER,
+`addtime` INTEGER
+)'''
+        sql.execute(csql,())
+
+    if not sql.table('sqlite_master').where('type=? AND name=?', ('table', 'database_servers')).count():
+        csql = '''CREATE TABLE IF NOT EXISTS `database_servers` (
+`id` INTEGER PRIMARY KEY AUTOINCREMENT,
+`db_host` REAL,
+`db_port` REAL,
+`db_user` INTEGER,
+`db_password` INTEGER,
+`ps` REAL,
 `addtime` INTEGER
 )'''
         sql.execute(csql,())
@@ -161,6 +186,13 @@ def control_init():
         public.ExecShell("rm -rf /www/server/panel/adminer")
     if os.path.exists('/dev/shm/session.db'):
         os.remove('/dev/shm/session.db')
+
+    node_service_bin = '/usr/bin/nodejs-service'
+    node_service_src = '/www/server/panel/script/nodejs-service.py'
+    if os.path.exists(node_service_src): public.ExecShell("chmod 700 " + node_service_src)
+    if not os.path.exists(node_service_bin):
+        if os.path.exists(node_service_src):
+            public.ExecShell("ln -sf {} {}".format(node_service_src,node_service_bin))
     
     #disable_putenv('putenv')
     #clean_session()
