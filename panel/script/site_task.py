@@ -69,9 +69,15 @@ def logs_analysis():
             try:
                 tmp_line = f.readline()
                 if not tmp_line: break
-                log_line = json.loads(tmp_line)
+                try:
+                    log_line = json.loads(tmp_line)
+                except:
+                    continue
                 tmp = {}
-                tmp['client_type'] = 'pc' if not re.search('(iPhone|Mobile|Android|iPod|iOS)',log_line[4],re.I) else 'mobile'
+                if log_line[4]:
+                    tmp['client_type'] = 'pc' if not re.search('(iPhone|Mobile|Android|iPod|iOS)',log_line[4],re.I) else 'mobile'
+                else:
+                    tmp['client_type'] = 'pc'
                 url_obj = urlparse(log_line[3])
                 url_path = url_obj.path
                 url_args = parse_qs(url_obj.query)
@@ -91,8 +97,8 @@ def logs_analysis():
                     if not url_args['action'] in [['a']]:
                         tmp['s_name'] = url_args['action'][0]
                     else:
-                        tmp['s_name'] = url_args['s'][0]
-                        tmp['mod_name'] = url_args['name'][0]
+                        if 's' in url_args: tmp['s_name'] = url_args['s'][0]
+                        if 'name' in url_args: tmp['mod_name'] = url_args['name'][0]
                 if log_line[2] == 'POST':
                     if log_line[-2].find("\'") == -1:
                         try:
@@ -101,8 +107,8 @@ def logs_analysis():
                                 if not post['action'] in ['a']:
                                     tmp['s_name'] = post['action']
                                 else:
-                                    tmp['s_name'] = post['name']
-                                    tmp['mod_name'] = post['s']
+                                    if 'name' in post: tmp['s_name'] = post['name']
+                                    if 's' in post: tmp['mod_name'] = post['s']
                         except:pass
                 if not tmp['mod_name'] and not tmp['s_name']: tmp['mod_name'] = 'home'
                 if tmp['mod_name'] in exolode_mods: continue
@@ -114,6 +120,7 @@ def logs_analysis():
                     tmp['day_count'] = 1
                     tmp_list[key] = tmp 
             except:
+                print(url_args)
                 print(public.get_error_info())
                 break
         f.close()
@@ -128,6 +135,35 @@ def logs_analysis():
 
         print(public.HttpPost('https://www.bt.cn/api/panel/model_total',pdata))
 
+    panelPath = '/www/server/panel'
+    logs_path = '{}/logs/click'.format(panelPath)
+    logs_tips = logs_path + '/tips'
+    if not os.path.exists(logs_tips): os.makedirs(logs_tips)        
+
+    for fname in os.listdir(logs_path):
+        if fname in ['tips']:continue
+        tip_file = '{}/tips/{}.pl'.format(logs_path,day_date)
+        if os.path.exists(tip_file): continue
+        
+        day_date = fname.split('.')[0]
+        if public.format_date().find(day_date) >= 0: continue
+        
+        data_list = []
+        try:                       
+            rlist = json.loads(public.readFile(logs_path + '/' + fname))
+        except :
+            print(public.get_error_info())
+            rlist = []
+
+        for key in rlist:
+            try:
+                data_list.append({ 'client_type' :'pc','os':'linux','mod_name':key,'day_count':rlist[key] })
+            except :pass            
+        pdata = {'data_list': json.dumps(data_list),'day_date':day_date }
+ 
+        ret = public.HttpPost('https://www.bt.cn/api/wpanel/model_click',pdata)
+        print(ret)
+        public.writeFile(tip_file,'')
 
 
 oldEdate = public.readFile('data/edate.pl')

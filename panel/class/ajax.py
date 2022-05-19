@@ -13,7 +13,7 @@ class ajax:
     def GetApacheStatus(self,get):
         a = apache.apache()
         return a.GetApacheStatus()
-  
+
     def GetProcessCpuPercent(self,i,process_cpu):
         try:
             pp = psutil.Process(i)
@@ -40,7 +40,7 @@ class ajax:
             if result:
                 tmp = result.split()
             if len(tmp) < 15: is_curl = True
-                
+
             if is_curl:
                 result = public.ExecShell('curl http://127.0.0.1/nginx_status')[0]
                 tmp = result.split()
@@ -64,10 +64,10 @@ class ajax:
             data['workercpu'] = round(float(process_cpu["nginx"]),2)
             data['workermen'] = "%s%s" % (int(workermen), "MB")
             return data
-        except Exception as ex: 
+        except Exception as ex:
             public.WriteLog('信息获取',"Nginx负载状态获取失败: %s" % ex)
             return public.returnMsg(False,'数据获取失败,检查nginx状态是否正常!')
-    
+
     def GetPHPStatus(self,get):
         #取指定PHP版本的负载状态
         try:
@@ -81,13 +81,13 @@ class ajax:
         except Exception as ex:
             public.WriteLog('信息获取',"PHP负载状态获取失败: {}".format(public.get_error_info()))
             return public.returnMsg(False,'负载状态获取失败!')
-        
+
     def CheckStatusConf(self):
         if public.get_webserver() != 'nginx': return
         filename = session['setupPath'] + '/panel/vhost/nginx/phpfpm_status.conf'
         if os.path.exists(filename):
             if public.ReadFile(filename).find('nginx_status')!=-1: return
-        
+
         conf = '''server {
     listen 80;
     server_name 127.0.0.1;
@@ -100,12 +100,12 @@ class ajax:
 
         public.writeFile(filename,conf)
         public.serviceReload()
-    
-    
+
+
     def GetTaskCount(self,get):
         #取任务数量
         return public.M('tasks').where("status!=?",('1',)).count()
-    
+
     def GetSoftList(self,get):
         #取软件列表
         import json,os
@@ -121,13 +121,13 @@ class ajax:
                     tmp = public.getStrBetween('[',']',task['name'])
                     if not tmp:continue
                     tmp1 = tmp.split('-')
-                    if data[i]['name'] == 'PHP': 
+                    if data[i]['name'] == 'PHP':
                         if tmp1[0].lower() == data[i]['name'].lower() and tmp1[1] == data[i]['versions'][n]['version']: isTask = task['status'];
                     else:
                         if tmp1[0].lower() == data[i]['name'].lower(): isTask = task['status']
-                
+
                 #检查安装状态
-                if data[i]['name'] == 'PHP': 
+                if data[i]['name'] == 'PHP':
                     data[i]['versions'][n]['task'] = isTask
                     checkFile = data[i]['check'].replace('VERSION',data[i]['versions'][n]['version'].replace('.',''))
                 else:
@@ -138,8 +138,8 @@ class ajax:
                     checkFile = data[i]['check']
                 data[i]['versions'][n]['status'] = os.path.exists(checkFile)
         return data
-    
-    
+
+
     def GetLibList(self,get):
         #取插件列表
         import json,os
@@ -149,12 +149,12 @@ class ajax:
             data[i]['status'] = self.CheckLibInstall(data[i]['check'])
             data[i]['optstr'] = self.GetLibOpt(data[i]['status'], data[i]['opt'])
         return data
-    
+
     def CheckLibInstall(self,checks):
         for cFile in checks:
             if os.path.exists(cFile): return '已安装'
         return '未安装'
-    
+
     #取插件操作选项
     def GetLibOpt(self,status,libName):
         optStr = ''
@@ -163,10 +163,10 @@ class ajax:
         else:
             libConfig = '配置'
             if(libName == 'beta'): libConfig = '内测资料'
-                                  
+
             optStr = '<a class="link" href="javascript:SetLibConfig(\''+libName+'\');">'+libConfig+'</a> | <a class="link" href="javascript:UninstallLib(\''+libName+'\');">卸载</a>'
         return optStr
-    
+
     #取插件AS
     def GetQiniuAS(self,get):
         filename = public.GetConfigValue('setup_path') + '/panel/data/'+get.name+'As.conf'
@@ -187,12 +187,12 @@ class ajax:
         public.writeFile(filename,conf)
         public.ExecShell("chmod 600 " + filename)
         result = public.ExecShell(public.get_python_bin() + " " + public.GetConfigValue('setup_path') + "/panel/script/backup_"+get.name+".py list")
-        
-        if result[0].find("ERROR:") == -1: 
+
+        if result[0].find("ERROR:") == -1:
             public.WriteLog("插件管理", "设置插件["+info['name']+"]AS!")
             return public.returnMsg(True, '设置成功!')
         return public.returnMsg(False, 'ERROR: 无法连接到'+info['name']+'服务器,请检查[AK/SK/存储空间]设置是否正确!')
-    
+
     #设置内测
     def SetBeta(self,get):
         data = {}
@@ -211,7 +211,7 @@ class ajax:
             return public.readFile('data/beta.pl').strip()
         except:
             return 'False'
-               
+
 
     #获取指定插件信息
     def GetLibInfo(self,name):
@@ -225,14 +225,14 @@ class ajax:
     #获取文件列表
     def GetQiniuFileList(self,get):
         try:
-            import json             
+            import json
             result = public.ExecShell(public.get_python_bin() + " " + public.GetConfigValue('setup_path') + "/panel/script/backup_"+get.name+".py list")
             return json.loads(result[0])
         except:
             return public.returnMsg(False, '获取列表失败,请检查[AK/SK/存储空间]设是否正确!');
 
-    
-    
+
+
     #取网络连接列表
     def GetNetWorkList(self,get):
         import psutil
@@ -256,23 +256,23 @@ class ajax:
             del(tmp)
         networkList = sorted(networkList, key=lambda x : x['status'], reverse=True)
         return networkList
-    
+
     #取进程列表
     def GetProcessList(self,get):
         import psutil,pwd
         Pids = psutil.pids()
-        
+
         processList = []
         for pid in Pids:
             try:
                 tmp = {}
                 p = psutil.Process(pid)
                 if p.exe() == "": continue
-                
+
                 tmp['name'] = p.name();                             #进程名称
                 if self.GoToProcess(tmp['name']): continue
-                
-                
+
+
                 tmp['pid'] = pid;                                   #进程标识
                 tmp['status'] = p.status();                         #进程状态
                 tmp['user'] = p.username();                         #执行用户
@@ -284,7 +284,7 @@ class ajax:
                 tmp['io_write_bytes'] = pio.write_bytes             #进程总共写入字节数
                 tmp['io_read_bytes'] = pio.read_bytes               #进程总共读取字节数
                 tmp['threads'] = p.num_threads()                    #进程总线程数
-                
+
                 processList.append(tmp)
                 del(p)
                 del(tmp)
@@ -294,7 +294,7 @@ class ajax:
         processList = sorted(processList, key=lambda x : x['memory_percent'], reverse=True)
         processList = sorted(processList, key=lambda x : x['cpu_times'], reverse=True)
         return processList
-    
+
     #结束指定进程
     def KillProcess(self,get):
         #return public.returnMsg(False,'演示服务器，禁止此操作!');
@@ -302,25 +302,25 @@ class ajax:
         p = psutil.Process(int(get.pid))
         name = p.name()
         if name == 'python': return public.returnMsg(False,'KILL_PROCESS_ERR')
-        
+
         p.kill()
         public.WriteLog('TYPE_PROCESS','KILL_PROCESS',(get.pid,name))
         return public.returnMsg(True,'KILL_PROCESS',(get.pid,name))
-    
+
     def GoToProcess(self,name):
         ps = ['sftp-server','login','nm-dispatcher','irqbalance','qmgr','wpa_supplicant','lvmetad','auditd','master','dbus-daemon','tapdisk','sshd','init','ksoftirqd','kworker','kmpathd','kmpath_handlerd','python','kdmflush','bioset','crond','kthreadd','migration','rcu_sched','kjournald','iptables','systemd','network','dhclient','systemd-journald','NetworkManager','systemd-logind','systemd-udevd','polkitd','tuned','rsyslogd']
-        
+
         for key in ps:
             if key == name: return True
-        
+
         return False
-        
-    
+
+
     def GetNetWorkIo(self,get):
         #取指定时间段的网络Io
         data =  public.M('network').dbfile('system').where("addtime>=? AND addtime<=?",(get.start,get.end)).field('id,up,down,total_up,total_down,down_packets,up_packets,addtime').order('id asc').select()
         return self.ToAddtime(data,None)
-    
+
     def GetDiskIo(self,get):
         #取指定时间段的磁盘Io
         data = public.M('diskio').dbfile('system').where("addtime>=? AND addtime<=?",(get.start,get.end)).field('id,read_count,write_count,read_bytes,write_bytes,read_time,write_time,addtime').order('id asc').select()
@@ -329,7 +329,7 @@ class ajax:
         #取指定时间段的CpuIo
         data = public.M('cpuio').dbfile('system').where("addtime>=? AND addtime<=?",(get.start,get.end)).field('id,pro,mem,addtime').order('id asc').select()
         return self.ToAddtime(data,True)
-    
+
     def get_load_average(self,get):
         data = public.M('load_average').dbfile('system').where("addtime>=? AND addtime<=?",(get.start,get.end)).field('id,pro,one,five,fifteen,addtime').order('id asc').select()
         return self.ToAddtime(data)
@@ -348,7 +348,7 @@ class ajax:
         data = public.M('process_tops').dbfile('system').where("addtime>=? AND addtime<=?",(get.start,get.end)).field('id,process_list,addtime').order('id asc').select()
         return self.ToAddtime(data)
 
-    
+
     def get_process_cpu_high(self,get):
         '''
             @name 获取CPU占用高的进程列表
@@ -364,12 +364,12 @@ class ajax:
 
 
 
-    
-    
+
+
     def ToAddtime(self,data,tomem = False):
         import time
         #格式化addtime列
-        
+
         if tomem:
             import psutil
             mPre = (psutil.virtual_memory().total / 1024 / 1024) / 100
@@ -395,7 +395,7 @@ class ajax:
             count = 0
             tmp = []
             for value in data:
-                if count < he: 
+                if count < he:
                     count += 1
                     continue
                 try:
@@ -409,7 +409,7 @@ class ajax:
                     count = 0
                 except: continue
             return tmp
-        
+
     def GetInstalleds(self,softlist):
         softs = ''
         for soft in softlist['data']:
@@ -421,7 +421,7 @@ class ajax:
         return softs
 
 
-    
+
     #获取SSH爆破次数
     def get_ssh_intrusion(self):
         fp = open('/var/log/secure','rb')
@@ -492,9 +492,9 @@ class ajax:
             other['ds'].append(d['name'])
         return ','.join(other['ds'])
 
-    
 
-    
+
+
     def UpdatePanel(self,get):
         try:
             if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK')
@@ -502,7 +502,7 @@ class ajax:
             if int(session['config']['status']) == 0:
                 public.HttpGet(public.GetConfigValue('home')+'/Api/SetupCount?type=Linux')
                 public.M('config').where("id=?",('1',)).setField('status',1)
-            
+
             #取回远程版本信息
             if 'updateInfo' in session and hasattr(get,'check') == False:
                 updateInfo = session['updateInfo']
@@ -534,16 +534,16 @@ class ajax:
                 if not updateInfo: return public.returnMsg(False,"CONNECT_ERR")
                 #updateInfo['msg'] = msg;
                 session['updateInfo'] = updateInfo
-                
+
             #检查是否需要升级
             if not hasattr(get,'toUpdate'):
                 if updateInfo['is_beta'] == 1:
                     if updateInfo['beta']['version'] == session['version']: return public.returnMsg(False,updateInfo)
                 else:
                     if updateInfo['version'] == session['version']: return public.returnMsg(False,updateInfo)
-            
-            
-            #是否执行升级程序 
+
+
+            #是否执行升级程序
             if(updateInfo['force'] == True or hasattr(get,'toUpdate') == True or os.path.exists('data/autoUpdate.pl') == True):
                 if updateInfo['is_beta'] == 1: updateInfo['version'] = updateInfo['beta']['version']
                 setupPath = public.GetConfigValue('setup_path')
@@ -555,7 +555,7 @@ class ajax:
                 public.ExecShell('unzip -o panel.zip -d ' + setupPath + '/')
                 if os.path.exists('/www/server/panel/runserver.py'): public.ExecShell('rm -f /www/server/panel/*.pyc')
                 if os.path.exists('/www/server/panel/class/common.py'): public.ExecShell('rm -f /www/server/panel/class/*.pyc')
-                
+
                 if os.path.exists('panel.zip'): os.remove("panel.zip")
                 session['version'] = updateInfo['version']
                 if 'getCloudPlugin' in session: del(session['getCloudPlugin'])
@@ -563,19 +563,26 @@ class ajax:
                 public.ExecShell("/etc/init.d/bt start")
                 public.writeFile('data/restart.pl','True')
                 return public.returnMsg(True,'PANEL_UPDATE',(updateInfo['version'],))
-            
+
             #输出新版本信息
             data = {
                 'status' : True,
                 'version': updateInfo['version'],
                 'updateMsg' : updateInfo['updateMsg']
             }
-            
+            # 忽略某个版本的更新
+            updateInfo['ignore'] = []
+            no_path = '{}/data/no_update.pl'.format(public.get_panel_path())
+            if os.path.exists(no_path):
+                try:
+                    updateInfo['ignore'] = json.loads(public.readFile(no_path))
+                except:
+                    pass
             public.ExecShell('rm -rf /www/server/phpinfo/*')
             return public.returnMsg(True,updateInfo)
         except Exception as ex:
             return public.get_error_info()
-         
+
     #检查是否安装任何
     def CheckInstalled(self,get):
         checks = ['nginx','apache','php','pure-ftpd','mysql']
@@ -584,14 +591,14 @@ class ajax:
             filename = public.GetConfigValue('root_path') + "/server/" + name
             if os.path.exists(filename): return True
         return False
-    
-    
+
+
     #取已安装软件列表
     def GetInstalled(self,get):
         import system
         data = system.system().GetConcifInfo()
         return data
-    
+
     #取PHP配置
     def GetPHPConfig(self,get):
         import re,json
@@ -604,19 +611,25 @@ class ajax:
         phpini = public.readFile(filename)
         data = {}
         rep = "disable_functions\s*=\s{0,1}(.*)\n"
-        tmp = re.search(rep,phpini).groups()
-        data['disable_functions'] = tmp[0]
-        
+
+        tmp = re.search(rep,phpini)
+        if tmp:
+            data['disable_functions'] = tmp.groups()[0]
+
         rep = "upload_max_filesize\s*=\s*([0-9]+)(M|m|K|k)"
-        tmp = re.search(rep,phpini).groups()
-        data['max'] = tmp[0]
-        
+
+        tmp = re.search(rep,phpini)
+        if tmp:
+            data['max'] = tmp.groups()[0]
+
         rep = u"\n;*\s*cgi\.fix_pathinfo\s*=\s*([0-9]+)\s*\n"
-        tmp = re.search(rep,phpini).groups()
-        if tmp[0] == '0':
-            data['pathinfo'] = False
-        else:
-            data['pathinfo'] = True
+        tmp = re.search(rep,phpini)
+        if tmp:
+            if tmp.groups()[0] == '0':
+                data['pathinfo'] = False
+            else:
+                data['pathinfo'] = True
+
         self.getCloudPHPExt(get)
         phplib = json.loads(public.readFile('data/phplib.conf'))
         libs = []
@@ -650,12 +663,12 @@ class ajax:
                     lib['status'] = False
                 else:
                     lib['status'] = True
-                
+
             libs.append(lib)
-        
+
         data['libs'] = libs
         return data
-        
+
     #获取PHP扩展
     def getCloudPHPExt(self,get):
         import json
@@ -705,7 +718,7 @@ class ajax:
             filename = public.GetConfigValue('setup_path') + "/panel/vhost/openlitespeed/detail/phpmyadmin.conf"
         else:
             filename = public.GetConfigValue('setup_path') + '/apache/conf/extra/httpd-vhosts.conf'
-        
+
         return filename
 
     # 获取phpmyadmin ssl配置
@@ -794,6 +807,22 @@ class ajax:
                 fw.DelAcceptPort(get)
         return public.returnMsg(True, 'SET_PORT_SUCCESS')
 
+    def _get_phpmyadmin_auth(self):
+        import re
+        nginx_conf = '/www/server/nginx/conf/nginx.conf'
+        reg = '#AUTH_START(.|\n)*#AUTH_END'
+        if os.path.exists(nginx_conf):
+            nginx_conf = public.readFile(nginx_conf)
+            auth_tmp = re.search(reg, nginx_conf)
+            if auth_tmp:
+                return True
+        apache_conf = '/www/server/apache/conf/extra/httpd-vhosts.conf'
+        if os.path.exists(apache_conf):
+            apache_conf = public.readFile(apache_conf)
+            auth_tmp = re.search(reg, apache_conf)
+            if auth_tmp:
+                return True
+
     # 设置phpmyadmin ssl
     def set_phpmyadmin_ssl(self,get):
         if public.get_webserver() == "openlitespeed":
@@ -801,6 +830,15 @@ class ajax:
         if not os.path.exists("/www/server/panel/ssl/certificate.pem"):
             return public.returnMsg(False,'面板证书不存在，请申请面板证书后再试')
         if get.v == "1":
+            # 获取auth信息
+            auth = ""
+            if self._get_phpmyadmin_auth():
+                auth = """
+        #AUTH_START
+        auth_basic "Authorization";
+        auth_basic_user_file /www/server/pass/phpmyadmin.pass;
+        #AUTH_END
+"""
         # nginx配置文件
             ssl_conf = """server
     {
@@ -819,6 +857,7 @@ class ajax:
         ssl_session_timeout 10m;
         error_page 497  https://$host$request_uri;
         #SSL-END
+        %s
         include enable-php.conf;
         location ~ .*\.(gif|jpg|jpeg|png|bmp|swf)$
         {
@@ -833,11 +872,20 @@ class ajax:
             deny all;
         }
         access_log  /www/wwwlogs/access.log;
-    }"""
+    }""" % auth
             public.writeFile("/www/server/panel/vhost/nginx/phpmyadmin.conf",ssl_conf)
             import panelPlugin
             get.sName = "phpmyadmin"
             v = panelPlugin.panelPlugin().get_soft_find(get)
+            if self._get_phpmyadmin_auth():
+                auth = """
+        #AUTH_START
+        AuthType basic
+        AuthName "Authorization "
+        AuthUserFile /www/server/pass/phpmyadmin.pass
+        Require user jose
+        #AUTH_END
+            """
             # apache配置
             ssl_conf = '''Listen 887
 <VirtualHost *:887>
@@ -847,7 +895,7 @@ class ajax:
     ServerAlias phpmyadmin.com
     #ErrorLog "/www/wwwlogs/BT_default_error.log"
     #CustomLog "/www/wwwlogs/BT_default_access.log" combined
-    
+
     #SSL
     SSLEngine On
     SSLCertificateFile /www/server/panel/ssl/certificate.pem
@@ -855,27 +903,28 @@ class ajax:
     SSLCipherSuite EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH
     SSLProtocol All -SSLv2 -SSLv3
     SSLHonorCipherOrder On
-    
+
     #PHP
     <FilesMatch \.php$>
            SetHandler "proxy:{}"
     </FilesMatch>
-    
+
     #DENY FILES
     <Files ~ (\.user.ini|\.htaccess|\.git|\.svn|\.project|LICENSE|README.md)$>
       Order allow,deny
       Deny from all
     </Files>
-    
+
     #PATH
     <Directory "/www/wwwroot/bt.youbadbad.cn/">
+{}
        SetOutputFilter DEFLATE
        Options FollowSymLinks
        AllowOverride All
        Require all granted
        DirectoryIndex index.php index.html index.htm default.php default.html default.htm
     </Directory>
-</VirtualHost>'''.format(public.get_php_proxy(v["ext"]["phpversion"],'apache'))
+</VirtualHost>'''.format(public.get_php_proxy(v["ext"]["phpversion"],'apache'),auth)
             public.writeFile("/www/server/panel/vhost/apache/phpmyadmin.conf", ssl_conf)
         else:
             if os.path.exists("/www/server/panel/vhost/nginx/phpmyadmin.conf"):
@@ -893,6 +942,8 @@ class ajax:
         import re
         #try:
         filename = self.__get_webserver_conffile()
+        if public.get_webserver() == 'openlitespeed':
+            filename = "/www/server/panel/vhost/openlitespeed/detail/phpmyadmin.conf"
         conf = public.readFile(filename)
         if not conf: return public.returnMsg(False,'ERROR')
         if hasattr(get,'port'):
@@ -920,7 +971,7 @@ class ajax:
                     oldPort = tmp.groups(1)
                 conf = re.sub(reg,"address *:{}".format(get.port),conf)
             if oldPort == get.port: return public.returnMsg(False,'SOFT_PHPVERSION_ERR_PORT')
-            
+
             public.writeFile(filename,conf)
             import firewalls
             get.ps = public.getMsg('SOFT_PHPVERSION_PS')
@@ -932,7 +983,7 @@ class ajax:
             get.port = oldPort
             fw.DelAcceptPort(get)
             return public.returnMsg(True,'SET_PORT_SUCCESS')
-        
+
         if hasattr(get,'phpversion'):
             if public.get_webserver() == 'nginx':
                 filename = public.GetConfigValue('setup_path') + '/nginx/conf/enable-php.conf'
@@ -949,14 +1000,14 @@ class ajax:
             public.serviceReload()
             public.WriteLog('TYPE_SOFT','SOFT_PHPMYADMIN_PHP',(get.phpversion,))
             return public.returnMsg(True,'SOFT_PHPVERSION_SET')
-        
+
         if hasattr(get,'password'):
             import panelSite
             if(get.password == 'close'):
                 return panelSite.panelSite().CloseHasPwd(get)
             else:
                 return panelSite.panelSite().SetHasPwd(get)
-        
+
         if hasattr(get,'status'):
             pma_path = public.GetConfigValue('setup_path') + '/phpmyadmin'
             stop_path = public.GetConfigValue('setup_path') + '/stop'
@@ -966,7 +1017,7 @@ class ajax:
             if conf.find(stop_path) != -1:
                 conf = conf.replace(stop_path,pma_path)
                 msg = public.getMsg('START')
-            
+
             if webserver == 'nginx':
                 sub_string = '''{};
         allow 127.0.0.1;
@@ -996,14 +1047,14 @@ class ajax:
                 else:
                     conf = conf.replace(pma_path,stop_path)
                     msg = public.getMsg('STOP')
-            
+
             public.writeFile(filename,conf)
             public.serviceReload()
             public.WriteLog('TYPE_SOFT','SOFT_PHPMYADMIN_STATUS',(msg,))
             return public.returnMsg(True,'SOFT_PHPMYADMIN_STATUS',(msg,))
         #except:
             #return public.returnMsg(False,'ERROR');
-            
+
     def ToPunycode(self,get):
         import re
         get.domain = get.domain.encode('utf8')
@@ -1018,27 +1069,27 @@ class ajax:
                         newdomain += 'xn--' + dkey.decode('utf-8').encode('punycode') + '.'
 
         return newdomain[0:-1]
-    
+
     #保存PHP排序
     def phpSort(self,get):
         if public.writeFile('/www/server/php/sort.pl',get.ssort): return public.returnMsg(True,'SUCCESS')
         return public.returnMsg(False,'ERROR')
-    
+
     #获取广告代码
     def GetAd(self,get):
         try:
             return public.HttpGet(public.GetConfigValue('home') + '/Api/GetAD?name='+get.name + '&soc=' + get.soc)
         except:
             return ''
-        
+
     #获取进度
     def GetSpeed(self,get):
         return public.getSpeed()
-    
+
     #检查登陆状态
     def CheckLogin(self,get):
         return True
-    
+
     #获取警告标识
     def GetWarning(self,get):
         warningFile = 'data/warning.json'
@@ -1047,7 +1098,7 @@ class ajax:
         wlist = json.loads(public.readFile(warningFile))
         wlist['time'] = int(time.time())
         return wlist
-    
+
     #设置警告标识
     def SetWarning(self,get):
         wlist = self.GetWarning(get)
@@ -1057,11 +1108,11 @@ class ajax:
             if wlist['data'][i]['id'] == id:
                 wlist['data'][i]['ignore_count'] += 1
                 wlist['data'][i]['ignore_time'] = int(time.time())
-        
+
         warningFile = 'data/warning.json'
         public.writeFile(warningFile,json.dumps(wlist))
         return public.returnMsg(True,'SET_SUCCESS')
-    
+
     #获取memcached状态
     def GetMemcachedStatus(self,get):
         import telnetlib,re;
@@ -1088,7 +1139,7 @@ class ajax:
             result['hit'] = float(result['get_hits']) / float(result['cmd_get']) * 100
 
         return result
-    
+
     #设置memcached缓存大小
     def SetMemcachedCache(self,get):
         import re
@@ -1101,14 +1152,14 @@ class ajax:
         public.writeFile(confFile,conf)
         public.ExecShell(confFile + ' reload')
         return public.returnMsg(True,'SET_SUCCESS')
-    
+
     #取redis状态
     def GetRedisStatus(self,get):
         import re
         c = public.readFile('/www/server/redis/redis.conf')
         port = re.findall('\n\s*port\s+(\d+)',c)[0]
         password = re.findall('\n\s*requirepass\s+(.+)',c)
-        if password: 
+        if password:
             password = ' -a ' + password[0]
         else:
             password = ''
@@ -1136,7 +1187,7 @@ class ajax:
             if not t[0] in res: continue
             result[t[0]] = t[1]
         return result
-    
+
     #取PHP-FPM日志
     def GetFpmLogs(self,get):
         import re
@@ -1149,7 +1200,7 @@ class ajax:
         if log_file.find('var/log') == 0:
             log_file = '/www/server/php/' +get.version + '/'+ log_file
         return public.returnMsg(True,public.GetNumLines(log_file,1000))
-    
+
     #取PHP慢日志
     def GetFpmSlowLogs(self,get):
         import re
@@ -1162,7 +1213,7 @@ class ajax:
         if log_file.find('var/log') == 0:
             log_file = '/www/server/php/' +get.version + '/'+ log_file
         return public.returnMsg(True,public.GetNumLines(log_file,1000))
-    
+
     #取指定日志
     def GetOpeLogs(self,get):
         if not os.path.exists(get.path): return public.returnMsg(False,'AJAX_LOG_FILR_NOT_EXISTS')
@@ -1190,7 +1241,7 @@ class ajax:
                 tmp = public.readFile(tmp_f)
                 if tmp: tmp = int(tmp)
         if not ltd: ltd = -1
-        if tmp is None: tmp = -1
+        if tmp == None: tmp = -1
         if ltd < 1:
             if ltd == -2:
                 tmp3 = public.to_string([60, 115, 112, 97, 110, 32, 99, 108, 97, 115, 115, 61, 34, 98, 116, 108, 116, 100,
@@ -1269,7 +1320,7 @@ class ajax:
                 time.strftime(public.to_string([37, 89, 45, 37, 109, 45, 37, 100]), time.localtime(ltd)))
 
         return tmp3, tmp, ltd
-    
+
     #检查用户绑定是否正确
     def check_user_auth(self,get):
         m_key = 'check_user_auth'
@@ -1277,12 +1328,12 @@ class ajax:
         u_path = 'data/userInfo.json'
         try:
             userInfo = json.loads(public.ReadFile(u_path))
-        except: 
+        except:
             if os.path.exists(u_path): os.remove(u_path)
             return public.returnMsg(False,'宝塔帐户绑定已失效，请在[设置]页面重新绑定!')
         pdata = {'access_key':userInfo['access_key'],'secret_key':userInfo['secret_key']}
         result = public.HttpPost(public.GetConfigValue('home') + '/api/panel/check_auth_key',pdata,3)
-        if result == '0': 
+        if result == '0':
             if os.path.exists(u_path): os.remove(u_path)
             return public.returnMsg(False,'宝塔帐户绑定已失效，请在[设置]页面重新绑定!')
         if result == '1':
@@ -1299,9 +1350,10 @@ class ajax:
             php_path = '/usr/local/lsws/lsphp'
         php_bin = php_path + php_version + '/bin/php'
         php_ini = php_path + php_version + '/etc/php.ini'
-        if not os.path.exists('/etc/redhat-release'):
-            php_ini = php_path + php_version + '/etc/php/'+args.php_version+'/litespeed/php.ini'
-        tmp = public.ExecShell(php_bin + ' /www/server/panel/class/php_info.php')[0]
+        php_ini_lit = "/www/server/php/80/etc/php/80/litespeed/php.ini"
+        if os.path.exists(php_ini_lit):
+            php_ini = php_ini_lit
+        tmp = public.ExecShell(php_bin + ' -c {} /www/server/panel/class/php_info.php'.format(php_ini))[0]
         if tmp.find('Warning: JIT is incompatible') != -1:
             tmp = tmp.strip().split('\n')[-1]
         result = json.loads(tmp)
@@ -1323,8 +1375,9 @@ class ajax:
         if not os.path.exists(args.filename): return public.returnMsg(False,'指定日志文件不存在!')
         s_body = public.ExecShell("tail -n {} {}".format(args.num,args.filename))[0]
         return public.returnMsg(True,s_body)
-        
+
     def log_analysis(self,get):
+        public.set_module_logs('log_analysis', 'log_analysis', 1)
         import log_analysis
         log_analysis=log_analysis.log_analysis()
         return log_analysis.log_analysis(get)
@@ -1347,7 +1400,9 @@ class ajax:
         log_analysis=log_analysis.log_analysis()
         return log_analysis.get_detailed(get)
 
-
+    def download_pay_type(self,path):
+        public.downloadFile(public.get_url() + '/install/lib/pay_type.json',path)
+        return True
 
     def get_pay_type(self,get):
         """
@@ -1356,46 +1411,75 @@ class ajax:
         spath = '{}/data/pay_type.json'.format(public.get_panel_path())
         down = cache.get('pay_type')
         if not down:
-            public.run_thread(public.downloadFile,(public.get_url() + '/install/lib/pay_type.json',spath))
+            public.run_thread(self.download_pay_type,(spath,))
             cache.set('pay_type',1,86400)
         try:
             data = json.loads(public.readFile("data/pay_type.json"))
         except :
             data = {}
-        
+
+        import panelPlugin
+        plu_panel =  panelPlugin.panelPlugin()
+        plugin_list = plu_panel.get_cloud_list()
+        if not 'pro' in plugin_list: plugin_list['pro'] = -1
+
         for item in data:
             if 'list' in item:
-                item['list'] = self.__get_home_list(item['list'])    
+                item['list'] = self.__get_home_list(item['list'],item['type'],plugin_list,plu_panel)
                 if item['type'] == 1:
-                    if len(item['list']) > 4: item['list'] = item['list'][:4]                        
+                    if len(item['list']) > 4: item['list'] = item['list'][:4]
+            if item['type'] == 0 and plugin_list['pro'] >= 0:
+                item['show'] = False
         return data
 
 
-    def __get_home_list(self,sList):  
+    def __get_home_list(self,sList,stype,plugin_list,plu_panel):
         """
             @name 获取首页软件列表推荐
         """
-        import panelPlugin       
-        plu_panel =  panelPlugin.panelPlugin()
-        plugin_list = plu_panel.get_cloud_list()
         nList = []
-        webserver = public.get_webserver()       
-        try:
-            indexList = json.loads(public.readFile("config/index.json"))
-        except :indexList = []
+        webserver = public.get_webserver()
         for x in sList:
             for plugin_info in plugin_list['list']:
                 if x['name'] == plugin_info['name']:
-                    if plugin_info['endtime'] >= 0:
+                    if not 'endtime' in plugin_info or plugin_info['endtime'] >= 0:
                         x['isBuy'] = True
-                
-            if not 'dependent' in x: 
-                nList.append(x)
-                continue
-
-            if x['dependent'] == webserver:
-                if not x['name'] in indexList: 
-                    info = plu_panel.get_soft_find(x['name'])
-                    if info:x['install'] = info['setup']
-                    nList.append(x)                
+            is_check = False
+            if 'dependent' in x :
+                if  x['dependent'] == webserver: is_check = True
+            else:
+                is_check = True
+            if is_check:
+                info = plu_panel.get_soft_find(x['name'])
+                if info:
+                    if stype == 1:
+                        if plugin_list['pro'] >=0: continue
+                        if not info['setup']:
+                            x['install'] = info['setup']
+                            nList.append(x)
+                    else:
+                        x['install'] = info['setup']
+                        nList.append(x)
         return nList
+
+    def ignore_version(self, get):
+        """
+        @忽略版本更新
+        :param version 面板版本
+        """
+        version = get.version
+        path = '{}/data/no_update.pl'.format(public.get_panel_path())
+        try:
+            data = json.loads(public.readFile(path))
+        except:
+            data = []
+
+        if not version in data: data.append(version)
+
+        public.writeFile(path, json.dumps(data))
+        try:
+            del (session['updateInfo'])
+        except:
+            pass
+
+        return public.returnMsg(True, "忽略成功，此版本将不再提醒更新.")

@@ -26,7 +26,8 @@ var database = {
     }
     bt.send('GetCloudServer','database/GetCloudServer',{},function(cloudData){
       layer.close(loadT);
-      that.cloudDatabaseList = cloudData
+			that.cloudDatabaseList = cloudData;
+			if (that.database_table) return;
       $('#bt_database_table').empty();
       that.database_table = bt_tools.table({
         el: '#bt_database_table',
@@ -214,7 +215,44 @@ var database = {
           }, {
             title: 'phpMyAdmin',
             event: function () {
-              bt.database.open_phpmyadmin('', 'root', bt.config.mysql_root)
+              var url = $('#phpMyAdminUrl').data('url'),
+              isEnable = url !== 'False';
+              bt.open({
+                type: 1,
+                title:'phpMyAdmin访问安全提示',
+                area:'450px',
+                btn:false,
+                content:'<div class="bt-form pd25">\
+                  <div class="rebt-con" style="width:100%;display: flex;padding:0;height:auto;justify-content: space-around;">\
+                    <div class="rebt-li panel_visit" style="position:relative;width: 150px;height: 50px;line-height: 50px;">\
+                      <a href="javascript:;" style="font-size:13px;border-radius:2px;">通过面板访问</a>\
+                      <span class="recommend-pay-icon" style="height: 30px;width: 30px;background-size: contain;"></span>\
+                    </div>\
+                    <div class="rebt-li public_visit" style="position:relative;width: 150px;height: 50px;line-height: 50px;">\
+                      <a href="javascript:;"  style="font-size:13px;border-radius:2px;">通过公共访问</a>\
+                    </div>\
+                  </div>\
+                  <ul class="help-info-text c7"><li>面板访问需要登录面板后，才能通过面板访问phpMyAdmin</li>'+ (isEnable?
+                    '<li class="color-red">关闭公共访问权限可提升安全性，可到软件商店-&gt;phpMyAdmin中关闭</li>':
+                    '<li>未开启公共访问权限，可到软件商店-&gt;phpMyAdmin中开启</li><li class="color-red">注意：开启公共访问权限存在安全风险，建议非必要不启用</li>'
+                  ) + '</ul>\
+                </div>',
+                success:function (layers,indexs) {
+                  $('.close_layer').click(function () {
+                    layer.close(indexs)
+                  })
+                  $('.panel_visit').click(function () {
+                    bt.database.open_phpmyadmin('', 'root', bt.config.mysql_root)
+                  })
+                  $('.public_visit').click(function () {
+                    if(isEnable){
+                      window.open(url)
+                    }else{
+                      layer.msg('未开启公共访问权限')
+                    }
+                  })
+                }
+              })
             }
           },
           {
@@ -773,7 +811,7 @@ var database = {
               group: [{
                 title:'编辑',
                 hide:function (row) {
-                  return row.db_host === '127.0.0.1'
+                  return row.id == 0
                 },
                 event:function(row){
                   that.render_db_cloud_server_view(row,true);
@@ -781,7 +819,7 @@ var database = {
               },{
                 title:'删除',
                 hide:function (row) {
-                  return row.db_host === '127.0.0.1'
+                  return row.id == 0
                 },
                 event:function(row){
                   that.del_db_cloud_server(row)
@@ -809,7 +847,7 @@ var database = {
       var arry = []
       for (var i = 0; i < rdata.length; i++) {
         var element = rdata[i];
-        if(element.db_host === '127.0.0.1') continue
+        if(element.id == 0) continue
         arry.push(element)
       }
       that.dbCloudServerTable.$reader_content(arry);
@@ -901,6 +939,7 @@ var database = {
         bt.send(interface,'database/'+interface,form,function(rdata){
           that.layerT.close();
           if(rdata.status){
+            that.database_table_view();
             that.render_cloud_server_table();
             layer.close(indexs)
             layer.msg(rdata.msg, {icon:1})
@@ -1361,7 +1400,10 @@ var database = {
       closeBtn: 2
     }, function () {
       bt.send('RemoveCloudServer','database/RemoveCloudServer',{id:row.id},function(rdata){
-        if(rdata.status) that.render_cloud_server_table();
+        if(rdata.status){
+					that.render_cloud_server_table();
+					that.database_table.$refresh_table_list(true);
+        }
         layer.msg(rdata.msg, {
           icon: rdata.status ? 1 : 2
         })

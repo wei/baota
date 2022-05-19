@@ -44,7 +44,7 @@ class panelMessage:
 
 
     """
-    获取官网推送消息，一小时获取一次
+    获取官网推送消息，一天获取一次
     """
     def get_cloud_messages(self,args):
         try:
@@ -69,8 +69,8 @@ class panelMessage:
                     "expire":int(time.time()) + (int(x['expire']) * 86400),
                     "addtime": int(time.time())
                 }
-                public.M('messages').insert(pdata)  
-            cache.set('get_cloud_messages',3600)
+                public.M('messages').insert(pdata)
+            cache.set('get_cloud_messages',86400)
             return public.returnMsg(True,'同步成功!')
         except:
             return public.returnMsg(False,'同步失败!')
@@ -81,7 +81,7 @@ class panelMessage:
             @author hwliang <2020-05-18>
             @return list
         '''
-        self.get_cloud_messages(args)
+        public.run_thread(self.get_cloud_messages,args=(args,))
         data = public.M('messages').where('state=? and expire>?',(1,int(time.time()))).order("id desc").select()
         return data
 
@@ -91,7 +91,7 @@ class panelMessage:
             @author hwliang <2020-05-18>
             @return list
         '''
-        self.get_cloud_messages(args)
+        public.run_thread(self.get_cloud_messages,args=(args,))
         data = public.M('messages').order("id desc").select()
         return data
 

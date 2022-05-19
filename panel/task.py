@@ -500,6 +500,7 @@ def checkPHPVersion(version):
 def check502Task():
     try:
         while True:
+            public.auto_backup_panel()
             check502()
             sess_expire()
             mysql_quota_check()
@@ -670,7 +671,6 @@ def check_files_panel():
                 os.popen('{} /www/server/panel/script/check_files.py'.format(python_bin)).read()
                 )
         except:
-            logging.info(public.get_error_info())
             continue
         if result in ['0']:
             continue
@@ -873,48 +873,48 @@ def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s]: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S', filename=task_log_file, filemode='a+')
     logging.info('服务已启动')
-
+    time.sleep(5)
     import threading
     t = threading.Thread(target=systemTask)
-    t.setDaemon(True)
+    # t.setDaemon(True)
     t.start()
 
     p = threading.Thread(target=check502Task)
-    p.setDaemon(True)
+    # p.setDaemon(True)
     p.start()
 
     pl = threading.Thread(target=panel_status)
-    pl.setDaemon(True)
+    # pl.setDaemon(True)
     pl.start()
 
     p = threading.Thread(target=restart_panel_service)
-    p.setDaemon(True)
+    # p.setDaemon(True)
     p.start()
 
     p = threading.Thread(target=check_panel_ssl)
-    p.setDaemon(True)
+    # p.setDaemon(True)
     p.start()
     
     p = threading.Thread(target=update_software_list)
-    p.setDaemon(True)
+    # p.setDaemon(True)
     p.start()
     
     p = threading.Thread(target=send_mail_time)
-    p.setDaemon(True)
+    # p.setDaemon(True)
     p.start()
 
     p = threading.Thread(target=check_files_panel)
-    p.setDaemon(True)
+    # p.setDaemon(True)
     p.start()
     import panelTask
     task_obj = panelTask.bt_task()
     task_obj.not_web = True
     p = threading.Thread(target=task_obj.start_task)
-    p.setDaemon(True)
+    # p.setDaemon(True)
     p.start()
 
     p = threading.Thread(target=check_panel_msg)
-    p.setDaemon(True)
+    # p.setDaemon(True)
     p.start()
 
     startTask()

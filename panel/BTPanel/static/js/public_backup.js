@@ -847,7 +847,7 @@ var bt = {
             break;
           case 'button':
             var _width = _obj.width ? _obj.width : '330px';
-            _html += '<button name=\'' + _name + '\' class="btn btn-success btn-sm mr5 ml5 ' + _name + bs + ' ' + (_obj['class'] ? _obj['class'] : '') + '">' + _obj.text + '</button>';
+            _html += '<button type="button" name=\'' + _name + '\' class="btn btn-success btn-sm mr5 ml5 ' + _name + bs + ' ' + (_obj['class'] ? _obj['class'] : '') + '">' + _obj.text + '</button>';
             break;
           case 'radio':
             var _v = _obj.value === true ? 'checked' : ''
@@ -912,7 +912,7 @@ var bt = {
           break;
         case 'button':
           var _width = item.width ? item.width : '330px';
-          _html += '<button name=\'' + _name + '\' class="btn btn-success btn-sm mr5 ml5 ' + _name + bs + '">' + item.text + '</button>';
+          _html += '<button type="button" name=\'' + _name + '\' class="btn btn-success btn-sm mr5 ml5 ' + _name + bs + '">' + item.text + '</button>';
           break;
         case 'number':
           var _width = item.width ? item.width : '330px';
@@ -1589,11 +1589,34 @@ bt.index = {
       var k = layer.open({
         type: 1,
         title: lan.bt.install_title,
-        area: ["670px", "510px"],
+        area: ["670px", "500px"],
         closeBtn: 2,
         shadeClose: false,
-        content: "<div class='rec-install'><div class='important-title'><p><span class='glyphicon glyphicon-alert' style='color: #f39c12; margin-right: 10px;'></span>" + lan.bt.install_ps + " <a href='javascript:jump()' style='color:#20a53a'>" + lan.bt.install_s + "</a> " + lan.bt.install_s1 + "</p></div><div class='rec-box'><h3>" + lan.bt.install_lnmp + "</h3><div class='rec-box-con'><ul class='rec-list'>" + c + "</ul><p class='fangshi1'>" + lan.bt.install_type + "：<label data-title='" + lan.bt.install_rpm_title + "'><span>" + lan.bt.install_rpm + "</span><input type='checkbox' checked></label><label data-title='" + lan.bt.install_src_title + "'><span>" + lan.bt.install_src + "</span><input type='checkbox'></label></p><div class='onekey'>" + lan.bt.install_key + "</div></div></div><div class='rec-box' style='margin-left:16px'><h3>LAMP</h3><div class='rec-box-con'><ul class='rec-list'>" + g + "</ul><p class='fangshi1'>" + lan.bt.install_type + "：<label data-title='" + lan.bt.install_rpm_title + "'><span>" + lan.bt.install_rpm + "</span><input type='checkbox' checked></label><label data-title='" + lan.bt.install_src_title + "'><span>" + lan.bt.install_src + "</span><input type='checkbox'></label></p><div class='onekey'>" + lan.bt.install_key + "</div></div></div></div>",
-        success: function () {
+        content: "\
+        <div class='rec-install'>\
+          <div class='important-title'>\
+            <p><span class='glyphicon glyphicon-alert' style='color: #f39c12; margin-right: 10px;'></span>" + lan.bt.install_ps + " <a href='javascript:jump()' style='color:#20a53a'>" + lan.bt.install_s + "</a> " + lan.bt.install_s1 + "</p>\
+            <button type='button' class='btn btn-sm btn-default no-show-rec-btn'>不再显示推荐</button>\
+            \
+          </div>\
+          <div class='rec-box'>\
+            <h3>" + lan.bt.install_lnmp + "</h3>\
+            <div class='rec-box-con'>\
+              <ul class='rec-list'>" + c + "</ul>\
+              <p class='fangshi1'>" + lan.bt.install_type + "：<label data-title='" + lan.bt.install_rpm_title + "'><span>" + lan.bt.install_rpm + "</span><input type='checkbox' checked></label><label data-title='" + lan.bt.install_src_title + "'><span>" + lan.bt.install_src + "</span><input type='checkbox'></label></p>\
+              <div class='onekey'>" + lan.bt.install_key + "</div>\
+            </div>\
+          </div>\
+          <div class='rec-box' style='margin-left:16px'>\
+            <h3>LAMP</h3>\
+            <div class='rec-box-con'>\
+              <ul class='rec-list'>" + g + "</ul>\
+              <p class='fangshi1'>" + lan.bt.install_type + "：<label data-title='" + lan.bt.install_rpm_title + "'><span>" + lan.bt.install_rpm + "</span><input type='checkbox' checked></label><label data-title='" + lan.bt.install_src_title + "'><span>" + lan.bt.install_src + "</span><input type='checkbox'></label></p>\
+              <div class='onekey'>" + lan.bt.install_key + "</div>\
+            </div>\
+          </div>\
+        </div>",
+        success: function ($layer, index) {
           form_group.select_all([
             '#select_Nginx',
             '#select_MySQL',
@@ -1613,6 +1636,23 @@ bt.index = {
                 siblings_label = input.parents('label').siblings()
             input.prop('checked', 'checked').next().addClass('active');
             siblings_label.find('input').removeAttr('checked').next().removeClass('active');
+          });
+          // 不再显示推荐
+          $('.no-show-rec-btn').click(function () {
+            bt.confirm({
+              title: '不再显示推荐',
+              msg: '是否不再显示推荐安装套件？',
+            }, function () {
+              var load = bt.load('正在设置，请稍候...');
+              bt.send('CreateDir', 'files/CreateDir', { path: '/www/server/php' }, function (res) {
+                load.close();
+                if (res.status) res.msg = '设置成功';
+                bt.msg(res);
+                setTimeout(function () {
+                  if (res.status) layer.close(index);
+                }, 2000)
+              });
+            });
           });
           var loadT = '';
           $('.fangshi1 label').hover(function () {
@@ -4136,6 +4176,12 @@ bt.soft = {
     var bt_user_info = bt.get_cookie('bt_user_info'),
         ltd_end = bt.get_cookie('ltd_end'),
         pro_end = bt.get_cookie('pro_end');
+    
+    var totalNum = config.totalNum ? config.totalNum : '';
+    if (totalNum) {
+      bt.set_cookie('pay_source', parseInt(totalNum));
+    }
+
     // 判断登录
     if (!bt_user_info) {
       bt.pub.bind_btname(function () {
@@ -4156,14 +4202,28 @@ bt.soft = {
     var that = this;
     var user_info = JSON.parse(bt_user_info);
     var username = user_info.data.username;
-    bt.open({
+    var overall_beforeunload = function(){
+      return ''
+    }
+    var overall_keyup = function() {
+      if ((window.event.keyCode == 116) || (window.event.shiftKey && window.event.keyCode == 121)) {
+        layer.msg('提示，正在交易订单，为确保订单支付成功，请关闭支付页面后再刷新页面!', {icon:1})
+        window.event.keyCode = 0;
+        window.event.returnValue = false;
+      }
+      if ((window.event.altKey) && (window.event.keyCode == 115)) { //屏蔽Alt+F4 
+        window.showModelessDialog("about:blank", "", "dialogWidth:1px;dialogheight:1px");
+        return false;
+      }
+    }
+    layer.open({
       type: 1,
       title: false,
       skin: 'libPay-view',
-      area: ['1000px', '650px'],
+      area: ['1000px', '640px'],
       shadeClose: false,
       content: '<div class="libPay-content-box" ' + (config.totalNum ? 'data-index="'+config.totalNum+'"' : '') + '>\
-                <div class="libPay-menu ' + (config.plugin ? 'is_plugin' : '') + '">\
+                <div class="libPay-menu ' + (config.plugin ? 'is_plugin' : '') + ' '+(typeof config.closePro != 'undefined' && config.closePro?'closePro':'')+'">\
                     ' + (config.plugin ? '<div class="libPay-menu-type lib_plugin"><p>' + config.name + '</p><p>' + config.name + '</p></div>' : '') + '\
                     <div class="libPay-menu-type lib_pro" >\
                         <p><span class="glyphicon glyphicon-vip"></span><span style="margin-left:8px">' + bt.os + '专业版</span></p>\
@@ -4171,7 +4231,7 @@ bt.soft = {
                     </div>\
                     <div class="libPay-menu-type lib_ltd" >\
                         <p><span class="recommend-pay-icon"></span><span class="glyphicon glyphicon-vip"></span><span style="margin-left:8px">' + bt.os + '企业版</span></p>\
-                        <p>适用于电商、教育、医疗、事业单位等企业用户</p>\
+                        <p>适用于官网，电商、教育、医疗等企业用户</p>\
                     </div>\
                     <div class="libPay-menu-type lib_ver" >\
                         <p><span></span><span style="margin-left:8px">抵扣券</span></p>\
@@ -4182,7 +4242,7 @@ bt.soft = {
                     <div class="libVoucher-loading"><p><img src="/static/images/loading-2.gif"></p><p>正在获取数据，请稍候...</p></div>\
                     <div class="libPay-layer-item">\
                         <div class="libPay-line-item proS" id="libPay-theme-tips">\
-                            <p>企业版特权:</p>\
+                          <p>企业版特权:</p>\
                         </div>\
                         <div class="libPay-line-item proP" id="libPay-theme-price"><ul class="pay-pro-cycle"></ul></div>\
                         <div class="libPay-line-item prokf hide">\
@@ -4193,39 +4253,40 @@ bt.soft = {
                             <span>是否需要客服电话联系，工作时间 9：30-18：00</span>\
                         </div>\
                         <div class="libPay-line-item mtb20" id="libPay-qcode-box">\
-                            <div class="libPay-qcode-left">\
-                                <div class="pay-radio-type" >\
-                                    <div class="pay-type-btn active" data-condition="2" >\
-                                        <label class="pay-type-label"> <span class="pay-radio-ati"></span><span class="pay-radio-tit">微信扫码支付</span></label>\
+                          <div class="libPay-qcode-left">\
+                              <div class="pay-radio-type" >\
+                                  <div class="pay-type-btn active" data-condition="2" >\
+                                      <label class="pay-type-label"> <span class="pay-radio-ati"></span><span class="pay-radio-tit">微信扫码支付</span></label>\
+                                  </div>\
+                                  <div class="pay-type-btn" data-condition="3">\
+                                      <label class="pay-type-label"><span class="pay-radio-ati"></span><span class="pay-radio-tit">支付宝扫码支付</span></label>\
+                                  </div>\
+                              </div>\
+                          </div>\
+                          <div class="libPay-qcode-right">\
+                              <div class="libPay-loading"><p><img src="/static/images/loading-2.gif"></p><p>正在生成订单,请稍候...</p></div>\
+                              <div class= "libPaycode-box">\
+                                  <div class="pay-wx" style="height:145px;width: 145px" id="PayQcode" ></div>\
+                                  <div class="payqcode-box" >\
+                                      <span class="wx-pay-ico mr5 wechat"></span>\
+                                  </div>\
+                                  <div class="libPaycode-foo-txt" >\
+                                    <div class="payment_results_tips">提示：支付后请耐心等待支付结果，请勿刷新浏览器，否则将会导致购买异常。</div>\
+                                    <div class="userinfo">\
+                                        <div class="info_label mb-5">当前账号：</div>\
+                                        <div class="info_value">' + username + '</div>\
+                                        <a class="btlink" onclick="bt.pub.bind_btname()" href="javascript:;">切换账号</a>\
                                     </div>\
-                                    <div class="pay-type-btn" data-condition="3">\
-                                        <label class="pay-type-label"><span class="pay-radio-ati"></span><span class="pay-radio-tit">支付宝扫码支付</span></label>\
-                                    </div>\
-                                </div>\
-                            </div>\
-                            <div class="libPay-qcode-right">\
-                                <div class="libPay-loading"><p><img src="/static/images/loading-2.gif"></p><p>正在生成订单,请稍候...</p></div>\
-                                <div class= "libPaycode-box">\
-                                    <div class="pay-wx" style="height:155px;width: 155px" id="PayQcode" ></div>\
-                                    <div class="payqcode-box" >\
-                                        <span class="wx-pay-ico mr5 wechat"></span>\
-                                    </div>\
-                                    <div class="libPaycode-foo-txt" >\
-                                        <div class="userinfo">\
-                                            <div class="info_label">当前账号：</div>\
-                                            <div class="info_value">' + username + '</div>\
-                                            <a class="btlink" onclick="bt.pub.bind_btname()" href="javascript:;">切换账号</a>\
-                                        </div>\
-                                        <p> 订单总价:</p> <span class="libPayTotal">---</span> /<lable class="libPayCycle">--年</lable>\
-                                        <div class= "libPaycode-pro-cylce">低至--元/天 </div>\
-                                    </div>\
-                                </div >\
-                            </div>\
-                        </div>\
-                        <ul class="libPay-footer-tips">\
-                            <li>所有不在堡塔付款的宝塔产品100%是骗人的，请勿上当。<a class="btlink" href="https://www.bt.cn/bbs/thread-22665-1-1.html" target="_blank">查看详情</a></p>\
-                            <li>如果购买后未立即到账，请耐心等待5分钟后重新登录面板，如遇到支付异常请联系客服QQ：<a class="btlink" href="https://wpa1.qq.com/OUMbED4a?_type=wpa&qidian=true" target="_blank">3007255432</a></p>\
-                        </ul>\
+                                    <p> 订单总价:</p> <span class="libPayTotal">---</span> /<lable class="libPayCycle">--年</lable>\
+                                    <div class= "libPaycode-pro-cylce">低至--元/天 </div>\
+                                  </div>\
+                              </div >\
+                          </div>\
+                      </div>\
+                      <ul class="libPay-footer-tips">\
+                        <li>所有不在堡塔付款的宝塔产品100%是骗人的，请勿上当。<a class="btlink" href="https://www.bt.cn/bbs/thread-22665-1-1.html" target="_blank">查看详情</a></li>\
+                        <li style="color:red;">如果购买后未立即到账，请点击更新软件列表/支付状态按钮，如遇到支付异常请联系<span class="ml5"><span class="wechatEnterpriseService" style="vertical-align: middle;"></span><span class="btlink service_buy_before">售前客服</span></span></li>\
+                      </ul>\
                     </div>\
                     <div class="libPay-layer-item">\
                         <p class="voucher-tit">产品类型</p>\
@@ -4249,7 +4310,7 @@ bt.soft = {
           that.pay_loading.init('end')
           // 防止浏览器过低
           $('.libPay-view .layui-layer-content').removeAttr('style')
-          $('.libPay-view .layui-layer-page,.libPay-view .layui-layer-content').height(650);
+          $('.libPay-view .layui-layer-page,.libPay-view .layui-layer-content').height(640);
           //客服电话咨询
           $('.libPay-line-item.prokf').click(function (ev) {
             if ($(this).find('i').hasClass('active')) {
@@ -4312,12 +4373,56 @@ bt.soft = {
             }
           });
         })
+        $('.service_buy_before').click(function(){
+          onChangeServiceMethod();
+        })
+        // 人工服务   带有参数为售前客服
+        function onChangeServiceMethod(){
+          layer.open({
+            type: 1,
+            area: ['300px', '290px'],
+            title: false,
+            closeBtn: 2,
+            shift: 0,
+            content: '<div class="service_consult">\
+                        <div class="service_consult_title">请打开微信"扫一扫"</div>\
+                        <div class="contact_consult" style="margin-bottom: 5px;"><div id="contact_consult_qcode"></div><i class="wechatEnterprise"></i></div>\
+                        <div>【售前客服】</div>\
+                        <ul class="c7" style="margin-top:22px;text-align: center;">\
+                            <li>工作时间：9:15 - 18:00</li>\
+                        </ul>\
+                    </div>',
+            success:function(){
+              $('#contact_consult_qcode').qrcode({
+                render: "canvas",
+                width: 140,
+                height: 140,
+                text:'https://work.weixin.qq.com/kfid/kfc72fcbde93e26a6f3'
+              });
+            }
+          })
+        }
+        $(window).on('beforeunload',overall_beforeunload)
+        $(document).on('keydown',overall_keyup)
+        bt.set_cookie('refresh_software_list',1)
+        bt.set_cookie('force', 1)
       },
       end: function () {
-        clearInterval(bt.soft.pub.wxpayTimeId);
-        bt.clear_cookie('pay_source');
+        $(window).unbind('beforeunload',overall_beforeunload)
+        $(document).unbind('keydown',overall_keyup)
+        clearInterval(bt.soft.pub.wxpayTimeId)
+      },
+      cancel:function(indexs){
+        bt.confirm({
+          title:'温馨提示',
+          msg:'支付过程中，请勿关闭该页面，以免出现支付异常！'
+        },function (indexss) {
+          layer.close(indexs)
+          layer.close(indexss)
+        })
+        return false
       }
-    });
+    })
   },
   //获取付款周期
   get_product_change: function (idx, btype) {
@@ -4344,20 +4449,35 @@ bt.soft = {
       that.get_product_discount_cache(_data, function (rdata) {
         var _ul = $("#libPay-theme-price ul").empty(),
             num = 0,
-            html = '';
+            html = '',
+            payList = [];
         for (var keys in rdata) {
           var item = rdata[keys];
           if (typeof item === 'object') {
             num++;
             if (num > 4) break
             item['cycle'] = keys
-            var _li = $('<li class="pay-cycle-btns" data-type="' + keys + '"><div class="pay-head-price"><span><div class="libPrice"><i>' + item.price + '</i>元</div>/' + that.pro.conver_unit(item.cycle + '') + '</span><p>原价:' + item.sprice + '元</p></div><div class="pay-foo-price">低至' + (item.price / ((item.cycle / 12) * 365)).toFixed(2) + '元/天</div>' + (item.tip ? '<em>' + item.tip + '</em>' : '') + '</li>')
-            _li.data('data', item).click(function () {
-              that.create_pay_code($(this).index())
-            })
-            _ul.append(_li)
+            payList.push(item)
           }
         }
+        // 排序
+        for (var i = 0; i < payList.length; i++) {
+          for (var j = i + 1; j < payList.length; j++) {
+            if (payList[i].sort > payList[j].sort) {
+              var temp = payList[i];
+              payList[i] = payList[j];
+              payList[j] = temp;
+            }
+          }
+        }
+        $.each(payList, function (index, item) {
+          var keys = item.cycle;
+          var _li = $('<li class="pay-cycle-btns" data-type="' + keys + '"><div class="pay-head-price"><span><div class="libPrice"><i>' + item.price + '</i>元</div>/' + that.pro.conver_unit(item.cycle + '') + '</span><p>原价:' + item.sprice + '元</p></div><div class="pay-foo-price">低至' + (item.price / ((item.cycle / 12) * 365)).toFixed(2) + '元/天</div>' + (item.tip ? '<em>' + item.tip + '</em>' : '') + '</li>')
+          _li.data('data', item).click(function () {
+            that.create_pay_code($(this).index());
+          });
+          _ul.append(_li);
+        });
         // if(num >= 4) $('#libPay-theme-price .pay-cycle-btns').css('width',((910  - ((num - 1) * 10)) / num) + 'px')
         that.create_pay_code(0)
       })
@@ -4454,25 +4574,13 @@ bt.soft = {
         _source = 0,
         _locahostURL = window.location.pathname;
     var pay_source = parseInt(bt.get_cookie('pay_source') || 0)
-    switch (_locahostURL) {
-      case '/':
-        if($('.btpro-gray').length == 1){  //是否免费版
-          _source = 27;
-        }else{
-          _source = 28;
-        }
-        break;
-      case '/control':
-        _source = 22
-        break;
-      case '/soft':
-        _source = $('.libPay-content-box').data('index');
-        break;
-      case '/btwaf/index':
-        _source = 25
-        break;
-    };
-    if(_source && !pay_source) bt.set_cookie('pay_source', _source);
+    if (pay_source === 0) {
+      if ($('.btpro-gray').length == 1) {  // 是否免费版
+        pay_source = 27;
+      } else {
+        pay_source = 28;
+      }
+    }
 
     $(".wx-pay-ico").hide()
     $(".libPay-loading").show();
@@ -4486,7 +4594,7 @@ bt.soft = {
     that.pro.create_order({
       pid: _product.pid,
       cycle: _cycle.cycle,
-      source: pay_source || _source
+      source: pay_source
     }, function (rdata) {
       var start = that.pay_loading.get('start')
       var end = that.pay_loading.set('end')
@@ -4503,9 +4611,16 @@ bt.soft = {
       if (rdata.status === false) {
 
         bt.set_cookie('force', 1);
-        if (soft) soft.flush_cache();
+        if (typeof soft != 'undefined') soft.flush_cache();
         layer.msg(rdata.msg, { icon: 2 });
+
+        //提示先解绑
+        if($('.payment_results_error_tips').length == 0){
+          $('#pay_product_view .libPay-layer-item:eq(0)').prepend('<div class="payment_results_error_tips">提示：'+rdata.msg+'</div>')
+        }
         return;
+      }else{
+        $('.payment_results_error_tips').remove();
       }
       $(".wx-pay-ico").show()
       $(".pay-radio-type").data('data', rdata)
@@ -4648,7 +4763,11 @@ bt.soft = {
       pid: 100000032,
       limit: 'ltd'
     };
-    if(num) param['totalNum'] = num
+    if (typeof num !== 'undefined') {
+      param['totalNum'] = num;
+    }
+    bt.set_cookie('pay_source', num);
+
     if (is_alone || false) $.extend(param, {
       source: 5,
       is_alone: true
@@ -4662,7 +4781,8 @@ bt.soft = {
       pid: 100000011,
       limit: 'pro'
     }
-    if(num) param['totalNum'] = num
+    if(num) param['totalNum'] = num;
+    bt.set_cookie('pay_source', num);
     bt.soft.product_pay_view(param);
   },
   //遍历数组和对象
@@ -4761,6 +4881,8 @@ bt.soft = {
       $(".sale-price").text((price * cycle).toFixed(2))
       $(".pay-wx").html('');
       $(".pay-wx").qrcode(rdata.msg.code);
+      $(".pay-wx").css({ 'display': 'flex', 'justify-content': 'center', 'margin-bottom': '10px' });
+      $(".pay-wx canvas").css({ 'width': '175px', 'height': '175px', 'margin': '0', 'border-bottom-color': '#ddd' });
       bt.set_cookie('other_oid', rdata.msg.oid)
       bt.soft.get_order_stat(rdata.msg.oid, type);
     });
@@ -5358,34 +5480,45 @@ bt.soft = {
 
   get_install_plugin: function (item) {
     var plugin_info = bt.load('正在获取插件安装信息，请稍候<img src="/static/img/ing.gif" />');
-    bt.send('install_plugin', 'plugin/install_plugin', {
-      sName: item.name,
-      version: item.install_version.m_version,
-      min_version: item.install_version.version,
-      type: item.install_type
-    }, function (rdata) {
-      plugin_info.close();
-      if (rdata.install_opt) {
-        bt.soft.show_plugin_info(rdata);
-        return
-      }
-      if (rdata.size) {
-        bt.soft.install_other(rdata, status);
-        return;
-      }
-      bt.pub.get_task_count(function (rdata) {
-        if (rdata > 0 && item.type === 5) messagebox();
-      });
-      if (typeof soft != "undefined") soft.get_list();
-      if (!rdata.status) layer.closeAll()
-      if (rdata.msg.indexOf('依赖以下软件,请先安装') > -1) {
-        layer.msg(rdata.msg.replace(/.*\[([A-z]*)].*/, function () {
-          return '依赖以下软件,请先安装[' + arguments[1] + ']，<a href="javascript:;" onclick="bt.soft.install(\'' + arguments[1] + '\',this)" class="btlink">点击安装软件</a>'
-        }), { icon: 0, time: 0, closeBtn: 2, shade: .3 })
-        return false;
-      }
-      bt.msg(rdata);
-    })
+    var fn = function () {
+      bt.send('install_plugin', 'plugin/install_plugin', {
+        sName: item.name,
+        version: item.install_version.m_version,
+        min_version: item.install_version.version,
+        type: item.install_type
+      }, function (rdata) {
+        plugin_info.close();
+        if (rdata.install_opt) {
+          bt.soft.show_plugin_info(rdata);
+          return
+        }
+        if (rdata.size) {
+          bt.soft.install_other(rdata, status);
+          return;
+        }
+        bt.pub.get_task_count(function (rdata) {
+          if (rdata > 0 && item.type === 5) messagebox();
+        });
+        if (typeof soft != "undefined") soft.get_list();
+        if (!rdata.status) layer.closeAll()
+        if (rdata.msg.indexOf('依赖以下软件,请先安装') > -1) {
+          layer.msg(rdata.msg.replace(/.*\[([A-z]*)].*/, function () {
+            return '依赖以下软件,请先安装[' + arguments[1] + ']，<a href="javascript:;" onclick="bt.soft.install(\'' + arguments[1] + '\',this)" class="btlink">点击安装软件</a>'
+          }), { icon: 0, time: 0, closeBtn: 2, shade: .3 })
+          return false;
+        }
+        bt.msg(rdata);
+      })
+    }
+    if(item.type === 10 && item.endtime === 0){
+      bt.send('create_plugin_other_order', 'auth/create_plugin_other_order', {
+        pid: item.pid,
+        cycle: 999,
+        type: 0
+      },fn)
+    }else{
+      fn()
+    }
   },
 
   /**
@@ -5503,9 +5636,11 @@ bt.soft = {
                 </div>',
         success: function (layers, indexs) {
           $('.historicVersion').on('click', function () {
+            var load = bt.load('正在获取历史版本，请稍后...');
             bt.send('get_plugin_upgrades', 'plugin/get_plugin_upgrades', {
               plugin_name: data.name
             }, function (res) {
+              load.close();
               layer.open({
                 type: 1,
                 area: ["520px", '400px'],
@@ -5525,7 +5660,7 @@ bt.soft = {
                             '<div class="index_date">' + bt.format_data(item.update_time) + '</div>' +
                             '<div class="index_title">' + data.title + item.m_version + '.' + item.version + '- ' + (item.beta ? '测试版' : '正式版') + '</div>' +
                             '<div class="index_conter">' + (item.update_msg.replace(/\n/g, '</br>') || '无') + '</div>' +
-                            '</div>'
+                          '</div>'
                       }
                       return html
                     }()) +
@@ -5939,6 +6074,7 @@ bt.soft = {
           }
           return;
         }
+        // rhtml = rhtml.replace(/,\s+error:\s+function(.|\n|\r)+obj.error\(ex\);\s+\}/,"");
         bt.open({
           type: 1,
           shift: 5,
@@ -6166,6 +6302,7 @@ bt.plugin = {
     bt.send('getConfigHtml', 'plugin/getConfigHtml', {
       name: name
     }, function (rdata) {
+      // rdata = rdata.replace(/,\s+error:\s+function(.|\n|\r)+obj.error\(ex\);\s+\}/,"")
       if (callback) callback(rdata);
     });
   },
@@ -7190,7 +7327,7 @@ bt.data = {
           bt.send('SetupPassword', 'database/SetupPassword', rdata, function (rRet) {
             loading.close();
             bt.msg(rRet);
-            load.close();
+            if (rRet.status) load.close();
           })
         })
       ]
@@ -8095,12 +8232,37 @@ bt.public = {
                   layer.close(indexs)
                   setTimeout(function () { location.reload() },200)
                 }else{
-                  layer.msg(res.msg,{ icon:res.status?1:2, area:'650px',time:0,shade:.3,closeBtn:2})
+                  // layer.msg(res.msg, { icon:res.status?1:2, time:0, shade:.3, closeBtn:2})
+                  if (res.msg === '此功能为企业版专享功能，请先购买企业版') {
+                    bt.confirm({
+                      title: '提示',
+                      msg: '此功能为企业版专享功能，是否购买企业版？'
+                    }, function () {
+                      bt.soft.product_pay_view({totalNum:51,limit:'ltd',closePro:true})
+                    });
+                  } else {
+                    layer.msg(res.msg, {
+                      time: 0,
+                      shade: .3,
+                      closeBtn: 2,
+                      maxWidth: 650,
+                      icon: res.status ? 1 : 2
+                    });
+                  }
                 }
               })
             }else{
               bt.public.modify_mysql_quota({data:JSON.stringify({size:quota_size,db_name:row.name})},function (res) {
-                bt.msg(res)
+                if (res.status === false && res.msg === '此功能为企业版专享功能，请先购买企业版') {
+                  bt.confirm({
+                    title: '提示',
+                    msg: '此功能为企业版专享功能，是否购买企业版？'
+                  }, function () {
+                    bt.soft.updata_pro(52);
+                  });
+                } else {
+                  bt.msg(res)
+                }
                 if(res.status){
                   layer.close(indexs)
                   setTimeout(function () { location.reload() },200)

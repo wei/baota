@@ -34,6 +34,13 @@
   font-weight: normal;
   font-style: normal;
 }
+
+.text-icon:before{
+  color: #cccccc;
+  content: '\f011';
+  font-family: octicons;
+}
+
 .default-icon:before {
   color: #cccccc;
   content: '\f011';
@@ -4918,11 +4925,6 @@
 	content: '\f0c8';
   font-family: file-icons;
   font-size: 14px;
-}
-.text-icon:before{
-  color: #cccccc;
-  content: '\f011';
-  font-family: octicons;
 }
 
 .compress-icon:before{

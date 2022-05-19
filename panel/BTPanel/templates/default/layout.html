@@ -120,8 +120,13 @@
       <button style="display: none;" id="bt_copys" class="bt_copy" data-clipboard-text=""></button>
       <a style="display: none;" id="defaultPath">{{session['config']['sites_path']}}</a>
       {% block content %}{% endblock %}
-      <div class="footer bgw">{{session['brand']}}{{session['product']}} &copy;2014-{{g['yaer']}} 广东堡塔安全技术有限公司 (bt.cn)<a
-          style="margin-left:10px;color:#20a53a;" href="http://www.bt.cn/bbs" target="_blank">求助|建议请上宝塔论坛</a>
+      <div class="footer bgw">
+        <span style="margin-right: 8px;">{{session['brand']}}{{session['product']}} &copy;2014-{{g['yaer']}} 广东堡塔安全技术有限公司 (bt.cn)</span>
+        <a style="margin-right: 8px;color:#20a53a;" href="http://www.bt.cn/bbs" target="_blank">论坛求助</a>|
+        <a class="btlink" style="margin: 0 8px;" href="https://www.kancloud.cn/chudong/bt2017/424204" target="_blank">使用手册</a>|
+        <a class="btlink bt_wx_qrcode" style="margin: 0 8px;" href="javascript:;">微信公众号<div class="bt_wx_img"></div></a>|
+        <a class="btlink" style="margin: 0 8px;" href="https://www.bt.cn/auth" target="_blank">正版查询</a>
+        <span class="bt_qq_qun">|<a class="btlink" style="margin: 0 8px;" href="https://jq.qq.com/?_wv=1027&k=12Y6BkLq" target="_blank">售后QQ群：907340327</a></span>
       </div>
     </div>
     {% if g.cdn_url != '/static' %}
@@ -162,7 +167,8 @@
 	  <script type="text/javascript" src="{{g.cdn_url}}/js/jquery.qrcode.min.js" defer></script>
 	  <script type="text/javascript" src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 	  <script type="text/javascript" src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-	  <script type="text/javascript" src="{{g.cdn_url}}/js/tools.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/js/statistics.min.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/js/tools.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
     {% endif %}
 
     {% block scripts %}
@@ -177,13 +183,15 @@
     <script src="{{g.cdn_url}}/js/bootstrap.min.js"></script>
     <script src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
     <script src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+    <script src="{{g.cdn_url}}/js/statistics.min.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 
     <script src="{{g.cdn_url}}/codemirror/lib/codemirror.js" defer></script>
     <!-- End -->
     <script type="text/javascript" src="{{g.cdn_url}}/js/tools.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
     <script type="text/javascript">
-        bt.set_cookie('order', 'id desc');
-        bt.set_cookie('serverType', "{{session['webserver']}}");
+      bt.set_cookie('order', 'id desc');
+      bt.set_cookie('serverType', "{{session['webserver']}}");
+      if (bt.get_cookie('pro_end') >= 0 || bt.get_cookie('ltd_end') > 0) $(".bt_qq_qun").show()
       $("#setBox").click(function () {
         if ($(this).prop("checked")) {
           $("input[name=id]").prop("checked", true);
@@ -298,17 +306,16 @@
       }
 
       function remove_task(id) {
-        loadT = layer.msg('正在取消任务...', {
-          time: 0,
-          icon: 16,
-          shade: [0.3, '#000']
-        });
-        $.post('/task?action=remove_task', {
-          id: id
-        }, function (rdata) {
-          layer.close(loadT)
-          layer.msg(rdata.msg);
-        });
+				layer.confirm('是否取消当前执行的任务队列？', { title: '取消任务队列', icon: 0 }, function(indexs) {
+					layer.close(indexs);
+					var loadT = bt.load('正在取消任务...');
+					$.post('/task?action=remove_task', {
+						id: id
+					}, function (rdata) {
+						loadT.close();
+						layer.msg(rdata.msg);
+					});
+				});
       }
       task_stat(); 
       {% if data['show_workorder'] %}

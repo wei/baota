@@ -1,6 +1,6 @@
 #coding: utf-8
 # +-------------------------------------------------------------------
-# | 宝塔Linux面板 
+# | 宝塔Linux面板
 # +-------------------------------------------------------------------
 # | Copyright (c) 2015-2099 宝塔软件(http://bt.cn) All rights reserved.
 # +-------------------------------------------------------------------
@@ -47,6 +47,7 @@ class ssh_terminal:
     _debug_file = 'logs/terminal.log'
     _s_code = None
     _last_num = 0
+    _key_passwd = None
 
     def connect(self):
         '''
@@ -108,7 +109,7 @@ class ssh_terminal:
                     p_file = BytesIO(self._pkey)
                 else:
                     p_file = StringIO(self._pkey)
-                
+
                 try:
                     pkey = paramiko.RSAKey.from_private_key(p_file)
                 except:
@@ -153,7 +154,7 @@ class ssh_terminal:
             if e.find('Bad authentication type; allowed types') != -1:
                 self.debug('认证失败{}'.format(e))
                 if self._host in ['127.0.0.1','localhost'] and self._pass == 'none':
-                    return returnMsg(False,'帐号或密码错误: {}'.format("Authentication failed ," + self._user + "@" + self._host + ":" +str(self._port))) 
+                    return returnMsg(False,'帐号或密码错误: {}'.format("Authentication failed ," + self._user + "@" + self._host + ":" +str(self._port)))
                 return returnMsg(False,'不支持的身份验证类型: {}'.format(e))
             if e.find('Connection reset by peer') != -1:
                 self.debug('目标服务器主动拒绝连接')
@@ -185,7 +186,7 @@ class ssh_terminal:
 
     def _auth_interactive(self):
         self.debug('正在二次认证 Verification Code')
-        
+
         self.brk = False
         def handler(title, instructions, prompt_list):
             if not self._ws:  raise public.PanelError('websocket error!')
@@ -230,7 +231,7 @@ class ssh_terminal:
         ssh_config_file = '/etc/ssh/sshd_config'
         ssh_config = public.readFile(ssh_config_file)
         if not ssh_config: return l_user
-        
+
         if ssh_config.find('PermitRootLogin yes') != -1: return l_user
 
 
@@ -244,7 +245,7 @@ class ssh_terminal:
 
         if not login_user:
             return l_user
-        
+
         return login_user
 
 
@@ -271,7 +272,7 @@ class ssh_terminal:
             @ps 如果host为127.0.0.1或localhost，则尝试自动使用publicKey登录
             @return void
         '''
-        
+
         if self._pass: return
         if self._pkey: return
         if self._host in ['127.0.0.1','localhost']:
@@ -284,9 +285,9 @@ class ssh_terminal:
                     self._host = ssh_info['host'].strip()
                     if 'username' in ssh_info:
                         self._user = ssh_info['username']
-                    if 'pkey' in ssh_info:    
+                    if 'pkey' in ssh_info:
                         self._pkey = ssh_info['pkey']
-                    if 'password' in ssh_info: 
+                    if 'password' in ssh_info:
                         self._pass = ssh_info['password']
                     self._old_conf = True
                     return
@@ -313,7 +314,7 @@ class ssh_terminal:
                         if os.path.exists(ifile):
                             self._pkey = public.readFile(ifile)
                             return
-                
+
                     self._pass = 'none'
                     return
                     # _ssh_ks = home_path + '/.ssh'
@@ -328,7 +329,7 @@ class ssh_terminal:
                     # public.ExecShell("chown -R {}:{} {}".format(self._user,self._user,_ssh_ks))
                     # public.ExecShell("chmod -R 600 {}".format(_ssh_ks))
                     # self._pkey = public.readFile(rsa_file)
-                    
+
 
             except:
                 return
@@ -406,7 +407,7 @@ class ssh_terminal:
             sshd_config_file = '/etc/ssh/sshd_config'
             if not os.path.exists(sshd_config_file):
                 return False
-            
+
             sshd_config = public.readFile(sshd_config_file)
 
             if not sshd_config:
@@ -418,7 +419,7 @@ class ssh_terminal:
                     self.restart_ssh()
                 return True
 
-            
+
 
             pin = r'^\s*PubkeyAuthentication\s+(yes|no)'
             pubkey_status = re.findall(pin,sshd_config,re.I)
@@ -427,7 +428,7 @@ class ssh_terminal:
                     pubkey_status = True
                 else:
                     pubkey_status = False
-            
+
             pin = r'^\s*RSAAuthentication\s+(yes|no)'
             rsa_status = re.findall(pin,sshd_config,re.I)
             if rsa_status:
@@ -435,7 +436,7 @@ class ssh_terminal:
                     rsa_status = True
                 else:
                     rsa_status = False
-            
+
             self._sshd_config_backup = sshd_config
             is_write = False
             if not pubkey_status:
@@ -455,7 +456,7 @@ class ssh_terminal:
             return True
         except:
             return False
-    
+
     def restart_ssh(self,act = 'reload'):
         '''
         重启ssh 无参数传递
@@ -467,7 +468,7 @@ class ssh_terminal:
             public.ExecShell("systemctl " + act + " sshd.service")
         else:
             public.ExecShell("/etc/init.d/sshd " + act)
-    
+
     def resize(self, data):
         '''
             @name 调整终端大小
@@ -495,7 +496,7 @@ class ssh_terminal:
         '''
         n = 0
         try:
-            while not self._ws.closed:
+            while self._ws.connected:
                 resp_line = self._ssh.recv(1024)
                 if not resp_line:
                     if not self._tp.is_active():
@@ -503,13 +504,13 @@ class ssh_terminal:
                         self._ws.send('连接已断开,按回车将尝试重新连接!')
                         self.close()
                         return
-                
-                if not resp_line: 
+
+                if not resp_line:
                     n+=1
                     if n > 5: break
                     continue
                 n = 0
-                if self._ws.closed:
+                if not self._ws.connected:
                     return
                 try:
                     result = resp_line.decode('utf-8','ignore')
@@ -520,19 +521,19 @@ class ssh_terminal:
                         result = str(resp_line)
 
                 self._ws.send(result)
-                
+
                 self.history_recv(result)
         except Exception as e:
             e = str(e)
             if e.find('closed') != -1:
                 self.debug('会话已中断')
-            elif not self._ws.closed:
+            elif self._ws.connected:
                 self.debug('读取tty缓冲区数据发生错误,{}'.format(e))
-            
-        if self._ws.closed:
+
+        if not self._ws.connected:
             self.debug('客户端已主动断开连接')
         self.close()
-    
+
     def send(self):
         '''
             @name 写入数据到缓冲区
@@ -540,13 +541,13 @@ class ssh_terminal:
             @return void
         '''
         try:
-            while not self._ws.closed:
+            while self._ws.connected:
                 if self._s_code:
                     time.sleep(0.1)
                     continue
                 client_data = self._ws.receive()
                 if not client_data: continue
-                if client_data is '{}': continue
+                if client_data == '{}': continue
                 if len(client_data) > 10:
                     if client_data.find('{"host":"') != -1:
                         continue
@@ -557,7 +558,7 @@ class ssh_terminal:
                 self.history_send(client_data)
         except Exception as ex:
             ex = str(ex)
-            
+
             if ex.find('_io.BufferedReader') != -1:
                 self.debug('从websocket读取数据发生错误，正在重新试')
                 self.send()
@@ -567,7 +568,7 @@ class ssh_terminal:
             else:
                 self.debug('写入数据到缓冲区发生错误: {}'.format(ex))
 
-        if self._ws.closed:
+        if not self._ws.connected:
             self.debug('客户端已主动断开连接')
         self.close()
 
@@ -611,27 +612,27 @@ class ssh_terminal:
         if send_data in ["\x1b[C"]:
             self._last_num -= 1
             return
-        
+
         # 右移光标
         if send_data in ["\x1b[D"]:
             self._last_num += 1
             return
-        
+
         #退格
         if send_data == "\x7f":
             self._last_cmd = self._last_cmd[:-1]
             return
 
-        
+
         #过滤特殊符号
         if send_data in ["\x1b[C","\x1b[D","\x1b[K","\x07","\x08","\x03","\x01","\x02","\x04","\x05","\x06","\x1bOB","\x1bOA","\x1b[8P","\x1b","\x1b[4P","\x1b[6P","\x1b[5P"]:
             return
-        
+
         #Tab补全处理
         if send_data == "\t":
             self._last_cmd_tip = 1
             return
-        
+
         if str(send_data).find("\x1b") != -1:
             return
 
@@ -648,9 +649,7 @@ class ssh_terminal:
         else:
             if self._last_num >= 0:
                 self._last_cmd += send_data
-            else:
-                self._last_cmd.insert(len(self._last_cmd) + self._last_num, send_data)
-    
+
 
     def close(self):
         '''
@@ -663,7 +662,7 @@ class ssh_terminal:
                 self._ssh.close()
             if self._tp:  # 关闭宿主服务
                 self._tp.close()
-            if not self._ws.closed:
+            if self._ws.connected:
                 self._ws.close()
         except:
             pass
@@ -679,10 +678,12 @@ class ssh_terminal:
         self._port = int(ssh_info['port'])
         if 'username' in ssh_info:
             self._user = ssh_info['username']
-        if 'pkey' in ssh_info:    
+        if 'pkey' in ssh_info:
             self._pkey = ssh_info['pkey']
-        if 'password' in ssh_info: 
+        if 'password' in ssh_info:
             self._pass = ssh_info['password']
+        if 'pkey_passwd' in ssh_info:
+            self._key_passwd = ssh_info['pkey_passwd']
         try:
             result = self.connect()
         except Exception as ex:
@@ -703,11 +704,11 @@ class ssh_terminal:
                 self._tp.send_ignore()
             else:
                 break
-            if not self._ws.closed:
+            if self._ws.connected:
                 self._ws.send("")
             else:
                 break
-                
+
     def debug(self,msg):
         '''
             @name 写debug日志
@@ -798,7 +799,7 @@ class ssh_host_admin(ssh_terminal):
             host_info['sort'] = int(info_tmp['sort'])
 
             host_list.append(host_info)
-        
+
         host_list = sorted(host_list,key=lambda x: x['sort'],reverse=False)
         return host_list
 
@@ -824,6 +825,9 @@ class ssh_host_admin(ssh_terminal):
         host_info['username'] = info_tmp['username']
         host_info['password'] = info_tmp['password']
         host_info['pkey'] = info_tmp['pkey']
+        host_info['pkey_passwd'] = ''
+        if 'pkey_passwd' in info_tmp:
+            host_info['pkey_passwd'] = info_tmp['pkey_passwd']
         return host_info
 
     def modify_host(self,args):
@@ -839,6 +843,7 @@ class ssh_host_admin(ssh_terminal):
                 username: 用户名
                 password: 密码
                 pkey: 密钥(如果不为空，将使用密钥连接)
+                pkey_passwd: 密钥的密码
             }
             @return dict
         '''
@@ -853,7 +858,7 @@ class ssh_host_admin(ssh_terminal):
 
         if not os.path.exists(info_file):
             return public.returnMsg(False,'指定SSH信息不存在!')
-        
+
         if not 'sort' in args:
             r_data = public.aes_decrypt(public.readFile(info_file),self._pass_str)
             info_tmp = json.loads(r_data)
@@ -867,6 +872,10 @@ class ssh_host_admin(ssh_terminal):
         host_info['username'] = args['username']
         host_info['password'] = args['password']
         host_info['pkey'] = args['pkey']
+        if 'pkey_passwd' in args:
+            host_info['pkey_passwd'] = args['pkey_passwd']
+        else:
+            host_info['pkey_passwd'] = ''
         if not host_info['pkey']: host_info['pkey'] = ''
         result = self.set_attr(host_info)
         if not result['status']: return result
@@ -888,6 +897,7 @@ class ssh_host_admin(ssh_terminal):
                 username: 用户名
                 password: 密码
                 pkey: 密钥(如果不为空，将使用密钥连接)
+                pkey_passwd： 密钥的密码
             }
             @return dict
         '''
@@ -910,6 +920,9 @@ class ssh_host_admin(ssh_terminal):
         host_info['username'] = args['username']
         host_info['password'] = args['password']
         host_info['pkey'] = args['pkey']
+        host_info['pkey_passwd'] = ''
+        if 'pkey_passwd' in args:
+            host_info['pkey_passwd'] = args['pkey_passwd']
         result = self.set_attr(host_info)
         if not result['status']: return result
         self.save_ssh_info(args.host,host_info)
@@ -983,7 +996,7 @@ class ssh_host_admin(ssh_terminal):
         for name in sort_list.keys():
             info_file = self._save_path + name + '/info.json'
             if not os.path.exists(info_file): continue
-            
+
             ssh_info = self.get_ssh_info(name)
             ssh_info['sort'] = int(sort_list[name])
             self.save_ssh_info(name,ssh_info)
@@ -1008,11 +1021,11 @@ class ssh_host_admin(ssh_terminal):
         if not user_cmd:
             if os.path.exists(self._user_command_file):
                 user_command = json.loads(public.readFile(self._user_command_file))
-        
+
         command = sys_command + user_command
         return command
 
-    
+
     def command_exists(self,command,title):
         '''
             @name 判断命令是否存在
@@ -1050,10 +1063,10 @@ class ssh_host_admin(ssh_terminal):
         '''
         args.title = args.title.strip()
         command = self.get_command_list(sys_cmd=True)
-        
+
         if self.command_exists(command,args.title):
             return public.returnMsg(False,'指定命令名称已存在')
-        
+
         cmd = {
             "title": args.title,
             "shell": args.shell.strip()

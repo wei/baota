@@ -100,7 +100,7 @@
                     <input type="text" class="bt-input-text" id="mstscPort" value="" />
                 </div>
                 <div class="ss-text pull-left">
-                    <button id="mstscSubmit" onclick='bt.firewall.set_mstsc($("#mstscPort").prop("value"))' class="btn btn-default btn-sm" type="button">{{data['lan']['BTN3']}}</button>
+                    <button id="mstscSubmit" class="btn btn-default btn-sm" type="button">{{data['lan']['BTN3']}}</button>
                     <button onclick='firewall.open_sshsafe_config_view()' class="btn btn-default btn-sm" type="button">SSH安全管理</button>
                 </div>
             </div>
@@ -265,6 +265,14 @@
             var value = $("#SearchValue").val();
             firewall.get_log_list(1, value);
         });
+        $('#mstscSubmit').click(function(){
+          var sshPort = $("#mstscPort").val()
+          if(sshPort == ''){
+            bt.msg({msg:'端口不能为空！',icon:2});
+            return;
+          }
+          bt.firewall.set_mstsc(sshPort)
+        })
       },
       flush_init:function(){
         bt.firewall.get_ssh_info(function(rdata){				
@@ -612,14 +620,12 @@
         })
       },
       clear_logs_files:function(){
-          console.log(1);
-          bt.show_confirm('', '', function () {
-              console.log(1);
-              bt.firewall.clear_logs_files(function(rdata){
-              $("#logSize").text(rdata);						
-              bt.msg({msg:lan.firewall.empty,icon:1});
-            })
-          })
+				bt.show_confirm('清空日志', '即将清空Web日志，是否继续？', function () {
+						bt.firewall.clear_logs_files(function(rdata){
+						$("#logSize").text(rdata);
+						bt.msg({msg:lan.firewall.empty,icon:1});
+					})
+				})
       },
       add_accept_port:function(){
         var type = $("#firewalldType").val();
@@ -657,7 +663,9 @@
               { field: 'id', title: "{{data['lan']['TH1']}}"},	
               { field: 'port', title: "{{data['lan']['TH2']}}",templet:function(item){
                 var _ps = lan.firewall.accept_port;
-                if(bt.contains(item.port,'.')){
+                             
+                var _m = item.port.match(/:/g);
+                if(bt.contains(item.port,'.') || (_m && _m.length > 2)){
                   _ps = lan.firewall.drop_ip;
                 }
                 _ps += ':['+item.port+']'
@@ -704,11 +712,11 @@
           var _tab =  bt.render({
             table:'#logsBody',
             columns:[						
-              { field: 'id',width:"55", title: "编号"},	
-              { field: 'username',width:"80", title: "用户",templet:function(row){
+              { field: 'id',width:"60", title: "编号"},	
+              { field: 'username',width:"100", title: "用户",templet:function(row){
                               return (row.username == 'system')?'系统日志':row.username;
                           }},	
-              { field: 'type',width:"80", title: "{{data['lan']['LTH2']}}"},	
+              { field: 'type',width:"100", title: "{{data['lan']['LTH2']}}"},	
               { field: 'log', title: "{{data['lan']['LTH3']}}",templet:function(row){
                 return '<span title="'+ _this.escapeHTML(row['log']) +'">'+  _this.escapeHTML(row['log']) +'</span>';
               }},		

@@ -2,11 +2,11 @@
 
 {% block content %}
 <style>
-   .weblog {
-        font-size: 14px;
-        display: inline-block;
-        line-height: 30px;
-    }
+  .weblog {
+    font-size: 14px;
+    display: inline-block;
+    line-height: 30px;
+  }
 	.weblog em {
 		font-style: normal;
 		color: #666;
@@ -26,16 +26,16 @@
 <div class="main-content">
     <div class="container-fluid" style="padding-bottom: 50px;">
         <div class="pos-box bgw mtb15">
-            <div class="position f14 c9 pull-left">
-                <a class="plr10 c4" href="/">{{data['lan']['H1']}}</a>/<span class="plr10 c4">{{data['lan']['H2']}}</span>
-            </div>
-            <div class="search pull-right">
-                <form target="hid" onsubmit='firewall.get_log_list(1,$("#SearchValue").prop("value"))'>
-                    <input type="text" id="SearchValue" class="ser-text pull-left" placeholder="{{data['lan']['SEARCH']}}" />
-                    <button type="button" class="ser-sub pull-left" onclick='firewall.get_log_list(1,$("#SearchValue").prop("value"))'></button>
-                </form>
-                <iframe name='hid' id="hid" style="display:none"></iframe>
-            </div>
+          <div class="position f14 c9 pull-left">
+            <a class="plr10 c4" href="/">{{data['lan']['H1']}}</a>/<span class="plr10 c4">{{data['lan']['H2']}}</span>
+          </div>
+          <div class="search pull-right">
+            <form target="hid" onsubmit='firewall.get_log_list(1,$("#SearchValue").prop("value"))'>
+              <input type="text" id="SearchValue" class="ser-text pull-left" placeholder="{{data['lan']['SEARCH']}}" />
+              <button type="button" class="ser-sub pull-left" onclick='firewall.get_log_list(1,$("#SearchValue").prop("value"))'></button>
+            </form>
+            <iframe name='hid' id="hid" style="display:none"></iframe>
+          </div>
         </div>
         <div class="safe container-fluid bgw mtb15 pd15">
             <div class="mr50 pull-left">
@@ -54,7 +54,7 @@
                     <input type="text" class="bt-input-text" id="mstscPort" value="" />
                 </div>
                 <div class="ss-text pull-left">
-                    <button id="mstscSubmit" onclick='bt.firewall.set_mstsc($("#mstscPort").prop("value"))' class="btn btn-default btn-sm" type="button">{{data['lan']['BTN3']}}</button>
+                  <button id="mstscSubmit" class="btn btn-default btn-sm" type="button">{{data['lan']['BTN3']}}</button>
                 </div>
             </div>
             <div class="mr50 pull-left" style="border-right: 1px solid #ccc; padding-right: 40px;">

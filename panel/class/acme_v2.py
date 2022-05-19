@@ -18,7 +18,6 @@ import binascii
 import hashlib
 import base64
 import json
-import copy
 import time
 import os
 import sys
@@ -320,7 +319,7 @@ class acme_v2:
         for domain_name in domains:
             identifiers.append({"type": 'dns', "value": domain_name})
         payload = {"identifiers": identifiers}
-        
+
         # 请求创建订单
         res = self.acme_request(self._apis['newOrder'], payload)
         if not res.status_code in [201]:  # 如果创建失败
@@ -340,7 +339,7 @@ class acme_v2:
                     res = self.acme_request(self._apis['newOrder'], payload)
             if not res.status_code in [201]:
                 a_auth = res.json()
-                
+
                 ret_title = self.get_error(str(a_auth))
                 raise StopIteration(
                         "{0} >>>> {1}".format(
@@ -367,10 +366,10 @@ class acme_v2:
             # 检查授权信息是否过期
             if time.time() < self._config['orders'][index]['auths'][0]['expires']:
                 return self._config['orders'][index]['auths']
-        
+
         #清理旧验证
         self.claer_auth_file(index)
-        
+
         auths = []
         for auth_url in self._config['orders'][index]['authorizations']:
             res = self.acme_request(auth_url, "")
@@ -411,11 +410,11 @@ class acme_v2:
 
     # 设置验证信息
     def set_auth_info(self, identifier_auth):
-        
+
         #从云端验证
         if not self.cloud_check_domain(identifier_auth['domain']):
             self.err = "云端验证失败!"
-        
+
         # 是否手动验证DNS
         if identifier_auth['auth_to'] == 'dns':
             return None
@@ -428,28 +427,28 @@ class acme_v2:
             # dnsapi验证
             self.create_dns_record(
                 identifier_auth['auth_to'], identifier_auth['domain'], identifier_auth['auth_value'])
-                
+
     #从云端验证域名是否可访问
     def cloud_check_domain(self,domain):
         try:
             result = requests.post('https://www.bt.cn/api/panel/check_domain',{"domain":domain,"ssl":1}).json()
             return result['status']
         except: return False
-        
+
 
     #清理验证文件
     def claer_auth_file(self,index):
-        if not self._config['orders'][index]['auth_type'] in ['http','tls']: 
+        if not self._config['orders'][index]['auth_type'] in ['http','tls']:
             return True
         acme_path = '{}/.well-known/acme-challenge'.format(self._config['orders'][index]['auth_to'])
         write_log("|-验证目录：{}".format(acme_path))
         if os.path.exists(acme_path):
             public.ExecShell("rm -f {}/*".format(acme_path))
-        
+
         acme_path = '/www/server/stop/.well-known/acme-challenge'
         if os.path.exists(acme_path):
             public.ExecShell("rm -f {}/*".format(acme_path))
-        
+
 
     # 写验证文件
     def write_auth_file(self, auth_to, token, acme_keyauthorization):
@@ -461,7 +460,7 @@ class acme_v2:
             wellknown_path = '{}/{}'.format(acme_path, token)
             public.writeFile(wellknown_path, acme_keyauthorization)
             public.set_own(wellknown_path, 'www')
-            
+
             acme_path = '/www/server/stop/.well-known/acme-challenge'
             if not os.path.exists(acme_path):
                 os.makedirs(acme_path)
@@ -774,12 +773,14 @@ fullchain.pem       粘贴到证书输入框
                     to_key_file = to_path + '/privateKey.pem'
                     if not os.path.exists(to_pem_file):
                         continue
-                    is_panel = True
+                    if path == paths[-1]: is_panel = True
                 # 获取目标证书的基本信息
                 to_cert_init = self.get_cert_init(to_pem_file)
                 # 判断证书品牌是否一致
-                if to_cert_init['issuer'] != cert_init['issuer'] and to_cert_init['issuer'].find("Let's Encrypt") == -1 and to_cert_init['issuer'] != 'R3':
-                    continue
+                try:
+                    if to_cert_init['issuer'] != cert_init['issuer'] and to_cert_init['issuer'].find("Let's Encrypt") == -1 and to_cert_init['issuer'] != 'R3':
+                        continue
+                except: continue
                 # 判断目标证书的到期时间是否较早
                 if to_cert_init['notAfter'] > cert_init['notAfter']:
                     continue
@@ -1201,7 +1202,7 @@ fullchain.pem       粘贴到证书输入框
 
         if not 'key' in self._config['account'][k]:
             self._config['account'][k]['key'] = self.create_key()
-            if type(self._config['account'][k]['key']) == bytes: 
+            if type(self._config['account'][k]['key']) == bytes:
                 self._config['account'][k]['key'] = self._config['account'][k]['key'].decode()
             self.save_config()
         return self._config['account'][k]['key']
@@ -1298,7 +1299,7 @@ fullchain.pem       粘贴到证书输入框
     # 申请证书 - api
     def apply_cert_api(self, args):
         # 是否为指定站点
-        if public.M('sites').where('id=? and project_type=?', (args.id, 'Java')).count():
+        if public.M('sites').where('id=? and project_type=?', (args.id, 'Java')).count() or public.M('sites').where('id=? and project_type=?', (args.id, 'Go')).count() or public.M('sites').where('id=? and project_type=?', (args.id, 'Other')).count():
                 project_info = public.M('sites').where('id=?', (args.id,)).getField('project_config')
                 try:
                     project_info = json.loads(project_info)
@@ -1310,7 +1311,7 @@ fullchain.pem       粘贴到证书输入框
                     args.auth_to=path
                     # check_result = self.check_auth_env(args)
                     # if check_result: return check_result
-            
+
                     if args.auto_wildcard == '1':
                         self._auto_wildcard = True
                     return self.apply_cert(json.loads(args.domains), args.auth_type, args.auth_to)
@@ -1324,13 +1325,13 @@ fullchain.pem       粘贴到证书输入框
                 args.auth_to = args.auth_to.replace("//", "/")
                 if args.auth_to[-1] == '/':
                     args.auth_to = args.auth_to[:-1]
-    
+
                 if not os.path.exists(args.auth_to):
                     return public.returnMsg(False, '无效的站点目录，请检查指定站点是否存在!')
-    
+
             check_result = self.check_auth_env(args)
             if check_result: return check_result
-    
+
             if args.auto_wildcard == '1':
                 self._auto_wildcard = True
             return self.apply_cert(json.loads(args.domains), args.auth_type, args.auth_to)
@@ -1339,8 +1340,8 @@ fullchain.pem       粘贴到证书输入框
     def check_auth_env(self,args):
         for domain in json.loads(args.domains):
             if public.checkIp(domain): continue
-            if domain.find('*.') >=0 and args.auth_type in ['http','tls']:
-                raise public.returnMsg(False, '泛域名不能使用【文件验证】的方式申请证书!')
+            if domain.find('*.') != -1 and args.auth_type in ['http','tls']:
+                return public.returnMsg(False, '泛域名不能使用【文件验证】的方式申请证书!')
         import panelSite
         s = panelSite.panelSite()
         if args.auth_type in ['http','tls']:
@@ -1350,12 +1351,12 @@ fullchain.pem       粘贴到证书输入框
                 args.sitename = args.siteName
                 data = s.GetRedirectList(args)
                 # 检查重定向是否开启
-                if type(data) == list: 
+                if type(data) == list:
                     for x in data:
                         if x['type']: return public.returnMsg(False, 'SITE_SSL_ERR_301')
                 data = s.GetProxyList(args)
                 # 检查反向代理是否开启
-                if type(data) == list:                    
+                if type(data) == list:
                     for x in data:
                         if x['type']: return public.returnMsg(False,'已开启反向代理的站点无法申请SSL!')
                 # 检查旧重定向是否开启
@@ -1367,14 +1368,14 @@ fullchain.pem       粘贴到证书输入框
                     return public.returnMsg(False, '配置强制HTTPS后无法使用【文件验证】的方式申请证书!')
             except:
                 return False
-        else:          
+        else:
             if args.auth_to.find('Dns_com') != -1:
                 if not os.path.exists('plugin/dns/dns_main.py'):
                     return public.returnMsg(False, '请先到软件商店安装【云解析】，并完成域名NS绑定.')
-        
-        
 
-            
+
+
+
         return False
 
     # DNS手动验证
@@ -1442,7 +1443,7 @@ fullchain.pem       粘贴到证书输入框
             identifiers.append({"type": 'dns', "value": domain_name})
         return public.md5(json.dumps(identifiers))
 
-    
+
     # 续签同品牌其它证书
     def renew_cert_other(self):
         '''
@@ -1455,6 +1456,9 @@ fullchain.pem       粘贴到证书输入框
         new_time = time.time() + (86400 * 30)
         n=0
         if not 'orders' in self._config: self._config['orders'] = {}
+        import panelSite
+        siteObj = panelSite.panelSite()
+        args = public.dict_obj()
         for siteName in os.listdir(cert_path):
             try:
                 cert_file = '{}/{}/fullchain.pem'.format(cert_path,siteName)
@@ -1465,31 +1469,53 @@ fullchain.pem       粘贴到证书输入框
                 if not cert_init: continue # 无法获取证书
                 end_time = time.mktime(time.strptime(cert_init['notAfter'],'%Y-%m-%d'))
                 if end_time > new_time: continue # 未到期
-                if not cert_init['issuer'] in ['R3',"Let's Encrypt"] and cert_init['issuer'].find("Let's Encrypt") == -1:
-                    continue # 非同品牌证书
+                try:
+                    if not cert_init['issuer'] in ['R3',"Let's Encrypt"] and cert_init['issuer'].find("Let's Encrypt") == -1:
+                        continue # 非同品牌证书
+                except: continue
 
                 if isinstance(cert_init['dns'],str): cert_init['dns'] = [cert_init['dns']]
                 index = self.get_index(cert_init['dns'])
                 if index in self._config['orders'].keys(): continue # 已在订单列表
-                
+
                 n+=1
                 write_log("|-正在续签第 {} 张其它证书，域名: {}..".format(n,cert_init['subject']))
                 write_log("|-正在创建订单..")
-                self.renew_cert_to(cert_init['dns'],'http',siteInfo['path'])
+                args.id = siteInfo['id']
+                runPath = siteObj.GetRunPath(args)
+                if runPath and not runPath in ['/']:
+                    path = siteInfo['path'] + '/' + runPath
+                else:
+                    path = siteInfo['path']
+
+                self.renew_cert_to(cert_init['dns'],'http',path.replace('//','/'))
             except:
                 write_log("|-[{}]续签失败".format(siteName))
-                
+
 
 
     def renew_cert_to(self,domains,auth_type,auth_to,index = None):
+        cert = {}
+
+        if os.path.exists(auth_to):
+            if public.M('sites').where('path=?',auth_to).count() == 1:
+                site_id = public.M('sites').where('path=?',auth_to).getField('id')
+                import panelSite
+                siteObj = panelSite.panelSite()
+                args = public.dict_obj()
+                args.id = site_id
+                runPath = siteObj.GetRunPath(args)
+                if runPath and not runPath in ['/']:
+                    path = auth_to + '/' + runPath
+                    if os.path.exists(path): auth_to = path.replace('//','/')
         try:
             index = self.create_order(
                 domains,
                 auth_type,
-                auth_to,
+                auth_to.replace('//','/'),
                 index
             )
-        
+
             write_log("|-正在获取验证信息..")
             self.get_auths(index)
             write_log("|-正在验证域名..")
@@ -1521,9 +1547,11 @@ fullchain.pem       粘贴到证书输入框
                     self._config['orders'][index]['retry_count'] += 1
                     # 保存证书配置
                     self.save_config()
-
-            write_log("|-" + str(e).split('>>>>')[0])
+            msg = str(e).split('>>>>')[0]
+            write_log("|-" + msg)
+            return public.returnMsg(False, msg)
         write_log("-" * 70)
+        return cert
 
 
     # 续签证书
@@ -1560,14 +1588,14 @@ fullchain.pem       粘贴到证书输入框
                     # 是否到了允许重试的时间
                     if 'next_retry_time' in self._config['orders'][i]:
                         timeout = self._config['orders'][i]['next_retry_time'] - int(time.time())
-                        if timeout > 0: 
+                        if timeout > 0:
                             write_log('|-本次跳过域名:{}，因第上次续签失败，还需要等待{}小时后再重试'.format(self._config['orders'][i]['domains'],int(timeout / 60 / 60)))
                             continue
-                    
+
                     # 是否到了最大重试次数
                     if 'retry_count' in self._config['orders'][i]:
-                        if self._config['orders'][i]['retry_count'] >= 3: 
-                            write_log('|-本次跳过域名:{}，因连续3次续签失败，不再续签此证书(可尝试手动续签此证书，成功后错误次数将被重置)'.format(self._config['orders'][i]['domains']))
+                        if self._config['orders'][i]['retry_count'] >= 5:
+                            write_log('|-本次跳过域名:{}，因连续5次续签失败，不再续签此证书(可尝试手动续签此证书，成功后错误次数将被重置)'.format(self._config['orders'][i]['domains']))
                             continue
 
                     # 加入到续签订单
@@ -1586,7 +1614,7 @@ fullchain.pem       粘贴到证书输入框
                 n += 1
                 write_log("|-正在续签第 {} 张，域名: {}..".format(n,self._config['orders'][index]['domains']))
                 write_log("|-正在创建订单..")
-                self.renew_cert_to(self._config['orders'][index]['domains'],self._config['orders'][index]['auth_type'],self._config['orders'][index]['auth_to'],index)
+                cert = self.renew_cert_to(self._config['orders'][index]['domains'],self._config['orders'][index]['auth_type'],self._config['orders'][index]['auth_to'],index)
             return cert
 
         except Exception as ex:

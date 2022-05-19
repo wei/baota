@@ -374,6 +374,7 @@ class bt_task:
             else:
                 import pwd
                 user = pwd.getpwuid(os.stat(dfile).st_uid).pw_name
+                if user in ['nobody']: user = 'www'
                 public.ExecShell("chown %s:%s %s" % (user, user, dfile))
 
         #public.WriteLog("TYPE_FILE", 'UNZIP_SUCCESS', (sfile, dfile),not_web = self.not_web)

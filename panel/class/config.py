@@ -455,14 +455,20 @@ class config:
         isReWeb = False
         sess_out_path = 'data/session_timeout.pl'
         if 'session_timeout' in get:
-            session_timeout = int(get.session_timeout)
+            try:
+                session_timeout = int(get.session_timeout)
+            except:
+                return public.returnMsg(False,"超时时间必需是整数!")
             s_time_tmp = public.readFile(sess_out_path)
             if not s_time_tmp: s_time_tmp = '0'
             if int(s_time_tmp) != session_timeout:
                 if session_timeout < 300: return public.returnMsg(False,'超时时间不能小于300秒')
+                if session_timeout > 86400: return public.returnMsg(False,'超时时间不能大于86400秒')
                 public.writeFile(sess_out_path,str(session_timeout))
                 isReWeb = True
-
+        else:
+            return public.returnMsg(False,'超时时间不能为空!')
+        
         workers_p = 'data/workers.pl'
         if 'workers' in get:
             workers = int(get.workers)
@@ -506,7 +512,10 @@ class config:
         public.writeFile('data/domain.conf',get.domain.strip())
         public.writeFile('data/iplist.txt',get.address)
         
-        
+        import files
+        fs = files.files()
+        if not fs.CheckDir(get.backup_path): return public.returnMsg(False,'不能使用系统关键目录作为默认备份目录')
+        if not fs.CheckDir(get.sites_path): return public.returnMsg(False,'不能使用系统关键目录作为默认建站目录')
         public.M('config').where("id=?",('1',)).save('backup_path,sites_path',(get.backup_path,get.sites_path))
         session['config']['backup_path'] = os.path.join('/',get.backup_path)
         session['config']['sites_path'] = os.path.join('/',get.sites_path)
@@ -533,19 +542,10 @@ class config:
 
     def set_admin_path(self,get):
         get.admin_path = get.admin_path.strip()
-        if get.admin_path == '': get.admin_path = '/'
-        if get.admin_path != '/':
-            if len(get.admin_path) < 6: return public.returnMsg(False,'安全入口地址长度不能小于6位!')
-            if get.admin_path in admin_path_checks: return public.returnMsg(False,'该入口已被面板占用,请使用其它入口!')
-            if not public.path_safe_check(get.admin_path) or get.admin_path[-1] == '.':  return public.returnMsg(False,'入口地址格式不正确,示例: /my_panel')
-            if get.admin_path[0] != '/': return public.returnMsg(False,'入口地址格式不正确,示例: /my_panel')
-        else:
-            get.domain = public.readFile('data/domain.conf')
-            if not get.domain: get.domain = ''
-            get.limitip = public.readFile('data/limitip.conf')
-            if not get.limitip: get.limitip = ''
-            if not get.domain.strip() and not get.limitip.strip() and not os.path.exists('config/basic_auth.json'): return public.returnMsg(False,'警告，关闭安全入口等于直接暴露你的后台地址在外网，十分危险，至少开启以下一种安全方式才能关闭：<a style="color:red;"><br>1、绑定访问域名<br>2、绑定授权IP <br> 3.开启BasicAuth认证</a>')
-
+        if len(get.admin_path) < 6: return public.returnMsg(False,'安全入口地址长度不能小于6位!')
+        if get.admin_path in admin_path_checks: return public.returnMsg(False,'该入口已被面板占用,请使用其它入口!')
+        if not public.path_safe_check(get.admin_path) or get.admin_path[-1] == '.':  return public.returnMsg(False,'入口地址格式不正确,示例: /my_panel')
+        if get.admin_path[0] != '/': return public.returnMsg(False,'入口地址格式不正确,示例: /my_panel')
         admin_path_file = 'data/admin_path.pl'
         admin_path = '/'
         if os.path.exists(admin_path_file): admin_path = public.readFile(admin_path_file).strip()
@@ -903,7 +903,6 @@ class config:
     #设置面板SSL
     def SetPanelSSL(self,get):
         if hasattr(get,"email"):
-            #rep_mail = "^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$"
             rep_mail = r"[\w!#$%&'*+/=?^_`{|}~-]+(?:\.[\w!#$%&'*+/=?^_`{|}~-]+)*@(?:[\w](?:[\w-]*[\w])?\.)+[\w](?:[\w-]*[\w])?"
             if not re.search(rep_mail,get.email):
                 return public.returnMsg(False,'邮箱格式不合法')
@@ -913,22 +912,21 @@ class config:
             return sps
         else:
             sslConf = '/www/server/panel/data/ssl.pl'
-            if os.path.exists(sslConf):
+            if os.path.exists(sslConf) and not 'cert_type' in get:
                 public.ExecShell('rm -f ' + sslConf)
                 g.rm_ssl = True
                 return public.returnMsg(True,'PANEL_SSL_CLOSE')
             else:
-                # public.ExecShell('pip install cffi')
-                # public.ExecShell('pip install cryptography')
-                # public.ExecShell('pip install pyOpenSSL')
-                if get.cert_type in [2,'2']:
+                if get.cert_type in [0,'0']:
                     result = self.SavePanelSSL(get)
                     if not result['status']: return result
                     public.writeFile(sslConf,'True')
+                    public.writeFile('data/reload.pl','True')
                 else:
                     try:
                         if not self.CreateSSL(): return public.returnMsg(False,'PANEL_SSL_ERR')
                         public.writeFile(sslConf,'True')
+                        public.writeFile('data/reload.pl','True')
                     except:
                         return public.returnMsg(False,'PANEL_SSL_ERR')
                 return public.returnMsg(True,'PANEL_SSL_OPEN')
@@ -1341,6 +1339,9 @@ class config:
         keyPath = 'ssl/privateKey.pem'
         certPath = 'ssl/certificate.pem'
         checkCert = '/tmp/cert.pl'
+        ssl_pl = 'data/ssl.pl'
+        if not 'certPem' in get: return public.returnMsg(False,'缺少certPem参数!')
+        if not 'privateKey' in get: return public.returnMsg(False,'缺少privateKey参数!')
         public.writeFile(checkCert,get.certPem)
         if get.privateKey:
             public.writeFile(keyPath,get.privateKey)
@@ -1348,7 +1349,7 @@ class config:
             public.writeFile(certPath,get.certPem)
         if not public.CheckCert(checkCert): return public.returnMsg(False,'证书错误,请检查!')
         public.writeFile('ssl/input.pl','True')
-        public.writeFile('data/reload.pl','True')
+        if os.path.exists(ssl_pl): public.writeFile('data/reload.pl','True')
         return public.returnMsg(True,'证书已保存!')
 
 
@@ -1529,12 +1530,14 @@ class config:
         tips = '_bt.cn'
         path = 'config/basic_auth.json'
         ba_conf = None
+        if is_open:
+            if not get.basic_user.strip() or not get.basic_pwd.strip(): return public.returnMsg(False,'BasicAuth认证用户名和密码不能为空!')
         if os.path.exists(path):
             try:
                 ba_conf = json.loads(public.readFile(path))
             except:
                 os.remove(path)
-
+    
         if not ba_conf: 
             ba_conf = {"basic_user":public.md5(get.basic_user.strip() + tips),"basic_pwd":public.md5(get.basic_pwd.strip() + tips),"open":is_open}
         else:
@@ -2200,3 +2203,140 @@ class config:
         public.writeFile(http_type_file,get.http_type)
         public.WriteLog('面板设置','将云端请求方式设置为:{}'.format(get.http_type))
         return public.returnMsg(True,'设置成功!')
+
+    
+    def get_node_config(self,get):
+        '''
+            @name 获取节点配置
+            @author hwliang<2022-03-16>
+            @return list
+        '''
+        node_list = [{"node_name":"自动选择","node_id":0,"node_ip":"","status":1}]
+        node_file = '{}/config/api_node.json'.format(public.get_panel_path())
+        if not os.path.exists(node_file): return node_list
+        node_list = json.loads(public.readFile(node_file))
+        for node in node_list:
+            # node['speed'] = self.test_node(node['node_ip'])
+            del(node['node_ip'])
+        return node_list
+
+
+    def test_node(self,node_ip):
+        '''
+            @name 测试节点
+            @author hwliang<2022-03-16>
+            @param node_ip<str> 节点IP
+            @return int 节点延迟
+        '''
+        if not node_ip: node_ip = "api.bt.cn"
+        s_time = time.time()
+        import requests
+        headers = {"Host":"api.bt.cn","User-Agent":"BT-Panel"}
+        try:
+            res = requests.get('https://{}'.format(node_ip),headers=headers,timeout=1,verify=False).text
+        except:
+            return 0
+        e_time = time.time()
+        if res != 'ok': return 0
+        return int((e_time - s_time) * 1000)
+
+    def set_node_config(self,get):
+        '''
+            @name 设置节点配置
+            @author hwliang<2022-03-16>
+            @param node_id<str> 节点ID
+            @return dict
+        '''
+        node_file = '{}/config/api_node.json'.format(public.get_panel_path())
+        if not 'node_id' in get:
+            return public.returnMsg(False,'参数错误!')
+        node_id = int(get.node_id)
+        if not os.path.exists(node_file):
+            return public.returnMsg(False,'节点配置文件不存在!')
+        node_list = json.loads(public.readFile(node_file))
+        node_name = '自动选择'
+        for node in node_list:
+            if node['node_id'] == node_id:
+                node['status'] = 1
+                node_name = node['node_name']
+                continue
+            node['status'] = 0
+        public.writeFile(node_file,json.dumps(node_list))
+        self.sync_node_config()
+        public.WriteLog('面板设置','将节点配置设置为:{}'.format(node_name))
+        return public.returnMsg(True,'设置成功!')
+
+    def sync_cloud_node_list(self):
+        '''
+            @name  同步云端的节点列表
+            @author hwliang<2022-03-16>
+            @return void
+        '''
+        node_file = '{}/config/api_node.json'.format(public.get_panel_path())
+        if not os.path.exists(node_file):
+            public.writeFile(node_file,'[]')
+        
+        node_list = json.loads(public.readFile(node_file))
+        try:
+            url = "{}/lib/other/api_node.json".format(public.get_url())
+            res = public.httpGet(url)
+            if not res: return
+            cloud_list = json.loads(res)
+        except:
+            return
+        for cloud_node in cloud_list:
+            is_insert = True
+            for node in node_list:
+                if node['node_id'] == cloud_node['node_id']:
+                    node['node_name'] = cloud_node['node_name']
+                    node['node_ip'] = cloud_node['node_ip']
+                    is_insert = False
+                    break
+            if is_insert: node_list.append(cloud_node)
+        public.writeFile(node_file,json.dumps(node_list))
+        # self.sync_node_config()
+
+
+    def sync_node_config(self):
+        '''
+            @name 同步节点配置
+            @author hwliang<2022-03-16>
+            @return void
+        '''
+
+        node_file = '{}/config/api_node.json'.format(public.get_panel_path())
+        if not os.path.exists(node_file): return
+        node_list = json.loads(public.readFile(node_file))
+        node_info = {}
+        for node in node_list:
+            if node['status'] == 1:
+                node_info = node
+                break
+        if not node_info: return
+        public.ExecShell("sed -i '/api.bt.cn/d' /etc/hosts")
+        if not node_info['node_ip']: return
+        public.ExecShell("echo '{} api.bt.cn' >> /etc/hosts".format(node_info['node_ip']))
+
+
+    def set_click_logs(self,get):
+        '''
+            @name 设置点击日志
+        '''
+        path = '{}/logs/click'.format(public.get_panel_path())
+        if not os.path.exists(path): os.makedirs(path)
+        
+        file = "{}/{}.json".format(path,public.format_date(format = "%Y-%m-%d"))
+        try:
+            ndata = json.loads(get['ndata'])          
+        except :ndata = {}
+
+        try:
+            data = json.loads(public.readFile(file))
+        except : data = {}
+
+        for x in ndata:            
+            if not x in data: data[x] = 0      
+            data[x] += ndata[x]
+     
+        public.writeFile(file,json.dumps(data))
+        return data

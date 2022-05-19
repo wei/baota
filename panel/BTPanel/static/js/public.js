@@ -263,9 +263,9 @@ var aceEditor = {
             title: '文件历史版本[ ' + _item.fileName + ' ]',
             skin: 'historys_layer',
             content: '<div class="pd20">\
-							<div class="divtable">\
+							<div class="divtable" style="overflow:auto;height:450px;">\
 								<table class="historys table table-hover">\
-									<thead><tr><th>文件名</th><th>版本时间</th><th style="text-align:right;">操作</th></tr></thead>\
+									<thead><tr><th>版本时间</th><th style="text-align:right;">操作</th></tr></thead>\
 									<tbody></tbody>\
 								</table>\
 							</div>\
@@ -273,7 +273,7 @@ var aceEditor = {
             success: function (layeo, index) {
               var _html = '';
               for (var i = 0; i < _item.historys.length; i++) {
-                _html += '<tr><td><span class="size_ellipsis" style="max-width:200px">' + _item.fileName + '</span></td><td>' + bt.format_data(_item.historys[i]) + '</td><td align="right"><a href="javascript:;" class="btlink open_history_file" data-time="' + _item.historys[i] + '">打开文件</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="javascript:;" class="btlink recovery_file_historys" data-history="' + _item.historys[i] + '" data-path="' + _item.path + '">恢复</a></td></tr>'
+                _html += '<tr><td>' + bt.format_data(_item.historys[i]) + '</td><td align="right"><a href="javascript:;" class="btlink open_history_file" data-time="' + _item.historys[i] + '">打开文件</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="javascript:;" class="btlink recovery_file_historys" data-history="' + _item.historys[i] + '" data-path="' + _item.path + '">恢复</a></td></tr>'
               }
               if (_html === '') _html += '<tr><td colspan="3">当前文件无历史版本</td></tr>'
               $('.historys tbody').html(_html);
@@ -399,8 +399,9 @@ var aceEditor = {
                 }
                 _this.saveAllFileBody(_arry, function () {
                   $('.ace_conter_menu>.item').each(function (el, index) {
+                    var _id = $(this).attr('data-id');
                     $(this).find('i').attr('data-file-state', '0').removeClass('glyphicon-exclamation-sign').addClass('glyphicon-remove');
-                    _item.fileType = 0;
+                    aceEditor['editor'][_id].fileType = 0;
                   });
                   layer.close(index);
                 });
@@ -787,7 +788,7 @@ var aceEditor = {
       $('.ace_toolbar_menu').hide();
       if (e.which === 3) {
         if ($(this).hasClass('edit_file_group')) return false;
-        $('.ace_catalogue_menu').css({ 'display': 'block', 'left': x - _left, 'top': y - _top });
+        $('.ace_catalogue_menu').css({ 'display': 'block', 'left': x + 15, 'top': y + 10 });
         _that.removeClass('bg');
         $(this).addClass('bg');
         _active.attr('data-edit') != '2' ? _active.parent().remove() : '';
@@ -1256,7 +1257,7 @@ var aceEditor = {
         if (_data[0].indexOf('.pyc') !== -1) continue;
         _files_dom += '<li class="has-children" title="' + (obj.path + '/' + _data[0]) + '" data-menu-path="' + (obj.path + '/' + _data[0]) + '" data-size="' + (_data[1]) + '" data-suffix="' + _this.get_file_suffix(_data[0]) + '">\
 					<div class="file_fold  group_'+ obj.group + '" data-group="' + obj.group + '" data-file="Files">\
-						<span class="file_title"><i class="'+ _this.get_file_suffix(_data[0]) + '-icon"></i><span>' + _data[0] + '</span></span>\
+						<span class="file_title"><i class="'+ _this.get_file_suffix(_data[0]) + '-icon text-icon"></i><span>' + _data[0] + '</span></span>\
 					</div>\
 				</li>';
       }
@@ -1928,6 +1929,10 @@ function ajaxSetup () {
     $.ajaxSetup({
       headers: my_headers,
       error: function (jqXHR, textStatus, errorThrown) {
+        var pro = parseInt(bt.get_cookie('pro_end') || -1);
+        var ltd = parseInt(bt.get_cookie('ltd_end')  || -1);
+        isBuy = false;
+        if(pro == 0 || ltd > 0) isBuy = true   //付费
 
         if (!jqXHR.responseText) return;
         //会话失效时自动跳转到登录页面
@@ -1945,6 +1950,7 @@ function ajaxSetup () {
 
         error_key = 'We need to make sure this has a favicon so that the debugger does';
         error_find = jqXHR.responseText.indexOf(error_key)
+        gl_error_body = jqXHR.responseText;
         if (jqXHR.status == 500 && jqXHR.responseText.indexOf('运行时发生错误') != -1) {
           if (jqXHR.responseText.indexOf('请先绑定宝塔帐号!') != -1) {
             if ($('.libLogin').length > 0 || $('.radio_account_view').length > 0) return false;
@@ -1953,31 +1959,120 @@ function ajaxSetup () {
             });
             return;
           }
-          gl_error_body = jqXHR.responseText;
-          error_msg = jqXHR.responseText.split('<h4 style="font-size: none;">')[1].split("</h4>")[0].replace("面板运行时发生错误:",'').replace("public.PanelError:",'').trim();
-          error_msg += "<br><a class='btlink' onclick='show_error_message()'> >>点击查看详情</a>";
-          $(".layui-layer-padding").parents('.layer-anim').remove();
-          $(".layui-layer-shade").remove();
-          setTimeout(function () {
-            layer.open({
-              title: false,
-              content: error_msg,
-              closeBtn: 2,
-              btn: false,
-              shadeClose: false,
-              shade: 0.3,
-              icon:2,
-              success: function () {
-                $('pre').scrollTop(100000000000)
+          if (jqXHR.responseText.indexOf('建议按顺序逐一尝试以下解决方案') != -1){
+            error_msg = jqXHR.responseText.split('Error: ')[1].split("</pre>")[0].replace("面板运行时发生错误:",'').replace("public.PanelError:",'').trim();
+          }else{
+            error_msg = '<h3>' + jqXHR.responseText.split('<h3>')[1].split('</h3>')[0] + '</h3>'
+            error_msg += '<a style="color:dimgrey;font-size:none">' + jqXHR.responseText.split('<h4 style="font-size: none;">')[1].split("</h4>")[0].replace("面板运行时发生错误:",'').replace("public.PanelError:",'').trim() + '</a>';
+          }
+          
+          error_msg += "<br><a class='btlink' onclick='show_error_message()'> >>点击查看详情</a>"+(isBuy?"<span class='ml33'><span class='wechatEnterpriseService' style='vertical-align: middle;'></span><span class='btlink error_kefu_consult'>微信客服</span>":'')+"</span>";
+        }else if(jqXHR.responseText != 'Internal Server Error'){
+          show_error_message()
+          return false
+        }else{return false}
+        $(".layui-layer-padding").parents('.layer-anim').remove();
+        $(".layui-layer-shade").remove();
+        setTimeout(function () {
+          layer.open({
+            title: false,
+            content: error_msg,
+            closeBtn: 2,
+            btn: false,
+            shadeClose: false,
+            shade: 0.3,
+            icon:2,
+            area:"600px",
+            success: function () {
+              $('pre').scrollTop(100000000000)
+
+              $('.error_kefu_consult').click(function(){wechatKefuConsult()})
+              // 人工服务   带有参数为售前客服
+              function wechatKefuConsult(){
+                layer.open({
+                  type: 1,
+                  area: ['300px', '290px'],
+                  title: false,
+                  closeBtn: 2,
+                  shift: 0,
+                  content: '<div class="service_consult">\
+                        <div class="service_consult_title">请打开微信"扫一扫"</div>\
+                        <div class="contact_consult" style="margin-bottom: 5px;"><div id="contact_consult_qcode"></div><i class="wechatEnterprise"></i></div>\
+                        <div>【微信客服】</div>\
+                        <ul class="c7" style="margin-top:22px;text-align: center;">\
+                            <li>工作时间：9:15 - 18:00</li>\
+                        </ul>\
+                    </div>',
+                  success:function(){
+                    $('#contact_consult_qcode').qrcode({
+                      render: "canvas",
+                      width: 140,
+                      height: 140,
+                      text:'https://work.weixin.qq.com/kfid/kfcc6f97f50f727a020'
+                    });
+                  }
+                })
               }
-            });
-          }, 100)
-        }
+            }
+          });
+        }, 100)
       }
     });
   }
 }
 ajaxSetup();
+
+
+function show_error_message() {
+  var error_body
+  if (error_find != -1) {
+    error_body = gl_error_body.split('<!--')[2].replace('-->', '')
+    var tmp = error_body.split('During handling of the above exception, another exception occurred:')
+    error_body = tmp[tmp.length - 1];
+    error_msg = '<div>\
+      <h3 style="margin-bottom: 10px;">出错了，面板运行时发生错误！</h3>\
+      <pre style="height:435px;word-wrap: break-word;white-space: pre-wrap;margin: 0 0 0px">' + error_body.trim() + '</pre>\
+      <ul class="help-info-text err_project_ul" style="display:inline-block">\
+        <li style="list-style: none;"><b>很抱歉，面板运行时意外发生错误，请尝试按以下顺序尝试解除此错误：</b></li>\
+        <li style="list-style: none;">修复方案一：在[首页]右上角点击修复面板，并退出面板重新登录。</li>\
+        <li style="list-style: none;">修复方案一：截图此窗口到宝塔论坛发贴寻求帮助, 论坛地址：<a class="btlink" href="https://www.bt.cn/bbs" target="_blank">https://www.bt.cn/bbs</a></li>\
+        <li style="list-style: none;display:'+(isBuy?'block':'none')+'">修复方案三(<span style="color:#ff7300">推荐</span>)：使用微信扫描右侧二维码，联系技术客服。</li>\
+      </ul>\
+      <div style="position: relative;margin-top: 20px;margin-right: 40px;text-align: center;font-size: 12px;display:'+(isBuy?'block':'none')+'" class="pull-right">\
+        <span id="err_kefu_img" style="padding: 5px;border: 1px solid #20a53a;display: inline-block;height: 113px;"></span>\
+        <i class="wechatEnterprise" style="position: absolute;top: 44px;left: 44px;"></i>\
+        <div>【微信客服】</div>\
+      </div>\
+    </div>'
+    $(".layui-layer-padding").parents('.layer-anim').remove();
+    $(".layui-layer-shade").remove();
+  }else{
+    error_msg = gl_error_body
+  }
+
+  setTimeout(function () {
+    layer.open({
+      title: false,
+      content: error_msg,
+      closeBtn: 2,
+      area: ["1200px", (error_find != -1?(isBuy?"670px":"625px"):(isBuy?"750px":"720px"))],
+      btn: false,
+      shadeClose: false,
+      shade: 0.3,
+      success: function () {
+        $('pre').scrollTop(100000000000)
+        $('.err_project_ul li').css('line-height','32px')
+        if(isBuy) $('.consult_project').show()
+        $('#err_kefu_img').qrcode({
+          render: "canvas",
+          width: 100,
+          height: 100,
+          text:'https://work.weixin.qq.com/kfid/kfcc6f97f50f727a020'
+        });
+      }
+    });
+  }, 100)
+}
 
 
 function show_error_message() {
@@ -3391,7 +3486,7 @@ function messagebox () {
       '<p>执行日志</p>' +
       '</div>' +
       '<div class="bt-w-con pd15">' +
-      '<div class="bt-w-item active" id="command_install_list"><ul class="cmdlist"></ul></div>' +
+      '<div class="bt-w-item active" id="command_install_list"><ul class="cmdlist"></ul><div style="position: fixed;bottom: 15px;">若任务长时间未执行，请尝试在首页点【重启面板】来重置任务队列</div></div>' +
       '<div class="bt-w-item" id="messageContent"></div>' +
       '<div class="bt-w-item"><pre id="execLog" class="command_output_pre" style="height: 530px;"></pre></div>' +
       '</div>' +
@@ -3531,43 +3626,43 @@ function reader_realtime_tasks (refresh) {
       for (var j = 0; j < message_split.length; j++) {
         shell += message_split[j] + "</br>";
       }
-      if (command_install_list.find('li').length) {
-        if (command_install_list.find('li').length > res.task.length) command_install_list.find('li:eq(0)').remove();
-        if(task[0].status === '-1'){
-          var is_scan = task[0].name.indexOf("扫描") !== -1;
-          command_install_list.find('li:eq(0) .state').html((is_scan ? lan.bt.task_scan : lan.bt.task_install) + ' ' + loading_img + ' | ' + del_task.replace('$id', task[0].id));
-        }
-        if (task[0].status !== '0' && !command_install_list.find('pre').length){
-          command_install_list.find('li:eq(0)').append('<pre class=\'cmd command_output_pre\'>' + shell + '</pre>')
-          messageBoxWssock.el = command_install_list.find('pre');
-        }
-      } else {
-        for (var i = 0; i < task.length; i++) {
-          var item = task[i], task_html = '';
-          if (item.status === '-1' && item.type === 'download') {
-            task_html = "<div class='line-progress' style='width:" + message.pre + "%'></div><span class='titlename'>" + item.name + "<a style='margin-left:130px;'>" + (ToSize(message.used) + "/" + ToSize(message.total)) + "</a></span><span class='com-progress'>" + message.pre + "%</span><span class='state'>" + lan.bt.task_downloading + " " + loading_img + " | " + del_task + "</span>";
-          } else {
-            task_html += '<span class="titlename">' + item.name + '</span>';
-            task_html += '<span class="state">';
-            switch(item.status){
-              case '0':
-                task_html += lan.bt.task_sleep + ' | ' + del_task.replace('$id', item.id);
-                break
-              case '-1':
-                var is_scan = item.name.indexOf("扫描") !== -1;
-                task_html += (is_scan ? lan.bt.task_scan : lan.bt.task_install) + ' ' + loading_img + ' | ' + del_task;
-                break
-            }
-            task_html += "</span>";
-            if (item.type !== "download" && item.status === "-1") {
-              task_html += '<pre class=\'cmd command_output_pre\'>' + shell + '</pre>'
-            }
+      // if (command_install_list.find('li').length) {
+      //   if (command_install_list.find('li').length > res.task.length) command_install_list.find('li:eq(0)').remove();
+      //   if(task[0].status === '-1'){
+      //     var is_scan = task[0].name.indexOf("扫描") !== -1;
+      //     command_install_list.find('li:eq(0) .state').html((is_scan ? lan.bt.task_scan : lan.bt.task_install) + ' ' + loading_img + ' | ' + del_task.replace('$id', task[0].id));
+      //   }
+      //   if (task[0].status !== '0' && !command_install_list.find('pre').length){
+      //     command_install_list.find('li:eq(0)').append('<pre class=\'cmd command_output_pre\'>' + shell + '</pre>')
+      //     messageBoxWssock.el = command_install_list.find('pre');
+      //   }
+      // } else {
+      for (var i = 0; i < task.length; i++) {
+        var item = task[i], task_html = '';
+        if (item.status === '-1' && item.type === 'download') {
+          task_html = "<div class='line-progress' style='width:" + message.pre + "%'></div><span class='titlename'>" + item.name + "<a style='margin-left:130px;'>" + (ToSize(message.used) + "/" + ToSize(message.total)) + "</a></span><span class='com-progress'>" + message.pre + "%</span><span class='state'>" + lan.bt.task_downloading + " " + loading_img + " | " + del_task.replace('$id', item.id) + "</span>";
+        } else {
+          task_html += '<span class="titlename">' + item.name + '</span>';
+          task_html += '<span class="state">';
+          switch(item.status){
+            case '0':
+              task_html += lan.bt.task_sleep + ' | ' + del_task.replace('$id', item.id);
+              break
+            case '-1':
+              var is_scan = item.name.indexOf("扫描") !== -1;
+              task_html += (is_scan ? lan.bt.task_scan : lan.bt.task_install) + ' ' + loading_img + ' | ' + del_task.replace('$id', item.id);
+              break
           }
-          html += "<li>" + task_html + "</li>";
+          task_html += "</span>";
+          if (item.type !== "download" && item.status === "-1") {
+            task_html += '<pre class=\'cmd command_output_pre\'>' + shell + '</pre>'
+          }
         }
-        command_install_list.find('ul').append(html);
+        html += "<li>" + task_html + "</li>";
       }
-      if (task[0].status === '0') {
+      command_install_list.find('ul').html(html);
+      // }
+      if (task.length > 0 && task[0].status === '0') {
         setTimeout(function () {
           reader_realtime_tasks(true)
         }, 100)
@@ -3775,7 +3870,7 @@ var Term = {
     Term.send(JSON.stringify({ 'x-http-token': http_token }))
     if (JSON.stringify(Term.ssh_info) !== "{}") Term.send(JSON.stringify(Term.ssh_info))
     // Term.term.FitAddon.fit();
-    // Term.resize();
+    Term.resize();
     var f_path = $("#fileInputPath").val() || getCookie('Path');
     if (f_path) {
       Term.last_cd = "cd " + f_path;
@@ -3844,12 +3939,12 @@ var Term = {
   },
 
   resize: function () {
+    $("#term").height($(".term_box_all .layui-layer-content").height() - 30)
     setTimeout(function () {
-      $("#term").height($(".term_box_all .layui-layer-content").height() - 18)
       Term.term.FitAddon.fit();
       Term.send(JSON.stringify({ resize: 1, rows: Term.term.rows, cols: Term.term.cols }));
       Term.term.focus();
-    }, 100)
+    }, 400)
   },
 
   //发送数据
@@ -6348,8 +6443,8 @@ var product_recommend = {
    */
   get_recommend_type:function(type){
     var config = null,pathname = location.pathname.replace('/','') || 'home';
-    for (let i = 0; i < this.data.length; i++) {
-      const item = this.data[i];
+    for (var i = 0; i < this.data.length; i++) {
+      var item = this.data[i];
       if(item.type == type && item.show) config = item
     }
     return config
@@ -6360,9 +6455,8 @@ var product_recommend = {
    * @param {} name 
    */
   get_version_event:function (item,param) {
-    var pay_status = this.get_pay_status();
     bt.soft.get_soft_find(item.name,function(res){
-      if((res.type === 12 && pay_status.is_pay && pay_status.advanced !== 'ltd') || !pay_status.is_pay){
+      if(!item.isBuy){
         product_recommend.recommend_product_view(item)
       }else if(!res.setup){
         bt.soft.install(item.name)
@@ -6399,27 +6493,40 @@ var product_recommend = {
   /**
    * @description 获取支付状态
    */
-  get_pay_status:function(){
-    var pro_end = parseInt(bt.get_cookie('pro_end') || -1);
-    var ltd_end = parseInt(bt.get_cookie('ltd_end')  || -1); 
-    var is_pay = pro_end >= -1 && ltd_end > -1; // 是否购买付费版本
+  get_pay_status:function(cnf){
+    if(typeof cnf === 'undefined') cnf = { isBuy:false }
+    var pro_end = parseInt(bt.get_cookie('pro_end') || -1)
+    var ltd_end = parseInt(bt.get_cookie('ltd_end')  || -1)
+    var is_pay = pro_end > -1 || ltd_end > -1 || cnf.isBuy; // 是否购买付费版本
     var advanced = 'ltd'; // 已购买，企业版优先显示
     if(pro_end === -2 || pro_end > -1) advanced = 'pro';
     if(ltd_end === -2 || ltd_end > -1) advanced = 'ltd';
     var end_time = advanced === 'ltd'? ltd_end:pro_end; // 到期时间
     return { advanced: advanced, is_pay:is_pay,  end_time:end_time };
   },
-
-  pay_product_sign:function (type,source) {
-    bt.set_cookie('pay_source',source)
-    bt.soft['updata_'+ type ]()
+  /**
+   * @description 打开购买界面
+   * @param {String} type 类型【专业版、企业版】
+   * @param {Number} source 购买统计码
+   * @param {Object} plugin 推荐插件信息
+   */
+  pay_product_sign:function (type, source, plugin) {
+    if(typeof plugin != 'undefined' && plugin == 'ltd') return  bt.soft.product_pay_view({totalNum:source,limit:'ltd',closePro:true})
+    switch (type) {
+      case 'pro':
+        bt.soft['updata_' + type](source);
+        break;
+      case 'ltd':
+        bt.soft['updata_' + type](false, source);
+        break;
+    }
   },
   /**
    * @description 获取项目类型
    * @param {Function} callback 回调函数
    */
   get_product_type:function(callback){
-    bt.send('get_pay_type','ajax/get_pay_type',{},(rdata)=>{
+    bt.send('get_pay_type','ajax/get_pay_type',{},function(rdata){
       bt.set_storage('session','get_pay_type',JSON.stringify(rdata))
       if(callback) callback(rdata)
     })
@@ -6430,7 +6537,7 @@ var product_recommend = {
   */
   recommend_product_view: function (config) {
     var name = config.name.split('_')[0];
-    var status = this.get_pay_status();
+    var status = this.get_pay_status(config);
     bt.open({
       title:false,
       area:'650px',
@@ -6459,8 +6566,14 @@ var product_recommend = {
         })
         // 立即购买
         $('.buyNow').click(function(){
-          bt.set_cookie('pay_source',config.pay)
-          bt.soft['updata_' + status.advanced]()
+          switch (status.advanced) {
+            case 'pro':
+              bt.soft['updata_' + status.advanced](config.pay);
+              break;
+            case 'ltd':
+              bt.soft['updata_' + status.advanced](false, config.pay);
+              break;
+          }
         })
       }
     })

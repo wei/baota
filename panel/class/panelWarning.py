@@ -18,13 +18,15 @@ class panelWarning:
             os.makedirs(self.__ignore,384)
         if not os.path.exists(self.__result):
             os.makedirs(self.__result,384)
-        
+
 
 
     def get_list(self,args):
         #self.sync_rule()
+        if 'force' in args:
+            public.set_module_logs('panelWarning', 'get_list', 1)
         p = public.get_modules('class/safe_warning')
-        
+
         data = {
             'security':[],
             'risk':[],
@@ -34,7 +36,7 @@ class panelWarning:
         for m_name in p.__dict__.keys():
             # 忽略的检查项
             if p[m_name]._level == 0: continue
-            
+
             m_info = {
                 'title': p[m_name]._title,
                 'm_name': m_name,
@@ -48,27 +50,27 @@ class panelWarning:
             }
             result_file = self.__result + '/' + m_name + '.pl'
 
-            not_force = True
-            if 'force' in args:
-                not_force = m_info['ignore']
+            # not_force = True
+            # if 'force' in args:
+            #     not_force = m_info['ignore']
 
-            if os.path.exists(result_file) and not_force:
-                try:
-                    m_info['status'],m_info['msg'],m_info['check_time'],m_info['taking'] = json.loads(public.readFile(result_file))
-                except:
-                    if os.path.exists(result_file): os.remove(result_file)
-                    continue
-            else:
-                try:
-                    s_time = time.time()
-                    m_info['status'],m_info['msg'] = p[m_name].check_run()
-                    m_info['taking'] = round(time.time() - s_time,6)
-                    m_info['check_time'] = int(time.time())
-                    public.writeFile(result_file,json.dumps([m_info['status'],m_info['msg'],m_info['check_time'],m_info['taking']],))
-                except:
-                    continue
+            # if os.path.exists(result_file) and not_force:
+            #     try:
+            #         m_info['status'],m_info['msg'],m_info['check_time'],m_info['taking'] = json.loads(public.readFile(result_file))
+            #     except:
+            #         if os.path.exists(result_file): os.remove(result_file)
+            #         continue
+            # else:
+            try:
+                s_time = time.time()
+                m_info['status'],m_info['msg'] = p[m_name].check_run()
+                m_info['taking'] = round(time.time() - s_time,6)
+                m_info['check_time'] = int(time.time())
+                public.writeFile(result_file,json.dumps([m_info['status'],m_info['msg'],m_info['check_time'],m_info['taking']],))
+            except:
+                continue
 
-            
+
             if m_info['ignore']:
                 data['ignore'].append(m_info)
             else:
@@ -109,7 +111,7 @@ class panelWarning:
         #     if local_version:
         #         if cloud_version == local_version:
         #             return
-            
+
         #     tmp_file = '/tmp/bt_safe_warning.zip'
         #     public.ExecShell('wget -O {} {} -T 5'.format(tmp_file,download_url + '/install/warning/safe_warning.zip'))
         #     if not os.path.exists(tmp_file):
@@ -118,7 +120,7 @@ class panelWarning:
         #     if os.path.getsize(tmp_file) < 2129:
         #         os.remove(tmp_file)
         #         return
-            
+
         #     if not os.path.exists(dep_path):
         #         os.makedirs(dep_path,384)
         #     public.ExecShell("unzip -o {} -d {}/ >/dev/null".format(tmp_file,dep_path))
@@ -148,7 +150,7 @@ class panelWarning:
             public.writeFile(ignore_file,'1')
         return public.returnMsg(True,'设置成功!')
 
-    
+
     def check_find(self,args):
         '''
             @name 检测指定项

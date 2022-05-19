@@ -67,16 +67,16 @@ class main(projectBase):
             os.makedirs(self._springboot_run_scripts)
 
     def test(self,get):
-        
+
         return type(get.domains)
-    
+
     def get_os_version(self,get):
         '''
         @name 获取操作系统版本的安装命令
         @author lkq<2021-08-25>
         @param get<dict_obj>
         @return string
-        ''' 
+        '''
         #获取Centos
         if os.path.exists('/usr/bin/yum') and os.path.exists('/etc/yum.conf'):
             return 'Centos'
@@ -92,7 +92,7 @@ class main(projectBase):
         @author lkq<2021-08-25>
         @param get<dict_obj>
         @return string
-        ''' 
+        '''
         ret=[]
         ret2={}
         if not 'JDK11' in ret2:
@@ -119,7 +119,7 @@ class main(projectBase):
                         java_ret['is_error']=False
                     else:
                         java_ret['is_error']=True
-                    ret2['JDK8']=java_ret 
+                    ret2['JDK8']=java_ret
                 if 'java-11' in i or 'openjdk-11' in i:
                     result=self.check_jdk(i)
                     java_ret={}
@@ -129,9 +129,9 @@ class main(projectBase):
                         java_ret['status']=True
                     else:
                         java_ret['is_error']=True
-                    ret2['JDK11']=java_ret 
+                    ret2['JDK11']=java_ret
         return ret2
-        
+
     def install_jdk(self,get):
         '''
         @name 安装JDK 版本
@@ -139,7 +139,7 @@ class main(projectBase):
         @param get<dict_obj>
         @param get.jdk_version<string>
         @return string
-        ''' 
+        '''
         tmp_file='/tmp/panelShell.pl'
         jdk_version=get.jdk_version.strip()
         if jdk_version=='':return public.returnMsg(False,'JDK版本不能为空!')
@@ -185,7 +185,7 @@ class main(projectBase):
         @name 删除JDK
         @author lkq
         @param get
-        @param get.jdk_version JDK版本 
+        @param get.jdk_version JDK版本
         @return
         '''
         jdk_version=get.jdk_version.strip()
@@ -216,7 +216,7 @@ class main(projectBase):
         @author lkq<2021-08-25>
         @param get<dict_obj>
         @return string
-        ''' 
+        '''
         java_path=jdk_path+'/jre/bin/java'
         java_path2=jdk_path+'/bin/java'
         if os.path.exists(java_path):
@@ -239,7 +239,7 @@ class main(projectBase):
         @param get.tomcat_start  tomcat启动脚本路径
         @param get.jdk_path  JDK路径
         @return string
-        ''' 
+        '''
         jdk_path=get.jdk_path.strip()
         jdk_path2=jdk_path.split('/')
         if jdk_path2[-1]=='java':
@@ -270,14 +270,14 @@ class main(projectBase):
                 public.ExecShell('bash %s start'%(tomcat_start))
                 return public.returnMsg(True,'修改成功!')
         return public.returnMsg(False,'修改失败!')
-                   
+
     def get_tomcat_version(self,get):
         '''
         @name 获取tomcat版本信息
         @author lkq<2021-08-27>
         @param get<dict_obj>
         @return string
-        ''' 
+        '''
         ret=["7","8","9"]
         ret2={}
         ret2['tomcat7']={}
@@ -304,12 +304,12 @@ class main(projectBase):
                     ret2["tomcat"+i]["tomcat_server"]=self.__tomcat9_server
                     ret2["tomcat"+i]["tomcat_start"]=self.__tomcat9_path+'/bin/daemon.sh'
         return ret2
-    
+
     def get_tomcat_info(self,version):
         '''
         @name 获取tomcat版本信息
         @author lkq<2021-08-27>
-        @param version  tomcat版本 7 8 9 
+        @param version  tomcat版本 7 8 9
         @return string
         '''
         tmp = {}
@@ -335,13 +335,13 @@ class main(projectBase):
 
     def install_tomcat(self,get):
         '''
-        @name 安装tomcat版本 
+        @name 安装tomcat版本
         @author lkq<2021-08-27>
         @param get<dict_obj>
         @param get.version 安装|卸载的版本
         @param get.type    install ==安装  uninstall ==卸载
         @return string
-        ''' 
+        '''
         tmp_file='/tmp/panelShell2.pl'
         if not os.path.exists(tmp_file):
             public.ExecShell("touch /tmp/panelShell2.pl")
@@ -369,7 +369,7 @@ class main(projectBase):
                 return public.returnMsg(True,'卸载成功!')
             else:
                 return public.returnMsg(False,'卸载失败!')
-        
+
     def xml_init(self, path):
         '''
         @name 初始化XML文件
@@ -438,7 +438,7 @@ class main(projectBase):
                 return False
         else:
             return False
-    
+
     def get_port(self):
         '''
         @name 取端口号
@@ -581,7 +581,7 @@ class main(projectBase):
                 return ''
         else:
             return ''
-    
+
     def format(self, em, level=0):
         '''
         @name 格式化配置文件
@@ -616,9 +616,12 @@ class main(projectBase):
         @param domain<string>
         @return string
         '''
-        Hosts = self.__ENGINE.getchildren()
+        try:
+            Hosts = self.__ENGINE.getchildren()
+        except:
+            Hosts = list(self.__ENGINE)
         for host in Hosts:
-            if host.tag != 'Host': continue;
+            if host.tag != 'Host': continue
             if host.attrib['name'] == domain:
                 return host
         return None
@@ -746,11 +749,11 @@ class main(projectBase):
             @return tuple
         '''
         config_file = "{}/nginx/java_{}.conf".format(public.get_vhost_path(),project_name)
-        if not os.path.exists(config_file): 
+        if not os.path.exists(config_file):
             return False,False
 
         config_body = public.readFile(config_file)
-        if not config_body: 
+        if not config_body:
             return False,False
 
         is_ssl,is_force_ssl = False,False
@@ -773,7 +776,7 @@ class main(projectBase):
         for d in project_find['project_config']['domains']:
             domain_tmp = d.split(':')
             if len(domain_tmp) == 1: domain_tmp.append(80)
-            if not int(domain_tmp[1]) in ports: 
+            if not int(domain_tmp[1]) in ports:
                 ports.append(int(domain_tmp[1]))
             if not domain_tmp[0] in domains:
                 domains.append(domain_tmp[0])
@@ -790,7 +793,7 @@ class main(projectBase):
         if is_ssl:
             listen_ports += "\n    listen 443 ssl http2;"
             if listen_ipv6: listen_ports += "\n    listen [::]:443 ssl http2;"
-        
+
             ssl_config = '''ssl_certificate    {vhost_path}/cert/{priject_name}/fullchain.pem;
     ssl_certificate_key    {vhost_path}/cert/{priject_name}/privkey.pem;
     ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3;
@@ -808,7 +811,7 @@ class main(projectBase):
         rewrite ^(/.*)$ https://$host$1 permanent;
     }
     #HTTP_TO_HTTPS_END'''
-        
+
         config_file = "{}/nginx/java_{}.conf".format(self._vhost_path,project_name)
         template_file = "{}/template/nginx/java_http.conf".format(self._vhost_path)
         config_body = public.readFile(template_file)
@@ -816,7 +819,7 @@ class main(projectBase):
             host='{}'.format(project_find['project_config']['project_name'])
         else:
             host='$Host'
-        # api_url='/' if not 'api_url' in project_find['project_config'] else project_find['project_config']['api_url'] 
+        # api_url='/' if not 'api_url' in project_find['project_config'] else project_find['project_config']['api_url']
         # site_path=project_find['path'] if not 'static_path' in project_find['project_config'] else project_find['project_config']['static_path']
         # host_url = host if not 'host_url' in project_find['project_config'] else project_find['project_config']['host_url']
         if 'host_url' in project_find['project_config']:
@@ -843,7 +846,7 @@ class main(projectBase):
         # ssl_config = self.get_nginx_ssl_config(project_name)
         # if ssl_config:
         #     config_body.replace('#error_page 404/404.html;',ssl_config)
-            
+
 
         rewrite_file = "{panel_path}/vhost/rewrite/java_{project_name}.conf".format(panel_path = self._panel_path,project_name = project_name)
         if not os.path.exists(rewrite_file): public.writeFile(rewrite_file,'# 请将伪静态规则或自定义NGINX配置填写到此处\n')
@@ -859,11 +862,11 @@ class main(projectBase):
             @return bool
         '''
         config_file = "{}/apache/java_{}.conf".format(public.get_vhost_path(),project_name)
-        if not os.path.exists(config_file): 
+        if not os.path.exists(config_file):
             return False,False
 
         config_body = public.readFile(config_file)
-        if not config_body: 
+        if not config_body:
             return False,False
 
         is_ssl,is_force_ssl = False,False
@@ -888,12 +891,12 @@ class main(projectBase):
         for d in project_find['project_config']['domains']:
             domain_tmp = d.split(':')
             if len(domain_tmp) == 1: domain_tmp.append(80)
-            if not int(domain_tmp[1]) in ports: 
+            if not int(domain_tmp[1]) in ports:
                 ports.append(int(domain_tmp[1]))
             if not domain_tmp[0] in domains:
                 domains.append(domain_tmp[0])
 
-        
+
         config_file = "{}/apache/java_{}.conf".format(self._vhost_path,project_name)
         template_file = "{}/template/apache/java_http.conf".format(self._vhost_path)
         config_body = public.readFile(template_file)
@@ -903,7 +906,7 @@ class main(projectBase):
         is_ssl,is_force_ssl  = self.exists_apache_ssl(project_name)
         if is_ssl:
             if not 443 in ports: ports.append(443)
-        
+
         from panelSite import panelSite
         s = panelSite()
 
@@ -948,7 +951,7 @@ class main(projectBase):
             # 添加端口到主配置文件
             if not p in [80]:
                 s.apacheAddPort(p)
-        
+
         # 写.htaccess
         rewrite_file = "{}/.htaccess".format(project_find['path'])
         if not os.path.exists(rewrite_file): public.writeFile(rewrite_file,'# 请将伪静态规则或自定义Apache配置填写到此处\n')
@@ -956,7 +959,7 @@ class main(projectBase):
         # 写配置文件
         public.writeFile(config_file,apache_config_body)
         return True
-    
+
     def get_nginx_ssl_config(self,project_name):
         '''
             @name 获取项目Nginx SSL配置
@@ -966,11 +969,11 @@ class main(projectBase):
         '''
         result = ''
         config_file = "{}/nginx/java_{}".format(self._vhost_path,project_name)
-        if not os.path.exists(config_file): 
+        if not os.path.exists(config_file):
             return result
 
         config_body = public.readFile(config_file)
-        if not config_body: 
+        if not config_body:
             return result
         if config_body.find('ssl_certificate') == -1:
             return result
@@ -1083,7 +1086,7 @@ class main(projectBase):
         #     rec = '%s' % domain
         #     if not re.search(rec, ret):
         #         public.ExecShell('echo "127.0.0.1 ' + domain + '" >> /etc/hosts')
-    
+
     def set_spring_user(self):
         '''
         @name 建立本地HOST
@@ -1130,8 +1133,8 @@ class main(projectBase):
             else:
                 return False
         else:
-            return False 
-    
+            return False
+
     def replce_tomcat_port(self,get):
         '''
         @name 更改tomcat端口
@@ -1177,12 +1180,18 @@ class main(projectBase):
             return False
     # 获取指定虚拟主机
     def Set_Domain_path(self, domain,docBase):
-        Hosts = self.__ENGINE.getchildren()
+        try:
+            Hosts = self.__ENGINE.getchildren()
+        except:
+            Hosts = list(self.__ENGINE)
         flag=False
         for host in Hosts:
-            if host.tag != 'Host': continue;
+            if host.tag != 'Host': continue
             if host.attrib['name'] == domain:
-                ch = host.getchildren()
+                try:
+                    ch = host.getchildren()
+                except:
+                    ch = list(host)
                 for i in ch:
                     print(i.attrib)
                     if 'docBase' in i.attrib:
@@ -1281,7 +1290,7 @@ class main(projectBase):
             ret=public.ExecShell(jdk+' -version')
             if ret[0].find('Error occurred') != -1:
                 return public.returnMsg(False,'JDK不可用')
-            
+
             public.writeFile(self._panel_path+'/data/get_local_jdk.json',json.dumps([jdk]))
             return public.returnMsg(True,'保存成功')
         else:
@@ -1328,14 +1337,14 @@ class main(projectBase):
         '''
         skey = "cpu_pre_{}".format(p.pid)
         old_cpu_times = cache.get(skey)
-        
+
         process_cpu_time = self.get_process_cpu_time(p.cpu_times())
         if not old_cpu_times:
             cache.set(skey,[process_cpu_time,time.time()],3600)
             # time.sleep(0.1)
             old_cpu_times = cache.get(skey)
             process_cpu_time = self.get_process_cpu_time(p.cpu_times())
-        
+
         old_process_cpu_time = old_cpu_times[0]
         old_time = old_cpu_times[1]
         new_time = time.time()
@@ -1391,7 +1400,7 @@ class main(projectBase):
             else:return False
         except:
             return False
-    
+
     def format_connections(self,connects):
         '''
             @name 获取进程网络连接信息
@@ -1604,17 +1613,17 @@ class main(projectBase):
             @return dict
         '''
         project_find = self.get_project_find(get.project_name)
-        if not project_find: 
+        if not project_find:
             return public.returnMsg(False,'指定项目不存在')
         last_domain = get.domain
         domain_arr = get.domain.split(':')
-        if len(domain_arr) == 1: 
+        if len(domain_arr) == 1:
             domain_arr.append(80)
         if domain_arr[0]==get.project_name:return public.returnMsg(False,'不能删除当前项目域名')
         project_id = public.M('sites').where('name=?',(get.project_name,)).getField('id')
         if len(project_find['project_config']['domains']) == 1: return public.returnMsg(False,'项目至少需要一个域名')
         domain_id = public.M('domain').where('name=? AND pid=?',(domain_arr[0],project_id)).getField('id')
-        if not domain_id: 
+        if not domain_id:
             return public.returnMsg(False,'指定域名不存在')
         public.M('domain').where('id=?',(domain_id,)).delete()
         if get.domain in project_find['project_config']['domains']:
@@ -1666,7 +1675,7 @@ class main(projectBase):
         @return dict
         '''
         project_find = self.get_project_find(get.project_name)
-        if not project_find: 
+        if not project_find:
             return public.returnMsg(False,'指定项目不存在')
         project_id = project_find['id']
         domains = get.domains
@@ -1674,8 +1683,9 @@ class main(projectBase):
         error_list = []
         for domain in domains:
             domain = domain.strip()
+            if not domain: return public.returnMsg(False,'域名不能为空')
             domain_arr = domain.split(':')
-            if len(domain_arr) == 1: 
+            if len(domain_arr) == 1:
                 domain_arr.append(80)
                 domain += ':80'
                 self.set_hosts(domain_arr[0])
@@ -1692,8 +1702,9 @@ class main(projectBase):
         if success_list:
             public.M('sites').where('id=?',(project_id,)).save('project_config',json.dumps(project_find['project_config']))
             self.set_config(get.project_name)
-        return public.returnMsg(True,"成功添加{}个域名，失败{}个!".format(len(success_list),len(error_list)))
-    
+            return public.returnMsg(True,"成功添加{}个域名，失败{}个!".format(len(success_list),len(error_list)))
+        return public.returnMsg(False,"成功添加{}个域名，失败{}个!".format(len(success_list),len(error_list)))
+
     def get_other_pids(self,pid):
         '''
             @name 获取其他进程pid列表
@@ -1840,10 +1851,11 @@ class main(projectBase):
             # 写入启动脚本
             public.writeFile(script_file,start_cmd)
             if os.path.exists(pid_file): os.remove(pid_file)
-            public.ExecShell("chown -R springboot:springboot {}".format(self._springboot))
+            public.ExecShell("chmod -R 777 /var/tmp/springboot/")
+            #public.ExecShell("chown -R {}:{} {}".format(project_find['project_config']['run_user'],project_find['project_config']['run_user'],self._springboot))
             public.set_mode(script_file,755)
-            public.ExecShell("chown  springboot:springboot {}".format(project_find['path']))
-            #判断是否在/www/  /www/wwwroot 
+            public.ExecShell("chown  {}:{} {}".format(project_find['project_config']['run_user'],project_find['project_config']['run_user'],project_find['path']))
+            #判断是否在/www/  /www/wwwroot
 
             # 执行脚本文件
             p = public.ExecShell("bash {}".format(script_file),user=project_find['project_config']['run_user'])
@@ -1855,7 +1867,7 @@ class main(projectBase):
             pid = int(public.readFile(pid_file))
             time.sleep(0.4)
             pids = self.get_project_pids(pid=pid)
-            #if not pids: 
+            #if not pids:
             #    if os.path.exists(pid_file): os.remove(pid_file)
             #    return public.returnMsg(False,'启动失败<br>{}'.format(public.GetNumLines(log_file,20)))
             return public.returnMsg(True, '启动成功')
@@ -1864,7 +1876,7 @@ class main(projectBase):
         '''
         @name  修改JDK 返回所需命令
         @param  jdK_path
-        @param  cmd 
+        @param  cmd
         @return string cmd
         '''
         jdK_path = get.jdK_path.strip()
@@ -1883,8 +1895,23 @@ class main(projectBase):
                 continue
             else:
                 return_cmd.append(i)
-            
+
         return public.returnMsg(True, ' '.join(return_cmd))
+
+    def send_cmd(self,get):
+        port = get.port if 'port' in get else self.generate_random_port()
+        project_jdk = get.project_jdk
+        if not os.path.exists(project_jdk): return public.returnMsg(False, '项目JDK不存在')
+        project_jar = get.project_jar.strip()
+        if not os.path.exists(project_jar): return public.returnMsg(False, '项目jar不存在')
+        if 'debug' in get:
+            debug_port = self.generate_random_port()
+            return public.returnMsg(True,
+                                    '{} -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address={} -jar -Xmx1024M -Xms256M  {} --server.port={}'.format(
+                                        project_jdk, debug_port, project_jar, port))
+        return public.returnMsg(True, '{} -jar -Xmx1024M -Xms256M  {} --server.port={}'.format(project_jdk, project_jar,
+                                                                                               port))
+
 
     def return_cmd(self,get):
         '''
@@ -1894,15 +1921,76 @@ class main(projectBase):
         @param  port 项目端口号
         @param  project_jdk 项目JDK
         '''
-        port = get.port if 'port' in get else self.generate_random_port()
-        project_jdk = get.project_jdk
-        if not os.path.exists(project_jdk):return public.returnMsg(False,'项目JDK不存在')
-        project_jar = get.project_jar.strip()
-        if not os.path.exists(project_jar):return public.returnMsg(False,'项目jar不存在')
-        if 'debug' in get:
-            debug_port=self.generate_random_port()
-            return public.returnMsg(True,'{} -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address={} -jar -Xmx1024M -Xms256M  {} --server.port={}'.format(project_jdk,debug_port,project_jar,port))
-        return public.returnMsg(True,'{} -jar -Xmx1024M -Xms256M  {} --server.port={}'.format(project_jdk,project_jar,port))
+        if not 'project_cmd' in get:
+            return self.send_cmd(get)
+        else:
+            if not get.project_cmd:
+                return self.send_cmd(get)
+            #修改port
+            project_find = self.get_project_find(get.project_name)
+            if not project_find:
+                return self.send_cmd(get)
+            project_cmd =get.project_cmd.strip()
+            cmd_type=int(get.type)
+
+            if cmd_type==1:
+                project_cmd=project_find['project_config']['project_cmd'].replace(str(project_find['project_config']['port']),
+                                                                      str(get.port))
+                project_find['project_config']['project_cmd']=project_cmd
+                project_find['project_config']['port']=get.port
+                project_find['project_config']['project_jdk']=get.project_jdk.strip()
+                pdata = {
+                    'name': get.project_name.strip(),
+                    'project_config':json.dumps(project_find['project_config'])
+                }
+                public.M('sites').where('name=?', (get.project_name,)).update(pdata)
+                return public.returnMsg(True,project_cmd)
+            if cmd_type==2:
+                if 'project_jdk' in project_find['project_config']:
+                    project_cmd = project_find['project_config']['project_cmd'].replace(
+                        str(project_find['project_config']['project_jdk']), str(get.project_jdk.strip()))
+                    project_cmd = project_cmd.replace(
+                        str(project_find['project_config']['port']), str(get.port))
+                else:
+                    project_cmd='{} -jar -Xmx1024M -Xms256M  {} --server.port={}'.format(get.project_jdk.strip(), get.project_jar.strip(),get.port)
+
+                project_find['project_config']['project_cmd']=project_cmd
+                project_find['project_config']['port'] = get.port
+                project_find['project_config']['project_jdk'] = get.project_jdk.strip()
+                pdata = {
+                    'name': get.project_name.strip(),
+                    'project_config':json.dumps(project_find['project_config'])
+                }
+
+
+                public.M('sites').where('name=?', (get.project_name,)).update(pdata)
+                return public.returnMsg(True, project_cmd)
+            if cmd_type == 3:
+                if 'debug' in get:
+                    if get.debug:
+                        debug_port = self.generate_random_port()
+                        cmd='{} -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address={} -jar -Xmx1024M -Xms256M  {} --server.port={}'.format(get.project_jdk, debug_port, project_find['project_config']['project_jar'], project_find['project_config']['port'])
+
+                        project_find['project_config']['project_cmd'] = cmd
+                        project_find['project_config']['port'] = get.port
+                        project_find['project_config']['project_jdk'] = get.project_jdk.strip()
+                        pdata = {
+                            'name': get.project_name.strip(),
+                            'project_config': json.dumps(project_find['project_config'])
+                        }
+                        public.M('sites').where('name=?', (get.project_name,)).update(pdata)
+                        return public.returnMsg(True,cmd)
+                cmd='{} -jar -Xmx1024M -Xms256M  {} --server.port={}'.format(get.project_jdk,project_find['project_config']['project_jar'],project_find['project_config']['port'])
+                project_find['project_config']['project_cmd'] = cmd
+                project_find['project_config']['port'] = get.port
+                project_find['project_config']['project_jdk'] = get.project_jdk.strip()
+                pdata = {
+                    'name': get.project_name.strip(),
+                    'project_config': json.dumps(project_find['project_config'])
+                }
+                public.M('sites').where('name=?', (get.project_name,)).update(pdata)
+                return public.returnMsg(True, cmd)
+
 
     def unbind_extranet(self,get):
         '''
@@ -1964,13 +2052,13 @@ class main(projectBase):
             return self.create_independent_project(get)
         elif project_type == 3:
             return self.create_spring_boot_project(get)
-    
+
     def create_internal_project(self,get):
         '''
         @name 创建内置项目
         @author lkq<2021-08-27>
         @param  domain 域名
-        @param  tomcat_version tomcat版本  7 8 9 
+        @param  tomcat_version tomcat版本  7 8 9
         @param  project_path 项目路径
         @param  project_ps 项目描述
         @param  bind_extranet  绑定外网 默认不需要传递
@@ -1996,7 +2084,7 @@ class main(projectBase):
                 return public.returnMsg(False,'指定域名已存在: {}'.format(domain))
         tomcat_version = str(get.tomcat_version)
         project_path = get.project_path.strip()
-        if not os.path.exists(project_path): 
+        if not os.path.exists(project_path):
             os.makedirs(project_path)
             public.set_own(project_path,'www')
         #project_name = get.project_name.strip()
@@ -2067,7 +2155,7 @@ class main(projectBase):
         @param  domain 域名
         @param  project_path 项目路径
         @param  port 端口号
-        @param  tomcat_version 项目tomcat版本  7 8 9 
+        @param  tomcat_version 项目tomcat版本  7 8 9
         #param  project_ps 项目描述
         @param  auth    开机自动启动
         '''
@@ -2098,7 +2186,7 @@ class main(projectBase):
         if self.check_port(port): return public.returnMsg(False, "端口被占用, 请更换其他端口")
         # 判断是否存在
         if os.path.exists(self.__site_path + domain): return public.returnMsg(False, "该网站已经存在。如想建立请删除%s" % self.__site_path + domain)
-        if not os.path.exists(project_path): 
+        if not os.path.exists(project_path):
             os.makedirs(project_path)
             public.set_own(project_path,'www')
         # 首先需要先复制好文件过去
@@ -2226,9 +2314,9 @@ class main(projectBase):
         '''
         @name 创建Spring_boot项目
         @author lkq<2021-08-27>
-        @param  domains 域名  可选 
+        @param  domains 域名  可选
         @param  project_jar 项目jar路径
-        @param  project_name 项目名称   
+        @param  project_name 项目名称
         @param  port 项目端口号
         @param  project_jdk 项目JDK
         @param  project_cmd  最终执行的命令
@@ -2255,15 +2343,21 @@ class main(projectBase):
         if not 'project_cmd' in get: return public.returnMsg(False, "请输入你的项目启动命令")
         if not 'project_ps' in get: return public.returnMsg(False, "请输入你的项目启动命令")
         if not 'is_separation' in get:get.is_separation=0
+        project_path = os.path.dirname(get.project_jar)
+        if not public.check_site_path(project_path):
+            a,c = public.get_sys_path()
+            return public.returnMsg(False,'请不要项目文件放到以下关键目录中: <br>{}'.format("<br>".join(a+c)))
+
         if get.is_separation:
             if public.get_webserver() == 'apache':
                 return public.returnMsg(False, "前后端分离不支持Apache")
             get.is_separation=1
         ##静态资源目录
-        if not 'static_path' in get: 
+        if not 'static_path' in get:
             get.static_path = '/www/wwwroot/'+get.project_name.split('/')[0]
         if not 'api_url' in get:
              get.api_url = '/'
+
         else:
             if get.api_url[-1] == '/':
                 get.api_url = get.api_url[:-1]
@@ -2291,10 +2385,10 @@ class main(projectBase):
         if public.M('sites').where('name=?',(get.project_name,)).count():
             return public.returnMsg(False,'指定项目名称已存在: {}'.format(get.project_name))
         project_name = get.project_name.strip()
-        # if not re.match("^\w+$",project_name): 
+        # if not re.match("^\w+$",project_name):
         #     return public.return_error('项目名称格式不正确，支持字母、数字、下划线，表达式: ^[0-9A-Za-z_]$')
         # 端口占用检测
-        if self.check_port(get.port): 
+        if self.check_port(get.port):
             return public.returnMsg(False,'指定端口已被其它应用占用，请修改您的项目配置使用其它端口, 端口: {}'.format(get.port))
         #判断JDK路径是否存在
         if not os.path.exists(get.project_jdk): return public.returnMsg(False,'请输入正确的JDK路径')
@@ -2309,7 +2403,6 @@ class main(projectBase):
         project_jar = get.project_jar.strip()
         if not os.path.exists(project_jar): return public.returnMsg(False,'请输入正确的jar包路径')
         #获取jar的根目录
-        project_path = os.path.dirname(project_jar)
         if not get.is_separation:
             get.host_url=False
         pdata = {
@@ -2321,6 +2414,7 @@ class main(projectBase):
             'project_type': 'Java',
             'project_config': json.dumps(
                 {
+                    'project_jdk':get.project_jdk.strip(),
                     'ssl_path': '/www/wwwroot/java_node_ssl',
                     'project_name': get.project_name.strip(),
                     'project_jar': get.project_jar.strip(),
@@ -2342,7 +2436,7 @@ class main(projectBase):
                 }
             ),
             'addtime': public.getDate()
-        }       
+        }
         project_id = public.M('sites').insert(pdata)
         if get.bind_extranet ==1:
             format_domains = []
@@ -2352,10 +2446,19 @@ class main(projectBase):
             get.domains = format_domains
             self.project_add_domain(get)
         self.set_config(get.project_name)
+        # 设置java启动目录为某个用户权限
+        public.ExecShell("chown {}:{} {}".format(get.run_user.strip(),get.run_user.strip(),project_path))
+        if get.is_separation:
+            if not os.path.exists(get.static_path):
+                public.ExecShell("mkdir -p {}".format(get.static_path))
+                public.ExecShell("chown {}:{} {}".format(get.run_user.strip(),get.run_user.strip(),get.static_path))
+            else:
+                public.ExecShell("chown -R {}:{} {}".format(get.run_user.strip(), get.run_user.strip(), get.static_path))
+
         public.WriteLog(self._log_name,'添加Java Springboot项目{}'.format(get.project_name))
         self.start_project(get)
         return public.returnMsg(True,'添加项目成功',project_id)
-    
+
     def kill_pids(self,get=None,pids = None):
         '''
             @name 结束进程列表
@@ -2396,7 +2499,7 @@ class main(projectBase):
             count = public.M('sites').where('project_type=?','Java').count()
             data = public.get_page(count,int(get.p),int(get.limit),get.callback)
             data['data'] = public.M('sites').where('project_type=?','Java').limit(data['shift'] + ',' + data['row']).order(get.order).select()
-                
+
         for i in range(len(data['data'])):
             project_config= json.loads(data['data'][i]['project_config'])
             #如果内置项目被删除 则直接删除当前项目
@@ -2427,7 +2530,7 @@ class main(projectBase):
                 if project_config["tomcat_version"]==verison:
                     ret.append(i['name'])
         return ret
-    
+
     def get_project_list(self,get):
         '''
         @name 取项目列表
@@ -2477,7 +2580,7 @@ class main(projectBase):
         for i in range(len(data['data'])):
             data['data'][i] = self.get_project_stat(data['data'][i])
         return data
-    
+
 
 
     #修复独立项目
@@ -2498,7 +2601,7 @@ class main(projectBase):
             if not project_config['tomcat_version'] in tomcat_list:return public.returnMsg(False,'请指定tomcat版本!')
             if self.check_port(str(project_config['port'])): return public.returnMsg(False, "%s端口被占用,修复失败"%str(project_config['port']))
             # 判断是否存在
-            if not os.path.exists(project_info['path']): 
+            if not os.path.exists(project_info['path']):
                 os.makedirs(project_info['path'])
                 public.set_own(project_info['path'],'www')
             #确定目录存在。先删除目录
@@ -2658,7 +2761,7 @@ class main(projectBase):
                 if project_info['listen']:
                     project_info['listen_ok'] = project_info['project_config']['port'] in project_info['listen']
             return project_info
-                
+
     def get_project_log(self,get):
         '''
         @name 取项目日志
@@ -2787,16 +2890,16 @@ class main(projectBase):
         else:
             project_name=get.project_name.strip()
         project_find['project_config']['project_name'] = project_name
-        if hasattr(get,'port'): 
+        if hasattr(get,'port'):
             if int(project_find['project_config']['port']) != int(get.port):
-                if self.check_port_is_used(get.get('port/port'),True): 
+                if self.check_port_is_used(get.get('port/port'),True):
                     return public.returnMsg(False,'指定端口已被其它应用占用，请修改您的项目配置使用其它端口, 端口: {}'.format(get.port))
                 project_find['project_config']['port'] = int(get.port)
         if hasattr(get,'auth'): project_find['project_config']['auth'] = get.auth
         if hasattr(get,'run_user'): project_find['project_config']['run_user'] = get.run_user.strip()
         if hasattr(get,'project_jdk'): project_find['project_config']['project_jdk'] = get.project_jdk.strip()
         if hasattr(get,'project_jar'): project_find['project_config']['project_jar'] = get.project_jar.strip()
-        if hasattr(get,'project_cmd'): 
+        if hasattr(get,'project_cmd'):
             project_find['project_config']['project_cmd'] = get.project_cmd.strip()
         else:
             return public.returnMsg(False,'缺少project_cmd参数')
@@ -2833,16 +2936,16 @@ class main(projectBase):
         '''
 
         falg=False
-        if hasattr(get,'port'): 
+        if hasattr(get,'port'):
             if int(project_find['project_config']['port']) != int(get.port):
-                if self.check_port_is_used(get.get('port/port'),True): 
+                if self.check_port_is_used(get.get('port/port'),True):
                     return public.returnMsg(False,'指定端口已被其它应用占用，请修改您的项目配置使用其它端口, 端口: {}'.format(get.port))
                 project_find['project_config']['port'] = int(get.port)
                 #独立项目修改端口
                 ret=self.set_tomcat_duli_port(get,get_project_find=project_find)
                 falg=True
                 if not ret['status']:return ret
-        
+
 
         #更换项目路径
         if hasattr(get,'project_path'):
@@ -2852,7 +2955,7 @@ class main(projectBase):
                 ret=self.set_tomcat_duli_path(get,get_project_find=project_find)
                 falg=True
                 if not ret['status']:return ret
-        
+
         #更换JDK
         if hasattr(get,'jdk_path'):
             ret=self.pendent_tomcat_info(domain=get.project_name)
@@ -2878,21 +2981,21 @@ class main(projectBase):
                 'project_config': json.dumps(project_find['project_config'])
                 }
                 public.M('sites').where('name=?',(get.project_name,)).update(pdata)
-        
+
         #更换描述
         if hasattr(get,'project_ps'):
             if get.project_ps.strip() != project_find['ps']:
                 falg=True
                 pdata = {'ps': get.project_ps.strip()}
                 public.M('sites').where('name=?',(get.project_name,)).update(pdata)
-        
+
         if falg:
             self.set_config(get.project_name)
             #self.restart_project(get)
             self.stop_project(get)
             self.start_project(get)
         return public.returnMsg(True,'修改完成')
-        
+
     def modify_project_neizhi(self,get,project_find):
         '''
         @name 修改内置项目配置
@@ -2903,9 +3006,9 @@ class main(projectBase):
         @param get.jdk_path  更换JDK的路径
         '''
         flag=False
-        if hasattr(get,'port'): 
+        if hasattr(get,'port'):
             if int(project_find['project_config']['port']) != int(get.port):
-                if self.check_port_is_used(get.get('port/port'),True): 
+                if self.check_port_is_used(get.get('port/port'),True):
                     return public.returnMsg(False,'指定端口已被其它应用占用，请修改您的项目配置使用其它端口, 端口: {}'.format(get.port))
                 project_find['project_config']['port'] = int(get.port)
                 #独立项目修改端口
@@ -2928,7 +3031,7 @@ class main(projectBase):
                         get.jdk_path=ret['jdk_path']
                         self.replace_jdk_version(get)
                         return ret2
-        
+
         #更换项目路径
         if hasattr(get,'project_path'):
             if (get.project_path.strip() == project_find['path']):
@@ -2937,7 +3040,7 @@ class main(projectBase):
                 ret=self.set_tomcat_duli_path(get,get_project_find=project_find)
                 flag=True
                 if not ret['status']:return ret
-        
+
         #更换描述
         if hasattr(get,'project_ps'):
             if get.project_ps.strip() != project_find['ps']:
@@ -2963,7 +3066,7 @@ class main(projectBase):
             project_config = json.loads(project_find['project_config'])
             if project_config['auth'] in [0,False,'0',None]: continue
             project_name = project_find['name']
-            
+
             if project_config['java_type']=='springboot':
                 project_state = self.get_project_run_state(project_name=project_name)
             elif project_config['java_type']=='duli':
@@ -2989,7 +3092,7 @@ class main(projectBase):
         public.WriteLog(self._log_name, dene_msg)
         public.print_log(dene_msg,'INFO')
         return True
-    
+
     def get_jmap_path(self,project_find):
         '''
         @name 获取jmap jhat jstack绝对路径
@@ -3006,7 +3109,7 @@ class main(projectBase):
         path=None
         for i in cmd:
             if 'bin/java' in i:
-                path=i 
+                path=i
                 break
         if not path:
             jdk_list =self.get_local_jdk_version(None)
@@ -3078,7 +3181,7 @@ class main(projectBase):
         '''
         @name 生成headdump 文件
         @author lkq<2021-09-24>
-        @param  type Finfo 代表强制获取每个类占用  info获取每个类占用   dump生成dump文件 Fdump 强制生成dump文件 heap 显示Java堆详细信息 Fheap 强制显示Java堆详细信息 
+        @param  type Finfo 代表强制获取每个类占用  info获取每个类占用   dump生成dump文件 Fdump 强制生成dump文件 heap 显示Java堆详细信息 Fheap 强制显示Java堆详细信息
         @return list
         '''
         if not hasattr(get,'type'):
@@ -3157,7 +3260,7 @@ class main(projectBase):
         @ps :此功能消耗很大的内存和CPU。請注意使用
         '''
         pass
-        dump_path=get.dump 
+        dump_path=get.dump
         if not os.path.exists(dump_path):
             return public.returnMsg(False,'dump文件不存在: {}'.format(dump_path))
         cmd = 'jhat {}'.format(dump_path)
@@ -3166,7 +3269,7 @@ class main(projectBase):
     def jstack_project(self,get):
         '''
         @name jstack 生成虚拟线程快照
-        @param pid 进程id  
+        @param pid 进程id
         @return string
         '''
         project_find = self.get_project_find(get.project_name)

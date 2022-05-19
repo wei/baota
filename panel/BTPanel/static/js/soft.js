@@ -23,6 +23,8 @@ var soft = {
     }
     bt.soft.get_soft_list(page, type, search, function (rdata) {
       soft.set_soft_tips(rdata, type);
+      var isClearCloudRefresh = bt.get_cookie('refresh_software_list')
+      if(isClearCloudRefresh) bt.clear_cookie('refresh_software_list')
       var tBody = '';
       rdata.type.unshift({
         icon: 'icon',
@@ -722,12 +724,16 @@ var soft = {
       var time = genre ? rdata.pro : rdata.ltd,
           newDate = parseInt(new Date().getTime() / 1000),
           countTime = Math.ceil((time - newDate) / 86400),
-          buy_type = is_buy?30:29,
-          kf_list_html = '';
-      for (var i = 0; i < remarks.kf_list.length; i++) {
-        var element = remarks.kf_list[i];
-        kf_list_html += '<a href="' + element.kf + '" target="_blank" class="btlink mr5"><img src="https://pub.idqqimg.com/qconn/wpa/button/button_old_41.gif" style="margin-right:5px;margin-left:3px;vertical-align: -1px;">客服QQ' + (i + 1) + ': ' + element.qq + '</a>'
-      }
+          buy_type = is_buy?30:29;
+      //售前客服列表
+      var wx_li = ''
+      $.each(remarks.wx_list,function(index,wx_item){
+        wx_li+='<div class="kf_fixed">\
+            <span class="wechatEnterpriseService" style="vertical-align: middle;"></span>\
+            <span class="btlink">'+wx_item.ps+'</span>\
+            <div class="wx_kf_mask"><p>请打开微信"扫一扫"</p><div id="wx_qcode'+index+'"></div><i class="wechatEnterprise"></i><p>【'+wx_item.ps+'】</p></div>\
+        </div>'
+      })
       explain.html('<div class="pro_introduce_content"><div class="pro_ic_title"><span class="advantage">' + bt.os + (genre ? '专业版' : '企业版') + '优势 </span><span class="renew_info">' +
           '<span onclick="' + (genre ? 'bt.soft.updata_pro(33)' : 'bt.soft.updata_ltd(undefined,33)') + '"style="cursor: pointer;' + (is_buy ? ((countTime <= 7 && countTime>=0) ? 'color:red;"' : '"'): '') + '>' + (is_buy ? ('过期时间：' + (function () {
             var title = bt.format_data(time, 'yyyy-MM-dd');
@@ -735,7 +741,7 @@ var soft = {
             if (genre && rdata.pro === 0) title = '永久授权';
             return title;
           }())) : '') +
-          '</span><span class="ml5">' + kf_list_html + '</span></div>' + pro_introduce + '</div>');
+          '</span><span class="ml5">' + wx_li + '</span></div>' + pro_introduce + '</div>');
 
       var btn = $('<a title="' + ('立即' + (is_buy ? '续费' : '购买')) + '" href="javascript:;" class="btn btn-success btn-xs va0 ml15" style="margin-left:10px;">' + ('立即' + (is_buy ? '续费' : '购买')) + '</a>')
       bt.set_cookie('soft_remarks', JSON.stringify(remarks))
@@ -757,6 +763,24 @@ var soft = {
         bt.set_cookie('productPurchase', 1, 1800000)
       })
       $(el).append(tips_info);
+      //售前客服二维码
+      $.each(remarks.wx_list,function(index,wx_item){
+        $('#wx_qcode'+index).qrcode({
+          render: "canvas",
+          width: 140,
+          height: 140,
+          text: wx_item.kf
+        });
+      })
+      $('.kf_fixed').click(function(e){
+        var _offset = $(this).offset()
+        $(this).siblings().find('.wx_kf_mask').removeAttr('style')   //关闭同级
+        $(this).find('.wx_kf_mask').css({'left':_offset.left-40,'top':_offset.top+25,'display':'block'})
+        $(document).one('click',function(){
+          $(this).find('.wx_kf_mask').removeAttr('style');
+        })
+        e.stopPropagation();
+      })
     }
   },
   /**
@@ -1384,7 +1408,7 @@ var soft = {
         }
         tabCon.append(bt.render_help(_arry))
         $('.return_php_info').click(function () {
-          $('.bt-soft-menu p:eq(12)').click();
+          $('.bt-soft-menu p:eq(13)').click();
         });
         var fileName = bt.soft.get_config_path(version),
             loadT = bt.load(lan.soft.get);
@@ -1405,7 +1429,7 @@ var soft = {
         var _arry = ['此处为PHP-FPM配置文件,若您不了解配置规则，请勿修改!'];
         tabCon.append(bt.render_help(_arry))
         $('.return_php_info').click(function () {
-          $('.bt-soft-menu p:eq(12)').click();
+          $('.bt-soft-menu p:eq(13)').click();
         });
         var fileName = bt.soft.get_config_path(version).replace('php.ini', 'php-fpm.conf');
         var loadT = bt.load(lan.soft.get);
@@ -1954,8 +1978,12 @@ var soft = {
         break;
       case 'log':
         var loadT = bt.load(lan.public.the_get);
+        var serverType = bt.get_cookie('serverType')
+        var log_file = 'error_log'
+        console.log(serverType)
+        if(serverType === 'nginx') log_file = serverType + '_error.log'
         bt.send('GetOpeLogs', 'ajax/GetOpeLogs', {
-          path: '/www/wwwlogs/nginx_error.log'
+          path: '/www/wwwlogs/'+ log_file
         }, function (rdata) {
           loadT.close();
           if (rdata.msg == '') rdata.msg = '当前没有日志!';

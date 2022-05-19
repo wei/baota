@@ -9,13 +9,13 @@ import public
 p = main()
 
 if len(sys.argv) < 3:
-    print("Usage: nodejs-service [project_name] [start|stop|restart|reload|status]")
+    print("Usage: nodejs-service [project_name] [start|stop|restart]")
     sys.exit()
 get = public.dict_obj()
 get.project_name = sys.argv[1].strip()
 action = sys.argv[2].strip()
 if action not in ['start','stop','restart']:
-    print("Usage: nodejs-service [project_name] [start|stop|restart|reload|status]")
+    print("Usage: nodejs-service [project_name] [start|stop|restart]")
     sys.exit()
 
 if action == 'start':

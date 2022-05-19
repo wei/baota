@@ -15,10 +15,9 @@ panel_init(){
         panel_path=/www/server/panel
         pidfile=$panel_path/logs/panel.pid
         cd $panel_path
-        env_path=$panel_path/pyenv/bin/activate
+        env_path=$panel_path/pyenv/bin/python3
         if [ -f $env_path ];then
-                source $env_path
-                pythonV=$panel_path/pyenv/bin/python
+                pythonV=$panel_path/pyenv/bin/python3
                 chmod -R 700 $panel_path/pyenv/bin
         else
                 pythonV=/usr/bin/python
@@ -53,7 +52,7 @@ get_panel_pids(){
 get_task_pids(){
         isStart=$(ps aux|grep -E '(task.py|BT-Task)'|grep -v grep|awk '{print $2}'|xargs)
         pids=$isStart
-        arr=$isStart    
+        arr=$isStart
 }
 
 panel_start()
@@ -91,7 +90,7 @@ panel_start()
         else
                 echo "Starting Bt-Panel... Bt-Panel (pid $(echo $isStart)) already running"
         fi
-        
+
         get_task_pids
         if [ "$isStart" == '' ];then
                 echo -e "Starting Bt-Tasks... \c"
@@ -164,7 +163,7 @@ panel_port_check()
 				done
 		  fi
         done
-	
+
 	is_ports=$(lsof -n -P -i:$port|grep LISTEN|grep -v grep|awk '{print $2}'|xargs)
 	if [ "$is_ports" != '' ];then
 		kill -9 $is_ports
@@ -190,7 +189,7 @@ panel_stop()
         do
                 kill -9 $p &>/dev/null
         done
-        
+
         if [ -f $pidfile ];then
                 rm -f $pidfile
         fi
@@ -206,7 +205,7 @@ panel_status()
         else
                 echo -e "\033[31mBt-Panel not running\033[0m"
         fi
-        
+
         get_task_pids
         if [ "$isStart" != '' ];then
                 echo -e "\033[32mBt-Task (pid $isStart) already running\033[0m"
@@ -224,7 +223,7 @@ panel_reload()
 	fi
 	get_panel_pids
         if [ "$isStart" != '' ];then
-    	
+
 	    get_panel_pids
 	for p in ${arr[@]}
         do
@@ -263,15 +262,30 @@ panel_reload()
 
 install_used()
 {
-        if [ ! -f $panel_path/aliyun.pl ];then
-                return;
+        if [ -f $panel_path/aliyun.pl ];then
+                password=$(cat /dev/urandom | head -n 16 | md5sum | head -c 12)
+                username=$($pythonV $panel_path/tools.py panel $password)
+                echo "$password" > $panel_path/default.pl
+                rm -f $panel_path/aliyun.pl
         fi
-        password=$(cat /dev/urandom | head -n 16 | md5sum | head -c 12)
-        username=$($pythonV $panel_path/tools.py panel $password)
-        safe_path=$(cat /dev/urandom | head -n 16 | md5sum | head -c 8)
-        echo "$safe_path" > $panel_path/admin_path.pl
-        echo "$password" > $panel_path/default.pl
-        rm -f $panel_path/aliyun.pl
+
+        if [ -f $panel_path/php_mysql_auto.pl ];then
+                bash $panel_path/script/mysql_auto.sh &> /dev/null
+                bash $panel_path/script/php_auto.sh &> /dev/null
+                rm -f $panel_path/php_mysql_auto.pl
+        fi
+
+        pip_file=/www/server/panel/pyenv/bin/pip3
+        python_file=/www/server/panel/pyenv/bin/python3
+        if [ -f $pip_file ];then
+                is_rep=$(ls -l /usr/bin/btpip|grep pip3.)
+                if [ "${is_rep}" != "" ];then
+                        rm -f /usr/bin/btpip /usr/bin/btpython
+                        ln -sf $pip_file /usr/bin/btpip
+                        ln -sf $python_file /usr/bin/btpython
+                fi
+        fi
+
 }
 
 error_logs()
@@ -290,7 +304,7 @@ case "$1" in
                 ;;
         'restart')
                 panel_stop
-				sleep 1
+		sleep 1
                 panel_start
                 ;;
         'reload')
@@ -306,36 +320,46 @@ case "$1" in
         		$pythonV $panel_path/tools.py cli $2
         		;;
         'default')
-                LOCAL_IP=$(ip addr | grep -E -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -E -v "^127\.|^255\.|^0\." | head -n 1)
                 port=$(cat $panel_path/data/port.pl)
                 password=$(cat $panel_path/default.pl)
                 if [ -f $panel_path/data/domain.conf ];then
                 	address=$(cat $panel_path/data/domain.conf)
                 fi
+                auth_path=/login
                 if [ -f $panel_path/data/admin_path.pl ];then
                 	auth_path=$(cat $panel_path/data/admin_path.pl)
                 fi
                 if [ "$address" = "" ];then
                 	address=$(curl -sS --connect-timeout 10 -m 60 https://www.bt.cn/Api/getIpAddress)
                 fi
-				pool=http
-				if [ -f $panel_path/data/ssl.pl ];then
-					pool=https
-				fi
+                pool=http
+                if [ -f $panel_path/data/ssl.pl ];then
+                        pool=https
+                fi
+                if [ "$auth_path" == "/" ];then
+                        auth_path=/login
+                fi
+
                 echo -e "=================================================================="
                 echo -e "\033[32mBT-Panel default info!\033[0m"
                 echo -e "=================================================================="
-                echo  "外网面板地址: $pool://$address:$port$auth_path"
-                echo  "内网面板地址: http://${LOCAL_IP}:$port$auth_path"
-                echo -e "\033[33m*以下仅为初始默认账户密码，若无法登录请执行bt命令重置账户/密码登录\033[0m"
+                echo  "Bt-Panel-URL: $pool://$address:$port$auth_path"
                 echo -e `$pythonV $panel_path/tools.py username`
                 echo -e "password: $password"
-                echo -e "\033[33mIf you cannot access the panel,\033[0m"
-                echo -e "\033[33mrelease the following panel port [${port}] in the security group\033[0m"
-                echo -e "\033[33m若无法访问面板，请检查防火墙/安全组是否有放行面板[${port}]端口\033[0m"
+                echo -e "\033[33mWarning:\033[0m"
+                echo -e "\033[33mIf you cannot access the panel, \033[0m"
+                echo -e "\033[33mrelease the following port (8888|888|80|443|20|21) in the security group\033[0m"
+                echo -e "\033[33m注意：初始密码仅在首次登录面板前能正确获取，其它时间请通过 bt 5 命令修改密码\033[0m"
                 echo -e "=================================================================="
                 ;;
         *)
+                if [ "${LANG}" != "en_US.UTF-8" ];then
+                    export LANG=en_US.UTF-8 &> /dev/null
+                fi
+                if [ "${LC_ALL}" != "en_US.UTF-8" ];then
+                    export LC_ALL=en_US.UTF-8 &> /dev/null
+                fi
                 $pythonV $panel_path/tools.py cli $1
         ;;
 esac
+

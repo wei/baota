@@ -6,13 +6,15 @@
  * @Autor: chudong
  * @Date: 2021-10-11 15:54:00
  * @LastEditors: chudong
- * @LastEditTime: 2021-11-04 17:12:51
+ * @LastEditTime: 2022-05-12 14:45:48
  */
 function UploadFile () {
+  this.uploadPath = ''; // 上传文件位置
   this.init = false; // 是否初始化
   this.compatible = true; // 是否兼容当前系统，默认全部兼容
   this.uploadElement = null; // 更新视图
   this.isUpload = true; // 是否可上传
+  this.isGetFiles = false; // 是否可获取文件，如果当前拦截判断已经触发，则无法继续获取文件
   this.limit = {
     size: 30 * 1024 * 1024 * 1024,
     number: 1000
@@ -150,12 +152,18 @@ UploadFile.prototype = {
 
     // 离开放置目录
     this.bind(this.uploadElement, 'dragleave', function (ev) {
-      if(ev.path[0].id == 'uploadView') return false
-      _this.file_drag_hover(ev);
+      if (ev.path[0].id == 'uploadView') {
+        if (ev.screenX == 0 || ev.screenY == 0) {
+          ev.path[0].style.display = 'none';
+        }
+        return false
+      }
+      // _this.file_drag_hover(ev);
     });
 
     // 放置目标
     this.bind(this.uploadElement, 'drop', function (ev) {
+      _this.isGetFiles = true;
       if (_this.uploadStatus === 2) {
         layer.msg('正在上传文件，请稍候', {
           icon: 0
@@ -163,6 +171,9 @@ UploadFile.prototype = {
         _this.file_drag_hover(ev);
         return false;
       }
+      var path = $('#fileInputPath').attr('data-path');
+      $('.againUpload').click();
+      _this.init_upload_path(path);
       _this.upload_layer();
       _this.isUpload = true;
       _this.file_select_handler(ev);
@@ -188,13 +199,11 @@ UploadFile.prototype = {
    */
   upload_layer: function (list) {
     var _this2 = this;
-
     if (typeof list === 'undefined') list = [];
-
     if (this.layer) return false;
     var layerMax = null,
       layerShade = null,
-      uploadPath = bt.get_cookie('Path');
+      uploadPath = this.uploadPath || bt.get_cookie('Path');
     this.layer = layer.open({
       type: 1,
       closeBtn: 1,
@@ -231,13 +240,7 @@ UploadFile.prototype = {
               title: '清空列表',
               icon: 0
             }, function (indexs) {
-              var dropUpLoadFile = _this2.queryEl('.dropUpLoadFile');
-              for (var i = 0; i < $li.length; i++) {
-                dropUpLoadFile.removeChild($li[i]);
-              }
-              _this2.init_data();
-              var $head = _this2.queryEl('.dropUpLoadFileHead');
-              if ($head) $head.removeAttribute('style');
+              _this2.empty_upload_list();
               layer.close(indexs);
             });
           }
@@ -253,10 +256,12 @@ UploadFile.prototype = {
           uploadBtnGroud.appendChild(uploadFileInput);
           _this2.bind(uploadFileInput, 'change', function (ev) {
             _this2.isUpload = true;
+            _this2.isGetFiles = true;
             var files = ev.target.files;
             for (var i = 0; i < files.length; i++) {
               if (!_this2.file_upload_limit(files[i])) return false;
             }
+            if (!_this2.isGetFiles) return false;
             _this2.render_file_list(_this2.fileList);
             uploadBtnGroud.removeChild(uploadFileInput);
             create_upload_input();
@@ -275,12 +280,20 @@ UploadFile.prototype = {
           _this2.cancel_upload(ev);
         });
         // 开始上传
-        _this2.bind(startUpload, function () {
-          if (_this2.fileList.length === 0) {
-            layer.msg('请选择需要上传的文件')
-            return false
+        _this2.bind(startUpload, function (e) {
+          var btn = e.target;
+          if (btn.classList.contains('againUpload')) {
+            $('.ico-tips-close').click()
+            btn.innerText = '开始上传'
+            btn.classList.remove('againUpload')
+            btn.classList.add('startUpload')
+          } else {
+            if (_this2.fileList.length === 0) {
+              layer.msg('请选择需要上传的文件')
+              return false
+            }
+            _this2.upload_file();
           }
-          _this2.upload_file();
         });
       },
       min: function () {
@@ -296,6 +309,18 @@ UploadFile.prototype = {
         return false
       }
     });
+  },
+
+  // 清空上传列表
+  empty_upload_list: function () {
+    var dropUpLoadFile = this.queryEl('.dropUpLoadFile');
+    var $li = this.queryElAll('.dropUpLoadFile li');
+    for (var i = 0; i < $li.length; i++) {
+      dropUpLoadFile.removeChild($li[i]);
+    }
+    this.init_data();
+    var $head = this.queryEl('.dropUpLoadFileHead');
+    if ($head) $head.removeAttribute('style');
   },
 
 
@@ -390,11 +415,11 @@ UploadFile.prototype = {
 
   /**
    * @description 上传文件
-   */
+  */
   upload_file: function (fileStart, index) {
     var _this3 = this;
     this.uploadPath = this.uploadPath || bt.get_cookie('Path');
-
+    if(this.fileList.length === 0) return false;
     // 开始上传
     if (fileStart == undefined && this.uploadList.length == 0) {
       fileStart = 0, index = 0;
@@ -514,6 +539,7 @@ UploadFile.prototype = {
                   upload: 1,
                   upload_size: item.size
                 }));
+
               } else {
                 _this3.set_upload_view(index, $.extend(item, {
                   upload: -1,
@@ -559,10 +585,14 @@ UploadFile.prototype = {
         var parent = this.parentNode.parentNode;
         parent.querySelector('.btn-group').classList.remove('hide');
         parent.querySelector('.file_upload_info').classList.add('hide');
+        _this4.empty_upload_list();
       });
+      
       var startUpload = this.queryEl('.startUpload')
       startUpload.removeAttribute('disabled')
-      startUpload.innerText = '开始上传'
+      startUpload.innerText = '重新上传'
+      startUpload.classList.remove('startUpload')
+      startUpload.classList.add('againUpload')
       _this4.init_data();
       return false;
     }
@@ -659,8 +689,8 @@ UploadFile.prototype = {
     var e = 1024;
     for (var b = 0; b < d.length; b += 1) {
       if (a < e) {
-        var num = (b === 0 ? a : a.toFixed(2)) + d[b];
-        return !isNaN(b === 0 ? a : a.toFixed(2)) && typeof num != 'undefined' ? num : '0B';
+        var num = a.toFixed(2) + d[b];
+        return !isNaN(a.toFixed(2)) && typeof num != 'undefined' ? num : '0B';
       }
       a /= e;
     }
@@ -728,6 +758,7 @@ UploadFile.prototype = {
    * 
    */
   render_file_list: function render_file_list (list) {
+    console.log(list)
     var _this5 = this;
     var html = '';
     for (var i = 0; i < list.length; i++) {
@@ -762,6 +793,7 @@ UploadFile.prototype = {
    * @param {Object} e 文件对象
    */
   file_upload_limit: function file_upload_limit (e, path) {
+    if(!this.isGetFiles) return false
     var extName = e.name.split('.');
     path = path || e.webkitRelativePath
     var paths = path.split('/');
@@ -778,10 +810,16 @@ UploadFile.prototype = {
     this.fileTotalNumber ++;
     if (this.fileTotalNumber >= this.limit.number) {
       layer.msg('当前文件数量已超过文件上传上限' + this.limit.number + '个， 请压缩文件夹后重试！');
+      this.init_data()
+      this.isGetFiles = false; // 停止文件内容获取
+      this.empty_upload_list()
       return false;
     }
     if (this.fileTotalSize >= this.limit.size) {
       layer.msg('当前文件大小已超过文件上传' + bt.format_size(this.limit.size) + '限制， 请使用SFTP/FTP等工具上传文件！');
+      this.init_data()
+      this.isGetFiles = false; // 停止文件内容获取
+      this.empty_upload_list()
       return false;
     }
     return true
@@ -803,7 +841,7 @@ UploadFile.prototype = {
       clearTimeout(this.timeNumber);
       this.timeNumber = setTimeout(function () {
         _this6.load.close();
-        if (_this6.isUpload) {
+        if (_this6.isUpload && _this6.isGetFiles) {
           _this6.render_file_list(_this6.fileList);
         } else {
           var layers = _this6.layer;
@@ -824,7 +862,7 @@ UploadFile.prototype = {
       };    
       dirReader.readEntries(fnReadEntries)
       setTimeout(function () {
-        if (_this6.fileList.length === 0) {
+        if (_this6.fileList.length === 0 && _this6.isGetFiles) {
           layer.msg('拖拽上传文件夹内容为空')
         }
       }, 500)

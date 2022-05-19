@@ -59,7 +59,7 @@ class userlogin:
                 session['password_expire'] = True
 
             #登陆告警
-            public.run_thread(public.login_send_body,("账号密码",userInfo['username'],public.GetClientIp(),str(int(request.environ.get('REMOTE_PORT')))))
+            
             # public.login_send_body("账号密码",userInfo['username'],public.GetClientIp(),str(request.environ.get('REMOTE_PORT')))
             if hasattr(post,'vcode'):
                 if not re.match(r"^\d+$",post.vcode): return public.returnJson(False,'验证码格式错误'),json_header
@@ -76,6 +76,7 @@ class userlogin:
                         num = self.limit_address('++',v="vcode")
                         return public.returnJson(False, '验证失败，您还可以尝试[{}]次!'.format(num)), json_header
                 now = int(time.time())
+                public.run_thread(public.login_send_body,("账号密码",userInfo['username'],public.GetClientIp(),str(int(request.environ.get('REMOTE_PORT')))))
                 public.writeFile("/www/server/panel/data/dont_vcode_ip.txt",json.dumps({"client_ip":public.GetClientIp(),"add_time":now}))
                 self.limit_address('--',v="vcode")
                 self.set_cdn_host(post)
@@ -84,6 +85,7 @@ class userlogin:
             acc_client_ip = self.check_two_step_auth()
 
             if not os.path.exists(_key_file) or acc_client_ip:
+                public.run_thread(public.login_send_body,("账号密码",userInfo['username'],public.GetClientIp(),str(int(request.environ.get('REMOTE_PORT')))))
                 self.set_cdn_host(post)
                 return self._set_login_session(userInfo)
             self.limit_address('-')
@@ -144,6 +146,10 @@ class userlogin:
             if not public.get_error_num(skey,10): return '连续10次验证失败，禁止1小时'
             
             s_time = int(time.time())
+            if public.M('temp_login').where('state=? and expire>?',(0,s_time)).field('id,token,salt,expire').count()==0:
+                public.set_error_num(skey)
+                return '验证失败2!'
+
             data = public.M('temp_login').where('state=? and expire>?',(0,s_time)).field('id,token,salt,expire').find()
             if not data:
                 public.set_error_num(skey)
@@ -188,34 +194,32 @@ class userlogin:
         config.config().reload_session()
 
     def request_get(self,get):
-        #if os.path.exists('/www/server/panel/install.pl'): raise redirect('/install');
+        '''
+            @name 验证登录页面请求权限
+            @author hwliang
+            @return False | Response
+        '''
+        # 获取标题
         if not 'title' in session: session['title'] = public.getMsg('NAME')
-        domain = public.readFile('data/domain.conf')
-        
-        if domain:
-            if(public.GetHost().lower() != domain.strip().lower()): 
-                errorStr = public.ReadFile('./BTPanel/templates/' + public.GetConfigValue('template') + '/error2.html')
-                try:
-                    errorStr = errorStr.format(public.getMsg('PAGE_ERR_TITLE'),public.getMsg('PAGE_ERR_DOMAIN_H1'),public.getMsg('PAGE_ERR_DOMAIN_P1'),public.getMsg('PAGE_ERR_DOMAIN_P2'),public.getMsg('PAGE_ERR_DOMAIN_P3'),public.getMsg('NAME'),public.getMsg('PAGE_ERR_HELP'))
-                except IndexError:pass
-                return errorStr
-        if os.path.exists('data/limitip.conf'):
-            iplist = public.readFile('data/limitip.conf')
-            if iplist:
-                iplist = iplist.strip()
-                if not public.GetClientIp() in iplist.split(','):
-                    errorStr = public.ReadFile('./BTPanel/templates/' + public.GetConfigValue('template') + '/error2.html')
-                    try:
-                        errorStr = errorStr.format(public.getMsg('PAGE_ERR_TITLE'),public.getMsg('PAGE_ERR_IP_H1'),public.getMsg('PAGE_ERR_IP_P1',(public.GetClientIp(),)),public.getMsg('PAGE_ERR_IP_P2'),public.getMsg('PAGE_ERR_IP_P3'),public.getMsg('NAME'),public.getMsg('PAGE_ERR_HELP'))
-                    except IndexError:pass
-                    return errorStr
+
+        # 验证是否使用限制的域名访问
+        domain_check = public.check_domain_panel()
+        if domain_check: return domain_check
+
+        # 验证是否使用限制的IP地址访问
+        ip_check = public.check_ip_panel()
+        if ip_check: return ip_check
                 
+        # 验证是否已经登录
         if 'login' in session:
             if session['login'] == True:
                 return redirect('/')
         
+        # 复位验证码
         if not 'code' in session:
             session['code'] = False
+
+        # 记录错误次数
         self.error_num(False)
 
     #生成request_token
@@ -303,6 +307,8 @@ class userlogin:
             login_type = 'data/app_login.pl'
             if os.path.exists(login_type):
                 os.remove(login_type)
+            default_pl = "{}/default.pl".format(public.get_panel_path())
+            public.writeFile(default_pl,public.GetRandomString(12))
             return public.returnJson(True,'LOGIN_SUCCESS'),json_header
         except Exception as ex:
             stringEx = str(ex)

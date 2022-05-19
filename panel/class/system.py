@@ -313,7 +313,7 @@ class system:
         cpuW = len(set(d_tmp))
         import threading
         p = threading.Thread(target=self.get_cpu_percent_thead,args=(interval,))
-        p.setDaemon(True)
+        # p.setDaemon(True)
         p.start()
         
         used = cache.get('cpu_used_all')
@@ -849,7 +849,7 @@ class system:
                 public.ExecShell('mkdir ' + vhostPath)
                 public.ExecShell('/etc/init.d/nginx start')
             
-            result = public.ExecShell('ulimit -n 8192 ; nginx -t -c '+self.setupPath+'/nginx/conf/nginx.conf')
+            result = public.ExecShell('ulimit -n 8192 ; '+self.setupPath+'/nginx/sbin/nginx -t -c '+self.setupPath+'/nginx/conf/nginx.conf')
             if result[1].find('perserver') != -1:
                 limit = self.setupPath + '/nginx/conf/nginx.conf'
                 nginxConf = public.readFile(limit)

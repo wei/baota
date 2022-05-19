@@ -765,7 +765,7 @@ var bt_tools = {
                   }
                 });
               }
-              template = '<div class="bt_batch"><label><i class="cust—checkbox cursor-pointer checkbox_' + this.random + '" data-checkbox="all"></i><input type="checkbox" lass="cust—checkbox-input" /></label>' + (typeof item.config != 'undefined' ? '<button class="btn btn-default btn-sm set_batch_option bt-disabled">批量' + item.config.title + '</button>' : '<div class="bt_table_select_group bt-disabled not-select"><span class="bt_select_value"><span class="bt_select_tips">请选择批量操作<em></em></span><span class="glyphicon glyphicon-triangle-bottom ml5"></span></span><ul class="bt_selects ">' + _html + '</ul></div><button class="btn btn-default btn-sm set_batch_option bt-disabled" >' + item.buttonValue + '</button>') + '</div>';
+              template = '<div class="bt_batch"><label><i class="cust—checkbox cursor-pointer checkbox_' + this.random + '" data-checkbox="all"></i><input type="checkbox" lass="cust—checkbox-input" /></label>' + (typeof item.config != 'undefined' ? '<button type="button" class="btn btn-default btn-sm set_batch_option bt-disabled">批量' + item.config.title + '</button>' : '<div class="bt_table_select_group bt-disabled not-select"><span class="bt_select_value"><span class="bt_select_tips">请选择批量操作<em></em></span><span class="glyphicon glyphicon-triangle-bottom ml5"></span></span><ul class="bt_selects ">' + _html + '</ul></div><button type="button" class="btn btn-default btn-sm set_batch_option bt-disabled" >' + item.buttonValue + '</button>') + '</div>';
               break;
             case 'page':
               this.config.page = item
@@ -2262,7 +2262,9 @@ var bt_tools = {
        * @param {object} data 需要插入的数据
       */
       refresh_data: function (data) {
-        var rdata = this.htmlEncodeByRegExp(data);
+        var rdata = this.htmlEncodeByRegExp(data)
+        this.el = $(this.config.el)
+        if(!this.el) return false;
         this.fragment.push(rdata)
         if (this.fragment.length >= 300) {
           this.fragment.splice(0, 150)
@@ -2362,7 +2364,7 @@ var bt_tools = {
   $fixed_table_thead: function (el) {
     $(el).scroll(function () {
       var scrollTop = this.scrollTop;
-      this.querySelector('thead').style.transform = 'translateY(' + scrollTop + 'px)';
+      this.querySelector('thead').style.transform = 'translateY(' + (scrollTop-1) + 'px)';
     });
   },
   /**

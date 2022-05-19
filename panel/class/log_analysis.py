@@ -9,6 +9,8 @@
 # | 日志分析工具
 # +-------------------------------------------------------------------
 import os
+import time
+
 import public
 
 
@@ -17,6 +19,7 @@ class log_analysis:
     log_analysis_path = '/www/server/panel/script/log_analysis.sh'
 
     def __init__(self):
+        if not os.path.exists(self.path + '/log/'): os.makedirs(self.path + '/log/')
         if not os.path.exists(self.log_analysis_path):
             log_analysis_data = '''help(){
 	echo  "Usage: ./action.sh [options] [FILE] [OUTFILE]     "
@@ -154,6 +157,8 @@ echo "[*] shut down"
                 "cd %s && bash %s san_log %s %s &" % (self.path, self.log_analysis_path, get.path, log_path))
         else:
             public.ExecShell("cd %s && bash %s san %s %s &" % (self.path, self.log_analysis_path, get.path, log_path))
+        speed = self.path + '/log/' + log_path+".time"
+        public.WriteFile(speed,str(time.time())+"[]"+time.strftime('%Y-%m-%d %X',time.localtime())+"[]"+"0")
         return public.ReturnMsg(True, '启动扫描成功')
 
     def speed_log(self, get):
@@ -170,6 +175,9 @@ echo "[*] shut down"
         try:
             data = public.ReadFile(speed)
             data = int(data)
+            if data==100:
+                time_data,start_time,status=public.ReadFile(self.path + '/log/' + log_path+".time").split("[]")
+                public.WriteFile(speed+".time",str(time.time()-float(time_data)) + "[]" + start_time + "[]" + "1")
             return public.ReturnMsg(True, data)
         except:
             return public.ReturnMsg(True, 0)
@@ -190,7 +198,6 @@ echo "[*] shut down"
             with open(path, 'rb') as f:
                 for i in f:
                     count += 1
-
             return count
 
     def get_result(self, get):
@@ -203,6 +210,21 @@ echo "[*] shut down"
         log_path = public.Md5(path)
         speed = self.path + '/log/' + log_path
         result = {}
+        if os.path.exists(speed):
+            result['is_status'] = True
+        else:
+            result['is_status'] = False
+        if os.path.exists(speed+".time"):
+            time_data, start_time, status = public.ReadFile(self.path + '/log/' + log_path + ".time").split("[]")
+            if status == '1' or start_time==1:
+                result['time']=time_data
+                result['start_time']=start_time
+        else:
+            result['time'] = "0"
+            result['start_time'] = "2022/2/22 22:22:22"
+        if 'time' not in result:
+            result['time'] = "0"
+            result['start_time'] = "2022/2/22 22:22:22"
         result['xss'] = self.get_log_count(speed + 'xss.log')
         result['sql'] = self.get_log_count(speed + 'sql.log')
         result['san'] = self.get_log_count(speed + 'san.log')

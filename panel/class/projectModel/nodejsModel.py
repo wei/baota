@@ -42,11 +42,11 @@ class main(projectBase):
 
         if not os.path.exists(self._node_logs_path):
             os.makedirs(self._node_logs_path,493)
-        
+
         if not os.path.exists(self._www_home):
             os.makedirs(self._www_home,493)
             public.set_own(self._www_home,'www')
-        
+
 
 
     def get_exec_logs(self,get):
@@ -58,7 +58,7 @@ class main(projectBase):
         '''
         if not os.path.exists(self._npm_exec_log): return public.returnMsg(False,'NODE_NOT_EXISTS')
         return public.GetNumLines(self._npm_exec_log,20)
-            
+
 
     def get_project_list(self,get):
         '''
@@ -102,7 +102,7 @@ class main(projectBase):
         return data.data().get_site_ssl_info('node_{}'.format(project_name))
 
 
-    
+
     def is_install_nodejs(self,get):
         '''
             @name 是否安装nodejs版本管理器
@@ -194,12 +194,12 @@ class main(projectBase):
             _bin = '{}/node_modules/.bin'.format(project_cwd)
             if os.path.exists(_bin):
                 nodejs_bin_path = _bin + ':' + nodejs_bin_path
-        
+
         last_env = '''PATH={nodejs_bin_path}:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 '''.format(nodejs_bin_path = nodejs_bin_path)
         return last_env
-        
+
 
     def install_packages(self,get):
         '''
@@ -216,23 +216,23 @@ export PATH
         package_file = '{}/package.json'.format(project_find['path'])
         if not os.path.exists(package_file): return public.return_error('没有在项目目录中找到package.json配置文件!')
         nodejs_version = project_find['project_config']['nodejs_version']
-        
+
         package_lock_file = '{}/package-lock.json'.format(project_find['path'])
         node_modules_path = '{}/node_modules'.format(project_find['path'])
 
         # 已经安装过的依赖包的情况下，可能存在不同node版本导致的问题，可能需要重新构建依赖包
         rebuild = False
-        if os.path.exists(package_lock_file) and os.path.exists(node_modules_path): 
+        if os.path.exists(package_lock_file) and os.path.exists(node_modules_path):
             rebuild = True
 
         npm_bin = self.get_npm_bin(nodejs_version)
         yarn_bin = self.get_yarn_bin(nodejs_version)
-        if not npm_bin and not yarn_bin: 
+        if not npm_bin and not yarn_bin:
             return public.return_error('指定nodejs版本不存在!')
         public.writeFile(self._npm_exec_log,"正在安装依赖包...\n")
         public.writeFile(self._npm_exec_log,"正在下载依赖包,请稍候...\n")
         if yarn_bin:
-            if os.path.exists(package_lock_file): 
+            if os.path.exists(package_lock_file):
                 os.remove(package_lock_file)
             public.ExecShell(self.get_last_env(nodejs_version) + "cd {} && {} install 2>&1 >> {}".format(project_find['path'],yarn_bin,self._npm_exec_log))
         else:
@@ -244,7 +244,7 @@ export PATH
         return public.return_data(True,'安装依赖包成功!')
 
 
-    
+
     def update_packages(self,get):
         '''
             @name 更新指定项目的依赖包
@@ -263,9 +263,9 @@ export PATH
         if not os.path.exists(package_lock_file): return public.return_error('请先安装依赖包!')
         nodejs_version = project_find['project_config']['nodejs_version']
         npm_bin = self.get_npm_bin(nodejs_version)
-        if not npm_bin: 
+        if not npm_bin:
             return public.return_error('指定nodejs版本不存在!')
-        
+
         public.ExecShell(self.get_last_env(nodejs_version) + "cd {} && {} update &> {}".format(project_find['path'],npm_bin,self._npm_exec_log))
         public.WriteLog(self._log_name, '项目[{}]更新所有依赖包'.format(get.project_name))
         return public.return_data(True,'依赖包更新成功!')
@@ -295,7 +295,7 @@ export PATH
 
         nodejs_version = project_find['project_config']['nodejs_version']
         npm_bin = self.get_npm_bin(nodejs_version)
-        if not npm_bin: 
+        if not npm_bin:
             return public.return_error('指定nodejs版本不存在!')
         public.WriteLog(self._log_name,'Node项目:{}，已重装所有依赖包')
         public.ExecShell(self.get_last_env(nodejs_version) + "cd {} && {} install &> {}".format(project_find['path'],npm_bin,self._npm_exec_log))
@@ -326,7 +326,7 @@ export PATH
                 if not os.path.exists(mod_pack_file): continue
                 mod_pack_info = json.loads(public.readFile(mod_pack_file))
                 pack_info = {
-                    "name": mod_name, 
+                    "name": mod_name,
                     "version": mod_pack_info['version'],
                     "description":mod_pack_info['description'],
                     "license": mod_pack_info['license'] if 'license' in mod_pack_info else 'NULL',
@@ -392,13 +392,13 @@ export PATH
         nodejs_version = project_find['project_config']['nodejs_version']
         npm_bin = self.get_npm_bin(nodejs_version)
         yarn_bin = self.get_yarn_bin(nodejs_version)
-        if not npm_bin and not yarn_bin: 
+        if not npm_bin and not yarn_bin:
             return public.return_error('指定nodejs版本不存在!')
         if yarn_bin:
             result = public.ExecShell(self.get_last_env(nodejs_version) + "cd {} && {} remove {}".format(project_find['path'],yarn_bin,mod_name))
         else:
             result = public.ExecShell(self.get_last_env(nodejs_version) + "cd {} && {} uninstall {}".format(project_find['path'],npm_bin,mod_name))
-        if os.path.exists(filename): 
+        if os.path.exists(filename):
             result = "\n".join(result)
             if result.find('looking for funding') != -1:
                 return public.return_error("此模块被其它已安装模块依赖，无法卸载!")
@@ -429,12 +429,12 @@ export PATH
         nodejs_version = project_find['project_config']['nodejs_version']
         npm_bin = self.get_npm_bin(nodejs_version)
 
-        if not npm_bin: 
+        if not npm_bin:
             return public.return_error('指定nodejs版本不存在!')
         public.ExecShell(self.get_last_env(nodejs_version) + "cd {} && {} update {} &> {}".format(project_find['path'],npm_bin,mod_name,self._npm_exec_log))
         public.WriteLog(self._log_name,'Node项目{} , {}模块更新完成!'.format(get.project_name,mod_name))
         return public.return_data(True,'模块更新成功!')
-        
+
 
     def create_project(self,get):
         '''
@@ -459,7 +459,7 @@ export PATH
             return public.return_error('请先安装nodejs版本管理器，并安装至少1个node.js版本')
 
         project_name = get.project_name.strip()
-        if not re.match("^\w+$",project_name): 
+        if not re.match("^\w+$",project_name):
             return public.return_error('项目名称格式不正确，支持字母、数字、下划线，表达式: ^[0-9A-Za-z_]$')
 
         if public.M('sites').where('name=?',(get.project_name,)).count():
@@ -467,11 +467,11 @@ export PATH
         get.project_cwd = get.project_cwd.strip()
         if not os.path.exists(get.project_cwd):
             return public.return_error('项目目录不存在: {}'.format(get.project_cwd))
-        
+
         # 端口占用检测
-        if self.check_port_is_used(get.get('port/port')): 
+        if self.check_port_is_used(get.get('port/port')):
             return public.return_error('指定端口已被其它应用占用，请修改您的项目配置使用其它端口, 端口: {}'.format(get.port))
-        
+
         domains = []
         if get.bind_extranet == 1:
             domains = get.domains
@@ -517,7 +517,7 @@ export PATH
         self.install_packages(get)
         self.start_project(get)
         return public.return_data(True,'添加项目成功',project_id)
-        
+
     def modify_project(self,get):
         '''
             @name 修改指定项目
@@ -544,20 +544,20 @@ export PATH
         if not os.path.exists(get.project_cwd):
             return public.return_error('项目目录不存在: {}'.format(get.project_cwd))
         rebuild = False
-        if hasattr(get,'port'): 
+        if hasattr(get,'port'):
             if int(project_find['project_config']['port']) != int(get.port):
-                if self.check_port_is_used(get.get('port/port'),True): 
+                if self.check_port_is_used(get.get('port/port'),True):
                     return public.return_error('指定端口已被其它应用占用，请修改您的项目配置使用其它端口, 端口: {}'.format(get.port))
                 project_find['project_config']['port'] = int(get.port)
         if hasattr(get,'project_cwd'): project_find['project_config']['project_cwd'] = get.project_cwd
-        if hasattr(get,'project_script'): 
+        if hasattr(get,'project_script'):
             if not get.project_script.strip():
                 return public.return_error('启动命令不能为空')
             project_find['project_config']['project_script'] = get.project_script.strip()
         if hasattr(get,'is_power_on'): project_find['project_config']['is_power_on'] = get.is_power_on
         if hasattr(get,'run_user'): project_find['project_config']['run_user'] = get.run_user
         if hasattr(get,'max_memory_limit'): project_find['project_config']['max_memory_limit'] = get.max_memory_limit
-        if hasattr(get,'nodejs_version'): 
+        if hasattr(get,'nodejs_version'):
             if project_find['project_config']['nodejs_version'] != get.nodejs_version:
                 rebuild = True
                 project_find['project_config']['nodejs_version'] = get.nodejs_version
@@ -602,7 +602,7 @@ export PATH
         project_find = self.get_project_find(get.project_name)
         if not project_find:
             return public.return_error('指定项目不存在: {}'.format(get.project_name))
-        
+
         self.stop_project(get)
         self.clear_config(get.project_name)
         public.M('domain').where('pid=?',(project_find['id'],)).delete()
@@ -658,17 +658,18 @@ export PATH
             @return dict
         '''
         project_find = self.get_project_find(get.project_name)
-        if not project_find: 
-            return public.return_error('指定项目不存在')
+        if not project_find:
+            return public.return_error('指定项目不存在',data='')
         project_id = project_find['id']
-        
+
         domains = get.domains
         success_list = []
         error_list = []
         for domain in domains:
             domain = domain.strip()
+            if not domain: return public.return_error('域名不能为空',data='')
             domain_arr = domain.split(':')
-            if len(domain_arr) == 1: 
+            if len(domain_arr) == 1:
                 domain_arr.append(80)
                 domain += ':80'
             if not public.M('domain').where('name=?',(domain_arr[0],)).count():
@@ -684,8 +685,8 @@ export PATH
         if success_list:
             public.M('sites').where('id=?',(project_id,)).save('project_config',json.dumps(project_find['project_config']))
             self.set_config(get.project_name)
-
-        return public.return_data(True,"成功添加{}个域名，失败{}个!".format(len(success_list),len(error_list)),error_msg=error_list)
+            return public.return_data(True,"成功添加{}个域名，失败{}个!".format(len(success_list),len(error_list)),error_msg=error_list)
+        return public.return_data(False,"成功添加{}个域名，失败{}个!".format(len(success_list),len(error_list)),error_msg=error_list)
 
 
     def project_remove_domain(self,get):
@@ -699,18 +700,18 @@ export PATH
             @return dict
         '''
         project_find = self.get_project_find(get.project_name)
-        if not project_find: 
+        if not project_find:
             return public.return_error('指定项目不存在')
         last_domain = get.domain
         domain_arr = get.domain.split(':')
-        if len(domain_arr) == 1: 
+        if len(domain_arr) == 1:
             domain_arr.append(80)
-            
+
         project_id = public.M('sites').where('name=?',(get.project_name,)).getField('id')
         if project_find['project_config']['bind_extranet']:
             if len(project_find['project_config']['domains']) == 1: return public.return_error('已映射外网的项目至少需要一个域名')
         domain_id = public.M('domain').where('name=? AND pid=?',(domain_arr[0],project_id)).getField('id')
-        if not domain_id: 
+        if not domain_id:
             return public.return_error('指定域名不存在')
         public.M('domain').where('id=?',(domain_id,)).delete()
 
@@ -745,7 +746,7 @@ export PATH
         public.WriteLog(self._log_name,'Node项目{}, 开启外网映射'.format(project_name))
         return public.return_data(True,'开启外网映射成功')
 
-    
+
     def set_config(self,project_name):
         '''
             @name 设置项目配置
@@ -818,11 +819,11 @@ export PATH
         project_name = project_find['name']
         ports = []
         domains = []
-        
+
         for d in project_find['project_config']['domains']:
             domain_tmp = d.split(':')
             if len(domain_tmp) == 1: domain_tmp.append(80)
-            if not int(domain_tmp[1]) in ports: 
+            if not int(domain_tmp[1]) in ports:
                 ports.append(int(domain_tmp[1]))
             if not domain_tmp[0] in domains:
                 domains.append(domain_tmp[0])
@@ -839,7 +840,7 @@ export PATH
         if is_ssl:
             listen_ports += "\n    listen 443 ssl http2;"
             if listen_ipv6: listen_ports += "\n    listen [::]:443 ssl http2;"
-        
+
             ssl_config = '''ssl_certificate    {vhost_path}/cert/{priject_name}/fullchain.pem;
     ssl_certificate_key    {vhost_path}/cert/{priject_name}/privkey.pem;
     ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3;
@@ -857,10 +858,10 @@ export PATH
         rewrite ^(/.*)$ https://$host$1 permanent;
     }
     #HTTP_TO_HTTPS_END'''
-        
+
         config_file = "{}/nginx/node_{}.conf".format(self._vhost_path,project_name)
         template_file = "{}/template/nginx/node_http.conf".format(self._vhost_path)
-        
+
         config_body = public.readFile(template_file)
         config_body = config_body.format(
             site_path = project_find['path'],
@@ -878,7 +879,7 @@ export PATH
         # ssl_config = self.get_nginx_ssl_config(project_name)
         # if ssl_config:
         #     config_body.replace('#error_page 404/404.html;',ssl_config)
-            
+
 
         rewrite_file = "{panel_path}/vhost/rewrite/node_{project_name}.conf".format(panel_path = self._panel_path,project_name = project_name)
         if not os.path.exists(rewrite_file): public.writeFile(rewrite_file,'# 请将伪静态规则或自定义NGINX配置填写到此处\n')
@@ -894,11 +895,11 @@ export PATH
         '''
         result = ''
         config_file = "{}/nginx/node_{}".format(self._vhost_path,project_name)
-        if not os.path.exists(config_file): 
+        if not os.path.exists(config_file):
             return result
 
         config_body = public.readFile(config_file)
-        if not config_body: 
+        if not config_body:
             return result
         if config_body.find('ssl_certificate') == -1:
             return result
@@ -916,11 +917,11 @@ export PATH
             @return tuple
         '''
         config_file = "{}/nginx/node_{}.conf".format(public.get_vhost_path(),project_name)
-        if not os.path.exists(config_file): 
+        if not os.path.exists(config_file):
             return False,False
 
         config_body = public.readFile(config_file)
-        if not config_body: 
+        if not config_body:
             return False,False
 
         is_ssl,is_force_ssl = False,False
@@ -938,11 +939,11 @@ export PATH
             @return bool
         '''
         config_file = "{}/apache/node_{}.conf".format(public.get_vhost_path(),project_name)
-        if not os.path.exists(config_file): 
+        if not os.path.exists(config_file):
             return False,False
 
         config_body = public.readFile(config_file)
-        if not config_body: 
+        if not config_body:
             return False,False
 
         is_ssl,is_force_ssl = False,False
@@ -967,12 +968,12 @@ export PATH
         for d in project_find['project_config']['domains']:
             domain_tmp = d.split(':')
             if len(domain_tmp) == 1: domain_tmp.append(80)
-            if not int(domain_tmp[1]) in ports: 
+            if not int(domain_tmp[1]) in ports:
                 ports.append(int(domain_tmp[1]))
             if not domain_tmp[0] in domains:
                 domains.append(domain_tmp[0])
 
-        
+
         config_file = "{}/apache/node_{}.conf".format(self._vhost_path,project_name)
         template_file = "{}/template/apache/node_http.conf".format(self._vhost_path)
         config_body = public.readFile(template_file)
@@ -982,7 +983,7 @@ export PATH
         is_ssl,is_force_ssl  = self.exists_apache_ssl(project_name)
         if is_ssl:
             if not 443 in ports: ports.append(443)
-        
+
         from panelSite import panelSite
         s = panelSite()
 
@@ -1027,7 +1028,7 @@ export PATH
             # 添加端口到主配置文件
             if not p in [80]:
                 s.apacheAddPort(p)
-        
+
         # 写.htaccess
         rewrite_file = "{}/.htaccess".format(project_find['path'])
         if not os.path.exists(rewrite_file): public.writeFile(rewrite_file,'# 请将伪静态规则或自定义Apache配置填写到此处\n')
@@ -1035,7 +1036,7 @@ export PATH
         # 写配置文件
         public.writeFile(config_file,apache_config_body)
         return True
-    
+
 
     def unbind_extranet(self,get):
         '''
@@ -1066,7 +1067,7 @@ export PATH
         if get: pid = int(get.pid)
         if not self._pids: self._pids = psutil.pids()
         project_pids = []
-        
+
         for i in self._pids:
             try:
                 p = psutil.Process(i)
@@ -1156,7 +1157,7 @@ export PATH
         if all_pids:
             pid_file = "{}/{}.pid".format(self._node_pid_path,project_name)
             public.writeFile(pid_file,str(all_pids[0]))
-            return True
+            return all_pids
         return False
 
     def kill_pids(self,get=None,pids = None):
@@ -1179,7 +1180,7 @@ export PATH
 
 
 
-    
+
     def start_project(self,get):
         '''
             @name 启动项目
@@ -1215,8 +1216,8 @@ export PATH
             scripts_keys = package_info['scripts'].keys()
         except:
             scripts_keys = []
-                
-        
+
+
         # 前置准备
         nodejs_version = project_find['project_config']['nodejs_version']
         node_bin = self.get_node_bin(nodejs_version)
@@ -1229,13 +1230,13 @@ export PATH
         if not project_script: return public.return_error('未配置启动脚本')
 
         last_env = self.get_last_env(nodejs_version,project_find['path'])
-        
+
         # 生成启动脚本
         if os.path.exists(project_script):
             start_cmd = '''{last_env}
 export NODE_PROJECT_NAME="{project_name}"
 cd {project_cwd}
-nohup {node_bin} {project_script} 2>&1 >> {log_file} & 
+nohup {node_bin} {project_script} 2>&1 >> {log_file} &
 echo $! > {pid_file}
 '''.format(
     project_cwd = project_find['path'],
@@ -1299,7 +1300,7 @@ echo $! > {pid_file}
             p = '\n'.join(p)
             if p.find('[Errno 0]') != -1:
                 if os.path.exists('{}/bt_security'.format(public.get_plugin_path())):
-                    return public.return_error('启动命令被【堡塔防提权】拦截，请关闭{}用户的防护'.format(project_find['project_config']['run_user']))
+                    return public.return_error('启动命令被【堡塔防入侵】拦截，请关闭{}用户的防护'.format(project_find['project_config']['run_user']))
                 return public.return_error('启动命令被未知安全软件拦截，请检查安装软件日志')
             return public.return_error('启动失败<pre>{}</pre>'.format(p))
 
@@ -1309,12 +1310,12 @@ echo $! > {pid_file}
         except:
             return public.return_error('启动失败<br>{}'.format(public.GetNumLines(log_file,20)))
         pids = self.get_project_pids(pid=pid)
-        if not pids: 
+        if not pids:
             if os.path.exists(pid_file): os.remove(pid_file)
             return public.return_error('启动失败<br>{}'.format(public.GetNumLines(log_file,20)))
 
         return public.return_data(True, '启动成功', pids)
-        
+
 
     def stop_project(self,get):
         '''
@@ -1381,7 +1382,7 @@ cd {}
         log_file = "{}/{}.log".format(self._node_logs_path,get.project_name)
         if not os.path.exists(log_file): return public.return_error('日志文件不存在')
         return public.GetNumLines(log_file,200)
-    
+
 
     def get_project_load_info(self,get = None,project_name = None):
         '''
@@ -1421,8 +1422,8 @@ cd {}
             value = getattr(obj, name)
             if not name.startswith('__') and not callable(value) and not name.startswith('_'): result[name] = value
         return result
-    
-    
+
+
     def list_to_dict(self,data):
         '''
             @name 将列表转换为字典
@@ -1536,7 +1537,7 @@ cd {}
             # time.sleep(0.1)
             old_pio = cache.get(skey)
             pio = p.io_counters()
-        
+
         old_write_bytes = old_pio[0].write_bytes
         old_read_bytes = old_pio[0].read_bytes
         old_time = old_pio[1]
@@ -1549,11 +1550,11 @@ cd {}
 
         write_speed = int((write_bytes - old_write_bytes) / (new_time - old_time))
         read_speed = int((read_bytes - old_read_bytes) / (new_time - old_time))
-        
+
         return write_speed,read_speed
 
 
-    
+
 
 
     def get_cpu_precent(self,p):
@@ -1565,14 +1566,14 @@ cd {}
         '''
         skey = "cpu_pre_{}".format(p.pid)
         old_cpu_times = cache.get(skey)
-        
+
         process_cpu_time = self.get_process_cpu_time(p.cpu_times())
         if not old_cpu_times:
             cache.set(skey,[process_cpu_time,time.time()],3600)
             # time.sleep(0.1)
             old_cpu_times = cache.get(skey)
             process_cpu_time = self.get_process_cpu_time(p.cpu_times())
-        
+
         old_process_cpu_time = old_cpu_times[0]
         old_time = old_cpu_times[1]
         new_time = time.time()
@@ -1580,7 +1581,7 @@ cd {}
         percent = round(100.00 * (process_cpu_time - old_process_cpu_time) / (new_time - old_time) / psutil.cpu_count(),2)
         return percent
 
-    
+
     def get_process_cpu_time(self,cpu_times):
         cpu_time = 0.00
         for s in cpu_times: cpu_time += s
@@ -1620,7 +1621,7 @@ cd {}
         if not project_info: return False
         project_info['project_config'] = json.loads(project_info['project_config'])
         return project_info
-        
+
 
     def get_project_info(self,get):
         '''
@@ -1654,7 +1655,7 @@ cd {}
         project_info['listen_ok'] = True
         if project_info['load_info']:
             for pid in project_info['load_info'].keys():
-                if not 'connections' in project_info['load_info'][pid]: 
+                if not 'connections' in project_info['load_info'][pid]:
                     project_info['load_info'][pid]['connections'] = []
                 for conn in project_info['load_info'][pid]['connections']:
                     if not conn['status'] == 'LISTEN': continue
@@ -1663,8 +1664,8 @@ cd {}
             if project_info['listen']:
                 project_info['listen_ok'] = project_info['project_config']['port'] in project_info['listen']
         return project_info
-            
-        
+
+
 
     def get_project_state(self,project_name):
         '''
