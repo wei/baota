@@ -30,7 +30,7 @@ class Page():
     __RTURN_JS      =  False          #是否返回JS回调
     __START_NUM     =  None           #起始行
     __END_NUM       =  None           #结束行
-    
+
     def __init__(self):
         tmp = public.GetMsg('PAGE');
         if tmp:
@@ -42,7 +42,7 @@ class Page():
             self.__COUNT_END    = tmp['COUNT_END'];
             self.__FO           = tmp['FO'];
             self.__LINE         = tmp['LINE'];
-    
+
     def GetPage(self,pageInfo,limit = '1,2,3,4,5,6,7,8'):
         # 取分页信息
         # @param pageInfo 传入分页参数字典
@@ -56,9 +56,9 @@ class Page():
         self.__COUNT_PAGE  = self.__GetCountPage()
         self.__URI         = self.__SetUri(pageInfo['uri'])
         self.SHIFT       = self.__START_NUM - 1
-        
+
         keys = limit.split(',')
-        
+
         pages = {}
         #起始页
         pages['1'] = self.__GetStart()
@@ -70,23 +70,23 @@ class Page():
         pages['4'] = self.__GetNext()
         #尾页
         pages['5'] = self.__GetEnd()
-        
+
         #当前显示页与总页数
         pages['6'] = "<span class='Pnumber'>" + str(self.__C_PAGE) + "/" + str(self.__COUNT_PAGE) + "</span>"
         #本页显示开始与结束行
         pages['7'] = "<span class='Pline'>" + self.__FO + str(self.__START_NUM) + "-" + str(self.__END_NUM) + self.__LINE + "</span>"
         #行数
         pages['8'] = "<span class='Pcount'>" + self.__COUNT_START + str(self.__COUNT_ROW) + self.__COUNT_END + "</span>"
-        
+
         #构造返回数据
         retuls = '<div>';
         for value in keys:
             retuls += pages[value]
         retuls +='</div>';
-        
+
         #返回分页数据
         return retuls;
-            
+
     def __GetEnd(self):
         #构造尾页
         endStr = ""
@@ -98,7 +98,7 @@ class Page():
             else:
                 endStr = "<a class='Pend' onclick='" + self.__RTURN_JS + "(" + str(self.__COUNT_PAGE) + ")'>" + self.__END + "</a>"
         return endStr
-    
+
     def __GetNext(self):
         #构造下一页
         nextStr = ""
@@ -107,11 +107,11 @@ class Page():
         else:
             if self.__RTURN_JS == "":
                 nextStr = "<a class='Pnext' href='" + self.__URI + "p=" + str(self.__C_PAGE + 1) + "'>" + self.__NEXT + "</a>"
-            else:    
+            else:
                 nextStr = "<a class='Pnext' onclick='" + self.__RTURN_JS + "(" + str(self.__C_PAGE + 1) + ")'>" + self.__NEXT + "</a>"
-        
+
         return nextStr
-    
+
     def __GetPages(self):
         #构造分页
         pages = ''
@@ -130,11 +130,11 @@ class Page():
                     pages += "<a class='Pnum' href='" + self.__URI + "p=" + str(page) + "'>" + str(page) + "</a>"
                 else:
                     pages += "<a class='Pnum' onclick='" + self.__RTURN_JS + "(" + str(page) + ")'>" + str(page) + "</a>"
-            
+
         #当前页
         if self.__C_PAGE > 0:
                 pages += "<span class='Pcurrent'>" + str(self.__C_PAGE) + "</span>"
-        
+
         #当前页之后
         if self.__C_PAGE <= self.__LIST_NUM:
             num = self.__LIST_NUM + (self.__LIST_NUM - self.__C_PAGE) + 1
@@ -148,11 +148,11 @@ class Page():
                 break;
             if self.__RTURN_JS == "":
                 pages += "<a class='Pnum' href='" + self.__URI + "p=" + str(page) + "'>" + str(page) + "</a>"
-            else:    
+            else:
                 pages += "<a class='Pnum' onclick='" + self.__RTURN_JS + "(" + str(page) + ")'>" + str(page) + "</a>"
-                
+
         return pages;
-    
+
     def __GetPrev(self):
         #构造上一页
         startStr = ''
@@ -161,10 +161,10 @@ class Page():
         else:
             if self.__RTURN_JS == "":
                 startStr = "<a class='Ppren' href='" + self.__URI + "p=" + str(self.__C_PAGE - 1) + "'>" + self.__PREV + "</a>"
-            else:    
+            else:
                 startStr = "<a class='Ppren' onclick='" + self.__RTURN_JS + "(" + str(self.__C_PAGE - 1) + ")'>" + self.__PREV + "</a>"
         return startStr
-    
+
     def __GetStart(self):
         #构造起始分页
         startStr = ''
@@ -176,27 +176,27 @@ class Page():
             else:
                 startStr = "<a class='Pstart' onclick='" + self.__RTURN_JS + "(1)'>" + self.__START + "</a>"
         return startStr;
-    
+
     def __GetCpage(self,p):
         #取当前页
         if p:
             return p
         return 1
-        
+
     def __StartRow(self):
         #从多少行开始
         return (self.__C_PAGE - 1) * self.ROW + 1
-    
+
     def __EndRow(self):
         #从多少行结束
         if self.ROW > self.__COUNT_ROW:
             return self.__COUNT_ROW
         return self.__C_PAGE * self.ROW
-    
+
     def __GetCountPage(self):
         #取总页数
         return int(math.ceil(self.__COUNT_ROW / float(self.ROW)))
-    
+
     def __SetUri(self,request_uri):
         #构造URI
         try:
@@ -207,4 +207,4 @@ class Page():
             else:
                 if request_uri[-1] != '&': request_uri += '&'
             return request_uri
-        except: return '';
+        except: return ''

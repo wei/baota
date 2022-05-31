@@ -1776,8 +1776,7 @@ var site = {
         $('.event_edate_' + that.random).each(function () {
           var $this = $(this);
           laydate.render({
-            elem: $this[0] //指定元素
-            ,
+            elem: $this[0], //指定元素
             min: bt.get_date(1),
             max: '2099-12-31',
             vlue: bt.get_date(365),
@@ -1794,6 +1793,7 @@ var site = {
               bt.site.set_endtime(item.id, date, function (res) {
                 if (res.status) {
                   layer.msg(res.msg);
+                  that.$refresh_table_list()
                   return false;
                 }
                 bt.msg(res);
@@ -7222,7 +7222,8 @@ var site = {
         callback: function (robj) {
           //   console.log(robj)
           bt.site.get_site_logs(web.name, function (rdata) {
-            var logs = { class: 'bt-logs', items: [{ name: 'site_logs', height: '590px', value: rdata.msg, width: '100%', type: 'textarea' }] },
+            var _logs_info = $('<div></div>').text(rdata.msg)
+            var logs = { class: 'bt-logs', items: [{ name: 'site_logs', height: '590px', value: _logs_info.html(), width: '100%', type: 'textarea' }] },
               _form_data = bt.render_form_line(logs);
             robj.append(_form_data.html);
             bt.render_clicks(_form_data.clicks);
@@ -7235,7 +7236,8 @@ var site = {
         callback: function (robj) {
           //   console.log(robj)
           bt.site.get_site_error_logs(web.name, function (rdata) {
-            var logs = { class: 'bt-logs', items: [{ name: 'site_logs', height: '590px', value: rdata.msg, width: '100%', type: 'textarea' }] },
+            var _logs_info = $('<div></div>').text(rdata.msg)
+            var logs = { class: 'bt-logs', items: [{ name: 'site_logs', height: '590px', value: _logs_info.html(), width: '100%', type: 'textarea' }] },
               _form_data = bt.render_form_line(logs);
             robj.append(_form_data.html);
             bt.render_clicks(_form_data.clicks);
@@ -8047,7 +8049,7 @@ var site = {
                         }
                       }()) +
                       '</td><td>订单完成</td><td style="text-align:right">已部署 | <a class="btlink" href="javascript:site.ssl.set_ssl_status(\'CloseSSLConf\',\'' + web.name + '\',2)">关闭</a></td></td>';
-                  } else if (deploy_ssl_info.type != 3) {
+                  } else {
                     html += '<tr data-index="' + index + '">' +
                       '<td><span>' + (item.domainName == null ? '--' : item.domainName.join('、')) + '</span></td><td><span class="size_ellipsis" title="'+item.title+'" style="width:164px">' + item.title + '</span></td><td>' + (function () {
                         var dayTime = new Date().getTime() / 1000,

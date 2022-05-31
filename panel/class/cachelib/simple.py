@@ -49,35 +49,43 @@ class SimpleCache(BaseCache):
         return timeout
 
     def get(self, key):
+        if not isinstance(key,str): return None
         try:
-            expires, value = self._cache[key]   
+            expires, value = self._cache[key]
             if expires == 0 or expires > time():
                 return pickle.loads(value)
         except (KeyError, pickle.PickleError):
             try:
                 if key[:4] == self.__session_key:
-                    filename =  '/'.join((self.__session_basedir,self.md5(key)))                    
+                    filename =  '/'.join((self.__session_basedir,self.md5(key)))
                     if not os.path.exists(filename): return None
 
                     with open(filename, 'rb') as fp:
                         _val = fp.read()
                         fp.close()
-                        expires = struct.unpack('f',_val[:4])[0] 
+                        expires = struct.unpack('f',_val[:4])[0]
                         if expires == 0 or expires > time():
                             value = _val[4:]
 
-                            self._cache[key] = (expires,value)  
+                            self._cache[key] = (expires,value)
                             return pickle.loads(value)
             except :pass
             return None
 
     def set(self, key, value, timeout=None):
-        
+
+        # 类型判断
+        if not isinstance(key,str): return False
+        type_list=(int,float,bool,str,list,dict,tuple,set,bytes)
+        if not isinstance(value,type_list): return False
+
+        # 过期清理
         expires = self._normalize_timeout(timeout)
         self._prune()
-        
+
+        # 转换
         _val =  pickle.dumps(value, pickle.HIGHEST_PROTOCOL)
-        self._cache[key] = (expires,_val)        
+        self._cache[key] = (expires,_val)
         try:
             if key[:4] == self.__session_key:
                 if len(_val) < 256: return True
@@ -94,10 +102,15 @@ class SimpleCache(BaseCache):
         return True
 
     def add(self, key, value, timeout=None):
+
+        # 类型判断
+        if not isinstance(key,str): return False
+        type_list=(int,float,bool,str,list,dict,tuple,set,bytes)
+        if not isinstance(value,type_list): return False
+
         expires = self._normalize_timeout(timeout)
         self._prune()
-        item = (expires, pickle.dumps(value,
-                                      pickle.HIGHEST_PROTOCOL))
+        item = (expires, pickle.dumps(value,pickle.HIGHEST_PROTOCOL))
         if key in self._cache:
             return False
         self._cache.setdefault(key, item)
@@ -107,7 +120,7 @@ class SimpleCache(BaseCache):
         result = self._cache.pop(key, None) is not None
         try:
             if key[:4] == self.__session_key:
-                filename =  '/'.join((self.__session_basedir,self.md5(key))) 
+                filename =  '/'.join((self.__session_basedir,self.md5(key)))
                 if os.path.exists(filename): os.remove(filename)
         except : pass
         return result
@@ -127,7 +140,7 @@ class SimpleCache(BaseCache):
         """
         import hashlib
         m = hashlib.md5()
- 
+
         m.update(strings.encode('utf-8'))
         return m.hexdigest()
 

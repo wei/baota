@@ -326,6 +326,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
 
         public.WriteLog('TYPE_FILE', 'FILE_UPLOAD_SUCCESS',
                         (args.f_name, args.f_path))
+        # 添加上传功能关键数据收集
+        public.set_module_logs('files', 'upload', 1)
         return public.returnMsg(True, '上传成功!')
 
     # 设置文件和目录权限
@@ -1080,6 +1082,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             try:
                 shutil.rmtree(filename)
             except:
+                public.ExecShell('chattr -R -a ' + filename)
                 public.ExecShell("rm -rf " + filename)
         else:
             try:
@@ -1112,6 +1115,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                     try:
                         shutil.rmtree(path)
                     except:
+                        public.ExecShell('chattr -R -a ' + path)
                         public.ExecShell('rm -rf ' + path)
                 else:
                     try:
@@ -2208,7 +2212,7 @@ cd %s
         else:
             return False
 
-    def ws_webshell_check(self,get):
+    def ws_webshell_check(self, get):
         '''
             @name websocket 进行木马扫描
             @author <lkq-2022-4-27>
@@ -2217,45 +2221,79 @@ cd %s
         '''
         if not 'path' in get: return public.returnMsg(False, '请输入有效目录!')
         if not '_ws' in get: return public.returnMsg(False, '当前只支持websocket链接!')
+        # 判断目录树php文件是否大于10000
+        __rule = ["@\\$\\_\\(\\$\\_", "\\$\\_=\"\"", "\\${'\\_'",
+                  "@preg\\_replace\\((\")*\\/(\\S)*\\/e(\")*,\\$_POST\\[\\S*\\]", "base64\\_decode\\(\\$\\_",
+                  "'e'\\.'v'\\.'a'\\.'l'", "\"e\"\\.\"v\"\\.\"a\"\\.\"l\"", "\"e\"\\.\"v\"\\.\"a\"\\.\"l\"",
+                  "\\$(\\w)+\\(\"\\/(\\S)+\\/e", "\\(array\\)\\$_(POST|GET|REQUEST|COOKIE)", "\\$(\\w)+\\(\\${",
+                  "@\\$\\_=", "\\$\\_=\\$\\_", "chr\\((\\d)+\\)\\.chr\\((\\d)+\\)", "phpjm\\.net", "cha88\\.cn",
+                  "c99shell", "phpspy", "Scanners", "cmd\\.php", "str_rot13", "webshell", "EgY_SpIdEr",
+                  "tools88\\.com", "SECFORCE", "eval\\(('|\")\\?>", "preg_replace\\(\"\\/\\.\\*\\/e\"",
+                  "assert\\(('|\"|\\s*)\\$", "eval\\(gzinflate\\(", "gzinflate\\(base64_decode\\(",
+                  "eval\\(base64_decode\\(", "eval\\(gzuncompress\\(", "ies\",gzuncompress\\(\\$",
+                  "eval\\(gzdecode\\(", "eval\\(str_rot13\\(", "gzuncompress\\(base64_decode\\(",
+                  "base64_decode\\(gzuncompress\\(", "eval\\(('|\"|\\s*)\\$_(POST|GET|REQUEST|COOKIE)",
+                  "assert\\(('|\"|\\s*)\\$_(POST|GET|REQUEST|COOKIE)",
+                  "require\\(('|\"|\\s*)\\$_(POST|GET|REQUEST|COOKIE)",
+                  "require_once\\(('|\"|\\s*)\\$_(POST|GET|REQUEST|COOKIE)",
+                  "include\\(('|\"|\\s*)\\$_(POST|GET|REQUEST|COOKIE)",
+                  "include_once\\(('|\"|\\s*)\\$_(POST|GET|REQUEST|COOKIE)", "call_user_func\\((\"|')assert(\"|')",
+                  "call_user_func\\(('|\"|\\s*)\\$_(POST|GET|REQUEST|COOKIE)",
+                  "\\$_(POST|GET|REQUEST|COOKIE)\\[([^\\]]+)\\]\\(('|\"|\\s*)\\$_(POST|GET|REQUEST|COOKIE)\\[",
+                  "echo\\(file_get_contents\\(('|\"|\\s*)\\$_(POST|GET|REQUEST|COOKIE)",
+                  "file_put_contents\\(('|\"|\\s*)\\$_(POST|GET|REQUEST|COOKIE)\\[([^\\]]+)\\],('|\"|\\s*)\\$_(POST|GET|REQUEST|COOKIE)",
+                  "fputs\\(fopen\\((.+),('|\")w('|\")\\),('|\"|\\s*)\\$_(POST|GET|REQUEST|COOKIE)\\[",
+                  "SetHandlerapplication\\/x-httpd-php", "php_valueauto_prepend_file", "php_valueauto_append_file"]
         if '_ws' in get: get._ws.send(public.getJson(
-                {"end": False, "ws_callback": get.ws_callback, "info": "正在开始扫描木马中", "type": "check",
-                 "status": False}))
-        path=get.path
+            {"end": False, "ws_callback": get.ws_callback, "info": "正在开始查杀木马请稍等....", "type": "check",
+             "status": False}))
+        file = []
+        if '_ws' in get: get._ws.send(public.getJson(
+            {"end": False, "ws_callback": get.ws_callback, "info": "正在获取当前目录下的php文件,如目录过大可能需要1-2分钟,请稍等....", "type": "check",
+             "status": False}))
+        for root, dirs, files in os.walk(get.path):
+            for filespath in files:
+                file2 = os.path.join(root, filespath)
+                if '.php' in filespath:
+                    file.append(file2)
+                    if len(file)>20000:
+                        if '_ws' in get: get._ws.send(public.getJson(
+                            {"end": True, "ws_callback": get.ws_callback,
+                             "info": "当前目录下的php文件超过20000.建议扫描子目录...", "type": "check",
+                             "status": False}))
+                        return []
+        if '_ws' in get: get._ws.send(public.getJson(
+            {"end": False, "ws_callback": get.ws_callback, "info": "获取当前目录下的php文件已完成,正在扫描....", "type": "check",
+             "status": False}))
         import webshell_check
-        webshell=webshell_check.webshell_check()
-        if '_ws' in get: get._ws.send(public.getJson(
-                {"end": False, "ws_callback": get.ws_callback, "info": "正在获取当前目录下的所有文件", "type": "check",
-                 "status": False}))
-        file = self.getdir_list(path)
-        if '_ws' in get: get._ws.send(public.getJson(
-                {"end": False, "ws_callback": get.ws_callback, "info": "获取当前目录下的所有文件已完成", "type": "check",
-                 "status": False}))
+        webshell = webshell_check.webshell_check()
         if not file:
             if '_ws' in get: get._ws.send(public.getJson(
                 {"end": True, "ws_callback": get.ws_callback, "info": "当前文件夹不存在木马文件", "type": "check",
                  "status": False}))
             return []
-        rule = webshell.get_rule()
-        if not rule:
-            if '_ws' in get: get._ws.send(public.getJson(
-                {"end": True, "ws_callback": get.ws_callback, "info": "当前文件夹不存在木马文件", "type": "check",
-                 "status": False}))
-            return []
-        result = webshell.scan(file, rule)
-        url=webshell.get_check_url()
-        result_info=[]
-        count=0
+        if '_ws' in get: get._ws.send(public.getJson(
+            {"end": False, "ws_callback": get.ws_callback, "info": "获取php文件数量为【%s】"%str(len(file)), "type": "check",
+             "status": False}))
+        result = webshell.scan(file, __rule)
+        url = webshell.get_check_url()
+        result_info = []
+        count = 0
+        if '_ws' in get: get._ws.send(public.getJson(
+            {"end": False, "ws_callback": get.ws_callback, "info": "扫描完成异常文件,异常文件数量为【%s】"%str(len(result)), "type": "check",
+             "status": False}))
         for i in result:
-            count+=1
+            count += 1
             if '_ws' in get: get._ws.send(public.getJson(
-                {"end": False, "ws_callback": get.ws_callback, "info": "正在扫描 %s 文件是否是木马" %i, "type": "check","status":False,"count":len(result),"is_count":count}))
+                {"end": False, "ws_callback": get.ws_callback, "info": "%s" % i, "type": "check", "status": False,
+                 "count": len(result), "is_count": count}))
             if webshell.upload_file_url2(i, url):
                 result_info.append(i)
                 if '_ws' in get: get._ws.send(public.getJson(
                     {"end": False, "ws_callback": get.ws_callback, "info": "发现 %s 文件是为木马" % i, "type": "check",
-                     "status": True,"path":i}))
+                     "status": True, "path": i}))
         if '_ws' in get: get._ws.send(public.getJson(
-            {"end": True, "ws_callback": get.ws_callback, "info": "扫描完成共发现%s个木马文件"%len(result_info), "type": "check",
+            {"end": True, "ws_callback": get.ws_callback, "info": "扫描已完成", "type": "check",
              "status": True}))
         return result_info
 
@@ -2384,7 +2422,8 @@ cd %s
         else:
             id = public.M(my_table).insert(pdata)
             pdata['id'] = id
-
+        # 添加关键数据统计
+        public.set_module_logs('linux_down', 'create_download_url', 1)
         return public.returnMsg(True,pdata)
 
 
@@ -2669,6 +2708,7 @@ cd %s
 
     def files_search(self,args):
         import panelSearch
+        public.set_module_logs('files','files_search')
         adad=panelSearch.panelSearch()
         return adad.get_search(args)
 
@@ -2756,10 +2796,10 @@ cd %s
         self.clear_thumbnail()
 
         for fname in file_list:
-
             try:
                 filename = os.path.join(args.path,fname)
-                cache_file = os.path.join(cache_path,public.md5(fname))
+                f_size = os.path.getsize(filename)
+                cache_file = os.path.join(cache_path,public.md5("{}_{}_{}_{}".format(filename,width,height,f_size)))
                 if not os.path.exists(filename):
                     # 移除缓存文件
                     if os.path.exists(cache_file): os.remove(cache_file)
@@ -2793,9 +2833,6 @@ cd %s
                     return send_file(out, mimetype=mimetype, cache_timeout=0)
             except:
                 data[fname] = ''
-
-
-
 
         return public.return_data(True,data)
 

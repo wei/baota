@@ -21,14 +21,14 @@ class data:
      * 设置备注信息
      * @param String _GET['tab'] 数据库表名
      * @param String _GET['id'] 条件ID
-     * @return Bool 
+     * @return Bool
     '''
     def setPs(self,get):
         id = get.id
         if public.M(get.table).where("id=?",(id,)).setField('ps',public.xssencode2(get.ps)):
-            return public.returnMsg(True,'EDIT_SUCCESS');    
+            return public.returnMsg(True,'EDIT_SUCCESS')
         return public.returnMsg(False,'EDIT_ERROR')
-    
+
     #端口扫描
     def CheckPort(self,port):
         import socket
@@ -43,11 +43,11 @@ class data:
             s.close()
         except:
             temp['local'] = False
-        
+
         result = 0
         if temp['local']: result +=2
         return result
-    
+
     # 转换时间
     def strf_date(self, sdate):
         return time.strftime('%Y-%m-%d', time.strptime(sdate, '%Y%m%d%H%M%S'))
@@ -107,7 +107,7 @@ class data:
 
             if not os.path.exists(s_file):
                 return -1
-            
+
             s_conf = public.readFile(s_file)
             if not s_conf: return -1
             ssl_file = None
@@ -129,11 +129,11 @@ class data:
             return ssl_info
         except: return -1
         #return "{}:{}".format(ssl_info['issuer'],ssl_info['notAfter'])
-        
+
 
     def get_php_version(self,siteName):
         try:
-            
+
             if not self.web_server:
                 self.web_server = public.get_webserver()
 
@@ -152,7 +152,7 @@ class data:
                 return '静态'
             if tmp[0] == 'other':
                 return '其它'
-            
+
             return tmp[0][0] + '.' + tmp[0][1]
         except:
             return '静态'
@@ -203,7 +203,7 @@ class data:
                 return quota_info
             return res
         except: return res
-    
+
     '''
      * 取数据列表
      * @param String _GET['tab'] 数据库表名
@@ -216,20 +216,20 @@ class data:
             table = get.table
             data = self.GetSql(get)
             SQL = public.M(table)
-        
+
             if table == 'backup':
                 import os
                 backup_path = public.M('config').where('id=?',(1,)).getField('backup_path')
                 for i in range(len(data['data'])):
                     if data['data'][i]['size'] == 0:
-                        if os.path.exists(data['data'][i]['filename']): 
+                        if os.path.exists(data['data'][i]['filename']):
                             data['data'][i]['size'] = os.path.getsize(data['data'][i]['filename'])
                     else:
-                        if not os.path.exists(data['data'][i]['filename']): 
+                        if not os.path.exists(data['data'][i]['filename']):
                             if (data['data'][i]['filename'].find('/www/') != -1 or data['data'][i]['filename'].find(backup_path) != -1) and data['data'][i]['filename'][0] == '/' and data['data'][i]['filename'].find('|') == -1:
                                 data['data'][i]['size'] = 0
                                 data['data'][i]['ps'] = '文件不存在'
-        
+
             elif table == 'sites' or table == 'databases':
                 type = '0'
                 if table == 'databases': type = '1'
@@ -255,12 +255,12 @@ class data:
             elif table == 'ftps':
                  for i in range(len(data['data'])):
                      data['data'][i]['quota'] = self.get_site_quota(data['data'][i]['path'])
-                
+
             #返回
             return data
         except:
             return public.get_error_info()
-    
+
     '''
      * 取数据库行
      * @param String _GET['tab'] 数据库表名
@@ -275,14 +275,14 @@ class data:
         where = "id=?"
         find = SQL.where(where,(id,)).field(field).find()
         return find
-    
-    
+
+
     '''
      * 取字段值
      * @param String _GET['tab'] 数据库表名
      * @param String _GET['key'] 字段
      * @param String _GET['id'] 条件ID
-     * @return String 
+     * @return String
     '''
     def getKey(self,get):
         tableName = get.table
@@ -292,7 +292,7 @@ class data:
         where = "id=?"
         retuls = SQL.where(where,(id,)).getField(keyName)
         return retuls
-        
+
     '''
      * 获取数据与分页
      * @param string table 表
@@ -304,34 +304,40 @@ class data:
     def GetSql(self,get,result = '1,2,3,4,5,8'):
         #判断前端是否传入参数
         order = "id desc"
-        if hasattr(get,'order'): 
-            order = get.order
-            
+        if hasattr(get,'order'):
+            # 验证参数格式
+            if re.match(r"^[\w\s\-\.]+$",get.order):
+                order = get.order
+
         limit = 20
-        if hasattr(get,'limit'): 
+        if hasattr(get,'limit'):
             limit = int(get.limit)
-        
-        if hasattr(get,'result'): 
-            result = get.result
-            
+            if limit < 1: limit = 20
+
+        if hasattr(get,'result'):
+            # 验证参数格式
+            if re.match(r"^[\d\,]+$",get.result):
+                result = get.result
+
         SQL = db.Sql()
         data = {}
         #取查询条件
         where = ''
+        param = ()
         if hasattr(get,'search'):
             if sys.version_info[0] == 2: get.search = get.search.encode('utf-8')
-            where = self.GetWhere(get.table,get.search)
+            where,param = self.GetWhere(get.table,get.search)
             if get.table == 'backup':
-                where += " and type='" + get.type+"'"
-            
+                where += " and type='{}'".format(int(get.type))
+
             if get.table == 'sites' and get.search:
-                pid = SQL.table('domain').where("name LIKE '%"+get.search+"%'",()).getField('pid')
-                if pid: 
-                    if where: 
+                pid = SQL.table('domain').where("name LIKE ?",("%{}%".format(get.search),)).getField('pid')
+                if pid:
+                    if where:
                         where += " or id=" + str(pid)
                     else:
                         where += "id=" + str(pid)
-                
+
         if get.table == 'sites':
             if where:
                 where = "({}) AND project_type='PHP'".format(where)
@@ -340,81 +346,89 @@ class data:
 
             if hasattr(get,'type'):
                 if get.type != '-1':
-                    where += " AND type_id={}".format(get.type)
+                    where += " AND type_id={}".format(int(get.type))
 
         if get.table == 'databases':
             if hasattr(get,'db_type'):
                 if where:
-                    where += " AND db_type='{}'".format(get.db_type)
+                    where += " AND db_type='{}'".format(int(get.db_type))
                 else:
-                    where = "db_type='{}'".format(get.db_type)
+                    where = "db_type='{}'".format(int(get.db_type))
             if hasattr(get,'sid'):
                 if where:
-                    where += " AND sid='{}'".format(get.sid)
+                    where += " AND sid='{}'".format(int(get.sid))
                 else:
-                    where = "sid='{}'".format(get.sid)
-        
+                    where = "sid='{}'".format(int(get.sid))
+
         field = self.GetField(get.table)
         #实例化数据库对象
-        
-        
+
+
         #是否直接返回所有列表
         if hasattr(get,'list'):
-            data = SQL.table(get.table).where(where,()).field(field).order(order).select()
+            data = SQL.table(get.table).where(where,param).field(field).order(order).select()
             return data
-        
+
         #取总行数
-        count = SQL.table(get.table).where(where,()).count()
+        count = SQL.table(get.table).where(where,param).count()
         #get.uri = get
         #包含分页类
         import page
         #实例化分页类
         page = page.Page()
-        
+
         info = {}
         info['count'] = count
         info['row']   = limit
-        
+
         info['p'] = 1
         if hasattr(get,'p'):
             info['p']     = int(get['p'])
-        info['uri']   = get
+            if info['p'] <1: info['p'] = 1
+
+        try:
+            from flask import request
+            info['uri']   = public.url_encode(request.full_path)
+        except:
+            info['uri'] = ''
         info['return_js'] = ''
         if hasattr(get,'tojs'):
-            info['return_js']   = get.tojs
-        
+            if re.match(r"^[\w\.\-]+$",get.tojs):
+                info['return_js']   = get.tojs
+
         data['where'] = where
-        
+
         #获取分页数据
         data['page'] = page.GetPage(info,result)
         #取出数据
-        data['data'] = SQL.table(get.table).where(where,()).order(order).field(field).limit(str(page.SHIFT)+','+str(page.ROW)).select()
+        data['data'] = SQL.table(get.table).where(where,param).order(order).field(field).limit(str(page.SHIFT)+','+str(page.ROW)).select()
         return data
-    
+
     #获取条件
-    def GetWhere(self,tableName,search): 
-        if not search: return ""
+    def GetWhere(self,tableName,search):
+        if not search: return "",()
 
         if type(search) == bytes: search = search.encode('utf-8').strip()
         try:
             search = re.search(r"[\w\x80-\xff\.\_\-]+",search).group()
         except:
-            return ''
+            return '',()
         wheres = {
-            'sites'     :   "name like '%"+search+"%' or ps like '%"+search+"%'",
-            'ftps'      :   "name like '%"+search+"%' or ps like '%"+search+"%'",
-            'databases' :   "(name like '%"+search+"%' or ps like '%"+search+"%')",
-            'logs'      :   "username='"+search+"' or type like '%"+search+"%' or log like '%"+search+"%'",
-            'backup'    :   "pid="+search+"",
-            'users'     :   "id='"+search+"' or username='"+search+"'",
-            'domain'    :   "pid='"+search+"' or name='"+search+"'",
-            'tasks'     :   "status='"+search+"' or type='"+search+"'"
+            'sites'     :   ("name LIKE ? OR ps LIKE ?",('%'+search+'%','%'+search+'%')),
+            'ftps'      :   ("name LIKE ? OR ps LIKE ?",('%'+search+'%','%'+search+'%')),
+            'databases' :   ("(name LIKE ? OR ps LIKE ?)",("%"+search+"%","%"+search+"%")),
+            'logs'      :   ("username=? OR type LIKE ? OR log LIKE ?",(search,'%'+search+'%','%'+search+'%')),
+            'backup'    :   ("pid=?",(search,)),
+            'users'     :   ("id='?' OR username=?",(search,search)),
+            'domain'    :   ("pid=? OR name=?",(search,search)),
+            'tasks'     :   ("status=? OR type=?",(search,search)),
             }
         try:
             return wheres[tableName]
         except:
-            return ''
-        
+            return '',()
+
+    # 获取返回的字段
     def GetField(self,tableName):
         fields = {
             'sites'     :   "id,name,path,status,ps,addtime,edate",
@@ -431,6 +445,6 @@ class data:
             return fields[tableName]
         except:
             return ''
-        
-    
-    
+
+
+

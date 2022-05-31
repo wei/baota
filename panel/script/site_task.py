@@ -29,6 +29,37 @@ def FtpReload():
     runPath = '/www/server/pure-ftpd/bin'
     public.ExecShell(runPath + '/pure-pw mkdb /www/server/pure-ftpd/etc/pureftpd.pdb')
 
+def HttpPost(url, data, timeout=60, headers={}):
+    """
+    发送POST请求
+    @url 被请求的URL地址(必需)
+    @data POST参数，可以是字符串或字典(必需)
+    @timeout 超时时间默认60秒
+    return string
+    """
+    start = time.time();
+
+    try:
+        import urllib.request, ssl
+        try:
+            ssl._create_default_https_context = ssl._create_unverified_context
+        except:
+            pass;
+        data2 = urllib.parse.urlencode(data).encode('utf-8')
+        req = urllib.request.Request(url, data2, headers=headers)
+        response = urllib.request.urlopen(req, timeout=timeout)
+        result = response.read()
+        if type(result) == bytes: result = result.decode('utf-8')
+        # print(url,time.time() - start)
+        return result
+    except Exception as ex:
+
+        return str(ex);
+
+
+def httpPost(url, data, timeout=20):
+    if timeout < 5: timeout = 5
+    return HttpPost(url, data, timeout)
 
 #面板日志分析统计
 def logs_analysis():
@@ -133,7 +164,7 @@ def logs_analysis():
             'data_list': json.dumps(data_list)
         }
 
-        print(public.HttpPost('https://www.bt.cn/api/panel/model_total',pdata))
+        print(httpPost('https://www.bt.cn/api/panel/model_total',pdata))
 
     panelPath = '/www/server/panel'
     logs_path = '{}/logs/click'.format(panelPath)
@@ -161,10 +192,33 @@ def logs_analysis():
             except :pass            
         pdata = {'data_list': json.dumps(data_list),'day_date':day_date }
  
-        ret = public.HttpPost('https://www.bt.cn/api/wpanel/model_click',pdata)
+        ret = httpPost('https://www.bt.cn/api/wpanel/model_click',pdata)
         print(ret)
         public.writeFile(tip_file,'')
+    # 模块统计
+    path = '{}/data/mod_log.json'.format(public.get_panel_path())
+    if os.path.exists(path):
+        mdata = {}
+        sday = public.format_date()
+        try:
+            mdata = json.loads(public.readFile(path))
+        except:
+            pass
 
+        nData = {}
+        pdata = public.get_user_info()
+        for key in mdata:
+            if sday.find(key) >= 0:
+                nData[key] = mdata[key]
+                continue
+            pdata['day_date'] = key
+            pdata['data_list'] = json.dumps(mdata[key])
+            try:
+                ret = json.loads(httpPost('https://www.bt.cn/api/v2/statistics/report_plugin_daily', pdata))
+                if not ret['success']: nData[key] = mdata[key]
+            except:
+                nData[key] = mdata[key]
+        public.writeFile(path, json.dumps(nData))
 
 oldEdate = public.readFile('data/edate.pl')
 if not oldEdate: oldEdate = '0000-00-00'

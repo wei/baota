@@ -78,8 +78,8 @@ var index = {
       }
     })
   },
-  warning_list: [],
-  warning_num: 0,
+  warning_list: {},
+  warning_num: null,
   series_option: {},// 配置项
   chart_json: {}, // 所有图表echarts对象
   chart_view: {}, // 磁盘echarts对象
@@ -776,7 +776,7 @@ var index = {
                 }
               })() + '\
               <div class="update_conter">\
-                  <div class="update_tips">'+ (is_beta?'正式版':'测试版') + '最新版本为：&nbsp;' + (is_beta?data.version:beta.version) + '&nbsp;&nbsp;&nbsp;更新时间:&nbsp;&nbsp;' + (!is_beta?data.uptime:beta.uptime) + '&nbsp;&nbsp;&nbsp;\
+                  <div class="update_tips">'+ (is_beta?'正式版':'测试版') + '最新版本为：&nbsp;' + (is_beta?data.version:beta.version) + '&nbsp;&nbsp;&nbsp;更新时间:&nbsp;&nbsp;' + (is_beta?data.uptime:beta.uptime) + '&nbsp;&nbsp;&nbsp;\
                   '+ (!is_beta ? '<span>如需更新测试版请点击<a href="javascript:;" onclick="index.beta_msg()" class="btlink btn_update_testPanel">查看详情</a></span>' : '<span>如需切换回正式版请点击<a href="javascript:;" onclick="index.to_not_beta()" class="btlink btn_update_testPanel">切换到正式版</a></span>') + '\
                   '+ (is_beta ? data.btb : '') + '\
                   </div>\
@@ -1100,6 +1100,10 @@ var index = {
   */
   reader_warning_view: function () {
     var that = this;
+    if(!that.warning_num && that.warning_num !== 0) {
+      layer.msg("正在获取安全风险项，请稍后 ...",{icon:0});
+      return false;
+    }
     function reader_warning_list (data) {
       var html = '', scan_time = '', arry = [['risk', '风险项'], ['security', '无风险项'], ['ignore', '已忽略项']], level = [['低危', '#e8d544'], ['中危', '#E6A23C'], ['高危', 'red']]
       bt.each(arry, function (index, item) {

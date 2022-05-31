@@ -570,7 +570,7 @@ def GetLocalIp():
         if not ipaddress:
             url = 'http://pv.sohu.com/cityjson?ie=utf-8'
             m_str = HttpGet(url)
-            ipaddress = re.search(r'\d+.\d+.\d+.\d+',m_str).group(0)
+            ipaddress = re.search(r"^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}$",m_str).group(0)
             WriteFile(filename,ipaddress)
         c_ip = check_ip(ipaddress)
         if not c_ip: return GetHost()
@@ -583,6 +583,17 @@ def GetLocalIp():
             return GetHost()
 
 def is_ipv4(ip):
+    '''
+        @name 是否是IPV4地址
+        @author hwliang
+        @param ip<string> IP地址
+        @return True/False
+    '''
+    #验证基本格式
+    if not re.match(r"^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}$", ip):
+        return False
+
+    # 验证每个段是否在合理范围
     try:
         socket.inet_pton(socket.AF_INET, ip)
     except AttributeError:
@@ -590,13 +601,23 @@ def is_ipv4(ip):
             socket.inet_aton(ip)
         except socket.error:
             return False
-        return ip.count('.') == 3
     except socket.error:
         return False
     return True
 
 
 def is_ipv6(ip):
+    '''
+        @name 是否为IPv6地址
+        @author hwliang
+        @param ip<string> 地址
+        @return True/False
+    '''
+    # 验证基本格式
+    if not re.match(r"^[\w:]$", ip):
+        return False
+
+    # 验证IPv6地址
     try:
         socket.inet_pton(socket.AF_INET6, ip)
     except socket.error:
@@ -610,6 +631,11 @@ def check_ip(ip):
 def GetHost(port = False):
     from flask import request
     host_tmp = request.headers.get('host')
+
+    # 验证基本格式
+    if not re.match("^[\w\.\-]+$", host_tmp):
+        host_tmp = ''
+
     if not host_tmp:
         if request.url_root:
             tmp = re.findall(r"(https|http)://([\w:\.-]+)",request.url_root)
@@ -966,7 +992,7 @@ REQUEST_FORM: {request_form}
     request_date = getDate(),
     remote_addr = GetClientIp(),
     method = request.method,
-    full_path = request.full_path,
+    full_path = url_encode(request.full_path),
     request_form = request.form.to_dict(),
     user_agent = request.headers.get('User-Agent'),
     panel_version = version(),
@@ -1384,7 +1410,8 @@ def load_module(pluginCode):
     from BTPanel import cache
     p_tk = 'data/%s' % md5(pluginCode + get_uuid())
     pluginInfo = None
-    if cache: pluginInfo = cache.get(pluginCode+'code')
+    skey = md5(pluginCode+'code')
+    if cache: pluginInfo = cache.get(skey)
     if not pluginInfo:
         import panelAuth
         pdata = panelAuth.panelAuth().create_serverid(None)
@@ -1399,7 +1426,7 @@ def load_module(pluginCode):
         if pluginInfo['status'] == False: return False
         WriteFile(p_tk,json.dumps(pluginInfo))
         os.chmod(p_tk,384)
-        if cache: cache.set(pluginCode+'code',pluginInfo,1800)
+        if cache: cache.set(skey,pluginInfo,1800)
 
     mod = sys.modules.setdefault(pluginCode, new_module(pluginCode))
     code = compile(pluginInfo['msg'].encode('utf-8'),pluginCode, 'exec')
@@ -1407,6 +1434,7 @@ def load_module(pluginCode):
     mod.__package__ = ''
     exec(code, mod.__dict__)
     return mod
+
 
 #解密数据
 def auth_decode(data):
@@ -1570,21 +1598,49 @@ def to_ord(string):
 
 #xss 防御
 def xssencode(text):
-    from cgi import html
-    list=['`','~','&','#','/','*','$','@','<','>','\"','\'',';','%',',','.','\\u']
-    ret=[]
-    for i in text:
-        if i in list:
-            i=''
-        ret.append(i)
-    str_convert = ''.join(ret)
-    text2=html.escape(str_convert, quote=True)
-    return text2
+    try:
+        from cgi import html
+        list=['`','~','&','#','/','*','$','@','<','>','\"','\'',';','%',',','.','\\u']
+        ret=[]
+        for i in text:
+            if i in list:
+                i=''
+            ret.append(i)
+        str_convert = ''.join(ret)
+        text2=html.escape(str_convert, quote=True)
+        return text2
+    except:
+        return text.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
+
+
+#xss 防御
+def xsssec(text):
+    return text.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
+
+#xss version
+def xss_version(text):
+    try:
+        if not text or not isinstance(text,str): return text
+        text = text.strip()
+        list=['`','~','&','#','/','*','$','@','<','>','\"','\'',';','%',',','\\u']
+        ret=[]
+        for i in text:
+            if i in list:
+                i=''
+            ret.append(i)
+        str_convert = ''.join(ret)
+        return str_convert
+    except:
+        return text.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
+
 #xss 防御
 def xssencode2(text):
-    from cgi import html
-    text2=html.escape(text, quote=True)
-    return text2
+    try:
+        from cgi import html
+        text2=html.escape(text, quote=True)
+        return text2
+    except:
+        return text.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
 # 取缓存
 def cache_get(key):
     from BTPanel import cache
@@ -1623,7 +1679,7 @@ def get_page(count,p=1,rows=12,callback='',result='1,2,3,4,5,8'):
     import page
     from BTPanel import request
     page = page.Page()
-    info = { 'count':count,  'row':rows,  'p':p, 'return_js':callback ,'uri':request.full_path}
+    info = { 'count':count,  'row':rows,  'p':p, 'return_js':callback ,'uri':url_encode(request.full_path)}
     data = { 'page': page.GetPage(info,result),  'shift': str(page.SHIFT), 'row': str(page.ROW) }
     return data
 
@@ -1666,7 +1722,7 @@ def get_os_version():
         version = "{} {}(Py{}.{}.{})".format(version,os.uname().machine,v_info.major,v_info.minor,v_info.micro)
     except:
         version = "{} (Py{}.{}.{})".format(version,v_info.major,v_info.minor,v_info.micro)
-    return version
+    return xsssec(version)
 
 #取文件或目录大小
 def get_path_size(path, exclude=[]):
@@ -3164,16 +3220,32 @@ def query_dns(domain,dns_type = 'A',is_root = False):
         return False
 
 #取通用对象
+re_key_match = re.compile(r'^[\w\s\[\]\-]+$')
+re_key_match2 = re.compile(r'^\.?__[\w\s[\]\-]+__\.?$')
+key_filter_list = ['get','set','get_items','exists','__contains__','__setitem__','__getitem__','__delitem__','__delattr__','__setattr__','__getattr__','__class__']
 class dict_obj:
     def __contains__(self, key):
         return getattr(self,key,None)
-    def __setitem__(self, key, value): setattr(self,key,value)
+    def __setitem__(self, key, value):
+        if key in key_filter_list:
+            raise PanelError("错误的字段名")
+        if not re_key_match.match(key) or re_key_match2.match(key):
+            raise PanelError("错误的字段名")
+        setattr(self,key,value)
     def __getitem__(self, key): return getattr(self,key,None)
     def __delitem__(self,key): delattr(self,key)
     def __delattr__(self, key): delattr(self,key)
     def get_items(self): return self
     def exists(self,keys):
         return exists_args(keys,self)
+    def set(self,key,value):
+        if not isinstance(value,str) or not isinstance(key,str): return False
+        if key in key_filter_list:
+            raise PanelError("错误的字段名")
+        if not re_key_match.match(key) or re_key_match2.match(key):
+            raise PanelError("错误的字段名")
+        return setattr(self,key,value)
+
     def get(self,key,default='',format='',limit = []):
         '''
             @name 获取指定参数
@@ -3362,7 +3434,7 @@ def check_app(check='app'):
         except:
             return False
     elif check=='app_bind':
-        if not cache_get('get_bind_status'):return False
+        if not cache_get(Md5(os.uname().version)):return False
         if not os.path.exists("/www/server/panel/plugin/btapp/btapp_main.py"):return False
         if not os.path.exists(path + 'config/api.json'):return False
         btapp_info = json.loads(readFile(path +'config/api.json'))

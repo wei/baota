@@ -41,17 +41,17 @@ class backup:
 
                     upload_file(filename,data_type = None)
                         文件名 , 数据类型 site/database/path
-                    
+
                     delete_file(filename,data_type = None)
                         文件名 , 数据类型 site/database/path
-                    
+
                     给_error_msg赋值，传递错误消息:
                     _error_msg = "错误消息"
         '''
         self._cloud = cloud_object
         self.cron_info = None
         if cron_info and 'echo' in cron_info.keys():
-            self.cron_info = self.get_cron_info(cron_info["echo"]) 
+            self.cron_info = self.get_cron_info(cron_info["echo"])
         self._path = public.M('config').where("id=?",(1,)).getField('backup_path')
 
     def echo_start(self):
@@ -83,7 +83,7 @@ class backup:
                 exclude = tmp_exclude.split(',')
         if not exclude: return []
         return exclude
-        
+
     #构造排除
     def get_exclude(self,exclude = []):
         if not exclude:
@@ -124,7 +124,7 @@ class backup:
                 arr['path'] = disk[6]
                 tmp1 = [disk[2],disk[3],disk[4],disk[5]]
                 arr['size'] = tmp1
-                if int(inodes[1]) == 0 and int(inodes[2]) == 0: 
+                if int(inodes[1]) == 0 and int(inodes[2]) == 0:
                     arr['inodes'] = [inodes[1],10000,10000,0]
                 else:
                     arr['inodes'] = [inodes[1],inodes[2],inodes[3],inodes[4]]
@@ -140,7 +140,7 @@ class backup:
         if not diskInfo: return '',0,0
         _root = None
         for d in diskInfo:
-            if d['path'] == '/': 
+            if d['path'] == '/':
                 _root = d
                 continue
             if re.match("^{}/.+".format(d['path']),dfile):
@@ -150,7 +150,7 @@ class backup:
         return '',0,0
 
 
-    #备份指定目录 
+    #备份指定目录
     def backup_path(self,spath,dfile = None,exclude=[],save=3):
 
         error_msg = ""
@@ -163,12 +163,12 @@ class backup:
 
         if spath[-1] == '/':
             spath = spath[:-1]
-        
-        dirname = os.path.basename(spath) 
+
+        dirname = os.path.basename(spath)
         if not dfile:
             fname = 'path_{}_{}.tar.gz'.format(dirname,public.format_date("%Y%m%d_%H%M%S"))
             dfile = os.path.join(self._path,'path',fname)
-        
+
         if not self.backup_path_to(spath,dfile,exclude):
             if self._error_msg:
                 error_msg = self._error_msg
@@ -192,11 +192,11 @@ class backup:
                 remark = "备份到" + self._cloud._title
                 self.send_failture_notification(error_msg, target=spath, remark=remark)
                 return False
-            
+
         filename = dfile
         if self._cloud:
             filename = dfile + '|' + self._cloud._name + '|' + fname
-        
+
         pdata = {
             'type': '2',
             'name': spath,
@@ -233,13 +233,13 @@ class backup:
                     self.echo_info("用户设置不保留本地备份，已删除{}".format(dfile))
             else:
                 self.echo_info("本地备份已保留。")
-        
+
         if not self._cloud:
             backups = public.M('backup').where("type=? and pid=? and name=? and filename NOT LIKE '%|%'",('2',0,spath)).field('id,name,filename').select()
         else:
-            backups = public.M('backup').where("type=? and pid=? and name=? and filename LIKE '%{}%'".format(self._cloud._name),('2',0,spath)).field('id,name,filename').select()
+            backups = public.M('backup').where("type=? and pid=? and name=? and filename LIKE ?",('2',0,spath,'%{}%'.format(self._cloud._name))).field('id,name,filename').select()
 
-                
+
         self.delete_old(backups,save,'path')
         self.echo_end()
         self.save_backup_status(True, target=spath)
@@ -287,20 +287,20 @@ class backup:
         dpath = os.path.dirname(dfile)
         if not os.path.exists(dpath):
             os.makedirs(dpath,384)
-        
+
         self.get_exclude(exclude)
         exclude_config = self._exclude
         exclude_list = self.get_exclude_list(exclude)
         p_size = public.get_path_size(spath, exclude=exclude_list)
         if not self._exclude:
             exclude_config = "未设置"
-        
+
         if siteName:
             self.echo_info('备份网站：{}'.format(siteName))
             self.echo_info('网站根目录：{}'.format(spath))
         else:
             self.echo_info('备份目录：{}'.format(spath))
-        
+
         self.echo_info("目录大小：{}".format(public.to_size(p_size)))
         self.echo_info('排除设置：{}'.format(exclude_config))
         disk_path,disk_free,disk_inode = self.get_disk_free(dfile)
@@ -347,7 +347,7 @@ class backup:
                 error_msg = self._error_msg
             self.send_failture_notification(error_msg, target=siteName)
             return False
-        
+
         if self._cloud:
             self.echo_info("正在上传到{}，请稍候...".format(self._cloud._title))
             if self._cloud.upload_file(dfile,'site'):
@@ -412,7 +412,7 @@ class backup:
         if not self._cloud:
             backups = public.M('backup').where("type=? and pid=? and filename NOT LIKE '%|%'",('0',pid)).field('id,name,filename').select()
         else:
-            backups = public.M('backup').where('type=? and pid=? and filename LIKE "%{}%"'.format(self._cloud._name),('0',pid)).field('id,name,filename').select()
+            backups = public.M('backup').where('type=? and pid=? and filename LIKE ?',('0',pid,"%{}%".format(self._cloud._name))).field('id,name,filename').select()
 
         self.delete_old(backups,save,'site')
         self.echo_end()
@@ -449,7 +449,7 @@ class backup:
                 failture_count += 1
             results.append((site['name'], result, self._error_msg,))
             self.save_backup_status(result, target=site['name'], msg=self._error_msg)
-        
+
         if failture_count > 0:
             self.send_all_failture_notification("site", results)
         self._backup_all = False
@@ -466,7 +466,7 @@ class backup:
             public.writeFile(conf_file,public.readFile(conf_file_bak))
             public.set_mode(conf_file,600)
             public.set_own(conf_file,'mysql')
-        
+
         public.ExecShell("sed -i '/user=root/d' {}".format(conf_file))
         public.ExecShell("sed -i '/password=/d' {}".format(conf_file))
         if act:
@@ -495,7 +495,7 @@ class backup:
             dfile = os.path.join(self._path,'database',fname)
         else:
             fname = os.path.basename(dfile)
-        
+
         dpath = os.path.dirname(dfile)
         if not os.path.exists(dpath):
             os.makedirs(dpath,384)
@@ -506,7 +506,7 @@ class backup:
         conn_config = {}
         self._db_mysql = public.get_mysql_obj(db_name)
         is_cloud_db = db_find['db_type'] in ['1',1,'2',2]
-        if is_cloud_db: 
+        if is_cloud_db:
             # 连接远程数据库
             if db_find['sid']:
                 conn_config = public.M('database_servers').where('id=?',db_find['sid']).find()
@@ -524,7 +524,7 @@ class backup:
             self.echo_error(error_msg)
             self.send_failture_notification(error_msg, target=db_name)
             return False
-        
+
         if p_size == None:
             error_msg = '指定数据库 `{}` 没有任何数据!'.format(db_name)
             self.echo_error(error_msg)
@@ -550,7 +550,7 @@ class backup:
                 self.echo_error(error_msg)
                 self.send_failture_notification(error_msg, target=db_name)
                 return False
-        
+
         stime = time.time()
         self.echo_info("开始导出数据库：{}".format(public.format_date(times=stime)))
         if os.path.exists(dfile):
@@ -610,7 +610,7 @@ class backup:
             os.remove(self._err_log)
 
         pid = public.M('databases').where('name=?',(db_name)).getField('id')
-        
+
         pdata = {
             'type': '1',
             'name': fname,
@@ -653,9 +653,9 @@ class backup:
         if not self._cloud:
             backups = public.M('backup').where("type=? and pid=? and filename NOT LIKE '%|%'",('1',pid)).field('id,name,filename').select()
         else:
-            backups = public.M('backup').where('type=? and pid=? and filename LIKE "%{}%"'.format(self._cloud._name),('1',pid)).field('id,name,filename').select()
+            backups = public.M('backup').where('type=? and pid=? and filename LIKE ?',('1',pid,"%{}%".format(self._cloud._name))).field('id,name,filename').select()
 
-        
+
         self.delete_old(backups,save,'database')
         self.echo_end()
         self.save_backup_status(True, target=db_name)
@@ -721,7 +721,7 @@ class backup:
         """ 通过计划任务名称查找计划任务配置参数 """
         try:
             cron_info  = public.M('crontab').where('echo=?',(cron_name,))\
-            .field('name,save_local,notice,notice_channel,id').find()
+            .field('name,save_local,notice,notice_channel,id,sType').find()
             return cron_info
         except Exception as e:
             pass
@@ -729,14 +729,14 @@ class backup:
 
     def send_failture_notification(self, error_msg, target="", remark=""):
         """发送任务失败消息
-        
+
         :error_msg 错误信息
         :remark 备注
         """
         if self._backup_all:
-            return 
+            return
         if not self.cron_info:
-            return 
+            return
         cron_info = self.cron_info
         cron_title = cron_info["name"]
         save_local = cron_info["save_local"]
@@ -749,7 +749,7 @@ class backup:
 
         if notice == 1 or notice == 2:
             title = self.generate_failture_title(cron_title)
-            task_name = cron_title 
+            task_name = cron_title
             msg = self.generate_failture_notice(task_name, error_msg, remark)
             res = self.send_notification(notice_channel, title, msg)
             if res:
@@ -757,12 +757,12 @@ class backup:
 
     def send_all_failture_notification(self, backup_type, results, remark=""):
         """统一发送任务失败消息
-        
+
         :results [(备份对象， 备份结果，错误信息),...]
         :remark 备注
         """
         if not self.cron_info:
-            return 
+            return
         cron_info = self.cron_info
         cron_title = cron_info["name"]
         save_local = cron_info["save_local"]
@@ -778,11 +778,11 @@ class backup:
                 "database": "数据库"
             }
             backup_type_desc = type_desc[backup_type]
-            task_name = cron_title 
+            task_name = cron_title
             failture_count = 0
             total = 0
             content = ""
-        
+
             for obj in results:
                 total += 1
                 obj_name = obj[0]
@@ -800,21 +800,99 @@ class backup:
                         failture_count, total, backup_type_desc)
 
             msg = self.generate_all_failture_notice(task_name, content, backup_type_desc, remark)
-            res = self.send_notification(notice_channel, title, msg)
+            res = self.send_notification(notice_channel, title, msg=msg, total=total, failture_count=failture_count)
             if res:
                 self.echo_info("消息通知已发送。")
             else:
                 self.echo_error("消息通知发送失败。")
 
-    def send_notification(self, channel, title, msg = ""):
+    def send_notification(self, channel, title, msg= "", total=0, failture_count=0):
+        """发送通知
+
+        Args:
+            channel (str): 消息通道，多个用英文逗号隔开
+            title (str): 通知标题
+            msg (str, optional): 消息内容. Defaults to "".
+
+        Returns:
+            bool: 通知是否发送成功
+        """
         try:
-            from send_mail import send_mail
-            tondao = []
+            from config import config
+            from panelPush import panelPush
+            tongdao = []
             if channel.find(",") >= 0:
-                tongdao = channel.split(",") 
+                tongdao = channel.split(",")
             else:
                 tongdao = [channel]
-        
+
+            error_count = 0
+            con_obj = config()
+            get = public.dict_obj()
+            msg_channels = con_obj.get_msg_configs(get)
+
+            error_channel = []
+            channel_data = {}
+            msg_data = {}
+            for ch in tongdao:
+                # 根据不同的消息通道准备不同的内容
+                if ch == "mail":
+                    msg_data = {
+                        "msg": msg.replace("\n", "<br/>"),
+                        "title": title
+                    }
+                if ch in ["dingding", "weixin", "feishu"]:
+                    msg_data["msg"] = msg
+                if ch in ["sms"]:
+                    if total > 0 and failture_count > 0:
+                        msg_data["sm_type"] = "backup_all"
+                        msg_data["sm_args"] = {
+                            "panel_name": public.GetConfigValue('title'),
+                            "task_name": self.cron_info["name"],
+                            "failed_count": failture_count,
+                            "total": total
+                        }
+                    else:
+                        msg_data["sm_type"] = "backup"
+                        msg_data["sm_args"] = {
+                            "panel_name": public.GetConfigValue('title'),
+                            "task_name": self.cron_info["name"]
+                        }
+                channel_data[ch] = msg_data
+            # print("channel data:")
+            # print(channel_data)
+            # 即时推送
+            pp = panelPush()
+            push_res = pp.push_message_immediately(channel_data)
+            if push_res["status"]:
+                channel_res = push_res["msg"]
+                for ch, res in channel_res.items():
+                    if not res["status"]:
+                        if ch in msg_channels:
+                            error_channel.append(msg_channels[ch]["title"])
+                            error_count +=1
+            if not push_res["status"] or error_count:
+                self.echo_error("消息通道:{} 发送失败！".format(",".join(error_channel)))
+            else:
+                self.echo_info("消息发送成功。")
+            if error_count == len(tongdao):
+                return False
+            return True
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+        return False
+
+
+    def send_notification2(self, channel, title, msg = ""):
+        try:
+            from send_mail import send_mail
+            tongdao = []
+            if channel.find(",") >= 0:
+                tongdao = channel.split(",")
+            else:
+                tongdao = [channel]
+
             sm = send_mail()
             send_res = []
             error_count = 0
@@ -863,4 +941,4 @@ class backup:
             sql.add("id,target,status,msg,addtime", (cron_id, target, status, msg, time.time(),))
         except Exception as e:
             print("保存备份状态异常: {}.".format(e))
-    
+

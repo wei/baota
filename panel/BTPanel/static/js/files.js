@@ -2408,8 +2408,9 @@ var bt_file = {
       delete config['cancel_favorites']; // 未分享
       config['favorites'] = (data.type == 'dir' ? '收藏目录' : '收藏文件');
     }
-    if (data.ext == 'php') config['dir_kill'] = '文件查杀';
-    if (data.ext != 'php' && data.type != 'dir') delete config['dir_kill'];
+    // if (data.ext == 'php') config['dir_kill'] = '文件查杀';
+    // if (data.ext != 'php' && data.type != 'dir') delete config['dir_kill'];
+    if (data.type != 'dir') delete config['dir_kill'];
     var num = 0;
     $.each(compression, function (index, item) { // 判断压缩文件
       if (item == data.ext) num++;
@@ -4463,24 +4464,482 @@ var bt_file = {
     this.$http('GetFileAccess', { filename: data.path }, function (rdata) { if (callback) callback(rdata) });
   },
   /**
-   * @description 文件夹目录查杀
-   * @param {Object} data 当前文件的数据对象
-   * @returns void
-   */
-  set_dir_kill: function (data) {
-    var that = this;
-    if (data.ext == 'php') {
-      that.$http('file_webshell_check', { filename: data.path }, function (rdata) {
-        layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 })
-      })
-    } else {
-      layer.confirm('目录查杀将包含子目录中的php文件，是否操作？', { title: '目录查杀[' + data['filename'] + ']', closeBtn: 2, icon: 3 }, function (index) {
-        that.$http('dir_webshell_check', { path: data.path }, function (rdata) {
-          layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 })
-        })
-      })
-    }
-  },
+     * @description 文件夹目录查杀
+     * @param {Object} data 当前文件的数据对象
+     * @returns void
+     */
+	 set_dir_kill: function(data) {
+		var that = this;
+		var socket = null;
+		var $layer = $('spyware_detection_view');
+		var that_layer = null;
+		var tableList = [];
+		var path = data.path;
+		bt.open({
+			type: '1',
+			title: '目录查杀 【' + path + '】',
+			area: ['840px', '650px'],
+			content: '\
+			<div class="spyware_detection_view">\
+				<div class="spyware_detection_head">\
+					<div class="head_icon">\
+						<div class="scanning" style="display: none;">\
+							<img class="start_icon" src="/static/img/scanning-scan.svg" />\
+							<div class="status_loading"></div>\
+						</div>\
+						<div class="scanning_danger" style="display: none;">\
+							<img class="start_icon" src="/static/img/scanning-dangerous.svg" />\
+							<div class="status_loading danger"></div>\
+						</div>\
+						<div class="done" style="display: none;">\
+							<img class="icon success" src="/static/img/scanning-success.svg" />\
+							<img class="icon danger" src="/static/img/scanning-danger.svg" style="display: none;" />\
+						</div>\
+					</div>\
+					<div class="head_left">\
+						<div class="info">当前未进行木马查杀</div>\
+						<div class="file"></div>\
+					</div>\
+					<div class="head_right">\
+						<button type="button" class="btn btn-default cancel-detection-btn" style="display: none;">取消查杀</button>\
+						<button type="button" class="btn btn-default reset-detection-btn" style="display: none; margin-right: 6px">重新查杀</button>\
+						<button type="button" class="btn btn-success done-detection-btn" style="display: none; width: 70px;">完成</button>\
+					</div>\
+				</div>\
+				<!-- <div class="spyware_detection_progress">\
+					<div class="progress_bar">\
+						<div class="inner"></div>\
+					</div>\
+					<div class="text">0%</div>\
+				</div> -->\
+				<div class="spyware_detection_body">\
+					<div id="spyware_detection_table"></div>\
+				</div>\
+			</div>',
+			success: function (layero, index) {
+				that_layer = this;
+				$layer = layero;
+
+				this.init_table();
+				that_layer.reset_detection();
+
+				// 重新查杀
+				$('.reset-detection-btn').click(function () {
+					that_layer.reset_detection();
+				});
+
+				// 取消
+				$('.cancel-detection-btn').click(function () {
+					bt.confirm({
+						title: '取消查杀',
+						msg: '当前正在进行木马查杀，确定停止查杀？'
+					}, function (indexs) {
+						that_layer.stop_detection();
+						layer.close(indexs);
+					});
+				});
+
+				// 完成
+				$('.done-detection-btn').click(function () {
+					layer.close(index);
+				});
+
+				$layer.prev().css({ 'z-index': 19999 })
+				$layer.css({ 'z-index': 20000 })
+			},
+			cancel: function (index) {
+				if (that_layer.detection_status != 'done') {
+					bt.confirm({
+						msg: '正在木马查杀，关闭即表示结束查杀',
+						title: '确定关闭木马查杀'
+					}, function (indexs) {
+						that_layer.stop_detection();
+						layer.close(indexs);
+						layer.close(index);
+					});
+				}
+				return that_layer.detection_status == 'done'
+			},
+			init_table: function () {
+				var that_layer = this;
+				this.spyTable = bt_tools.table({
+					el: '#spyware_detection_table',
+					default: "暂无数据",
+					height: '376',
+					data: [],
+					column: [
+						{
+							type: 'checkbox', 
+							width: 20 
+						},
+						{
+							fid: 'filename',
+							title: '文件名',
+							width: 140,
+							type: 'text',
+							template: function (row) {
+								return '<span class="flex" title="' + row.filename + '"><span style="flex: 1; width: 0;" class="text_ellipsis">' + row.filename + '</span></span>';
+							}
+						},
+						{
+							fid: 'path',
+							title: '文件路径',
+							type: 'text',
+							template: function (row) {
+								return '<span class="flex" title="' + row.path + '"><span style="flex: 1; width: 0;" class="text_ellipsis">' + row.path + '</span></span>';
+							}
+						},
+						{
+							type: 'group',
+							title: '操作',
+							width: 140,
+							align: 'right',
+							group: [
+								{
+									title: '误报',
+									event: function (row) {
+										bt.show_confirm('误报反馈', '<span class="red">是否确定提交误报反馈</br></span>', function () {
+											var loadT = bt.load('正在添加URL白名单，请稍候...');
+											bt.send('send_baota', 'files/send_baota', { filename: row.path }, function (res) {
+												loadT.close();
+												bt.msg(res);
+											});
+										});
+									}
+								},
+								{
+									title: '编辑',
+									event: function (row) {
+										openEditorView(0, row.path);
+									}
+								},
+								{
+									title: '删除',
+									event: function (row, index) {
+										that.del_file_or_dir(row, function (res) {
+											if (res.status) {
+												tableList.splice(index, 1);
+												that_layer.set_table_list();
+											}
+										});
+									}
+								}
+							]
+						}
+					],
+					tootls: [
+						{ // 批量操作
+							type: 'batch',
+							positon: ['left', 'bottom'],
+							config: {
+								title: '删除',
+								callback:function (data) {
+									bt.confirm({
+										title: '批量删除', 
+										msg: '确认删除选中内容,删除后将移至回收站，是否继续操作?'
+									}, function (indexs) {
+										var layerT = bt.load('正在批量删除文件，请稍候...');
+										var list = [];
+										var i = 0;
+										var checkList = data.check_list;
+										
+										function delFile (data, callback) {
+											bt.send('DeleteFile', 'files/DeleteFile', { path: data.path }, function(res) {
+												list.push({
+													filename: data.filename,
+													status: res.status,
+													result: res.status ? '删除成功' : '删除失败'
+												});
+												if (res.status) {
+													var fileIndex = -1;
+													for (var i = 0; i < tableList.length; i++) {
+														if(tableList[i].path == data.path) {
+															fileIndex = i;
+														}
+													}
+													if (fileIndex != -1) {
+														tableList.splice(fileIndex, 1);
+													}
+												}
+												callback && callback(res);
+											});
+										}
+										function callback () {
+											i++;
+											if (i >= checkList.length) {
+												that_layer.set_table_list();
+												layerT.close();
+												bt.open({
+													type: '1',
+													title: '批量删除',
+													area: '350px',
+													content: '\
+														<div class="batch_title">\
+															<span class="batch_icon"></span>\
+															<span class="batch_text">批量删除操作完成！</span>\
+														</div>\
+														<div id="batch_table" style="margin: 15px 30px 15px 30px;"></div>\
+													',
+													success: function ($layers) {
+														bt_tools.table({
+															el: '#batch_table',
+															height: '200px',
+															data: list,
+															column: [
+																{
+																	fid: 'filename',
+																	title: '文件名',
+																	type: 'text',
+																	template: function (row) {
+																		return '<span class="flex" title="' + row.filename + '"><span style="flex: 1; width: 0;" class="text_ellipsis">' + row.filename + '</span></span>';
+																	}
+																},
+																{
+																	fid: 'result',
+																	title: '操作结果',
+																	type: 'text',
+																	width: 90,
+																	align: 'right',
+																	template: function (row) {
+																		return '<span style="color: ' + (row.status ? '#20a53a' : 'red') + '">' + row.result + '</span>';
+																	}
+																}
+															]
+														});
+
+														var top = ($(window).height() - $layers.height()) / 2;
+														$layers.css('top', top + 'px');
+													}
+												});
+											} else {
+												delFile(checkList[i], callback);
+											}
+										}
+										delFile(checkList[i], callback);
+									});
+								}
+							}
+						}
+					]
+				});
+			},
+			reset_detection: function () {
+				that_layer.detection_status = 'start'
+				$layer.find('.spyware_detection_head .file').text('开始文件查杀');
+				this.show_cancel_btn();
+				this.init_info();
+				this.reset_table();
+				this.reset_tq_num();
+				this.set_progress(0);
+				this.set_stop_status(false);
+				this.set_search_file_num(0);
+				this.set_icon_status('scanning');
+				// this.set_progress_color('success');
+				this.start_detection();
+			},
+			// 显示取消按钮
+			show_cancel_btn: function () {
+				$('.done-detection-btn').hide();
+				$('.start-detection-btn').hide();
+				$('.reset-detection-btn').hide();
+				$('.cancel-detection-btn').show();
+			},
+			// 显示完成按钮
+			show_done_btn: function () {
+				$('.start-detection-btn').hide();
+				$('.cancel-detection-btn').hide();
+				$('.done-detection-btn').show();
+				$('.reset-detection-btn').show();
+			},
+			// 初始化信息
+			init_info: function () {
+				$layer.find('.spyware_detection_head .info').html('<span class="status">正在查杀</span>，已扫描过滤文件<span class="scanned_num">0</span>/<span class="total_num">0</span>个；发现木马文件<span class="tqnum">0</span>个')
+			},
+			// 改变完成状态
+			change_status_done: function () {
+				$layer.find('.spyware_detection_head .info .status').text('查杀完成');
+			},
+			// 设置进度条进度
+			set_progress: function (val) {
+				if (val == 0) {
+					$layer.find('.progress_bar .inner').remove();
+					$layer.find('.progress_bar').html('<div class="inner"></div>');
+				} else {
+					$layer.find('.progress_bar .inner').css('width', val + '%');
+					$layer.find('.spyware_detection_progress .text').text(val + '%');
+				}
+			},
+			// 设置进度条颜色
+			set_progress_color: function (status) {
+				switch (status) {
+					case 'success':
+						$layer.find('.progress_bar .inner').css('background-color', '#20a53a');
+						break;
+					case 'danger':
+						$layer.find('.progress_bar .inner').css('background-color', 'red');
+						break;
+				}
+			},
+			// 设置目录查杀进度条
+			set_search_progress: function (scanned, total) {
+				if (total == 0) return;
+				var range = ((scanned / total) * 100).toFixed(1);
+				this.set_progress(range);
+			},
+			// 设置图标状态
+			set_icon_status: function (state) {
+				$layer.find('.spyware_detection_head .head_icon>div').hide();
+				var $icon = $layer.find('.spyware_detection_head .head_icon .' + state);
+				$icon.show();
+				switch (state) {
+					case 'done':
+						var img = $layer.find('.spyware_detection_head .tqnum').text() <= 0 ? 'success' : 'danger';
+						$icon.find('.icon').hide();
+						$icon.find('.icon.' + img).show();
+						break;
+				}
+			},
+			// 设置搜索文件数量
+			set_search_file_num: function (scanned, total) {
+				$layer.find('.spyware_detection_head .scanned_num').text(scanned);
+				if (total) $layer.find('.spyware_detection_head .total_num').text(total);
+			},
+			// 设置搜索文件信息
+			set_search_file_text: function (text) {
+				$layer.find('.spyware_detection_head .file').text(text);
+			},
+			// 重置木马数量
+			reset_tq_num: function () {
+				$layer.find('.tqnum').text(0);
+			},
+			// 设置停止状态
+			set_stop_status: function (val) {
+				this.stop_status = val;
+				if (val) this.on_close();
+			},
+			// 添加木马数量
+			add_tq_num: function () {
+				var num = $layer.find('.tqnum').text() || 0;
+				num++;
+				$layer.find('.tqnum').text(num);
+			},
+			// 开始查杀
+			start_detection: function () {
+				this.connect();
+			},
+			// 停止查杀
+			stop_detection: function () {
+				this.set_stop_status(true);
+				this.set_progress(100.0);
+				this.show_done_btn();
+				this.set_icon_status('done');
+				this.change_status_done();
+				$layer.find('.spyware_detection_head .info .status').text('查杀已取消');
+				$layer.find('.spyware_detection_head .file').text('扫描已完成');
+			},
+			// 重置表格数据
+			reset_table: function () {
+				tableList = [];
+				this.set_table_list();
+			},
+			// 设置表格数据
+			set_table_data: function (data) {
+				var path = data.path;
+				if (!path) return;
+				var filename = path.substring(path.lastIndexOf('/') + 1, path.length);
+				that.$http('get_file_attribute', { filename: path }, function (res) {
+					tableList.push({
+						type: res.is_dir ? 'dir' : 'file',
+						type_tips: res.is_dir ? '文件夹' : '文件',
+						filename: filename,
+						path: path
+					});
+					that_layer.set_table_list();
+				});
+			},
+			set_table_list: function () {
+				this.spyTable.$reader_content(tableList);
+			},
+			connect: function () {
+				// 连接
+				var url = (window.location.protocol === 'http:' ? 'ws://' : 'wss://') + window.location.host + '/ws_panel';
+				socket = new WebSocket(url);
+				// 绑定事件
+				socket.addEventListener('open', this.on_open);
+				socket.addEventListener('error', this.on_error);
+				socket.addEventListener('message', this.on_message);
+			},
+			send: function (data, success) {
+				// 判断当前连接状态，如果 != 1，则100ms后尝试重新发送
+				if (socket.readyState === 1) {
+					socket.send(JSON.stringify(data));
+					if (success) success(); 
+				} else {
+					setTimeout(function () { that_layer.send(data); }, 100);
+				}
+			},
+			on_open: function (e) {
+				var token = $("#request_token_head").attr('token');
+				that_layer.send({ mod_name: 'files', 'x-http-token': token });
+				that_layer.send({ mod_name: 'files', def_name: 'ws_webshell_check', ws_callback: 1, path: path });
+			},
+			on_close: function () {
+				if (socket) {
+					socket.close();
+					socket = null;
+				}
+			},
+			on_error: function (e) {
+				console.log(e);
+			},
+			on_message: function (e) {
+				var dataStr = e.data;
+				if (!dataStr) return;
+				if (that_layer.stop_status === true) return;
+				var data = JSON.parse(dataStr);
+				that_layer.set_search_file_text(data.info);
+				if (data.end === false) {
+					that_layer.set_search_file_num(data.is_count, data.count);
+				}
+				if (data.end === false && data.status === false) {
+					that_layer.set_search_progress(data.is_count, data.count);
+				}
+				if (data.end === false && data.status === true) {
+					that_layer.set_icon_status('scanning_danger');
+					// that_layer.set_progress_color('danger');
+					that_layer.add_tq_num();
+					that_layer.set_table_data(data);
+				}
+				if (data.end === true && data.is_max !== true) {
+					that_layer.detection_status = 'done'
+					that_layer.set_progress(100.0);
+					that_layer.change_status_done();
+					that_layer.show_done_btn();
+					that_layer.set_icon_status('done');
+				} else if (data.end === true && data.is_max === true) {
+					that_layer.detection_status = 'done'
+					that_layer.set_icon_status('done');
+					that_layer.set_progress(100.0);
+					that_layer.show_done_btn();
+					$layer.find('.head_left .info').text('查杀失败')
+					$layer.find('.head_icon .done .icon.success').hide()
+					$layer.find('.head_icon .done .icon.danger').show()
+					$layer.find('.reset-detection-btn').hide()
+				}
+			}
+		});
+		// if (data.ext == 'php') {
+		//     that.$http('file_webshell_check', { filename: data.path }, function(rdata) {
+		//         layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 })
+		//     })
+		// } else {
+		//     layer.confirm('目录查杀将包含子目录中的php文件，是否操作？', { title: '目录查杀[' + data['filename'] + ']', closeBtn: 2, icon: 3 }, function(index) {
+		//         that.$http('dir_webshell_check', { path: data.path }, function(rdata) {
+		//             layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 })
+		//         })
+		//     })
+		// }
+	},
   /**
    * @description 文件路径合并
    * @param {String} paths 旧路径

@@ -753,6 +753,18 @@ fullchain.pem       粘贴到证书输入框
         except:
             write_log(public.get_error_info())
 
+    # 通过域名获取网站名称
+    def get_site_name_by_domains(self,domains):
+        sql = public.M('domain')
+        site_sql = public.M('sites')
+        siteName = None
+        for domain in domains:
+            pid = sql.where('name=?',domain).getField('pid')
+            if pid:
+                siteName = site_sql.where('id=?',pid).getField('name')
+                break
+        return siteName
+
     # 替换服务器上的同域名同品牌证书
     def sub_all_cert(self, key_file, pem_file):
         cert_init = self.get_cert_init(pem_file)  # 获取新证书的基本信息
@@ -1492,14 +1504,44 @@ fullchain.pem       粘贴到证书输入框
             except:
                 write_log("|-[{}]续签失败".format(siteName))
 
+    # 关闭强制https
+    def close_httptohttps(self,siteName):
+        try:
+
+            if not siteName: siteName
+            import panelSite
+            site_obj = panelSite.panelSite()
+            if not site_obj.IsToHttps(siteName):
+                return False
+            get = public.dict_obj()
+            get.siteName = siteName
+            site_obj.CloseToHttps(get)
+            return True
+        except:
+            return False
+
+    # 恢复强制https
+    def rep_httptohttps(self,siteName):
+        try:
+            if not siteName: return False
+            import panelSite
+            site_obj = panelSite.panelSite()
+            if not site_obj.IsToHttps(siteName):
+                get = public.dict_obj()
+                get.siteName = siteName
+                site_obj.HttpToHttps(get)
+            return True
+        except:
+            return False
 
 
     def renew_cert_to(self,domains,auth_type,auth_to,index = None):
+        siteName = None
         cert = {}
-
         if os.path.exists(auth_to):
             if public.M('sites').where('path=?',auth_to).count() == 1:
                 site_id = public.M('sites').where('path=?',auth_to).getField('id')
+                siteName = public.M('sites').where('path=?',auth_to).getField('name')
                 import panelSite
                 siteObj = panelSite.panelSite()
                 args = public.dict_obj()
@@ -1508,6 +1550,10 @@ fullchain.pem       粘贴到证书输入框
                 if runPath and not runPath in ['/']:
                     path = auth_to + '/' + runPath
                     if os.path.exists(path): auth_to = path.replace('//','/')
+
+            else:
+                siteName = self.get_site_name_by_domains(domains)
+        is_rep = self.close_httptohttps(siteName)
         try:
             index = self.create_order(
                 domains,
@@ -1537,6 +1583,7 @@ fullchain.pem       粘贴到证书输入框
             cert['msg'] = '续签成功!'
             write_log("|-续签成功!")
         except Exception as e:
+
             if str(e).find('请稍候重试') == -1: # 受其它证书影响和连接CA失败的的不记录重试次数
                 if index:
                     # 设置下次重试时间
@@ -1550,6 +1597,8 @@ fullchain.pem       粘贴到证书输入框
             msg = str(e).split('>>>>')[0]
             write_log("|-" + msg)
             return public.returnMsg(False, msg)
+        finally:
+            if is_rep: self.rep_httptohttps(siteName)
         write_log("-" * 70)
         return cert
 
@@ -1583,6 +1632,15 @@ fullchain.pem       粘贴到证书输入框
                         if not os.path.exists(self._config['orders'][i]['auth_to']):
                             auth_to = self.get_ssl_used_site(self._config['orders'][i]['save_path'])
                             if not auth_to: continue
+
+                            # 域名不存在？
+                            for domain in self._config['orders'][i]['domains']:
+                                if domain.find('*') != -1: break
+                                if not public.M('domain').where("name=?",(domain,)).count() and not public.M('binding').where("domain=?",domain).count():
+                                    auth_to = None
+                                    write_log("|-跳过被删除的域名: {}".format(self._config['orders'][i]['domains']))
+                            if not auth_to: continue
+
                             self._config['orders'][i]['auth_to'] = auth_to
 
                     # 是否到了允许重试的时间

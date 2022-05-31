@@ -1652,12 +1652,13 @@ var docker = {
                                 type:'help',
                                 style:{'margin-top':'0'},
                                 list:[
-                                    '优先使用加速URL执行操作，请求超时将跳过使用默认加速方式'
+                                    '优先使用加速URL执行操作，请求超时将跳过使用默认加速方式',
+                                    '设置加速后需要手动重启docker',
+                                    '关闭加速请设置为空'
                                 ]
                             }
                         }]
                     },yes:function(formD,index){
-                        if(formD.registry_mirrors_address == '')return bt_tools.msg('加速URL不能为空',2)
                         that.ajax_task_method('set_registry_mirrors',{data:formD,tips:false},function(uRes){
                             if(uRes.status){
                                 layer.close(index)
@@ -2542,7 +2543,7 @@ var docker = {
                             type: 'text',
                             name: 'registry',
                             width: '358px',
-                            placeholder: '请输入仓库地址'
+                            placeholder: '例：ccr.ccs.tencentyun.com'
                         }
                     },{
                         label: '仓库名',
@@ -2550,7 +2551,7 @@ var docker = {
                             type: 'text',
                             name: 'name',
                             width: '358px',
-                            placeholder: '请输入仓库名'
+                            placeholder: '例：testtest'
                         }
                     },{
                         label:'用户',
@@ -2572,7 +2573,7 @@ var docker = {
                             type: 'text',
                             name: 'namespace',
                             width: '328px',
-                            placeholder: '请输入命名空间'
+                            placeholder: '例：testname'
                         },{
                             type:'link',
                             title: '?',
@@ -3217,10 +3218,12 @@ var docker = {
     */
     stop_user_operation:function(is_install,is_service){
         var that = this;
-        var tips = '当前未启动docker服务,请在docker设置中开启';
+        var tips = '当前未启动docker服务,请在<a class="btlink link_setting">【docker设置】</a>中开启';
         if(!is_install) tips = '当前未安装docker或docker-compose,<a class="btlink install_docker">点击安装</a>'
         $('.mask_layer').removeAttr('style');
         $('.prompt_description').html(tips)
+        //跳转到设置页
+        $('.link_setting').click(function(){ $('#cutMode .tabs-item[data-type=setup]').trigger('click') })
         //安装docker
         $('.install_docker').click(function(){
             that.ajax_task_method('install_docker_program',{model_name:{dk_model_name:'setup'}},function(res){

@@ -146,7 +146,7 @@ admin_path_checks = [
 ]
 if admin_path in admin_path_checks: admin_path = '/bt'
 uri_match = re.compile(r"(^/static/[\w_\./\-]+\.(js|css|png|jpg|gif|ico|svg|woff|woff2|ttf|otf|eot|map)$|^/[\w_\./\-]*$)")
-
+session_id_match = re.compile(r"^[\w\.\-]+$")
 # ===================================Flask HOOK========================#
 
 # Flask请求勾子
@@ -165,6 +165,10 @@ def request_check():
         for k in pdata.keys():
             if len(k) > 48: return abort(403)
             if len(pdata[k]) > 256: return abort(403)
+
+    # SESSIONID过滤
+    session_id =  request.cookies.get(app.config['SESSION_COOKIE_NAME'],'')
+    if session_id and not session_id_match.match(session_id): return abort(403)
     if session.get('debug') == 1: return
 
     if app.config['BASIC_AUTH_OPEN']:
@@ -597,7 +601,8 @@ def panel_warning(pdata=None):
     # 首页安全警告
     comReturn = comm.local()
     if comReturn: return comReturn
-
+    if 'request_token' in session and 'login' in session:
+        if not check_csrf(): return public.ReturnJson(False, 'INIT_CSRF_ERR'), json_header
     get = get_input()
     ikey = 'warning_list'
     if get.action == 'get_list':
@@ -969,7 +974,7 @@ def download():
         filename = filename.split('|')[1]
     if not filename: return public.ReturnJson(False, "INIT_ARGS_ERR"), json_header
     if filename in ['alioss', 'qiniu', 'upyun', 'txcos', 'ftp', 'msonedrive', 'gcloud_storage', 'gdrive',
-                    'aws_s3']: return panel_cloud()
+                    'aws_s3']: return panel_cloud(False)
     if not os.path.exists(filename): return public.ReturnJson(False, "FILE_NOT_EXISTS"), json_header
 
     if request.args.get('play') == 'true':
@@ -989,10 +994,12 @@ def download():
 
 
 @app.route('/cloud', methods=method_all)
-def panel_cloud():
+def panel_cloud(is_csrf=True):
     # 从对像存储下载备份文件接口
     comReturn = comm.local()
     if comReturn: return comReturn
+    if is_csrf:
+        if not check_csrf(): return public.ReturnJson(False, 'INIT_CSRF_ERR'), json_header
     get = get_input()
     _filename = get.filename
     plugin_name = ""
@@ -1008,6 +1015,7 @@ def panel_cloud():
     public.mod_reload(plugin_main)
     tmp = eval("plugin_main.%s_main()" % plugin_name)
     if not hasattr(tmp, 'download_file'): return public.returnJson(False, 'INIT_PLUGIN_NOT_DOWN_FUN'), json_header
+    if not re.match(r"^[\w\.\/-]+$", get.name): return public.returnJson(False, 'FILE_NOT_EXISTS'), json_header
     download_url = tmp.download_file(get.name)
     if plugin_name == 'ftp':
         if download_url.find("ftp") != 0: download_url = "ftp://" + download_url
@@ -1045,12 +1053,68 @@ def panel_cloud():
     return redirect(download_url)
 
 
+@app.route('/btwaf_error', methods=method_get)
+def btwaf_error():
+    # 图标
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    get=get_input()
+    p_path = os.path.join('/www/server/panel/plugin/', "btwaf")
+    if not os.path.exists(p_path):
+        if get.name == 'btwaf' and get.fun == 'index':
+            return  render_template('error3.html',data={})
+    return  render_template('error3.html',data={})
+
+
+
+@app.route('/favicon.ico', methods=method_get)
+def send_favicon():
+    # 图标
+    comReturn = comm.local()
+    if comReturn: return abort(404)
+    s_file = '/www/server/panel/BTPanel/static/favicon.ico'
+    if not os.path.exists(s_file): return abort(404)
+    return send_file(s_file, conditional=True, add_etags=True)
+
+
+@app.route('/rspamd', defaults={'path': ''},methods=method_all)
+@app.route('/rspamd/<path:path>',methods=method_all)
+def proxy_rspamd_requests(path):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    # param = str(request.url).split('?')[-1]
+    # if not param:
+    #     param = ""
+    param = "" if len(str(request.url).split('?')) < 2 else param[-1]
+    import requests
+    headers = {}
+    for h in request.headers.keys():
+        headers[h] = request.headers[h]
+    if request.method == "GET":
+        if re.search("\.(js|css)$",path):
+            return send_file('/usr/share/rspamd/www/rspamd/'+path,conditional=True,add_etags=True)
+        if path == "/":
+            return send_file('/usr/share/rspamd/www/rspamd/',conditional=True,add_etags=True)
+        url = "http://127.0.0.1:11334/rspamd/" + path + "?" +param
+        for i in ['stat','auth','neighbours','list_extractors','list_transforms','graph','maps','actions','symbols','history','errors','check_selector','saveactions','savesymbols','getmap']:
+            if i in path:
+                url = "http://127.0.0.1:11334/" + path + "?" +param
+        req = requests.get(url, headers=headers,stream = True)
+        return Resp(stream_with_context(req.iter_content()), content_type = req.headers['content-type'])
+    else:
+        url = "http://127.0.0.1:11334/" + path
+        for i in request.form.keys():
+            data = '{}='.format(i)
+        # public.writeFile('/tmp/2',data+"\n","a+")
+        req = requests.post(url,data=data,headers=headers,stream = True)
+
+        return Resp(stream_with_context(req.iter_content()), content_type = req.headers['content-type'])
+
+
 # ======================普通路由区============================#
 
 
 # ======================严格排查区域============================#
-
-
 route_path = os.path.join(admin_path, '')
 if not route_path: route_path = '/'
 if route_path[-1] == '/': route_path = route_path[:-1]
@@ -1161,6 +1225,7 @@ def login():
             else:
                 data['hosts'] = json.dumps(data['hosts'])
         data['app_login'] = os.path.exists('data/app_login.pl')
+        public.cache_set(public.Md5(uuid.UUID(int=uuid.getnode()).hex[-12:]+public.GetClientIp()),'check',360)
         return render_template('login.html',data=data)
 
 
@@ -1173,12 +1238,12 @@ def close():
     return render_template('close.html', data=data)
 
 
-@app.route('/tips', methods=method_get)
-def tips():
-    # 提示页面
-    get=get_input()
-    if len(get.__dict__.keys()) > 1:return abort(404)
-    return render_template('tips.html')
+# @app.route('/tips', methods=method_get)
+# def tips():
+#     # 提示页面
+#     get=get_input()
+#     if len(get.__dict__.keys()) > 1:return abort(404)
+#     return render_template('tips.html')
 
 
 @app.route('/get_app_bind_status', methods=method_all)
@@ -1247,6 +1312,7 @@ def code():
 def down(token=None, fname=None):
     # 文件分享对外接口
     try:
+        if public.M('download_token').count()==0:return abort(404)
         fname = request.args.get('fname')
         if fname:
             if (len(fname) > 256): return abort(404)
@@ -1347,6 +1413,7 @@ def panel_public():
             return public.getJson(result),json_header
         except:
             return abort(404)
+    if public.cache_get(public.Md5(uuid.UUID(int=uuid.getnode()).hex[-12:]+public.GetClientIp()))!='check':return abort(404)
     global admin_check_auth, admin_path, route_path, admin_path_file
     if admin_path != '/bt' and os.path.exists(admin_path_file) and not 'admin_auth' in session:
         return abort(404)
@@ -1354,7 +1421,6 @@ def panel_public():
     for n in get.__dict__.keys():
         if not n in v_list:
             return abort(404)
-
     get.client_ip = public.GetClientIp()
     num_key = get.client_ip + '_wxapp'
     if not public.get_error_num(num_key, 10):
@@ -1380,29 +1446,6 @@ def panel_public():
         return abort(404)
 
 
-@app.route('/favicon.ico', methods=method_get)
-def send_favicon():
-    # 图标
-    comReturn = comm.local()
-    if comReturn: return abort(404)
-    s_file = '/www/server/panel/BTPanel/static/favicon.ico'
-    if not os.path.exists(s_file): return abort(404)
-    return send_file(s_file, conditional=True, add_etags=True)
-
-
-
-@app.route('/btwaf_error', methods=method_get)
-def btwaf_error():
-    # 图标
-    comReturn = comm.local()
-    if comReturn: return comReturn
-    get=get_input()
-    p_path = os.path.join('/www/server/panel/plugin/', "btwaf")
-    if not os.path.exists(p_path):
-        if get.name == 'btwaf' and get.fun == 'index':
-            return  render_template('error3.html',data={})
-    return  render_template('error3.html',data={})
-
 @app.route('/coll', methods=method_all)
 @app.route('/coll/', methods=method_all)
 @app.route('/<name>/<fun>', methods=method_all)
@@ -1410,15 +1453,25 @@ def btwaf_error():
 def panel_other(name=None, fun=None, stype=None):
     if not public.is_bind():
         return redirect('/bind',302)
-    # 插件接口
     if public.is_error_path():
         return redirect('/error',302)
     if not name: return abort(404)
     if name != "mail_sys" or fun != "send_mail_http.json":
         comReturn = comm.local()
         if comReturn: return comReturn
+        if not stype:
+            tmp = fun.split('.')
+            fun = tmp[0]
+            if len(tmp) == 1:  tmp.append('')
+            stype = tmp[1]
         if fun:
-            if fun.find('.json') != -1:
+            if name=='btwaf' and fun=='index':
+                pass
+            elif fun=='static':
+                pass
+            elif stype=='html':
+                pass
+            else:
                 if 'request_token' in session and 'login' in session:
                     if not check_csrf(): return public.ReturnJson(False, 'INIT_CSRF_ERR'), json_header
         args = None
@@ -1568,50 +1621,6 @@ def install():
         data['status'] = os.path.exists('install.pl')
         data['username'] = get.bt_username
         return render_template('install.html', data=data)
-
-
-# @app.route('/robots.txt', methods=method_all)
-# def panel_robots():
-#     # 爬虫规则响应接口
-#     get=get_input()
-#     if len(get.__dict__.keys()) > 1:return abort(404)
-#     robots = '''User-agent: *
-# Disallow: /
-# '''
-#     return robots, {'Content-Type': 'text/plain'}
-
-@app.route('/rspamd', defaults={'path': ''},methods=method_all)
-@app.route('/rspamd/<path:path>',methods=method_all)
-def proxy_rspamd_requests(path):
-    comReturn = comm.local()
-    if comReturn: return comReturn
-    # param = str(request.url).split('?')[-1]
-    # if not param:
-    #     param = ""
-    param = "" if len(str(request.url).split('?')) < 2 else param[-1]
-    import requests
-    headers = {}
-    for h in request.headers.keys():
-        headers[h] = request.headers[h]
-    if request.method == "GET":
-        if re.search("\.(js|css)$",path):
-            return send_file('/usr/share/rspamd/www/rspamd/'+path,conditional=True,add_etags=True)
-        if path == "/":
-            return send_file('/usr/share/rspamd/www/rspamd/',conditional=True,add_etags=True)
-        url = "http://127.0.0.1:11334/rspamd/" + path + "?" +param
-        for i in ['stat','auth','neighbours','list_extractors','list_transforms','graph','maps','actions','symbols','history','errors','check_selector','saveactions','savesymbols','getmap']:
-            if i in path:
-                url = "http://127.0.0.1:11334/" + path + "?" +param
-        req = requests.get(url, headers=headers,stream = True)
-        return Resp(stream_with_context(req.iter_content()), content_type = req.headers['content-type'])
-    else:
-        url = "http://127.0.0.1:11334/" + path
-        for i in request.form.keys():
-            data = '{}='.format(i)
-        # public.writeFile('/tmp/2',data+"\n","a+")
-        req = requests.post(url,data=data,headers=headers,stream = True)
-
-        return Resp(stream_with_context(req.iter_content()), content_type = req.headers['content-type'])
 
 # ==================================================#
 
@@ -1921,23 +1930,23 @@ def get_input():
     data = public.dict_obj()
     exludes = ['blob']
     for key in request.args.keys():
-        data[key] = str(request.args.get(key, ''))
+        data.set(key,str(request.args.get(key, '')))
     try:
         for key in request.form.keys():
             if key in exludes: continue
-            data[key] = str(request.form.get(key, ''))
+            data.set(key,str(request.form.get(key, '')))
     except:
         try:
             post = request.form.to_dict()
             for key in post.keys():
                 if key in exludes: continue
-                data[key] = str(post[key])
+                data.set(key, str(post[key]))
         except:
             pass
 
     if 'form_data' in g:
         for k in g.form_data.keys():
-            data[k] = str(g.form_data[k])
+            data.set(k,str(g.form_data[k]))
 
     if not hasattr(data, 'data'): data.data = []
     return data
@@ -2224,8 +2233,7 @@ def close_sock_shell():
     comReturn = comm.local()
     if comReturn: return comReturn
     args = get_input()
-
-
+    if not check_csrf(): return public.ReturnJson(False, 'INIT_CSRF_ERR'), json_header
     cmdstring = args.cmdstring.strip()
     skey = public.md5(cmdstring)
     pid = cache.get(skey)

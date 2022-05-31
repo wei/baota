@@ -5072,7 +5072,7 @@ RewriteRule \.(BTPFILE)$    /404.html   [R,NC]
         type_sql = public.M('site_types')
         if type_sql.count() >= 10: return public.returnMsg(False,'最多添加10个分类!')
         if type_sql.where('name=?',(get.name,)).count()>0: return public.returnMsg(False,"指定分类名称已存在!")
-        type_sql.add("name",(get.name,))
+        type_sql.add("name",(public.xssencode(get.name),))
         return public.returnMsg(True,'添加成功!')
 
     #删除网站分类

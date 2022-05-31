@@ -141,12 +141,18 @@ z-index: 1;
 
 .file_table_view.icon_view .file_ico_type {
   height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
+
 
 .file_table_view.icon_view .file_list_content .file_icon {
   width: 45px;
   height: 45px;
-  left: 21%;
+  margin-left: -22.5px;
+  left: 50%;
+  top: 25%;
 }
 
 .file_table_view.icon_view .file_name i {
@@ -173,6 +179,9 @@ z-index: 1;
   border: 1px solid #ddefeb;
   box-sizing: border-box;
   padding: 4px;
+}
+.file_table_view.icon_view .file_operation{
+  display: none;
 }
 
 .file_list_header .file_th {
@@ -328,7 +337,6 @@ display: block;
   border-bottom: 1px solid #e9e9e9;
   border-left: 1px solid transparent;
   border-right: 1px solid transparent;
-  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -564,7 +572,8 @@ display: block;
   width: 22px;
   height: 22px;
   position: absolute;
-  top: 6.5px;
+  top: 50%;
+  margin-top: -11px;
 }
 .file_table_view.list_view .file_title {
   vertical-align: top;

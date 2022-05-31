@@ -68,7 +68,7 @@ class SiteDirAuth:
         param = param['msg']
         password = param['password']
         username = param['username']
-        name = get.name
+        name = param['name']
         site_dir = get.site_dir
         if public.get_webserver() == "openlitespeed":
             return public.returnMsg(False,"OpenLiteSpeed is currently not supported")
@@ -338,5 +338,17 @@ class SiteDirAuth:
             if re.search('\s', username):
                 return public.returnMsg(False, '账号不能存在空格')
             values['username'] = username
+
+        if hasattr(get, "name"):
+            if not get.name:
+                return public.returnMsg(False, '请输入名称!')
+            name = get.name.strip()
+            if len(name) < 3:
+                return public.returnMsg(False, '名称不能少于3位')
+            if re.search('\s', name):
+                return public.returnMsg(False, '名称不能存在空格')
+            if re.search('[\/\"\'\!@#$%^&*()+={}\[\]\:\;\?><,./]+', name):
+                return public.returnMsg(False, '名称格式为 [ aaa_bbb ]')
+            values['name'] = name
 
         return public.returnMsg(True, values)
