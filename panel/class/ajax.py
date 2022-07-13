@@ -6,7 +6,7 @@
 # +-------------------------------------------------------------------
 # | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
-from BTPanel import session,request,cache
+from BTPanel import plugin, session,request,cache
 import public,os,json,time,apache,psutil
 class ajax:
 
@@ -492,6 +492,24 @@ class ajax:
             other['ds'].append(d['name'])
         return ','.join(other['ds'])
 
+    def get_docker_model_info(self):
+        """
+        获取docker模块下所创建的容器，模板和项目数量
+        :return: str
+        """
+        try:
+            if not os.path.exists("/www/server/panel/data/docker.db"):
+                return ""
+            # 获取docker模块创建的容器数量
+            dk_c_num = str(public.M('container').dbfile('docker').count()) + ' dk_c_num'
+            # 获取docker模块创建模板数量
+            dk_t_num = str(public.M('templates').dbfile('docker').count()) + ' dk_t_num'
+            # 获取docker模块创建项目数量
+            dk_s_num = str(public.M('stacks').dbfile('docker').count()) + ' dk_s_num'
+            return "|{}|{}|{}".format(dk_c_num,dk_t_num,dk_s_num)
+        except:
+            return ""
+
 
 
 
@@ -521,7 +539,7 @@ class ajax:
                 data['ftps'] = str(public.M('ftps').count())
                 data['databases'] = str(public.M('databases').count())
                 data['system'] = panelsys.GetSystemVersion() + '|' + str(mem.total / 1024 / 1024) + 'MB|' + str(public.getCpuType()) + '*' + str(psutil.cpu_count()) + '|' + str(public.get_webserver()) + '|' +session['version']
-                data['system'] += '||'+self.GetInstalleds(mplugin.getPluginList(None))
+                data['system'] += '||'+self.GetInstalleds(mplugin.getPluginList(None))+self.get_docker_model_info()
                 data['logs'] = logs
                 data['client'] = request.headers.get('User-Agent')
                 data['oem'] = ''
@@ -538,9 +556,9 @@ class ajax:
             #检查是否需要升级
             if not hasattr(get,'toUpdate'):
                 if updateInfo['is_beta'] == 1:
-                    if updateInfo['beta']['version'] == session['version']: return public.returnMsg(False,updateInfo)
+                    if public.version_to_tuple(updateInfo['beta']['version']) <= public.version_to_tuple(session['version']): return public.returnMsg(False,updateInfo)
                 else:
-                    if updateInfo['version'] == session['version']: return public.returnMsg(False,updateInfo)
+                    if public.version_to_tuple(updateInfo['version']) <= public.version_to_tuple(session['version']): return public.returnMsg(False,updateInfo)
 
 
             #是否执行升级程序
@@ -570,7 +588,7 @@ class ajax:
                 'version': updateInfo['version'],
                 'updateMsg' : updateInfo['updateMsg']
             }
-            # 忽略某个版本的更新
+            # 输出忽略的版本
             updateInfo['ignore'] = []
             no_path = '{}/data/no_update.pl'.format(public.get_panel_path())
             if os.path.exists(no_path):
@@ -1217,7 +1235,7 @@ class ajax:
     #取指定日志
     def GetOpeLogs(self,get):
         if not os.path.exists(get.path): return public.returnMsg(False,'AJAX_LOG_FILR_NOT_EXISTS')
-        return public.returnMsg(True,public.GetNumLines(get.path,1000))
+        return public.returnMsg(True,public.xsssec(public.GetNumLines(get.path,1000)))
 
     def get_pd(self,get):
         from BTPanel import cache
@@ -1465,7 +1483,7 @@ class ajax:
     def ignore_version(self, get):
         """
         @忽略版本更新
-        :param version 面板版本
+        :param version 忽略的版本号
         """
         version = get.version
         path = '{}/data/no_update.pl'.format(public.get_panel_path())

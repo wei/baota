@@ -6,6 +6,7 @@
 # Copyright (c) 2015-2099 宝塔软件(http://bt.cn) All rights reserved.
 # -------------------------------------------------------------------
 # Author: hwliang <hwl@bt.cn>
+#Maintainer:hezhihong <bt_ahong@qq.com>
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -50,9 +51,25 @@ def check_run():
         return True,'未安装MySQL'
     if not public.ExecShell("lsof -i :{}".format(port_tmp[0]))[0]:
         return True,'未启动MySQL'
+    
     result = public.check_port_stat(int(port_tmp[0]),public.GetLocalIp())
-    if result == 0:
-        return True,'无风险'
+    #兼容socket能连通但实际端口不通情况
+    if result != 0:
+        res=''
+        if os.path.exists('/usr/sbin/firewalld'):
+            res=public.ExecShell('firewall-cmd --list-all')
+        elif os.path.exists('/usr/sbin/ufw'):
+            try: 
+                res=public.ExecShell('sudo ufw status verbose')
+            except:
+                res=public.ExecShell('ufw status verbose')
+        else:
+            pass
+        check_str=' '+port_tmp[0]+'/'
+        if res[0].find(check_str) == -1:
+            return True,'无风险'
+    else:return True,'无风险'
+
 
     fail2ban_file = '/www/server/panel/plugin/fail2ban/config.json'
     if os.path.exists(fail2ban_file):

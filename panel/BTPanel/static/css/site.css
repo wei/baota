@@ -286,6 +286,10 @@ background-color: #e6e9ee
   margin-bottom: 0 !important;
 }
 
+.mb10{
+  margin-bottom: 10px;
+}
+
 .mb15 {
   margin-bottom: 15px
 }
@@ -354,11 +358,22 @@ background-color: #e6e9ee
 }
 
 .btlink {
-  color: #20a53a
+  color: #20a53a;
+  font-style: inherit;
 }
 
 .btlink:hover {
   cursor: pointer
+}
+
+.bterror{
+  color: #f00;
+  font-style: inherit;
+}
+
+.bterror:hover{
+  color: #f00;
+  cursor: pointer;
 }
 
 .btn-btlink {
@@ -5465,6 +5480,10 @@ select[disabled] {
   white-space: nowrap;
 }
 
+#proxy_list td:nth-child(4)>span{
+  width: 165px;
+}
+
 #softList tr td:nth-child(3)>span {
   white-space: inherit;
   cursor: pointer;
@@ -5886,8 +5905,8 @@ select[disabled] {
 }
 
 .ace_catalogue_title {
-  height: 40px;
-  line-height: 40px;
+  height: 35px;
+  line-height: 35px;
   padding: 0 15px;
   color: #fff;
   background: #383838;
@@ -5904,7 +5923,7 @@ select[disabled] {
 .ace_catalogue_list {
   height: auto;
   position: absolute;
-  top: 70px;
+  top: 65px;
   left: 0;
   right: 1px;
   bottom: 0;
@@ -5989,7 +6008,7 @@ select[disabled] {
 }
 
 .ace_conter_menu {
-  height: 40px;
+  height: 35px;
   position: relative;
   background: #292929;
   overflow: auto;
@@ -6001,9 +6020,9 @@ select[disabled] {
 
 .ace_editors {
   position: absolute;
-  top: 40px;
+  top: 35px;
   right: 0;
-  bottom: 35px;
+  bottom: 26px;
   left: 0px;
   font-size: 13px;
   overflow-y: auto;
@@ -6062,14 +6081,14 @@ select[disabled] {
   left: 0;
   right: 0;
   top: 0;
-  height: 35px;
+  height: 30px;
   background: #565656;
   transition: top 500ms;
 }
 
 .ace_dir_tools {
   height: 30px;
-  top: 40px;
+  top: 35px;
   position: absolute;
   left: 0;
   right: 0;
@@ -6235,8 +6254,8 @@ select[disabled] {
 
 .ace_header>span {
   float: left;
-  height: 35px;
-  line-height: 35px;
+  height: 30px;
+  line-height: 30px;
   padding: 0 15px;
   font-size: 13px;
   text-align: center;
@@ -6259,8 +6278,8 @@ select[disabled] {
   position: absolute;
   z-index: 999;
   right: 0;
-  height: 35px;
-  line-height: 35px;
+  height: 30px;
+  line-height: 30px;
   padding: 0 14px;
   font-size: 15px;
   color: #fff;
@@ -6300,7 +6319,7 @@ select[disabled] {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 15px;
-  height: 40px;
+  height: 35px;
 }
 
 @keyframes mymove {
@@ -6340,7 +6359,7 @@ select[disabled] {
 .ace_conter_menu>li {
   float: left;
   max-width: 300px;
-  height: 40px;
+  height: 35px;
   display: block;
   position: relative;
 }
@@ -6426,10 +6445,11 @@ select[disabled] {
 }
 
 .ace_conter_menu .item span {
-  line-height: 40px;
-  height: 40px;
+  line-height: 35px;
+  height: 35px;
   padding: 0 5px;
   vertical-align: top;
+  font-size: 14px;
 }
 
 .ace_conter_menu .item span i {
@@ -6459,8 +6479,8 @@ select[disabled] {
 .ace_conter_menu .item .icon-tool {
   display: none;
   position: absolute;
-  right: 15px;
-  top: 13px;
+  right: 10px;
+  top: 10px;
   transition: all 1000ms;
 }
 
@@ -6535,8 +6555,8 @@ select[disabled] {
 /* 关闭视图-结束 */
 
 .ace_conter_toolbar {
-  height: 35px;
-  line-height: 35px;
+  height: 26px;
+  line-height: 26px;
   bottom: 0px;
   right: 0;
   left: 0;
@@ -6556,18 +6576,18 @@ select[disabled] {
 
 .ace_conter_toolbar .pull-left,
 .ace_conter_toolbar .pull-right {
-  height: 35px;
+  height: 26px;
 }
 
 .ace_conter_toolbar .pull-left span,
 .ace_conter_toolbar .pull-right span {
-  color: #fff;
+  color: #eee;
   display: inline-block;
   border-right: 1px solid #505050;
   padding: 0 15px;
   cursor: pointer;
   transition: all 500ms;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .ace_conter_toolbar .pull-left span {
@@ -13808,7 +13828,9 @@ height: 30px;
   color: #F0AD4E;
   /* display: inline-block; */
 }
-
+.domain_number_tips span:nth-child(2){
+  color: red;
+}
 
 /* 人工服务 */
 
@@ -14714,11 +14736,52 @@ textarea {
 
 /* 专业版优势 end*/
 
-
+/* 点击咨询 */
+.enter_qrcode {
+  text-align: center;
+  margin: 15px 0;
+}
+.enter_qrcode .enterprise_wechat_qrcode{
+  width: 150px;
+}
+.enter_qrcode .icon{
+  height: 16px;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+.enter_qrcode span{
+  vertical-align: middle;
+  font-size: 14px;
+  font-weight: 700;
+}
 /* New 支付界面 */
+.pay_status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 20px 0 20px;
+}
+.pay_status .icon {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  background-position: -30px 0;
+  margin-right: 10px;
+}
+.pay_status .icon.icon-success {
+  background-image: url('data:image/png;base64,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');
+}
+.pay_status .text {
+  font-size: 20px;
+}
 
 .libPay-view .layui-layer-setwin {
   z-index: 999;
+}
+
+.libPay-view.layui-layer-page .layui-layer-content{
+  height: 100% !important;
+  overflow: hidden;
 }
 
 .libPay-menu {
@@ -14743,11 +14806,16 @@ textarea {
 .libPay-menu.closePro .libPay-menu-type.lib_pro{
   display: none;
 }
-.libPay-menu.closePro .libPay-menu-type.lib_ltd,
+..libPay-menu.closePro .libPay-menu-type.lib_ltd,
+.libPay-menu.closePro .libPay-menu-type.lib_ops,
 .libPay-menu.closePro .libPay-menu-type.lib_ver{
-  width: 499.5px;
+  width: 333px;
 }
 .libPay-menu.is_plugin .libPay-menu-type {
+  width: 290px;
+}
+
+.libPay-menu.is_ops .libPay-menu-type {
   width: 290px;
 }
 
@@ -14833,7 +14901,8 @@ textarea {
 }
 
 .libPay-line-item.proS .pro-introduce {
-  width: 170px;
+  /* width: 170px; */
+  width: 180px;
   height: 35px;
   line-height: 35px;
   display: inline-block;
@@ -14841,7 +14910,8 @@ textarea {
 
 .libPay-line-item.proS {
   font-size: 14px;
-  margin: 0 0 20px 5px;
+   /* margin: 0 0 20px 5px; */
+   margin: 0 0 15px 5px;
 }
 
 .libPay-line-item.proS .glyphicon {
@@ -14851,6 +14921,10 @@ textarea {
 
 .libPay-line-item.proS span:nth-child(2) {
   color: #666;
+}
+
+.libPay-line-item.proS p span {
+  margin-left: 15px;
 }
 
 .libPay-content-box .libPay-layer-item {
@@ -15045,7 +15119,8 @@ textarea {
   margin-right: 10px;
   text-align: center;
   border-radius: 4px;
-  padding: 15px 20px;
+  /* padding: 15px 20px; */
+  padding: 10px 20px;
   font-style: normal;
   border: 1px solid #eee;
   position: relative;
@@ -15397,12 +15472,325 @@ textarea {
 
 
 /*数据库划线区分*/
-
-#bt_database_table .tootls_group .pull-left button:nth-child(5):after {
+select[name=dataAccess] {
+  vertical-align: top;
+}
+.alertMsg{
+  line-height: 22px;
+}
+.bt_multiple_select_updown.bt_select_updown,.crontab_form .bt_multiple_select_updown.bt_select_updown{
+  height: auto;
+}
+.bt_multiple_select_updown.bt_select_updown .bt_select_value,
+.crontab_form .bt_multiple_select_updown.bt_select_updown .bt_select_value{
+  padding: 1px 20px 0 8px;
+  word-wrap: break-word;
+  height: auto;
+  white-space: normal;
+}
+.bt_multiple_select_updown.bt_select_updown .bt_select_list .item.active{
+  color: #20a53a;
+  background-color: #fff;
+  position: relative;
+}
+.bt_multiple_select_updown.bt_select_updown .bt_select_list .item.active:hover{
+  background-color: #f2f2f2;
+}
+.bt_multiple_select_updown.bt_select_updown .bt_select_value .bt_select_content{
+  background-color: #f4f4f5;
+  border-color: #e9e9eb;
+  color: #909399;
+  height: 24px;
+  padding: 3px 8px;
+  line-height: 22px;
+  border: 1px solid #d9ecff;
+  border-radius: 4px;
+  white-space: nowrap;
+  align-items: center;
+  max-width: 100%;
+}
+.bt_multiple_select_updown.bt_select_updown .bt_select_list .item.active .icon-item-active::before{
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 6px;
+  border-left: 2px solid #20a532;
+  border-bottom: 2px solid #20a532;
+  transform: rotate(-45deg);
+  position: absolute;
+  right: 10px;
+  top: 8px;
+}
+.bt_multiple_select_updown .icon-trem-close{
+  display: inline-block !important;
+  position: relative;
+  right: 0;
+  top: 0;
+  margin-left: 3px;
+  z-index: 888;
+}
+.bt_multiple_select_updown .icon-trem-close::after,.bt_multiple_select_updown .icon-trem-close::before {
+  content: '';
+  height: 12px;
+  width: 2px;
+  display: inline-block;
+  background: #909399;
+  z-index: 999;
+  position: absolute;
+  position: absolute;
+  top: 7.5px;
+  left: 8px;
+  transform: rotate(-45deg);
+}
+.bt_multiple_select_updown .icon-trem-close::before {
+  transform: rotate(-45deg);
+}
+.bt_multiple_select_updown .icon-trem-close::after {
+  transform: rotate(45deg);
+}
+.addDbbackup.layui-layer-page .layui-layer-content{
+  overflow: visible;
+}
+.plrt10pb20 {
+  padding: 10px 10px 20px 10px;
+}
+.bt_backup_table .tab-body .tab-con{
+  padding: 10px 0;
+}
+.bt_backup_table .tab-body .tab-con .tab-block{
+  width: 100%;
+}
+#bt_database_table .tootls_group .pull-left button:nth-child(6):after {
   content: ' ';
   position: relative;
   left: -76px;
   border-left: 1px solid #ececec;
+}
+#bt_redis_view .emptyRedisDB:after{
+  left: -90px;
+}
+
+#bt_incbackup_table .table tr th:nth-child(3)>span,#bt_incbackup_table .table tr td:nth-child(3)>span{
+  width: 153px;
+  word-wrap: break-word;
+}
+#dbbackup_list .table tr th:nth-child(2)>span,#dbbackup_list .table tr td:nth-child(2)>span{
+  width: 153px;
+  word-wrap: break-word;
+}
+#dbbackup_list{
+  height: 100%;
+}
+#dbbackup_list .help-info-text{
+  position: absolute;
+  bottom: 0px;
+}
+#dbbackup_list .selects_conter{
+  position: relative;
+  z-index: 999;
+  display: inline-block;
+}
+.selects_conter .select_text {
+  display: inline-block;
+  height: 30px;
+  line-height: 30px;
+  padding: 0 15px;
+  position: relative;
+  border: 1px solid #ececec;
+  background: #f3f3f3;
+  color: #666;
+}
+
+.select_conter {
+  display: inline-block;
+  font-size: 14px;
+  border: 1px solid #ececec;
+  color: #444;
+  position: relative;
+  cursor: pointer;
+  height: 30px;
+  line-height: 30px;
+  margin-left: -5px;
+}
+
+.select_conter .database_input {
+  display: inline-block;
+  padding-left: 15px;
+  height: 28px;
+  line-height: 28px;
+  vertical-align: top;
+  font-size: 12px;
+}
+
+.inbox_input:focus {
+  outline: none;
+}
+
+.select_conter .select_down {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-width: 6px;
+  border-style: solid;
+  border-color: #777 transparent transparent transparent;
+  position: absolute;
+  top: 14px;
+  right: 12px;
+  transition: all 500ms;
+}
+
+.select_conter .database_list {
+  display: none;
+  background: #fff;
+  position: absolute;
+  top: 34px;
+  left: -1px;
+  border: 1px solid #ececec;
+  overflow-y: auto;
+  max-height: 280px;
+  width: 203px;
+  z-index: 999;
+  box-shadow: 2px 5px 8px #ccc;
+  font-size: 12px;
+}
+
+.select_conter .database_list.active {
+  display: block;
+}
+
+.select_conter .database_list li {
+  text-align: left;
+  padding: 0 10px;
+}
+
+.select_conter .database_list li:hover {
+  background: #20a53a;
+  color: #fff;
+}
+
+.select_conter .database_list li.active {
+  background: #20a53a;
+  color: #fff;
+}
+.selectDb,.searchTypeName{
+  vertical-align: top;
+}
+.selectDb .info-r,.searchTypeName .info-r{
+  display: inline-block;
+}
+.selectDb .bt-form,.searchTypeName .bt-form{
+  height: 30px;
+}
+.selectDb .bt-form .line,.searchTypeName .bt-form .line{
+  padding: 0;
+}
+.searchTypeName .info-r .bt_select_updown{
+  margin-right: 0;
+}
+#databaseBackup .table thead th:last-child,#databaseBackup .table tbody td:last-child{
+  width: 190px;
+  text-align: right;
+}
+#addDbbackup .line .group input{
+  width: 101px;
+}
+.line .group_span span {
+  height: 30px;
+  line-height: 28px;
+  display: inline-block;
+  border: 1px solid #ccc;
+  border-left: 0;
+  border-radius: 2px;
+  width: 44px;
+  text-align: center;
+  background-color: #f6f6f6;
+  vertical-align: middle;
+  position: relative;
+  top: -1.5px;
+  left: -10px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+#calendar,.showPwd{
+  width: 200px;
+}
+.tootls_group_table {
+  height: 40px;
+  display: none;
+}
+.backup-con{
+  position: relative;
+  height: 100%;
+}
+#databaseBackup .dbBackup{
+  overflow: initial;
+}
+.dbBackup .table thead tr{
+  height: 37px;
+}
+.dbBackup .table thead th{
+  position: relative;
+}
+.dbBackup .table .type span{
+  position: relative;
+  z-index: 999;
+  height: 24px;
+  padding-top: 3px;
+}
+.dbBackup .table .type img{
+  width: 14px;
+  height: 14px;
+  margin-left: 3px;
+  transition: all 500ms;
+  position: relative;
+  top: -1px;
+}
+.dbBackup .table .type:hover img{
+  transform: rotate(180deg);
+}
+.dbBackup .table .type:hover span
+{
+  border-bottom: 1px solid #b8b8b8;
+  cursor: pointer;
+  width: 41px;
+}
+.dbBackup .table .type:hover .backup_title
+{
+  display: block !important;
+  cursor: pointer;
+}
+.dbBackup .table .type ul{
+  width: 70px;
+  position: absolute;
+  z-index: 998;
+  top: 5px;
+  left: 0%;
+  margin-left: -7.5px;
+}
+.dbBackup .table .type .backup_title{
+  box-shadow: 0 0 20px #ddd;
+  padding-top: 32px;
+  border-radius: 5px;
+  border: 1px solid #efefef;
+  background: #fefefe;
+}
+.dbBackup .table .type ul li a
+{
+  display: block;
+  padding: 2px;
+  color: #666;
+  line-height: 26px;
+  text-align: center;
+}
+.dbBackup .table .type ul li a:hover
+{
+  background-color: #f3f3f3;
+}
+#addDbbackup input[type=checkbox]{
+  margin: 9px 0 0;
+}
+#addDbbackup .selectTables{
+  display: none;
 }
 
 
@@ -16941,3 +17329,211 @@ margin-bottom: 10px;
   display: block;
 }
 /* end */
+
+/*消息通道安装模块样式 start*/
+.alarm-view .plugin_body {
+  position: relative;
+  height: 525px;
+}
+
+.alarm-view .plugin_user_info {
+  padding: 15px 30px;
+  line-height: 26px;
+  background: #f5f6fa;
+  border-radius: 5px;
+  border: 1px solid #efefef;
+}
+
+.alarm-view .plugin_user_info p {
+  font-size: 14px;
+}
+
+.alarm-view .plugin_update {
+  position: absolute;
+  bottom: -20px;
+  left: -15px;
+  background-color: #f7f7f7;
+  width: 489px;
+  height: 45px;
+  line-height: 45px;
+  padding-left: 15px;
+}
+
+.alarm-view .plugin_update button {
+  position: absolute;
+  right: 10px;
+  top: 9px;
+}
+
+/*消息通道安装模块样式  end*/
+/*当前证书*/
+.ssl_state_info{
+  padding: 15px 30px;
+  background: #f5faf2;
+  margin-top: 5px;
+  border-radius: 4px;
+  border: 1px solid #EAF1F2;
+  font-size: 12px;
+  position: relative;
+}
+
+
+.ssl_state_info .state_item{
+  width: 50%;
+  height: 25px;
+  line-height: 25px;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.ellipsis_text{
+  width: 220px;
+  display: block;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+
+.ssl_state_info .state_item span{
+  height: 25px;
+  line-height: 25px;
+  display: inline-block;
+  vertical-align: top;
+}
+
+
+.ssl_state_info .state_item span:nth-child(1){
+  font-weight: bold;
+  color: #666;
+}
+
+
+.ssl_state_info  .state_item .bt_switch{
+  display: inline-block;
+}
+
+
+.ssl_state_info  .state_item .btswitch-btn{
+  margin-bottom: 0;
+  height: 1.9rem;
+  width: 3.2rem;
+  position: relative;
+  top:2.5px
+}
+
+.custom_certificate_info{
+  margin-top: 15px;
+}
+
+.custom_certificate_info .state_item{
+  width: 48%;
+  height: 50px;
+  display: inline-block;
+  margin-right: 4%;
+}
+.custom_certificate_info .state_item:nth-child(2){
+  margin-right: 0;
+}
+
+.custom_certificate_info .state_item span{
+  width:100%;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.custom_certificate_info .state_item textarea{
+  width: 100%;
+  height: 250px;
+  line-height: 25px;
+}
+
+.warning_info{
+  color: #a94442;
+  background-color: #f2dede;
+  border-color: #ebccd1;
+  height: 40px;
+  line-height: 20px;
+  padding: 10px 15px;
+  border-radius: 4px;
+}
+
+.module-check.check_disabled label, .module-check.check_disabled i{
+  cursor: no-drop;
+}
+
+
+/* 微信客服 */
+.wechat-customer {
+  background-color: #fff;
+  width: 100px;
+  height: 140px;
+  border: #eee 1px solid;
+  border-radius: 4px;
+  text-align: center;
+  position: fixed;
+  right: 20px;
+  bottom: 100px;
+  font-size: 12px;
+  box-sizing: initial;
+  padding: 5px;
+  z-index: 9999;
+  box-shadow: 0 0 20px #ddd
+}
+
+#wechatCustomerQrcode {
+  width: 100%;
+  padding: 5px 0
+}
+
+#wechatCustomerQrcode canvas, #wechatCustomerQrcode img {
+  border-radius: 2px;
+  display: inline-block !important;
+}
+
+.qrcode-wechat {
+  width: 100px;
+  height: 90px;
+  margin: 0 auto;
+  position: relative
+}
+
+.wechatEnterprise {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-left: -12.5px;
+  margin-top: -12.5px
+}
+
+.wechatEnterprise img {
+  width: 25px
+}
+
+.wechat-customer .wechat-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #666;
+  padding-bottom: 5px
+}
+
+.wechat-customer .icon {
+  height: 16px;
+  vertical-align: middle;
+  margin-right: 5px
+}
+
+.wechat-customer .scan-title {
+  vertical-align: middle;
+  font-size: 14px;
+  color: #7e7e7e
+}
+
+.wechat-customer .describe-title {
+  font-weight: 700;
+  color: #10952aad;
+  font-size: 14px;
+  padding-top: 5px
+}
+
+/*微信客服 END*/

@@ -12,7 +12,7 @@
 #------------------------------
 
 import public,time,json,os,re
-from pluginAuth import Plugin
+# from pluginAuth import Plugin
 try:
     from BTPanel import session,cache
 except:
@@ -22,7 +22,7 @@ class panelAuth:
     __product_list_path = 'data/product_list.pl'
     __product_bay_path = 'data/product_bay.pl'
     __product_id = '100000011'
-    
+
     def create_serverid(self,get):
         try:
             userPath = 'data/userInfo.json'
@@ -61,7 +61,7 @@ class panelAuth:
         params = {}
         params['wxoid'] = get.wxoid
         if 'kf' in get: params['kf'] = get.kf
-            
+
         data = self.send_cloud('check_order_pay_status', params)
         if not data: return public.returnMsg(False,'连接服务器失败!')
         if data['status'] == True:
@@ -91,11 +91,11 @@ class panelAuth:
         p_url = public.GetConfigValue('home') + '/api/Pluginother/order_stat'
         if get.type == '1':  p_url = public.GetConfigValue('home') + '/api/Pluginother/re_order_stat'
         return json.loads(public.httpPost(p_url,pdata))
-    
+
     def check_serverid(self,get):
         if get.serverid != self.create_serverid(get): return False
         return True
-    
+
     def get_plugin_price(self,get):
         try:
             userPath = 'data/userInfo.json'
@@ -109,17 +109,18 @@ class panelAuth:
         except:
             del(session['get_product_list'])
             return public.returnMsg(False,'正在同步信息，请重试!' + public.get_error_info())
-    
+
     def get_plugin_info(self,pluginName):
         data = self.get_business_plugin(None)
         if not data: return None
         for d in data:
             if d['name'] == pluginName: return d
         return None
-    
+
     def get_plugin_list(self,get):
         try:
-            Plugin(False).get_plugin_list(True)
+            import PluginLoader
+            PluginLoader.get_plugin_list(1)
             if not session.get('get_product_bay') or not os.path.exists(self.__product_bay_path):
                 data = self.send_cloud('get_order_list_byuser', {})
                 if data: public.writeFile(self.__product_bay_path,json.dumps(data))
@@ -127,7 +128,7 @@ class panelAuth:
             data = json.loads(public.readFile(self.__product_bay_path))
             return data
         except: return None
-    
+
     # def get_buy_code(self,get):
     #     params = {}
     #     params['pid'] = get.pid
@@ -187,19 +188,19 @@ class panelAuth:
                 cache.delete(buy_code_key)
                 cache.delete(buy_oid)
         return data
-    
+
     def flush_pay_status(self,get):
         if 'get_product_bay' in session: del(session['get_product_bay'])
         data = self.get_plugin_list(get)
         if not data: return public.returnMsg(False,'连接服务器失败!')
         return public.returnMsg(True,'状态刷新成功!')
-    
+
     def get_renew_code(self):
         pass
-    
+
     def check_renew_code(self):
         pass
-    
+
     def get_business_plugin(self,get):
         try:
             if not session.get('get_product_list') or not os.path.exists(self.__product_list_path):
@@ -209,13 +210,13 @@ class panelAuth:
             data = json.loads(public.readFile(self.__product_list_path))
             return data
         except: return None
-    
+
     def get_ad_list(self):
         pass
-    
+
     def check_plugin_end(self):
         pass
-    
+
     def get_re_order_status_plugin(self,get):
         params = {}
         params['pid'] = getattr(get,'pid',0)
@@ -225,7 +226,7 @@ class panelAuth:
             self.flush_pay_status(get)
             if 'get_product_bay' in session: del(session['get_product_bay'])
         return data
-    
+
     def get_voucher_plugin(self,get):
         params = {}
         params['pid'] = getattr(get,'pid',0)
@@ -233,7 +234,7 @@ class panelAuth:
         data = self.send_cloud('get_voucher', params)
         if not data: return []
         return data
-    
+
     def create_order_voucher_plugin(self,get):
         params = {}
         params['pid'] = getattr(get,'pid',0)
@@ -244,8 +245,8 @@ class panelAuth:
             self.flush_pay_status(get)
             if 'get_product_bay' in session: del(session['get_product_bay'])
         return data
-    
-    
+
+
     def send_cloud(self,module,params):
         try:
             cloudURL = public.GetConfigValue('home') + '/api/Plugin/'
@@ -267,7 +268,7 @@ class panelAuth:
             if not result: return None
             return result
         except: return None
-        
+
     def send_cloud_pro(self,module,params):
         try:
             cloudURL = public.GetConfigValue('home') + '/api/invite/'
@@ -281,62 +282,62 @@ class panelAuth:
                 params['serverid'] = userInfo['serverid']
                 params['access_key'] = userInfo['access_key']
             result = public.httpPost(cloudURL + module,params)
-            
+
             result = json.loads(result)
             if not result: return None
             return result
         except: return None
-    
+
     def get_voucher(self,get):
         params = {}
         params['product_id'] = self.__product_id
         params['status'] = '0'
         data = self.send_cloud_pro('get_voucher', params)
         return data
-    
+
     def get_order_status(self,get):
         params = {}
         data = self.send_cloud_pro('get_order_status', params)
         return data
-        
-    
+
+
     def get_product_discount_by(self,get):
         params = {}
         data = self.send_cloud_pro('get_product_discount_by', params)
         return data
-    
+
     def get_re_order_status(self,get):
         params = {}
         data = self.send_cloud_pro('get_re_order_status', params)
         return data
-    
+
     def create_order_voucher(self,get):
         code = getattr(get,'code','1')
         params = {}
         params['code'] = code
         data = self.send_cloud_pro('create_order_voucher', params)
         return data
-    
+
     def create_order(self,get):
         cycle = getattr(get,'cycle','1')
         params = {}
         params['cycle'] = cycle
         data = self.send_cloud_pro('create_order', params)
         return data
-    
+
     def get_mac_address(self):
         import uuid
         mac=uuid.UUID(int = uuid.getnode()).hex[-12:]
         return ":".join([mac[e:e+2] for e in range(0,11,2)])
-    
+
     def get_hostname(self):
         import socket
         return socket.getfqdn(socket.gethostname())
-    
+
     def get_cpuname(self):
         return public.ExecShell("cat /proc/cpuinfo|grep 'model name'|cut -d : -f2")[0].strip()
-    
-    
+
+
     def get_plugin_remarks(self,get):
         ikey = 'plugin_remarks'
         if ikey in session:
@@ -345,14 +346,14 @@ class panelAuth:
         if not data: return public.returnMsg(False,'连接服务器失败!')
         session[ikey] = data
         return data
-    
+
     def set_user_adviser(self,get):
         params = {}
         params['status'] = get.status
         data = self.send_cloud_wpanel('set_user_adviser',params)
         if not data: return public.returnMsg(False,'连接服务器失败!');
         return data
-        
+
     def send_cloud_wpanel(self,module,params):
         try:
             cloudURL = public.GetConfigValue('home') + '/api/panel/'
@@ -365,9 +366,8 @@ class panelAuth:
                 params['serverid'] = userInfo['serverid']
             params['os'] = 'Linux'
             result = public.httpPost(cloudURL + module,params)
-            
+
             result = json.loads(result)
             if not result: return None
             return result
         except: return None
-    

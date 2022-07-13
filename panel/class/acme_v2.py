@@ -245,7 +245,9 @@ class acme_v2:
                            '.com.tm','.com.tn','.com.to','.com.tp','.com.tr','.com.tt','.com.tv','.com.tw','.com.tz',
                            '.com.ua','.com.ug','.com.uk','.com.uk','.com.us','.com.uy','.com.uz','.com.va','.com.vc',
                            '.com.ve','.com.vg','.com.vn','.com.vu','.com.wf','.com.ws','.com.ye','.com.za','.com.zm',
-                           '.com.zw']
+                           '.com.zw','.mil.cn','.qh.cn','.sc.cn','.sd.cn','.sh.cn','.sx.cn','.tj.cn','.tw.cn','.tw.cn',
+                           '.xj.cn','.xz.cn','.yn.cn','.zj.cn','.bj.cn','.edu.kg'
+        ]
         old_domain_name = domain_name
         top_domain = "."+".".join(domain_name.rsplit('.')[-2:])
         new_top_domain = "." + top_domain.replace(".", "")

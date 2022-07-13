@@ -2,13 +2,13 @@
 import public,re
 
 class projectBase:
-    
+
     def check_port(self, port):
         '''
         @name 检查端口是否被占用
         @args port:端口号
         @return: 被占用返回True，否则返回False
-        @author: lkq 2021-08-28        
+        @author: lkq 2021-08-28
         '''
         a = public.ExecShell("netstat -nltp|awk '{print $4}'")
         if a[0]:
@@ -24,7 +24,7 @@ class projectBase:
         @name 验证域名合法性
         @args domain:域名
         @return: 合法返回True，否则返回False
-        @author: lkq 2021-08-28 
+        @author: lkq 2021-08-28
         '''
         import re
         domain_regex = re.compile(r'(?:[A-Z0-9_](?:[A-Z0-9-_]{0,247}[A-Z0-9])?\.)+(?:[A-Z]{2,6}|[A-Z0-9-]{2,}(?<!-))\Z', re.IGNORECASE)
@@ -44,13 +44,13 @@ class projectBase:
             if not self.check_port(port): break
             port = str(random.randint(5000, 10000))
         return port
-    
+
     def IsOpen(self, port):
         '''
         @name 检查端口是否被占用
         @args port:端口号
         @return: 被占用返回True，否则返回False
-        @author: lkq 2021-08-28        
+        @author: lkq 2021-08-28
         '''
         ip = '0.0.0.0'
         import socket

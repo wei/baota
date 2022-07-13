@@ -386,7 +386,6 @@ class san_baseline:
     def php_security(self):
         ret = []
         php_path = '/www/server/php/'
-        if not os.path.exists(php_path): return []
         php_list = os.listdir(php_path)
         if len(php_list) >= 1:
             for i in php_list:
@@ -685,12 +684,13 @@ class san_baseline:
         if not os.path.exists(public.get_cron_path()):return ret
         f = open(public.get_cron_path(), 'r')
         for i in f.readlines():
+
             if not i: continue;
             i2 = i
             i = i.strip().split()
             if not i: continue
             if i == None: continue
-            if len(i)>6 and i[5]:
+            if i[5]:
                 if '/www/server/' not in i[5]:
                     if '/root/.acme.sh' not in i[5]:
                         if 'wget' in i or 'curl' in i or 'bash' or 'http://' in i or 'https://' in i:

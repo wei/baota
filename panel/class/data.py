@@ -181,8 +181,8 @@ class data:
         '''
         res = {'size':0 ,'used':0 }
         try:
-            from projectModel.quotaModel import main
-            quota_info =  main().get_quota_path_list(get_path = path)
+            import PluginLoader
+            quota_info =  PluginLoader.module_run('quota','get_quota_path',path)
             if isinstance(quota_info,dict):
                 return quota_info
             return res
@@ -197,8 +197,8 @@ class data:
         '''
         res = {'size':0 ,'used':0 }
         try:
-            from projectModel.quotaModel import main
-            quota_info = main().get_quota_mysql_list(get_name = db_name)
+            import PluginLoader
+            quota_info =  PluginLoader.module_run('quota','get_quota_mysql',db_name)
             if isinstance(quota_info,dict):
                 return quota_info
             return res
@@ -256,6 +256,14 @@ class data:
                  for i in range(len(data['data'])):
                      data['data'][i]['quota'] = self.get_site_quota(data['data'][i]['path'])
 
+            try:
+                for _find in data['data']:
+                    _keys = _find.keys()
+                    for _key in _keys:
+                        _find[_key] = public.xsssec(_find[_key])
+            except:
+                pass
+
             #返回
             return data
         except:
@@ -274,6 +282,12 @@ class data:
         SQL = public.M(tableName)
         where = "id=?"
         find = SQL.where(where,(id,)).field(field).find()
+        try:
+            _keys = find.keys()
+            for _key in _keys:
+                find[_key] = public.xsssec(find[_key])
+        except:
+            pass
         return find
 
 
@@ -291,7 +305,7 @@ class data:
         SQL = db.Sql().table(tableName)
         where = "id=?"
         retuls = SQL.where(where,(id,)).getField(keyName)
-        return retuls
+        return public.xsssec(retuls)
 
     '''
      * 获取数据与分页
@@ -359,6 +373,11 @@ class data:
                     where += " AND sid='{}'".format(int(get.sid))
                 else:
                     where = "sid='{}'".format(int(get.sid))
+
+            if where:
+                where += ' and type="MySQL"'
+            else:
+                where = 'type = "MySQL"'
 
         field = self.GetField(get.table)
         #实例化数据库对象

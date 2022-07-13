@@ -6,7 +6,7 @@
  * @Autor: chudong
  * @Date: 2021-10-11 15:54:00
  * @LastEditors: chudong
- * @LastEditTime: 2022-05-12 14:45:48
+ * @LastEditTime: 2022-05-12 14:42:07
  */
 function UploadFile () {
   this.uploadPath = ''; // 上传文件位置
@@ -837,18 +837,18 @@ UploadFile.prototype = {
     if (item.isFile) {
       item.file(function (e) {
         _this6.file_upload_limit(e, path);
+        clearTimeout(_this6.timeNumber);
+        _this6.timeNumber = setTimeout(function () {
+          _this6.load.close();
+          if (_this6.isUpload && _this6.isGetFiles) {
+            _this6.render_file_list(_this6.fileList);
+          } else {
+            var layers = _this6.layer;
+            _this6.init_data();
+            _this6.layers = layers;
+          }
+        }, 10);
       });
-      clearTimeout(this.timeNumber);
-      this.timeNumber = setTimeout(function () {
-        _this6.load.close();
-        if (_this6.isUpload && _this6.isGetFiles) {
-          _this6.render_file_list(_this6.fileList);
-        } else {
-          var layers = _this6.layer;
-          _this6.init_data();
-          _this6.layers = layers;
-        }
-      }, 10);
     } else if (item.isDirectory) {
       var dirReader = item.createReader();
       var fnReadEntries = function (entries) {

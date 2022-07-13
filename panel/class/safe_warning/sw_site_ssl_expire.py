@@ -50,14 +50,14 @@ def check_run():
         cert_timeout = get_cert_timeout(cert_file)
         if s_time > cert_timeout:
             not_ssl_list.append(site_info['name'] + ' 过期时间: ' + public.format_date("%Y-%m-%d",cert_timeout))
-        
+
     if not_ssl_list:
         return False ,'以下站点SSL证书已过期: <br />' + ('<br />'.join(not_ssl_list))
-    
+
     return True,'无风险'
-        
-        
-    
+
+
+
 # 获取证书到期时间
 def get_cert_timeout(cert_file):
     try:

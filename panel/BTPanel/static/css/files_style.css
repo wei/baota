@@ -229,6 +229,9 @@ background: #f1f1f1;
   padding-left: 5px;
   outline: none;
 }
+.file_ps_title span{
+  padding-left: 5px;
+}
 
 .file_ps_title .set_file_ps:hover{
   border: 1px solid #20a53a !important;
@@ -380,7 +383,7 @@ display: block;
 .file_table_view.list_view .file_name .icon-favorites:before,
 .file_table_view.list_view .file_name .icon-share1:before {
   position: relative;
-  top: -8px;
+  top: -11px;
   height: 18px;
   width: 18px;
   cursor: pointer;
@@ -408,10 +411,9 @@ display: block;
   padding: 0 18px;
   margin-right: 10px;
   background-color: #20a53a;
-  border-color: #20a53a;
   border-radius: 2px;
   color: #fff;
-  border: 1px solid transparent;
+  border: 1px solid #20a53a;
 }
 
 .file_table_view.list_view .file_list_content .file_tr.editr_tr .clear_file_btn {
@@ -584,6 +586,11 @@ display: block;
   text-overflow: ellipsis;
   white-space: nowrap;
   display: inline-block;
+}
+
+.file_table_view.icon_view .file_title textarea{
+  text-align: center;
+  border-radius: 2px;
 }
 
 .file_table_view.list_view .file_title.file_file_status i {
@@ -1478,6 +1485,16 @@ background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAY
   font-size: 12px;
   margin-left: 5px;
   color: #666;
+}
+.nav_group.mount_disk_list .nav_btn .glyphicon {
+  top: -2px;
+}
+.nav_group.mount_disk_list .nav_btn span:nth-child(2) {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  max-width: 80px;
+  overflow: hidden;
 }
 .file_disk_list .nav_btn span:nth-child(0){
   font-size: 12px;

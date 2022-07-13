@@ -327,7 +327,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         public.WriteLog('TYPE_FILE', 'FILE_UPLOAD_SUCCESS',
                         (args.f_name, args.f_path))
         # 添加上传功能关键数据收集
-        public.set_module_logs('files', 'upload', 1)
+        public.set_module_logs('files_upload', 'upload', 1)
         return public.returnMsg(True, '上传成功!')
 
     # 设置文件和目录权限
@@ -1289,8 +1289,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             return public.returnMsg(False, '该文件格式不支持在线编辑!')
 
 
-        if os.path.getsize(get.path) > 3145928:
-            return public.returnMsg(False, u'不能在线编辑大于3MB的文件!')
+        # if os.path.getsize(get.path) > 3145928:
+        #     return public.returnMsg(False, u'不能在线编辑大于3MB的文件!')
         if os.path.isdir(get.path):
             return public.returnMsg(False, '这不是一个文件!')
 
@@ -1302,12 +1302,19 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 if os.path.exists(mycnf_file_bak):
                     public.writeFile(myconf_file,public.readFile(mycnf_file_bak))
 
-
-        fp = open(get.path, 'rb')
         data = {}
         data['status'] = True
-
-        try:
+        data["only_read"] = False
+        data["size"] = os.path.getsize(get.path)
+        if data["size"] > 3145928:
+            try:
+                info_data=self.last_lines(get.path, 10000)
+                if info_data=="":return public.returnMsg(False, u'文件编码不被兼容，无法正确读取文件!')
+                data["data"]=info_data
+                data["only_read"]=True
+            except:return public.returnMsg(False, u'文件编码不被兼容，无法正确读取文件!')
+        else:
+            fp = open(get.path, 'rb')
             if fp:
                 srcBody = fp.read()
                 fp.close()
@@ -1326,14 +1333,38 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                             return public.returnMsg(False, u'文件编码不被兼容，无法正确读取文件!')
             else:
                 return public.returnMsg(False, '打开文件失败，文件可能被其它进程占用!')
-            if hasattr(get, 'filename'):
-                get.path = get.filename
-            data['historys'] = self.get_history(get.path)
-            data['auto_save'] = self.get_auto_save(get.path)
-            data['st_mtime'] = str(int(os.stat(get.path).st_mtime))
-            return data
-        except Exception as ex:
-            return public.returnMsg(False, u'文件编码不被兼容，无法正确读取文件!' + str(ex))
+        if hasattr(get, 'filename'):
+            get.path = get.filename
+        data['historys'] = self.get_history(get.path)
+        data['auto_save'] = self.get_auto_save(get.path)
+        data['st_mtime'] = str(int(os.stat(get.path).st_mtime))
+        return data
+
+    def last_lines(self,filename, lines=1):
+        block_size = 3145928
+        block = ''
+        nl_count = 0
+        start = 0
+        fsock = open(filename, 'rU')
+        try:
+            fsock.seek(0, 2)
+            curpos = fsock.tell()
+            while (curpos > 0):
+                curpos -= (block_size + len(block))
+                if curpos < 0: curpos = 0
+                fsock.seek(curpos)
+                try:
+                    block = fsock.read()
+                except:
+                    continue
+                nl_count = block.count('\n')
+                if nl_count >= lines: break
+            for n in range(nl_count - lines + 1):
+                start = block.find('\n', start) + 1
+        finally:
+            fsock.close()
+        return block[start:]
+
 
     # 保存文件
     def SaveFileBody(self, get):
@@ -1352,6 +1383,9 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if not os.path.exists(get.path):
             if get.path.find('.htaccess') == -1:
                 return public.returnMsg(False, 'FILE_NOT_EXISTS')
+
+        if os.path.getsize(get.path) > 3145928:
+            return public.returnMsg(False, '不能在线编辑大于3MB的文件!')
 
         nginx_conf_path = public.get_vhost_path() + '/nginx/'
         if get.path.find(nginx_conf_path) != -1:

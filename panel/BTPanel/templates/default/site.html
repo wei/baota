@@ -49,7 +49,7 @@
         display:inline-block;
         text-align: left;
         vertical-align: middle;
-        margin-left: 25px;
+        margin-left: 16px;
     }
     .warning_scan_head .buy{
         position: absolute;
@@ -395,6 +395,8 @@
                 <div class="tabs-item" data-type="php">PHP项目</div>
                 <div class="tabs-item" data-type="java">Java项目</div>
                 <div class="tabs-item" data-type="nodejs">Node项目</div>
+                <div class="tabs-item" data-type="go">Go项目</div>
+                <div class="tabs-item" data-type="other">其他项目</div>
                 <!-- <div class="control-item" data-type="go">Go项目</div> -->
             </div>
         </div>
@@ -672,7 +674,10 @@
                     </div>
                 </div>
                 <div class="tab-con-block">
-                    <div id="bt_go_table"></div>
+                  <div id="bt_go_table"></div>
+                </div>
+                <div class="tab-con-block">
+                  <div id="bt_other_table"></div>
                 </div>
             </div>
         </div>
@@ -680,7 +685,7 @@
 </div>
 {% endblock %}
 {% block scripts %}
-{{ super() }} 
+{{ super() }}
 <script type="text/javascript">
 	bt.set_cookie('sites_path', "{{session['config']['sites_path']}}");
 	bt.set_cookie('serverType', "{{session['webserver']}}");

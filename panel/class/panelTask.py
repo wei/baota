@@ -91,6 +91,12 @@ class bt_task:
                                    (task_name, task_type, task_shell, other, int(time.time()), 0))
         public.WriteFile(self.__task_tips, 'True')
         public.ExecShell("/etc/init.d/bt start")
+        if not public.M(self.__table).where('status=?', ('-1',)).count():
+            tip_file = "/dev/shm/.start_task.pl"
+            tip_time = public.readFile(tip_file)
+            if not tip_time or time.time() - int(tip_time) > 60:
+                public.ExecShell("/www/server/panel/BT-Task")
+                public.print_log("已重启后台任务")
         return task_id
 
     # 修改任务
@@ -196,24 +202,25 @@ class bt_task:
     def start_task(self):
         noe = False
         n = 0
+        tip_file = '/dev/shm/.start_task.pl'
         while True:
             try:
                 time.sleep(1)
                 n += 1
                 if not os.path.exists(self.__task_tips) and noe and n < 60:
+                    public.writeFile(tip_file, str(int(time.time())))
                     continue
                 if os.path.exists(self.__task_tips):
                     os.remove(self.__task_tips)
                 n = 0
-                public.M(self.__table).where(
-                    'status=?', ('-1',)).setField('status', 0)
+                public.M(self.__table).where('status=?', ('-1',)).setField('status', 0)
                 task_list = self.get_task_list(0)
                 for task_info in task_list:
-                    self.execute_task(
-                        task_info['id'], task_info['type'], task_info['shell'], task_info['other'])
+                    self.execute_task(task_info['id'], task_info['type'], task_info['shell'], task_info['other'])
                 noe = True
+                public.writeFile(tip_file, str(int(time.time())))
             except:
-                print(public.get_error_info())
+                public.print_log(public.get_error_info())
 
     # 前端通过任务ID取某一个任务的日志
     def get_task_log_by_id(self, get):
@@ -374,7 +381,6 @@ class bt_task:
             else:
                 import pwd
                 user = pwd.getpwuid(os.stat(dfile).st_uid).pw_name
-                if user in ['nobody']: user = 'www'
                 public.ExecShell("chown %s:%s %s" % (user, user, dfile))
 
         #public.WriteLog("TYPE_FILE", 'UNZIP_SUCCESS', (sfile, dfile),not_web = self.not_web)

@@ -147,6 +147,7 @@ admin_path_checks = [
 if admin_path in admin_path_checks: admin_path = '/bt'
 uri_match = re.compile(r"(^/static/[\w_\./\-]+\.(js|css|png|jpg|gif|ico|svg|woff|woff2|ttf|otf|eot|map)$|^/[\w_\./\-]*$)")
 session_id_match = re.compile(r"^[\w\.\-]+$")
+
 # ===================================Flask HOOK========================#
 
 # Flask请求勾子
@@ -169,7 +170,13 @@ def request_check():
     # SESSIONID过滤
     session_id =  request.cookies.get(app.config['SESSION_COOKIE_NAME'],'')
     if session_id and not session_id_match.match(session_id): return abort(403)
+
+    # 请求头过滤
+    # if not public.filter_headers():
+    #     return abort(403)
+
     if session.get('debug') == 1: return
+
 
     if app.config['BASIC_AUTH_OPEN']:
         if request.path in ['/public', '/download', '/mail_sys', '/hook', '/down', '/check_bind',
@@ -415,7 +422,7 @@ def site(pdata=None):
     'GetLimitNet', 'RemoveProxy', 'GetProxyList', 'GetProxyDetals', 'CreateProxy', 'ModifyProxy', 'GetProxyFile',
     'SaveProxyFile', 'ToBackup',
     'DelBackup', 'GetSitePHPVersion', 'logsOpen', 'GetLogsStatus', 'CloseHasPwd', 'SetHasPwd', 'GetHasPwd', 'GetDnsApi',
-    'SetDnsApi')
+    'SetDnsApi','download_cert')
     return publicObject(siteObject, defs, None, pdata)
 
 
@@ -595,7 +602,6 @@ def panel_password(pdata=None):
     return publicObject(dataObject, defs, None, pdata)
 
 
-
 @app.route('/warning', methods=method_all)
 def panel_warning(pdata=None):
     # 首页安全警告
@@ -620,7 +626,7 @@ def panel_warning(pdata=None):
     import panelWarning
     dataObject = panelWarning.panelWarning()
     defs = ('get_list', 'set_ignore', 'check_find')
-    if get.action == 'set_ignore' or get.action == 'check_find':
+    if get.action in ['set_ignore','check_find']:
         cache.delete(ikey)
     return publicObject(dataObject, defs, None, pdata)
 
@@ -663,7 +669,6 @@ def project(mod_name,def_name):
     get.action = 'model'
     get.mod_name = mod_name
     get.def_name = def_name
-
     return publicObject(project_obj,defs,None,get)
 
 @app.route('/docker', methods=method_all)
@@ -676,6 +681,7 @@ def docker(pdata=None):
         data['js_random'] = get_js_random()
         data['lan'] = public.GetLan('files')
         return render_template('docker.html', data=data)
+
 
 @app.route('/dbmodel/<mod_name>/<def_name>', methods=method_all)
 def dbmodel(mod_name,def_name):
@@ -721,7 +727,7 @@ def files(pdata=None):
             'GetTmpFile', 'del_files_store', 'add_files_store', 'get_files_store', 'del_files_store_types',
             'add_files_store_types', 'exec_git','upload_file_exists',
             'RemoveTask', 'ActionTask', 'Re_Recycle_bin', 'Get_Recycle_bin', 'Del_Recycle_bin', 'Close_Recycle_bin',
-            'Recycle_bin', 'file_webshell_check', 'dir_webshell_check','files_search','files_replace','get_replace_logs','send_baota'
+            'Recycle_bin', 'file_webshell_check', 'dir_webshell_check','files_search','files_replace','get_replace_logs'
             )
     return publicObject(filesObject, defs, None, pdata)
 
@@ -817,7 +823,8 @@ def config(pdata=None):
     'ClosePanel', 'AutoUpdatePanel', 'SetPanelLock', 'return_mail_list', 'del_mail_list', 'add_mail_address',
     'user_mail_send', 'get_user_mail', 'set_dingding', 'get_dingding', 'get_settings', 'user_stmp_mail_send',
     'user_dingding_send','get_login_send','set_login_send','set_empty','clear_login_send','get_login_log','login_ipwhite',
-    'set_ssl_verify','get_ssl_verify','get_password_config','set_password_expire','set_password_safe'
+    'set_ssl_verify','get_ssl_verify','get_password_config','set_password_expire','set_password_safe',"get_msg_configs",
+    "get_module_template","install_msg_module", "uninstall_msg_module", "set_msg_config"
     )
     return publicObject(config.config(), defs, None, pdata)
 
@@ -1065,8 +1072,6 @@ def btwaf_error():
             return  render_template('error3.html',data={})
     return  render_template('error3.html',data={})
 
-
-
 @app.route('/favicon.ico', methods=method_get)
 def send_favicon():
     # 图标
@@ -1075,7 +1080,6 @@ def send_favicon():
     s_file = '/www/server/panel/BTPanel/static/favicon.ico'
     if not os.path.exists(s_file): return abort(404)
     return send_file(s_file, conditional=True, add_etags=True)
-
 
 @app.route('/rspamd', defaults={'path': ''},methods=method_all)
 @app.route('/rspamd/<path:path>',methods=method_all)
@@ -1110,11 +1114,21 @@ def proxy_rspamd_requests(path):
 
         return Resp(stream_with_context(req.iter_content()), content_type = req.headers['content-type'])
 
+@app.route('/tips', methods=method_get)
+def tips():
+    # 提示页面
+    comReturn = comm.local()
+    if comReturn: return abort(404)
+    get=get_input()
+    if len(get.__dict__.keys()) > 1:return abort(404)
+    return render_template('tips.html')
 
 # ======================普通路由区============================#
 
 
 # ======================严格排查区域============================#
+
+
 route_path = os.path.join(admin_path, '')
 if not route_path: route_path = '/'
 if route_path[-1] == '/': route_path = route_path[:-1]
@@ -1238,14 +1252,6 @@ def close():
     return render_template('close.html', data=data)
 
 
-# @app.route('/tips', methods=method_get)
-# def tips():
-#     # 提示页面
-#     get=get_input()
-#     if len(get.__dict__.keys()) > 1:return abort(404)
-#     return render_template('tips.html')
-
-
 @app.route('/get_app_bind_status', methods=method_all)
 def get_app_bind_status(pdata=None):
     # APP绑定状态查询
@@ -1280,16 +1286,12 @@ def check_bind(pdata=None):
 def code():
     if not 'code' in session: return ''
     if not session['code']: return ''
-    get=get_input()
-    if len(get.__dict__.keys()) > 2: return '存在无意义参数!'
     # 获取图片验证码
     try:
-        import vilidate, time
+        import vilidate
     except:
         public.ExecShell("pip install Pillow -I")
         return "Pillow not install!"
-    code_time = cache.get('codeOut')
-    if code_time: return u'Error: Don\'t request validation codes frequently'
     vie = vilidate.vieCode()
     codeImage = vie.GetCodeImage(80, 4)
     if sys.version_info[0] == 2:
@@ -1393,6 +1395,19 @@ def down(token=None, fname=None):
     except:
         return abort(404)
 
+@app.route('/database/<mod_name>/<def_name>', methods=method_all)
+def databaseModel(mod_name, def_name):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    from panelDatabaseController import DatabaseController
+    project_obj = DatabaseController()
+    defs = ('model',)
+    get = get_input()
+    get.action = 'model'
+    get.mod_name = mod_name
+    get.def_name = def_name
+
+    return publicObject(project_obj, defs, None, get)
 
 @app.route('/public', methods=method_all)
 def panel_public():
@@ -1413,6 +1428,7 @@ def panel_public():
             return public.getJson(result),json_header
         except:
             return abort(404)
+
     if public.cache_get(public.Md5(uuid.UUID(int=uuid.getnode()).hex[-12:]+public.GetClientIp()))!='check':return abort(404)
     global admin_check_auth, admin_path, route_path, admin_path_file
     if admin_path != '/bt' and os.path.exists(admin_path_file) and not 'admin_auth' in session:
@@ -1421,6 +1437,7 @@ def panel_public():
     for n in get.__dict__.keys():
         if not n in v_list:
             return abort(404)
+
     get.client_ip = public.GetClientIp()
     num_key = get.client_ip + '_wxapp'
     if not public.get_error_num(num_key, 10):
@@ -1446,8 +1463,6 @@ def panel_public():
         return abort(404)
 
 
-@app.route('/coll', methods=method_all)
-@app.route('/coll/', methods=method_all)
 @app.route('/<name>/<fun>', methods=method_all)
 @app.route('/<name>/<fun>/<path:stype>', methods=method_all)
 def panel_other(name=None, fun=None, stype=None):
@@ -1456,6 +1471,8 @@ def panel_other(name=None, fun=None, stype=None):
     if public.is_error_path():
         return redirect('/error',302)
     if not name: return abort(404)
+    if not re.match(r"^[\w\-]+$", name): return abort(404)
+    if fun and not re.match(r"^[\w\-\.]+$", fun): return abort(404)
     if name != "mail_sys" or fun != "send_mail_http.json":
         comReturn = comm.local()
         if comReturn: return comReturn
@@ -1466,6 +1483,8 @@ def panel_other(name=None, fun=None, stype=None):
             stype = tmp[1]
         if fun:
             if name=='btwaf' and fun=='index':
+                pass
+            elif name=='firewall' and fun=='get_file':
                 pass
             elif fun=='static':
                 pass
@@ -1498,8 +1517,8 @@ def panel_other(name=None, fun=None, stype=None):
     if not os.path.exists(p_path):
         if name == 'btwaf' and fun == 'index':
             pdata = {}
-            from pluginAuth import Plugin
-            plugin_list = Plugin(False).get_plugin_list()
+            import PluginLoader
+            plugin_list = PluginLoader.get_plugin_list(0)
             for p in plugin_list['list']:
                 if p['name'] in ['btwaf']:
                     if p['endtime'] != 0 and p['endtime'] < time.time():
@@ -1525,13 +1544,15 @@ def panel_other(name=None, fun=None, stype=None):
 
     # 初始化插件对象
     try:
-        from pluginAuth import Plugin
+        import PluginLoader
         try:
             args.s = fun
-            args.name = name
-            p = Plugin(name)
-            if not p.isdef(fun): return public.returnMsg(False,'PLUGIN_INPUT_C',(fun,))
-            data =  p.exec_fun(args)
+            data = PluginLoader.plugin_run(name,fun,args)
+            if isinstance(data,dict):
+                if 'status' in data and data['status'] == False and 'msg' in data:
+                    if isinstance(data['msg'],str):
+                        if data['msg'].find('加载失败') != -1 or data['msg'].find('Traceback ') == 0:
+                            raise public.PanelError(data['msg'])
         except Exception as ex:
             if name == 'btwaf' and fun == 'index' and str(ex).find('未购买') != -1:
                 return  render_template('error3.html',data={})
@@ -2392,5 +2413,12 @@ def proxy_port(port,full_path=None):
     px = HttpProxy()
     return px.proxy(proxy_url)
 
-
-
+@app.route('/push',methods=method_all)
+def push(pdata = None):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    import panelPush
+    toObject = panelPush.panelPush()
+    defs = ('set_push_status','get_push_msg_list','get_modules_list','install_module','uninstall_module','get_module_template','set_push_config','get_push_config','del_push_config','get_module_logs','get_module_config')
+    result = publicObject(toObject,defs,None,pdata);
+    return result;

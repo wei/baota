@@ -100,7 +100,7 @@ def start(puri):
     #如果是PHP文件
     if puri[-4:] == '.php':
         return request_php(puri)
-    
+
     #如果是静态文件
     return send_file(filename)
 

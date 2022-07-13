@@ -263,7 +263,7 @@
         background-color: #f2f2f2;
     }
     .daily-table .daily-title{
-        font-weight:bold; 
+        font-weight:bold;
         background: #f7f7f7;
     }
     .daily-table tr td {
@@ -523,10 +523,10 @@
       z-index: 1;
     } */
 </style>
-{% endblock %} 
+{% endblock %}
 {% block scripts %}
-  {{ super() }} 
-	<script type="text/javascript" src="{{g.cdn_url}}/js/echarts.min.js?version={{g['version']}}"></script>
+  {{ super() }}
+  <script type="text/javascript" src="{{g.cdn_url}}/js/echarts.min.js?version={{g['version']}}"></script>
   <script type="text/javascript" src="{{g.cdn_url}}/js/soft.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
   <script type="text/javascript" src="{{g.cdn_url}}/js/control.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
   <script type="text/javascript">

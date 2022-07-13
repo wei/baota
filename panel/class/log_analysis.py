@@ -25,7 +25,7 @@ class log_analysis:
 	echo  "Usage: ./action.sh [options] [FILE] [OUTFILE]     "
 	echo  "Options:"
 	echo  "xxx.sh san_log     [FILE] 获取成功访问请求中带有xss|sql|铭感信息|php代码执行 关键字的日志列表  [OUTFILE]   11"
-	echo  "xxx.sh san     [FILE] 获取成功访问请求中带有sql关键字的日志列表   [OUTFILE]   11  "  
+	echo  "xxx.sh san     [FILE] 获取成功访问请求中带有sql关键字的日志列表   [OUTFILE]   11  "
 }
 
 if [ $# == 0 ]
@@ -47,7 +47,7 @@ fi
 
 echo "[*] Starting ..."
 
-if  [ $1 == "san_log" ] 
+if  [ $1 == "san_log" ]
 then
     echo "1">./log/$3
 	echo "开始获取xss跨站脚本攻击日志..."
@@ -59,7 +59,7 @@ then
 	echo "20">./log/$3
 
 
-	echo  "开始获取sql注入漏洞攻击日志..." 
+	echo  "开始获取sql注入漏洞攻击日志..."
 	echo "分析日志已经保存到./log/$3sql.log"
 grep -E ' (200|302|301|500|444|403) ' $2 | grep -i -E "(from.+?information_schema.+|select.+(from|limit)|union(.*?)select|extractvalue\(|case when|extractvalue\(|updatexml\(|sleep\().*?HTTP/1.1" > ./log/$3sql.log
     echo "扫描到攻击次数: "`cat ./log/$3sql.log |wc -l`
@@ -99,7 +99,7 @@ then
 	echo "扫描到攻击次数: "`cat ./log/$3xss.log |wc -l`
 	echo "20">./log/$3
 
-	echo  "开始获取sql注入漏洞攻击日志..." 
+	echo  "开始获取sql注入漏洞攻击日志..."
 	echo "分析日志已经保存到./log/$3sql.log"
 grep -E ' (200|302|301|500|444|403) ' $2 | grep -i -E "(from.+?information_schema.+|select.+(from|limit)|union(.*?)select|extractvalue\(|case when|extractvalue\(|updatexml\(|sleep\().*?HTTP/1.1" > ./log/$3sql.log
     echo "扫描到攻击次数: "`cat ./log/$3sql.log |wc -l`
@@ -118,7 +118,7 @@ grep -E ' (200|302|301|500|444|403) ' $2 | grep -i -E "(from.+?information_schem
 	echo "扫描到攻击次数: "`cat ./log/$3php.log |wc -l`
 	echo "100">./log/$3
 
-else 
+else
 	help
 fi
 

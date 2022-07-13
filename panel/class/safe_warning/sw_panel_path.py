@@ -41,7 +41,7 @@ def check_run():
     p_file = '/www/server/panel/data/limitip.conf'
     if public.readFile(p_file):
         return True,'无风险'
-    
+
 
     p_file = '/www/server/panel/data/admin_path.pl'
     p_body = public.readFile(p_file)
@@ -50,10 +50,10 @@ def check_run():
     if p_body == '': return False,'当前未设置安全入口，面板有被扫描的风险'
 
     lower_path = ['root','admin','123456','123','12','1234567','12345','1234','12345678','123456789','abc','bt']
-    
+
     if p_body in lower_path:
         return False,'当前安全入口为：{}，过于简单，存在安全隐患'.format(p_body)
-    
+
     lower_rule = 'qwertyuiopasdfghjklzxcvbnm1234567890'
     for s in lower_rule:
         for i in range(12):
@@ -61,5 +61,5 @@ def check_run():
             lp = s * i
             if p_body == lp:
                 return False,'当前安全入口为：{}，过于简单，存在安全隐患'.format(p_body)
-    
+
     return True,'无风险'

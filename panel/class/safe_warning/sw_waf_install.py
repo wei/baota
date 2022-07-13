@@ -49,7 +49,7 @@ def check_run():
 
     if not is_install_web:
         return True,'无风险'
-    
+
     waf_list = [
         '/www/server/panel/plugin/btwaf/info.json',
         '/www/server/panel/plugin/btwaf_httpd/info.json',
@@ -62,7 +62,6 @@ def check_run():
     for waf in waf_list:
         if os.path.exists(waf):
             return True,'无风险'
-        
+
     return True,'未安装WAF防火墙，服务器网站容易受到攻击，存在安全风险'
 
-    

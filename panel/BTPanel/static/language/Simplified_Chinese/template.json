@@ -75,6 +75,10 @@
 	"database":{
 		"H1":"首页",
 		"H2":"数据库管理",
+		"H3":"MySQL",
+		"H4":"SQLServer",
+		"H5":"MongoDB",
+		"H6":"Redis",
 		"SEARCH":"搜索数据库",
 		"BTN1":"添加数据库",
 		"BTN2":"root密码",

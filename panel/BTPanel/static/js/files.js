@@ -24,11 +24,11 @@ var bt_file = {
   recomConfig: {},  //推荐软件
   scroll_width: (function () {
     var odiv = document.createElement('div'),
-    styles = {
-      width: '100px',
-      height: '100px',
-      overflowY: 'scroll'
-    }, i, scrollbarWidth;
+        styles = {
+          width: '100px',
+          height: '100px',
+          overflowY: 'scroll'
+        }, i, scrollbarWidth;
     for (i in styles) odiv.style[i] = styles[i];
     document.body.appendChild(odiv); // 把div添加到body中
     scrollbarWidth = odiv.offsetWidth - odiv.clientWidth; // 相减
@@ -105,7 +105,7 @@ var bt_file = {
     }).keydown(function (e) { // 全局按键事件
       e = window.event || e;
       var keyCode = e.keyCode,
-        tagName = e.target.tagName.toLowerCase();
+          tagName = e.target.tagName.toLowerCase();
       if (!that.is_editor) { //非编辑模式
         // Ctrl + v   粘贴事件
         if (e.ctrlKey && keyCode == 86 && tagName != 'input' && tagName != 'textarea') {
@@ -157,7 +157,7 @@ var bt_file = {
     $('.file_path_input .path_input').on('focus blur keyup', function (e) {
       e = e || window.event;
       var path = $(this).attr('data-path'),
-        _this = $(this);
+          _this = $(this);
       switch (e.type) {
         case 'focus':
           $(this).addClass('focus').val(path).prev().hide();
@@ -189,7 +189,7 @@ var bt_file = {
     // 文件操作前进或后退
     $('.forward_path span').click(function () {
       var index = $(this).index(),
-        path = '';
+          path = '';
       if (!$(this).hasClass('active')) {
         switch (index) {
           case 0:
@@ -208,7 +208,7 @@ var bt_file = {
     //展示已隐藏的目录
     $('.file_path_input .file_dir_view').on('click', '.file_dir_omit', function (e) {
       var _this = this,
-        new_down_list = $(this).children('.nav_down_list');
+          new_down_list = $(this).children('.nav_down_list');
       $(this).addClass('active');
       new_down_list.addClass('show');
       $(document).one('click', function () {
@@ -274,12 +274,12 @@ var bt_file = {
         that.is_editor = true;
         // 首位创建“新建文件夹、文件”
         $('.file_list_content').prepend('<div class="file_tr createModel active">' +
-          '<div class="file_td file_checkbox"></div>' +
-          '<div class="file_td file_name">' +
-          '<div class="file_ico_type"><i class="file_icon ' + (type == 'newBlankDir' ? 'file_folder' : '') + '"></i></div>' +
-          (bt.get_cookie('rank') == 'icon' ? '<span class="file_title file_' + (type == 'newBlankDir' ? 'dir' : 'file') + '_status"><textarea name="createArea" onfocus="select()">' + (type == 'newBlankDir' ? '新建文件夹' : '新建文件') + '</textarea></span>' : '<span class="file_title file_' + (type == 'newBlankDir' ? 'dir' : 'file') + '_status"><input name="createArea" value="' + (type == 'newBlankDir' ? '新建文件夹' : '新建文件') + '" onfocus="select()" type="text"></span>') +
-          '</div>' +
-          '</div>'
+            '<div class="file_td file_checkbox"></div>' +
+            '<div class="file_td file_name">' +
+            '<div class="file_ico_type"><i class="file_icon ' + (type == 'newBlankDir' ? 'file_folder' : '') + '"></i></div>' +
+            (bt.get_cookie('rank') == 'icon' ? '<span class="file_title file_' + (type == 'newBlankDir' ? 'dir' : 'file') + '_status"><textarea name="createArea" onfocus="select()">' + (type == 'newBlankDir' ? '新建文件夹' : '新建文件') + '</textarea></span>' : '<span class="file_title file_' + (type == 'newBlankDir' ? 'dir' : 'file') + '_status"><input name="createArea" value="' + (type == 'newBlankDir' ? '新建文件夹' : '新建文件') + '" onfocus="select()" type="text"></span>') +
+            '</div>' +
+            '</div>'
         )
 
         // 输入增高、回车、焦点、失去焦点
@@ -313,15 +313,15 @@ var bt_file = {
     // 收藏夹列表跳转
     $('.file_nav_view .favorites_file_path ul').on('click', 'li', function (e) {
       var _href = $(this).data('path'),
-        _type = $(this).data('type'),
-        nav_down_list = $('.favorites_file_path .nav_down_list');
+          _type = $(this).data('type'),
+          nav_down_list = $('.favorites_file_path .nav_down_list');
       if (_type == 'dir') {
         that.reader_file_list({ path: _href, is_operating: true });
       } else {
         if ($(this).data('null') != undefined) return false;
         var _file = $(this).attr('title').split('.'),
-          _fileT = _file[_file.length - 1],
-          _fileE = that.determine_file_type(_fileT);
+            _fileT = _file[_file.length - 1],
+            _fileE = that.determine_file_type(_fileT);
         switch (_fileE) {
           case 'text':
             openEditorView(0, _href)
@@ -396,7 +396,7 @@ var bt_file = {
     // 硬盘磁盘挂载
     $('.mount_disk_list').on('click', '.nav_down_list li', function () {
       var path = $(this).data('disk'),
-        disk_list = $('.mount_disk_list.thezoom .nav_down_list');
+          disk_list = $('.mount_disk_list.thezoom .nav_down_list');
       disk_list.css({
         'display': function () {
           setTimeout(function () { disk_list.removeAttr('style') }, 100)
@@ -434,8 +434,8 @@ var bt_file = {
     // 表头点击事件，触发排序字段和排序方式
     $('.file_list_header').on('click', '.file_name,.file_size,.file_mtime,.file_accept,.file_user', function (e) {
       var _tid = $(this).attr('data-tid'),
-        _reverse = $(this).find('.icon_sort').hasClass('active'),
-        _active = $(this).hasClass('active');
+          _reverse = $(this).find('.icon_sort').hasClass('active'),
+          _active = $(this).hasClass('active');
       if (!$(this).find('.icon_sort').hasClass('active') && $(this).hasClass('active')) {
         $(this).find('.icon_sort').addClass('active');
       } else {
@@ -453,7 +453,7 @@ var bt_file = {
     // 设置排序显示
     $('.file_list_header .file_th').each(function (index, item) {
       var files_sort = bt.get_cookie('files_sort'),
-        name_reverse = bt.get_cookie('name_reverse');
+          name_reverse = bt.get_cookie('name_reverse');
       if ($(this).attr('data-tid') === files_sort) {
         $(this).addClass('active').siblings().removeClass('active').find('.icon_sort').removeClass('active').empty();
         $(this).find('.icon_sort').html('<i class="iconfont icon-xiala"></i>');
@@ -492,8 +492,8 @@ var bt_file = {
     // 文件勾选
     $('.file_list_content').on('click', '.file_checkbox', function (e) { //列表选择
       var _tr = $(this).parents('.file_tr'),
-        index = _tr.data('index'),
-        filename = _tr.data('filename');
+          index = _tr.data('index'),
+          filename = _tr.data('filename');
       if (_tr.hasClass('active')) {
         _tr.removeClass('active');
         that.remove_check_file(that.file_table_arry, 'filename', filename);
@@ -533,8 +533,8 @@ var bt_file = {
     // 打开文件的分享、收藏状态
     $('.file_table_view .file_list_content').on('click', '.file_name .iconfont', function (e) {
       var file_tr = $(this).parents('.file_tr'),
-        index = file_tr.data('index'),
-        data = that.file_list[index];
+          index = file_tr.data('index'),
+          data = that.file_list[index];
       data['index'] = index
       if ($(this).hasClass('icon-share1')) { that.info_file_share(data); }
       if ($(this).hasClass('icon-favorites')) { that.cancel_file_favorites(data); }
@@ -543,12 +543,12 @@ var bt_file = {
     // 打开文件夹和文件 --- 双击
     $('.file_table_view .file_list_content').on('dblclick', '.file_tr', function (e) {
       var index = $(this).data('index'),
-        data = that.file_list[index];
+          data = that.file_list[index];
       if (
-        $(e.target).hasClass('file_check') ||
-        $(e.target).parents('.foo_menu').length > 0 ||
-        $(e.target).hasClass('set_file_ps') ||
-        that.is_editor
+          $(e.target).hasClass('file_check') ||
+          $(e.target).parents('.foo_menu').length > 0 ||
+          $(e.target).hasClass('set_file_ps') ||
+          that.is_editor
       ) return false;
       if (data.type == 'dir') {
         if (data['filename'] == 'Recycle_bin') return that.recycle_bin_view();
@@ -576,8 +576,8 @@ var bt_file = {
     // 打开文件夹或文件 --- 文件名单击
     $('.file_table_view .file_list_content').on('click', '.file_title i,.file_ico_type .file_icon', function (e) {
       var file_tr = $(this).parents('.file_tr'),
-        index = file_tr.data('index'),
-        data = that.file_list[index];
+          index = file_tr.data('index'),
+          data = that.file_list[index];
       if (data.type == 'dir') {
         if (data['filename'] == 'Recycle_bin') return that.recycle_bin_view();
         that.reader_file_list({ path: that.file_path + '/' + data['filename'], is_operating: true });
@@ -605,11 +605,15 @@ var bt_file = {
     // 文件夹和文件鼠标右键
     $('.file_list_content').on('mousedown', '.file_tr', function (ev) {
       if (ev.which === 1 && ($(ev.target).hasClass('foo_menu_title') || $(ev.target).parents().hasClass('foo_menu_title'))) {
+        ev.stopPropagation();
+        ev.preventDefault();
         that.render_file_groud_menu(ev, this);
         $(ev.target).parent().addClass('foo_menu_click');
         $(this).siblings().find('.foo_menu').removeClass('foo_menu_click');
         $(this).addClass('active').siblings().removeClass('active');
       } else if (ev.which === 3 && !that.is_editor) {
+
+        $('.selection_right_menu').show();
         if (that.file_table_arry.length > 1) {
           that.render_files_multi_menu(ev);
         } else {
@@ -617,9 +621,19 @@ var bt_file = {
           $('.content_right_menu').removeAttr('style');
           $(this).addClass('active').siblings().removeClass('active');
         }
+        ev.stopPropagation();
+        ev.preventDefault();
       } else { return true }
-      ev.stopPropagation();
-      ev.preventDefault();
+    });
+
+    $(document).click(function () {
+      $('.selection_right_menu').hide()
+    });
+
+    $(document).mousedown(function (e) {
+      if (3 == e.which) {
+        $('.selection_right_menu').hide()
+      }
     });
 
 
@@ -651,7 +665,7 @@ var bt_file = {
     // 获取文件夹大小
     $('.file_list_content').on('click', '.folder_size', function (e) {
       var data = that.file_list[$(this).parents('.file_tr').data('index')],
-        _this = this;
+          _this = this;
       that.get_file_size({ path: data.path }, function (res) {
         $(_this).text(bt.format_size(res.size));
       });
@@ -669,32 +683,35 @@ var bt_file = {
 
     // 文件区域【鼠标按下】
     $('.file_list_content').on('mousedown', function (ev) {
-
       if (
-        $(ev.target).hasClass('file_checkbox') ||
-        $(ev.target).hasClass('file_check') ||
-        $(ev.target).hasClass('icon-share1') ||
-        $(ev.target).hasClass('icon-favorites') ||
-        ev.target.localName == 'i' ||
-        $(ev.target).parents('.app_menu_group').length > 0 ||
-        $(ev.target).hasClass('createModel') ||
-        $(ev.target).hasClass('editr_tr') ||
-        $(ev.target).attr('name') == 'createArea' ||
-        $(ev.target).attr('name') == 'rename_file_input' ||
-        $(ev.target).hasClass('set_file_ps') ||
-        that.is_editor
-      ) return true;
+          $(ev.target).hasClass('file_checkbox') ||
+          $(ev.target).hasClass('file_check') ||
+          $(ev.target).hasClass('icon-share1') ||
+          $(ev.target).hasClass('icon-favorites') ||
+          ev.target.localName == 'i' ||
+          $(ev.target).parents('.app_menu_group').length > 0 ||
+          $(ev.target).hasClass('createModel') ||
+          $(ev.target).hasClass('editr_tr') ||
+          $(ev.target).attr('name') == 'createArea' ||
+          $(ev.target).attr('name') == 'rename_file_input' ||
+          $(ev.target).hasClass('set_file_ps') ||
+          that.is_editor
+      ) {
+        return true;
+      }
       if (ev.which == 3 && !that.is_editor) {
+        ev.stopPropagation();
+        ev.preventDefault();
         $('.selection_right_menu').removeAttr('style');
         that.render_file_all_menu(ev, this);
         return true;
-      } 
+      }
       //是否为右键
       $('.file_list_content').bind('mousewheel', function () { return false; }); //禁止滚轮(鼠标抬起时解绑)
       var container = $(this), //当前选区容器
-        scroll_h = 0,
-        con_t = container.offset().top, //选区偏移上
-        con_l = container.offset().left //选区偏移左
+          scroll_h = 0,
+          con_t = container.offset().top, //选区偏移上
+          con_l = container.offset().left //选区偏移左
       var startPos = { //初始位置
         top: ev.clientY - $(this).offset().top,
         left: ev.clientX - $(this).offset().left
@@ -812,16 +829,16 @@ var bt_file = {
     // 备注设置
     $('.file_list_content').on('blur', '.set_file_ps', function (ev) {
       var tr_index = $(this).parents('.file_tr').data('index'),
-        item = that.file_list[tr_index],
-        nval = $(this).val(),
-        oval = $(this).data('value'),
-        _this = this;
+          item = that.file_list[tr_index],
+          nval = $(this).val(),
+          oval = $(this).data('value'),
+          _this = this;
       if (nval == oval) return false;
       bt_tools.send('files/set_file_ps', { filename: item.path, ps_type: 0, ps_body: nval }, function (rdata) {
         $(_this).data('value', nval);
       }, { tips: '设置文件/目录备注', tips: true });
     });
-    // 备注回车事件 
+    // 备注回车事件
     $('.file_list_content').on('keyup', '.set_file_ps', function (ev) {
       if (ev.keyCode == 13) {
         $(this).blur();
@@ -833,9 +850,9 @@ var bt_file = {
       return false;
       if (ev.which == 3) return false;
       var th = $(this),
-        Minus_v = $(this).prev().offset().left,
-        _header = $('.file_list_header').innerWidth(),
-        maxlen = 0;
+          Minus_v = $(this).prev().offset().left,
+          _header = $('.file_list_header').innerWidth(),
+          maxlen = 0;
       maxlen = _header - $('.file_main_title').data
       $(document).unbind('mousemove').mousemove(function (ev) {
         var thatPos = ev.clientX - Minus_v;
@@ -860,9 +877,11 @@ var bt_file = {
 
     //老版快捷操作
     $('.file_list_content').on('click', '.set_operation_group a', function (ev) {
+      ev.stopPropagation();
+      ev.preventDefault();
       var data = $(this).parents('.file_tr').data(),
-        type = $(this).data('type'),
-        item = that.file_list[data.index]
+          type = $(this).data('type'),
+          item = that.file_list[data.index]
       if (type == 'more') return true;
       item.open = type;
       item.index = data.index;
@@ -917,7 +936,7 @@ var bt_file = {
    */
   calculate_table_active: function () {
     var that = this,
-      header_check = $('.file_list_header .file_check');
+        header_check = $('.file_list_header .file_check');
     //判断数量
     if (this.file_table_arry.length == 0) {
       header_check.removeClass('active active_2').data('checkbox', 0);
@@ -930,8 +949,8 @@ var bt_file = {
     if (this.file_table_arry.length > 0) {
       $(document).unbind('keydown').on('keydown', function (e) {
         var keyCode = e.keyCode,
-          tagName = e.target.localName.toLowerCase(),
-          is_mac = window.navigator.userAgent.indexOf('Mac') > -1
+            tagName = e.target.localName.toLowerCase(),
+            is_mac = window.navigator.userAgent.indexOf('Mac') > -1
         if (tagName == 'input' || tagName == 'textarea') return true;
         // Ctrl + c   复制事件
         if (e.ctrlKey && keyCode == 67) {
@@ -974,9 +993,9 @@ var bt_file = {
    */
   set_dir_view_resize: function () {
     var file_path_input = $('.file_path_input'),
-      file_dir_view = $('.file_path_input .file_dir_view'),
-      _path_width = file_dir_view.attr('data-width'),
-      file_item_hide = null;
+        file_dir_view = $('.file_path_input .file_dir_view'),
+        _path_width = file_dir_view.attr('data-width'),
+        file_item_hide = null;
     if (_path_width) {
       parseInt(_path_width);
     } else {
@@ -1021,11 +1040,11 @@ var bt_file = {
    */
   set_menu_line_view_resize: function () {
     var menu_width = $('.file_nav_view').width(),
-      disk_list_width = 0,
-      batch_list_width = 0,
-      _width = 0,
-      disk_list = $('.mount_disk_list'),
-      batch_list = $('.nav_group.multi');
+        disk_list_width = 0,
+        batch_list_width = 0,
+        _width = 0,
+        disk_list = $('.mount_disk_list'),
+        batch_list = $('.nav_group.multi');
     if (!disk_list.attr('data-width')) disk_list.attr('data-width', disk_list.innerWidth());
     if (!batch_list.attr('data-width') && batch_list.innerWidth() != 0 && batch_list.innerWidth() != -1) {
       batch_list.attr('data-width', batch_list.innerWidth())
@@ -1064,7 +1083,7 @@ var bt_file = {
    */
   set_file_forward: function () {
     var that = this,
-      forward_path = $('.forward_path span');
+        forward_path = $('.forward_path span');
     if (that.file_operating.length == 1) {
       forward_path.addClass('active');
     } else if (that.file_pointer == that.file_operating.length - 1) {
@@ -1083,7 +1102,7 @@ var bt_file = {
    */
   set_file_view: function () {
     var file_list_content = $('.file_list_content'),
-      height = this.area[1] - $('.file_table_view')[0].offsetTop - 170;
+        height = this.area[1] - $('.file_table_view')[0].offsetTop - 170;
     $('.file_bodys').height(this.area[1] - 100);
     if ((this.file_list.length * 40) > height) {
       file_list_content.attr('data-height', file_list_content.data('height') || file_list_content.height()).css({ 'overflow': 'hidden', 'overflow-y': 'auto', 'height': height + 'px' });
@@ -1138,20 +1157,20 @@ var bt_file = {
    */
   render_share_list: function (param) {
     var that = this,
-      _list = ''
+        _list = ''
     if (typeof param == 'undefined') param = { p: 1 }
     bt_tools.send('files/get_download_url_list', param, function (res) {
       that.file_share_list = res.data;
       if (res.data.length > 0) {
         $.each(res.data, function (index, item) {
           _list += '<tr>' +
-            '<td><span style="width:230px;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;display: inline-block;" title="' + item.ps + '">' + item.ps + '</span></td>' +
-            '<td><span style="width:300px;white-space: nowrap;overflow:hidden;text-overflow: ellipsis;display: inline-block;" title="' + item.filename + '">' + item.filename + '</span></td>' +
-            '<td><span>' + bt.format_data(item.expire) + '</span></td>' +
-            '<td style="text-align:right;">' +
-            '<a href="javascript:;" class="btlink info_down" data-id="' + item.id + '" data-index="' + index + '">详情</a>&nbsp;|&nbsp;' +
-            '<a href="javascript:;" class="btlink del_down" data-id="' + item.id + '" data-index="' + index + '" data-ps="' + item.ps + '">关闭</a>' +
-            '</td></tr>'
+              '<td><span style="width:230px;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;display: inline-block;" title="' + item.ps + '">' + item.ps + '</span></td>' +
+              '<td><span style="width:300px;white-space: nowrap;overflow:hidden;text-overflow: ellipsis;display: inline-block;" title="' + item.filename + '">' + item.filename + '</span></td>' +
+              '<td><span>' + bt.format_data(item.expire) + '</span></td>' +
+              '<td style="text-align:right;">' +
+              '<a href="javascript:;" class="btlink info_down" data-id="' + item.id + '" data-index="' + index + '">详情</a>&nbsp;|&nbsp;' +
+              '<a href="javascript:;" class="btlink del_down" data-id="' + item.id + '" data-index="' + index + '" data-ps="' + item.ps + '">关闭</a>' +
+              '</td></tr>'
         })
       } else {
         _list = '<tr><td colspan="4">暂无分享数据</td></tr>'
@@ -1161,7 +1180,7 @@ var bt_file = {
       // 删除操作
       $('.download_table').on('click', '.del_down', function () {
         var id = $(this).attr('data-id'),
-          _ps = $(this).attr('data-ps'); 
+            _ps = $(this).attr('data-ps');
         that.remove_download_url({ id: id, fileName: _ps }, function (res) {
           if (res.status) that.render_share_list(param)
           layer.msg(res.msg, { icon: res.status ? 1 : 2 })
@@ -1173,7 +1192,7 @@ var bt_file = {
   /**
    * @description 删除选中数据
    * @param {Array} arry
-   * @param {*} value 
+   * @param {*} value
    * @return void
    */
   remove_check_file: function (arry, key, value) {
@@ -1203,21 +1222,21 @@ var bt_file = {
         eventType: ['input', 'focus'],
         input: function () {
           var value = $(this).val(),
-            url_list = value.split('/');
+              url_list = value.split('/');
           $('[name="filename"]').val(url_list[url_list.length - 1]);
         }
       },
-      { label: '下载到:', name: 'path', placeholder: '下载到', value: that.file_path },
-      {
-        label: '文件名:',
-        name: 'filename',
-        placeholder: '保存文件名',
-        value: '',
-        eventType: 'enter',
-        enter: function () {
-          $('.download_file_view .layui-layer-btn0').click();
+        { label: '下载到:', name: 'path', placeholder: '下载到', value: that.file_path },
+        {
+          label: '文件名:',
+          name: 'filename',
+          placeholder: '保存文件名',
+          value: '',
+          eventType: 'enter',
+          enter: function () {
+            $('.download_file_view .layui-layer-btn0').click();
+          }
         }
-      }
       ]
     }, function (form, html) {
       var loadT = bt.open({
@@ -1260,13 +1279,13 @@ var bt_file = {
    * @description 设置样式文件
    * @param {String} type 表头类型
    * @param {Number} width 宽度
-   * @return void 
+   * @return void
    */
   set_style_width: function (type, width) {
     var _content = bt.get_cookie('formHeader') || $('#file_list_info').html(),
-      _html = '',
-      _reg = new RegExp("\\.file_" + type + "\\s?\\{width\\s?\\:\\s?(\\w+)\\s\\!important;\\}", "g"),
-      _defined_config = { name: 150, type: 80, size: 80, mtime: 150, accept: 80, user: 80, ps: 150 };
+        _html = '',
+        _reg = new RegExp("\\.file_" + type + "\\s?\\{width\\s?\\:\\s?(\\w+)\\s\\!important;\\}", "g"),
+        _defined_config = { name: 150, type: 80, size: 80, mtime: 150, accept: 80, user: 80, ps: 150 };
     _html = _content.replace(_reg, function (match, $1, $2, $3) {
       return '.file_' + type + '{width:' + (width < 80 ? _defined_config[type] + 'px' : width + 'px') + ' !important;}'
     });
@@ -1279,15 +1298,15 @@ var bt_file = {
    */
   set_file_table_width: function () {
     var that = this,
-      file_header_width = $('.file_table_view')[0].offsetWidth,
-      auto_num = 0,
-      width = 0,
-      auto_all_width = 0,
-      css = '',
-      _width = 0,
-      tr_heigth = 40,
-      other = '',
-      config = {};
+        file_header_width = $('.file_table_view')[0].offsetWidth,
+        auto_num = 0,
+        width = 0,
+        auto_all_width = 0,
+        css = '',
+        _width = 0,
+        tr_heigth = 40,
+        other = '',
+        config = {};
     $.each(this.file_header, function (key, item) {
       if (item == 'auto') {
         auto_num++;
@@ -1325,10 +1344,10 @@ var bt_file = {
    */
   render_path_list: function (callback) {
     var that = this,
-      html = '<div class="file_dir_omit hide" title="展开已隐藏的目录"><span></span><i class="iconfont icon-zhixiang-zuo"></i><div class="nav_down_list"></div></div>',
-      path_before = '',
-      dir_list = this.file_path.split("/").splice(1),
-      first_dir = this.file_path.split("/")[0];
+        html = '<div class="file_dir_omit hide" title="展开已隐藏的目录"><span></span><i class="iconfont icon-zhixiang-zuo"></i><div class="nav_down_list"></div></div>',
+        path_before = '',
+        dir_list = this.file_path.split("/").splice(1),
+        first_dir = this.file_path.split("/")[0];
     if (bt.os === 'Windows') {
       if (dir_list.length == 0) dir_list = [];
       dir_list.unshift('<span class="glyphicon glyphicon-hdd"></span><span class="ml5">本地磁盘(' + first_dir + ')</span>');
@@ -1362,8 +1381,8 @@ var bt_file = {
    */
   render_path_down_list: function (el, path, callback) {
     var that = this,
-      _html = '',
-      next_path = $(el).parent().next().find('.file_dir').attr('title');
+        _html = '',
+        next_path = $(el).parent().next().find('.file_dir').attr('title');
     this.get_dir_list({
       path: path
     }, function (res) {
@@ -1383,10 +1402,10 @@ var bt_file = {
    */
   reader_file_list: function (data, callback) {
     var that = this,
-      select_page_num = '',
-      next_path = '',
-      model = bt.get_cookie('rank'),
-      isPaste = bt.get_cookie('record_paste_type');
+        select_page_num = '',
+        next_path = '',
+        model = bt.get_cookie('rank'),
+        isPaste = bt.get_cookie('record_paste_type');
     if (isPaste != 'null' && isPaste != undefined) { //判断是否显示粘贴
       $('.file_nav_view .file_all_paste').removeClass('hide');
     } else {
@@ -1452,38 +1471,38 @@ var bt_file = {
    */
   data_reconstruction: function (data, type, callback) {
     var that = this,
-      arry = [],
-      info_ps = [
-        ['/etc', 'PS: 系统主要配置文件目录'],
-        ['/home', 'PS: 用户主目录'],
-        ['/tmp', 'PS: 公共的临时文件存储点'],
-        ['/root', 'PS: 系统管理员的主目录'],
-        ['/home', 'PS: 用户主目录'],
-        ['/usr', 'PS: 系统应用程序目录'],
-        ['/boot', 'PS: 系统启动核心目录'],
-        ['/lib', 'PS: 系统资源文件类库目录'],
-        ['/mnt', 'PS: 存放临时的映射文件系统'],
-        ['/www', 'PS: 宝塔面板程序目录'],
-        ['/bin', 'PS: 存放二进制可执行文件目录'],
-        ['/dev', 'PS: 存放设备文件目录'],
-        ['/www/wwwlogs', 'PS: 默认网站日志目录'],
-        ['/www/server', 'PS: 宝塔软件安装目录'],
-        ['/www/wwwlogs', 'PS: 网站日志目录'],
-        ['/www/Recycle_bin', 'PS: 回收站目录,勿动'],
-        ['/www/server/panel', 'PS: 宝塔主程序目录，勿动'],
-        ['/www/server/panel/plugin', 'PS: 宝塔插件安装目录'],
-        ['/www/server/panel/BTPanel', 'PS: 宝塔面板前端文件'],
-        ['/www/server/panel/BTPanel/static', 'PS: 宝塔面板前端静态文件'],
-        ['/www/server/panel/BTPanel/templates', 'PS: 宝塔面板前端模板文件'],
-        [bt.get_cookie('backup_path'), 'PS: 默认备份目录'],
-        [bt.get_cookie('sites_path'), 'PS: 默认建站目录']
-      ];
+        arry = [],
+        info_ps = [
+          ['/etc', 'PS: 系统主要配置文件目录'],
+          ['/home', 'PS: 用户主目录'],
+          ['/tmp', 'PS: 公共的临时文件存储点'],
+          ['/root', 'PS: 系统管理员的主目录'],
+          ['/home', 'PS: 用户主目录'],
+          ['/usr', 'PS: 系统应用程序目录'],
+          ['/boot', 'PS: 系统启动核心目录'],
+          ['/lib', 'PS: 系统资源文件类库目录'],
+          ['/mnt', 'PS: 存放临时的映射文件系统'],
+          ['/www', 'PS: 宝塔面板程序目录'],
+          ['/bin', 'PS: 存放二进制可执行文件目录'],
+          ['/dev', 'PS: 存放设备文件目录'],
+          ['/www/wwwlogs', 'PS: 默认网站日志目录'],
+          ['/www/server', 'PS: 宝塔软件安装目录'],
+          ['/www/wwwlogs', 'PS: 网站日志目录'],
+          ['/www/Recycle_bin', 'PS: 回收站目录,勿动'],
+          ['/www/server/panel', 'PS: 宝塔主程序目录，勿动'],
+          ['/www/server/panel/plugin', 'PS: 宝塔插件安装目录'],
+          ['/www/server/panel/BTPanel', 'PS: 宝塔面板前端文件'],
+          ['/www/server/panel/BTPanel/static', 'PS: 宝塔面板前端静态文件'],
+          ['/www/server/panel/BTPanel/templates', 'PS: 宝塔面板前端模板文件'],
+          [bt.get_cookie('backup_path'), 'PS: 默认备份目录'],
+          [bt.get_cookie('sites_path'), 'PS: 默认建站目录']
+        ];
     if (data.length < 1) return [];
     $.each(data, function (index, item) {
       var itemD = item.split(";"),
-        fileMsg = '',
-        fileN = itemD[0].split('.'),
-        extName = fileN[fileN.length - 1];
+          fileMsg = '',
+          fileN = itemD[0].split('.'),
+          extName = fileN[fileN.length - 1];
       switch (itemD[0]) {
         case '.user.ini':
           fileMsg = 'PS: PHP用户配置文件(防跨站)!';
@@ -1512,7 +1531,7 @@ var bt_file = {
         user: itemD[3], // 用户权限
         root_level: itemD[4], // 所有者
         soft_link: itemD[5] || '', // 软连接
-        is_search: $('.file_search_input').val() ? true : false //判断是否搜索 
+        is_search: $('.file_search_input').val() ? true : false //判断是否搜索
       });
     });
     return arry;
@@ -1525,7 +1544,7 @@ var bt_file = {
   render_file_selected: function (_array) {
 
     var that = this,
-      tmp = [];
+        tmp = [];
     that.clear_table_active()
     $.each(_array, function (index, item) {
       if (tmp.indexOf(item) == -1) {
@@ -1538,7 +1557,7 @@ var bt_file = {
     })
     that.calculate_table_active();
   },
-  /** 
+  /**
    * @descripttion 渲染收藏夹列表
    * @return: 无返回值
    */
@@ -1547,9 +1566,9 @@ var bt_file = {
     if (this.file_store_list.length > 0) {
       $.each(this.file_store_list, function (index, item) {
         html += '<li title="' + item['name'] + '" data-path="' + item['path'] + '" data-type="' + item['type'] + '">' +
-          '<i class="' + (item['type'] == 'file' ? 'file_new_icon' : 'file_menu_icon create_file_icon') + '"></i>' +
-          '<span>' + item['name'] + '</span>' +
-          '</li>'
+            '<i class="' + (item['type'] == 'file' ? 'file_new_icon' : 'file_menu_icon create_file_icon') + '"></i>' +
+            '<span>' + item['name'] + '</span>' +
+            '</li>'
       })
       html += '<li data-manage="favorites" data-null onclick="bt_file.set_favorites_manage()"><span class="iconfont icon-shezhi1"></span><span>管理</span></li>'
     } else { html = '<li data-null style="width: 150px;"><i></i><span>（空）</span></li>' }
@@ -1595,11 +1614,11 @@ var bt_file = {
       if (rdata.length > 0) {
         $.each(rdata, function (ind, item) {
           _detail += '<tr>' +
-            '<td><span class="favorites_span" title="' + item['path'] + '">' + item['path'] + '</span></td>' +
-            '<td style="text-align:right;">' +
-            '<a class="btlink" onclick="bt_file.del_favorites(\'' + item['path'] + '\')">删除</a>' +
-            '</td>' +
-            '</tr>'
+              '<td><span class="favorites_span" title="' + item['path'] + '">' + item['path'] + '</span></td>' +
+              '<td style="text-align:right;">' +
+              '<a class="btlink" onclick="bt_file.del_favorites(\'' + item['path'] + '\')">删除</a>' +
+              '</td>' +
+              '</tr>'
         })
       } else {
         _detail = '<tr><td colspan="2">暂无收藏</td></tr>'
@@ -1646,7 +1665,7 @@ var bt_file = {
    */
   set_dir_rsync: function (config) {
     var loadget = layer.msg('正在检测配置信息...', { icon: 16, time: 0, shade: [0.3, '#000'] }),
-      _path = config.path + '/'
+        _path = config.path + '/'
     $.get('/plugin?action=a&name=rsync&s=get_send_conf', function (res) {
       if (res.length > 0) {
         $.each(res, function (index, item) {
@@ -1719,7 +1738,7 @@ var bt_file = {
    */
   set_rsync_view: function (path, editConfig) {
     var _param = { title: '创建接收端', btn: '提交', action: 'add_module', form: { mName: '', password: bt.get_random(12), path: path, comment: '' } },
-      receiveForm = null;
+        receiveForm = null;
     if (editConfig) _param = editConfig
     layer.open({
       type: 1,
@@ -2040,9 +2059,9 @@ var bt_file = {
         if ($(this).val() == 'true') {
           var mpath = $('input[name="path"]').val();
           var msg = '<div><span style="color:orangered;">警告：您选择了完全同步，将会使本机同步与目标机器指定目录的文件保持一致，'
-            + '<br />请确认目录设置是否有误，一但设置错误，可能导致目标机器的目录文件被删除!</span>'
-            + '<br /><br /> <span style="color:red;">注意： 同步程序将本机目录：'
-            + mpath + '的所有数据同步到目标服务器，若目标服务器的同步目录存在其它文件将被删除!</span> <br /><br /> 已了解风险，请按确定继续</div>';
+              + '<br />请确认目录设置是否有误，一但设置错误，可能导致目标机器的目录文件被删除!</span>'
+              + '<br /><br /> <span style="color:red;">注意： 同步程序将本机目录：'
+              + mpath + '的所有数据同步到目标服务器，若目标服务器的同步目录存在其它文件将被删除!</span> <br /><br /> 已了解风险，请按确定继续</div>';
 
           layer.confirm(msg, {
             title: '数据安全风险警告', icon: 2, closeBtn: 1, shift: 5,
@@ -2209,34 +2228,34 @@ var bt_file = {
    */
   reader_file_list_content: function (data, callback) {
     var _html = '',
-      that = this,
-      is_dir_num = 0,
-      images_num = 0;
+        that = this,
+        is_dir_num = 0,
+        images_num = 0;
     $.each(data, function (index, item) {
       var _title = item.filename,
-        only_id = bt.get_random(10),
-        path = (that.file_path + '/' + item.filename).replace('//', '/'),
-        is_compress = that.determine_file_type(item.ext, 'compress'),
-        is_editor_tips = (function () {
-          var _openTitle = '打开';
-          switch (that.determine_file_type(item.ext)) {
-            case 'images':
-              _openTitle = '预览';
-              break;
-            case 'video':
-              _openTitle = '播放';
-              break;
-            default:
-              if (that.determine_file_type(item.ext) == 'compress') {
-                _openTitle = '';
-              } else {
-                _openTitle = '编辑';
-              }
-              break;
-          }
-          item.type == 'dir' ? _openTitle = '打开' : '';
-          return _openTitle;
-        }(item))
+          only_id = bt.get_random(10),
+          path = (that.file_path + '/' + item.filename).replace('//', '/'),
+          is_compress = that.determine_file_type(item.ext, 'compress'),
+          is_editor_tips = (function () {
+            var _openTitle = '打开';
+            switch (that.determine_file_type(item.ext)) {
+              case 'images':
+                _openTitle = '预览';
+                break;
+              case 'video':
+                _openTitle = '播放';
+                break;
+              default:
+                if (that.determine_file_type(item.ext) == 'compress') {
+                  _openTitle = '';
+                } else {
+                  _openTitle = '编辑';
+                }
+                break;
+            }
+            item.type == 'dir' ? _openTitle = '打开' : '';
+            return _openTitle;
+          }(item))
       that.file_list[index]['only_id'] = only_id;
       if (item.type == 'dir') is_dir_num++;
       item.path = path; // 文件路径;
@@ -2247,30 +2266,30 @@ var bt_file = {
         images_num++;
       }
       _html += '<div class="file_tr" data-index="' + index + '" data-filename="' + item.filename + '" ' + (bt.get_cookie('rank') == 'icon' ? 'title="' + path + '&#13;' + lan.files.file_size + ':' + bt.format_size(item.size) + '&#13;' + lan.files.file_etime + ':' + bt.format_data(item.mtime) + '&#13;' + lan.files.file_auth + ':' + item.user + '&#13;' + lan.files.file_own + ':' + item.root_level + '"' : '') + '>' +
-        '<div class="file_td file_checkbox"><div class="file_check"></div></div>' +
-        '<div class="file_td file_name">' +
-        '<div class="file_ico_type">' +
-        (item.open_type == 'images' ? '<img class="file_images" src="/static/images/layer/loading-2.gif" style="width:20px;height:20px;left:5px;top:12.5px;" />' : '') +
-        '<i class="file_icon ' + (item.open_type == 'images' ? 'hide ' : '') + '' + (item.type == 'dir' ? 'file_folder' : (item.ext == '' ? '' : 'file_' + item.ext).replace('//', '/')) + '"></i>' +
-        '</div>' +
-        '<span class="file_title file_' + item.type + '_status" ' + (bt.get_cookie('rank') == 'icon' ? '' : 'title="' + path + '"') + '><i>' + item.filename + item.soft_link + '</i></span>' + (item.caret ? '<span class="iconfont icon-favorites" style="' + (item.down_id != 0 ? 'right:30px' : '') + '" title="文件已收藏，点击取消"></span>' : '') + (item.down_id != 0 ? '<span class="iconfont icon-share1" title="文件已分享，点击查看信息"></span>' : '') +
-        '</div>' +
-        '<div class="file_td file_type hide"><span title="' + (item.type == 'dir' ? '文件夹' : that.ext_type_tips(item.ext)) + '">' + (item.type == 'dir' ? '文件夹' : that.ext_type_tips(item.ext)) + '</span></div>' +
-        '<div class="file_td file_accept"><span>' + item.user + ' / ' + item.root_level + '</span></div>' +
-        '<div class="file_td file_size"><span>' + (item.type == 'dir' ? '<a class="btlink folder_size" href="javascript:;" data-path="' + path + '">计算</a>' : bt.format_size(item.size)) + '</span></div>' +
-        '<div class="file_td file_mtime"><span>' + bt.format_data(item.mtime) + '</span></div>' +
-        '<div class="file_td file_ps"><span class="file_ps_title" title="' + item.ps + '">' + (item.is_os_ps ? item.ps : '<input type="text" class="set_file_ps" data-value="' + item.ps + '" value="' + item.ps + '" />') + '</span></div>' +
-        '<div class="file_td file_operation"><div class="set_operation_group">' +
-        '<a href="javascript:;" class="btlink" data-type="open">' + is_editor_tips + '</a>&nbsp;|&nbsp;' +
-        '<a href="javascript:;" class="btlink" data-type="copy">复制</a>&nbsp;|&nbsp;' +
-        '<a href="javascript:;" class="btlink" data-type="shear">剪切</a>&nbsp;|&nbsp;' +
-        '<a href="javascript:;" class="btlink" data-type="rename">重命名</a>&nbsp;|&nbsp;' +
-        '<a href="javascript:;" class="btlink" data-type="authority">权限</a>&nbsp;|&nbsp;' +
-        '<a href="javascript:;" class="btlink" data-type="' + (is_compress ? 'unzip' : 'compress') + '">' + (is_compress ? '解压' : '压缩') + '</a>&nbsp;|&nbsp;' +
-        '<a href="javascript:;" class="btlink" data-type="del">删除</a>&nbsp;|&nbsp;' +
-        '<a href="javascript:;" class="btlink foo_menu_title" data-type="more">更多<i></i></a>' +
-        '</div></div>' +
-      '</div>';
+          '<div class="file_td file_checkbox"><div class="file_check"></div></div>' +
+          '<div class="file_td file_name">' +
+          '<div class="file_ico_type">' +
+          (item.open_type == 'images' ? '<img class="file_images" src="/static/images/layer/loading-2.gif" style="width:20px;height:20px;left:5px;top:12.5px;" />' : '') +
+          '<i class="file_icon ' + (item.open_type == 'images' ? 'hide ' : '') + '' + (item.type == 'dir' ? 'file_folder' : (item.ext == '' ? '' : 'file_' + item.ext).replace('//', '/')) + '"></i>' +
+          '</div>' +
+          '<span class="file_title file_' + item.type + '_status" ' + (bt.get_cookie('rank') == 'icon' ? '' : 'title="' + path + '"') + '><i>' + item.filename + item.soft_link + '</i></span>' + (item.caret ? '<span class="iconfont icon-favorites" style="' + (item.down_id != 0 ? 'right:30px' : '') + '" title="文件已收藏，点击取消"></span>' : '') + (item.down_id != 0 ? '<span class="iconfont icon-share1" title="文件已分享，点击查看信息"></span>' : '') +
+          '</div>' +
+          '<div class="file_td file_type hide"><span title="' + (item.type == 'dir' ? '文件夹' : that.ext_type_tips(item.ext)) + '">' + (item.type == 'dir' ? '文件夹' : that.ext_type_tips(item.ext)) + '</span></div>' +
+          '<div class="file_td file_accept"><span>' + item.user + ' / ' + item.root_level + '</span></div>' +
+          '<div class="file_td file_size"><span>' + (item.type == 'dir' ? '<a class="btlink folder_size" href="javascript:;" data-path="' + path + '">计算</a>' : bt.format_size(item.size)) + '</span></div>' +
+          '<div class="file_td file_mtime"><span>' + bt.format_data(item.mtime) + '</span></div>' +
+          '<div class="file_td file_ps"><span class="file_ps_title" title="' + item.ps + '">' + (item.is_os_ps ? ('<span>' + item.ps +'</span>') : '<input type="text" class="set_file_ps" data-value="' + item.ps + '" value="' + item.ps + '" />') + '</span></div>' +
+          '<div class="file_td file_operation"><div class="set_operation_group">' +
+          '<a href="javascript:;" class="btlink" data-type="open">' + is_editor_tips + '</a>&nbsp;|&nbsp;' +
+          '<a href="javascript:;" class="btlink" data-type="copy">复制</a>&nbsp;|&nbsp;' +
+          '<a href="javascript:;" class="btlink" data-type="shear">剪切</a>&nbsp;|&nbsp;' +
+          '<a href="javascript:;" class="btlink" data-type="rename">重命名</a>&nbsp;|&nbsp;' +
+          '<a href="javascript:;" class="btlink" data-type="authority">权限</a>&nbsp;|&nbsp;' +
+          '<a href="javascript:;" class="btlink" data-type="' + (is_compress ? 'unzip' : 'compress') + '">' + (is_compress ? '解压' : '压缩') + '</a>&nbsp;|&nbsp;' +
+          '<a href="javascript:;" class="btlink" data-type="del">删除</a>&nbsp;|&nbsp;' +
+          '<a href="javascript:;" class="btlink foo_menu_title" data-type="more">更多<i></i></a>' +
+          '</div></div>' +
+          '</div>';
     })
     that.render_file_thumbnail()
     $('.file_list_content').html(_html)
@@ -2284,14 +2303,14 @@ var bt_file = {
    */
   render_file_disk_list: function () {
     var that = this,
-      html = '',
-      _li = '';
+        html = '',
+        _li = '';
     that.get_disk_list(function (res) {
       $.each(res, function (index, item) {
         html += '<div class="nav_btn" data-menu="' + item.path + '">' +
-          '<span class="glyphicon glyphicon-hdd"></span>' +
-          '<span>' + (item.path == '/' ? '/(根目录)' : item.path) + ' (' + item.size[2] + ')</span>' +
-          '</div>';
+            '<span class="glyphicon glyphicon-hdd"></span>' +
+            '<span title="'+ (item.path == '/' ? '/(根目录)' : item.path) + ' (' + item.size[2] + ')' +'">' + (item.path == '/' ? '/(根目录)' : item.path) + ' (' + item.size[2] + ')</span>' +
+            '</div>';
         _li += '<li data-disk="' + item.path + '"><i class="glyphicon glyphicon-hdd"></i><span>' + (item.path == '/' ? '根目录' : item.path) + ' (' + item.size[2] + ')</span></li>'
       });
       $('.mount_disk_list').html('<div class="disk_title_group_btn hide"><span class="disk_title_group">磁盘分区</span><i class="iconfont icon-xiala"></i><ul class="nav_down_list">' + _li + '</ul></div><div class="file_disk_list">' + html + '</div>');
@@ -2302,7 +2321,7 @@ var bt_file = {
 
   /**
    * @description 渲染文件缩略图列表
-  */
+   */
   render_file_thumbnail: function () {
     if (this.file_images_list.length == 0) return false
     var arry = []
@@ -2331,50 +2350,50 @@ var bt_file = {
    */
   render_file_groud_menu: function (ev, el) {
     var that = this,
-      index = $(el).data('index'),
-      _openTitle = '打开',
-      data = that.file_list[index],
-      compression = ['zip', 'rar', 'gz', 'war', 'tgz', 'bz2', '7z'],
-      config = {
-        open: _openTitle,
-        split_0: true,
-        download: '下载',
-        share: '分享目录/文件',
-        cancel_share: '取消分享',
-        favorites: '收藏目录/文件',
-        cancel_favorites: '取消收藏',
-        rsync: '数据同步',
-        split_1: true,
-        dir_kill: '目录查杀',
-        authority: '权限',
-        split_2: true,
-        copy: '复制',
-        shear: '剪切',
-        rename: '重命名',
-        del: '删除',
-        split_3: true,
-        compress: '创建压缩',
-        unzip: '解压',
-        open_find_dir: '打开文件所在目录',
-        split_4: true,
-        property: '属性'
-      },
-      info_ps = [
-        '/etc',
-        '/home',
-        '/tmp',
-        '/root',
-        '/home',
-        '/usr',
-        '/boot',
-        '/lib',
-        '/mnt',
-        '/www',
-        '/bin',
-        '/dev',
-        '/www/server',
-        '/www/Recycle_bin'
-      ];
+        index = $(el).data('index'),
+        _openTitle = '打开',
+        data = that.file_list[index],
+        compression = ['zip', 'rar', 'gz','tar', 'war', 'tgz', 'bz2', '7z'],
+        config = {
+          open: _openTitle,
+          split_0: true,
+          download: '下载',
+          share: '分享目录/文件',
+          cancel_share: '取消分享',
+          favorites: '收藏目录/文件',
+          cancel_favorites: '取消收藏',
+          rsync: '数据同步',
+          split_1: true,
+          dir_kill: '目录查杀',
+          authority: '权限',
+          split_2: true,
+          copy: '复制',
+          shear: '剪切',
+          rename: '重命名',
+          del: '删除',
+          split_3: true,
+          compress: '创建压缩',
+          unzip: '解压',
+          open_find_dir: '打开文件所在目录',
+          split_4: true,
+          property: '属性'
+        },
+        info_ps = [
+          '/etc',
+          '/home',
+          '/tmp',
+          '/root',
+          '/home',
+          '/usr',
+          '/boot',
+          '/lib',
+          '/mnt',
+          '/www',
+          '/bin',
+          '/dev',
+          '/www/server',
+          '/www/Recycle_bin'
+        ];
     $.each(info_ps, function (index, item) {
       if (item == data.path) { //禁止同步关键目录
         delete config['rsync']
@@ -2433,21 +2452,21 @@ var bt_file = {
    */
   render_file_all_menu: function (ev, el) {
     var that = this,
-      config = {
-        refresh: '刷新',
-        split_0: true,
-        upload: '上传',
-        create: ['新建文件夹/文件', {
-          create_dir: '新建文件夹',
-          create_files: '新建文件',
-          soft_link: '软链接文件'
-        }],
-        web_shell: '终端',
-        split_1: true,
-        paste: '粘贴'
-      },
-      offsetNum = 0,
-      isPaste = bt.get_cookie('record_paste_type');
+        config = {
+          refresh: '刷新',
+          split_0: true,
+          upload: '上传',
+          create: ['新建文件夹/文件', {
+            create_dir: '新建文件夹',
+            create_files: '新建文件',
+            soft_link: '软链接文件'
+          }],
+          web_shell: '终端',
+          split_1: true,
+          paste: '粘贴'
+        },
+        offsetNum = 0,
+        isPaste = bt.get_cookie('record_paste_type');
     if (isPaste == 'null' || isPaste == undefined) {
       delete config['split_1']
       delete config['paste']
@@ -2461,17 +2480,17 @@ var bt_file = {
    */
   render_files_multi_menu: function (ev) {
     var that = this,
-      config_group = [
-        ['copy', '复制'],
-        ['shear', '剪切'],
-        ['authority', '权限'],
-        ['compress', '创建压缩'],
-        ['del', '删除']
-      ],
-      el = $('.selection_right_menu').find('ul'),
-      el_height = el.height(),
-      el_width = el.width(),
-      left = ev.clientX - ((this.area[0] - ev.clientX) < el_width ? el_width : 0);
+        config_group = [
+          ['copy', '复制'],
+          ['shear', '剪切'],
+          ['authority', '权限'],
+          ['compress', '创建压缩'],
+          ['del', '删除']
+        ],
+        el = $('.selection_right_menu').find('ul'),
+        el_height = el.height(),
+        el_width = el.width(),
+        left = ev.clientX - ((this.area[0] - ev.clientX) < el_width ? el_width : 0);
     el.empty();
     $.each(config_group, function (index, mitem) {
       var $children = null;
@@ -2503,21 +2522,22 @@ var bt_file = {
 
   /**
    * @description 渲染菜单列表
-   * @param {Object} el 菜单DOM 
+   * @param {Object} el 菜单DOM
    * @param {Object} config 菜单配置列表和数据
    * @returns void
    */
   reader_menu_list: function (config) {
+    config.el.show()
     var that = this,
-      el = config.el.find('ul'),
-      el_height = 0,
-      el_width = el.width(),
-      left = config.ev.clientX - ((this.area[0] - config.ev.clientX) < el_width ? el_width : 0),
-      top = 0;
+        el = config.el.find('ul'),
+        el_height = 0,
+        el_width = el.width(),
+        left = config.ev.clientX - ((this.area[0] - config.ev.clientX) < el_width ? el_width : 0),
+        top = 0;
     el.empty();
     $.each(config.list, function (key, item) {
       var $children = null,
-        $children_list = null;
+          $children_list = null;
       if (typeof item == "boolean") {
         el.append('<li class="separate"></li>');
       } else {
@@ -2593,18 +2613,18 @@ var bt_file = {
 
   /**
    * @description 文件类型判断，或返回格式类型(不传入type)
-   * @param {String} ext 
+   * @param {String} ext
    * @param {String} type
    * @return {Boolean|Object} 返回类型或类型是否支持
    */
   determine_file_type: function (ext, type) {
     var config = {
-      images: ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'tiff', 'ico', 'JPG', 'webp'],
-      compress: ['zip', 'rar', 'gz', 'war', 'tgz', '7z'],
-      video: ['mp4', 'mp3', 'mpeg', 'mpg', 'mov', 'avi', 'webm', 'mkv', 'mkv', 'mp3', 'rmvb', 'wma', 'wmv'],
-      ont_text: ['iso', 'xlsx', 'xls', 'doc', 'docx', 'tiff', 'exe', 'so', '7z', 'bz', 'dmg', 'apk', 'pptx', 'ppt', 'xlsb', 'pdf']
-    },
-      returnVal = false;
+          images: ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'tiff', 'ico', 'JPG', 'webp'],
+          compress: ['zip', 'rar', 'gz', 'war', 'tgz','tar', '7z'],
+          video: ['mp4', 'mp3', 'mpeg', 'mpg', 'mov', 'avi', 'webm', 'mkv', 'mkv', 'mp3', 'rmvb', 'wma', 'wmv'],
+          ont_text: ['iso', 'xlsx', 'xls', 'doc', 'docx', 'tiff', 'exe', 'so', '7z', 'bz', 'dmg', 'apk', 'pptx', 'ppt', 'xlsb', 'pdf']
+        },
+        returnVal = false;
     if (type != undefined) {
       if (type == 'text') {
         $.each(config, function (key, item) {
@@ -2641,8 +2661,8 @@ var bt_file = {
 
   /**
    * @description 右键菜单事件组
-   * @param {Object} data 当前文件或文件夹右键点击的数据和数组下标，以及Dom元素 
-   * @return void 
+   * @param {Object} data 当前文件或文件夹右键点击的数据和数组下标，以及Dom元素
+   * @return void
    */
   file_groud_event: function (data) {
     var that = this;
@@ -2780,10 +2800,10 @@ var bt_file = {
    */
   batch_file_manage: function (stype) {
     var that = this,
-      _api = '',
-      _fname = [],
-      _obj = {},
-      _path = $('')
+        _api = '',
+        _fname = [],
+        _obj = {},
+        _path = $('')
     types = [];
     $.each(this.file_table_arry, function (index, item) {
       if (item.type && types.indexOf(item.type) == -1) {
@@ -2814,7 +2834,7 @@ var bt_file = {
         break;
       case 'compress': //压缩
         var arry_f = that.file_path.split('/'),
-          file_title = arry_f[arry_f.length - 1];
+            file_title = arry_f[arry_f.length - 1];
         _obj['filename'] = _fname.join(',');
         _obj['open'] = 'tar_gz'
         _obj['path'] = that.file_path + '/' + file_title;
@@ -2872,7 +2892,7 @@ var bt_file = {
    */
   batch_file_paste: function () {
     var that = this,
-      _pCookie = bt.get_cookie('record_paste_type');
+        _pCookie = bt.get_cookie('record_paste_type');
     this.check_exists_files_req({ dfile: this.file_path }, function (result) {
       if (result.length > 0) {
         var tbody = '';
@@ -2917,64 +2937,64 @@ var bt_file = {
       zIndex: 19900,
       closeBtn: 2,
       content: '<div class="replace_content_box" style="padding:20px 40px">' +
-        '<div class="replace_content_line">' +
-        '<span class="tname">查找</span>' +
-        '<div class="info-r">' +
-        '<input class="bt-input-text" id="replaceContentValue" AUTOCOMPLETE="off" type="text" placeholder="请输入查找的文件内容" style="width:486px">' +
-        '<i class="history_search iconfont icon-xiala"></i>' +
-        '<button class="normalBtnStyle checkBtn" onClick="bt_file.searchReplaceContent()" style="vertical-align: top; ">查找</button>' +
-        '<ul class="history_search_list hide"></ul>' +
-        '</div>' +
-        '</div>' +
-        '<div class="replace_content_line">' +
-        '<span class="tname">类型</span>' +
-        '<div class="info-r">' +
-        '<input name="replaceFileExtsType" id="replaceFileExtsType" class="bt-input-text" placeholder="例：php,html" type="text" value="html,php" style="width:570px">' +
-        '</div>' +
-        '</div>' +
-        '<div class="replace_content_line" style="margin-bottom: 10px;">' +
-        '<span class="tname">目录</span>' +
-        '<div class="info-r">' +
-        '<input class="bt-input-text" value="' + bt_file.file_path + '" type="text" style="width:570px" id="replaceContentPath">' +
-        '<div class="file_path_switch replaceHasChild">' +
-        '<i class="file_find_checkbox"></i>' +
-        '<span class="laberText">包含子目录</span>' +
-        '</div>' +
-        '</div>' +
-        '</div>' +
-        '<div class="replace_content_line">' +
-        '<span class="tname">模式</span>' +
-        '<div class="info-r matchModel">' +
-        '<div>' +
-        '<div class="checkbox_config normalModel">' +
-        '<i class="file_find_radio active"></i>' +
-        '<span class="laberText">普通</span>' +
-        '</div>' +
-        '<div class="checkbox_config regularMatchRe">' +
-        '<i class="file_find_radio"></i>' +
-        '<span class="laberText">正则</span>' +
-        '</div>' +
-        '</div>' +
-        '<div>' +
-        '<div class="checkbox_config allMatchRe hide_option">' +
-        '<i class="file_find_checkbox"></i>' +
-        '<span class="laberText">全词匹配</span>' +
-        '</div>' +
-        '<div class="checkbox_config distinguishCaseRe">' +
-        '<i class="file_find_checkbox"></i>' +
-        '<span class="laberText">不区分大小写</span>' +
-        '</div>' +
-        '</div>' +
-        '</div>' +
-        '</div>' +
-        '<div class="line match_container">' +
-        '<div class="header">' +
-        '<div class="tips-title matchRresult"></div>' +
-        '</div>' +
-        '<div class="main matchContent_main"><div style="color: #bcbcbc; font-size: 16px; text-align: center;line-height: 35px;">键入查找内容以在文件中查询</br><span style="font-size:14px">尝试查找选项能让范围缩小</span></div></div>' +
-        '</div>' +
-        '<span class="glyphicon cursor mr5 glyphicon-folder-open" onClick="bt.select_path(\'replaceContentPath\')"></span>' +
-        '</div>',
+          '<div class="replace_content_line">' +
+          '<span class="tname">查找</span>' +
+          '<div class="info-r">' +
+          '<input class="bt-input-text" id="replaceContentValue" AUTOCOMPLETE="off" type="text" placeholder="请输入查找的文件内容" style="width:486px">' +
+          '<i class="history_search iconfont icon-xiala"></i>' +
+          '<button class="normalBtnStyle checkBtn" onClick="bt_file.searchReplaceContent()" style="vertical-align: top; ">查找</button>' +
+          '<ul class="history_search_list hide"></ul>' +
+          '</div>' +
+          '</div>' +
+          '<div class="replace_content_line">' +
+          '<span class="tname">类型</span>' +
+          '<div class="info-r">' +
+          '<input name="replaceFileExtsType" id="replaceFileExtsType" class="bt-input-text" placeholder="例：php,html" type="text" value="html,php" style="width:570px">' +
+          '</div>' +
+          '</div>' +
+          '<div class="replace_content_line" style="margin-bottom: 10px;">' +
+          '<span class="tname">目录</span>' +
+          '<div class="info-r">' +
+          '<input class="bt-input-text" value="' + bt_file.file_path + '" type="text" style="width:570px" id="replaceContentPath">' +
+          '<div class="file_path_switch replaceHasChild">' +
+          '<i class="file_find_checkbox"></i>' +
+          '<span class="laberText">包含子目录</span>' +
+          '</div>' +
+          '</div>' +
+          '</div>' +
+          '<div class="replace_content_line">' +
+          '<span class="tname">模式</span>' +
+          '<div class="info-r matchModel">' +
+          '<div>' +
+          '<div class="checkbox_config normalModel">' +
+          '<i class="file_find_radio active"></i>' +
+          '<span class="laberText">普通</span>' +
+          '</div>' +
+          '<div class="checkbox_config regularMatchRe">' +
+          '<i class="file_find_radio"></i>' +
+          '<span class="laberText">正则</span>' +
+          '</div>' +
+          '</div>' +
+          '<div>' +
+          '<div class="checkbox_config allMatchRe hide_option">' +
+          '<i class="file_find_checkbox"></i>' +
+          '<span class="laberText">全词匹配</span>' +
+          '</div>' +
+          '<div class="checkbox_config distinguishCaseRe">' +
+          '<i class="file_find_checkbox"></i>' +
+          '<span class="laberText">不区分大小写</span>' +
+          '</div>' +
+          '</div>' +
+          '</div>' +
+          '</div>' +
+          '<div class="line match_container">' +
+          '<div class="header">' +
+          '<div class="tips-title matchRresult"></div>' +
+          '</div>' +
+          '<div class="main matchContent_main"><div style="color: #bcbcbc; font-size: 16px; text-align: center;line-height: 35px;">键入查找内容以在文件中查询</br><span style="font-size:14px">尝试查找选项能让范围缩小</span></div></div>' +
+          '</div>' +
+          '<span class="glyphicon cursor mr5 glyphicon-folder-open" onClick="bt.select_path(\'replaceContentPath\')"></span>' +
+          '</div>',
       success: function () {
         //单选、复选框按钮事件
         $('.checkbox_config,.file_path_switch').click(function (e) {
@@ -3028,19 +3048,19 @@ var bt_file = {
    */
   searchReplaceContent: function () {
     var that = this,
-      file_num = 0,    //文件数量
-      match_num = 0,   //文件内查询到的数量
-      match_file_html = '',
-      data = {
-        text: $('#replaceContentValue').val(),
-        exts: $("#replaceFileExtsType").val() || 'html,php',
-        path: $('#replaceContentPath').val(),     //路径
-        is_subdir: !$('.replaceHasChild').find('i').hasClass('active') ? '0' : '1',    //0不包含子目录 1 包含子目录
-        mode: !$('.regularMatchRe').find('i').hasClass('active') ? '0' : '1',          //为普通模式 1 为正则模式
-        isword: !$('.allMatchRe').find('i').hasClass('active') ? '0' : '1',            //全词匹配 0 默认
-        iscase: !$('.distinguishCaseRe').find('i').hasClass('active') ? '0' : '1',     //不区分大小写 0 默认
-        noword: '0'        //不输出行信息 0 默认
-      }
+        file_num = 0,    //文件数量
+        match_num = 0,   //文件内查询到的数量
+        match_file_html = '',
+        data = {
+          text: $('#replaceContentValue').val(),
+          exts: $("#replaceFileExtsType").val() || 'html,php',
+          path: $('#replaceContentPath').val(),     //路径
+          is_subdir: !$('.replaceHasChild').find('i').hasClass('active') ? '0' : '1',    //0不包含子目录 1 包含子目录
+          mode: !$('.regularMatchRe').find('i').hasClass('active') ? '0' : '1',          //为普通模式 1 为正则模式
+          isword: !$('.allMatchRe').find('i').hasClass('active') ? '0' : '1',            //全词匹配 0 默认
+          iscase: !$('.distinguishCaseRe').find('i').hasClass('active') ? '0' : '1',     //不区分大小写 0 默认
+          noword: '0'        //不输出行信息 0 默认
+        }
     this.$http('files_search', data, function (res) {
       var reg = new RegExp("(" + that.escodeChange(data.text) + ")");
       if (res.error) return layer.msg(res.error, { icon: 2 });
@@ -3054,11 +3074,11 @@ var bt_file = {
         file_num++;
         var contentNum = Object.keys(item).length
         match_file_html += '<div class="match_content_item" data-file="' + fileName + '">' +
-          '<div class="match_content_title">' +
-          '<span class="match_result_file_title" title="' + fileName + '&nbsp;&nbsp;(匹配' + contentNum + '次)"><i class="glyphicon glyphicon-triangle-bottom"></i>' + fileName + '&nbsp;&nbsp;(匹配' + contentNum + '次)</span>' +
-          '<a class="btlink pull-right editFile" data-filename="' + fileName + '">编辑</a>' +
-          '</div>' +
-          '<div class="match_result_file_content matchShow">'
+            '<div class="match_content_title">' +
+            '<span class="match_result_file_title" title="' + fileName + '&nbsp;&nbsp;(匹配' + contentNum + '次)"><i class="glyphicon glyphicon-triangle-bottom"></i>' + fileName + '&nbsp;&nbsp;(匹配' + contentNum + '次)</span>' +
+            '<a class="btlink pull-right editFile" data-filename="' + fileName + '">编辑</a>' +
+            '</div>' +
+            '<div class="match_result_file_content matchShow">'
         $.each(item, function (index, lineItem) {
           match_num++
           var html = $('<div></div>').text(lineItem.trim()).html().replace(reg, '<i style="font-weight: bold">' + $('<div></div>').text(data.text).html() + '</i>')
@@ -3071,7 +3091,7 @@ var bt_file = {
       // 隐藏显示内容
       $('.matchContent_main .match_result_file_title').click(function (e) {
         var parent_box = $(this).parents('.match_content_item'),
-          is_icon_top = $(this).find('i').hasClass('glyphicon-triangle-top')   //是否图标向上（未打开）
+            is_icon_top = $(this).find('i').hasClass('glyphicon-triangle-top')   //是否图标向上（未打开）
         if (is_icon_top) {
           parent_box.find('.match_result_file_content').addClass('matchShow')
           $(this).find('i').removeClass('glyphicon-triangle-top').addClass('glyphicon-triangle-bottom')
@@ -3345,7 +3365,7 @@ var bt_file = {
   Set_Recycle_bin: function (db) {
     var loadT = layer.msg(lan['public'].the, { icon: 16, time: 0, shade: [0.3, '#000'] });
     var that = this,
-      data = {}
+        data = {}
     if (db == 1) {
       data = { db: db };
     }
@@ -3402,7 +3422,7 @@ var bt_file = {
   /**0
    * @param {Object} data 当前文件的数据对象
    * @return void
-  */
+   */
   open_property_view: function (data) {
     var _this = this;
     _this.$http('get_file_attribute', { filename: data.path }, function (res) {
@@ -3529,7 +3549,7 @@ var bt_file = {
    * @description 固定表头
    * @param {string} el DOM选择器
    * @return void
-  */
+   */
   fixed_table_thead: function (el) {
     $(el).scroll(function () {
       var scrollTop = this.scrollTop;
@@ -3540,7 +3560,7 @@ var bt_file = {
    * @description 字符千分隔符
    * @param {string} el DOM选择器
    * @return void
-  */
+   */
   font_thousandth: function (num) {
     var source = String(num).split(".");//按小数点分成2部分
     source[0] = source[0].replace(new RegExp('(\\d)(?=(\\d{3})+$)', 'ig'), "$1,");//只将整数部分进行都好分割
@@ -3554,28 +3574,28 @@ var bt_file = {
    */
   open_images_preview: function (data) {
     var that = this,
-      mask = $('<div class="preview_images_mask">' +
-        '<div class="preview_head">' +
-        '<span class="preview_title">' + data.filename + '</span>' +
-        '<span class="preview_small hidden" title="缩小显示"><span class="glyphicon glyphicon-resize-small" aria-hidden="true"></span></span>' +
-        '<span class="preview_full" title="最大化显示"><span class="glyphicon glyphicon-resize-full" aria-hidden="true"></span></span>' +
-        '<span class="preview_close" title="关闭图片预览视图"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></span>' +
-        '</div>' +
-        '<div class="preview_body"><img id="preview_images" src="/download?filename=' + data.path + '" data-index="' + data.images_id + '"></div>' +
-        '<div class="preview_toolbar">' +
-        '<a href="javascript:;" title="左旋转"><span class="glyphicon glyphicon-repeat reverse-repeat" aria-hidden="true"></span></a>' +
-        '<a href="javascript:;" title="右旋转"><span class="glyphicon glyphicon-repeat" aria-hidden="true"></span></a>' +
-        '<a href="javascript:;" title="放大视图"><span class="glyphicon glyphicon-zoom-in" aria-hidden="true"></span></a>' +
-        '<a href="javascript:;" title="缩小视图"><span class="glyphicon glyphicon-zoom-out" aria-hidden="true"></span></a>' +
-        '<a href="javascript:;" title="重置视图"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span></a>' +
-        '<a href="javascript:;" title="图片列表"><span class="glyphicon glyphicon-list" aria-hidden="true"></span></a>' +
-        '</div>' +
-        '<div class="preview_cut_view">' +
-        '<a href="javascript:;" title="上一张"><span class="glyphicon glyphicon-menu-left" aria-hidden="true"></span></a>' +
-        '<a href="javascript:;" title="下一张"><span class="glyphicon glyphicon-menu-right" aria-hidden="true"></span></a>' +
-        '</div>' +
-        '</div>'),
-      images_config = { natural_width: 0, natural_height: 0, init_width: 0, init_height: 0, preview_width: 0, preview_height: 0, current_width: 0, current_height: 0, current_left: 0, current_top: 0, rotate: 0, scale: 1, images_mouse: false };
+        mask = $('<div class="preview_images_mask">' +
+            '<div class="preview_head">' +
+            '<span class="preview_title">' + data.filename + '</span>' +
+            '<span class="preview_small hidden" title="缩小显示"><span class="glyphicon glyphicon-resize-small" aria-hidden="true"></span></span>' +
+            '<span class="preview_full" title="最大化显示"><span class="glyphicon glyphicon-resize-full" aria-hidden="true"></span></span>' +
+            '<span class="preview_close" title="关闭图片预览视图"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></span>' +
+            '</div>' +
+            '<div class="preview_body"><img id="preview_images" src="/download?filename=' + data.path + '" data-index="' + data.images_id + '"></div>' +
+            '<div class="preview_toolbar">' +
+            '<a href="javascript:;" title="左旋转"><span class="glyphicon glyphicon-repeat reverse-repeat" aria-hidden="true"></span></a>' +
+            '<a href="javascript:;" title="右旋转"><span class="glyphicon glyphicon-repeat" aria-hidden="true"></span></a>' +
+            '<a href="javascript:;" title="放大视图"><span class="glyphicon glyphicon-zoom-in" aria-hidden="true"></span></a>' +
+            '<a href="javascript:;" title="缩小视图"><span class="glyphicon glyphicon-zoom-out" aria-hidden="true"></span></a>' +
+            '<a href="javascript:;" title="重置视图"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span></a>' +
+            '<a href="javascript:;" title="图片列表"><span class="glyphicon glyphicon-list" aria-hidden="true"></span></a>' +
+            '</div>' +
+            '<div class="preview_cut_view">' +
+            '<a href="javascript:;" title="上一张"><span class="glyphicon glyphicon-menu-left" aria-hidden="true"></span></a>' +
+            '<a href="javascript:;" title="下一张"><span class="glyphicon glyphicon-menu-right" aria-hidden="true"></span></a>' +
+            '</div>' +
+            '</div>'),
+        images_config = { natural_width: 0, natural_height: 0, init_width: 0, init_height: 0, preview_width: 0, preview_height: 0, current_width: 0, current_height: 0, current_left: 0, current_top: 0, rotate: 0, scale: 1, images_mouse: false };
     if ($('.preview_images_mask').length > 0) {
       $('#preview_images').attr('src', '/download?filename=' + data.path);
       return false;
@@ -3640,11 +3660,11 @@ var bt_file = {
       $('.preview_images_mask').on('mousemove', function (e) {
         e = e || window.event
         var offsetX = e.clientX - preview.left - diffX,
-          offsetY = e.clientY - preview.top - diffY,
-          rotate = Math.abs(images_config.rotate / 90),
-          preview_width = (rotate % 2 == 0 ? images_config.preview_width : images_config.preview_height),
-          preview_height = (rotate % 2 == 0 ? images_config.preview_height : images_config.preview_width),
-          left, top;
+            offsetY = e.clientY - preview.top - diffY,
+            rotate = Math.abs(images_config.rotate / 90),
+            preview_width = (rotate % 2 == 0 ? images_config.preview_width : images_config.preview_height),
+            preview_height = (rotate % 2 == 0 ? images_config.preview_height : images_config.preview_width),
+            left, top;
         if (images_config.current_width > preview_width) {
           var max_left = preview_width - images_config.current_width;
           left = images_config.current_left + offsetX;
@@ -3686,7 +3706,7 @@ var bt_file = {
     //图片工具条预览
     $('.preview_toolbar a').click(function () {
       var index = $(this).index(),
-        images = $('#preview_images');
+          images = $('#preview_images');
       switch (index) {
         case 0: //左旋转,一次旋转90度
         case 1: //右旋转,一次旋转90度
@@ -3733,8 +3753,8 @@ var bt_file = {
     // 上一张，下一张
     $('.preview_cut_view a').click(function () {
       var images_src = '',
-        preview_images = $('#preview_images'),
-        images_id = parseInt(preview_images.attr('data-index'));
+          preview_images = $('#preview_images'),
+          images_id = parseInt(preview_images.attr('data-index'));
       if (!$(this).index()) {
         images_id = images_id === 0 ? (that.file_images_list.length - 1) : images_id - 1;
         images_src = that.file_images_list[images_id];
@@ -3748,10 +3768,10 @@ var bt_file = {
     // 自动图片大小
     function auto_images_size (transition) {
       var rotate = Math.abs(images_config.rotate / 90),
-        preview_width = (rotate % 2 == 0 ? images_config.preview_width : images_config.preview_height),
-        preview_height = (rotate % 2 == 0 ? images_config.preview_height : images_config.preview_width),
-        preview_images = $('#preview_images'),
-        css_config = {};
+          preview_width = (rotate % 2 == 0 ? images_config.preview_width : images_config.preview_height),
+          preview_height = (rotate % 2 == 0 ? images_config.preview_height : images_config.preview_width),
+          preview_images = $('#preview_images'),
+          css_config = {};
       images_config.init_width = images_config.natural_width;
       images_config.init_height = images_config.natural_height;
       if (images_config.init_width > preview_width) {
@@ -3788,9 +3808,9 @@ var bt_file = {
    */
   open_video_play: function (data) {
     var old_filename = data.path,
-      imgUrl = '/download?filename=' + data.path,
-      p_tmp = data.path.split('/'),
-      path = p_tmp.slice(0, p_tmp.length - 1).join('/')
+        imgUrl = '/download?filename=' + data.path,
+        p_tmp = data.path.split('/'),
+        path = p_tmp.slice(0, p_tmp.length - 1).join('/')
     layer.open({
       type: 1,
       closeBtn: 2,
@@ -3802,12 +3822,12 @@ var bt_file = {
       success: function () {
         $.post('/files?action=get_videos', { path: path }, function (rdata) {
           var video_list = '<table class="table table-hover" style="margin-bottom:0;"><thead style="display: none;"><tr><th style="word-break: break-all;word-wrap:break-word;width:165px;">文件名</th><th style="width:65px" style="text-align:right;">大小</th></tr></thead>',
-            index = 0;
+              index = 0;
           for (var i = 0; i < rdata.length; i++) {
             var filename = path + '/' + rdata[i].name;
             if (filename === old_filename) index = i;
             video_list += '<tr class="' + (filename === old_filename ? 'video-avt' : '') + '"><td style="word-break: break-all;word-wrap:break-word;width:150px" onclick="bt_file.play_file(this,\'' + filename + '\')" title="文件: ' + filename + '\n类型: ' + rdata[i].type + '"><a>' +
-              rdata[i].name + '</a></td><td style="font-size: 8px;text-align:right;width:' + (65 + bt_file.scroll_width) + 'px;">' + ToSize(rdata[i].size) + '</td></tr>';
+                rdata[i].name + '</a></td><td style="font-size: 8px;text-align:right;width:' + (65 + bt_file.scroll_width) + 'px;">' + ToSize(rdata[i].size) + '</td></tr>';
           }
           video_list += '</table>';
           $('.video-list').html(video_list).scrollTop(index * 34);
@@ -3817,7 +3837,7 @@ var bt_file = {
   },
   /**
    * @description 切换播放
-   * @param {String} obj  
+   * @param {String} obj
    * @param {String} filename 文件名
    * @return void
    */
@@ -3862,10 +3882,10 @@ var bt_file = {
    */
   paste_file_or_dir: function () {
     var that = this,
-      _isPaste = bt.get_cookie('record_paste_type'),
-      _fileType = bt.get_cookie('record_paste_fileType'),
-      _paste = bt.get_cookie('record_paste'),
-      _filename = '';
+        _isPaste = bt.get_cookie('record_paste_type'),
+        _fileType = bt.get_cookie('record_paste_fileType'),
+        _paste = bt.get_cookie('record_paste'),
+        _filename = '';
     if (_paste != 'null' && _paste != undefined) _filename = _paste.split('/').pop()
     if (_fileType == 'dir' && this.file_path.indexOf(_paste) > -1) {
       layer.msg('错误的复制逻辑，从' + _paste + '粘贴到' + this.file_path + '有包含关系，存在无限循环复制风险!', { icon: 0, time: 0, shade: 0.3, shadeClose: true });
@@ -3876,17 +3896,33 @@ var bt_file = {
         case 'cut':
         case 'copy':
           this.check_exists_files_req({ dfile: this.file_path, filename: _filename }, function (result) {
-            if (result.length > 0) {
+            if (result.length > 1) {
               var tbody = '';
               for (var i = 0; i < result.length; i++) {
-                tbody += '<tr><td><span class="exists_files_style">' + result[i].filename + '</span></td><td>' + ToSize(result[i].size) + '</td><td>' + getLocalTime(result[i].mtime) + '</td></tr>';
+                tbody += '\
+								<tr>\
+									<td><span style="display: flex;" title="' + result[i].filename + '"><span class="exists_files_style" style="flex: 1; width: 0;">' + result[i].filename + '</span></span></td>\
+									<td>' + ToSize(result[i].size) + '</td>\
+									<td>' + getLocalTime(result[i].mtime) + '</td>\
+								</tr>';
               }
-              var mbody = '<div class="divtable"><table class="table table-hover" width="100%" border="0" cellpadding="0" cellspacing="0"><thead><th>文件名</th><th>大小</th><th>最后修改时间</th></thead>\
-                                        <tbody>' + tbody + '</tbody>\
-                                        </table></div>';
+              var mbody = '\
+							<div class="divtable">\
+								<table class="table table-hover" width="100%">\
+									<thead>\
+										<th>文件名</th>\
+										<th width="90">大小</th>\
+										<th width="140">最后修改时间</th>\
+									</thead>\
+                  <tbody>' + tbody + '</tbody>\
+                </table>\
+							</div>';
               SafeMessage('即将覆盖以下文件', mbody, function () {
                 that.config_paste_to(_paste, _filename);
               });
+            } else if (result.length == 1) {
+              result[0].type = _fileType;
+              that.cover_single_file(_paste, result[0]);
             } else {
               that.config_paste_to(_paste, _filename);
             }
@@ -3900,23 +3936,128 @@ var bt_file = {
     }
   },
   /**
+   * @descripttion 覆盖单个文件
+   * @param {String} path 路径
+   * @param {Object} file 文件对象
+   */
+  cover_single_file: function (path, file) {
+    var that = this;
+    layer.open({
+      type: 1,
+      title: '重复文件提示',
+      area: "400px",
+      closeBtn: 2,
+      shadeClose: false,
+      btn: ['确定', '取消'],
+      content: '\
+			<div class="cover_single_file bt-form">\
+				<div class="rows input">\
+					<div class="rows-label">操作类型: </div>\
+					<div class="rows-value">\
+						<div class="replace_content_view">\
+							<div class="checkbox_config c$over">\
+								<i class="file_find_radio active"></i>\
+								<span class="laberText" style="font-size: 12px;">覆盖文件</span>\
+							</div>\
+							<div class="checkbox_config rename">\
+								<i class="file_find_radio"></i>\
+								<span class="laberText" style="font-size: 12px;">重命名文件</span>\
+							</div>\
+						</div>\
+					</div>\
+				</div>\
+				<div class="rows input">\
+					<div class="rows-label">文件名: </div>\
+					<div class="rows-value">\
+						<input type="text" class="bt-input-text" disabled="disabled" name="filename" placeholder="文件名" value="' + file.filename + '" style="width: 220px;" />\
+					</div>\
+				</div>\
+				<div class="rows">\
+					<div class="rows-label">大小: </div>\
+					<div class="rows-value">' + ToSize(file.size) + '</div>\
+				</div>\
+				<div class="rows">\
+					<div class="rows-label">最后修改时间: </div>\
+					<div class="rows-value">' + getLocalTime(file.mtime) + '</div>\
+				</div>\
+			</div>',
+      success: function () {
+        $('.cover_single_file .checkbox_config').click(function () {
+          if ($(this).find('.file_find_radio').hasClass('active')) return
+          $(this).parent().find('.file_find_radio').removeClass('active');
+          $(this).find('.file_find_radio').addClass('active');
+          var $input = $('.cover_single_file input[name="filename"]');
+          if ($(this).hasClass('rename')) {
+            $input.removeAttr('disabled')
+            var filename = file.filename
+            var index = filename.lastIndexOf('.')
+            if (index == -1) {
+              filename += ' - 副本';
+            } else {
+              filename = filename.substring(0, index) + ' - 副本' + filename.substring(index, filename.length);
+            }
+            $input.val(filename);
+            $input.focus();
+          } else {
+            $input.val(file.filename);
+            $input.attr('disabled', 'disabled');
+          }
+        })
+      },
+      yes: function (index) {
+        var filename = $('.cover_single_file input[name="filename"]').val();
+
+        function save () {
+          that.config_paste_to(path, filename, function (res) {
+            if (res.status) {
+              layer.close(index);
+            }
+          });
+        }
+
+        if (this.checkSameName(filename)) {
+          bt.confirm({
+            title: '覆盖文件【' + filename + '】',
+            msg: '您确定要覆盖当前文件？'
+          }, function (indexs) {
+            layer.close(indexs)
+            save()
+          })
+        } else {
+          save()
+        }
+      },
+      checkSameName: function (filename) {
+        var result = false;
+        for (var i = 0; i < that.file_list.length; i++) {
+          if (that.file_list[i].filename == filename) {
+            result = true;
+            break;
+          }
+        }
+        return result;
+      }
+    })
+  },
+  /**
    * @descripttion 粘贴到
    * @param {String} path         复制/剪切路径
    * @param {String} _filename     文件名称
    * @return: 无返回值
    */
-  config_paste_to: function (path, _filename) {
+  config_paste_to: function (path, _filename, callback) {
     var that = this,
-      dfile = this.file_path + '/' + _filename,
-      _type = bt.get_cookie('record_paste_type');
+        dfile = this.file_path + '/' + _filename,
+        _type = bt.get_cookie('record_paste_type');
     this.$http(_type == 'copy' ? 'CopyFile' : 'MvFile', { sfile: path, dfile: dfile }, function (rdata) {
       if (rdata.status) {
         bt.set_cookie('record_paste', null);
         bt.set_cookie('record_paste_fileType', null);
         bt.set_cookie('record_paste_type', null);
-        that.reader_file_list({ path: that.file_path })
+        that.reader_file_list({ path: that.file_path });
       }
-      layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 })
+      layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 });
+      callback && callback(rdata);
     })
   },
   /**
@@ -3938,7 +4079,7 @@ var bt_file = {
       }
       if (data.type == 'file') {
         var ext_arry = $(this).val().split('.'),
-          ext = ext_arry[ext_arry.length - 1];
+            ext = ext_arry[ext_arry.length - 1];
         $(this).parent().prev().find('.file_icon').removeAttr('class').addClass('file_icon file_' + ext);
       }
     }).keyup(function (e) {
@@ -3947,7 +4088,7 @@ var bt_file = {
       e.preventDefault();
     }).blur(function () {
       var _val = $(this).val().replace(/[\r\n]/g, ""),
-        config = { sfile: data.path, dfile: that.path_resolve(that.file_path, _val) }
+          config = { sfile: data.path, dfile: that.path_resolve(that.file_path, _val) }
       if (data.filename == _val || _val == '') {
         $('.file_list_content .file_tr:nth-child(' + (data.index + 1) + ')').removeClass('editr_tr').find('.file_title').empty().append($('<i>' + data.filename + '</i>'));
         that.is_editor = false;
@@ -3976,18 +4117,18 @@ var bt_file = {
       title: '设置分享' + data.type_tips + '-[' + data.filename + ']',
       btn: ['生成外链', '取消'],
       content: '<from class="bt-form" id="outer_url_form" style="padding:30px 15px;display:inline-block">' +
-        '<div class="line"><span class="tname">分享名称</span><div class="info-r"><input name="ps"  class="bt-input-text mr5" type="text" placeholder="分享名称不能为空" style="width:270px" value="' + data.filename + '"></div></div>' +
-        '<div class="line"><span class="tname">有效期</span><div class="info-r">' +
-        '<label class="checkbox_grourd"><input type="radio" name="expire" value="24" checked><span>&nbsp;1天</span></label>' +
-        '<label class="checkbox_grourd"><input type="radio" name="expire" value="168"><span>&nbsp;7天</span></label>' +
-        '<label class="checkbox_grourd"><input type="radio" name="expire" value="1130800"><span>&nbsp;永久</span></label>' +
-        '</div></div>' +
-        '<div class="line"><span class="tname">提取码</span><div class="info-r"><input name="password" class="bt-input-text mr5" placeholder="为空则不设置提取码" type="text" style="width:220px" value=""><button type="button" id="random_paw" class="btn btn-success btn-sm btn-title">随机</button></div></div>' +
-        '</from>',
+          '<div class="line"><span class="tname">分享名称</span><div class="info-r"><input name="ps"  class="bt-input-text mr5" type="text" placeholder="分享名称不能为空" style="width:270px" value="' + data.filename + '"></div></div>' +
+          '<div class="line"><span class="tname">有效期</span><div class="info-r">' +
+          '<label class="checkbox_grourd"><input type="radio" name="expire" value="24" checked><span>&nbsp;1天</span></label>' +
+          '<label class="checkbox_grourd"><input type="radio" name="expire" value="168"><span>&nbsp;7天</span></label>' +
+          '<label class="checkbox_grourd"><input type="radio" name="expire" value="1130800"><span>&nbsp;永久</span></label>' +
+          '</div></div>' +
+          '<div class="line"><span class="tname">提取码</span><div class="info-r"><input name="password" class="bt-input-text mr5" placeholder="为空则不设置提取码" type="text" style="width:220px" value=""><button type="button" id="random_paw" class="btn btn-success btn-sm btn-title">随机</button></div></div>' +
+          '</from>',
       yes: function (indexs, layers) {
         var ps = $('[name=ps]').val(),
-          expire = $('[name=expire]:checked').val(),
-          password = $('[name=password]').val();
+            expire = $('[name=expire]:checked').val(),
+            password = $('[name=password]').val();
         if (ps === '') {
           layer.msg('分享名称不能为空', { icon: 2 })
           return false;
@@ -4044,7 +4185,7 @@ var bt_file = {
     var data = datas
     if (type == 'fonticon') { data = datas.down_info }
     var that = this,
-      download_url = location.origin + '/down/' + data.token;
+        download_url = location.origin + '/down/' + data.token;
     this.loadY = bt.open({
       type: 1,
       shift: 5,
@@ -4052,15 +4193,15 @@ var bt_file = {
       area: '550px',
       title: '外链分享-[' + data.filename + ']',
       content: '<div class="bt-form pd20 pb70">' +
-        '<div class="line"><span class="tname">分享名称</span><div class="info-r"><input readonly class="bt-input-text mr5" type="text" style="width:365px" value="' + data.ps + '"></div></div>' +
-        '<div class="line external_link"><span class="tname">分享外链</span><div class="info-r"><input readonly class="bt-input-text mr5" type="text" style="width:280px" value="' + download_url + '"><button type="button" id="copy_url" data-clipboard-text="' + download_url + '" class="btn btn-success btn-sm btn-title copy_url" style="margin-right:5px" data-clipboard-target="#copy_url"><img style="width:16px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABIUlEQVQ4T6XTsSuFURjH8d+3/AFm0x0MyqBEUQaUIqUU3YwWyqgMptud/BlMSt1SBiklg0K3bhmUQTFZDZTxpyOvznt7z3sG7/T2vOf5vM85z3nQPx+KfNuHkhoZ7xXYjNfEwIukXUnvNcg2sJECnoHhugpsnwBN21PAXVgbV/AEjNhuVSFA23YHWLNt4Cc3Bh6BUdtLcbzAgHPbp8BqCngAxjJbOANWUkAPGA8fE8icpD1gOQV0gclMBRfAYgq4BaZtz/YhA5IGgY7tS2AhBdwAM7b3JX1I+iz1G45sXwHzKeAa6P97qZgcEA6v/ZsR3v9aHCmt0P9UBVuShjKz8CYpXPkDYKJ0kaKhWpe0UwOFxDATx5VACFZ0Ivbuga8i8A3NFqQRZ5pz7wAAAABJRU5ErkJggg=="></button><button type="button" class="btn btn-success QR_code btn-sm btn-title"><img  style="width:16px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABUklEQVQ4T6WSIU9DQRCEvwlYLIoEgwEECs3rDyCpobbtL6AKRyggMQ9TJBjUMzgMCeUnIEAREoICFAoEZMk2dy/Xo4KGNZu7nZ2bnT3xz1DsN7MFYCnhe5V0n/Kb2QowL2kY70cEoXAHVEnDG/ABXAJXmVDHVZKqSFAA58AqsAY8AW3A68/AQ7hbBG6BbeDGlaQEh8AucA3suzDgC5gFXHID2At5YxJBNwA6ocFBM8B3OL8DTaCcpMDN2QojxHHdk9Qrx9SeAyf1CMFIJ3DjYqxLOgo192gs4ibSNfrMOaj2yBvMrCnpImYHR4C/vizpIPkX/mpbUtfMepJKMxtKKsyslNTLCZxkBzgFjoE5oCVp08yKvyhwgkGyRl9nX1LDzDz3kzxS8kuBpFYygq8xJ4gjjBMEpz+BF+AxcXLg39XMOpLOciW1gtz9ac71GqdpSrE/8U20EQ3XLHEAAAAASUVORK5CYII="></button></div></div>' +
-        '<div class="line external_link" style="' + (data.password == "" ? "display:none;" : "display:block") + '"><span class="tname">提取码</span><div class="info-r"><input readonly class="bt-input-text mr5" type="text" style="width:243px" value="' + data.password + '"><button type="button" data-clipboard-text="链接:' + download_url + ' 提取码:' + data.password + '"  class="btn btn-success copy_paw btn-sm btn-title">复制链接及提取码</button></div></div>' +
-        '<div class="line"><span class="tname">过期时间</span><div class="info-r"><span style="line-height:32px; display: block;font-size:14px">' + ((data.expire > (new Date('2099-01-01 00:00:00').getTime()) / 1000) ? '<span calss="btlink">永久有效</span>' : bt.format_data(data.expire)) + '</span></div></div>' +
-        '<div class="bt-form-submit-btn">' +
-        '<button type="button" class="btn btn-danger btn-sm btn-title layer_close">' + lan['public'].close + '</button>' +
-        '<button type="button" id="down_del" class="btn btn-danger btn-sm btn-title close_down" style="color:#fff;background-color:#c9302c;border-color:#ac2925;" onclick="">关闭分享外链</button>' +
-        '</div>' +
-        '</div>',
+          '<div class="line"><span class="tname">分享名称</span><div class="info-r"><input readonly class="bt-input-text mr5" type="text" style="width:365px" value="' + data.ps + '"></div></div>' +
+          '<div class="line external_link"><span class="tname">分享外链</span><div class="info-r"><input readonly class="bt-input-text mr5" type="text" style="width:280px" value="' + download_url + '"><button type="button" id="copy_url" data-clipboard-text="' + download_url + '" class="btn btn-success btn-sm btn-title copy_url" style="margin-right:5px" data-clipboard-target="#copy_url"><img style="width:16px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABIUlEQVQ4T6XTsSuFURjH8d+3/AFm0x0MyqBEUQaUIqUU3YwWyqgMptud/BlMSt1SBiklg0K3bhmUQTFZDZTxpyOvznt7z3sG7/T2vOf5vM85z3nQPx+KfNuHkhoZ7xXYjNfEwIukXUnvNcg2sJECnoHhugpsnwBN21PAXVgbV/AEjNhuVSFA23YHWLNt4Cc3Bh6BUdtLcbzAgHPbp8BqCngAxjJbOANWUkAPGA8fE8icpD1gOQV0gclMBRfAYgq4BaZtz/YhA5IGgY7tS2AhBdwAM7b3JX1I+iz1G45sXwHzKeAa6P97qZgcEA6v/ZsR3v9aHCmt0P9UBVuShjKz8CYpXPkDYKJ0kaKhWpe0UwOFxDATx5VACFZ0Ivbuga8i8A3NFqQRZ5pz7wAAAABJRU5ErkJggg=="></button><button type="button" class="btn btn-success QR_code btn-sm btn-title"><img  style="width:16px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABUklEQVQ4T6WSIU9DQRCEvwlYLIoEgwEECs3rDyCpobbtL6AKRyggMQ9TJBjUMzgMCeUnIEAREoICFAoEZMk2dy/Xo4KGNZu7nZ2bnT3xz1DsN7MFYCnhe5V0n/Kb2QowL2kY70cEoXAHVEnDG/ABXAJXmVDHVZKqSFAA58AqsAY8AW3A68/AQ7hbBG6BbeDGlaQEh8AucA3suzDgC5gFXHID2At5YxJBNwA6ocFBM8B3OL8DTaCcpMDN2QojxHHdk9Qrx9SeAyf1CMFIJ3DjYqxLOgo192gs4ibSNfrMOaj2yBvMrCnpImYHR4C/vizpIPkX/mpbUtfMepJKMxtKKsyslNTLCZxkBzgFjoE5oCVp08yKvyhwgkGyRl9nX1LDzDz3kzxS8kuBpFYygq8xJ4gjjBMEpz+BF+AxcXLg39XMOpLOciW1gtz9ac71GqdpSrE/8U20EQ3XLHEAAAAASUVORK5CYII="></button></div></div>' +
+          '<div class="line external_link" style="' + (data.password == "" ? "display:none;" : "display:block") + '"><span class="tname">提取码</span><div class="info-r"><input readonly class="bt-input-text mr5" type="text" style="width:243px" value="' + data.password + '"><button type="button" data-clipboard-text="链接:' + download_url + ' 提取码:' + data.password + '"  class="btn btn-success copy_paw btn-sm btn-title">复制链接及提取码</button></div></div>' +
+          '<div class="line"><span class="tname">过期时间</span><div class="info-r"><span style="line-height:32px; display: block;font-size:14px">' + ((data.expire > (new Date('2099-01-01 00:00:00').getTime()) / 1000) ? '<span calss="btlink">永久有效</span>' : bt.format_data(data.expire)) + '</span></div></div>' +
+          '<div class="bt-form-submit-btn">' +
+          '<button type="button" class="btn btn-danger btn-sm btn-title layer_close">' + lan['public'].close + '</button>' +
+          '<button type="button" id="down_del" class="btn btn-danger btn-sm btn-title close_down" style="color:#fff;background-color:#c9302c;border-color:#ac2925;" onclick="">关闭分享外链</button>' +
+          '</div>' +
+          '</div>',
       success: function (layers, index) {
         var copy_url = new ClipboardJS('.copy_url');
         var copy_paw = new ClipboardJS('.copy_paw');
@@ -4143,7 +4284,7 @@ var bt_file = {
    */
   cancel_file_favorites: function (data) {
     var that = this,
-      index = data.index;
+        index = data.index;
     this.loadY = bt.confirm({ title: '取消' + data['filename'] + '收藏', msg: '是否取消[' + data['path'] + ']的收藏，是否继续？' }, function () {
       that.$http('del_files_store', { path: data.path }, function (res) {
         if (res.status) {
@@ -4158,7 +4299,7 @@ var bt_file = {
   /**
    * @description 创建软链接
    * @param {Object} data 当前文件的数据对象
-  */
+   */
   set_soft_link: function (data) {
     var that = this;
     bt_tools.open({
@@ -4356,7 +4497,7 @@ var bt_file = {
         return
       }
       var task_body = '',
-        is_add = false;
+          is_add = false;
       $.each(lists, function (index, item) {
         if (item.status == -1) {
           if (!that.file_present_task) that.get_present_task_view();
@@ -4464,22 +4605,22 @@ var bt_file = {
     this.$http('GetFileAccess', { filename: data.path }, function (rdata) { if (callback) callback(rdata) });
   },
   /**
-     * @description 文件夹目录查杀
-     * @param {Object} data 当前文件的数据对象
-     * @returns void
-     */
-	 set_dir_kill: function(data) {
-		var that = this;
-		var socket = null;
-		var $layer = $('spyware_detection_view');
-		var that_layer = null;
-		var tableList = [];
-		var path = data.path;
-		bt.open({
-			type: '1',
-			title: '目录查杀 【' + path + '】',
-			area: ['840px', '650px'],
-			content: '\
+   * @description 文件夹目录查杀
+   * @param {Object} data 当前文件的数据对象
+   * @returns void
+   */
+  set_dir_kill: function(data) {
+    var that = this;
+    var socket = null;
+    var $layer = $('spyware_detection_view');
+    var that_layer = null;
+    var tableList = [];
+    var path = data.path;
+    bt.open({
+      type: '1',
+      title: '目录查杀 【' + path + '】',
+      area: ['840px', '650px'],
+      content: '\
 			<div class="spyware_detection_view">\
 				<div class="spyware_detection_head">\
 					<div class="head_icon">\
@@ -4516,430 +4657,430 @@ var bt_file = {
 					<div id="spyware_detection_table"></div>\
 				</div>\
 			</div>',
-			success: function (layero, index) {
-				that_layer = this;
-				$layer = layero;
+      success: function (layero, index) {
+        that_layer = this;
+        $layer = layero;
 
-				this.init_table();
-				that_layer.reset_detection();
+        this.init_table();
+        that_layer.reset_detection();
 
-				// 重新查杀
-				$('.reset-detection-btn').click(function () {
-					that_layer.reset_detection();
-				});
+        // 重新查杀
+        $('.reset-detection-btn').click(function () {
+          that_layer.reset_detection();
+        });
 
-				// 取消
-				$('.cancel-detection-btn').click(function () {
-					bt.confirm({
-						title: '取消查杀',
-						msg: '当前正在进行木马查杀，确定停止查杀？'
-					}, function (indexs) {
-						that_layer.stop_detection();
-						layer.close(indexs);
-					});
-				});
+        // 取消
+        $('.cancel-detection-btn').click(function () {
+          bt.confirm({
+            title: '取消查杀',
+            msg: '当前正在进行木马查杀，确定停止查杀？'
+          }, function (indexs) {
+            that_layer.stop_detection();
+            layer.close(indexs);
+          });
+        });
 
-				// 完成
-				$('.done-detection-btn').click(function () {
-					layer.close(index);
-				});
+        // 完成
+        $('.done-detection-btn').click(function () {
+          layer.close(index);
+        });
 
-				$layer.prev().css({ 'z-index': 19999 })
-				$layer.css({ 'z-index': 20000 })
-			},
-			cancel: function (index) {
-				if (that_layer.detection_status != 'done') {
-					bt.confirm({
-						msg: '正在木马查杀，关闭即表示结束查杀',
-						title: '确定关闭木马查杀'
-					}, function (indexs) {
-						that_layer.stop_detection();
-						layer.close(indexs);
-						layer.close(index);
-					});
-				}
-				return that_layer.detection_status == 'done'
-			},
-			init_table: function () {
-				var that_layer = this;
-				this.spyTable = bt_tools.table({
-					el: '#spyware_detection_table',
-					default: "暂无数据",
-					height: '376',
-					data: [],
-					column: [
-						{
-							type: 'checkbox', 
-							width: 20 
-						},
-						{
-							fid: 'filename',
-							title: '文件名',
-							width: 140,
-							type: 'text',
-							template: function (row) {
-								return '<span class="flex" title="' + row.filename + '"><span style="flex: 1; width: 0;" class="text_ellipsis">' + row.filename + '</span></span>';
-							}
-						},
-						{
-							fid: 'path',
-							title: '文件路径',
-							type: 'text',
-							template: function (row) {
-								return '<span class="flex" title="' + row.path + '"><span style="flex: 1; width: 0;" class="text_ellipsis">' + row.path + '</span></span>';
-							}
-						},
-						{
-							type: 'group',
-							title: '操作',
-							width: 140,
-							align: 'right',
-							group: [
-								{
-									title: '误报',
-									event: function (row) {
-										bt.show_confirm('误报反馈', '<span class="red">是否确定提交误报反馈</br></span>', function () {
-											var loadT = bt.load('正在添加URL白名单，请稍候...');
-											bt.send('send_baota', 'files/send_baota', { filename: row.path }, function (res) {
-												loadT.close();
-												bt.msg(res);
-											});
-										});
-									}
-								},
-								{
-									title: '编辑',
-									event: function (row) {
-										openEditorView(0, row.path);
-									}
-								},
-								{
-									title: '删除',
-									event: function (row, index) {
-										that.del_file_or_dir(row, function (res) {
-											if (res.status) {
-												tableList.splice(index, 1);
-												that_layer.set_table_list();
-											}
-										});
-									}
-								}
-							]
-						}
-					],
-					tootls: [
-						{ // 批量操作
-							type: 'batch',
-							positon: ['left', 'bottom'],
-							config: {
-								title: '删除',
-								callback:function (data) {
-									bt.confirm({
-										title: '批量删除', 
-										msg: '确认删除选中内容,删除后将移至回收站，是否继续操作?'
-									}, function (indexs) {
-										var layerT = bt.load('正在批量删除文件，请稍候...');
-										var list = [];
-										var i = 0;
-										var checkList = data.check_list;
-										
-										function delFile (data, callback) {
-											bt.send('DeleteFile', 'files/DeleteFile', { path: data.path }, function(res) {
-												list.push({
-													filename: data.filename,
-													status: res.status,
-													result: res.status ? '删除成功' : '删除失败'
-												});
-												if (res.status) {
-													var fileIndex = -1;
-													for (var i = 0; i < tableList.length; i++) {
-														if(tableList[i].path == data.path) {
-															fileIndex = i;
-														}
-													}
-													if (fileIndex != -1) {
-														tableList.splice(fileIndex, 1);
-													}
-												}
-												callback && callback(res);
-											});
-										}
-										function callback () {
-											i++;
-											if (i >= checkList.length) {
-												that_layer.set_table_list();
-												layerT.close();
-												bt.open({
-													type: '1',
-													title: '批量删除',
-													area: '350px',
-													content: '\
+        $layer.prev().css({ 'z-index': 19999 })
+        $layer.css({ 'z-index': 20000 })
+      },
+      cancel: function (index) {
+        if (that_layer.detection_status != 'done') {
+          bt.confirm({
+            msg: '正在木马查杀，关闭即表示结束查杀',
+            title: '确定关闭木马查杀'
+          }, function (indexs) {
+            that_layer.stop_detection();
+            layer.close(indexs);
+            layer.close(index);
+          });
+        }
+        return that_layer.detection_status == 'done'
+      },
+      init_table: function () {
+        var that_layer = this;
+        this.spyTable = bt_tools.table({
+          el: '#spyware_detection_table',
+          default: "暂无数据",
+          height: '376',
+          data: [],
+          column: [
+            {
+              type: 'checkbox',
+              width: 20
+            },
+            {
+              fid: 'filename',
+              title: '文件名',
+              width: 140,
+              type: 'text',
+              template: function (row) {
+                return '<span class="flex" title="' + row.filename + '"><span style="flex: 1; width: 0;" class="text_ellipsis">' + row.filename + '</span></span>';
+              }
+            },
+            {
+              fid: 'path',
+              title: '文件路径',
+              type: 'text',
+              template: function (row) {
+                return '<span class="flex" title="' + row.path + '"><span style="flex: 1; width: 0;" class="text_ellipsis">' + row.path + '</span></span>';
+              }
+            },
+            {
+              type: 'group',
+              title: '操作',
+              width: 140,
+              align: 'right',
+              group: [
+                {
+                  title: '误报',
+                  event: function (row) {
+                    bt.show_confirm('误报反馈', '<span class="red">是否确定提交误报反馈</br></span>', function () {
+                      var loadT = bt.load('正在添加URL白名单，请稍候...');
+                      bt.send('send_baota', 'files/send_baota', { filename: row.path }, function (res) {
+                        loadT.close();
+                        bt.msg(res);
+                      });
+                    });
+                  }
+                },
+                {
+                  title: '编辑',
+                  event: function (row) {
+                    openEditorView(0, row.path);
+                  }
+                },
+                {
+                  title: '删除',
+                  event: function (row, index) {
+                    that.del_file_or_dir(row, function (res) {
+                      if (res.status) {
+                        tableList.splice(index, 1);
+                        that_layer.set_table_list();
+                      }
+                    });
+                  }
+                }
+              ]
+            }
+          ],
+          tootls: [
+            { // 批量操作
+              type: 'batch',
+              positon: ['left', 'bottom'],
+              config: {
+                title: '删除',
+                callback:function (data) {
+                  bt.confirm({
+                    title: '批量删除',
+                    msg: '确认删除选中内容,删除后将移至回收站，是否继续操作?'
+                  }, function (indexs) {
+                    var layerT = bt.load('正在批量删除文件，请稍候...');
+                    var list = [];
+                    var i = 0;
+                    var checkList = data.check_list;
+
+                    function delFile (data, callback) {
+                      bt.send('DeleteFile', 'files/DeleteFile', { path: data.path }, function(res) {
+                        list.push({
+                          filename: data.filename,
+                          status: res.status,
+                          result: res.status ? '删除成功' : '删除失败'
+                        });
+                        if (res.status) {
+                          var fileIndex = -1;
+                          for (var i = 0; i < tableList.length; i++) {
+                            if(tableList[i].path == data.path) {
+                              fileIndex = i;
+                            }
+                          }
+                          if (fileIndex != -1) {
+                            tableList.splice(fileIndex, 1);
+                          }
+                        }
+                        callback && callback(res);
+                      });
+                    }
+                    function callback () {
+                      i++;
+                      if (i >= checkList.length) {
+                        that_layer.set_table_list();
+                        layerT.close();
+                        bt.open({
+                          type: '1',
+                          title: '批量删除',
+                          area: '350px',
+                          content: '\
 														<div class="batch_title">\
 															<span class="batch_icon"></span>\
 															<span class="batch_text">批量删除操作完成！</span>\
 														</div>\
 														<div id="batch_table" style="margin: 15px 30px 15px 30px;"></div>\
 													',
-													success: function ($layers) {
-														bt_tools.table({
-															el: '#batch_table',
-															height: '200px',
-															data: list,
-															column: [
-																{
-																	fid: 'filename',
-																	title: '文件名',
-																	type: 'text',
-																	template: function (row) {
-																		return '<span class="flex" title="' + row.filename + '"><span style="flex: 1; width: 0;" class="text_ellipsis">' + row.filename + '</span></span>';
-																	}
-																},
-																{
-																	fid: 'result',
-																	title: '操作结果',
-																	type: 'text',
-																	width: 90,
-																	align: 'right',
-																	template: function (row) {
-																		return '<span style="color: ' + (row.status ? '#20a53a' : 'red') + '">' + row.result + '</span>';
-																	}
-																}
-															]
-														});
+                          success: function ($layers) {
+                            bt_tools.table({
+                              el: '#batch_table',
+                              height: '200px',
+                              data: list,
+                              column: [
+                                {
+                                  fid: 'filename',
+                                  title: '文件名',
+                                  type: 'text',
+                                  template: function (row) {
+                                    return '<span class="flex" title="' + row.filename + '"><span style="flex: 1; width: 0;" class="text_ellipsis">' + row.filename + '</span></span>';
+                                  }
+                                },
+                                {
+                                  fid: 'result',
+                                  title: '操作结果',
+                                  type: 'text',
+                                  width: 90,
+                                  align: 'right',
+                                  template: function (row) {
+                                    return '<span style="color: ' + (row.status ? '#20a53a' : 'red') + '">' + row.result + '</span>';
+                                  }
+                                }
+                              ]
+                            });
 
-														var top = ($(window).height() - $layers.height()) / 2;
-														$layers.css('top', top + 'px');
-													}
-												});
-											} else {
-												delFile(checkList[i], callback);
-											}
-										}
-										delFile(checkList[i], callback);
-									});
-								}
-							}
-						}
-					]
-				});
-			},
-			reset_detection: function () {
-				that_layer.detection_status = 'start'
-				$layer.find('.spyware_detection_head .file').text('开始文件查杀');
-				this.show_cancel_btn();
-				this.init_info();
-				this.reset_table();
-				this.reset_tq_num();
-				this.set_progress(0);
-				this.set_stop_status(false);
-				this.set_search_file_num(0);
-				this.set_icon_status('scanning');
-				// this.set_progress_color('success');
-				this.start_detection();
-			},
-			// 显示取消按钮
-			show_cancel_btn: function () {
-				$('.done-detection-btn').hide();
-				$('.start-detection-btn').hide();
-				$('.reset-detection-btn').hide();
-				$('.cancel-detection-btn').show();
-			},
-			// 显示完成按钮
-			show_done_btn: function () {
-				$('.start-detection-btn').hide();
-				$('.cancel-detection-btn').hide();
-				$('.done-detection-btn').show();
-				$('.reset-detection-btn').show();
-			},
-			// 初始化信息
-			init_info: function () {
-				$layer.find('.spyware_detection_head .info').html('<span class="status">正在查杀</span>，已扫描过滤文件<span class="scanned_num">0</span>/<span class="total_num">0</span>个；发现木马文件<span class="tqnum">0</span>个')
-			},
-			// 改变完成状态
-			change_status_done: function () {
-				$layer.find('.spyware_detection_head .info .status').text('查杀完成');
-			},
-			// 设置进度条进度
-			set_progress: function (val) {
-				if (val == 0) {
-					$layer.find('.progress_bar .inner').remove();
-					$layer.find('.progress_bar').html('<div class="inner"></div>');
-				} else {
-					$layer.find('.progress_bar .inner').css('width', val + '%');
-					$layer.find('.spyware_detection_progress .text').text(val + '%');
-				}
-			},
-			// 设置进度条颜色
-			set_progress_color: function (status) {
-				switch (status) {
-					case 'success':
-						$layer.find('.progress_bar .inner').css('background-color', '#20a53a');
-						break;
-					case 'danger':
-						$layer.find('.progress_bar .inner').css('background-color', 'red');
-						break;
-				}
-			},
-			// 设置目录查杀进度条
-			set_search_progress: function (scanned, total) {
-				if (total == 0) return;
-				var range = ((scanned / total) * 100).toFixed(1);
-				this.set_progress(range);
-			},
-			// 设置图标状态
-			set_icon_status: function (state) {
-				$layer.find('.spyware_detection_head .head_icon>div').hide();
-				var $icon = $layer.find('.spyware_detection_head .head_icon .' + state);
-				$icon.show();
-				switch (state) {
-					case 'done':
-						var img = $layer.find('.spyware_detection_head .tqnum').text() <= 0 ? 'success' : 'danger';
-						$icon.find('.icon').hide();
-						$icon.find('.icon.' + img).show();
-						break;
-				}
-			},
-			// 设置搜索文件数量
-			set_search_file_num: function (scanned, total) {
-				$layer.find('.spyware_detection_head .scanned_num').text(scanned);
-				if (total) $layer.find('.spyware_detection_head .total_num').text(total);
-			},
-			// 设置搜索文件信息
-			set_search_file_text: function (text) {
-				$layer.find('.spyware_detection_head .file').text(text);
-			},
-			// 重置木马数量
-			reset_tq_num: function () {
-				$layer.find('.tqnum').text(0);
-			},
-			// 设置停止状态
-			set_stop_status: function (val) {
-				this.stop_status = val;
-				if (val) this.on_close();
-			},
-			// 添加木马数量
-			add_tq_num: function () {
-				var num = $layer.find('.tqnum').text() || 0;
-				num++;
-				$layer.find('.tqnum').text(num);
-			},
-			// 开始查杀
-			start_detection: function () {
-				this.connect();
-			},
-			// 停止查杀
-			stop_detection: function () {
-				this.set_stop_status(true);
-				this.set_progress(100.0);
-				this.show_done_btn();
-				this.set_icon_status('done');
-				this.change_status_done();
-				$layer.find('.spyware_detection_head .info .status').text('查杀已取消');
-				$layer.find('.spyware_detection_head .file').text('扫描已完成');
-			},
-			// 重置表格数据
-			reset_table: function () {
-				tableList = [];
-				this.set_table_list();
-			},
-			// 设置表格数据
-			set_table_data: function (data) {
-				var path = data.path;
-				if (!path) return;
-				var filename = path.substring(path.lastIndexOf('/') + 1, path.length);
-				that.$http('get_file_attribute', { filename: path }, function (res) {
-					tableList.push({
-						type: res.is_dir ? 'dir' : 'file',
-						type_tips: res.is_dir ? '文件夹' : '文件',
-						filename: filename,
-						path: path
-					});
-					that_layer.set_table_list();
-				});
-			},
-			set_table_list: function () {
-				this.spyTable.$reader_content(tableList);
-			},
-			connect: function () {
-				// 连接
-				var url = (window.location.protocol === 'http:' ? 'ws://' : 'wss://') + window.location.host + '/ws_panel';
-				socket = new WebSocket(url);
-				// 绑定事件
-				socket.addEventListener('open', this.on_open);
-				socket.addEventListener('error', this.on_error);
-				socket.addEventListener('message', this.on_message);
-			},
-			send: function (data, success) {
-				// 判断当前连接状态，如果 != 1，则100ms后尝试重新发送
-				if (socket.readyState === 1) {
-					socket.send(JSON.stringify(data));
-					if (success) success(); 
-				} else {
-					setTimeout(function () { that_layer.send(data); }, 100);
-				}
-			},
-			on_open: function (e) {
-				var token = $("#request_token_head").attr('token');
-				that_layer.send({ mod_name: 'files', 'x-http-token': token });
-				that_layer.send({ mod_name: 'files', def_name: 'ws_webshell_check', ws_callback: 1, path: path });
-			},
-			on_close: function () {
-				if (socket) {
-					socket.close();
-					socket = null;
-				}
-			},
-			on_error: function (e) {
-				console.log(e);
-			},
-			on_message: function (e) {
-				var dataStr = e.data;
-				if (!dataStr) return;
-				if (that_layer.stop_status === true) return;
-				var data = JSON.parse(dataStr);
-				that_layer.set_search_file_text(data.info);
-				if (data.end === false) {
-					that_layer.set_search_file_num(data.is_count, data.count);
-				}
-				if (data.end === false && data.status === false) {
-					that_layer.set_search_progress(data.is_count, data.count);
-				}
-				if (data.end === false && data.status === true) {
-					that_layer.set_icon_status('scanning_danger');
-					// that_layer.set_progress_color('danger');
-					that_layer.add_tq_num();
-					that_layer.set_table_data(data);
-				}
-				if (data.end === true && data.is_max !== true) {
-					that_layer.detection_status = 'done'
-					that_layer.set_progress(100.0);
-					that_layer.change_status_done();
-					that_layer.show_done_btn();
-					that_layer.set_icon_status('done');
-				} else if (data.end === true && data.is_max === true) {
-					that_layer.detection_status = 'done'
-					that_layer.set_icon_status('done');
-					that_layer.set_progress(100.0);
-					that_layer.show_done_btn();
-					$layer.find('.head_left .info').text('查杀失败')
-					$layer.find('.head_icon .done .icon.success').hide()
-					$layer.find('.head_icon .done .icon.danger').show()
-					$layer.find('.reset-detection-btn').hide()
-				}
-			}
-		});
-		// if (data.ext == 'php') {
-		//     that.$http('file_webshell_check', { filename: data.path }, function(rdata) {
-		//         layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 })
-		//     })
-		// } else {
-		//     layer.confirm('目录查杀将包含子目录中的php文件，是否操作？', { title: '目录查杀[' + data['filename'] + ']', closeBtn: 2, icon: 3 }, function(index) {
-		//         that.$http('dir_webshell_check', { path: data.path }, function(rdata) {
-		//             layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 })
-		//         })
-		//     })
-		// }
-	},
+                            var top = ($(window).height() - $layers.height()) / 2;
+                            $layers.css('top', top + 'px');
+                          }
+                        });
+                      } else {
+                        delFile(checkList[i], callback);
+                      }
+                    }
+                    delFile(checkList[i], callback);
+                  });
+                }
+              }
+            }
+          ]
+        });
+      },
+      reset_detection: function () {
+        that_layer.detection_status = 'start'
+        $layer.find('.spyware_detection_head .file').text('开始文件查杀');
+        this.show_cancel_btn();
+        this.init_info();
+        this.reset_table();
+        this.reset_tq_num();
+        this.set_progress(0);
+        this.set_stop_status(false);
+        this.set_search_file_num(0);
+        this.set_icon_status('scanning');
+        // this.set_progress_color('success');
+        this.start_detection();
+      },
+      // 显示取消按钮
+      show_cancel_btn: function () {
+        $('.done-detection-btn').hide();
+        $('.start-detection-btn').hide();
+        $('.reset-detection-btn').hide();
+        $('.cancel-detection-btn').show();
+      },
+      // 显示完成按钮
+      show_done_btn: function () {
+        $('.start-detection-btn').hide();
+        $('.cancel-detection-btn').hide();
+        $('.done-detection-btn').show();
+        $('.reset-detection-btn').show();
+      },
+      // 初始化信息
+      init_info: function () {
+        $layer.find('.spyware_detection_head .info').html('<span class="status">正在查杀</span>，已扫描过滤文件<span class="scanned_num">0</span>/<span class="total_num">0</span>个；发现木马文件<span class="tqnum">0</span>个')
+      },
+      // 改变完成状态
+      change_status_done: function () {
+        $layer.find('.spyware_detection_head .info .status').text('查杀完成');
+      },
+      // 设置进度条进度
+      set_progress: function (val) {
+        if (val == 0) {
+          $layer.find('.progress_bar .inner').remove();
+          $layer.find('.progress_bar').html('<div class="inner"></div>');
+        } else {
+          $layer.find('.progress_bar .inner').css('width', val + '%');
+          $layer.find('.spyware_detection_progress .text').text(val + '%');
+        }
+      },
+      // 设置进度条颜色
+      set_progress_color: function (status) {
+        switch (status) {
+          case 'success':
+            $layer.find('.progress_bar .inner').css('background-color', '#20a53a');
+            break;
+          case 'danger':
+            $layer.find('.progress_bar .inner').css('background-color', 'red');
+            break;
+        }
+      },
+      // 设置目录查杀进度条
+      set_search_progress: function (scanned, total) {
+        if (total == 0) return;
+        var range = ((scanned / total) * 100).toFixed(1);
+        this.set_progress(range);
+      },
+      // 设置图标状态
+      set_icon_status: function (state) {
+        $layer.find('.spyware_detection_head .head_icon>div').hide();
+        var $icon = $layer.find('.spyware_detection_head .head_icon .' + state);
+        $icon.show();
+        switch (state) {
+          case 'done':
+            var img = $layer.find('.spyware_detection_head .tqnum').text() <= 0 ? 'success' : 'danger';
+            $icon.find('.icon').hide();
+            $icon.find('.icon.' + img).show();
+            break;
+        }
+      },
+      // 设置搜索文件数量
+      set_search_file_num: function (scanned, total) {
+        $layer.find('.spyware_detection_head .scanned_num').text(scanned);
+        if (total) $layer.find('.spyware_detection_head .total_num').text(total);
+      },
+      // 设置搜索文件信息
+      set_search_file_text: function (text) {
+        $layer.find('.spyware_detection_head .file').text(text);
+      },
+      // 重置木马数量
+      reset_tq_num: function () {
+        $layer.find('.tqnum').text(0);
+      },
+      // 设置停止状态
+      set_stop_status: function (val) {
+        this.stop_status = val;
+        if (val) this.on_close();
+      },
+      // 添加木马数量
+      add_tq_num: function () {
+        var num = $layer.find('.tqnum').text() || 0;
+        num++;
+        $layer.find('.tqnum').text(num);
+      },
+      // 开始查杀
+      start_detection: function () {
+        this.connect();
+      },
+      // 停止查杀
+      stop_detection: function () {
+        this.set_stop_status(true);
+        this.set_progress(100.0);
+        this.show_done_btn();
+        this.set_icon_status('done');
+        this.change_status_done();
+        $layer.find('.spyware_detection_head .info .status').text('查杀已取消');
+        $layer.find('.spyware_detection_head .file').text('扫描已完成');
+      },
+      // 重置表格数据
+      reset_table: function () {
+        tableList = [];
+        this.set_table_list();
+      },
+      // 设置表格数据
+      set_table_data: function (data) {
+        var path = data.path;
+        if (!path) return;
+        var filename = path.substring(path.lastIndexOf('/') + 1, path.length);
+        that.$http('get_file_attribute', { filename: path }, function (res) {
+          tableList.push({
+            type: res.is_dir ? 'dir' : 'file',
+            type_tips: res.is_dir ? '文件夹' : '文件',
+            filename: filename,
+            path: path
+          });
+          that_layer.set_table_list();
+        });
+      },
+      set_table_list: function () {
+        this.spyTable.$reader_content(tableList);
+      },
+      connect: function () {
+        // 连接
+        var url = (window.location.protocol === 'http:' ? 'ws://' : 'wss://') + window.location.host + '/ws_panel';
+        socket = new WebSocket(url);
+        // 绑定事件
+        socket.addEventListener('open', this.on_open);
+        socket.addEventListener('error', this.on_error);
+        socket.addEventListener('message', this.on_message);
+      },
+      send: function (data, success) {
+        // 判断当前连接状态，如果 != 1，则100ms后尝试重新发送
+        if (socket.readyState === 1) {
+          socket.send(JSON.stringify(data));
+          if (success) success();
+        } else {
+          setTimeout(function () { that_layer.send(data); }, 100);
+        }
+      },
+      on_open: function (e) {
+        var token = $("#request_token_head").attr('token');
+        that_layer.send({ mod_name: 'files', 'x-http-token': token });
+        that_layer.send({ mod_name: 'files', def_name: 'ws_webshell_check', ws_callback: 1, path: path });
+      },
+      on_close: function () {
+        if (socket) {
+          socket.close();
+          socket = null;
+        }
+      },
+      on_error: function (e) {
+        console.log(e);
+      },
+      on_message: function (e) {
+        var dataStr = e.data;
+        if (!dataStr) return;
+        if (that_layer.stop_status === true) return;
+        var data = JSON.parse(dataStr);
+        that_layer.set_search_file_text(data.info);
+        if (data.end === false) {
+          that_layer.set_search_file_num(data.is_count, data.count);
+        }
+        if (data.end === false && data.status === false) {
+          that_layer.set_search_progress(data.is_count, data.count);
+        }
+        if (data.end === false && data.status === true) {
+          that_layer.set_icon_status('scanning_danger');
+          // that_layer.set_progress_color('danger');
+          that_layer.add_tq_num();
+          that_layer.set_table_data(data);
+        }
+        if (data.end === true && data.is_max !== true) {
+          that_layer.detection_status = 'done'
+          that_layer.set_progress(100.0);
+          that_layer.change_status_done();
+          that_layer.show_done_btn();
+          that_layer.set_icon_status('done');
+        } else if (data.end === true && data.is_max === true) {
+          that_layer.detection_status = 'done'
+          that_layer.set_icon_status('done');
+          that_layer.set_progress(100.0);
+          that_layer.show_done_btn();
+          $layer.find('.head_left .info').text('查杀失败')
+          $layer.find('.head_icon .done .icon.success').hide()
+          $layer.find('.head_icon .done .icon.danger').show()
+          $layer.find('.reset-detection-btn').hide()
+        }
+      }
+    });
+    // if (data.ext == 'php') {
+    //     that.$http('file_webshell_check', { filename: data.path }, function(rdata) {
+    //         layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 })
+    //     })
+    // } else {
+    //     layer.confirm('目录查杀将包含子目录中的php文件，是否操作？', { title: '目录查杀[' + data['filename'] + ']', closeBtn: 2, icon: 3 }, function(index) {
+    //         that.$http('dir_webshell_check', { path: data.path }, function(rdata) {
+    //             layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 })
+    //         })
+    //     })
+    // }
+  },
   /**
    * @description 文件路径合并
    * @param {String} paths 旧路径
@@ -4948,7 +5089,7 @@ var bt_file = {
    */
   path_resolve: function (paths, param) {
     var path = '',
-      split = '';
+        split = '';
     if (!Array.isArray(param)) param = [param];
     paths.replace(/([\/|\/]*)$/, function ($1) {
       split = $1;
@@ -5229,7 +5370,7 @@ var bt_file = {
    */
   get_dir_list: function (data, callback) {
     var that = this,
-      f_sort = bt.get_cookie('files_sort');
+        f_sort = bt.get_cookie('files_sort');
     if (f_sort) {
       data['sort'] = f_sort;
       data['reverse'] = bt.get_cookie('name_reverse');
@@ -5263,11 +5404,11 @@ var bt_file = {
           ['rar', 'rar (WinRAR对中文兼容较好)']
         ]
       },
-      { label: '压缩路径', id: 'compress_path', name: 'dfile', placeholder: '保存的文件名', value: data.path + '_' + bt.get_random(6) + '.' + (data.open == 'tar_gz' ? 'tar.gz' : data.open) }
+        { label: '压缩路径', id: 'compress_path', name: 'dfile', placeholder: '保存的文件名', value: data.path + '_' + bt.get_random(6) + '.' + (data.open == 'tar_gz' ? 'tar.gz' : data.open) }
       ],
       beforeSend: function (updata) {
         var ind = data.path.lastIndexOf("\/"),
-          _url = data.path.substring(0, ind + 1); // 过滤路径文件名
+            _url = data.path.substring(0, ind + 1); // 过滤路径文件名
         return { sfile: data.filename, dfile: updata.dfile, z_type: (updata.z_type == 'tar_gz' ? 'tar.gz' : updata.z_type), path: _url }
       }
     }, function (form, html) {
@@ -5284,8 +5425,8 @@ var bt_file = {
           // 切换压缩格式
           $('select[name=z_type]').change(function () {
             var _type = $(this).val(),
-              _inputVel = $('input[name=dfile]').val(),
-              path_list = [];
+                _inputVel = $('input[name=dfile]').val(),
+                path_list = [];
             _type == 'tar_gz' ? 'tar.gz' : _type
             _inputVel = _inputVel.substring(0, _inputVel.lastIndexOf('\/'))
             path_list = _inputVel.split('/');
@@ -5319,8 +5460,8 @@ var bt_file = {
    */
   unpack_file_to_path: function (data) {
     var that = this,
-      _type = 'zip',
-      spath = '';
+        _type = 'zip',
+        spath = '';
     spath = data.path.substring(0, data.path.lastIndexOf('\/'))
     this.reader_form_line({
       url: 'UnZip',
@@ -5407,38 +5548,38 @@ var bt_file = {
    */
   reader_form_line: function (config, callback) {
     var that = this,
-      random = bt.get_random(10),
-      html = $('<form id="' + random + '" class="bt-form pd20"></form>'),
-      data = config,
-      eventList = [],
-      that = this;
+        random = bt.get_random(10),
+        html = $('<form id="' + random + '" class="bt-form pd20"></form>'),
+        data = config,
+        eventList = [],
+        that = this;
     if (!Array.isArray(config)) data = config.data;
     $.each(data, function (index, item) {
       var labelWidth = item.labelWidth || config.overall.labelWidth || null,
-        event_random = bt.get_random(10),
-        width = item.labelWidth || config.overall.width || null,
-        form_line = $('<div class="line"><span class="tname" ' + (labelWidth ? ('width:' + labelWidth) : '') + '>' + (item.label || '') + '</span><div class="info-r"></div></div>'),
-        form_el = $((function () {
-          switch (item.type) {
-            case 'select':
-              return '<select ' + (item.disabled ? 'disabled' : '') + ' ' + (item.readonly ? 'readonly' : '') + ' class="bt-input-text mr5 ' + (item.readonly ? 'readonly-form-input' : '') + '" name="' + item.name + '" ' + (item.eventType ? 'data-event="' + event_random + '"' : '') + ' style="' + (width ? ('width:' + width) : '') + '">' + (function (item) {
-                var options_list = '';
-                $.each(item.list, function (key, items) {
-                  if (!Array.isArray(items)) { //判断是否为二维数组
-                    options_list += '<option value="' + items + '" ' + (item.value === key ? 'selected' : '') + '>' + items + '</option>'
-                  } else {
-                    options_list += '<option value="' + items[0] + '" ' + (item.value === items[0] ? 'selected' : '') + '>' + items[1] + '</option>'
-                  }
-                })
-                return options_list;
-              }(item)) + '</select>';
-              break;
-            case 'text':
-            default:
-              return '<input ' + (item.disabled ? 'disabled' : '') + ' ' + (item.readonly ? 'readonly' : '') + ' ' + (item.eventType ? 'data-event="' + event_random + '"' : '') + ' type="text" name="' + item.name + '" ' + (item.id ? 'id="' + item.id + '"' : '') + ' class="bt-input-text ' + (item.readonly ? 'readonly-form-input' : '') + '" placeholder="' + (item.placeholder || '') + '" style="' + (width ? ('width:' + width) : '') + '" value="' + (item.value || '') + '"/>';
-              break;
-          }
-        }(item)));
+          event_random = bt.get_random(10),
+          width = item.labelWidth || config.overall.width || null,
+          form_line = $('<div class="line"><span class="tname" ' + (labelWidth ? ('width:' + labelWidth) : '') + '>' + (item.label || '') + '</span><div class="info-r"></div></div>'),
+          form_el = $((function () {
+            switch (item.type) {
+              case 'select':
+                return '<select ' + (item.disabled ? 'disabled' : '') + ' ' + (item.readonly ? 'readonly' : '') + ' class="bt-input-text mr5 ' + (item.readonly ? 'readonly-form-input' : '') + '" name="' + item.name + '" ' + (item.eventType ? 'data-event="' + event_random + '"' : '') + ' style="' + (width ? ('width:' + width) : '') + '">' + (function (item) {
+                  var options_list = '';
+                  $.each(item.list, function (key, items) {
+                    if (!Array.isArray(items)) { //判断是否为二维数组
+                      options_list += '<option value="' + items + '" ' + (item.value === key ? 'selected' : '') + '>' + items + '</option>'
+                    } else {
+                      options_list += '<option value="' + items[0] + '" ' + (item.value === items[0] ? 'selected' : '') + '>' + items[1] + '</option>'
+                    }
+                  })
+                  return options_list;
+                }(item)) + '</select>';
+                break;
+              case 'text':
+              default:
+                return '<input ' + (item.disabled ? 'disabled' : '') + ' ' + (item.readonly ? 'readonly' : '') + ' ' + (item.eventType ? 'data-event="' + event_random + '"' : '') + ' type="text" name="' + item.name + '" ' + (item.id ? 'id="' + item.id + '"' : '') + ' class="bt-input-text ' + (item.readonly ? 'readonly-form-input' : '') + '" placeholder="' + (item.placeholder || '') + '" style="' + (width ? ('width:' + width) : '') + '" value="' + (item.value || '') + '"/>';
+                break;
+            }
+          }(item)));
       if (item.eventType || item.event) {
         if (!Array.isArray(item.eventType)) item.eventType = [item.eventType];
         $.each(item.eventType, function (index, items) {
@@ -5516,13 +5657,13 @@ var bt_file = {
 
   /**
    * @description 文件管理请求方法
-   * @param {*} data 
+   * @param {*} data
    * @param {*} parem
    * @param {*} callback
    */
   $http: function (data, parem, callback) {
     var that = this,
-      loadT = '';
+        loadT = '';
     if (typeof data == "string") {
       if (typeof parem != "object") callback = parem, parem = {};
       if (!Array.isArray(that.method_list[data])) that.method_list[data] = ['files', that.method_list[data]];

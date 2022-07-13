@@ -11,7 +11,6 @@
 # 宝塔公共库
 #--------------------------------
 import json,os,sys,time,re,socket,importlib,binascii,base64,io,string
-from random import choice
 _LAN_PUBLIC = None
 _LAN_LOG = None
 _LAN_TEMPLATE = None
@@ -614,7 +613,7 @@ def is_ipv6(ip):
         @return True/False
     '''
     # 验证基本格式
-    if not re.match(r"^[\w:]$", ip):
+    if not re.match(r"^[\w:]+$", ip):
         return False
 
     # 验证IPv6地址
@@ -755,7 +754,7 @@ def GetNumLines(path,num,p=1):
         if not os.path.exists(path): return ""
         start_line = (p - 1) * num
         count = start_line + num
-        fp = open(path,'r')
+        fp = open(path,'rb')
         buf = ""
         fp.seek(-1, 2)
         if fp.read(1) == "\n": fp.seek(-1, 2)
@@ -776,7 +775,7 @@ def GetNumLines(path,num,p=1):
                         if sp_len > 0:
                             line = line[sp_len:]
                         try:
-                            data.insert(0,html.escape(line))
+                            data.insert(0,line)
                         except: pass
                     buf = buf[:newline_pos]
                     n += 1
@@ -898,17 +897,25 @@ def get_requests_headers():
 
 def downloadFile(url,filename):
     try:
-        import requests
+        import requests,config
         from requests.packages.urllib3.exceptions import InsecureRequestWarning
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-        # import requests.packages.urllib3.util.connection as urllib3_conn
-        # old_family = urllib3_conn.allowed_gai_family
-        # urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
-        res = requests.get(url,headers=get_requests_headers(),timeout=30,stream=True)
+        import requests.packages.urllib3.util.connection as urllib3_conn
+        _ip_type = config.config().get_request_iptype()
+        old_family = urllib3_conn.allowed_gai_family
+        if _ip_type == 'ipv4':
+            urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
+        elif _ip_type == 'ipv6':
+            urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
+        try:
+            res = requests.get(url,headers=get_requests_headers(),timeout=30,stream=True)
+        except Exception as ex:
+            raise PanelError(error_conn_cloud(str(ex)))
+        finally:
+            urllib3_conn.allowed_gai_family = old_family
         with open(filename,"wb") as f:
             for _chunk in res.iter_content(chunk_size=8192):
                 f.write(_chunk)
-        # urllib3_conn.allowed_gai_family = old_family
     except:
         ExecShell("wget -O {} {} --no-check-certificate".format(filename,url))
 
@@ -1435,7 +1442,6 @@ def load_module(pluginCode):
     exec(code, mod.__dict__)
     return mod
 
-
 #解密数据
 def auth_decode(data):
     token = GetToken()
@@ -1677,9 +1683,13 @@ def sess_remove(key):
 # 构造分页
 def get_page(count,p=1,rows=12,callback='',result='1,2,3,4,5,8'):
     import page
-    from BTPanel import request
+    try:
+        from BTPanel import request
+        uri = url_encode(request.full_path)
+    except:
+        uri = ''
     page = page.Page()
-    info = { 'count':count,  'row':rows,  'p':p, 'return_js':callback ,'uri':url_encode(request.full_path)}
+    info = { 'count':count,  'row':rows,  'p':p, 'return_js':callback ,'uri':uri}
     data = { 'page': page.GetPage(info,result),  'shift': str(page.SHIFT), 'row': str(page.ROW) }
     return data
 
@@ -3105,6 +3115,7 @@ def send_file(data,fname='',mimetype = ''):
                     cache_timeout=0)
 
 def gen_password(length=8,chars=string.ascii_letters+string.digits):
+    from random import choice
     return ''.join([choice(chars) for i in range(length)])
 
 def get_ipaddress():
@@ -3220,7 +3231,7 @@ def query_dns(domain,dns_type = 'A',is_root = False):
         return False
 
 #取通用对象
-re_key_match = re.compile(r'^[\w\s\[\]\-]+$')
+re_key_match = re.compile(r'^[\w\s\[\]\-\.]+$')
 re_key_match2 = re.compile(r'^\.?__[\w\s[\]\-]+__\.?$')
 key_filter_list = ['get','set','get_items','exists','__contains__','__setitem__','__getitem__','__delitem__','__delattr__','__setattr__','__getattr__','__class__']
 class dict_obj:
@@ -3625,18 +3636,23 @@ def check_site_path(site_path):
         @param site_path<string> 网站根目录全路径
         @return bool
     '''
-    whites = ['/www/server/tomcat','/www/server/stop','/www/server/phpmyadmin']
-    for w in whites:
-        if site_path.find(w) == 0: return True
-    a,error_paths = get_sys_path()
-    site_path = site_path.strip()
-    if site_path[-1] == '/': site_path = site_path[:-1]
-    if site_path in a:
+    try:
+        if site_path in ['/','/usr','/dev','/home','/media','/mnt','/opt','/tmp','/var']:
+            return False
+        whites = ['/www/server/tomcat','/www/server/stop','/www/server/phpmyadmin']
+        for w in whites:
+            if site_path.find(w) == 0: return True
+        a,error_paths = get_sys_path()
+        site_path = site_path.strip()
+        if site_path[-1] == '/': site_path = site_path[:-1]
+        if site_path in a:
+            return False
+        site_path += '/'
+        for ep in error_paths:
+            if site_path.find(ep) == 0: return False
+        return True
+    except:
         return False
-    site_path += '/'
-    for ep in error_paths:
-        if site_path.find(ep) == 0: return False
-    return True
 
 def is_debug():
     debug_file = "{}/data/debug.pl".format(get_panel_path())
@@ -3654,6 +3670,18 @@ class PanelError(Exception):
     def __str__(self):
         return ("面板运行时发生错误: {}".format(str(self.value)))
 
+def sys_path_append(path):
+    '''
+        @name 追加引用路径
+        @author hwliang<2021-07-07>
+        @param path<string> 路径
+        @return void
+    '''
+    try:
+        if not path in sys.path:
+            sys.path.insert(0,path)
+    except: pass
+
 
 def get_plugin_find(upgrade_plugin_name = None):
     '''
@@ -3662,9 +3690,8 @@ def get_plugin_find(upgrade_plugin_name = None):
         @param upgrade_plugin_name<string> 插件名称
         @return dict
     '''
-    from pluginAuth import Plugin
-
-    plugin_list_data = Plugin(False).get_plugin_list()
+    import panelPlugin
+    plugin_list_data = panelPlugin.panelPlugin().get_cloud_list()
 
     for p_data_info in plugin_list_data['list']:
         if p_data_info['name'] == upgrade_plugin_name:
@@ -3672,6 +3699,31 @@ def get_plugin_find(upgrade_plugin_name = None):
             return p_data_info
 
     return get_plugin_info(upgrade_plugin_name)
+
+
+def get_plugin_value(plugin_name,key):
+    '''
+        @name 获取插件配置值
+        @author hwliang
+        @param plugin_name<string> 插件名称
+        @param key<string> 字段名
+        @return mixed
+    '''
+    plugin_info = get_plugin_find(plugin_name)
+    return plugin_info.get(key,None)
+
+def get_plugin_pid(plugin_name):
+    '''
+        @name 获取指定插件的pid
+        @author hwliang<2021-06-15>
+        @param plugin_name<string> 插件名称
+        @return string
+    '''
+    plugin_info = get_plugin_find(plugin_name)
+    if not plugin_info: return 0
+    if 'pid' in plugin_info:
+        return plugin_info['pid']
+    return 0
 
 
 def get_plugin_info(upgrade_plugin_name):
@@ -3705,12 +3757,26 @@ def download_main(upgrade_plugin_name,upgrade_version):
     pdata['name'] = upgrade_plugin_name
     pdata['version'] = upgrade_version
     pdata['os'] = 'Linux'
-    download_res = requests.post(download_d_main_url,pdata,timeout=30,headers=get_requests_headers())
+    import config,socket
+    import requests.packages.urllib3.util.connection as urllib3_conn
+    _ip_type = config.config().get_request_iptype()
+    old_family = urllib3_conn.allowed_gai_family
+    if _ip_type == 'ipv4':
+        urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
+    elif _ip_type == 'ipv6':
+        urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
+    try:
+        download_res = requests.post(download_d_main_url,pdata,timeout=30,headers=get_requests_headers())
+    except Exception as ex:
+        raise PanelError(error_conn_cloud(str(ex)))
+    finally:
+        urllib3_conn.allowed_gai_family = old_family
     filename = '{}/{}.py'.format(tmp_path,upgrade_plugin_name)
     with open(filename,'wb+') as save_script_f:
         save_script_f.write(download_res.content)
         save_script_f.close()
-    if md5(download_res.content) != download_res.headers['Content-md5']:
+
+    if md5(download_res.content) != download_res.headers.get('Content-md5'):
         raise PanelError('插件安装包HASH校验失败')
     dst_file = '{plugin_path}/{plugin_name}/{plugin_name}_main.py'.format(plugin_path=plugin_path,plugin_name = upgrade_plugin_name)
     shutil.copyfile(filename,dst_file)
@@ -4120,9 +4186,10 @@ def flush_plugin_list():
     '''
     skey = 'TNaMJdG3mDHKRS6Y'
     from BTPanel import cache
-    from pluginAuth import Plugin
+    # from pluginAuth import Plugin
+    import PluginLoader
     if cache.get(skey): cache.delete(skey)
-    Plugin(False).get_plugin_list(True)
+    PluginLoader.get_plugin_list(1)
     return True
 
 
@@ -4213,7 +4280,7 @@ def to_date(format = "%Y-%m-%d %H:%M:%S",times = None):
         if isinstance(times,float): return int(times)
         if re.match("^\d+$",times): return int(times)
     else: return 0
-    ts = time.strptime(times, "%Y-%m-%d %H:%M:%S")
+    ts = time.strptime(times, format)
     return time.mktime(ts)
 
 
@@ -4591,3 +4658,148 @@ def set_module_logs(mod_name, fun_name, count=1):
 
     writeFile(path, json.dumps(data))
     return True
+
+
+
+headers_filter_rules = None
+def filter_headers():
+    '''
+        @name 过滤请求头
+        @author hwliang<2021-12-18>
+        @return dict
+    '''
+    global headers_filter_rules
+
+    # 预编译过滤规则
+    if not headers_filter_rules:
+        headers_filter_rules = {
+            'host': re.compile(r'^[\w\.\-\:]+$'),
+            'accept': re.compile(r'^[\w\s\.\-\*\/\,\=\;\+]+$'),
+            'accept-encoding': re.compile(r'^[\w\s\.\-\*\/\,]+$'),
+            'accept-language': re.compile(r'^[\w\s\.\-\*\/\,\=\:\;]+$'),
+            'cache-control': re.compile(r'^[\w\s\.\-\=\;]+$'),
+            'connection': re.compile(r'^[\w\s\.\-]+$'),
+            'content-length': re.compile(r'^[\d]+$'),
+            'cookie': re.compile(r'^[\w\s\=\%\+\&\;\:\@\$\,\.\-\_\*\/\?\!\~\#]+$'),
+            'origin': re.compile(r'^(http|https)://[\w\.\-\?\=\&\/\:]+$'),
+            'pragma': re.compile(r'^[\w\s\.\-]+$'),
+            'referer': re.compile(r'^(http|https)://[\w\.\-\?\=\&\/\:\%\#\~\!\*\+\@]+$'),
+            'user-agent': re.compile(r'^[\w\s\.\-\*\/\,\(\)\=\+\;\:\@\$\,\.\-\_\~\#]+$'),
+            'x-cookie-token': re.compile(r'^\w+$'),
+            'x-http-token': re.compile(r'^\w+$'),
+            'X-KL-Ajax-Request': re.compile(r'^\w+$'),
+            'X-Requested-With': re.compile(r'^\w+$')
+        }
+    from flask import request
+    headers = request.headers
+    skeys = headers_filter_rules.keys()
+
+    for k in skeys:
+        v = headers.get(k,None)
+        if not v: continue
+        if not headers_filter_rules[k].match(v):
+            return False
+    return True
+
+def trim(data):
+    """
+    @去除所有空格
+    """
+    return data.replace(' ','').strip()
+
+
+def get_os(_os='windows'):
+    """
+    @验证系统版本
+    """
+    src_os = 'windows'
+    if os.path.exists('/www/server/panel'): src_os = 'linux'
+    if src_os == _os: return True
+    return False
+
+
+def get_file_list(path, flist):
+    """
+    递归获取目录所有文件列表
+    @path 目录路径
+    @flist 返回文件列表
+    """
+    if os.path.exists(path):
+        files = os.listdir(path)
+        flist.append(path)
+        for file in files:
+            if os.path.isdir(path + '/' + file):
+                get_file_list(path + '/' + file, flist)
+            else:
+                flist.append(path + '/' + file)
+
+
+def writeFile2(filename, s_body, mode='w+'):
+    """
+    写入字节文件内容
+    @filename 文件名
+    @s_body 欲写入的内容
+
+    """
+    try:
+        fp = open(filename, mode);
+        fp.write(s_body)
+        fp.close()
+        return True
+    except:
+        return False
+
+
+def check_obj_upgrade(_obj,filename = None):
+    '''
+        @name 检查指定模块是否修改
+        @author hwliang
+        @param <string>文件名
+        @param <object>模块对象
+        @return void
+    '''
+
+    # 引用缓存
+    try:
+        from BTPanel import cache
+    except:
+        return
+
+    # 是否传递文件名？
+    if not filename:
+        filename = _obj.__file__
+
+    # 获取文件修改时间
+    skey = "obj_up_{}".format(md5(filename))
+    mtime = os.path.getmtime(filename) # 当前
+    old_mtime = cache.get(skey) # 旧的
+
+    # 直接设置当前修改时间
+    if not old_mtime:
+        cache.set(skey,mtime)
+        return
+
+    # 检查是否修改
+    if old_mtime == mtime:
+        return
+
+    # 重新加载模块
+    import importlib
+    importlib.reload(_obj)
+    cache.set(skey,mtime)
+
+
+def version_to_tuple(version):
+    '''
+        @name 将版本号转为元组
+        @version 字符串版本号
+        @return 元组版本号
+    '''
+    if not version:
+        return ()
+    if not isinstance(version, str):
+        return version
+    version = re.sub(r"[^\.\d]+","",version)
+    version = version.split('.')
+    version = tuple(map(int, version))
+    return version

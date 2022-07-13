@@ -39,11 +39,11 @@ def check_run():
 
     tmp = re.findall(r"^\s*IP=(0\.0\.0\.0)",p_body,re.M)
     if not tmp: return True,'无风险'
-    
+
     tmp = re.findall(r"^\s*PORT=(\d+)",p_body,re.M)
 
     result = public.check_port_stat(int(tmp[0]),public.GetClientIp())
     if result == 0:
         return True,'无风险'
-    
+
     return False,'当前Memcached端口：{}, 允许任意客户端访问，这可能导致数据泄露'.format(tmp[0])

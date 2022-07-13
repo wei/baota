@@ -37,13 +37,13 @@ def check_run():
         @author hwliang<2020-08-03>
         @return tuple (status<bool>,msg<string>)
 
-        @example   
+        @example
             status, msg = check_run()
             if status:
                 print('OK')
             else:
                 print('Warning: {}'.format(msg))
-        
+
     '''
 
     file = '/etc/ssh/sshd_config'
@@ -54,7 +54,7 @@ def check_run():
     port = '22'
     if tmp1:
         port = tmp1.groups(0)[0]
-    
+
 
     version = public.readFile('/etc/redhat-release')
     if not version:
@@ -72,7 +72,7 @@ def check_run():
             status = public.ExecShell("systemctl status sshd.service | grep 'dead'|grep -v grep")
         else:
             status = public.ExecShell("/etc/init.d/sshd status | grep -e 'stopped' -e '已停'|grep -v grep")
-            
+
     fail2ban_file = '/www/server/panel/plugin/fail2ban/config.json'
     if os.path.exists(fail2ban_file):
         try:
@@ -81,7 +81,7 @@ def check_run():
                 if fail2ban_config['sshd']['act'] == 'true':
                     return True,'已开启Fail2ban防爆破'
         except: pass
-        
+
     if len(status[0]) > 3:
         status = False
     else:
@@ -91,10 +91,10 @@ def check_run():
         return True,'未开启SSH服务'
     if port != '22':
         return True,'已修改默认SSH端口'
-    
+
     result = public.check_port_stat(int(port),public.GetLocalIp())
     if result == 0:
         return True,'无风险'
-    
+
     return False,'默认SSH端口({})未修改，且未做访问IP限定配置，有SSH暴破风险'.format(port)
 

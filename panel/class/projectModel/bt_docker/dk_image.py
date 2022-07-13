@@ -15,212 +15,214 @@ import public #line:14
 import docker .errors #line:15
 import projectModel .bt_docker .dk_public as dp #line:16
 class main :#line:18
-    __OOOOO00OOOOOO0000 ='/tmp/dockertmp.log'#line:19
-    def docker_client (O0OO0O00O000O0000 ,OOOOOO0OOOOOO0OO0 ):#line:20
+    __OO0OO00OO0O0OOO00 ='/tmp/dockertmp.log'#line:19
+    def docker_client (OOO000OO0OOO0O00O ,O0O0O0OOO0O0O0OOO ):#line:20
         import projectModel .bt_docker .dk_public as dp #line:21
-        return dp .docker_client (OOOOOO0OOOOOO0OO0 )#line:22
-    def save (OOO00OOOO000OOO0O ,OO00O00OO0O000000 ):#line:25
+        return dp .docker_client (O0O0O0OOO0O0O0OOO )#line:22
+    def save (OOO000OO0O0000OOO ,OOOOOOOOOO0000OOO ):#line:25
         ""#line:33
         try :#line:34
-            if "tar"in OO00O00OO0O000000 .name :#line:35
-                O0OOOOOO00O0O00OO ='{}/{}'.format (OO00O00OO0O000000 .path ,OO00O00OO0O000000 .name )#line:36
+            if "tar"in OOOOOOOOOO0000OOO .name :#line:35
+                O0OO0OOO000000OOO ='{}/{}'.format (OOOOOOOOOO0000OOO .path ,OOOOOOOOOO0000OOO .name )#line:36
             else :#line:37
-                O0OOOOOO00O0O00OO ='{}/{}.tar'.format (OO00O00OO0O000000 .path ,OO00O00OO0O000000 .name )#line:38
-            if not os .path .exists (OO00O00OO0O000000 .path ):#line:39
-                os .makedirs (OO00O00OO0O000000 .path )#line:40
-            public .writeFile (O0OOOOOO00O0O00OO ,"")#line:41
-            OOO0O00O0O0OO0000 =open (O0OOOOOO00O0O00OO ,'wb')#line:42
-            O000OO0OOOO0OOO0O =OOO00OOOO000OOO0O .docker_client (OO00O00OO0O000000 .url ).images .get (OO00O00OO0O000000 .id )#line:43
-            for OOO0000OO0O0OO0O0 in O000OO0OOOO0OOO0O .save (named =True ):#line:44
-                OOO0O00O0O0OO0000 .write (OOO0000OO0O0OO0O0 )#line:45
-            OOO0O00O0O0OO0000 .close ()#line:46
-            dp .write_log ("镜像【{}】导出到【{}】成功！".format (OO00O00OO0O000000 .id ,O0OOOOOO00O0O00OO ))#line:47
-            return public .returnMsg (True ,"成功保存到: {}".format (O0OOOOOO00O0O00OO ))#line:48
-        except docker .errors .APIError as O0O00OO00O0OOO0O0 :#line:49
-            if "empty export - not implemented"in str (O0O00OO00O0OOO0O0 ):#line:50
-                return public .returnMsg (False ,"不能导出空镜像！")#line:51
+                O0OO0OOO000000OOO ='{}/{}.tar'.format (OOOOOOOOOO0000OOO .path ,OOOOOOOOOO0000OOO .name )#line:38
+            if not os .path .exists (OOOOOOOOOO0000OOO .path ):#line:39
+                os .makedirs (OOOOOOOOOO0000OOO .path )#line:40
+            public .writeFile (O0OO0OOO000000OOO ,"")#line:41
+            O0000OOO0OO000O00 =open (O0OO0OOO000000OOO ,'wb')#line:42
+            O000O0000OO000O00 =OOO000OO0O0000OOO .docker_client (OOOOOOOOOO0000OOO .url ).images .get (OOOOOOOOOO0000OOO .id )#line:43
+            for OOO0O0OOOO00OO0O0 in O000O0000OO000O00 .save (named =True ):#line:44
+                O0000OOO0OO000O00 .write (OOO0O0OOOO00OO0O0 )#line:45
+            O0000OOO0OO000O00 .close ()#line:46
+            dp .write_log ("镜像 [{}] 导出到 [{}] 成功".format (OOOOOOOOOO0000OOO .id ,O0OO0OOO000000OOO ))#line:47
+            return public .returnMsg (True ,"Saved successfully to: {}".format (O0OO0OOO000000OOO ))#line:48
+        except docker .errors .APIError as O00OO0O000O00O00O :#line:49
+            if "empty export - not implemented"in str (O00OO0O000O00O00O ):#line:50
+                return public .returnMsg (False ,"不能导出镜像！")#line:51
             return public .get_error_info ()#line:52
-    def load (O0O00OOO0OOOO00O0 ,O0OOO00OO000000O0 ):#line:55
+    def load (OO0OOOOOOO0000OOO ,OOO0000OO000OO000 ):#line:55
         ""#line:60
-        OO0OOO00OOOO00OO0 =O0O00OOO0OOOO00O0 .docker_client (O0OOO00OO000000O0 .url ).images #line:61
-        with open (O0OOO00OO000000O0 .path ,'rb')as O0OOO000OOOOO0000 :#line:62
-            OO0OOO00OOOO00OO0 .load (O0OOO000OOOOO0000 )#line:65
-        dp .write_log ("镜像【{}】导入成功！".format (O0OOO00OO000000O0 .path ))#line:66
-        return public .returnMsg (True ,"导入成功！{}".format (O0OOO00OO000000O0 .path ))#line:67
-    def image_list (OOOOOOO0OOO0OOOOO ,O000OOO0OOO0O0OO0 ):#line:70
+        O0O00OOOOO00O000O =OO0OOOOOOO0000OOO .docker_client (OOO0000OO000OO000 .url ).images #line:61
+        with open (OOO0000OO000OO000 .path ,'rb')as OOO0000O0O0OO0OOO :#line:62
+            O0O00OOOOO00O000O .load (OOO0000O0O0OO0OOO )#line:65
+        dp .write_log ("镜像 [{}] 导入成功!".format (OOO0000OO000OO000 .path ))#line:66
+        return public .returnMsg (True ,"镜像导入成功！{}".format (OOO0000OO000OO000 .path ))#line:67
+    def image_list (OOO00O0000O0O0O00 ,OO0O0OO00O0OO000O ):#line:70
         ""#line:75
         import projectModel .bt_docker .dk_registry as dr #line:76
         import projectModel .bt_docker .dk_setup as ds #line:77
-        O00O0O00OO00O0000 =list ()#line:78
-        OO00O0O00000O000O =OOOOOOO0OOO0OOOOO .docker_client (O000OOO0OOO0O0OO0 .url )#line:79
-        OO0O0OO0OOO0000OO =ds .main ()#line:80
-        O0O00O00000000OOO =OO0O0OO0OOO0000OO .check_docker_program ()#line:81
-        O00OO000O0OOOO0O0 =OO0O0OO0OOO0000OO .get_service_status ()#line:82
-        if not OO00O0O00000O000O :#line:83
-            O00O0O00OO00O0000 ={"images_list":[],"registry_list":[],"installed":O0O00O00000000OOO ,"service_status":O00OO000O0OOOO0O0 }#line:89
-            return public .returnMsg (True ,O00O0O00OO00O0000 )#line:90
-        O0O0OO00O0O000000 =OO00O0O00000O000O .images #line:91
-        OO0000O000O0OOOO0 =OOOOOOO0OOO0OOOOO .get_image_attr (O0O0OO00O0O000000 )#line:92
-        O0OOO0OOOO0OO0OO0 =dr .main ().registry_list (O000OOO0OOO0O0OO0 )#line:93
-        if O0OOO0OOOO0OO0OO0 ['status']:#line:94
-            O0OOO0OOOO0OO0OO0 =O0OOO0OOOO0OO0OO0 ['msg']['registry']#line:95
+        OOOO00OOO00000OO0 =list ()#line:78
+        OOO00OO00OOOOOO0O =OOO00O0000O0O0O00 .docker_client (OO0O0OO00O0OO000O .url )#line:79
+        OOOOO0OO0OO000O0O =ds .main ()#line:80
+        O0OOO0O000000OO00 =OOOOO0OO0OO000O0O .check_docker_program ()#line:81
+        OOOO000OOO00OOO00 =OOOOO0OO0OO000O0O .get_service_status ()#line:82
+        if not OOO00OO00OOOOOO0O :#line:83
+            OOOO00OOO00000OO0 ={"images_list":[],"registry_list":[],"installed":O0OOO0O000000OO00 ,"service_status":OOOO000OOO00OOO00 }#line:89
+            return public .returnMsg (True ,OOOO00OOO00000OO0 )#line:90
+        O000O0OOO00O0O00O =OOO00OO00OOOOOO0O .images #line:91
+        OO0OOOOOOOOO000O0 =OOO00O0000O0O0O00 .get_image_attr (O000O0OOO00O0O00O )#line:92
+        O0O0O000O0OO000OO =dr .main ().registry_list (OO0O0OO00O0OO000O )#line:93
+        if O0O0O000O0OO000OO ['status']:#line:94
+            O0O0O000O0OO000OO =O0O0O000O0OO000OO ['msg']['registry']#line:95
         else :#line:96
-            O0OOO0OOOO0OO0OO0 =[]#line:97
-        for OOO0O00O00O00OOO0 in OO0000O000O0OOOO0 :#line:98
-            if len (OOO0O00O00O00OOO0 ['RepoTags'])==1 :#line:99
-                OOOO0000OOO00O000 ={"id":OOO0O00O00O00OOO0 ["Id"],"tags":OOO0O00O00O00OOO0 ["RepoTags"],"time":OOO0O00O00O00OOO0 ["Created"],"name":OOO0O00O00O00OOO0 ['RepoTags'][0 ],"size":OOO0O00O00O00OOO0 ["Size"],"detail":OOO0O00O00O00OOO0 }#line:107
-                O00O0O00OO00O0000 .append (OOOO0000OOO00O000 )#line:108
-            elif len (OOO0O00O00O00OOO0 ['RepoTags'])>1 :#line:109
-                for O00OO0OOO0000O000 in range (len (OOO0O00O00O00OOO0 ['RepoTags'])):#line:110
-                    OOOO0000OOO00O000 ={"id":OOO0O00O00O00OOO0 ["Id"],"tags":OOO0O00O00O00OOO0 ["RepoTags"],"time":OOO0O00O00O00OOO0 ["Created"],"name":OOO0O00O00O00OOO0 ['RepoTags'][O00OO0OOO0000O000 ],"size":OOO0O00O00O00OOO0 ["Size"],"detail":OOO0O00O00O00OOO0 }#line:118
-                    O00O0O00OO00O0000 .append (OOOO0000OOO00O000 )#line:119
-            elif not OOO0O00O00O00OOO0 ['RepoTags']:#line:120
-                OOOO0000OOO00O000 ={"id":OOO0O00O00O00OOO0 ["Id"],"tags":OOO0O00O00O00OOO0 ["RepoTags"],"time":OOO0O00O00O00OOO0 ["Created"],"name":OOO0O00O00O00OOO0 ["Id"],"size":OOO0O00O00O00OOO0 ["Size"],"detail":OOO0O00O00O00OOO0 }#line:128
-                O00O0O00OO00O0000 .append (OOOO0000OOO00O000 )#line:129
-        O00O0O00OO00O0000 ={"images_list":O00O0O00OO00O0000 ,"registry_list":O0OOO0OOOO0OO0OO0 ,"installed":O0O00O00000000OOO ,"service_status":O00OO000O0OOOO0O0 }#line:135
-        return public .returnMsg (True ,O00O0O00OO00O0000 )#line:136
-    def get_image_attr (OOO000OOO0OOO0000 ,OO0OO000OOO0O0O0O ):#line:138
-        O000OO0O0O0O00OOO =OO0OO000OOO0O0O0O .list ()#line:139
-        return [O00O0O0O00O0O0OO0 .attrs for O00O0O0O00O0O0OO0 in O000OO0O0O0O00OOO ]#line:140
-    def get_logs (OOOO00OOO0OO00000 ,O0O0000OO0O00O0OO ):#line:142
+            O0O0O000O0OO000OO =[]#line:97
+        for OOOOOO0O0OO000O00 in OO0OOOOOOOOO000O0 :#line:98
+            if len (OOOOOO0O0OO000O00 ['RepoTags'])==1 :#line:99
+                O000O0O00OO00O0OO ={"id":OOOOOO0O0OO000O00 ["Id"],"tags":OOOOOO0O0OO000O00 ["RepoTags"],"time":OOOOOO0O0OO000O00 ["Created"],"name":OOOOOO0O0OO000O00 ['RepoTags'][0 ],"size":OOOOOO0O0OO000O00 ["Size"],"detail":OOOOOO0O0OO000O00 }#line:107
+                OOOO00OOO00000OO0 .append (O000O0O00OO00O0OO )#line:108
+            elif len (OOOOOO0O0OO000O00 ['RepoTags'])>1 :#line:109
+                for O00OOOO000O00OOO0 in range (len (OOOOOO0O0OO000O00 ['RepoTags'])):#line:110
+                    O000O0O00OO00O0OO ={"id":OOOOOO0O0OO000O00 ["Id"],"tags":OOOOOO0O0OO000O00 ["RepoTags"],"time":OOOOOO0O0OO000O00 ["Created"],"name":OOOOOO0O0OO000O00 ['RepoTags'][O00OOOO000O00OOO0 ],"size":OOOOOO0O0OO000O00 ["Size"],"detail":OOOOOO0O0OO000O00 }#line:118
+                    OOOO00OOO00000OO0 .append (O000O0O00OO00O0OO )#line:119
+            elif not OOOOOO0O0OO000O00 ['RepoTags']:#line:120
+                O000O0O00OO00O0OO ={"id":OOOOOO0O0OO000O00 ["Id"],"tags":OOOOOO0O0OO000O00 ["RepoTags"],"time":OOOOOO0O0OO000O00 ["Created"],"name":OOOOOO0O0OO000O00 ["Id"],"size":OOOOOO0O0OO000O00 ["Size"],"detail":OOOOOO0O0OO000O00 }#line:128
+                OOOO00OOO00000OO0 .append (O000O0O00OO00O0OO )#line:129
+        OOOO00OOO00000OO0 ={"images_list":OOOO00OOO00000OO0 ,"registry_list":O0O0O000O0OO000OO ,"installed":O0OOO0O000000OO00 ,"service_status":OOOO000OOO00OOO00 }#line:135
+        return public .returnMsg (True ,OOOO00OOO00000OO0 )#line:136
+    def get_image_attr (O0OO0OO00OOOOO0OO ,OO0OOO00O000OOOOO ):#line:138
+        O00O0OO0O0OOO0O00 =OO0OOO00O000OOOOO .list ()#line:139
+        return [O000O0O0O0OO000OO .attrs for O000O0O0O0OO000OO in O00O0OO0O0OOO0O00 ]#line:140
+    def get_logs (OOOOOO00O0OO0OO00 ,OO0OO00OO0O0O0O0O ):#line:142
         import files #line:143
-        OOOOO0OOOOOO0OOO0 =O0O0000OO0O00O0OO .logs_file #line:144
-        return public .returnMsg (True ,files .files ().GetLastLine (OOOOO0OOOOOO0OOO0 ,20 ))#line:145
-    def build (O0O00O00O0O00000O ,O0O0O0O0O0O0000OO ):#line:148
+        O000O0OO0OO000OOO =OO0OO00OO0O0O0O0O .logs_file #line:144
+        return public .returnMsg (True ,files .files ().GetLastLine (O000O0OO0OO000OOO ,20 ))#line:145
+    def build (O00O0O00OO00OOOO0 ,O00O000O00O00OO0O ):#line:148
         ""#line:156
-        public .writeFile (O0O00O00O0O00000O .__OOOOO00OOOOOO0000 ,"开始构建镜像！")#line:157
-        public .writeFile ('/tmp/dockertmp.log',"开始构造镜像")#line:158
-        if not hasattr (O0O0O0O0O0O0000OO ,"pull"):#line:159
-            O0O0O0O0O0O0000OO .pull =False #line:160
-        if hasattr (O0O0O0O0O0O0000OO ,"data")and O0O0O0O0O0O0000OO .data :#line:161
-            O0O0O0O0O0O0000OO .path ="/tmp/dockerfile"#line:162
-            public .writeFile (O0O0O0O0O0O0000OO .path ,O0O0O0O0O0O0000OO .data )#line:163
-            with open (O0O0O0O0O0O0000OO .path ,'rb')as OOO0O000OO0O00OOO :#line:164
-                O0O0O0O000OOOOOO0 ,OOOOOO0000OO0O000 =O0O00O00O0O00000O .docker_client (O0O0O0O0O0O0000OO .url ).images .build (pull =True if O0O0O0O0O0O0000OO .pull =="1"else False ,fileobj =OOO0O000OO0O00OOO ,tag =O0O0O0O0O0O0000OO .tag )#line:169
-            os .remove (O0O0O0O0O0O0000OO .path )#line:170
-        else :#line:171
-            if not os .path .isdir (O0O0O0O0O0O0000OO .path ):#line:172
-                O0O0O0O0O0O0000OO .path ='/'.join (O0O0O0O0O0O0000OO .path .split ('/')[:-1 ])#line:173
-            O0O0O0O000OOOOOO0 ,OOOOOO0000OO0O000 =O0O00O00O0O00000O .docker_client (O0O0O0O0O0O0000OO .url ).images .build (pull =True if O0O0O0O0O0O0000OO .pull =="1"else False ,path =O0O0O0O0O0O0000OO .path ,tag =O0O0O0O0O0O0000OO .tag )#line:178
-        dp .log_docker (OOOOOO0000OO0O000 ,"Docker 构建任务")#line:180
-        dp .write_log ("构建镜像【{}】成功！".format (O0O0O0O0O0O0000OO .tag ))#line:181
-        return public .returnMsg (True ,"构造成功！")#line:182
-    def remove (OO0OOOOOO0OOOOOO0 ,O00000OOOOO00O0OO ):#line:185
-        ""#line:193
-        try :#line:194
-            OO0OOOOOO0OOOOOO0 .docker_client (O00000OOOOO00O0OO .url ).images .remove (O00000OOOOO00O0OO .name )#line:195
-            dp .write_log ("删除镜像【{}】成功！".format (O00000OOOOO00O0OO .name ))#line:196
-            return public .returnMsg (True ,"镜像删除成功！")#line:197
-        except docker .errors .ImageNotFound as OOOOO0OO000OOO00O :#line:198
-            return public .returnMsg (False ,"删除镜像失败，可能是镜像不存在！")#line:199
-        except docker .errors .APIError as OOOOO0OO000OOO00O :#line:200
-            if "image is referenced in multiple repositories"in str (OOOOO0OO000OOO00O ):#line:201
-                return public .returnMsg (False ,"该镜像ID被用于多个镜像中，请勾选【强制删除】！")#line:202
-            if "using its referenced image"in str (OOOOO0OO000OOO00O ):#line:203
-                return public .returnMsg (False ,"该镜像正在使用，请删除容器后再删除！")#line:204
-            return public .returnMsg (False ,"删除镜像失败！<br> {}".format (OOOOO0OO000OOO00O ))#line:205
-    def pull_from_some_registry (OOOOO00O0000O00O0 ,OOO0OOO00OO000000 ):#line:208
-        ""#line:215
-        import projectModel .bt_docker .dk_registry as br #line:216
-        OO0OOOO0O0OOOO0O0 =br .main ().registry_info (OOO0OOO00OO000000 .name )#line:217
-        O0OO00OO00OO0OOO0 =br .main ().login (OOO0OOO00OO000000 .url ,OO0OOOO0O0OOOO0O0 ['url'],OO0OOOO0O0OOOO0O0 ['username'],OO0OOOO0O0OOOO0O0 ['password'])['status']#line:218
-        if not O0OO00OO00OO0OOO0 :#line:219
-            return O0OO00OO00OO0OOO0 #line:220
-        OOO0OOO00OO000000 .username =OO0OOOO0O0OOOO0O0 ['username']#line:221
-        OOO0OOO00OO000000 .password =OO0OOOO0O0OOOO0O0 ['password']#line:222
-        OOO0OOO00OO000000 .registry =OO0OOOO0O0OOOO0O0 ['url']#line:223
-        OOO0OOO00OO000000 .namespace =OO0OOOO0O0OOOO0O0 ['namespace']#line:224
-        return OOOOO00O0000O00O0 .pull (OOO0OOO00OO000000 )#line:225
-    def push (OOO00O0OO00OO0000 ,OO0OO0OO0000O0OO0 ):#line:228
-        ""#line:236
-        if "/"in OO0OO0OO0000O0OO0 .tag :#line:237
-            return public .returnMsg (False ,"推送的镜像名不可以包含符号 [/] ，请使用如下格式：image:v1 (镜像名：版本号)")#line:238
-        if ":"not in OO0OO0OO0000O0OO0 .tag :#line:239
-            return public .returnMsg (False ,"推送的镜像名需包含符号 [ : ] ，请使用如下格式：image:v1 (镜像名：版本号)")#line:240
-        public .writeFile (OOO00O0OO00OO0000 .__OOOOO00OOOOOO0000 ,"开始推送镜像！\n")#line:241
-        import projectModel .bt_docker .dk_registry as br #line:242
-        OOO0OOOO0OO0OOOOO =br .main ().registry_info (OO0OO0OO0000O0OO0 .name )#line:243
-        if OO0OO0OO0000O0OO0 .name =="docker官方库"and OOO0OOOO0OO0OOOOO ['url']=="docker.io":#line:244
-            public .writeFile (OOO00O0OO00OO0000 .__OOOOO00OOOOOO0000 ,"镜像无法推送到Docker公共仓库！\n")#line:245
-            return public .returnMsg (False ,"无法推送到Docker公共仓库！")#line:246
-        O0OO000OO0O0OO0OO =br .main ().login (OO0OO0OO0000O0OO0 .url ,OOO0OOOO0OO0OOOOO ['url'],OOO0OOOO0OO0OOOOO ['username'],OOO0OOOO0OO0OOOOO ['password'])['status']#line:247
-        OOO0OO000O0OOO0O0 =OO0OO0OO0000O0OO0 .tag #line:248
-        if not O0OO000OO0O0OO0OO :#line:249
-            return O0OO000OO0O0OO0OO #line:250
-        OO0OOOO0OOO00O000 ={"username":OOO0OOOO0OO0OOOOO ['username'],"password":OOO0OOOO0OO0OOOOO ['password'],"registry":OOO0OOOO0OO0OOOOO ['url']}#line:254
-        if ":"not in OOO0OO000O0OOO0O0 :#line:256
-            OOO0OO000O0OOO0O0 ="{}:latest".format (OOO0OO000O0OOO0O0 )#line:257
-        O0000OO00OO00O0O0 =OOO0OOOO0OO0OOOOO ['url']#line:258
-        OOOO000OO0O000OO0 ="{}/{}/{}".format (O0000OO00OO00O0O0 ,OOO0OOOO0OO0OOOOO ['namespace'],OO0OO0OO0000O0OO0 .tag )#line:259
-        OOO00O0OO00OO0000 .tag (OO0OO0OO0000O0OO0 .url ,OO0OO0OO0000O0OO0 .id ,OOOO000OO0O000OO0 )#line:260
-        O00O0O0O0000OO0OO =OOO00O0OO00OO0000 .docker_client (OO0OO0OO0000O0OO0 .url ).images .push (repository =OOOO000OO0O000OO0 .split (":")[0 ],tag =OOO0OO000O0OOO0O0 .split (":")[-1 ],auth_config =OO0OOOO0OOO00O000 ,stream =True )#line:266
-        dp .log_docker (O00O0O0O0000OO0OO ,"镜像推送任务")#line:267
-        OO0OO0OO0000O0OO0 .name =OOOO000OO0O000OO0 #line:269
-        OOO00O0OO00OO0000 .remove (OO0OO0OO0000O0OO0 )#line:270
-        dp .write_log ("镜像【{}】推送成功！".format (OOOO000OO0O000OO0 ))#line:271
-        return public .returnMsg (True ,"推送成功！{}".format (str (O00O0O0O0000OO0OO )))#line:272
-    def tag (OO00OOOO00O0O000O ,OO0OO0O0O0O0OOOOO ,O000O00OOO00OO0OO ,OOOO0O000OO0OOO0O ):#line:274
-        ""#line:281
-        O0OO00O0O0OOOO00O =OOOO0O000OO0OOO0O .split (":")[0 ]#line:282
-        O0O00O00OOO00O00O =OOOO0O000OO0OOO0O .split (":")[1 ]#line:283
-        OO00OOOO00O0O000O .docker_client (OO0OO0O0O0O0OOOOO ).images .get (O000O00OOO00OO0OO ).tag (repository =O0OO00O0O0OOOO00O ,tag =O0O00O00OOO00O00O )#line:287
-        return public .returnMsg (True ,"设置成功")#line:288
-    def pull (O00O000O0O0O000OO ,OO0OO0O0OOO0000OO ):#line:290
-        ""#line:299
-        public .writeFile (O00O000O0O0O000OO .__OOOOO00OOOOOO0000 ,"开始拉取镜像！")#line:300
-        import docker .errors #line:301
-        try :#line:302
-            if ':'not in OO0OO0O0OOO0000OO .image :#line:303
-                OO0OO0O0OOO0000OO .image ='{}:latest'.format (OO0OO0O0OOO0000OO .image )#line:304
-            O0OO000O0O00OO0OO ={"username":OO0OO0O0OOO0000OO .username ,"password":OO0OO0O0OOO0000OO .password ,"registry":OO0OO0O0OOO0000OO .registry if OO0OO0O0OOO0000OO .registry else None }if OO0OO0O0OOO0000OO .username else None #line:308
-            if not hasattr (OO0OO0O0OOO0000OO ,"tag"):#line:309
-                OO0OO0O0OOO0000OO .tag =OO0OO0O0OOO0000OO .image .split (":")[-1 ]#line:310
-            if OO0OO0O0OOO0000OO .registry !="docker.io":#line:311
-                OO0OO0O0OOO0000OO .image ="{}/{}/{}".format (OO0OO0O0OOO0000OO .registry ,OO0OO0O0OOO0000OO .namespace ,OO0OO0O0OOO0000OO .image )#line:312
-            O000000OOO0000OOO =dp .docker_client_low (OO0OO0O0OOO0000OO .url ).pull (repository =OO0OO0O0OOO0000OO .image ,auth_config =O0OO000O0O00OO0OO ,tag =OO0OO0O0OOO0000OO .tag ,stream =True )#line:318
-            dp .log_docker (O000000OOO0000OOO ,"镜像拉取任务")#line:319
-            if O000000OOO0000OOO :#line:320
-                dp .write_log ("镜像【{}:{}】拉取成功！".format (OO0OO0O0OOO0000OO .image ,OO0OO0O0OOO0000OO .tag ))#line:321
-                return public .returnMsg (True ,'拉取镜像成功.')#line:322
-            else :#line:323
-                return public .returnMsg (False ,'可能没有这个镜像.')#line:324
-        except docker .errors .ImageNotFound as O0000OOO0OOO00OO0 :#line:325
-            if "pull access denied for"in str (O0000OOO0OOO00OO0 ):#line:326
-                return public .returnMsg (False ,"拉取失败，该镜像为私有镜像需要输入dockerhub的账号密码！")#line:327
-            return public .returnMsg (False ,"拉取失败<br><br>原因: {}".format (O0000OOO0OOO00OO0 ))#line:329
-        except docker .errors .NotFound as O0000OOO0OOO00OO0 :#line:331
-            if "not found: manifest unknown"in str (O0000OOO0OOO00OO0 ):#line:332
-                return public .returnMsg (False ,"拉取失败，仓库没有该镜像！")#line:333
-            return public .returnMsg (False ,"拉取失败<br><br>原因: {}".format (O0000OOO0OOO00OO0 ))#line:334
-        except docker .errors .APIError as O0000OOO0OOO00OO0 :#line:335
-            if "invalid tag format"in str (O0000OOO0OOO00OO0 ):#line:336
-                return public .returnMsg (False ,"拉取失败，镜像格式错误，格式应该为：nginx:v1！")#line:337
-            return public .returnMsg (False ,"拉取失败！{}".format (O0000OOO0OOO00OO0 ))#line:338
-    def pull_high_api (O0000O00O00OOOOOO ,OOOOOOO00OO0OOO0O ):#line:342
-        ""#line:351
-        import docker .errors #line:352
-        try :#line:353
-            if ':'not in OOOOOOO00OO0OOO0O .image :#line:354
-                OOOOOOO00OO0OOO0O .image ='{}:latest'.format (OOOOOOO00OO0OOO0O .image )#line:355
-            O00O000OO000OOOOO ={"username":OOOOOOO00OO0OOO0O .username ,"password":OOOOOOO00OO0OOO0O .password ,"registry":OOOOOOO00OO0OOO0O .registry if OOOOOOO00OO0OOO0O .registry else None }if OOOOOOO00OO0OOO0O .username else None #line:359
-            if OOOOOOO00OO0OOO0O .registry !="docker.io":#line:361
-                OOOOOOO00OO0OOO0O .image ="{}/{}/{}".format (OOOOOOO00OO0OOO0O .registry ,OOOOOOO00OO0OOO0O .namespace ,OOOOOOO00OO0OOO0O .image )#line:362
-            OO0O00O0OOO000O0O =O0000O00O00OOOOOO .docker_client (OOOOOOO00OO0OOO0O .url ).images .pull (repository =OOOOOOO00OO0OOO0O .image ,auth_config =O00O000OO000OOOOO ,)#line:366
-            if OO0O00O0OOO000O0O :#line:367
-                return public .returnMsg (True ,'拉取镜像成功.')#line:368
-            else :#line:369
-                return public .returnMsg (False ,'可能没有这个镜像.')#line:370
-        except docker .errors .ImageNotFound as OOOOO000000000O00 :#line:371
-            if "pull access denied for"in str (OOOOO000000000O00 ):#line:372
-                return public .returnMsg (False ,"拉取失败，该镜像为私有镜像需要输入dockerhub的账号密码！")#line:373
-            return public .returnMsg (False ,"拉取失败<br><br>原因: {}".format (OOOOO000000000O00 ))#line:374
-    def image_for_host (O00OOO00000O0OO0O ,OO000000000OOOO0O ):#line:376
-        ""#line:381
-        O0OOOO00OO0OO000O =O00OOO00000O0OO0O .image_list (OO000000000OOOO0O )#line:382
-        if not O0OOOO00OO0OO000O ['status']:#line:383
-            return O0OOOO00OO0OO000O #line:384
-        OOOOO00OO0000OOO0 =len (O0OOOO00OO0OO000O ['msg']['images_list'])#line:385
-        O000OOOOOOO00O00O =0 #line:386
-        for O00OO00O00O0O00OO in O0OOOO00OO0OO000O ['msg']['images_list']:#line:387
-            O000OOOOOOO00O00O +=O00OO00O00O0O00OO ['size']#line:388
-        return public .returnMsg (True ,{'num':OOOOO00OO0000OOO0 ,'size':O000OOOOOOO00O00O })
+        public .writeFile (O00O0O00OO00OOOO0 .__OO0OO00OO0O0OOO00 ,"开始构建镜像！")#line:157
+        public .writeFile ('/tmp/dockertmp.log',"开始构建镜像！")#line:158
+        if not hasattr (O00O000O00O00OO0O ,"pull"):#line:159
+            O00O000O00O00OO0O .pull =False #line:160
+        if hasattr (O00O000O00O00OO0O ,"data")and O00O000O00O00OO0O .data :#line:161
+            O00O000O00O00OO0O .path ="/tmp/dockerfile"#line:162
+            public .writeFile (O00O000O00O00OO0O .path ,O00O000O00O00OO0O .data )#line:163
+            with open (O00O000O00O00OO0O .path ,'rb')as OO0O0000O0OOOO0OO :#line:164
+                OOOOO000O0OOO00O0 ,OO0000O0000OO00O0 =O00O0O00OO00OOOO0 .docker_client (O00O000O00O00OO0O .url ).images .build (pull =True if O00O000O00O00OO0O .pull =="1"else False ,fileobj =OO0O0000O0OOOO0OO ,tag =O00O000O00O00OO0O .tag ,forcerm =True )#line:170
+            os .remove (O00O000O00O00OO0O .path )#line:171
+        else :#line:172
+            if not os .path .exists (O00O000O00O00OO0O .path ):#line:173
+                return public .returnMsg (True ,"请输入正确的DockerFile路径！")#line:174
+            if not os .path .isdir (O00O000O00O00OO0O .path ):#line:175
+                O00O000O00O00OO0O .path ='/'.join (O00O000O00O00OO0O .path .split ('/')[:-1 ])#line:176
+            OOOOO000O0OOO00O0 ,OO0000O0000OO00O0 =O00O0O00OO00OOOO0 .docker_client (O00O000O00O00OO0O .url ).images .build (pull =True if O00O000O00O00OO0O .pull =="1"else False ,path =O00O000O00O00OO0O .path ,tag =O00O000O00O00OO0O .tag ,forcerm =True )#line:182
+        dp .log_docker (OO0000O0000OO00O0 ,"Docker 构建任务！")#line:184
+        dp .write_log ("构建镜像 [{}] 成功!".format (O00O000O00O00OO0O .tag ))#line:185
+        return public .returnMsg (True ,"构建镜像成功!")#line:186
+    def remove (OOO00OOOOOO0O00O0 ,O0OOOO00O000000OO ):#line:189
+        ""#line:197
+        try :#line:198
+            OOO00OOOOOO0O00O0 .docker_client (O0OOOO00O000000OO .url ).images .remove (O0OOOO00O000000OO .name )#line:199
+            dp .write_log ("删除镜像【{}】成功!".format (O0OOOO00O000000OO .name ))#line:200
+            return public .returnMsg (True ,"删除镜像成功!")#line:201
+        except docker .errors .ImageNotFound as OO000O0O00OOOO000 :#line:202
+            return public .returnMsg (False ,"删除进行失败，镜像可能不存在!")#line:203
+        except docker .errors .APIError as OO000O0O00OOOO000 :#line:204
+            if "image is referenced in multiple repositories"in str (OO000O0O00OOOO000 ):#line:205
+                return public .returnMsg (False ,"镜像 ID 用在多个镜像中，请强制删除镜像!")#line:206
+            if "using its referenced image"in str (OO000O0O00OOOO000 ):#line:207
+                return public .returnMsg (False ,"镜像正在使用中，请删除容器后再删除镜像!")#line:208
+            return public .returnMsg (False ,"删除镜像失败!<br> {}".format (OO000O0O00OOOO000 ))#line:209
+    def pull_from_some_registry (O0OO00OO0O00O00OO ,OOOOO0OO000O0000O ):#line:212
+        ""#line:219
+        import projectModel .bt_docker .dk_registry as br #line:220
+        OOO0O00OOOOO0OO00 =br .main ().registry_info (OOOOO0OO000O0000O .name )#line:221
+        OOOO0O0OOO0O0OO00 =br .main ().login (OOOOO0OO000O0000O .url ,OOO0O00OOOOO0OO00 ['url'],OOO0O00OOOOO0OO00 ['username'],OOO0O00OOOOO0OO00 ['password'])['status']#line:222
+        if not OOOO0O0OOO0O0OO00 :#line:223
+            return OOOO0O0OOO0O0OO00 #line:224
+        OOOOO0OO000O0000O .username =OOO0O00OOOOO0OO00 ['username']#line:225
+        OOOOO0OO000O0000O .password =OOO0O00OOOOO0OO00 ['password']#line:226
+        OOOOO0OO000O0000O .registry =OOO0O00OOOOO0OO00 ['url']#line:227
+        OOOOO0OO000O0000O .namespace =OOO0O00OOOOO0OO00 ['namespace']#line:228
+        return O0OO00OO0O00O00OO .pull (OOOOO0OO000O0000O )#line:229
+    def push (OO0O0O0000O000O00 ,OO0OO00OO0O00OO0O ):#line:232
+        ""#line:240
+        if "/"in OO0OO00OO0O00OO0O .tag :#line:241
+            return public .returnMsg (False ,"推送的镜像不能包含 [/] , 请使用以下格式: image:v1 (镜像名:版本)")#line:242
+        if ":"not in OO0OO00OO0O00OO0O .tag :#line:243
+            return public .returnMsg (False ,"推送的镜像不能包含 [ : ] , 请使用以下格式: image:v1 (image_name:version_number)")#line:244
+        public .writeFile (OO0O0O0000O000O00 .__OO0OO00OO0O0OOO00 ,"开始推镜像!\n")#line:245
+        import projectModel .bt_docker .dk_registry as br #line:246
+        O0O00O0000O00000O =br .main ().registry_info (OO0OO00OO0O00OO0O .name )#line:247
+        if OO0OO00OO0O00OO0O .name =="docker official"and O0O00O0000O00000O ['url']=="docker.io":#line:248
+            public .writeFile (OO0O0O0000O000O00 .__OO0OO00OO0O0OOO00 ,"镜像无法推送到 Docker 公共仓库!\n")#line:249
+            return public .returnMsg (False ,"无法推送到 Docker 公共仓库!")#line:250
+        OOOO0000OOOOO0OO0 =br .main ().login (OO0OO00OO0O00OO0O .url ,O0O00O0000O00000O ['url'],O0O00O0000O00000O ['username'],O0O00O0000O00000O ['password'])['status']#line:251
+        OOOO00OOOOOOO0000 =OO0OO00OO0O00OO0O .tag #line:252
+        if not OOOO0000OOOOO0OO0 :#line:253
+            return OOOO0000OOOOO0OO0 #line:254
+        O0OO00O00OO00OO0O ={"username":O0O00O0000O00000O ['username'],"password":O0O00O0000O00000O ['password'],"registry":O0O00O0000O00000O ['url']}#line:258
+        if ":"not in OOOO00OOOOOOO0000 :#line:260
+            OOOO00OOOOOOO0000 ="{}:latest".format (OOOO00OOOOOOO0000 )#line:261
+        O00OO000OOO000OOO =O0O00O0000O00000O ['url']#line:262
+        OO0O00O0OO0O0OOO0 ="{}/{}/{}".format (O00OO000OOO000OOO ,O0O00O0000O00000O ['namespace'],OO0OO00OO0O00OO0O .tag )#line:263
+        OO0O0O0000O000O00 .tag (OO0OO00OO0O00OO0O .url ,OO0OO00OO0O00OO0O .id ,OO0O00O0OO0O0OOO0 )#line:264
+        O0OOOOO0O0OO00O00 =OO0O0O0000O000O00 .docker_client (OO0OO00OO0O00OO0O .url ).images .push (repository =OO0O00O0OO0O0OOO0 .split (":")[0 ],tag =OOOO00OOOOOOO0000 .split (":")[-1 ],auth_config =O0OO00O00OO00OO0O ,stream =True )#line:270
+        dp .log_docker (O0OOOOO0O0OO00O00 ,"Image push task")#line:271
+        OO0OO00OO0O00OO0O .name =OO0O00O0OO0O0OOO0 #line:273
+        OO0O0O0000O000O00 .remove (OO0OO00OO0O00OO0O )#line:274
+        dp .write_log ("镜像 [{}] 推送成功！".format (OO0O00O0OO0O0OOO0 ))#line:275
+        return public .returnMsg (True ,"推送成功！{}".format (str (O0OOOOO0O0OO00O00 )))#line:276
+    def tag (OOO0O0OO0O000O0O0 ,OO00000OO0000000O ,O0O0OOOOO0OOO0O00 ,OO00000O00O0OO0OO ):#line:278
+        ""#line:285
+        O00O0O0O00OO00000 =OO00000O00O0OO0OO .split (":")[0 ]#line:286
+        OO0O0O0OOO00OO0OO =OO00000O00O0OO0OO .split (":")[1 ]#line:287
+        OOO0O0OO0O000O0O0 .docker_client (OO00000OO0000000O ).images .get (O0O0OOOOO0OOO0O00 ).tag (repository =O00O0O0O00OO00000 ,tag =OO0O0O0OOO00OO0OO )#line:291
+        return public .returnMsg (True ,"设置成功！")#line:292
+    def pull (O0OO00OO00O0OOOO0 ,OOOOOO0OO0OO0000O ):#line:294
+        ""#line:303
+        public .writeFile (O0OO00OO00O0OOOO0 .__OO0OO00OO0O0OOO00 ,"开始推送镜像!")#line:304
+        import docker .errors #line:305
+        try :#line:306
+            if ':'not in OOOOOO0OO0OO0000O .image :#line:307
+                OOOOOO0OO0OO0000O .image ='{}:latest'.format (OOOOOO0OO0OO0000O .image )#line:308
+            OOO0000OOOOO0O000 ={"username":OOOOOO0OO0OO0000O .username ,"password":OOOOOO0OO0OO0000O .password ,"registry":OOOOOO0OO0OO0000O .registry if OOOOOO0OO0OO0000O .registry else None }if OOOOOO0OO0OO0000O .username else None #line:312
+            if not hasattr (OOOOOO0OO0OO0000O ,"tag"):#line:313
+                OOOOOO0OO0OO0000O .tag =OOOOOO0OO0OO0000O .image .split (":")[-1 ]#line:314
+            if OOOOOO0OO0OO0000O .registry !="docker.io":#line:315
+                OOOOOO0OO0OO0000O .image ="{}/{}/{}".format (OOOOOO0OO0OO0000O .registry ,OOOOOO0OO0OO0000O .namespace ,OOOOOO0OO0OO0000O .image )#line:316
+            O0O0O0OO00OO0OOOO =dp .docker_client_low (OOOOOO0OO0OO0000O .url ).pull (repository =OOOOOO0OO0OO0000O .image ,auth_config =OOO0000OOOOO0O000 ,tag =OOOOOO0OO0OO0000O .tag ,stream =True )#line:322
+            dp .log_docker (O0O0O0OO00OO0OOOO ,"镜像拉取任务")#line:323
+            if O0O0O0OO00OO0OOOO :#line:324
+                dp .write_log ("镜像拉取 [{}:{}] 成功".format (OOOOOO0OO0OO0000O .image ,OOOOOO0OO0OO0000O .tag ))#line:325
+                return public .returnMsg (True ,'镜像拉取成功.')#line:326
+            else :#line:327
+                return public .returnMsg (False ,'可能没有这个镜像.')#line:328
+        except docker .errors .ImageNotFound as OO0O0OOO00000O0O0 :#line:329
+            if "pull access denied for"in str (OO0O0OOO00000O0O0 ):#line:330
+                return public .returnMsg (False ,"拉取失败，镜像为私有镜像，需要输入dockerhub的账号密码!")#line:331
+            return public .returnMsg (False ,"拉取失败<br><br>原因: {}".format (OO0O0OOO00000O0O0 ))#line:333
+        except docker .errors .NotFound as OO0O0OOO00000O0O0 :#line:335
+            if "not found: manifest unknown"in str (OO0O0OOO00000O0O0 ):#line:336
+                return public .returnMsg (False ,"镜像拉取失败，仓库中没有这个镜像!")#line:337
+            return public .returnMsg (False ,"Pull failed<br><br>reason:{}".format (OO0O0OOO00000O0O0 ))#line:338
+        except docker .errors .APIError as OO0O0OOO00000O0O0 :#line:339
+            if "invalid tag format"in str (OO0O0OOO00000O0O0 ):#line:340
+                return public .returnMsg (False ,"拉取失败, 镜像格式错误, 如: nginx:v 1!")#line:341
+            return public .returnMsg (False ,"拉取失败!{}".format (OO0O0OOO00000O0O0 ))#line:342
+    def pull_high_api (OO000OOO0O0O0OOO0 ,OO000O0OOO00OOOOO ):#line:346
+        ""#line:355
+        import docker .errors #line:356
+        try :#line:357
+            if ':'not in OO000O0OOO00OOOOO .image :#line:358
+                OO000O0OOO00OOOOO .image ='{}:latest'.format (OO000O0OOO00OOOOO .image )#line:359
+            OO00O0OOOO0000O0O ={"username":OO000O0OOO00OOOOO .username ,"password":OO000O0OOO00OOOOO .password ,"registry":OO000O0OOO00OOOOO .registry if OO000O0OOO00OOOOO .registry else None }if OO000O0OOO00OOOOO .username else None #line:363
+            if OO000O0OOO00OOOOO .registry !="docker.io":#line:365
+                OO000O0OOO00OOOOO .image ="{}/{}/{}".format (OO000O0OOO00OOOOO .registry ,OO000O0OOO00OOOOO .namespace ,OO000O0OOO00OOOOO .image )#line:366
+            OOOO00OOO0OOO00O0 =OO000OOO0O0O0OOO0 .docker_client (OO000O0OOO00OOOOO .url ).images .pull (repository =OO000O0OOO00OOOOO .image ,auth_config =OO00O0OOOO0000O0O ,)#line:370
+            if OOOO00OOO0OOO00O0 :#line:371
+                return public .returnMsg (True ,'拉取镜像成功.')#line:372
+            else :#line:373
+                return public .returnMsg (False ,'可能没有这个镜像.')#line:374
+        except docker .errors .ImageNotFound as OOOOOOO0OO0OOO0OO :#line:375
+            if "pull access denied for"in str (OOOOOOO0OO0OOO0OO ):#line:376
+                return public .returnMsg (False ,"拉取镜像失败, 这个是私有镜像，请输入账号密码!")#line:377
+            return public .returnMsg (False ,"拉取镜像失败<br><br>原因: {}".format (OOOOOOO0OO0OOO0OO ))#line:378
+    def image_for_host (OO0O0O00O000O0O0O ,OO0OO0OOOOO0OOO00 ):#line:380
+        ""#line:385
+        O000000OOOO00OO0O =OO0O0O00O000O0O0O .image_list (OO0OO0OOOOO0OOO00 )#line:386
+        if not O000000OOOO00OO0O ['status']:#line:387
+            return O000000OOOO00OO0O #line:388
+        OO0000O0O0000OOOO =len (O000000OOOO00OO0O ['msg']['images_list'])#line:389
+        O0OOO0O0O000OOO0O =0 #line:390
+        for O00OO00OOOO0000OO in O000000OOOO00OO0O ['msg']['images_list']:#line:391
+            O0OOO0O0O000OOO0O +=O00OO00OOOO0000OO ['size']#line:392
+        return public .returnMsg (True ,{'num':OO0000O0O0000OOOO ,'size':O0OOO0O0O000OOO0O })

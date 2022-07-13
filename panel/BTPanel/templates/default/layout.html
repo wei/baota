@@ -120,6 +120,21 @@
       <button style="display: none;" id="bt_copys" class="bt_copy" data-clipboard-text=""></button>
       <a style="display: none;" id="defaultPath">{{session['config']['sites_path']}}</a>
       {% block content %}{% endblock %}
+      <div id="onlineCustomer" class="debugs hide"><span>在线<br>客服</span></div>
+      <div id="wechat-customer" class="wechat-customer hide" >
+        <div class="describe-title">企业版专属客服</div>
+        <div class="qrcode-wechat">
+          <div id="wechatCustomerQrcode"></div>
+          <div class="wechatEnterprise">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAABXdJREFUaEPlmn9MlVUYxz8Plwv0QiAuRc1ARFf5g4nT2MyfIWXqXP6i5WyJzs2WpVuasVr+wbTaNJQxc9XU0nJCaWrONlxu/jYsjNYPQiw1zUiJ4r38kHs57cBgIlx473vvZcye7e7d7n3O93k+73Pec95zzhXuEpO7hIP/F0h1ffXwkNCQOSjGIQxDBb2ObqAcRZEHzxfRzujTXUXstCIu5RogHnlLoZ7tSijIvxeKQ9YaYngF8gpiNphTRWQXEBfkJC3Li8iLhsPI66hBhyDVDdVTQiSkEHBYjtJNjiKy0nAYm+8M1w6ksrIyJjwm/DsUCd2Um89hlFKPRzmj9I1utXYgZoO5WURe8lm9OxsI30Q6Isd4BalSVbFOj/Mm9PxhWZB5RqjxWQtMm4qYbvM5QXZ05821G0uQj41QY2GHILWe2i2NqvF5u+Ld3K48MjRySIcgLrfrMDDNTkLVtVD0i/4I5X9ApQmV1XBPGPS+F3pHweRkRXIiJPW3E6F9m8jQyNYe1aZr1bhrjinUBF/CnL8IR0uEoyVQZVprmTYKFkxSDL3fmr83L8NhOESkUf/uF8j2QmF7m0HQemLhTlgwGTLT7b/vBAQke7dQWGw9cW+es1Jh1Vx7MH6DrHxP+PaC/xAtCk+OgawM32H8Asn5XNh3KnAQLUoaRAP5YrZBvv8NXtgSnCVMv1jIXabQV6tmGyTvoJB/3GoY3/30w79suvUuZhtk4ivBqUYL8vhhsH5RkEH05PZUdnBB4vvABysUEWHWqmmrInq2zswJHkh8X7hcAVuXK4bFBxGk9HdYmht4kMx0SH3QevK3I9qqSH0DpL8WeJDCdYq/3L9ScOU94o0hzB24xFo5AFsgWn3JZqHsquU4XTrOGAtr5itWlyzg7M2vmvzXPJTDjP7PdNlWO9gGef9LYWdzvICY7lb6XWtF8RyKq5pn2eSYVPJG77ekbxvkyg1YnCPobmbXYiJh6iiYPlYxdABI3U9U1JSx6eo+jt/QqwhYN3IHE+7rejVhG0QH2bhX2H/GHsaUZFjyhEIPs9rk3yM4rq7Bk7gLFfEwJf+c5dC1TygzfyA3ZS9RodGdBvILRFcja4dwrsw3mEFx8NHLzZNdyJ8bEPMkYp5qhohObyN2+PoexD2Q6xWPEB0Bjw0OpVdE+4HGLxAdsaIKsj707cFveR4cpRORutKmxFXUODxJ+zq8I8sP1rH3x+Y+vD49gkWjne38/AbRiofPwZv51ofjVpDy2U2V0NbYbzWNcavaJXjx70bStrmo1zvA0AShYe60gIAcKoK3C6yDRBtQkKUwag/guLQUZYzBw+swKAWcbZPcePIWG0/UN+Wtu1X21HASY0OCA5J7QPj0hPXnJKEvDE+AV+ff9lJ4Zg/q6wJk9hvwQHKT2OnLHuburmF8goP5I5xNH28WkIqs2CoUX2wOkZIEs1IVelPhlhtcdWDWNV+1xfWC2KiO01G7VsLZfEiehqTM5J36mQyMFjJGegdoUQoIyIVrcKhImDRSMWqw9cq08yw9jsp7uvVrWbgJUjMsCQYExFIki05qw3S4dL7Ze8IiJGO9pZZeQUy3eUSQNEsqgXT6+RgqPwv6JCLzspuuVszrBp3L7doGZFoR6QE+nWyZ3nItI4R3e0CSXabQ6Sa2y+XqTzjXulTpAQ6dHivo/Fxu1xagZ+/Id3XQo0H0YU9YY9h5pZTFlXP3l8fS0ZtOq1bVTlaNqlApFdr9aXYe0fJhaIuM2WCmichOIECnGf7fEp+Pp1thlBknHtGz02L/0/BLoVCUrDWcNv4wcHvYqrqqpDBn2Gyl1KMiMkIpFa6XE36l1nnjwP6FI4iJBlza+oIi4KEDK3jXgPwH8FZOUYC1gSwAAAAASUVORK5CYII=" />
+          </div>
+        </div>
+        <div class="wechat-title">
+          <img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAAAAXNSR0IArs4c6QAAATlJREFUSEvtVrFOw0AMfed8AxJsZWGAgQHBXP4DCQa+Ioou7g18BRIg9T/KDGJggIGFbiDxDXGQowSBuGvrFISEmtF+7/nis312RVEMiWgIoMT375aIjpj5KeJrTMy8JSJjAPsRzEhErl1Zlhd1XZ8kRKZEdMjM0xlBBiIyATCIYZxzl857X6uTiHaY+TElZrUz87aIPCjvI0gIwVmF5uG7H1gFmZepxv85XTdqCCEcLMQ0gLz3jbbTOm/rPdkLBt0v0E77xysq2it9T2nhuTzPN4ho10KyYEXkXvvkBcC6hWjEvmqQMwCnANZa8p1RJAbfa41vAM7/0cUzczOiZ43zvunrtPVOntuO3+wrluJ12qspvFBm/+bR+u03nhPrkKZk2ZVINUZO964sy44Ta9FSK5GuQ1VVXb0DLf+sHQ9tLL0AAAAASUVORK5CYII=" />
+          <span class="scan-title">微信扫码</span>
+        </div>
+        <span class="layui-layer-setwin wechat-close"><a href="javascript:;" class="layui-layer-ico layui-layer-close layui-layer-close2"></a></span>
+      </div>
       <div class="footer bgw">
         <span style="margin-right: 8px;">{{session['brand']}}{{session['product']}} &copy;2014-{{g['yaer']}} 广东堡塔安全技术有限公司 (bt.cn)</span>
         <a style="margin-right: 8px;color:#20a53a;" href="http://www.bt.cn/bbs" target="_blank">论坛求助</a>|
@@ -167,23 +182,21 @@
 	  <script type="text/javascript" src="{{g.cdn_url}}/js/jquery.qrcode.min.js" defer></script>
 	  <script type="text/javascript" src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 	  <script type="text/javascript" src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-    <script type="text/javascript" src="{{g.cdn_url}}/js/statistics.min.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-    <script type="text/javascript" src="{{g.cdn_url}}/js/tools.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+      <script type="text/javascript" src="{{g.cdn_url}}/js/tools.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
     {% endif %}
 
     {% block scripts %}
     <script src="{{g.cdn_url}}/js/jquery-2.2.4.min.js"></script>
     <script src="{{g.cdn_url}}/layer/layer.js?version={{g['version']}}"></script>
-      <script src="{{g.cdn_url}}/language/{{session['lan']}}/lan.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+    <script src="{{g.cdn_url}}/language/{{session['lan']}}/lan.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
     <script src="{{g.cdn_url}}/js/clipboard.min.js" defer></script>
     <script src="{{g.cdn_url}}/laydate/laydate.js" defer></script>
-    <script src="{{g.cdn_url}}/js/jquery.qrcode.min.js" defer></script>
+    <script type="text/javascript"  src="{{g.cdn_url}}/js/jquery.qrcode.min.js"></script>
 
     <!-- 以下文件未来将被剔除 -->
     <script src="{{g.cdn_url}}/js/bootstrap.min.js"></script>
     <script src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
     <script src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-    <script src="{{g.cdn_url}}/js/statistics.min.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 
     <script src="{{g.cdn_url}}/codemirror/lib/codemirror.js" defer></script>
     <!-- End -->
@@ -192,6 +205,36 @@
       bt.set_cookie('order', 'id desc');
       bt.set_cookie('serverType', "{{session['webserver']}}");
       if (bt.get_cookie('pro_end') >= 0 || bt.get_cookie('ltd_end') > 0) $(".bt_qq_qun").show()
+
+      $('#wechatCustomerQrcode').qrcode({
+        width: 80,
+        height: 80,
+        text: "https://work.weixin.qq.com/kfid/kfc0ffe8f5ec461e5b7"
+      });
+
+      $('#onlineCustomer').click(function (){
+        var customer = $("#wechat-customer");
+        var ltd_end = bt.get_cookie('ltd_end');
+        if (!(ltd_end > 0)){
+          product_recommend.pay_product_sign('ltd',45,'ltd')
+          layer.msg('在线客服仅支持企业版用户使用', {icon: 5});
+          return false;
+        }
+        if(customer.hasClass('hide')){
+          customer.removeClass('hide');
+        }else{
+          customer.addClass('hide');
+        }
+      })
+
+      $('#wechat-customer .wechat-close').on('click',function(){
+        $(this).parent().addClass('hide');
+      })
+
+      {% if data['show_workorder'] %}
+        $('.debugs').removeClass('hide');
+      {% endif %}
+
       $("#setBox").click(function () {
         if ($(this).prop("checked")) {
           $("input[name=id]").prop("checked", true);
@@ -202,7 +245,7 @@
       var is_files_html = false;
       var task_open = 0;
       var task_close = false;
-      if ($(".current").attr("id") == 'memuAfiles') {
+      if ($(".current").attr("id") === 'memuAfiles') {
         is_files_html = true;
       }
 
@@ -306,21 +349,19 @@
       }
 
       function remove_task(id) {
-				layer.confirm('是否取消当前执行的任务队列？', { title: '取消任务队列', icon: 0 }, function(indexs) {
-					layer.close(indexs);
-					var loadT = bt.load('正在取消任务...');
-					$.post('/task?action=remove_task', {
-						id: id
-					}, function (rdata) {
-						loadT.close();
-						layer.msg(rdata.msg);
-					});
-				});
+        layer.confirm('是否取消当前执行的任务队列？', { title: '取消任务队列', icon: 0 }, function(indexs) {
+            layer.close(indexs);
+            var loadT = bt.load('正在取消任务...');
+            $.post('/task?action=remove_task', {
+                id: id
+            }, function (rdata) {
+                loadT.close();
+                layer.msg(rdata.msg);
+            });
+        });
       }
-      task_stat(); 
-      {% if data['show_workorder'] %}
-        var box = new MessageBox(); 
-      {%endif %}
+      task_stat();
+
     </script>
     {% endblock %}
     {% for js_f in g['other_js'] %}

@@ -494,10 +494,20 @@ class panelPlugin:
         filename = '{}/{}.zip'.format(self.__tmp_path,upgrade_plugin_name)
         if not os.path.exists(self.__tmp_path): os.makedirs(self.__tmp_path,384)
         if not cache.get(pkey):
+            import config,socket
+            import requests.packages.urllib3.util.connection as urllib3_conn
+            _ip_type = config.config().get_request_iptype()
+            old_family = urllib3_conn.allowed_gai_family
+            if _ip_type == 'ipv4':
+                urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
+            elif _ip_type == 'ipv6':
+                urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
             try:
                 download_res = requests.post(self.__download_url,pdata,headers=public.get_requests_headers(),timeout=30,stream=True)
             except Exception as ex:
                 raise public.PanelError(public.error_conn_cloud(str(ex)))
+            finally:
+                urllib3_conn.allowed_gai_family = old_family
 
             try:
                 headers_total_size = int(download_res.headers['File-size'])
@@ -869,6 +879,13 @@ class panelPlugin:
         cache.delete('install_task')
         public.writeFile('/tmp/panelTask.pl','True')
         public.WriteLog('TYPE_SETUP','PLUGIN_ADD',(get.sName,get.version))
+
+        if not public.M('tasks').where("status=?", ('-1',)).count():
+            tip_file = '/dev/shm/.panelTask.pl'
+            tip_time = public.readFile(tip_file)
+            if not tip_time or time.time() - int(tip_time) > 60:
+                public.ExecShell("/www/server/panel/BT-Task")
+                public.print_log("已重启后台任务")
         return public.returnMsg(True,'已将安装任务添加到队列!')
 
     #卸载插件
@@ -906,6 +923,7 @@ class panelPlugin:
             get.sName = get.sName.lower()
             if get.sName.find('php-') != -1:
                 get.sName = get.sName.split('-')[0]
+            if get.sName in ['redis']: get.version = ''
             execstr = "cd /www/server/panel/install && /bin/bash install_soft.sh "+get.type+" uninstall " + get.sName.lower() + " "+ get.version.replace('.','')
             public.ExecShell(execstr)
             public.WriteLog('TYPE_SETUP','PLUGIN_UNINSTALL',(get.sName,get.version))
@@ -954,6 +972,12 @@ class panelPlugin:
             if type(softList)!=dict:
                 softList={"list":[]}
                 return softList
+
+        if not 'list' in softList:
+            if 'msg' in softList:
+                raise public.PanelError(softList['msg'])
+            else:
+                raise public.PanelError('获取插件列表失败!')
 
         softList['list'] = self.get_local_plugin(softList['list'])
         softList['list'] = self.get_types(softList['list'],sType)

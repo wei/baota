@@ -23,12 +23,12 @@ class ssh_authentication:
             public.ExecShell("chmod 600 " + self.__python_pam)
         if not os.path.exists(self.__config_pl):
             public.ExecShell("echo  '%s' >>%s"%(public.GetRandomString(32),self.__config_pl))
-            public.ExecShell("chmod 600 " + self.__config_pl)  
+            public.ExecShell("chmod 600 " + self.__config_pl)
 
     def wirte(self, file, ret):
         result = public.writeFile(file, ret)
         return result
-    
+
     #重启SSH
     def restart_ssh(self):
         act = 'restart'
@@ -43,7 +43,7 @@ class ssh_authentication:
                 public.ExecShell("/etc/init.d/sshd " + act)
         else:
             public.ExecShell("/etc/init.d/sshd " + act)
-    
+
     #查找PAM目录
     def get_pam_dir(self):
         #Centos 系列
@@ -79,7 +79,7 @@ class ssh_authentication:
                 else:
                     return False
         return False
-        
+
     #判断PAMSO文件是否存在
     def isPamSoExists(self):
         check2=self.get_pam_dir()
@@ -103,7 +103,7 @@ class ssh_authentication:
         public.ExecShell('/usr/local/curl/bin/curl -o %s http://download.bt.cn/btwaf_rule/pam_python_so/%s'%(so_path,so_name))
         public.ExecShell("chmod 600 " + so_path)
         return True
-    
+
     #开启双因子认证
     def start_ssh_authentication(self):
         check=self.isPamSoExists()
@@ -118,7 +118,7 @@ class ssh_authentication:
                     public.writeFile(self.__PAM_CONFIG,auth_data)
                     return True
         return False
-                
+
     #关闭双因子认证
     def stop_ssh_authentication(self):
         check=self.isPamSoExists()
@@ -199,7 +199,7 @@ class ssh_authentication:
                 self.wirte(self.__SSH_CONFIG, file_result)
                 self.restart_ssh()
                 return public.returnMsg(True, '关闭密码认证成功')
-            else:   
+            else:
                 return public.returnMsg(False, '没有密码认证')
         return public.returnMsg(False, '没有密码认证')
 
@@ -260,7 +260,7 @@ class ssh_authentication:
             return public.returnMsg(True,'开启成功')
         return public.returnMsg(True,'开启失败')
 
-    
+
     #关闭SSH 双因子认证
     def close_ssh_authentication_two_factors(self):
         if not self.get_pam_dir():return public.returnMsg(False,'不支持该系统')
@@ -276,7 +276,7 @@ class ssh_authentication:
             return public.returnMsg(True,'已关闭')
         if self.stop_ssh_authentication():
             return public.returnMsg(True,'已关闭')
-        
+
 
     #检查是否开启双因子认证
     def check_ssh_authentication_two_factors(self):
@@ -288,7 +288,7 @@ class ssh_authentication:
         if not self.check_ssh_authentication():
             return public.returnMsg(False,'未开启')
         return public.returnMsg(True,'已开启')
-    
+
     def is_check_so(self):
         '''判断SO文件是否存在'''
         if not self.get_pam_dir():return public.returnMsg(False,'不支持该系统')

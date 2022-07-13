@@ -33,7 +33,7 @@ class Page():
 
     def __init__(self):
         tmp = public.GetMsg('PAGE');
-        if tmp:
+        if isinstance(tmp,dict):
             self.__PREV         = tmp['PREV'];
             self.__NEXT         = tmp['NEXT'];
             self.__START        = tmp['START'];

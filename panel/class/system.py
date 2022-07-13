@@ -177,15 +177,15 @@ class system:
         try:
             port = public.GetHost(True)
         except:
-            port = '8888'
+            port = '8888';
         domain = ''
         if os.path.exists('data/domain.conf'):
-           domain = public.readFile('data/domain.conf')
+           domain = public.readFile('data/domain.conf');
 
         autoUpdate = ''
-        if os.path.exists('data/autoUpdate.pl'): autoUpdate = 'checked'
+        if os.path.exists('data/autoUpdate.pl'): autoUpdate = 'checked';
         limitip = ''
-        if os.path.exists('data/limitip.conf'): limitip = public.readFile('data/limitip.conf')
+        if os.path.exists('data/limitip.conf'): limitip = public.readFile('data/limitip.conf');
         admin_path = '/'
         if os.path.exists('data/admin_path.pl'): admin_path = public.readFile('data/admin_path.pl').strip()
 
@@ -194,7 +194,7 @@ class system:
         #    if os.path.isdir('templates/' + template): templates.append(template);
         template = public.GetConfigValue('template')
 
-        check502 = ''
+        check502 = '';
         if os.path.exists('data/502Task.pl'): check502 = 'checked';
         return {'port':port,'address':address,'domain':domain,'auto':autoUpdate,'502':check502,'limitip':limitip,'templates':templates,'template':template,'admin_path':admin_path}
 
@@ -275,7 +275,7 @@ class system:
         return data
 
     def GetTitle(self):
-        return public.GetConfigValue('title')
+        return public.xss_version(public.GetConfigValue('title'))
 
     def GetSystemVersion(self):
         #取操作系统版本

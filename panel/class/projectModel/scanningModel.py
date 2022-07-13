@@ -10,9 +10,9 @@ class main (projectBase ):#line:20
     __O000O000O0OOO000O =public .to_string ([27492 ,21151 ,33021 ,20026 ,20225 ,19994 ,29256 ,19987 ,20139 ,21151 ,33021 ,65292 ,35831 ,20808 ,36141 ,20080 ,20225 ,19994 ,29256 ])#line:25
     def __OO00OO00O00000OOO (O0000O000O0OOO0O0 ):#line:27
         try :#line:28
-            from pluginAuth import Plugin #line:29
-            OO0OOO0O0OOO0OOO0 =Plugin (False )#line:30
-            OO000O00OOO0OOO00 =OO0OOO0O0OOO0OOO0 .get_plugin_list ()#line:31
+            # from pluginAuth import Plugin #line:29
+            import PluginLoader
+            OO000O00OOO0OOO00 =PluginLoader.get_plugin_list (0)#line:31
             if int (OO000O00OOO0OOO00 ['ltd'])>time .time ():#line:32
                 return True #line:33
             return False #line:34

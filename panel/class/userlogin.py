@@ -12,11 +12,11 @@ from BTPanel import session,cache,json_header
 from flask import request,redirect,g
 
 class userlogin:
-    
+
     def request_post(self,post):
         if not hasattr(post, 'username') or not hasattr(post, 'password'):
             return public.returnJson(False,'LOGIN_USER_EMPTY'),json_header
-        
+
         self.error_num(False)
         if self.limit_address('?') < 1: return public.returnJson(False,'LOGIN_ERR_LIMIT'),json_header
         post.username = post.username.strip()
@@ -30,7 +30,7 @@ class userlogin:
         public.chdck_salt()
         sql = db.Sql()
         user_list = sql.table('users').field('id,username,password,salt').select()
-        
+
         userInfo = None
         for u_info in user_list:
             if public.md5(u_info['username']) == post.username:
@@ -59,7 +59,7 @@ class userlogin:
                 session['password_expire'] = True
 
             #登陆告警
-            
+            #public.run_thread(public.login_send_body,("账号密码",userInfo['username'],public.GetClientIp(),str(int(request.environ.get('REMOTE_PORT')))))
             # public.login_send_body("账号密码",userInfo['username'],public.GetClientIp(),str(request.environ.get('REMOTE_PORT')))
             if hasattr(post,'vcode'):
                 if not re.match(r"^\d+$",post.vcode): return public.returnJson(False,'验证码格式错误'),json_header
@@ -93,7 +93,7 @@ class userlogin:
             return "1"
         except Exception as ex:
             stringEx = str(ex)
-            if stringEx.find('unsupported') != -1 or stringEx.find('-1') != -1: 
+            if stringEx.find('unsupported') != -1 or stringEx.find('-1') != -1:
                 public.ExecShell("rm -f /tmp/sess_*")
                 public.ExecShell("rm -f /www/wwwlogs/*log")
                 public.ServiceReload()
@@ -144,7 +144,7 @@ class userlogin:
             if not re.match(r"^\w+$",get.tmp_token):return '错误的参数!'
             skey = public.GetClientIp() + '_temp_login'
             if not public.get_error_num(skey,10): return '连续10次验证失败，禁止1小时'
-            
+
             s_time = int(time.time())
             if public.M('temp_login').where('state=? and expire>?',(0,s_time)).field('id,token,salt,expire').count()==0:
                 public.set_error_num(skey)
@@ -158,7 +158,7 @@ class userlogin:
                 public.set_error_num(skey)
                 return '验证失败!'
             r_token = public.md5(get.tmp_token + data['salt'])
-            if r_token != data['token']: 
+            if r_token != data['token']:
                 public.set_error_num(skey)
                 return '验证失败!'
             public.set_error_num(skey,True)
@@ -187,7 +187,7 @@ class userlogin:
             return redirect('/')
         except:
             return '登录失败，登录过程发生错误'
-   
+
 
     def login_token(self):
         import config
@@ -209,12 +209,12 @@ class userlogin:
         # 验证是否使用限制的IP地址访问
         ip_check = public.check_ip_panel()
         if ip_check: return ip_check
-                
+
         # 验证是否已经登录
         if 'login' in session:
             if session['login'] == True:
                 return redirect('/')
-        
+
         # 复位验证码
         if not 'code' in session:
             session['code'] = False
@@ -246,7 +246,7 @@ class userlogin:
             num = 1
         if s: cache.inc(nKey,1)
         if num > 6: session['code'] = True
-    
+
     #IP限制
     def limit_address(self,type,v=""):
         import time
@@ -260,7 +260,7 @@ class userlogin:
             if not num1:
                 cache.set(numKey,1,outTime)
                 num1 = 1
-                        
+
             #计数
             if type == '+':
                 cache.inc(numKey,1)
@@ -346,7 +346,7 @@ class userlogin:
                 from BTPanel import sdb
                 if os.path.exists(session_file): os.remove(session_file)
                 sdb.create_all()
-                if not os.path.exists(session_file): 
+                if not os.path.exists(session_file):
                     public.writeFile('/www/server/panel/data/reload.pl','True')
                     return False
             return True

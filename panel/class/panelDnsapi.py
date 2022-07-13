@@ -55,9 +55,9 @@ caa_value = '0 issue "letsencrypt.org"'
 
 def extract_zone(domain_name):
     domain_name = domain_name.lstrip("*.")
-    top_domain_list = ['.ac.cn', '.ah.cn', '.bj.cn', '.com.cn', '.cq.cn', '.fj.cn', '.gd.cn', 
-                        '.gov.cn', '.gs.cn', '.gx.cn', '.gz.cn', '.ha.cn', '.hb.cn', '.he.cn', 
-                        '.hi.cn', '.hk.cn', '.hl.cn', '.hn.cn', '.jl.cn', '.js.cn', '.jx.cn', 
+    top_domain_list = ['.ac.cn', '.ah.cn', '.bj.cn', '.com.cn', '.cq.cn', '.fj.cn', '.gd.cn',
+                        '.gov.cn', '.gs.cn', '.gx.cn', '.gz.cn', '.ha.cn', '.hb.cn', '.he.cn',
+                        '.hi.cn', '.hk.cn', '.hl.cn', '.hn.cn', '.jl.cn', '.js.cn', '.jx.cn',
                         '.ln.cn', '.mo.cn', '.net.cn', '.nm.cn', '.nx.cn', '.org.cn']
     old_domain_name = domain_name
     top_domain = "."+".".join(domain_name.rsplit('.')[-2:])
@@ -113,12 +113,12 @@ class DNSPodDns(BaseDns):
 
     def create_dns_record(self, domain_name, domain_dns_value):
         domain_name,_,subd = extract_zone(domain_name)
-        if self._type == 1:            
+        if self._type == 1:
             self.add_record(domain_name,subd.replace('_acme-challenge.',''),domain_dns_value,'CNAME')
         else:
             self.add_record(domain_name,subd,domain_dns_value,'TXT')
 
-       
+
 
     def add_record(self,domain_name,subd,domain_dns_value,s_type):
         url = urljoin(self.DNSPOD_API_BASE_URL, "Record.Create")
@@ -206,7 +206,7 @@ class CloudFlareDns(BaseDns):
         super(CloudFlareDns, self).__init__()
 
     def find_dns_zone(self, domain_name):
-        url = urljoin(self.CLOUDFLARE_API_BASE_URL, "zones?status=active")
+        url = urljoin(self.CLOUDFLARE_API_BASE_URL, "zones?status=active&per_page=1000")
         headers = {"X-Auth-Email": self.CLOUDFLARE_EMAIL, "X-Auth-Key": self.CLOUDFLARE_API_KEY}
         find_dns_zone_response = requests.get(url, headers=headers, timeout=self.HTTP_TIMEOUT)
         if find_dns_zone_response.status_code != 200:
@@ -229,7 +229,7 @@ class CloudFlareDns(BaseDns):
                     response=self.log_response(find_dns_zone_response),
                 )
             )
-    
+
     def add_record(self,domain_name,value,s_type):
         url = urljoin(
             self.CLOUDFLARE_API_BASE_URL,
@@ -241,7 +241,7 @@ class CloudFlareDns(BaseDns):
             "name": domain_name,
             "content": "{0}".format(value),
         }
-        
+
         create_cloudflare_dns_record_response = requests.post(
             url, headers=headers, json=body, timeout=self.HTTP_TIMEOUT
         )
@@ -267,12 +267,12 @@ class CloudFlareDns(BaseDns):
             "name": "_acme-challenge" + "." + domain_name + ".",
             "content": "{0}".format(domain_dns_value),
         }
-        
+
         if self._type == 1:
             body['type'] = 'CNAME'
-            root, _, acme_txt = extract_zone(domain_name)           
+            root, _, acme_txt = extract_zone(domain_name)
             body['name'] = acme_txt.replace('_acme-challenge.','')
-            
+
         create_cloudflare_dns_record_response = requests.post(
             url, headers=headers, json=body, timeout=self.HTTP_TIMEOUT
         )
@@ -310,7 +310,7 @@ class CloudFlareDns(BaseDns):
             requests.delete(
                 url, headers=headers, timeout=self.HTTP_TIMEOUT
             )
-        
+
     def delete_dns_record(self, domain_name, domain_dns_value):
         domain_name = domain_name.lstrip("*.")
         dns_name = "_acme-challenge" + "." + domain_name
@@ -353,7 +353,7 @@ class AliyunDns(object):
 
     def create_dns_record(self, domain_name, domain_dns_value):
         root, _, acme_txt = extract_zone(domain_name)
-        if self._type == 1:      
+        if self._type == 1:
             acme_txt = acme_txt.replace('_acme-challenge.','')
             self.add_record(root,'CNAME',acme_txt,domain_dns_value)
         else:
@@ -461,7 +461,7 @@ class CloudxnsDns(object):
         headers = self.get_headers(url)
         req = requests.get(url=url, headers=headers,verify=False)
         req = req.json()
-        
+
         return req
 
     def get_domain_id(self, domain_name):
@@ -489,7 +489,7 @@ class CloudxnsDns(object):
         headers = self.get_headers(url, parameter)
         req = requests.post(url=url, headers=headers, data=parameter,verify=False)
         req = req.json()
-       
+
         return req
 
     def delete_dns_record(self, domain_name, domain_dns_value):
@@ -515,7 +515,7 @@ class Dns_com(object):
     _type = 0 # 0:lest 1：锐成
     def __init__(self, key, secret, ):
         pass
-    
+
     def get_dns_obj(self):
         p_path = '/www/server/panel/plugin/dns'
         if not os.path.exists(p_path +'/dns_main.py'): return None
@@ -526,13 +526,13 @@ class Dns_com(object):
 
     def create_dns_record(self, domain_name, domain_dns_value):
         root, _, acme_txt = extract_zone(domain_name)
- 
+
         if self._type == 1:
             acme_txt = acme_txt.replace('_acme-challenge.','')
-            result = self.add_record(acme_txt + '.' + root,domain_dns_value)    
+            result = self.add_record(acme_txt + '.' + root,domain_dns_value)
         else:
             result = self.get_dns_obj().add_txt(acme_txt + '.' + root,domain_dns_value)
-        
+
         if result == "False":
             raise ValueError('[DNS]当前绑定的宝塔DNS云解析账户里面不存在这个域名[{}],添加解析失败!'.format((acme_txt + '.' + root,domain_dns_value)))
         time.sleep(5)

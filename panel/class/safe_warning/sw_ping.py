@@ -35,7 +35,7 @@ def check_run():
         @author hwliang<2020-08-05>
         @return tuple (status<bool>,msg<string>)
     '''
-    
+
     cfile = '/etc/sysctl.conf'
     conf = public.readFile(cfile)
     rep = r"#*net\.ipv4\.icmp_echo_ignore_all\s*=\s*([0-9]+)"

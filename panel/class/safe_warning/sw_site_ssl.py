@@ -42,11 +42,11 @@ def check_run():
         if not s_body: continue
         if s_body.find('ssl_certificate') == -1:
             not_ssl_list.append(site_info['name'])
-        
+
     if not_ssl_list:
         return False ,'以下站点未部署SSL证书: <br />' + ('<br />'.join(not_ssl_list))
-    
+
     return True,'无风险'
-        
-        
-    
+
+
+

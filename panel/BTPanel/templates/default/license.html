@@ -51,7 +51,7 @@
             padding: 5px 30px;
             border: 1px solid #ececec;
             overflow: auto;
-            
+
         }
 
         .conter_tips .row {
@@ -147,7 +147,7 @@
         }
         .conter_shadow{
             position: absolute;
-            
+
             height: 10px;
             width: 100%;
             left: 0;
@@ -287,7 +287,7 @@
                     <div class="line">4.7 宝塔面板在使用过程中不会收集、传输、存储其安装载体中的数据，您需要自行负责您的数据安全与备份。您理解并同意宝塔面板无法提供找回丢失数据等服务。</div>
                     <div class="line">4.8 您理解并同意本软件的开发是一个持续开发过程，您及其他用户因此而受益。为促进本软件的持续开发，您可以向堡塔公司提供关于使用、改进或应用本软件的建议、文件、材料或其他数据（简称“贡献”）。您充分了解并同意堡塔公司可能在本软件和/或相关产品或服务上使用贡献。除非堡塔公司和您针对任何贡献签署书面文件或本协议另有约定，您授予堡塔公司不可撤销的、永久的、非排他的、世界范围内的、免费的许可，以在开发、示范、展示、许可、修改、复制、分发和出售本软件和/或相关产品和服务时披露、使用和纳入。同时请确保您的反馈不包含您或者第三方的机密和著作权信息。</div>
                     <div class="line">4.9 您可阅读堡塔公司网站上发布的《隐私声明》进一步了解堡塔公司会如何收集、使用、存储和保护您的个人信息及您享有何种权利。该《隐私政策》可能会不时更新，在上述更新发布后继续使用本软件或堡塔公司服务即表示您同意新的条款。</div>
-                    <div class="line">4.10 如果您未满18周岁，您在使用本软件前须取得法定监护人的书面同意。</div> 
+                    <div class="line">4.10 如果您未满18周岁，您在使用本软件前须取得法定监护人的书面同意。</div>
                 </div>
                 <div class="content-box">
                     <h5 class="row">五、用户使用规范</h5>
@@ -403,7 +403,7 @@
             <div class="conter_shadow shadow_bottom"></div>
         </div>
 
-        
+
         <div class="conter_select">
             <div class="select_tips">测试内容</div>
             <label class="ubind_click">
@@ -473,14 +473,14 @@
             if (cls.replace(/\s/g, '').length == 0) return false;
             return new RegExp(' ' + cls + ' ').test(' ' + elem.className + ' ');
         }
-        
+
         //添加class
         function addClass(elem, cls) {
             if (!hasClass(elem, cls)) {
                 elem.className = elem.className == '' ? cls : elem.className + ' ' + cls;
             }
         }
-        
+
         //删除class
         function removeClass(elem, cls) {
             if (hasClass(elem, cls)) {
@@ -491,13 +491,13 @@
                 elem.className = newClass.replace(/^\s+|\s+$/g, '');
             }
         }
-        
+
         //替换class
         function replaceClass(elem,cls,newCls){
             removeClass(elem,cls);
             addClass(elem,newCls);
         }
-        
+
         // 打开面板
         function open_panel(){
             if(!is_scroll){
@@ -520,7 +520,7 @@
                 select_tips.style.display = 'none';
             },config.time || 3000);
         }
-        
+
         window.onresize = function () {
             auto_mian();
         }

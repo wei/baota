@@ -32,7 +32,7 @@ class datatools:
         '''
         传递一个数据库名称即可 get.databases
         '''
-        
+
         db_name=get.db_name
         if not db_name:return False
         if not self.DB_MySQL:self.DB_MySQL = public.get_mysql_obj(db_name)
@@ -71,7 +71,7 @@ class datatools:
 
     #修复表信息
     def RepairTable(self,get):
-        
+
         '''
         POST:
         db_name=web
@@ -94,7 +94,7 @@ class datatools:
                 if len(ret)>0:
                     for i in ret:
                         self.DB_MySQL.execute('REPAIR TABLE `%s`.`%s`'%(db_name,i))
-                    return True 
+                    return True
         return False
 
 
@@ -114,7 +114,7 @@ class datatools:
         db_name=web
         tables=['web1','web2']
         '''
-        
+
         db_name = get.db_name
         tables = json.loads(get.tables)
         if not db_name or not tables: return False
@@ -130,7 +130,7 @@ class datatools:
                 if len(ret)>0:
                     for i in ret:
                         self.DB_MySQL.execute('OPTIMIZE table `%s`.`%s` ENGINE=MyISAM' % (db_name,i))
-                    return True 
+                    return True
         return False
 
     # 更改表引擎

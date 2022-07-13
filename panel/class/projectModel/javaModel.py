@@ -1369,7 +1369,10 @@ class main(projectBase):
         if not 'pids' in project_info['project_config']:return False
         pid_file = project_info['project_config']['pids']
         if not os.path.exists(pid_file): return False
-        pid = int(public.readFile(pid_file))
+        try:
+            pid = int(public.readFile(pid_file))
+        except:
+            return False
         pids = self.get_project_pids(pid=pid)
         if not pids: return False
         return True
@@ -1445,7 +1448,9 @@ class main(projectBase):
         if not 'pids' in project_info['project_config']:return load_info
         pid_file = project_info['project_config']['pids']
         if not os.path.exists(pid_file): return load_info
-        pid = int(public.readFile(pid_file))
+        try:
+            pid = int(public.readFile(pid_file))
+        except:return load_info
         pids = self.get_project_pids(pid=pid)
         if not pids: return load_info
         for i in pids:
@@ -1469,7 +1474,10 @@ class main(projectBase):
         else:
             pid_file = "{}/{}/logs/catalina-daemon.pid".format(bt_tomcat_web,project_name)
         if not os.path.exists(pid_file): return load_info
-        pid_data=public.readFile(pid_file)
+        try:
+            pid_data=public.readFile(pid_file)
+        except:return load_info
+
         if isinstance(pid_data,str):
             pid= pid_data.split()[0]
             pid = int(pid)
@@ -1553,15 +1561,19 @@ class main(projectBase):
                 process_info['user'] = p.username()
                 process_info['memory_used'] = p_mem.uss
                 process_info['cpu_percent'] = self.get_cpu_precent(p)
-                process_info['io_write_bytes'],process_info['io_read_bytes'] = self.get_io_speed(p)
+                try:
+                    process_info['io_write_bytes'],process_info['io_read_bytes'] =p.io_counters()
+                except:
+                   process_info['io_write_bytes'],process_info['io_read_bytes'] =0,0
                 process_info['connections'] = self.format_connections(p.connections())
                 process_info['connects'] = self.get_connects(pid)
                 process_info['open_files'] = self.list_to_dict(p.open_files())
                 process_info['threads'] = p.num_threads()
                 process_info['exe'] = ' '.join(p.cmdline())
-                return process_info
-        except:
             return process_info
+        except:
+           return process_info
+
 
     def get_io_speed(self,p):
         '''
@@ -1572,6 +1584,7 @@ class main(projectBase):
         '''
         skey = "io_speed_{}".format(p.pid)
         old_pio = cache.get(skey)
+        if not hasattr(p,'io_counters'): return 0,0
         pio = p.io_counters()
         if not old_pio:
             cache.set(skey,[pio,time.time()],3600)
@@ -1715,7 +1728,10 @@ class main(projectBase):
         plugin_name = None
         for pid_name in os.listdir(self._springboot_pid_path):
             pid_file = '{}/{}'.format(self._springboot_pid_path,pid_name)
-            s_pid = int(public.readFile(pid_file))
+            try:
+                s_pid = int(public.readFile(pid_file))
+            except:
+                continue
             if pid == s_pid:
                 plugin_name = pid_name[:-4]
                 break
@@ -1776,7 +1792,10 @@ class main(projectBase):
             #pid_file = "{}/{}.pid".format(self._springboot_pid_path,get.project_name)
             pid_file = project_info['project_config']['pids']
             if not os.path.exists(pid_file): return public.returnMsg(False,'项目未启动')
-            pid = int(public.readFile(pid_file))
+            try:
+                pid = int(public.readFile(pid_file))
+            except:
+                return public.returnMsg(False,'项目未启动')
             pids = self.get_project_pids(pid=pid)
             if not pids: return public.returnMsg(False,'项目未启动')
             self.kill_pids(pids=pids)
@@ -1864,7 +1883,9 @@ class main(projectBase):
                 return public.returnMsg(False,'启动失败{}'.format(p))
 
             # 获取PID
-            pid = int(public.readFile(pid_file))
+            try:
+                pid = int(public.readFile(pid_file))
+            except:return public.returnMsg(True, '启动失败')
             time.sleep(0.4)
             pids = self.get_project_pids(pid=pid)
             #if not pids:
@@ -2762,6 +2783,11 @@ class main(projectBase):
                     project_info['listen_ok'] = project_info['project_config']['port'] in project_info['listen']
             return project_info
 
+    # xss 防御
+    def xsssec(self,text):
+        return text.replace('<', '&lt;').replace('>', '&gt;')
+
+
     def get_project_log(self,get):
         '''
         @name 取项目日志
@@ -2781,7 +2807,7 @@ class main(projectBase):
             return public.returnMsg(True,public.GetNumLines('/www/server/bt_tomcat_web/{}/logs/catalina-daemon.out'.format(get.project_name.strip()), 3000))
         if project_info['project_config']['java_type']=='neizhi':
             version=project_info['project_config']['tomcat_version']
-            return public.returnMsg(True,public.GetNumLines('/usr/local/bttomcat/tomcat%s/logs/catalina-daemon.out'%version, 3000))
+            return public.returnMsg(True,self.xsssec(public.GetNumLines('/usr/local/bttomcat/tomcat%s/logs/catalina-daemon.out'%version, 3000)))
 
     def remove_project(self,get):
         '''

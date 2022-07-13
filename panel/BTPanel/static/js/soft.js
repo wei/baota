@@ -3472,7 +3472,7 @@ function AddSite(codename, title) {
     time: 0,
     shade: [0.3, "#000"]
   })
-  var data = $("#addweb").serialize() + "&port=" + Webport + "&webname=" + domain + '&ftp=false&sql=true&address=localhost&codeing=utf8&version=' + php_version;
+  var data = $("#addweb").serialize() + "&port=" + Webport + "&webname=" + domain + '&ftp=false&sql=true&address=localhost&codeing=utf8mb4&version=' + php_version;
   $.post('/site?action=AddSite', data, function (ret) {
     layer.close(loadT)
     if (!ret.siteStatus) {

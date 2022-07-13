@@ -11,6 +11,8 @@ import sys
 import time
 import os
 import struct
+import base64
+base64.b64encode
 
 os.chdir('/www/server/panel')
 if 'class/' in sys.path: sys.path.insert(0,"class/")
@@ -39,7 +41,7 @@ except ImportError:
             os.system("dnf install libpcap-devel -y")
     elif os.path.exists('/usr/bin/yum'):
         os.system("yum install libpcap-devel -y")
-        
+
     os.system("btpip install pypcap")
     try:
         import pcap
@@ -62,7 +64,7 @@ class process_network_total:
             @author hwliang<2021-09-13>
             @param timeout<int> 结束时间(秒)，0表示持久运行，默认为0
             @return void
-        '''        
+        '''
         stime = time.time()
         self.__end_time = timeout + stime
         self.__last_stat = stime
@@ -78,7 +80,7 @@ class process_network_total:
                         break
         except:
             self.rm_pid_file()
-        
+
     def handle_packet(self, pcap_data):
         '''
             @name 处理pcap数据包
@@ -94,7 +96,7 @@ class process_network_total:
         # 解析sport/dport端口
         src_port = pcap_data[34:36]
         dst_port = pcap_data[36:38]
-        
+
         src = src_ip + b':' + src_port
         dst = dst_ip + b':' + dst_port
         # 计算数据包长度
@@ -201,15 +203,15 @@ class process_network_total:
             remote_ip,remote_port = self.hex_to_ip(tcp_tmp[2])
             if local_ip == remote_ip: continue
             if remote_ip == '0.0.0.0': continue
-            
+
             pid = self.inode_to_pid(inode,force)
-            if not pid: continue 
-            
+            if not pid: continue
+
             key = self.get_ip_pack(local_ip) + b':' + self.get_port_pack(local_port)
             self.__net_process_list[key] = pid
         return self.__net_process_list
-            
-    
+
+
     def get_port_pack(self,port):
         '''
             @name 将端口转换为字节流
@@ -218,7 +220,7 @@ class process_network_total:
             @return bytes
         '''
         return struct.pack('H',int(port))[::-1]
-    
+
     def get_ip_pack(self,ip):
         '''
             @name 将IP地址转换为字节流

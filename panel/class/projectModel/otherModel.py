@@ -337,6 +337,7 @@ class main(projectBase):
         '''
         skey = "io_speed_{}".format(p.pid)
         old_pio = cache.get(skey)
+        if not hasattr(p,'io_counters'): return 0,0
         pio = p.io_counters()
         if not old_pio:
             cache.set(skey, [pio, time.time()], 3600)
@@ -984,8 +985,12 @@ echo $! > {pid_file}'''.format(
             public.M('sites').where('id=?', (project_id,)).save('project_config',
                                                                 json.dumps(project_find['project_config']))
             self.set_config(get.project_name)
-        return public.return_data(True, "成功添加{}个域名，失败{}个!".format(len(success_list), len(error_list)),
-                                  error_msg=error_list)
+
+        if success_list:
+            public.M('sites').where('id=?',(project_id,)).save('project_config',json.dumps(project_find['project_config']))
+            self.set_config(get.project_name)
+            return public.returnMsg(True,"成功添加{}个域名，失败{}个!".format(len(success_list),len(error_list)))
+        return public.returnMsg(False,"成功添加{}个域名，失败{}个!".format(len(success_list),len(error_list)))
 
     def get_project_info(self, get):
         '''
@@ -1018,6 +1023,7 @@ echo $! > {pid_file}'''.format(
             }
             @return dict
         '''
+
         project_name = get.project_name.strip()
         if not re.match("^\w+$", project_name):
             return public.return_error('项目名称格式不正确，支持字母、数字、下划线，表达式: ^[0-9A-Za-z_]$')
@@ -1030,7 +1036,8 @@ echo $! > {pid_file}'''.format(
             return public.return_error('项目目录不存在: {}'.format(get.project_exe))
 
         # 端口占用检测
-        if self.check_port_is_used(get.get('port/port')):
+        if get.port=="":return public.return_error("请填写好端口")
+        if self.check_port_is_used(get.port):
             return public.return_error('指定端口已被其它应用占用，请修改您的项目配置使用其它端口, 端口: {}'.format(get.port))
         domains = []
         if get.bind_extranet == 1:
@@ -1095,8 +1102,8 @@ echo $! > {pid_file}'''.format(
         if not project_find:
             return public.return_error('指定项目不存在: {}'.format(get.project_name))
 
-        if not os.path.exists(get.project_path):
-            return public.return_error('项目目录不存在: {}'.format(get.project_path))
+        if not os.path.exists(get.project_exe):
+            return public.return_error('项目目录不存在: {}'.format(get.project_exe))
 
         if hasattr(get, 'port'):
             if int(project_find['project_config']['port']) != int(get.port):
@@ -1105,12 +1112,12 @@ echo $! > {pid_file}'''.format(
                 project_find['project_config']['port'] = int(get.port)
         # if hasattr(get,'project_cwd'): project_find['project_config']['project_cwd'] = get.project_cwd.strip()
         if hasattr(get, 'project_path'): project_find['project_config']['project_path'] = get.project_path.strip()
-        if hasattr(get, 'is_power_on'): project_find['project_config']['is_power_on'] = get.is_power_on.strip()
+        if hasattr(get, 'is_power_on'): project_find['project_config']['is_power_on'] = get.is_power_on
         if hasattr(get, 'run_user'): project_find['project_config']['run_user'] = get.run_user.strip()
         if hasattr(get, 'project_cmd'): project_find['project_config']['project_cmd'] = get.project_cmd.strip()
 
         pdata = {
-            'path': get.project_path,
+            'path': get.project_exe,
             'ps': get.project_ps,
             'project_config': json.dumps(project_find['project_config'])
         }
@@ -1149,6 +1156,11 @@ echo $! > {pid_file}'''.format(
         public.WriteLog(self._log_name, '删除其他项目{}'.format(get.project_name))
         return public.return_data(True, '删除项目成功')
 
+    # xss 防御
+    def xsssec(self,text):
+        return text.replace('<', '&lt;').replace('>', '&gt;')
+
+
     def get_project_log(self, get):
         '''
         @name 取项目日志
@@ -1161,7 +1173,7 @@ echo $! > {pid_file}'''.format(
         if not project_info: return public.returnMsg(False, '项目不存在')
         log_file = "{}/{}.log".format(self._go_logs_path, get.project_name)
         if not os.path.exists(log_file): return public.returnMsg(False, '日志文件不存在')
-        return public.GetNumLines(log_file, 1000)
+        return public.returnMsg(True, self.xsssec(public.GetNumLines(log_file,1000)))
 
     def auto_run(self):
         '''
@@ -1184,7 +1196,7 @@ echo $! > {pid_file}'''.format(
                     error_count += 1
                     error_msg = '自动启动其他项目[' + project_name + ']失败!'
                     public.WriteLog(self._log_name, error_msg)
-                    public.print_log(error_msg + ", " + result['error_msg'], 'ERROR')
+                    public.print_log(error_msg, 'ERROR')
                 else:
                     success_count += 1
                     success_msg = '自动启动其他项目[' + project_name + ']成功!'

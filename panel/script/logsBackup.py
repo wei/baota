@@ -35,7 +35,7 @@ def split_log(siteName,num):
         if os.path.exists(i):
             os.remove(old_logs[i])
             print('|---多余日志['+i+']已删除!')
-        
+
     remove_num = remove_num - len(old_list)
     for i in logs[:remove_num]:
         if os.path.exists(i):
@@ -45,8 +45,8 @@ def split_log(siteName,num):
         if os.path.exists(err_file):
             os.remove(err_file)
             print('|---多余日志['+err_file+']已删除!')
-        
-    
+
+
 
     his_date = time.strftime("%Y-%m-%d_%H%M%S")
     ngx_access_log = os.path.join(logsPath,siteName + '.log')

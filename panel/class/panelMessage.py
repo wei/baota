@@ -10,11 +10,11 @@
 # +-------------------------------------------------------------------
 # | 消息提醒
 # +-------------------------------------------------------------------
-import os,sys,time
-import public,json
-if os.environ.get('BT_TASK') != '1':
+import time
+import public
+try:
     from BTPanel import cache
-else:
+except :
     import cachelib
     cache = cachelib.SimpleCache()
 
@@ -26,7 +26,6 @@ class panelMessage:
             public.M('messages').execute("alter TABLE messages add send integer DEFAULT 0",())
             public.M('messages').execute("alter TABLE messages add retry_num integer DEFAULT 0",())
         pass
-
 
     def set_send_status(self, id, data):
         '''
@@ -50,7 +49,7 @@ class panelMessage:
         try:
             ret = cache.get('get_cloud_messages')
             if ret: return public.returnMsg(True,'同步成功1!')
-            data = {}        
+            data = {}
             data['version'] = public.version()
             data['os'] = self.os
             sUrl = public.GetConfigValue('home') + '/api/wpanel/get_messages'
@@ -58,10 +57,10 @@ class panelMessage:
             http_requests.DEFAULT_TYPE = 'src'
             info = http_requests.post(sUrl,data).json()
             # info = json.loads(public.httpPost(sUrl,data))
-            for x in info:          
+            for x in info:
                 count = public.M('messages').where('level=? and msg=?',(x['level'],x['msg'],)).count()
                 if count: continue
-                
+
                 pdata = {
                     "level":x['level'],
                     "msg":x['msg'],
@@ -193,5 +192,23 @@ class panelMessage:
         else:
             return True
 
+    def init_msg_module(self, module):
+        """
+        初始化消息通道, 迁移自windows
+        @module 消息通道模块名称
+        @author lx
+        """
+        import os, sys
+        if not os.path.exists('class/msg'): os.makedirs('class/msg')
+        panelPath = "/www/server/panel"
 
+        sfile = 'class/msg/{}_msg.py'.format(module)
+        if not os.path.exists(sfile): return False
+        sys.path.insert(0, "{}/class/msg".format(panelPath))
 
+        msg_main = __import__('{}_msg'.format(module))
+        try:
+            public.reload_mod(msg_main)
+        except:
+            pass
+        return eval('msg_main.{}_msg()'.format(module));

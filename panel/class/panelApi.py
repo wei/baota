@@ -22,7 +22,7 @@ class panelApi:
             data['token'] = public.de_crypt(data['token'],data['token_crypt'])
         else:
             data['token'] = "***********************************"
-                
+
         data['limit_addr'] = '\n'.join(data['limit_addr'])
         data['bind'] = self.get_bind_token()
         qrcode = (public.getPanelAddr() + "|" + data['token'] + "|" + data['key'] + '|' + data['bind']['token']).encode('utf-8')
@@ -46,7 +46,7 @@ class panelApi:
             if session_id!=key:return public.returnMsg(False,'无效的登录密钥4')
             if tid != tid2: return public.returnMsg(False, '指定密钥不存在，或已过期5')
             if time.time() - float(init_time) > 60:
-                return public.returnMsg(False, '二维码失效时间过期6')
+                return public.returnMsg(False, '二维码有效时间过期6')
             cache.set(session_id,public.md5(uuid.UUID(int=uuid.getnode()).hex),120)
             import uuid
             data = key + ':' + init_time + ':' + tid2 + ':' + uuid.UUID(int=uuid.getnode()).hex[-12:]
@@ -58,7 +58,7 @@ class panelApi:
 
     def get_api_config(self):
         tmp = public.ReadFile(self.save_path)
-        if not tmp or not os.path.exists(self.save_path): 
+        if not tmp or not os.path.exists(self.save_path):
             data = { "open":False, "token":"", "limit_addr":[] }
             public.WriteFile(self.save_path,json.dumps(data))
             public.ExecShell("chmod 600 " + self.save_path)
@@ -78,7 +78,7 @@ class panelApi:
         if len(data['binds']) > 5:
             data['binds'] = data['binds'][:5]
             is_save = True
-        
+
         if is_save:
             self.save_api_config(data)
         return data
@@ -93,7 +93,7 @@ class panelApi:
             return 0
         if not args.client_brand or not args.client_model:
             return '无效的设备'
-        
+
         bind = self.get_bind_token(args.bind_token)
         if bind['token'] != args.bind_token:
             return '当前二维码已过期，请刷新页面重新扫码!'
@@ -120,7 +120,7 @@ class panelApi:
         if self.get_app_find(args.bind_token):
             return 1
         return 0
-    
+
     def set_bind_token(self,bind):
         data = self.get_api_config()
         is_save = False
@@ -215,7 +215,7 @@ class panelApi:
             data['binds'] = binds
             self.save_api_config(data)
         return bind
-        
+
 
     def set_token(self,get):
         if 'request_token' in get: return public.returnMsg(False,'不能通过API接口配置API')

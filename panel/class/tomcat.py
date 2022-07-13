@@ -25,7 +25,7 @@ class tomcat:
         self.__TREE.parse(self.__CONF_FILE)
         self.__ROOT = self.__TREE.getroot()
         self.__ENGINE = self.__TREE.findall('Service/Engine')[0]
-        
+
     #获取虚拟主机列表
     def GetVhosts(self):
         try:
@@ -55,7 +55,7 @@ class tomcat:
         self.__ENGINE.append(Host)
         self.Save()
         return True
-    
+
     #删除虚拟主机
     def DelVhost(self,name):
         host = self.GetVhost(name)
@@ -63,7 +63,7 @@ class tomcat:
         self.__ENGINE.remove(host)
         self.Save()
         return True
-    
+
     #获取指定虚拟主机
     def GetVhost(self,name):
         try:
@@ -75,7 +75,7 @@ class tomcat:
             if host.attrib['name'] == name:
                 return host
         return None
-    
+
     #修改根目录
     def SetPath(self,name,path):
         if not os.path.exists(path): return False
@@ -85,7 +85,7 @@ class tomcat:
         host.getchildren()[0].attrib['docBase'] = path
         self.Save()
         return True
-    
+
     #修改虚拟主机属性
     def SetVhost(self,name,key,value):
         host = self.GetVhost(name)
@@ -93,12 +93,12 @@ class tomcat:
         host.attrib[key] = value
         self.Save()
         return True
-    
+
     #保存配置
     def Save(self):
         self.format(self.__ROOT)
         self.__TREE.write(self.__CONF_FILE,'utf-8')
-    
+
     #整理配置文件格式
     def format(self,em,level = 0):
         i = "\n" + level*"  "
@@ -114,4 +114,3 @@ class tomcat:
 if __name__ == '__main__':
     tom = tomcat()
     print(tom.DelVhost('w1.hao.com'))
-    

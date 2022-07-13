@@ -1,8 +1,13 @@
-var backupListAll = [], siteListAll = [], databaseListAll = [];
-
+var backupListAll = [], siteListAll = [], databaseListAll = [], allDatabases = [],allTables = [],
+    backuptolist = [{ title: '本地服务器', value: 'localhost' },
+      { title: '阿里云OSS', value: 'alioss' },
+      { title: '腾讯云COS', value: 'txcos' },
+      { title: '七牛云存储', value: 'qiniu' },
+      { title: '华为云存储', value: 'obs' },
+      { title: '百度云存储', value: 'bos' }];
 var crontab = {
   typeTips: { site: '备份网站', database: '备份数据库', logs: '切割日志', path: '备份目录', webshell: '查杀站点' },
-  crontabForm: { name: '', type: '', where1: '', hour: '', minute: '', week: '', sType: '', sBody: '', sName: '', backupTo: '', save: '', sBody: '', urladdress: '', save_local: '', notice: '', notice_channel: '' },
+  crontabForm: { name: '', type: '', where1: '', hour: '', minute: '', week: '', sType: '', sBody: '', sName: '', backupTo: '', save: '', sBody: '', urladdress: '', save_local: '', notice: '', notice_channel: '' , datab_name : '',tables_name :'' },
   editForm: false,
   crontabFormConfig: [{
     label: '任务类型',
@@ -15,6 +20,7 @@ var crontab = {
         { title: 'Shell脚本', value: 'toShell' },
         { title: '备份网站', value: 'site' },
         { title: '备份数据库', value: 'database' },
+        { title: '数据库增量备份', value: 'enterpriseBackup' },
         { title: '日志切割', value: 'logs' },
         { title: '备份目录', value: 'path' },
         { title: '木马查杀', value: 'webshell' },
@@ -27,12 +33,19 @@ var crontab = {
         that.data.type = 'week'   //默认类型为每星期
         var config = crontab.crontabsType(arryCopy(crontab.crontabFormConfig), formData, that)
         that.$again_render_form(config)
-        var arry = ['site', 'database', 'logs', 'webshell'];
+        var arry = ['site', 'database', 'logs', 'webshell', 'enterpriseBackup'];
         if (arry.indexOf(formData.sType) > -1) {
           that.$replace_render_content(3)
           setTimeout(function () {
             $('[data-name="sName"] li:eq(0)').click()
           }, 100)
+        }
+        if (formData.sType == 'enterpriseBackup') {
+          $('.glyphicon-repeat').on('click',function(){
+            that.config.form[6].group.value = bt.get_random(bt.get_random_num(6,10))
+            that.$local_refresh('urladdress', that.config.form[6].group)
+            $('input[name=urladdress]').click()
+          })
         }
       }
     }
@@ -41,7 +54,7 @@ var crontab = {
     group: {
       type: 'text',
       name: 'name',
-      width: '300px',
+      width: '350px',
       placeholder: '请输入计划任务名称'
     }
   }, {
@@ -116,7 +129,15 @@ var crontab = {
       list: siteListAll,
       change: function (formData, element, that) {
         var nameForm = that.config.form[1]
-        nameForm.group.value = crontab.typeTips[formData.sType] + '[ ' + (formData.sName === 'ALL' ? '所有' : formData.sName) + ' ]'
+        if (formData.sType == 'enterpriseBackup') {
+          crontab.getAllTables(formData.datab_name)
+          that.config.form[3].group[3].list = allTables
+          that.config.form[3].group[3].display = formData.sName === 'tables' ? true : false
+          that.$replace_render_content(3)
+          nameForm.group.value = '[勿删]数据库增量备份[ ' + (formData.sName === 'databases' ? formData.datab_name : formData.datab_name+'---'+ allTables[0].value) + ' ]'
+        }else{
+          nameForm.group.value = crontab.typeTips[formData.sType] + '[ ' + (formData.sName === 'ALL' ? '所有' : formData.sName) + ' ]'
+        }
         that.$local_refresh('name', nameForm.group)
       }
     }, {
@@ -135,7 +156,38 @@ var crontab = {
       },
       value: bt.get_cookie('sites_path') ? bt.get_cookie('sites_path') : '/www/wwwroot',
       placeholder: '请选择文件目录'
-    }, {
+    },{
+      label: '数据库',
+      display: false,
+      type: 'select',
+      name: 'datab_name',
+      width: '150px',
+      list: allDatabases,
+      change: function (formData, element, that) {
+        var nameForm = that.config.form[1]
+        crontab.getAllTables(formData.datab_name)
+        setTimeout(function () {
+          that.config.form[3].group[3].list = allTables
+          that.$replace_render_content(3)
+          nameForm.group.value = '[勿删]数据库增量备份[ ' + (formData.sName === 'databases' ? formData.datab_name : formData.datab_name+'---'+allTables[0].value) + ' ]'
+          that.$local_refresh('name', nameForm.group)
+        },300)
+      }
+    },{
+      type: 'select',
+      display: false,
+      label: '表',
+      name: 'tables_name',
+      width: '150px',
+      list: allTables,
+      change: function (formData, element, that) {
+        var nameForm = that.config.form[1]
+        if (formData.sType == 'enterpriseBackup') {
+          nameForm.group.value = '[勿删]数据库增量备份[ ' + (formData.sName === 'databases' ? formData.datab_name : formData.datab_name+'---'+formData.tables_name) + ' ]'
+        }
+        that.$local_refresh('name', nameForm.group)
+      }
+    } ,{
       type: 'select',
       name: 'backupTo',
       label: '备份到',
@@ -144,19 +196,21 @@ var crontab = {
       value: 'localhost',
       list: backupListAll,
       change: function (formData, element, that) {
-        that.config.form[3].group[2].value = formData.backupTo;
-        that.config.form[3].group[3].value = formData.save;
-        that.config.form[3].group[4].display = formData.backupTo !== "localhost" ? true : false;
-        switch(formData.sType){
-          case 'site':
-          case 'database':
-            that.config.form[3].group[0].value = formData.sName
-            break;
-          case 'path':
-            that.config.form[3].group[1].value = formData.path
-            break;
+        if (formData.sType && formData.sType !== 'enterpriseBackup') {
+          that.config.form[3].group[4].value = formData.backupTo;
+          that.config.form[3].group[5].value = formData.save;
+          that.config.form[3].group[6].display = formData.backupTo !== "localhost" ? true : false;
+          switch(formData.sType){
+            case 'site':
+            case 'database':
+              that.config.form[3].group[0].value = formData.sName
+              break;
+            case 'path':
+              that.config.form[3].group[1].value = formData.path
+              break;
+          }
+          that.$replace_render_content(3)
         }
-        that.$replace_render_content(3)
       }
     }, {
       label: '保留最新',
@@ -175,7 +229,7 @@ var crontab = {
       value: 1,
       title: '同时保留本地备份（和云存储保留份数一致）',
       event: function (formData, element, that) {
-        that.config.form[3].group[4].value = !formData.save_local ? '0' : '1';
+        that.config.form[3].group[6].value = !formData.save_local ? '0' : '1';
       }
     }]
   }, {
@@ -210,23 +264,14 @@ var crontab = {
       width: '100px',
       placeholder: '未配置消息通道',
       list: {
-        url: '/config?action=get_settings',
+        url: '/config?action=get_msg_configs',
         dataFilter: function (res, that) {
-          var arry = crontab.objectEmailOrDingding.getChannelSwitch(res, that.config.form[0].group.value), _val = '';
-          // 	是否有消息通道列表
-          if (arry.length > 0) {
-            if (that.config.form[4].group[1].value) {  //编辑或有预设值
-              _val = that.config.form[4].group[1].value
-            } else {
-              _val = arry[0].value      //默认取第一个
-            }
-          } else {
-            _val = ''    //未设置消息通道
-          }
-          that.config.form[4].group[1].value = _val;
-          return arry
+          return crontab.pushChannelMessage.getChannelSwitch(res,that.config.form[0].group.value)
         },
         success: function (res, that, config, list) {
+          if(!config.group[1].value && config.group[0].value == 1){
+            config.group[1].value = list.length > 0 ? list[0].value : []
+          }
           if (list.length === 0) {
             that.config.form[8].group.disabled = true
             that.$local_refresh('submitForm', that.config.form[8].group)
@@ -238,71 +283,7 @@ var crontab = {
       'class': 'mr5',
       title: '设置消息通道',
       event: function (formData, element, that) {
-        layer.open({
-          type: 1,
-          area: "600px",
-          title: "设置消息通道",
-          skin: 'layer-alarm-channel',
-          closeBtn: 2,
-          shift: 5,
-          shadeClose: false,
-          content: '<div class="bt-form">\
-							<div class="bt-w-main">\
-								<div class="bt-w-menu">\
-									<p class="bgw">邮箱</p>\
-									<p>钉钉</p>\
-								</div>\
-								<div class="bt-w-con pd15">\
-									<div class="conter_box active"><div class="email_alarm"></div></div>\
-									<div class="conter_box" style="display:none">\
-										<div class="bt-form">\
-											<div class="line">\
-												<span class="tname">通知全体</span>\
-												<div class="info-r" style="height:28px; margin-left:100px">\
-													<input class="btswitch btswitch-ios" id="panel_alert_all" type="checkbox">\
-													<label style="position: relative;top: 5px;" class="btswitch-btn" for="panel_alert_all"></label>\
-												</div>\
-											</div>\
-											<div class="line">\
-												<span class="tname">钉钉URL</span>\
-												<div class="info-r">\
-													<textarea name="channel_dingding_value" class="bt-input-text mr5" type="text" style="width: 300px; height:90px; line-height:20px" placeholder="请输入钉钉URL"></textarea>\
-												</div>\
-												<div class="dingding_btn">\
-													<button class="btn btn-success btn-sm save_channel_ding" style="margin: 10px 0 0 100px;">保存</button>\
-												</div>\
-											</div>\
-										</div>\
-										<ul class="help-info-text c7" style="margin-top: 170px;">\
-											<li style="list-style:inside disc">支持钉钉/企业微信\
-												<a class="btlink" href="https://www.bt.cn/bbs/thread-71298-1-1.html" target="_blank">《如何获取URL》</a>\
-											</li></ul>\
-									</div>\
-								</div>\
-							</div></div>',
-          success: function () {
-            $(".bt-w-menu p").click(function () {
-              var index = $(this).index();
-              $(this).addClass('bgw').siblings().removeClass('bgw');
-              $('.conter_box').eq(index).show().siblings().hide();
-            });
-            $('.save_channel_ding').click(function () {
-              var _url = $('textarea[name=channel_dingding_value]').val(),
-                _all = $('#panel_alert_all').prop("checked");
-              bt_tools.send({
-                url: '/config?action=set_dingding',
-                data: { url: _url, atall: _all == true ? 'True' : 'False' }
-              }, function (res) {
-                if (res.status) {
-                  crontab.objectEmailOrDingding.renderChannelSelete(that)
-                }
-                bt.msg(res)
-              }, '生成钉钉通道');
-            })
-
-            crontab.objectEmailOrDingding.renderEmailList(that);
-          }
-        })
+        open_three_channel_auth();
       }
     }]
   }, {
@@ -327,7 +308,16 @@ var crontab = {
       type: 'text',
       width: '500px',
       name: 'urladdress',
-      value: 'http://'
+      value: 'http://',
+      event: function (formData, element, that) {
+        if (formData.sType == 'enterpriseBackup') {
+          $('.glyphicon-repeat').on('click',function(){
+            that.config.form[6].group.value = bt.get_random(bt.get_random_num(6,10))
+            that.$local_refresh('urladdress', that.config.form[6].group)
+            $('input[name=urladdress]').click()
+          })
+        }
+      }
     }
   }, {
     label: '提示',
@@ -346,7 +336,7 @@ var crontab = {
       name: 'submitForm',
       title: '添加任务',
       event: function (formData, element, that) {
-        formData['save_local'] = that.config.form[3].group[4].value.toString();
+        formData['save_local'] = that.config.form[3].group[6].value.toString();
         that.submit(formData)
       }
     }
@@ -359,10 +349,47 @@ var crontab = {
    */
   crontabsType: function (config, formData, Add) {
     config[4].group[1].name = 'notice_channel';
-    config[3].group[2].list = backupListAll;
+    config[3].group[4].list = backupListAll;
     // config[2].group[0].value = 'week';
     switch (formData.sType) {
       case 'toShell':
+        break;
+        case 'enterpriseBackup':
+        config[2].label = '备份周期'
+        config[2].group[0].display = false
+        config[2].group[1].display = false
+        config[2].group[2].display = false
+        config[2].group[3].display = true
+        config[2].group[4].display = false
+        config[6].display = false;
+        config[3].group[0].list = [{title: '数据库', value: 'databases'},{title: '表', value: 'tables'}];
+        config[3].label = '备份类型'
+        config[3].group[0].placeholder = ''
+        config[3].group[4].placeholder = ''
+        config[3].group[4].value = 'localhost'
+        config[3].group[4].width = '300px'
+        config[3].group[2].list = allDatabases
+        config[3].group[4].list = backuptolist
+        config[3].group[4].type = 'multipleSelect'
+        config[3].group[2].display = true;
+        config[3].group[5].display = false;
+        config[3].display = true;
+        config[6].display = true;
+        config[6].label = '压缩密码' 
+        config[6].group.width = '250px'
+        config[6].group.unit = '<span class="glyphicon glyphicon-repeat cursor mr5"></span><span style="margin-left:5px;color:red;">注意：请牢记压缩密码，以免因压缩密码导致无法恢复和下载数据</span>'
+        config[6].group.placeholder = '请输入压缩密码'
+        config[6].group.value = bt.get_random(bt.get_random_num(6,10))
+        config[1].group.disabled = true // 禁用任务名称，不允许修改
+        config[5].display = false;
+        config[4].display = true;
+        config[7].display = true;
+        config[7].group.list = ''
+        config[7].group.unit = '<span class="alertMsg"><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>【使用提醒】此功能为企业版专享功能，当前所有用户可免费使用。</span>'
+        if (Add) {
+          config[2].group[0].value = 'hour-n'
+          config[2].group[3].value = '3'
+        }
         break;
       case 'database':
         config[3].group[0].placeholder = '无数据库数据';
@@ -381,8 +408,8 @@ var crontab = {
             config[2].group[0].value = 'day'
           }
           config[2].group[1].display = false
-          config[3].group[2].display = false
-          config[3].group[3].value = 180
+          config[3].group[4].display = false
+          config[3].group[5].value = 180
         }
       case 'path':
         if (formData.sType === 'path') {
@@ -393,14 +420,14 @@ var crontab = {
           }
           config[3].group[0].display = false
           config[3].group[1].display = true
-          config[3].group[2].list = backupListAll
+          config[3].group[4].list = backupListAll
         }
       case 'webshell':
         if (formData.sType === 'webshell') {
           config[3].group[0].unit = '<span style="margin-top: 9px; display: inline-block;">*本次查杀由长亭牧云强力驱动</span>';
-          config[3].group[2].display = false
-          config[3].group[3].display = false
           config[3].group[4].display = false
+          config[3].group[5].display = false
+          config[3].group[6].display = false
           config[4].display = true
           config[4].label = '消息通道'
           config[4].group[1].name = 'urladdress'
@@ -573,21 +600,86 @@ var crontab = {
               return false;
             }
             break;
+          case 'enterpriseBackup':
+            if (form.hour < 1) {
+              layer.msg('备份周期应大于0', { icon: 2 });
+              $('#crontabForm input[name=hour]').focus();
+              return false;
+            }
+            break;
         }
         if (form.sType == "site" || form.sType == "database" || form.sType == "path" || form.sType == "logs") {
           if (Number(form.save) < 1 || form.save == '') {
             return bt.msg({status: false, msg: '保留最新不能小于1！'});
           }
         }
+        var url = '/crontab?action=AddCrontab',params = form
+        if (form.sType == "enterpriseBackup") {
+          var multipleValues = $('select[name=backupTo').val()
+          if(multipleValues == null) return layer.msg('请最少选择一个备份类型')
+          url = 'project/binlog/add_mysqlbinlog_backup_setting'
+          params = {
+            datab_name : form.datab_name,
+            backup_type : form.sName,
+            zip_password : form.urladdress,
+            cron_type : 'hour-n',
+            backup_cycle : form.hour,
+            upload_localhost : multipleValues.indexOf('localhost') > -1 ? 'localhost' : '',
+            upload_alioss : multipleValues.indexOf('alioss') > -1 ? 'alioss' : '',
+            upload_txcos : multipleValues.indexOf('txcos') > -1 ? 'txcos' : '',
+            upload_qiniu : multipleValues.indexOf('qiniu') > -1 ? 'qiniu' : '',
+            upload_obs : multipleValues.indexOf('obs') > -1 ? 'obs' : '',
+            upload_bos : multipleValues.indexOf('bos') > -1 ? 'bos' : '',
+            notice : form.notice,
+            notice_channel : form.notice_channel,
+          }
+          if(params.backup_type == 'tables') {
+            params['table_name'] = form.tables_name
+            if(form.tables_name == '') return layer.msg("当前数据库下没有表，不能添加")
+          }
+        }
         bt_tools.send({
-          url: '/crontab?action=AddCrontab',
-          data: form
+          url: url,
+          data: params
         }, function (res) {
           _that.addCrontabForm.data = {}
           _that.addCrontabForm.$again_render_form(_that.crontabFormConfig)
           _that.crontabTabel.$refresh_table_list(true)
           bt_tools.msg(res)
         }, '添加计划任务');
+      }
+    })
+  },
+  /**
+   * @description 获取所有数据库名
+   */
+   getAllDatabases: function (callback){
+    $.post('project/binlog/get_databases', function (res) {
+      if (res.length == 0) {
+        allDatabases = [{title:'当前没有数据库',value:''}]
+      }else{
+        for (let i = 0; i < res.length; i++) {
+          allDatabases.push({title:res[i].name,value:res[i].name})
+        }
+      }
+      if (callback) callback(res)
+    })
+  },
+  /**
+   * @description 取指定数据库的所有表名
+   * @param {object} param 参数对象
+   * @param {function} callback 回调函数
+   */
+  getAllTables: function (param, callback) {
+    $.post('project/binlog/get_tables', {db_name: param} , function (res) {
+      var data = []
+      for (let i = 0; i < res.length; i++) {
+        data.push({title:res[i].name,value:res[i].name})
+      }
+      if (data.length == 0) {
+        allTables = [{title:'当前数据库下没有表',value:''}]
+      }else{
+        allTables = data
       }
     })
   },
@@ -745,7 +837,13 @@ var crontab = {
         // },
         {
           fid: 'cycle',
-          title: "执行周期"
+          title: "执行周期",
+          template: function (row, index) {
+            if (row.sType == "enterpriseBackup") {
+              return '<span>每隔'+ row.where1 +'小时执行</span>'
+            }
+            return '<span>'+ row.cycle +'</span>'
+          }
         }, {
           fid: 'save',
           title: "保存数量",
@@ -755,16 +853,29 @@ var crontab = {
         }, {
           fid: 'backupTo',
           title: "备份到",
-          width: 120,
+          width: 170,
           template: function (row, index) {
-            for (var i = 0; i < backupListAll.length; i++) {
-              var item = backupListAll[i]
-              if (item.value === row.backupTo) {
-                if (row.sType === 'toShell') return '<span>--</span>';
-                return '<span>' + item.title + '</span>'
+            if (row.sType == "enterpriseBackup") {
+              var arry = [],arry1 = []
+              arry = row.backupTo.split("|")
+              for (var i = 0; i < arry.length; i++) {
+                for (var j = 0; j < backuptolist.length; j++) {
+                  if (arry[i] == backuptolist[j].value) {
+                    arry1.push(backuptolist[j].title)
+                  }
+                }
               }
+              return '<span>' + arry1 + '</span>'
+            } else {
+              for (var i = 0; i < backupListAll.length; i++) {
+                var item = backupListAll[i]
+                if (item.value === row.backupTo) {
+                  if (row.sType === 'toShell') return '<span>--</span>';
+                  return '<span>' + item.title + '</span>'
+                }
+              }
+              return '<span>--</span>'
             }
-            return '<span>--</span>'
           }
         }, {
           fid: 'addtime',
@@ -788,12 +899,15 @@ var crontab = {
               layer.open({
                 type: 1,
                 title: '编辑计划任务-[' + row.name + ']',
-                area: '850px',
+                area: row.sType != "enterpriseBackup" ? '990px':'1140px',
                 skin: 'layer-create-content',
                 shadeClose: false,
                 closeBtn: 2,
                 content: '<div class="ptb20" id="editCrontabForm" style="min-height: 400px"></div>',
                 success: function (layers, indexs) {
+                  var arry = []
+                  arry = row.urladdress.split("|")
+                  crontab.getAllTables(arry[0])
                   bt_tools.send({
                     url: '/crontab?action=get_crond_find',
                     data: { id: row.id }
@@ -833,9 +947,11 @@ var crontab = {
                         break;
                     }
 
-                    formConfig[3].group[2].value = rdata.backupTo;
-                    formConfig[3].group[4].display = (rdata.backupTo != "" && rdata.backupTo != 'localhost');
-                    formConfig[3].group[4].value = rdata.save_local;
+                    if (rdata.sType !== 'enterpriseBackup') {
+                      formConfig[3].group[4].value = rdata.backupTo;
+                      formConfig[3].group[6].display = (rdata.backupTo != "" && rdata.backupTo != 'localhost');
+                      formConfig[3].group[6].value = rdata.save_local;
+                    }
                     formConfig[4].group[0].value = rdata.notice;
                     formConfig[4].group[1].display = rdata.sType == 'webshell' ? true : !!rdata.notice;    //单独判断是否为木马查杀
                     if (formConfig[4].group[1].display) {
@@ -852,6 +968,25 @@ var crontab = {
                         form.path = rdata.sName
                         formConfig[3].group[1].disabled = true
                         break
+                      case 'enterpriseBackup':
+                        formConfig[3].group[2].value = arry[0]
+                        formConfig[3].group[2].disabled = true
+                        if(arry[1] !== ''){
+                          formConfig[3].group[3].list = [{title:arry[1],value:arry[1]}]
+                          formConfig[3].group[3].value = arry[1]
+                          formConfig[3].group[3].disabled = true
+                          formConfig[3].group[3].display = true
+                        }
+                        formConfig[3].group[1].disabled = true
+                        formConfig[6].display = false
+                        var backT = rdata.backupTo.split('|'), backupTolist = []
+                        for (var i = 0; i < backT.length; i++) {
+                          if (backT[i] != '') {
+                            backupTolist.push(backT[i])
+                          }                          
+                        }
+                        formConfig[3].group[4].value = backupTolist
+                        break;
                     }
                     formConfig[0].group.disabled = true
                     formConfig[1].group.disabled = true
@@ -906,6 +1041,10 @@ var crontab = {
                               return false;
                             }
                             break;
+                          case 'enterpriseBackup':
+                            if (submitForm.hour == '')  return bt.msg({ status: false, msg: '备份周期不能为空！' })
+                            if (submitForm.hour < 0)  return
+                            break;
                         }
 
                         var hour = parseInt(submitForm.hour), minute = parseInt(submitForm.minute), where1 = parseInt(submitForm.where1)
@@ -941,9 +1080,30 @@ var crontab = {
                           }
                         }
                         
+                        var url = '/crontab?action=modify_crond', params = submitForm
+                        if (submitForm.sType == 'enterpriseBackup') {
+                          var multipleValues = $('select[name=backupTo').val()
+                          if(multipleValues == null) return layer.msg('请最少选择一个备份类型')
+                          url = 'project/binlog/modify_mysqlbinlog_backup_setting'
+                          params = {
+                            datab_name : arry[0],
+                            cron_type : 'hour-n',
+                            backup_cycle : submitForm.hour,
+                            upload_localhost : multipleValues.indexOf('localhost') > -1 ? 'localhost' : '',
+                            upload_alioss : multipleValues.indexOf('alioss') > -1 ? 'alioss' : '',
+                            upload_txcos : multipleValues.indexOf('txcos') > -1 ? 'txcos' : '',
+                            upload_qiniu : multipleValues.indexOf('qiniu') > -1 ? 'qiniu' : '',
+                            upload_obs : multipleValues.indexOf('obs') > -1 ? 'obs' : '',
+                            upload_bos : multipleValues.indexOf('bos') > -1 ? 'bos' : '',
+                            notice : submitForm.notice,
+                            notice_channel : submitForm.notice_channel,
+                            cron_id : row.id,
+                            backup_id : arry[2]
+                          }
+                        }
                         bt_tools.send({
-                          url: '/crontab?action=modify_crond',
-                          data: submitForm
+                          url: url,
+                          data: params
                         }, function (res) {
                           bt_tools.msg(res)
                           layer.close(indexs)
@@ -992,9 +1152,18 @@ var crontab = {
                 title: '删除计划任务',
                 msg: '您确定要删除计划任务【' + row.name + '】，是否继续？'
               }, function () {
-                _that.delCrontab(row, function () {
-                  that.$refresh_table_list(true);
-                })
+                if (row.sType == 'enterpriseBackup') {
+                  var arry = []
+                  arry = row.urladdress.split("|")
+                  bt_tools.send({url: 'project/binlog/delete_mysql_binlog_setting',data: {cron_id:row.id,backup_id:arry[2],type:'cron'} },function (res) {
+                    layer.msg(res.msg, {icon: res.status ? 1:2})
+                    that.$refresh_table_list(true);
+                  })
+                }else{
+                  _that.delCrontab(row, function () {
+                    that.$refresh_table_list(true);
+                  })
+                }
               })
             }
           }]
@@ -1037,11 +1206,19 @@ var crontab = {
           }
         }, {
           title: "删除任务",
-          url: '/crontab?action=DelCrontab',
-          load: true,
-          param: function (row) {
-            return { id: row.id }
+          url: function (row) {
+            if (row.sType == 'enterpriseBackup') {
+              var arry = []
+              arry = row.urladdress.split("|")
+              return 'project/binlog/delete_mysql_binlog_setting?cron_id='+row.id+'&backup_id='+arry[2]+'&type=cron'
+            } else {
+              return '/crontab?action=DelCrontab&id='+ row.id
+            }
           },
+          load: true,
+          // param: function (row) {
+          //   return { id: row.id }
+          // },
           callback: function (that) { // 手动执行,data参数包含所有选中的站点
             bt.show_confirm("批量删除计划任务", "<span style='color:red'>同时删除选中的计划任务，是否继续？</span>", function () {
               var param = {};
@@ -1065,275 +1242,23 @@ var crontab = {
     })
   },
   /**
-   * @descripttion 邮箱钉钉方法集合
+   * @descripttion 消息推送下拉
    */
-  objectEmailOrDingding: {
-    //渲染邮箱列表
-    renderEmailList: function (configs) {
-      var channel_table = bt_tools.table({
-        el: ".email_alarm",
-        load: true,
-        url: "/config?action=get_settings",
-        'default': "收件者列表为空", //数据为空时的默认提示
-        height: "275",
-        dataFilter: function (res, that) {
-          that.EmailObj = res;
-          var dingALL = res.dingding.info.msg['isAtAll'] == 'True' ? true : false,
-            dingURL = res.dingding.info.msg == '无信息' ? '' : res.dingding.info.msg.dingding_url,
-            arryD = [];
-          $('#panel_alert_all').attr('checked', dingALL);
-          $('textarea[name=channel_dingding_value]').val(dingURL);
-          if (res.dingding.dingding) {
-            $('.delding').remove();
-            var _Bremove = $('<button class="btn btn-default btn-sm delding">清除设置</button>').click(function () {
-              bt_tools.send({
-                url: '/config?action=set_empty',
-                data: { type: 'dingding' }
-              }, function (res) {
-                if (res.status) {
-                  channel_table.$refresh_table_list(true);
-                }
-                bt.msg(res)
-              }, '清除设置');
-            })
-            $('.dingding_btn').append(_Bremove)
-          }
-          $.each(res.user_mail.mail_list, function (index, item) {
-            arryD.push({ title: 'mail', value: item })
-          })
-          return {
-            data: arryD
-          };
-        },
-        column: [{
-          title: "收件者邮箱",
-          fid: 'value',
-          width: 300
-        }, {
-          title: "操作",
-          type: "group",
-          align: 'right',
-          width: 70,
-          group: [{
-            title: "删除",
-            event: function (row, index, ev, key, that) {
-              bt_tools.send({
-                url: '/config?action=del_mail_list',
-                data: { email: row.value }
-              }, function (res) {
-                if (res.status) {
-                  channel_table.$refresh_table_list(true);
-                }
-                bt.msg(res)
-              }, '删除收件者【' + row + '】');
-            }
-          }]
-        }],
-        tootls: [{
-          type: "group",
-          positon: ["left", "top"],
-          list: [{
-            title: "添加收件者",
-            active: true,
-            event: function (ev, that) {
-              bt_tools.open({
-                type: 1,
-                title: '添加收件者邮箱',
-                area: '400px',
-                btn: ['创建', '关闭'],
-                content: {
-                  'class': "pd20",
-                  form: [{
-                    label: "收件者邮箱",
-                    group: [{
-                      name: "email",
-                      type: "text",
-                      value: '',
-                      width: "240px"
-                    }]
-                  }]
-                },
-                yes: function (formD, indexs, layers) {
-                  if (formD.email === '') {
-                    bt_tools.msg('邮箱地址不能为空!', 2);
-                    return false;
-                  }
-                  bt_tools.send({
-                    url: '/config?action=add_mail_address',
-                    data: formD
-                  }, function (res) {
-                    if (res.status) {
-                      layer.close(indexs);
-                      channel_table.$refresh_table_list(true);
-                    }
-                    bt.msg(res)
-                  }, '创建收件人列表');
-                }
-              })
-            }
-          }, {
-            title: "发送者设置",
-            event: function (ev, that) {
-              var EmailInfo = that.EmailObj.user_mail.info.msg,
-                E_EMAIL = EmailInfo.qq_mail == undefined ? '' : EmailInfo.qq_mail,
-                E_STMP_PW = EmailInfo.qq_stmp_pwd == undefined ? '' : EmailInfo.qq_stmp_pwd,
-                E_HOSTS = EmailInfo.hosts == undefined ? '' : EmailInfo.hosts,
-                E_PORT = EmailInfo.port == undefined ? '' : EmailInfo.port;
-              if (E_PORT == '') E_PORT = 465
-              var isOtherPort = $.inArray(parseInt(E_PORT), [25, 465, 587]) >= 0, _btn = ['保存', '关闭']
-              if (that.EmailObj.user_mail.user_name) _btn = ['保存', '关闭', '清除设置']
-              bt_tools.open({
-                type: 1,
-                title: '设置发送者邮箱信息',
-                area: ['470px', '410px'],
-                skin: 'channel_config_view',
-                btn: _btn,
-                content: {
-                  'class': "pd20",
-                  form: [{
-                    label: "发送人邮箱",
-                    group: [{
-                      name: "email",
-                      type: "text",
-                      value: E_EMAIL,
-                      width: "300px"
-                    }]
-                  }, {
-                    label: "SMTP密码",
-                    group: [{
-                      name: "stmp_pwd",
-                      type: "password",
-                      value: E_STMP_PW,
-                      width: "300px"
-                    }]
-                  }, {
-                    label: "SMTP服务器",
-                    group: [{
-                      name: "hosts",
-                      type: "text",
-                      value: E_HOSTS,
-                      width: "300px"
-                    }]
-                  }, {
-                    label: "端口",
-                    'class': "port_selected",
-                    group: [{
-                      type: "select",
-                      name: "port",
-                      width: isOtherPort ? "300px" : "100px",
-                      value: isOtherPort ? parseInt(E_PORT) : "diy",
-                      style: isOtherPort ? {} : { 'margin-top': '-7px' },
-                      list: [
-                        { value: 25, title: 25 },
-                        { value: 465, title: 465 },
-                        { value: 578, title: 578 },
-                        { value: "diy", title: "自定义" }
-                      ],
-                      change: function (value, form, that, config, ev) {
-                        var isDIY = value.port === 'diy' ? true : false;
-                        that.config.form[3].group[0].width = isDIY ? '100px' : '300px';
-                        that.config.form[3].group[0].style = isDIY ? { 'margin-top': '-7px' } : {};
-                        that.config.form[3].group[1].hide = isDIY ? false : true;
-                        config.value = value.port === 'diy' ? 'diy' : parseInt(value.port);
-                        that.$replace_render_content(config.find_index)
-                      }
-                    }, {
-                      name: "port_diy",
-                      hide: isOtherPort ? true : false,
-                      type: "text",
-                      value: E_PORT,
-                      width: "190px"
-                    }]
-                  }, {
-                    group: {
-                      type: "help",
-                      style: { 'margin-top': '35px' },
-                      list: [
-                        "推荐使用465端口，协议为SSL/TLS",
-                        "25端口为SMTP协议，587端口为STARTTLS协议"
-                      ]
-                    }
-                  }]
-                },
-                yes: function (formD, indexs, layers) {
-                  if (formD.email === '') {
-                    bt_tools.msg('邮箱地址不能为空!', 2);
-                    return false;
-                  }
-                  if (formD.stmp_pwd === '') {
-                    bt_tools.msg('SMTP密码不能为空!', 2);
-                    return false;
-                  }
-                  if (formD.hosts === '') {
-                    bt_tools.msg('SMTP服务器地址不能为空!', 2);
-                    return false;
-                  }
-                  if (formD.port === 'diy') {
-                    if (formD.port_diy === '') {
-                      bt_tools.msg('请输入有效的端口!', 2);
-                      return false;
-                    }
-                    formD.port = formD.port_diy
-                  }
-                  delete formD.port_diy
-                  bt_tools.send({
-                    url: '/config?action=user_mail_send',
-                    data: formD
-                  }, function (res) {
-                    if (res.status) {
-                      layer.close(indexs);
-                      crontab.objectEmailOrDingding.renderChannelSelete(configs);
-                      channel_table.$refresh_table_list(true);
-                    }
-                    bt.msg(res)
-                  }, '生成邮箱通道');
-                },
-                btn3: function (index, layero) {
-                  bt_tools.send({
-                    url: '/config?action=set_empty',
-                    data: { type: 'mail' }
-                  }, function (res) {
-                    if (res.status) {
-                      channel_table.$refresh_table_list(true);
-                    }
-                    bt.msg(res)
-                  }, '清除设置');
-                }
-              })
-            }
-          }]
-        }]
-      })
-    },
-    //渲染消息通道下拉
-    renderChannelSelete: function (that) {
-      var _this = this;
-      bt_tools.send({
-        url: '/config?action=get_settings'
-      }, function (sett) {
-        var select = _this.getChannelSwitch(sett, that.config.form[0].group.value);
-        select = $.extend(true, {}, that.config.form[4].group[1], { display: true, label: '', disabled: false, list: select })
-        that.config.form[8].group.disabled = false
-        that.$local_refresh("notice_channel", select)
-        that.$local_refresh('submitForm', that.config.form[8].group)
-      })
-    },
+  pushChannelMessage:{
     //获取通道状态
-    getChannelSwitch: function (data, type) {
-      var config = { dingding: '钉钉', user_mail: '邮箱' }, arry = [{ title: '全部通道', value: '' }], info = [];
-
+    getChannelSwitch:function(data,type) {
+      var arry = [{title: '全部通道', value: ''}], info = [];
       for (var resKey in data) {
         if (data.hasOwnProperty(resKey)) {
-          var value = resKey === 'user_mail' ? 'mail' : resKey, item = data[resKey]
-          if (!item['dingding'] && !item['user_name']) continue
+          var value = resKey, item = data[resKey]
+          if (!item['setup'] || $.isEmptyObject(item['data'])) continue
           info.push(value)
-          arry.push({ title: config[resKey], value: value })
+          arry.push({title: item.title, value: value})
         }
       }
       arry[0].value = info.join(',');
       if (type === 'webshell') arry.shift();
       if (arry.length === (type === 'webshell' ? 0 : 1)) return []
-
       return arry
     }
   },
@@ -1342,6 +1267,7 @@ var crontab = {
    */
   init: function () {
     var that = this;
+    this.getAllDatabases()
     this.getDataList(function () {
       that.addCrontabForm = that.addCrontabForm()
       that.crontabTabel = that.crontabTabel()

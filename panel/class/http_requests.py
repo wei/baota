@@ -37,7 +37,7 @@ class http:
                     urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
                 elif self._ip_type == 'ipv6':
                     urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
-                
+
                 result = requests.get(url,timeout=timeout,headers=get_headers(headers),verify=verify)
             except:
                 try:
@@ -80,7 +80,7 @@ class http:
                     # 使用CURL
                     result = self._post_curl(url,data,timeout,headers,verify)
             urllib3_conn.allowed_gai_family = old_family
-        
+
         elif type == 'curl':
             result = self._post_curl(url,data,timeout,headers,verify)
         elif type == 'php':
@@ -101,7 +101,7 @@ class http:
             @param filename<string> 保存路径
             @param data<dict> POST参数，不传则使用GET方法，否则使用POST方法
             @param timeout<int> 超时时间,默认1800秒
-            @param speed_file<string> 
+            @param speed_file<string>
         '''
         import requests
         from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -204,7 +204,7 @@ exit($header."\r\n\r\n".json_encode($body));
         #if 'Content-Type' in headers:
         #    if headers['Content-Type'].find('application/json') != -1:
         #        data = json.dumps(pdata)
-        
+
         data = json.dumps({"url":url,"timeout":timeout,"verify":verify,"headers":self._php_headers(headers),"data":data})
         if php_version in ['53']:
             php_version = '/www/server/php/' + php_version + '/bin/php'
@@ -252,7 +252,7 @@ exit($header."\r\n\r\n".json_encode($body));
 
     #GET请求 Python3
     def _get_py3(self,url,timeout,headers,verify):
-        import urllib.request       
+        import urllib.request
         req = urllib.request.Request(url,headers = headers)
         try:
             if not verify:
@@ -332,8 +332,8 @@ exit($header."\r\n\r\n".json_encode($body));
         if os.path.exists(tmp_file): os.remove(tmp_file)
         r_body,r_headers,r_status_code = self._curl_format(result)
         return response(json.loads(r_body).strip(),r_status_code,r_headers)
-        
-        
+
+
 
     #取可用的PHP版本
     def _get_php_version(self):
@@ -397,13 +397,13 @@ exit($header."\r\n\r\n".json_encode($body));
         str_pdata = ''
         if headers.find('application/jose') != -1 \
             or headers.find('application/josn') != -1:
-            if type(pdata) == dict: 
+            if type(pdata) == dict:
                 pdata = json.dumps(pdata)
             if type(pdata) == bytes:
                 pdata = pdata.decode('utf-8')
             str_pdata += " -d '{}'".format(pdata)
             return str_pdata
-        
+
         for key in pdata.keys():
             str_pdata += " -F '{}={}'".format(key ,pdata[key])
         return str_pdata
@@ -413,7 +413,7 @@ exit($header."\r\n\r\n".json_encode($body));
         if 'Content-Type' in headers:
             if headers['Content-Type'].find('application/jose') != -1 \
                or headers['Content-Type'].find('application/josn') != -1:
-                if type(pdata) == dict: 
+                if type(pdata) == dict:
                     pdata = json.dumps(pdata)
                 if type(pdata) == str:
                     pdata = pdata.encode('utf-8')
@@ -428,7 +428,7 @@ class http_headers:
     def __getitem__(self, key): return getattr(self,key.lower(),None)
     def __delitem__(self,key): delattr(self,key.lower())
     def __delattr__(self, key): delattr(self,key.lower())
-    def get(self,key): return getattr(self,key.lower(),None) 
+    def get(self,key): return getattr(self,key.lower(),None)
     def get_items(self): return self
 
 #响应对象
@@ -485,7 +485,7 @@ __version__ = 1.0
 
 #请请求方法
 def get_stype(s_type):
-    if not s_type: 
+    if not s_type:
         s_type_file = '/www/server/panel/data/http_type.pl'
         if os.path.exists(s_type_file):
             tmp_type = public.readFile(s_type_file)

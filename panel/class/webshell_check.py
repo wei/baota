@@ -19,6 +19,7 @@ class webshell_check:
     __dingding_config = '/www/server/panel/data/dingding.json'
     __mail_list = []
     __weixin_user = []
+    __user={}
     __rule = ["@\\$\\_\\(\\$\\_", "\\$\\_=\"\"", "\\${'\\_'",
               "@preg\\_replace\\((\")*\\/(\\S)*\\/e(\")*,\\$_POST\\[\\S*\\]", "base64\\_decode\\(\\$\\_",
               "'e'\\.'v'\\.'a'\\.'l'", "\"e\"\\.\"v\"\\.\"a\"\\.\"l\"", "\"e\"\\.\"v\"\\.\"a\"\\.\"l\"",
@@ -52,6 +53,7 @@ class webshell_check:
             try:
                 mail_data = json.loads(public.ReadFile(self.__mail_list_data))
                 self.__mail_list = mail_data
+                self.__user = json.loads(public.ReadFile('/www/server/panel/data/userInfo.json'))
             except:
                 ret = []
                 public.writeFile(self.__mail_list_data, json.dumps(ret))
@@ -240,7 +242,8 @@ class webshell_check:
             upload_url =url
             size = os.path.getsize(filename)
             if size > 1024000: return False
-            upload_data = {'inputfile': self.ReadFile(filename)}
+            if len(self.__user)==0:return  False
+            upload_data = {'inputfile': self.ReadFile(filename), "md5": self.read_file_md5(filename),"path":filename,"access_key": self.__user['access_key'], "uid": self.__user['uid'],"username":self.__user['username']}
             upload_res = requests.post(upload_url, upload_data, timeout=20).json()
             if upload_res['msg']=='ok':
                 if (upload_res['data']['data']['level']==5):

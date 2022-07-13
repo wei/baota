@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # encoding: utf-8
-  
+
 import os,sys,hashlib,time,re,threading,chardet,json
 import public
 
 class safe:
-  
+
     rulelist = [
         {'msg':'GET/POST可能被利用后门','level':'危险','code':'(\$_(GET|POST|REQUEST)\[.{0,15}\]\s{0,10}\(\s{0,10}\$_(GET|POST|REQUEST)\[.{0,15}\]\))'},
         {'msg':'一句话木马','level':'高危','code':'((eval|assert)(\s|\n)*\((\s|\n)*\$_(POST|GET|REQUEST)\[.{0,15}\]\))'},
@@ -28,17 +28,17 @@ class safe:
         {'msg':'一句话木马','level':'高危','code':'((eval|assert|include|require|include\_once|require\_once|array\_map|array\_walk)+\s*\(\s*\$\_(GET|POST|REQUEST|COOKIE|SERVER|SESSION)+\[(.*)\]\s*\))'},
         {'msg':'一句话木马','level':'危险','code':'(preg\_replace\s*\((.*)\(base64\_decode\(\$)'}
         ]
-    
+
     ruleFile = '/www/server/panel/data/ruleList.conf';
     if not os.path.exists(ruleFile): public.writeFile(ruleFile,json.dumps(rulelist));
     rulelist = json.loads(public.readFile(ruleFile));
-    
+
     result = {};
     result['data'] = []
     result['phpini'] = []
     result['userini'] = result['sshd'] = result['scan'] = True;
     result['outime'] = result['count'] = result['error'] = 0
-    
+
     def scan(self,path):
         start = time.time();
         ce = ['.jsp','.asp','.html','.htm','.php','.tpl','.xml']
@@ -50,7 +50,7 @@ class safe:
                     self.threadto(filename);
         end = time.time();
         self.result['outime'] = int(end - start)
-    
+
     def threadto(self,filename):
         print 'scanning ' + filename,
         file= open(filename)
@@ -77,20 +77,20 @@ class safe:
         self.result['count'] += 1
         public.writeFile(self.result['path'] + '/scan.pl',json.dumps(self.result));
         del(filestr)
-        
+
     def md5sum(self,md5_file):
         m = hashlib.md5()
         fp = open(md5_file)
         m.update(fp.read())
         return m.hexdigest()
         fp.close()
-        
-    
+
+
     def checkUserINI(self,path):
         self.result['userini'] =  os.path.exists(path+'/.user.ini');
         if not self.result['userini']: self.result['error'] += 1;
         public.writeFile(self.result['path'] + '/scan.pl',json.dumps(self.result));
-    
+
     def checkPHPINI(self):
         setupPath = '/www/server';
         phps = public.get_php_versions()
@@ -111,20 +111,20 @@ class safe:
                 self.result['phpini'].append(tmp);
         self.result['error'] += len(self.result['phpini']);
         public.writeFile(self.result['path'] + '/scan.pl',json.dumps(self.result));
-            
-        
-        
+
+
+
     def checkSSH(self):
         if self.md5sum('/etc/issue') == '3e3c7c4194b12af573ab11c16990c477':
             if self.md5sum('/usr/sbin/sshd') != 'abf7a90c36705ef679298a44af80b10b':  self.result['sshd'] = False
-                
+
         if self.md5sum('/etc/issue') == '6c9222ee501323045d85545853ebea55':
             if self.md5sum('/usr/sbin/sshd') != '4bbf2b12d6b7f234fa01b23dc9822838': self.result['sshd'] = False
         self.result['sshd'] = True
         public.writeFile(self.result['path'] + '/scan.pl',json.dumps(self.result));
-    
-    
-                
+
+
+
     def suspect(self,path):
         self.result['path'] = path;
         self.checkSSH();
@@ -137,7 +137,7 @@ class safe:
         return self.result;
 
 if __name__=='__main__':
-  
+
     if len(sys.argv)!=2:
         print('参数错误')
         exit();

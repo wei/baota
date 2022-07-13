@@ -46,7 +46,7 @@ class aescrypt_py3():
             return base64.b64decode(str2)
         else:
             return str(base64.b64decode(str2))
-            
+
 class aescrypt_py2():
     def __init__(self,key,model = 'ECB',iv = None,encode_='utf-8'):
         self.encode_ = encode_

@@ -18,7 +18,7 @@
 </div>
 {% endblock %}
 {% block scripts %}
-	{{ super() }} 
+	{{ super() }}
 <script type="text/javascript">
 
 	bt.set_cookie('sites_path',"{{session['config']['sites_path']}}");
@@ -89,7 +89,7 @@
 							setTimeout(function () {
 								window.location.reload()
 							}, 1000)
-						}	
+						}
 					})
 					$('.port'+bs).val('{{session["port"]}}');
 				},
@@ -105,7 +105,7 @@
 							if(callback) callback(rdata);
 						});
 					}else{
-						bt.confirm({msg:lan.ftp.stop_confirm.replace('{1}',obj.name),title:lan.ftp.stop_title},function(index){			
+						bt.confirm({msg:lan.ftp.stop_confirm.replace('{1}',obj.name),title:lan.ftp.stop_title},function(index){
 							bt.ftp.set_status(obj.id,obj.name,"0",function(rdata){
 								if(callback) callback(rdata);
 							});
@@ -204,6 +204,6 @@
 				jump:true, //是否支持跳转分页,默认禁用
 			}]
 		});
-    {% endif %}	
+    {% endif %}
 </script>
 {% endblock %}

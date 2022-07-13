@@ -2389,13 +2389,13 @@ var docker = {
                             type: 'text',
                             name: 'subnet',
                             width: '160px',
-                            placeholder: '请输入子网'
+                            placeholder: '例：124.42.0.0/16'
                         },{
                             label:'网关',
                             type: 'text',
                             name: 'gateway',
                             width: '160px',
-                            placeholder: '请输入网关'
+                            placeholder: '例：124.42.0.254'
                         }]
                     },{
                         label: 'IP范围',
@@ -2403,7 +2403,7 @@ var docker = {
                             type: 'text',
                             name: 'iprange',
                             width: '358px',
-                            placeholder: '请输入IP地址范围'
+                            placeholder: '例：124.42.0.0/24'
                         }
                     },{
                         label: '标签',
@@ -2426,7 +2426,6 @@ var docker = {
             yes:function(layers){
                 var formValue = add_network.$get_form_value()
                 if(formValue.name == '')return layer.msg('网络名不能为空',{icon:2})
-                if(formValue.options == '')return layer.msg('参数不能为空',{icon:2})
                 if(formValue.subnet == '')return layer.msg('子网不能为空',{icon:2})
                 if(formValue.gateway == '')return layer.msg('网关不能为空',{icon:2})
                 if(formValue.iprange == '')return layer.msg('IP地址范围不能为空',{icon:2})

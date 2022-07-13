@@ -50,7 +50,7 @@ def check_run():
     redis_pass = tmp[0].strip()
     if not is_strong_password(redis_pass):
         return False, 'Redis访问密码过于简单，存在安全隐患'
-    
+
     return True,'无风险'
 
 

@@ -78,7 +78,7 @@ var index = {
       }
     })
   },
-  warning_list: {},
+  warning_list: [],
   warning_num: null,
   series_option: {},// 配置项
   chart_json: {}, // 所有图表echarts对象
@@ -295,7 +295,7 @@ var index = {
             _this.chart_view.mem.setOption(option, true)
             that.next().hide()
           }, 400)
-          // 释放接口请求 
+          // 释放接口请求
           bt.system.re_memory(function (res) {
             that.next().show()
             clearInterval(setInter)
@@ -360,7 +360,7 @@ var index = {
     setTimeout(function () {
       bt.system.check_update(function (rdata) {
         index.consultancy_services(rdata.msg.adviser);
-      
+
         if (rdata.status !== false) {
           var res = rdata.msg, beta = res.beta,is_beta = res.is_beta,ignore = res.ignore;
           if(ignore.indexOf(is_beta?beta.version:res.version) == -1) index.check_update(true) // 判断自动升级
@@ -420,7 +420,7 @@ var index = {
   /**
    * @description 渲染系统信息
    * @param rdata 接口返回值
-   * 
+   *
   */
   reander_system_info: function (callback) {
     var _this = this;
@@ -524,7 +524,7 @@ var index = {
   },
   /**
    * @description 渲染画布视图
-   * 
+   *
   */
   init_chart_view: function () {
     // 所有图表对象装进chart_view
@@ -598,7 +598,7 @@ var index = {
   },
   /**
    * @description 赋值chart的数据
-   * 
+   *
   */
   set_chart_data: function () {
     this.chart_active("load")
@@ -619,7 +619,7 @@ var index = {
   },
   /**
    * @description 赋值chart的数据
-   * 
+   *
   */
   chart_active: function (name) {
     // 图表数据
@@ -649,7 +649,7 @@ var index = {
   },
   /**
    * @description 赋值chart的颜色
-   * 
+   *
   */
   chart_color_active: function (number) {
     var activeInfo = {};
@@ -708,7 +708,7 @@ var index = {
         }
       }
       $("#indexsoft").html(con);
-            
+
       // 推荐安装软件
       try {
         var recomConfig = product_recommend.get_recommend_type(1)
@@ -740,7 +740,7 @@ var index = {
       if (setup_length <= softboxsum) {
         for (var i = 0; i < softboxsum - setup_length; i++) {
           softboxcon += '<div class="col-sm-3 col-md-3 col-lg-3 no-bg"></div>'
-        }  
+        }
       }
       $("#indexsoft").append(softboxcon);
       $("#indexsoft").dragsort({ dragSelector: ".spanmove", dragBetween: true, dragEnd: saveOrder, placeHolderTemplate: "<div class='col-sm-3 col-md-3 col-lg-3 dashed-border'></div>" });
@@ -756,7 +756,6 @@ var index = {
     if ($('.layui-layer-dialog').length > 0) return false;
     var loadT = bt.load();
     bt.system.check_update(function (rdata) {
-      console.log(rdata)
       loadT.close();
       var data = rdata.msg, is_beta = data.is_beta, beta = data.beta, versionData = is_beta ? beta : data, versionType = is_beta?'测试版':'正式版'
       bt.open({
@@ -770,9 +769,9 @@ var index = {
               <div class="update_title"><i class="layui-layer-ico layui-layer-ico'+ (rdata.status?0:1) +'"></i><span>'+ (!rdata.status?'恭喜您，当前已经是最新版本':'发现新的面板版本，是否立即更新？') +'</span></div>\
               '+ (function () {
                 if (!rdata.status) {
-                  return '<div class="update_version">当前版本：<a href="https://www.bt.cn/bbs/forum-2-1.html" target="_blank" class="btlink" title="查看当前版本日志">宝塔'+ bt.os + versionType + versionData.version + '</a>&nbsp;&nbsp;发布时间：' + versionData.uptime + '</div>'
+                  return '<div class="update_version">当前版本：<a href="https://www.bt.cn/bbs/forum-36-1.html" target="_blank" class="btlink" title="查看当前版本日志">宝塔'+ bt.os + versionType + versionData.version + '</a>&nbsp;&nbsp;发布时间：' + versionData.uptime + '</div>'
                 }else{
-                  return '<div class="update_conter"><div class="update_version"><span>最新版本：<a href="https://www.bt.cn/bbs/forum-2-1.html" target="_blank" class="btlink" title="查看版本更新日志">' + versionData.version + ' (' + versionType + ')' + '</a></span><span style="text-align: right;">更新日期：' + versionData.uptime + '</span></div><div class="update_logs">'+ versionData.updateMsg + '</div></div>'
+                  return '<div class="update_conter"><div class="update_version"><span style="width:60%;">最新版本：<a href="https://www.bt.cn/bbs/forum-36-1.html" target="_blank" class="btlink" title="查看版本更新日志">宝塔'+ bt.os + versionType +' '+ versionData.version + '</a></span><span style="text-align: right;width:40%;">更新日期：' + versionData.uptime + '</span></div><div class="update_logs">'+ versionData.updateMsg + '</div></div>'
                 }
               })() + '\
               <div class="update_conter">\
@@ -805,7 +804,7 @@ var index = {
           $('.ignore-renew').on('click', function () {
             bt.confirm({
               title: '忽略本次更新',
-              msg: '是否忽略本次更新，忽略后，当前版本将不在提示更新！',
+              msg: '是否忽略本次更新，忽略后，当前版本将不再提示更新！',
             }, function () {
               bt.send('ignore_version', 'ajax/ignore_version', { version: versionData.version }, function (rdata) {
                 bt.msg(rdata);
@@ -879,7 +878,7 @@ var index = {
                             <div class="bt-form-line"> <label for="notice" style="cursor: pointer;"><input id="notice" disabled="disabled" type="checkbox" style="vertical-align: text-top;margin-right:5px"></input><span style="font-weight:500">我已查看“<b>《申请内测须知》</b>”<i id="update_time"></i></span></label>\</div>\
                             <div class="bt-form-submit-btn">\
                                 <button type="button" class="btn btn-danger btn-sm btn-title" onclick="layer.closeAll()">'+ lan.public.cancel + '</button>\
-                                <button type="button" class="btn btn-success btn-sm btn-title btn_update_panel_beta" disabled>'+ lan.index.update_go + '</button>\
+                                <button type="button" class="btn btn-success btn-sm btn-title btn_update_panel_beta disabled" >'+ lan.index.update_go + '</button>\
                             </div>\
                             <style>\
                                 .bt-form-conter{padding: 20px 25px;line-height: 29px;background: #f7f7f7;border-radius: 5px;padding-bottom:30px;margin-bottom:20px;}\
@@ -888,7 +887,8 @@ var index = {
                                 #notice span{cursor: pointer;}\
                                 #update_time{font-style:normal;color:red;}\
                                 .item_list{margin-left:95px;border-left:5px solid #e1e1e1;position:relative;padding:5px 0 0 2px}.index_title{border-bottom:1px solid #ececec;margin-bottom:5px;font-size:15px;color:#20a53a;padding-left:15px;margin-top:7px;margin-left:5px}.index_conter{line-height:25px;font-size:12px;min-height:40px;padding-left:20px;color:#888}.index_date{position:absolute;left:-90px;top:13px;font-size:13px;color:#333}.index_acive{width:15px;height:15px;background-color:#20a53a;display:block;border-radius:50%;position:absolute;left:-10px;top:21px}.index_acive::after{position:relative;display:block;content:"";height:5px;width:5px;display:block;border-radius:50%;background-color:#fff;top:5px;left:5px}\
-                            </style>\
+                                .bt-form-submit-btn{position:fixed;}\
+                              </style>\
                         </div>'
       });
       var countdown = 5;
@@ -908,24 +908,27 @@ var index = {
       settime($('#notice'));
       $('#notice').click(function () {
         if ($(this).prop('checked')) {
-          $('.btn_update_panel_beta').removeAttr('disabled');
+          $('.btn_update_panel_beta').removeClass('disabled')
         } else {
-          $('.btn_update_panel_beta').attr('disabled', 'disabled');
+          $('.btn_update_panel_beta').addClass('disabled')
         }
       });
       $('.btn_update_panel_beta').click(function () {
-        bt.show_confirm('升级Linux内测版', '请仔细阅读内测升级须知，是否升级Linux内测版？', function () {
-
-          bt.send('apple_beta', 'ajax/apple_beta', {}, function (rdata) {
-            if (rdata.status === false) {
-              bt.msg(rdata);
-              return;
-            }
-            bt.system.check_update(function (rdata) {
-              index.to_update();
-            });
-          });
-        });
+        if($(this).hasClass('disabled')){
+          layer.tips('请查看并勾选“申请内测须知”', $(this), {tips: [1, '#f00']});
+        }else{
+          bt.show_confirm('升级Linux内测版', '请仔细阅读内测升级须知，是否升级Linux内测版？', function () {
+            bt.send('apple_beta', 'ajax/apple_beta', {}, function (rdata) {
+              if (rdata.status === false) {
+                bt.msg(rdata)
+                return
+              }
+              bt.system.check_update(function (rdata) {
+                index.to_update()
+              })
+            })
+          })
+        }
       })
     });
   },
@@ -1351,7 +1354,7 @@ var index = {
    * @description 推荐任务管理器
   */
   recommend_task_manager: function () {
-    
+
   }
 }
 index.get_init();
@@ -1359,7 +1362,7 @@ index.consultancy_services()
 //setTimeout(function () { index.get_cloud_list() }, 800);
 
 product_recommend.init(function(){
-  index.get_product_status(function(){ 
+  index.get_product_status(function(){
     index.recommend_paid_version()
   });
   index.get_index_list();

@@ -65,7 +65,7 @@ class database(datatool.datatools):
             @author hwliang<2021-01-10>
             @return list
         '''
-        data = public.M('database_servers').select()
+        data = public.M('database_servers').where("db_type=?",("mysql",)).select()
         bt_mysql_bin = '{}/mysql/bin/mysql'.format(public.get_setup_path())
 
         if not isinstance(data,list): data = []
@@ -349,7 +349,7 @@ class database(datatool.datatools):
         if str(result).find('1044') != -1:
             mysql_obj.execute("grant SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER,CREATE TEMPORARY TABLES,LOCK TABLES,EXECUTE,CREATE VIEW,SHOW VIEW,EVENT,TRIGGER on `%s`.* to `%s`@`localhost`" % (dbname,username))
         for a in address.split(','):
-            mysql_obj.execute("CREATE USER `%s`@`%s` IDENTIFIED BY '%s'" % (username,a,password))
+            mysql_obj.execute("CREATE USER `{}`@`{}` IDENTIFIED BY '{}'".format(username,a,password))
             result = mysql_obj.execute("grant all privileges on `%s`.* to `%s`@`%s`" % (dbname,username,a))
             if str(result).find('1044') != -1:
                 mysql_obj.execute("grant SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER,CREATE TEMPORARY TABLES,LOCK TABLES,EXECUTE,CREATE VIEW,SHOW VIEW,EVENT,TRIGGER on `%s`.* to `%s`@`%s`" % (dbname,username,a))
@@ -636,8 +636,7 @@ SetLink
         password = get['password'].strip()
         try:
             if not password: return public.returnMsg(False,'root密码不能为空')
-            rep = "^[\w%@#!\.\+-~]+$"
-            if not re.match(rep, password): return public.returnMsg(False,  '数据库密码不能带有特殊符号')
+            if password.find("'") != -1 or password.find('"') != -1: return public.returnMsg(False,"数据库密码不能包含引号")
             if re.search(r"[\u4e00-\u9fa5]+",password): return public.returnMsg(False,  '数据库密码不能包含中文')
             self.sid = get.get('sid/d',0)
             #修改MYSQL
@@ -697,8 +696,7 @@ SetLink
         db_find = public.M('databases').where('id=?',(id,)).find()
         name = db_find['name']
 
-        rep = "^[\w%@#!\.\+-~]+$"
-        if  not re.match(rep, newpassword): return public.returnMsg(False, '数据库密码不能带有特殊符号')
+        if newpassword.find("'") != -1 or newpassword.find('"') != -1: return public.returnMsg(False,"数据库密码不能包含引号")
         #修改MYSQL
         self.sid = db_find['sid']
         if self.sid and username == 'root': return public.returnMsg(False,'不能修改远程数据库的root密码')
@@ -764,7 +762,7 @@ SetLink
             try:
                 password = public.M('config').where('id=?',(1,)).getField('mysql_root')
                 os.environ["MYSQL_PWD"] = str(password)
-                public.ExecShell(mysqldump_bin + " -R -E --triggers=false --default-character-set="+ public.get_database_character(name) +" --force --opt \"" + name + "\"  -u root -p"+str(password)+" | gzip > " + backupName)
+                public.ExecShell(mysqldump_bin + " -R -E --triggers=false --default-character-set="+ public.get_database_character(name) +" --force --opt \"" + name + "\"  -u root -p\""+str(password)+"\" | gzip > " + backupName)
             except Exception as e:
                 raise
             finally:
@@ -777,7 +775,7 @@ SetLink
                 res = self.CheckCloudDatabase(conn_config)
                 if isinstance(res,dict): return res
                 os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
-                public.ExecShell(mysqldump_bin + " -h "+ conn_config['db_host'] +" -P "+ str(int(conn_config['db_port'])) +" -R -E --triggers=false --default-character-set=" + public.get_database_character(name) + " --force --opt \"" + str(db_find['name']) + "\"  -u "+ str(conn_config['db_user']) +" -p"+str(conn_config['db_password'])+" | gzip > " + backupName)
+                public.ExecShell(mysqldump_bin + " -h "+ conn_config['db_host'] +" -P "+ str(int(conn_config['db_port'])) +" -R -E --triggers=false --default-character-set=" + public.get_database_character(name) + " --force --opt \"" + str(db_find['name']) + "\"  -u "+ str(conn_config['db_user']) +" -p\""+str(conn_config['db_password'])+"\" | gzip > " + backupName)
             except Exception as e:
                 raise
             finally:
@@ -788,7 +786,7 @@ SetLink
                 res = self.CheckCloudDatabase(conn_config)
                 if isinstance(res,dict): return res
                 os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
-                public.ExecShell(mysqldump_bin + " -h "+ conn_config['db_host'] +" -P "+ str(int(conn_config['db_port'])) +" -R -E --triggers=false --default-character-set=" + public.get_database_character(name) + " --force --opt \"" + str(db_find['name']) + "\"  -u "+ str(conn_config['db_user']) +" -p"+str(conn_config['db_password'])+" | gzip > " + backupName)
+                public.ExecShell(mysqldump_bin + " -h "+ conn_config['db_host'] +" -P "+ str(int(conn_config['db_port'])) +" -R -E --triggers=false --default-character-set=" + public.get_database_character(name) + " --force --opt \"" + str(db_find['name']) + "\"  -u "+ str(conn_config['db_user']) +" -p\""+str(conn_config['db_password'])+"\" | gzip > " + backupName)
             except Exception as e:
                 raise
             finally:
@@ -881,11 +879,11 @@ SetLink
                 elif db_find['db_type'] in ['1',1]:
                     conn_config = json.loads(db_find['conn_config'])
                     os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
-                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p" + str(conn_config['db_password']) + " --force \"" + name + "\" < " +'"'+ input_path +'"')
+                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p\"" + str(conn_config['db_password']) + "\" --force \"" + name + "\" < " +'"'+ input_path +'"')
                 elif db_find['db_type'] in ['2',2]:
                     conn_config = public.M('database_servers').where('id=?',db_find['sid']).find()
                     os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
-                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p" + str(conn_config['db_password']) + " --force \"" + name + "\" < " +'"'+ input_path +'"')
+                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p\"" + str(conn_config['db_password']) + "\" --force \"" + name + "\" < " +'"'+ input_path +'"')
             except Exception as e:
                 raise
             finally:
@@ -904,11 +902,11 @@ SetLink
                 elif db_find['db_type'] in ['1',1]:
                     conn_config = json.loads(db_find['conn_config'])
                     os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
-                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p" + str(conn_config['db_password']) + " --force \"" + name + "\" < " +'"'+ file +'"')
+                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p\"" + str(conn_config['db_password']) + "\" --force \"" + name + "\" < " +'"'+ file +'"')
                 elif db_find['db_type'] in ['2',2]:
                     conn_config = public.M('database_servers').where('id=?',db_find['sid']).find()
                     os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
-                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p" + str(conn_config['db_password']) + " --force \"" + name + "\" < " +'"'+ file +'"')
+                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p\"" + str(conn_config['db_password']) + "\" --force \"" + name + "\" < " +'"'+ file +'"')
             except Exception as e:
                 raise
             finally:
@@ -929,7 +927,7 @@ SetLink
         n = 0
         sql = public.M('databases')
         if type == 0:
-            data = sql.field('id,sid,name,username,password,accept,db_type').select()
+            data = sql.field('id,sid,name,username,password,accept,db_type').where("type='MySQL'",()).select()
             for value in data:
                 if value['db_type'] in ['1',1]:
                     continue # 跳过远程数据库
@@ -1316,19 +1314,33 @@ SetLink
             limit_size =int((slist[0] + slist[-1])/2 * 0.85)
         return limit_size
 
-    def get_database_size(self,ids,is_pid = False):
+    def get_database_size(self, ids, is_pid=False):
         """
         获取数据库大小
         """
         result = {}
         for id in ids:
             if not is_pid:
-                x = public.M('databases').where('id=?',id).field('id,sid,pid,name,ps,addtime').find()
+                x = public.M('databases').where('id=?', id).field('id,sid,pid,name,type,ps,addtime').find()
             else:
-                x = public.M('databases').where('pid=?',id).field('id,sid,pid,name,ps,addtime').find()
+                x = public.M('databases').where('pid=?', id).field('id,sid,pid,name,ps,type,addtime').find()
             if not x: continue
-            x['backup_count'] = public.M('backup').where("pid=? AND type=?",(x['id'],'1')).count()
-            x['total'] = int(public.get_database_size_by_id(x['id']))
+            x['backup_count'] = public.M('backup').where("pid=? AND type=?", (x['id'], '1')).count()
+            if x['type'] == 'MySQL':
+                x['total'] = int(public.get_database_size_by_id(x['id']))
+            else:
+                try:
+                    from panelDatabaseController import DatabaseController
+                    project_obj = DatabaseController()
+
+                    get = public.dict_obj()
+                    get['data'] = {'db_id': x['id']}
+                    get['mod_name'] = x['type'].lower()
+                    get['def_name'] = 'get_database_size_by_id'
+
+                    x['total'] = project_obj.model(get)
+                except:
+                    x['total'] = int(public.get_database_size_by_id(x['id']))
             result[x['name']] = x
         return result
 

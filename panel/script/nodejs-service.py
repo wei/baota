@@ -14,7 +14,7 @@ if len(sys.argv) < 3:
 get = public.dict_obj()
 get.project_name = sys.argv[1].strip()
 action = sys.argv[2].strip()
-if action not in ['start','stop','restart']:
+if action not in ['start','stop','restart','status']:
     print("Usage: nodejs-service [project_name] [start|stop|restart]")
     sys.exit()
 
@@ -24,6 +24,8 @@ elif action == 'stop':
     res = p.stop_project(get)
 elif action == 'restart':
     res = p.restart_project(get)
+elif action == 'status':
+    res = p.get(get)
 
 if res['status']:
     print("\033[1;32mSUCCESS: " + res['data'] + "\033[0m")

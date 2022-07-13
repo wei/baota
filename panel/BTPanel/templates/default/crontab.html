@@ -162,7 +162,7 @@
 </style>
 {% endblock %}
 {% block scripts %}
-  {{ super() }} 
+  {{ super() }}
   <script src="{{g.cdn_url}}/js/crontab.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
   <script type="text/javascript">
       crontab.init()

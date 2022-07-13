@@ -23,6 +23,7 @@ if [ "$go" == 'n' ];then
 	exit;
 fi
 
+
 yum -y install ntp
 \cp -a -r /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 echo 'Synchronizing system time..'

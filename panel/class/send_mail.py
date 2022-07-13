@@ -9,7 +9,7 @@
 # +--------------------------------------------------------------------
 # |   宝塔内置消息通道
 # +--------------------------------------------------------------------
-import os, sys, public, base64, json, re
+import os, sys, public, json, re
 import smtplib, requests
 # import http_requests as requests
 from email.mime.text import MIMEText

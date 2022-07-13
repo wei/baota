@@ -104,7 +104,7 @@
             <button type="button" class="btn btn-success btn-sm ml5 savePanelConfig" disabled>保存</button>
             <div class="line-row-tips">给面板取个别的名称，用于网页标题</div>
           </div>
-          
+
           <div class="line" title="超时时间">
             <div class="line-title">超时时间</div>
             <div class="line-input">
@@ -151,7 +151,7 @@
             <button type="button" class="btn btn-success btn-sm ml5 syncDateBtn">同步</button>
             <div class="line-row-tips">同步当前服务器时间</div>
           </div>
-          
+
           <div class="line" title="面板账号">
             <div class="line-title">面板账号</div>
             <div class="line-input">
@@ -359,25 +359,34 @@
             <div class="line-title">消息通道</div>
             <div class="line-input">
               <div class="line-row">
-                <a href="javascript:;" class="bt_warning setMessageChannelMail">邮箱未设置</a>
+                <a href="javascript:;" class="bt_warning setMessageChannelMail">邮箱未配置</a>
                 <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
-                <a href="javascript:;" class="bt_warning setMessageChannelNailNail">钉钉/企业微信未设置</a>&nbsp;&nbsp;&nbsp;&nbsp;
+                <a href="javascript:;" class="bt_warning setMessageChannelNailNail">钉钉/飞书/企业微信未配置</a>
+                <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+                <a href="javascript:;" class="bt_warning setMessageChannelSMS">短信未设置</a>&nbsp;&nbsp;&nbsp;&nbsp;
               </div>
               <button type="button" class="btn btn-success btn-xs setMessageChannelMailBtn">设置消息通道</button>
             </div>
-            <div class="line-row-tips">设置消息推送配置，设置后可以将消息推送至邮箱、钉钉/企业微信</div>
+            <div class="line-row-tips">设置消息推送配置，设置后可以将消息推送至邮箱、钉钉/企业微信、短信</div>
           </div>
           <div class="line" title="登录告警">
             <div class="line-title">登录告警</div>
             <div class="line-input">
               <div class="line-row">
-                <a href="javascript:;" class="bt_warning setAlarmMail">邮箱未设置</a>
+                <a href="javascript:;" class="bt_warning setAlarmMail">邮箱未配置</a>
                 <span class="interval">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
-                <a href="javascript:;" class="bt_warning setAlarmNailNail">钉钉/企业微信未设置</a>&nbsp;&nbsp;&nbsp;&nbsp;
+                <a href="javascript:;" class="bt_warning setAlarmNailNail">钉钉/企业微信未配置</a>&nbsp;&nbsp;&nbsp;&nbsp;
               </div>
               <button type="button" class="btn btn-success btn-xs setAlarmMailBtn">设置登录告警</button>
             </div>
             <div class="line-row-tips">设置登录告警提示，每次登录面板都会使用消息推送功能，发送邮件或发送信息至钉钉/企业微信</div>
+          </div>
+          <div class="line" title="消息推送">
+            <div class="line-title">消息推送</div>
+            <div class="line-input">
+              <button type="button" class="btn btn-success btn-xs setAlarmType">设置推送</button>
+            </div>
+            <div class="line-row-tips">设置消息推送提示，服务停止时将消息发送至邮件、钉钉/飞书/企业微信、短信</div>
           </div>
         </div>
       </div>
@@ -535,13 +544,24 @@
     .create_temp_view .info-r {
         margin: 0;
     }
+
+    /*消息推送模块*/
+    .layui-layer.layui-layer-page .bt-form .form-checkbox-label{
+      height: 18px;
+      line-height: 18px;
+    }
+    .layui-layer.layui-layer-page .bt-form .inlineBlock.group span.unit{
+      line-height: 28px;
+    }
+    /*消息推送模块 end*/
   </style>
   {% endblock %}
   {% block scripts %}
-    <script src="{{g.cdn_url}}/js/jquery-2.2.4.min.js"></script>
-    <script src="{{g.cdn_url}}/language/{{session['lan']}}/lan.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-    <script src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-    <script src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/js/jquery-2.2.4.min.js"></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/language/{{session['lan']}}/lan.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/js/jquery.qrcode.min.js"></script>
     <script type="text/javascript">
       bt.set_cookie('order', 'id desc');
       bt.set_cookie('serverType', "{{session['webserver']}}");
@@ -671,17 +691,51 @@
           layer.msg(rdata.msg);
         });
       }
-      task_stat(); 
-      {% if data['show_workorder'] %}
-        var box = new MessageBox(); 
-      {%endif %}
+      task_stat();
     </script>
     <script type="text/javascript" src="{{g.cdn_url}}/amd/require.min.js" data-main="{{g.cdn_url}}/amd/main"></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/js/tools.js?version_20200217={{g['version']}}"></script>
     <script type="text/javascript">
       var sessionInfo  = {
         title:"{{session['title']}}",
         username:"{{session['username']}}",
         statusCode:"{{data['status_code']}}"
       }
+
+      //  设置消息通道
+      $('.setMessageChannelMail,.setMessageChannelMailBtn,.setMessageChannelNailNail,.setMessageChannelSMS').on('click', function(){open_three_channel_auth()});
+
+      // 消息推送
+      $('.setAlarmType').on('click', function(){open_three_channel_auth('MsgPush')});
+
+      $('#wechatCustomerQrcode').qrcode({
+        width: 80,
+        height: 80,
+        text: "https://work.weixin.qq.com/kfid/kfc0ffe8f5ec461e5b7"
+      });
+
+
+      $('#onlineCustomer').click(function (){
+        var customer = $("#wechat-customer");
+        var ltd_end = bt.get_cookie('ltd_end');
+        if (!(ltd_end > 0)){
+          product_recommend.pay_product_sign('ltd',45,'ltd')
+          layer.msg('在线客服仅支持企业版用户使用', {icon: 5});
+          return false;
+        }
+        if(customer.hasClass('hide')){
+          customer.removeClass('hide');
+        }else{
+          customer.addClass('hide');
+        }
+      })
+
+      $('#wechat-customer .wechat-close').on('click',function(){
+        $(this).parent().addClass('hide');
+      })
+
+      {% if data['show_workorder'] %}
+      $('.debugs').removeClass('hide');
+      {%endif %}
     </script>
   {% endblock %}

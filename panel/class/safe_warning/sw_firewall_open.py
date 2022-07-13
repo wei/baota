@@ -35,16 +35,16 @@ def check_run():
         @author hwliang<2020-08-04>
         @return tuple (status<bool>,msg<string>)
     '''
-    
-    if os.path.exists('/usr/sbin/firewalld'): 
+
+    if os.path.exists('/usr/sbin/firewalld'):
         if public.ExecShell("systemctl status firewalld|grep 'active (running)'")[0]:
             return True,'无风险'
 
-    elif os.path.exists('/usr/sbin/ufw'): 
+    elif os.path.exists('/usr/sbin/ufw'):
         if public.ExecShell("ufw status|grep 'Status: active'")[0]:
-            return True,'无风险' 
+            return True,'无风险'
     else:
         if public.ExecShell("service iptables status|grep 'Table: filter'")[0]:
             return True,'无风险'
-    
+
     return False,'未开启系统防火墙，存在安全风险'

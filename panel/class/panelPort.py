@@ -32,9 +32,9 @@ def main():
         item = (ip,port)
         t = SkPort(ip,port)
         t.start()
-            
-    
+
+
     print str(ports)
-     
+
 if __name__ == '__main__':
     main()

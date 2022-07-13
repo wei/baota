@@ -131,47 +131,39 @@ def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):
 # 任务队列
 def startTask():
     global isTask,logPath
-    try:
-        while True:
-            try:
-                if os.path.exists(isTask):
-                    with db.Sql() as sql:
-                        sql.table('tasks').where(
-                            "status=?", ('-1',)).setField('status', '0')
-                        taskArr = sql.table('tasks').where("status=?", ('0',)).field(
-                            'id,type,execstr').order("id asc").select()
-                        for value in taskArr:
-                            start = int(time.time())
-                            if not sql.table('tasks').where("id=?", (value['id'],)).count():
-                                continue
-                            sql.table('tasks').where("id=?", (value['id'],)).save(
-                                'status,start', ('-1', start))
-                            if value['type'] == 'download':
-                                argv = value['execstr'].split('|bt|')
-                                DownloadFile(argv[0], argv[1])
-                            elif value['type'] == 'execshell':
-                                ExecShell(value['execstr'])
-                            end = int(time.time())
-                            sql.table('tasks').where("id=?", (value['id'],)).save(
-                                'status,end', ('1', end))
-                            if(sql.table('tasks').where("status=?", ('0')).count() < 1):
-                                if os.path.exists(isTask):
-                                    os.remove(isTask)
-                                #ExecShell('rm -f ' + isTask)
-                        sql.close()
-                        taskArr = None
-            except:
-                pass
-            siteEdate()
-            time.sleep(2)
-    except Exception as ex:
-        logging.info(ex)
-        time.sleep(60)
-        startTask()
+    tip_file = '/dev/shm/.panelTask.pl'
+    while 1:
+        try:
+            if os.path.exists(isTask):
+                with db.Sql() as sql:
+                    sql.table('tasks').where(
+                        "status=?", ('-1',)).setField('status', '0')
+                    taskArr = sql.table('tasks').where("status=?", ('0',)).field('id,type,execstr').order("id asc").select()
+                    for value in taskArr:
+                        start = int(time.time())
+                        if not sql.table('tasks').where("id=?", (value['id'],)).count():
+                            public.writeFile(tip_file, str(int(time.time())))
+                            continue
+                        sql.table('tasks').where("id=?", (value['id'],)).save('status,start', ('-1', start))
+                        if value['type'] == 'download':
+                            argv = value['execstr'].split('|bt|')
+                            DownloadFile(argv[0], argv[1])
+                        elif value['type'] == 'execshell':
+                            ExecShell(value['execstr'])
+                        end = int(time.time())
+                        sql.table('tasks').where("id=?", (value['id'],)).save('status,end', ('1', end))
+                        if(sql.table('tasks').where("status=?", ('0')).count() < 1):
+                            if os.path.exists(isTask):
+                                os.remove(isTask)
+                    sql.close()
+                    taskArr = None
+            public.writeFile(tip_file, str(int(time.time())))
+        except:
+            pass
+        time.sleep(2)
+
 
 # 网站到期处理
-
-
 def siteEdate():
     global oldEdate
     try:
@@ -182,8 +174,9 @@ def siteEdate():
         mEdate = time.strftime('%Y-%m-%d', time.localtime())
         if oldEdate == mEdate:
             return False
-        os.system(get_python_bin() +
-                  " /www/server/panel/script/site_task.py > /dev/null")
+        oldEdate = mEdate
+        os.system("nohup " + get_python_bin() + " /www/server/panel/script/site_task.py > /dev/null 2>&1 &")
+
     except Exception as ex:
         logging.info(ex)
         pass
@@ -308,7 +301,7 @@ def systemTask():
 
                     if not diskInfo:
                         diskInfo = tmp
-                    
+
                     if (tmp['read_bytes'] + tmp['write_bytes']) > (diskInfo['read_bytes'] + diskInfo['write_bytes']):
                         diskInfo['read_count'] = tmp['read_count']
                         diskInfo['write_count'] = tmp['write_count']
@@ -352,7 +345,7 @@ def systemTask():
                     sql.table('process_high_percent').where("addtime<?", (deltime,)).delete()
                     sql.table('process_tops').where("addtime<?", (deltime,)).delete()
                     sql.close()
-                    
+
                     lpro = None
                     load_average = None
                     cpuInfo = None
@@ -364,7 +357,7 @@ def systemTask():
                     if reloadNum > 1440:
                         reloadNum = 0
                     process_object.get_monitor_list()
-                    
+
                     # 日报数据收集
                     if os.path.exists("/www/server/panel/data/start_daily.pl"):
                         try:
@@ -372,7 +365,7 @@ def systemTask():
                             pd = panelDaily()
                             t_now = time.localtime()
                             yesterday  = time.localtime(time.mktime((
-                                t_now.tm_year, t_now.tm_mon, t_now.tm_mday-1, 
+                                t_now.tm_year, t_now.tm_mon, t_now.tm_mday-1,
                                 0,0,0,0,0,0
                             )))
                             yes_time_key = pd.get_time_key(yesterday)
@@ -384,7 +377,7 @@ def systemTask():
                                     store = True
                             else:
                                 store = True
-    
+
                             if store:
                                 date_str = str(yes_time_key)
                                 daily_data = pd.get_daily_data_local(date_str)
@@ -398,7 +391,7 @@ def systemTask():
                                     # logging.info("更新应用存储信息:"+str(yes_time_key))
                                     pd.check_server()
                         except Exception as e:
-                            logging.info("存储应用空间信息错误:"+str(e)) 
+                            logging.info("存储应用空间信息错误:"+str(e))
                 except Exception as ex:
                     logging.info(str(ex))
             del(tmp)
@@ -504,6 +497,7 @@ def check502Task():
             check502()
             sess_expire()
             mysql_quota_check()
+            siteEdate()
             time.sleep(600)
     except Exception as ex:
         logging.info(ex)
@@ -512,7 +506,7 @@ def check502Task():
 
 # MySQL配额检查
 def mysql_quota_check():
-    os.system(get_python_bin() +" /www/server/panel/script/mysql_quota.py > /dev/null")
+    os.system("nohup " + get_python_bin() +" /www/server/panel/script/mysql_quota.py > /dev/null 2>&1 &")
 
 # session过期处理
 def sess_expire():
@@ -547,7 +541,7 @@ def check_panel_ssl():
             if not lets_info:
                 time.sleep(3600)
                 continue
-            os.system(get_python_bin() + " /www/server/panel/script/panel_ssl_task.py > /dev/null")
+            os.system("nohup " + get_python_bin() + " /www/server/panel/script/panel_ssl_task.py > /dev/null 2>&1 &")
             time.sleep(3600)
     except Exception as e:
         public.writeFile("/tmp/panelSSL.pl", str(e), "a+")
@@ -585,7 +579,7 @@ def service_panel(action='reload'):
     if not os.path.exists('/www/server/panel/init.sh'):
         update_panel()
     else:
-        os.system("bash /www/server/panel/init.sh {} &".format(action))
+        os.system("nohup bash /www/server/panel/init.sh {} > /dev/null 2>&1 &".format(action))
 
 # 重启面板服务
 def restart_panel_service():
@@ -602,17 +596,20 @@ def restart_panel_service():
 
 # 取面板pid
 def get_panel_pid():
-    pid = ReadFile('/www/server/panel/logs/panel.pid')
-    if pid:
-        return int(pid)
-    for pid in pids():
-        try:
-            p = Process(pid)
-            n = p.cmdline()[-1]
-            if n.find('runserver') != -1 or n.find('BT-Panel') != -1:
-                return pid
-        except:
-            pass
+    try:
+        pid = ReadFile('/www/server/panel/logs/panel.pid')
+        if pid:
+            return int(pid)
+        for pid in pids():
+            try:
+                p = Process(pid)
+                n = p.cmdline()[-1]
+                if n.find('runserver') != -1 or n.find('BT-Panel') != -1:
+                    return pid
+            except:
+                pass
+    except:
+        pass
     return None
 
 
@@ -644,7 +641,7 @@ def HttpGet(url, timeout=6, headers={}):
 def send_mail_time():
     while True:
         try:
-            os.system(get_python_bin() +" /www/server/panel/script/mail_task.py > /dev/null")
+            os.system("nohup " + get_python_bin() +" /www/server/panel/script/mail_task.py > /dev/null 2>&1 &")
             time.sleep(180)
         except:
             time.sleep(360)
@@ -692,9 +689,15 @@ def check_files_panel():
 def check_panel_msg():
     python_bin = get_python_bin()
     while True:
-        os.system('{} /www/server/panel/script/check_msg.py &'.format(python_bin))
+        os.system('nohup {} /www/server/panel/script/check_msg.py > /dev/null 2>&1 &'.format(python_bin))
         time.sleep(3600)
 
+# 面板推送消息
+def push_msg():
+    python_bin = get_python_bin()
+    while True:
+        os.system('nohup {} /www/server/panel/script/push_msg.py > /dev/null 2>&1 &'.format(python_bin))
+        time.sleep(60)
 
 class process_task:
 
@@ -768,7 +771,7 @@ class process_task:
         monitor_list = {}
         cpu_src_limit = 30
         cpu_pre_limit = 80 / self.__cpu_count
-        
+
         addtime = int(time.time())
         for pid in self.__pids:
             try:
@@ -798,12 +801,12 @@ class process_task:
                         pname = 'mysqld,mysql_safe(MySQL)'
                     elif pname in ['BT-Task','BT-Panel']:
                         continue
-                    
+
                     monitor_list[pid] = {
                         'pid':[pid],
                         'name':pname,
                         'cmdline': cmdline,
-                        'memory': rss, 
+                        'memory': rss,
                         'cpu_time_total': cpu_time_total,
                         'cpu_percent': cpu_percent
                     }
@@ -825,9 +828,9 @@ class process_task:
             else:
                 if monitor_list[i]['cpu_percent'] >= cpu_pre_limit:
                     cpu_high_list.append(monitor_list[i])
-            
 
-        self.__sql = db.Sql().dbfile('system')        
+
+        self.__sql = db.Sql().dbfile('system')
         process_info_list = sorted(process_info_list,key=lambda x:x['cpu_time_total'],reverse=True)
         self.__sql.table('process_tops').insert({"process_list": dumps(process_info_list[:10]),'addtime':addtime})
 
@@ -875,6 +878,14 @@ def main():
     logging.info('服务已启动')
     time.sleep(5)
     import threading
+    import panelTask
+    task_obj = panelTask.bt_task()
+    task_obj.not_web = True
+    p = threading.Thread(target=task_obj.start_task)
+    # p.setDaemon(True)
+    p.start()
+
+
     t = threading.Thread(target=systemTask)
     # t.setDaemon(True)
     t.start()
@@ -894,11 +905,11 @@ def main():
     p = threading.Thread(target=check_panel_ssl)
     # p.setDaemon(True)
     p.start()
-    
+
     p = threading.Thread(target=update_software_list)
     # p.setDaemon(True)
     p.start()
-    
+
     p = threading.Thread(target=send_mail_time)
     # p.setDaemon(True)
     p.start()
@@ -906,15 +917,13 @@ def main():
     p = threading.Thread(target=check_files_panel)
     # p.setDaemon(True)
     p.start()
-    import panelTask
-    task_obj = panelTask.bt_task()
-    task_obj.not_web = True
-    p = threading.Thread(target=task_obj.start_task)
-    # p.setDaemon(True)
-    p.start()
+
 
     p = threading.Thread(target=check_panel_msg)
     # p.setDaemon(True)
+    p.start()
+
+    p = threading.Thread(target=push_msg)
     p.start()
 
     startTask()

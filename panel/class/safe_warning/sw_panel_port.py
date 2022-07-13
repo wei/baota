@@ -40,4 +40,4 @@ def check_run():
     if port != 8888:
         return True,'无安全风险'
     return False,'面板端口为默认端口({}), 这可能造成不必要的安全风险'.format(port)
-    
+

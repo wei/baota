@@ -42,7 +42,7 @@ class main(projectBase):
 
         if not os.path.exists(self._go_logs_path):
             public.ExecShell("mkdir -p %s && chmod 777 %s"%(self._go_logs_path,self._go_logs_path))
-        
+
         if not os.path.exists(self._go_run_scripts):
             public.ExecShell("mkdir -p %s && chmod 777 %s"%(self._go_run_scripts,self._go_run_scripts))
 
@@ -74,7 +74,7 @@ class main(projectBase):
         if not project_info: return False
         project_info['project_config'] = json.loads(project_info['project_config'])
         return project_info
-        
+
 
     def get_other_pids(self,pid):
         '''
@@ -113,7 +113,7 @@ class main(projectBase):
         if get: pid = int(get.pid)
         if not self._pids: self._pids = psutil.pids()
         project_pids = []
-        
+
         for i in self._pids:
             try:
                 p = psutil.Process(i)
@@ -165,14 +165,14 @@ class main(projectBase):
         '''
         skey = "cpu_pre_{}".format(p.pid)
         old_cpu_times = cache.get(skey)
-        
+
         process_cpu_time = self.get_process_cpu_time(p.cpu_times())
         if not old_cpu_times:
             cache.set(skey,[process_cpu_time,time.time()],3600)
             # time.sleep(0.1)
             old_cpu_times = cache.get(skey)
             process_cpu_time = self.get_process_cpu_time(p.cpu_times())
-        
+
         old_process_cpu_time = old_cpu_times[0]
         old_time = old_cpu_times[1]
         new_time = time.time()
@@ -296,13 +296,14 @@ class main(projectBase):
         '''
         skey = "io_speed_{}".format(p.pid)
         old_pio = cache.get(skey)
+        if not hasattr(p,'io_counters'): return 0,0
         pio = p.io_counters()
         if not old_pio:
             cache.set(skey,[pio,time.time()],3600)
             # time.sleep(0.1)
             old_pio = cache.get(skey)
             pio = p.io_counters()
-        
+
         old_write_bytes = old_pio[0].write_bytes
         old_read_bytes = old_pio[0].read_bytes
         old_time = old_pio[1]
@@ -315,7 +316,7 @@ class main(projectBase):
 
         write_speed = int((write_bytes - old_write_bytes) / (new_time - old_time))
         read_speed = int((read_bytes - old_read_bytes) / (new_time - old_time))
-        
+
         return write_speed,read_speed
 
 
@@ -381,11 +382,11 @@ class main(projectBase):
             @return tuple
         '''
         config_file = "{}/nginx/go_{}.conf".format(public.get_vhost_path(),project_name)
-        if not os.path.exists(config_file): 
+        if not os.path.exists(config_file):
             return False,False
 
         config_body = public.readFile(config_file)
-        if not config_body: 
+        if not config_body:
             return False,False
 
         is_ssl,is_force_ssl = False,False
@@ -421,11 +422,11 @@ class main(projectBase):
             @return bool
         '''
         config_file = "{}/apache/go_{}.conf".format(public.get_vhost_path(),project_name)
-        if not os.path.exists(config_file): 
+        if not os.path.exists(config_file):
             return False,False
 
         config_body = public.readFile(config_file)
-        if not config_body: 
+        if not config_body:
             return False,False
 
         is_ssl,is_force_ssl = False,False
@@ -450,12 +451,12 @@ class main(projectBase):
         for d in project_find['project_config']['domains']:
             domain_tmp = d.split(':')
             if len(domain_tmp) == 1: domain_tmp.append(80)
-            if not int(domain_tmp[1]) in ports: 
+            if not int(domain_tmp[1]) in ports:
                 ports.append(int(domain_tmp[1]))
             if not domain_tmp[0] in domains:
                 domains.append(domain_tmp[0])
 
-        
+
         config_file = "{}/apache/go_{}.conf".format(self._vhost_path,project_name)
         template_file = "{}/template/apache/go_http.conf".format(self._vhost_path)
         config_body = public.readFile(template_file)
@@ -465,7 +466,7 @@ class main(projectBase):
         is_ssl,is_force_ssl  = self.exists_apache_ssl(project_name)
         if is_ssl:
             if not 443 in ports: ports.append(443)
-        
+
         from panelSite import panelSite
         s = panelSite()
 
@@ -510,7 +511,7 @@ class main(projectBase):
             # 添加端口到主配置文件
             if not p in [80]:
                 s.apacheAddPort(p)
-        
+
         # 写.htaccess
         rewrite_file = "{}/.htaccess".format(project_find['path'])
         if not os.path.exists(rewrite_file): public.writeFile(rewrite_file,'# 请将伪静态规则或自定义Apache配置填写到此处\n')
@@ -529,11 +530,11 @@ class main(projectBase):
         project_name = project_find['name']
         ports = []
         domains = []
-        
+
         for d in project_find['project_config']['domains']:
             domain_tmp = d.split(':')
             if len(domain_tmp) == 1: domain_tmp.append(80)
-            if not int(domain_tmp[1]) in ports: 
+            if not int(domain_tmp[1]) in ports:
                 ports.append(int(domain_tmp[1]))
             if not domain_tmp[0] in domains:
                 domains.append(domain_tmp[0])
@@ -550,7 +551,7 @@ class main(projectBase):
         if is_ssl:
             listen_ports += "\n    listen 443 ssl http2;"
             if listen_ipv6: listen_ports += "\n    listen [::]:443 ssl http2;"
-        
+
             ssl_config = '''ssl_certificate    {vhost_path}/cert/{priject_name}/fullchain.pem;
     ssl_certificate_key    {vhost_path}/cert/{priject_name}/privkey.pem;
     ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3;
@@ -568,10 +569,10 @@ class main(projectBase):
         rewrite ^(/.*)$ https://$host$1 permanent;
     }
     #HTTP_TO_HTTPS_END'''
-        
+
         config_file = "{}/nginx/go_{}.conf".format(self._vhost_path,project_name)
         template_file = "{}/template/nginx/go_http.conf".format(self._vhost_path)
-        
+
         config_body = public.readFile(template_file)
         config_body = config_body.format(
             site_path = project_find['path'],
@@ -589,7 +590,7 @@ class main(projectBase):
         # ssl_config = self.get_nginx_ssl_config(project_name)
         # if ssl_config:
         #     config_body.replace('#error_page 404/404.html;',ssl_config)
-            
+
 
         rewrite_file = "{panel_path}/vhost/rewrite/go_{project_name}.conf".format(panel_path = self._panel_path,project_name = project_name)
         if not os.path.exists(rewrite_file): public.writeFile(rewrite_file,'# 请将伪静态规则或自定义NGINX配置填写到此处\n')
@@ -656,7 +657,7 @@ class main(projectBase):
         self.set_apache_config(project_find)
         public.serviceReload()
         return True
-        
+
     def kill_pids(self,get=None,pids = None):
         '''
             @name 结束进程列表
@@ -799,7 +800,7 @@ echo $! > {pid_file}'''.format(
         # 获取PID
         pid = int(public.readFile(pid_file))
         pids = self.get_project_pids(pid=pid)
-        if not pids: 
+        if not pids:
             if os.path.exists(pid_file): os.remove(pid_file)
             return public.returnMsg(False,'启动失败<br>{}'.format(public.GetNumLines(log_file,20)))
         # return public.returnMsg(True, '启动成功')
@@ -875,17 +876,17 @@ echo $! > {pid_file}'''.format(
             @return dict
         '''
         project_find = self.get_project_find(get.project_name)
-        if not project_find: 
+        if not project_find:
             return public.return_error('指定项目不存在')
         last_domain = get.domain
         domain_arr = get.domain.split(':')
-        if len(domain_arr) == 1: 
+        if len(domain_arr) == 1:
             domain_arr.append(80)
-            
+
         project_id = public.M('sites').where('name=?',(get.project_name,)).getField('id')
         if len(project_find['project_config']['domains']) == 1: return public.return_error('项目至少需要一个域名')
         domain_id = public.M('domain').where('name=? AND pid=?',(domain_arr[0],project_id)).getField('id')
-        if not domain_id: 
+        if not domain_id:
             return public.return_error('指定域名不存在')
         public.M('domain').where('id=?',(domain_id,)).delete()
 
@@ -910,7 +911,7 @@ echo $! > {pid_file}'''.format(
             @return dict
         '''
         project_find = self.get_project_find(get.project_name)
-        if not project_find: 
+        if not project_find:
             return public.return_error('指定项目不存在')
         project_id = project_find['id']
         domains = get.domains
@@ -920,7 +921,7 @@ echo $! > {pid_file}'''.format(
             domain = domain.strip()
             if not domain:continue
             domain_arr = domain.split(':')
-            if len(domain_arr) == 1: 
+            if len(domain_arr) == 1:
                 domain_arr.append(80)
                 domain += ':80'
             if not public.M('domain').where('name=?',(domain_arr[0],)).count():
@@ -974,7 +975,7 @@ echo $! > {pid_file}'''.format(
             @return dict
         '''
         project_name = get.project_name.strip()
-        if not re.match("^\w+$",project_name): 
+        if not re.match("^\w+$",project_name):
             return public.return_error('项目名称格式不正确，支持字母、数字、下划线，表达式: ^[0-9A-Za-z_]$')
 
         if public.M('sites').where('name=? and project_type=?',(get.project_name,)).count():
@@ -982,9 +983,9 @@ echo $! > {pid_file}'''.format(
         get.project_exe = get.project_exe.strip()
         if not os.path.exists(get.project_exe):
             return public.return_error('项目目录不存在: {}'.format(get.project_exe))
-        
+
         # 端口占用检测
-        if self.check_port_is_used(get.get('port/port')): 
+        if self.check_port_is_used(get.get('port/port')):
             return public.return_error('指定端口已被其它应用占用，请修改您的项目配置使用其它端口, 端口: {}'.format(get.port))
         # if 'domains' in get:
         #     domains = json.loads(get.domains)
@@ -1065,9 +1066,9 @@ echo $! > {pid_file}'''.format(
         if not os.path.exists(get.project_exe):
             return public.return_error('项目目录不存在: {}'.format(get.project_exe))
 
-        if hasattr(get,'port'): 
+        if hasattr(get,'port'):
             if int(project_find['project_config']['port']) != int(get.port):
-                if self.check_port_is_used(get.get('port/port'),True): 
+                if self.check_port_is_used(get.get('port/port'),True):
                     return public.return_error('指定端口已被其它应用占用，请修改您的项目配置使用其它端口, 端口: {}'.format(get.port))
                 project_find['project_config']['port'] = int(get.port)
         #if hasattr(get,'project_cwd'): project_find['project_config']['project_cwd'] = get.project_cwd.strip()
@@ -1102,7 +1103,7 @@ echo $! > {pid_file}'''.format(
         project_find = self.get_project_find(get.project_name)
         if not project_find:
             return public.return_error('指定项目不存在: {}'.format(get.project_name))
-        
+
         self.stop_project(get)
         self.clear_config(get.project_name)
         public.M('domain').where('pid=?',(project_find['id'],)).delete()
@@ -1116,6 +1117,11 @@ echo $! > {pid_file}'''.format(
         public.WriteLog(self._log_name,'删除Go项目{}'.format(get.project_name))
         return public.return_data(True,'删除项目成功')
 
+    # xss 防御
+    def xsssec(self,text):
+        return text.replace('<', '&lt;').replace('>', '&gt;')
+
+
     def get_project_log(self,get):
         '''
         @name 取项目日志
@@ -1128,7 +1134,7 @@ echo $! > {pid_file}'''.format(
         if not project_info: return public.returnMsg(False,'项目不存在')
         log_file = "{}/{}.log".format(self._go_logs_path,get.project_name)
         if not os.path.exists(log_file): return public.returnMsg(False,'日志文件不存在')
-        return public.returnMsg(True, public.GetNumLines(log_file,1000))
+        return public.returnMsg(True, self.xsssec(public.GetNumLines(log_file,1000)))
 
     def auto_run(self):
         '''
@@ -1151,7 +1157,7 @@ echo $! > {pid_file}'''.format(
                     error_count += 1
                     error_msg = '自动启动Nodej项目['+project_name+']失败!'
                     public.WriteLog(self._log_name, error_msg)
-                    public.print_log(error_msg + ", " + result['error_msg'],'ERROR')
+                    public.print_log(error_msg,'ERROR')
                 else:
                     success_count += 1
                     success_msg = '自动启动Go项目['+project_name+']成功!'
@@ -1163,4 +1169,3 @@ echo $! > {pid_file}'''.format(
         public.print_log(dene_msg,'INFO')
         return True
 
-        

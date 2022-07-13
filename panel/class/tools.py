@@ -21,7 +21,7 @@ import public,time,json
 def set_mysql_root(password):
     import db,os
     sql = db.Sql()
-    
+
     root_mysql = '''#!/bin/bash
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
@@ -50,11 +50,11 @@ service mysqld start
 echo '==========================================='
 echo "root密码成功修改为: ${pwd}"
 echo "The root password set ${pwd}  successuful"''';
-    
+
     public.writeFile('mysql_root.sh',root_mysql)
     os.system("/bin/bash mysql_root.sh " + password)
     os.system("rm -f mysql_root.sh")
-    
+
     result = sql.table('config').where('id=?',(1,)).setField('mysql_root',password)
     print(result);
 
@@ -164,7 +164,7 @@ def CloseTask():
     os.system("kill `ps -ef |grep 'install_soft.sh'|grep -v grep|grep -v panelExec|awk '{print $2}'`");
     os.system('/etc/init.d/bt restart');
     print("成功清理 " + int(ncount) + " 个任务!")
-    
+
 #自签证书
 def CreateSSL():
     import OpenSSL
@@ -275,7 +275,7 @@ def ClearRecycle_Bin():
     import files
     f = files.files();
     f.Close_Recycle_bin(None);
-    
+
 #清理其它
 def ClearOther():
     clearPath = [
@@ -286,7 +286,7 @@ def ClearOther():
                  {'path':'/www/server/panel/install','find':'.zip'},
                  {'path':'/www/server/panel/install','find':'.gz'}
                  ]
-    
+
     total = count = 0;
     print('|-正在清理临时文件及网站日志 ...');
     for c in clearPath:
@@ -345,13 +345,13 @@ def set_panel_username(username = None):
         sql.table('users').where('id=?',(1,)).setField('username',username)
         print("|-新用户名: %s" % username)
         return;
-    
+
     username = sql.table('users').where('id=?',(1,)).getField('username')
-    if username == 'admin': 
+    if username == 'admin':
         username = public.GetRandomString(8).lower()
         sql.table('users').where('id=?',(1,)).setField('username',username)
     print('username: ' + username)
-    
+
 #设定idc
 def setup_idc():
     try:
@@ -463,7 +463,7 @@ def bt_cli():
         if not re.match(rep, input_mysql):
             print("|-错误，密码中不能包含特殊符号")
             return;
-        
+
         print(input_mysql)
         set_mysql_root(input_mysql.strip())
     elif u_input == 8:

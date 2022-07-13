@@ -39,6 +39,9 @@ def control_init():
     if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'sites','%type_id%')).count():
         public.M('sites').execute("alter TABLE sites add type_id integer DEFAULT 0",())
 
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'database_servers','%db_type%')).count():
+        public.M('databases').execute("alter TABLE database_servers add db_type REAL DEFAULT 'mysql'",())
+
     if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'sites','%edate%')).count():
         public.M('sites').execute("alter TABLE sites add edate integer DEFAULT '0000-00-00'",())
 
@@ -60,6 +63,30 @@ def control_init():
     if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'databases','%sid%')).count():
         public.M('databases').execute("alter TABLE databases add sid integer DEFAULT 0",())
 
+    ndb = public.M('databases').order("id desc").field('id,pid,name,username,password,accept,ps,addtime,type').select()
+    if type(ndb) == str: public.M('databases').execute("alter TABLE databases add type TEXT DEFAULT MySQL",())
+
+    # 计划任务表处理
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'crontab','%status%')).count():
+        public.M('crontab').execute("ALTER TABLE 'crontab' ADD 'status' INTEGER DEFAULT 1",())
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'crontab','%save%')).count():
+        public.M('crontab').execute("ALTER TABLE 'crontab' ADD 'save' INTEGER DEFAULT 3",())
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'crontab','%backupTo%')).count():
+        public.M('crontab').execute("ALTER TABLE 'crontab' ADD 'backupTo' TEXT DEFAULT off",())
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'crontab','%sName%')).count():
+        public.M('crontab').execute("ALTER TABLE 'crontab' ADD 'sName' TEXT",())
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'crontab','%sBody%')).count():
+        public.M('crontab').execute("ALTER TABLE 'crontab' ADD 'sBody' TEXT",())
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'crontab','%sType%')).count():
+        public.M('crontab').execute("ALTER TABLE 'crontab' ADD 'sType' TEXT",())
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'crontab','%urladdress%')).count():
+        public.M('crontab').execute("ALTER TABLE 'crontab' ADD 'urladdress' TEXT",())
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'crontab','%save_local%')).count():
+        public.M('crontab').execute("ALTER TABLE 'crontab' ADD 'save_local' INTEGER DEFAULT 0",())
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'crontab','%notice%')).count():
+        public.M('crontab').execute("ALTER TABLE 'crontab' ADD 'notice' INTEGER DEFAULT 0",())
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'crontab','%notice_channel%')).count():
+        public.M('crontab').execute("ALTER TABLE 'crontab' ADD 'notice_channel' TEXT DEFAULT ''",())
 
     sql = db.Sql()
     if not sql.table('sqlite_master').where('type=? AND name=?', ('table', 'site_types')).count():
@@ -171,8 +198,6 @@ def control_init():
     if os.path.exists("/www/server/mysql"):
         public.ExecShell("chown mysql:mysql /etc/my.cnf;chmod 600 /etc/my.cnf")
     public.ExecShell("rm -rf /www/server/panel/temp/*")
-    if not public.is_debug():
-        public.ExecShell("rm -f /www/server/panel/class/pluginAuth.py")
     stop_path = '/www/server/stop'
     if not os.path.exists(stop_path):
         os.makedirs(stop_path)
@@ -217,31 +242,79 @@ def control_init():
     set_php_cli_env()
     check_enable_php()
     sync_node_list()
-    hide_docker_menu()
+    check_default_curl_file()
+    null_html()
+    remove_other()
+    show_docker()
 
-def hide_docker_menu():
+
+def show_docker():
     hide_menu_file = 'config/hide_menu.json'
     tip_file = 'data/show_docker'
     menu_docker_name = 'memuDocker'
-    is_write = False
-    if not os.path.exists(tip_file):
+    if os.path.exists(tip_file):
         if not os.path.exists(hide_menu_file):
             public.writeFile(hide_menu_file,'[]')
         hide_menu = public.readFile(hide_menu_file)
         if hide_menu:
             try:
                 hide_menu = json.loads(hide_menu)
-                if not menu_docker_name in hide_menu:
-                    hide_menu.append(menu_docker_name)
+                if menu_docker_name in hide_menu:
+                    hide_menu.remove(menu_docker_name)
                     public.writeFile(hide_menu_file,json.dumps(hide_menu))
             except:
-                is_write = True
-        else:
-            is_write = True
+                pass
 
-        if is_write:
-            public.writeFile(hide_menu_file,json.dumps([menu_docker_name]))
-        public.writeFile(tip_file,'')
+        if os.path.exists(tip_file):
+            os.remove(tip_file)
+
+
+def remove_other():
+    rm_files = [
+        "class/pluginAuth.so",
+        "class/pluginAuth.cpython-310-x86_64-linux-gnu.so",
+        "class/pluginAuth.cpython-310-aarch64-linux-gnu.so",
+        "class/pluginAuth.cpython-37m-i386-linux-gnu.so",
+        "class/pluginAuth.cpython-37m-loongarch64-linux-gnu.so",
+        "class/pluginAuth.cpython-37m-aarch64-linux-gnu.so",
+        "class/pluginAuth.cpython-37m-x86_64-linux-gnu.so",
+        "class/libAuth.loongarch64.so",
+        "class/libAuth.x86.so",
+        "class/libAuth.x86-64.so",
+        "class/libAuth.glibc-2.14.x86_64.so",
+        "class/libAuth.aarch64.so",
+    ]
+
+    for f in rm_files:
+        if os.path.exists(f):
+            os.remove(f)
+
+
+
+def null_html():
+    null_files = ['/www/server/nginx/html/index.html','/www/server/apache/htdocs/index.html','/www/server/panel/data/404.html']
+    null_new_body='''<html>
+<head><title>404 Not Found</title></head>
+<body>
+<center><h1>404 Not Found</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>'''
+    for null_file in null_files:
+        if not os.path.exists(null_file): continue
+
+        null_body = public.readFile(null_file)
+        if not null_body: continue
+        if null_body.find('没有找到站点') != -1 or null_body.find('您请求的文件不存在') != -1:
+            public.writeFile(null_file,null_new_body)
+
+
+def check_default_curl_file():
+    default_file = '{}/data/default_curl.pl'.format(public.get_panel_path())
+    if os.path.exists(default_file):
+        default_curl_body = public.readFile(default_file)
+        if default_curl_body:
+            public.WriteFile(default_file,default_curl_body.strip())
 
 def sync_node_list():
     import config
@@ -707,5 +780,10 @@ def clean_session():
         if old_state: public.ExecShell("rm -f " + session_path + '/*')
         return True
     except:return False
+
+
+
+if __name__ == '__main__':
+    control_init()
 
 

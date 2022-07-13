@@ -10,6 +10,39 @@
 		padding-left: 35px;
 	}
 	/* 数据同步 end*/
+
+	/* 单个文件覆盖 */
+	.cover_single_file {
+		padding: 20px;
+	}
+
+	.cover_single_file .rows {
+		display: flex;
+		line-height: 25px;
+	}
+
+	.cover_single_file .rows + .rows {
+		margin-top: 12px;
+	}
+
+	.cover_single_file .rows.input {
+		line-height: 30px;
+	}
+
+	.cover_single_file .rows-label {
+		width: 110px;
+		padding-left: 10px;
+	}
+
+	.cover_single_file .rows-value {
+		flex: 1;
+		width: 0;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+	/* end */
+
 	/* 目录查杀 */
 	@keyframes load8 {
 		from {
@@ -19,7 +52,7 @@
 			transform: rotate(360deg);
 		}
 	}
-	
+
 	@-webkit-keyframes load8 {
 		from {
 			transform: rotate(0deg);
@@ -109,7 +142,7 @@
 		color: #444;
 		font-weight: 600;
 	}
-	
+
 	.spyware_detection_head .file {
 		width: 100%;
 		word-break: break-all;
@@ -440,7 +473,7 @@
             <span class="helps"><i class="glyphicon glyphicon-question-sign" aria-hidden="true"></i><span>快捷键</span></span>
             <div class="pull-down" title="隐藏工具条" style="top: 0"><i class="glyphicon glyphicon-menu-down" aria-hidden="true"></i></div>
         </div>
-        <div class="ace_overall" style="top: 35px;">
+        <div class="ace_overall" style="top: 30px;">
             <!-- 编辑器目录 -->
             <div class="ace_catalogue" style="left:0px">
                 <div class="ace_catalogue_title">目录<div class="dir-menu-right"><span class="glyphicon glyphicon-minus" aria-hidden="true"></span></div></div>
@@ -505,6 +538,7 @@
                         <span data-type="tab"></span>
                         <span data-type="encoding"></span>
                         <span data-type="lang"></span>
+                        <span data-type="readOnly"></span>
                     </div>
                 </div>
             </div>
@@ -838,7 +872,7 @@
 </script>
 {% endblock %}
 {% block scripts %}
-  {{ super() }} 
+  {{ super() }}
     <script type="text/javascript" src="{{g.cdn_url}}/js/jquery.dragsort-0.5.2.min.js" defer></script>
     <script type="text/javascript" src="{{g.cdn_url}}/js/jquery.qrcode.min.js" defer></script>
     <script type="text/javascript" src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>

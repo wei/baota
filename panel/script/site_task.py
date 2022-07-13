@@ -67,7 +67,7 @@ def logs_analysis():
     logs_tips = logs_path + 'tips/'
     admin_path = public.readFile('/www/server/panel/data/admin_path.pl')
     exolode_mods = ['data','warning','message','workorder','login','public','code','wxapp','webhook','webssh']
-    if admin_path: 
+    if admin_path:
         admin_path = admin_path.replace('/','')
         if admin_path: exolode_mods.append(admin_path)
     explode_names = ['GetNetWork','get_task_lists','get_index_list','UpdatePanel',
@@ -83,7 +83,7 @@ def logs_analysis():
         from urlparse import parse_qs, urlparse
     else:
         from urllib.parse import parse_qs, urlparse
-        
+
     for fname in os.listdir(logs_path):
         if fname in ['tips']:continue
         day_date = fname.split('.')[0]
@@ -138,6 +138,7 @@ def logs_analysis():
                                 if not post['action'] in ['a']:
                                     tmp['s_name'] = post['action']
                                 else:
+
                                     if 'name' in post: tmp['s_name'] = post['name']
                                     if 's' in post: tmp['mod_name'] = post['s']
                         except:pass
@@ -149,7 +150,7 @@ def logs_analysis():
                     tmp_list[key]['day_count'] += 1
                 else:
                     tmp['day_count'] = 1
-                    tmp_list[key] = tmp 
+                    tmp_list[key] = tmp
             except:
                 print(url_args)
                 print(public.get_error_info())
@@ -169,18 +170,18 @@ def logs_analysis():
     panelPath = '/www/server/panel'
     logs_path = '{}/logs/click'.format(panelPath)
     logs_tips = logs_path + '/tips'
-    if not os.path.exists(logs_tips): os.makedirs(logs_tips)        
+    if not os.path.exists(logs_tips): os.makedirs(logs_tips)
 
     for fname in os.listdir(logs_path):
         if fname in ['tips']:continue
         tip_file = '{}/tips/{}.pl'.format(logs_path,day_date)
         if os.path.exists(tip_file): continue
-        
+
         day_date = fname.split('.')[0]
         if public.format_date().find(day_date) >= 0: continue
-        
+
         data_list = []
-        try:                       
+        try:
             rlist = json.loads(public.readFile(logs_path + '/' + fname))
         except :
             print(public.get_error_info())
@@ -189,9 +190,9 @@ def logs_analysis():
         for key in rlist:
             try:
                 data_list.append({ 'client_type' :'pc','os':'linux','mod_name':key,'day_count':rlist[key] })
-            except :pass            
+            except :pass
         pdata = {'data_list': json.dumps(data_list),'day_date':day_date }
- 
+
         ret = httpPost('https://www.bt.cn/api/wpanel/model_click',pdata)
         print(ret)
         public.writeFile(tip_file,'')
@@ -220,6 +221,7 @@ def logs_analysis():
                 nData[key] = mdata[key]
         public.writeFile(path, json.dumps(nData))
 
+
 oldEdate = public.readFile('data/edate.pl')
 if not oldEdate: oldEdate = '0000-00-00'
 mEdate = time.strftime('%Y-%m-%d',time.localtime())
@@ -231,7 +233,7 @@ for site in edateSites:
     get.id = site['id']
     get.name = site['name']
     siteObject.SiteStop(get)
-    
+
     bind_ftp = public.M('ftps').where('pid=?',get.id).find()
     if bind_ftp:
         get = public.dict_obj()

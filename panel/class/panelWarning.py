@@ -23,10 +23,7 @@ class panelWarning:
 
     def get_list(self,args):
         #self.sync_rule()
-        if 'force' in args:
-            public.set_module_logs('panelWarning', 'get_list', 1)
         p = public.get_modules('class/safe_warning')
-
         data = {
             'security':[],
             'risk':[],

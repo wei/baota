@@ -22,7 +22,7 @@ class plugin_deployment:
     timeoutCount = 0
     oldTime = 0
     _speed_key = 'dep_download_speed'
-    
+
     #获取列表
     def GetList(self,get):
         self.GetCloudList(get)
@@ -30,12 +30,12 @@ class plugin_deployment:
         if not os.path.exists(jsonFile): return public.returnMsg(False,'配置文件不存在!')
         data = {}
         data = self.get_input_list(json.loads(public.readFile(jsonFile)))
-            
-        if not hasattr(get,'type'): 
+
+        if not hasattr(get,'type'):
             get.type = 0
         else:
             get.type = int(get.type)
-        if not hasattr(get,'search'): 
+        if not hasattr(get,'search'):
             search = None
             m = 0
         else:
@@ -44,7 +44,7 @@ class plugin_deployment:
             else:
                 search = get.search.lower()
             m = 1
-            
+
         tmp = []
         for d in data['list']:
             i=0
@@ -63,7 +63,7 @@ class plugin_deployment:
                 del(d['versions'][0]['md5'])
                 d = self.get_icon(d)
                 tmp.append(d)
-            
+
         data['list'] = tmp
         return data
 
@@ -75,11 +75,11 @@ class plugin_deployment:
         m_uri = pinfo['min_image']
         pinfo['min_image'] = '/static/img/dep_ico/%s.png' % pinfo['name']
         if sys.version_info[0] == 2: filename = filename.encode('utf-8')
-        if os.path.exists(filename): 
+        if os.path.exists(filename):
             if os.path.getsize(filename) > 100: return pinfo
         public.ExecShell("wget -O " + filename + ' https://www.bt.cn' + m_uri + " &")
         return pinfo
-    
+
     #获取插件列表
     def GetDepList(self,get):
         jsonFile = self.__setupPath + '/deployment_list.json'
@@ -98,7 +98,7 @@ class plugin_deployment:
                 data['list'].append(d)
             return data
         except:return data
-    
+
     #从云端获取列表
     def GetCloudList(self,get):
         try:
@@ -114,9 +114,9 @@ class plugin_deployment:
             return public.returnMsg(True,'无需更新!')
         except:
             return public.returnMsg(False,'从云端获取失败!')
-        
-        
-    
+
+
+
     #导入程序包
     def AddPackage(self,get):
         jsonFile = self.__setupPath + '/deployment_list_other.json'
@@ -159,7 +159,7 @@ class plugin_deployment:
         data = json.loads(public.readFile(jsonFile))
         is_exists = False
         for i in range(len(data)):
-            if data[i]['name'] == pinfo['name']: 
+            if data[i]['name'] == pinfo['name']:
                 data[i] = pinfo
                 is_exists = True
 
@@ -174,32 +174,32 @@ class plugin_deployment:
         jsonFile = self.__setupPath + '/deployment_list_other.json'
         if not os.path.exists(jsonFile): public.returnMsg(False,'没有找到[%s]' % p_name)
         data = json.loads(public.readFile(jsonFile))
-        
+
         for i in range(len(data)):
             if data[i]['name'] == p_name: return data[i]
         return public.returnMsg(False,'没有找到[%s]' % p_name)
-                
-    
+
+
     #删除程序包
     def DelPackage(self,get):
         jsonFile = self.__setupPath + '/deployment_list_other.json'
         if not os.path.exists(jsonFile): return public.returnMsg(False,'配置文件不存在!')
-        
+
         data = {}
         data = json.loads(public.readFile(jsonFile))
-        
+
         tmp = []
         for d in data:
-            if d['name'] == get.dname: 
+            if d['name'] == get.dname:
                 s_file = self.__panelPath + '/package/' + d['name'] + '.zip'
                 if os.path.exists(s_file): os.remove(s_file)
                 continue
             tmp.append(d)
-        
+
         data = tmp
         public.writeFile(jsonFile,json.dumps(data))
         return public.returnMsg(True,'删除成功!')
-    
+
     #下载文件
     def DownloadFile(self,url,filename):
         import requests
@@ -212,14 +212,14 @@ class plugin_deployment:
         count = 0
         with open(filename,'wb+') as with_res_f:
             for download_chunk in download_res.iter_content(chunk_size=res_chunk_size):
-                if download_chunk: 
+                if download_chunk:
                     count += 1
                     with_res_f.write(download_chunk)
                     speed_last_size = len(download_chunk)
                     self.DownloadHook(count,speed_last_size,headers_total_size)
             with_res_f.close()
-            
-    #下载文件进度回调  
+
+    #下载文件进度回调
     def DownloadHook(self,count, blockSize, totalSize):
         used = count * blockSize
         pre1 = int((100.0 * used / totalSize))
@@ -228,11 +228,11 @@ class plugin_deployment:
             speed = {'name':'下载文件','total':totalSize,'used':used,'pre':self.pre,'speed':int(dspeed)}
             self.WriteLogs(speed)
             self.pre = pre1
-    
+
     #写输出日志
     def WriteLogs(self,logMsg):
         cache.set(self._speed_key,logMsg,3600)
-    
+
     #一键安装网站程序
     #param string name 程序名称
     #param string site_name 网站名称
@@ -251,7 +251,7 @@ class plugin_deployment:
         pinfo = self.GetPackageInfo(name)
         id = pinfo['id']
         if not pinfo: return public.returnMsg(False,'指定软件包不存在!')
-        
+
         #检查本地包
         self.WriteLogs({'name':'正在校验软件包...','total':0,'used':0,'pre':0,'speed':0})
         pack_path = self.__panelPath + '/package'
@@ -263,7 +263,7 @@ class plugin_deployment:
             if md5str != pinfo['versions'][0]['md5']: isDownload = True
         else:
             isDownload = True
-            
+
         #下载文件
         if isDownload:
             self.WriteLogs({'name':'正在下载文件 ...','total':0,'used':0,'pre':0,'speed':0})
@@ -273,7 +273,7 @@ class plugin_deployment:
 
         pinfo = self.set_temp_file(packageZip,path)
         if not pinfo: return public.returnMsg(False,'在安装包中找不到【宝塔自动部署配置文件】')
-        
+
         #设置权限
         self.WriteLogs({'name':'设置权限','total':0,'used':0,'pre':0,'speed':0})
         public.ExecShell('chmod -R 755 ' + path)
@@ -282,7 +282,7 @@ class plugin_deployment:
             if pinfo['chmod']:
                 for chm in pinfo['chmod']:
                     public.ExecShell('chmod -R ' + str(chm['mode']) + ' ' + (path + '/' + chm['path']).replace('//','/'))
-            
+
         #安装PHP扩展
         self.WriteLogs({'name':'安装必要的PHP扩展','total':0,'used':0,'pre':0,'speed':0})
         if 'php_ext' in pinfo:
@@ -290,7 +290,7 @@ class plugin_deployment:
             mfile = files.files()
             if type(pinfo['php_ext']) != list : pinfo['php_ext'] = pinfo['php_ext'].strip().split(',')
             for ext in pinfo['php_ext']:
-                if ext == 'pathinfo': 
+                if ext == 'pathinfo':
                     import config
                     con = config.config()
                     get.version = php_version
@@ -301,7 +301,7 @@ class plugin_deployment:
                     get.version = php_version
                     get.type = '1'
                     mfile.InstallSoft(get)
-                
+
         #解禁PHP函数
         if 'enable_functions' in pinfo:
             try:
@@ -320,13 +320,13 @@ class plugin_deployment:
                 public.phpReload(php_version)
             except:pass
 
-        
+
         #执行额外shell进行依赖安装
         self.WriteLogs({'name':'执行额外SHELL','total':0,'used':0,'pre':0,'speed':0})
-        if os.path.exists(path+'/install.sh'): 
+        if os.path.exists(path+'/install.sh'):
             public.ExecShell('cd '+path+' && bash ' + 'install.sh ' + find['name'] + " &> install.log")
             public.ExecShell('rm -f ' + path+'/install.sh')
-            
+
         #是否执行Composer
         if os.path.exists(path + '/composer.json'):
             self.WriteLogs({'name':'执行Composer','total':0,'used':0,'pre':0,'speed':0})
@@ -341,7 +341,7 @@ class plugin_deployment:
                     phpiniConf = phpiniConf.replace('proc_open,proc_get_status,','')
                     public.writeFile(phpini,phpiniConf)
                     public.ExecShell('nohup cd '+path+' && '+execPHP+' /usr/bin/composer install -vvv > /tmp/composer.log 2>&1 &')
-        
+
         #写伪静态
         self.WriteLogs({'name':'设置伪静态','total':0,'used':0,'pre':0,'speed':0})
         swfile = path + '/nginx.rewrite'
@@ -356,16 +356,16 @@ class plugin_deployment:
             if pinfo['run_path'] != '/' and not os.path.exists(swpath):
                 public.writeFile(swpath, public.readFile(swfile))
 
-                
+
         #删除伪静态文件
         public.ExecShell("rm -f " + path + '/*.rewrite')
-        
+
         #删除多余文件
         rm_file = path + '/index.html'
-        if os.path.exists(rm_file): 
+        if os.path.exists(rm_file):
             rm_file_body = public.readFile(rm_file)
             if rm_file_body.find('panel-heading') != -1: os.remove(rm_file)
-        
+
         #设置运行目录
         self.WriteLogs({'name':'设置运行目录','total':0,'used':0,'pre':0,'speed':0})
         if 'run_path' in pinfo:
@@ -376,7 +376,7 @@ class plugin_deployment:
                 mobj.id = find['id']
                 mobj.runPath = pinfo['run_path']
                 siteObj.SetSiteRunPath(mobj)
-            
+
         #导入数据
         self.WriteLogs({'name':'导入数据库','total':0,'used':0,'pre':0,'speed':0})
         if os.path.exists(path+'/import.sql'):
@@ -406,7 +406,7 @@ class plugin_deployment:
                         os.remove(filename)
                     else:
                         public.ExecShell("rm -rf " + filename)
-                
+
         public.serviceReload()
         if id: self.depTotal(id)
         self.WriteLogs({'name':'准备部署','total':0,'used':0,'pre':0,'speed':0})
@@ -429,7 +429,7 @@ class plugin_deployment:
                 if not auto_config in df[2]: continue
                 if not os.path.exists(df[0] + '/' + auto_config): continue
                 d_path = df[0]
-            if d_path: 
+            if d_path:
                 tmp_path = d_path
                 auto_file = tmp_path + '/' + auto_config
                 if os.path.exists(auto_file):
@@ -463,8 +463,8 @@ class plugin_deployment:
                     print(shutil.copyfile(f_src,f_dst))
             return True
         except: return False
-                
-    
+
+
     #提交安装统计
     def depTotal(self,id):
         import panelAuth
@@ -473,7 +473,7 @@ class plugin_deployment:
         pdata['pid'] = id
         p_url = public.GetConfigValue('home') + '/api/pluginother/create_order_okey'
         public.httpPost(p_url,pdata)
-    
+
     #获取进度
     def GetSpeed(self,get):
         try:
@@ -482,7 +482,7 @@ class plugin_deployment:
             return result
         except:
             return {'name':'准备部署','total':0,'used':0,'pre':0,'speed':0}
-     
+
     #获取包信息
     def GetPackageInfo(self,name):
         data = self.GetDepList(None)
@@ -491,16 +491,16 @@ class plugin_deployment:
             if info['name'] == name:
                 return info
         return False
-    
+
     #检查指定包是否存在
     def CheckPackageExists(self,name):
         data = self.GetDepList(None)
         if not data: return False
         for info in data['list']:
             if info['name'] == name: return True
-        
+
         return False
-    
+
     #文件的MD5值
     def GetFileMd5(self,filename):
         if not os.path.isfile(filename): return False
@@ -514,8 +514,7 @@ class plugin_deployment:
             myhash.update(b)
         f.close()
         return myhash.hexdigest()
-    
+
     #获取站点标识
     def GetSiteId(self,get):
         return public.M('sites').where('name=?',(get.webname,)).getField('id')
-    

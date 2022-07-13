@@ -32,11 +32,11 @@ class HttpProxy:
             if h in ['Content-Encoding','Transfer-Encoding']: continue
             headers[h] = p_res.headers[h]
             if h in ['Location']:
-                
+
                 if headers[h].find('phpmyadmin_') != -1:
-                    if not self._pma_path: 
+                    if not self._pma_path:
                         self._pma_path = get_phpmyadmin_dir()
-                        if self._pma_path: 
+                        if self._pma_path:
                             self._pma_path = self._pma_path[0]
                         else:
                             self._pma_path = ''
@@ -65,7 +65,7 @@ class HttpProxy:
         #     res.set_cookie(k, cookie_dict[k],
         #                         expires=expires, httponly=httponly,
         #                         path='/')
-        
+
         return res
 
     def get_pma_phpversion(self):
@@ -98,7 +98,7 @@ class HttpProxy:
             @author hwliang<2022-01-19>
             @return str
         '''
-        
+
         pma_version = self.get_pma_version()
         if not pma_version: return False
 
@@ -129,18 +129,18 @@ class HttpProxy:
             php_bin = php_install_path + '/' + version + '/bin/php'
             if os.path.exists(php_bin):
                 installed_php_versions.append(version)
-        
+
         if not installed_php_versions: return False
 
         php_version = installed_php_versions[-1]
-        
+
         import ajax
         args = public.dict_obj()
         args.phpversion = php_version
         ajax.ajax().setPHPMyAdmin(args)
         public.WriteLog('数据库','检测到phpMyAdmin使用的PHP版本不兼容，已自动修改为最佳兼容版本: PHP-' + php_version)
         time.sleep(0.5)
-        
+
 
     def get_request_headers(self):
         '''
@@ -175,7 +175,7 @@ class HttpProxy:
             data[k] = form.getlist(k)
             if len(data[k]) == 1: data[k] = data[k][0]
         return data
-        
+
     def proxy(self,proxy_url):
         '''
             @name 代理指定URL地址
@@ -194,18 +194,20 @@ class HttpProxy:
                     'User-Agent':'BT-Panel',
                     'Connection':'close'
                 }
-                try:
-                    session[s_key].headers['Host'] = public.en_punycode(request.url_root).replace('http://','').replace('https://','').split('/')[0]
-                except:pass
+
                 if proxy_url.find('phpmyadmin') != -1:
                     if proxy_url.find('https://') == 0:
                         session[s_key].cookies.update({'pma_lang_https':'zh_CN'})
                     else:
                         session[s_key].cookies.update({'pma_lang':'zh_CN'})
                     self.set_pma_phpversion()
-                
+
             if 'Authorization' in request.headers:
                 session[s_key].headers['Authorization'] = request.headers['Authorization']
+
+            try:
+                session[s_key].headers['Host'] = public.en_punycode(request.url_root).replace('http://','').replace('https://','').split('/')[0]
+            except:pass
             # headers = self.get_request_headers()
             headers = None
             if request.method == 'GET':
@@ -216,12 +218,12 @@ class HttpProxy:
                 if request.files: # 如果上传文件
                     tmp_path = '{}/tmp'.format(public.get_panel_path())
                     if not os.path.exists(tmp_path): os.makedirs(tmp_path,384)
-    
+
                     # 处理请求头
                     if headers:
                         if 'Content-Type' in headers: del(headers['Content-Type'])
                         if 'Content-Length' in headers: del(headers['Content-Length'])
-    
+
                     # 遍历form表单中的所有文件
                     files = {}
                     f_list = {}
@@ -230,25 +232,25 @@ class HttpProxy:
                         filename = upload_files[0].filename
                         if not filename: filename = public.GetRandomString(12)
                         tmp_file = '{}/{}'.format(tmp_path,filename)
-                        
-                        
+
+
                         # 保存上传文件到临时目录
                         with open(tmp_file,'wb') as f:
                             for tmp_f in upload_files:
                                 f.write(tmp_f.read())
                             f.close()
-    
+
                         # 构造文件上传对象
                         f_list[key] = open(tmp_file,'rb')
                         files[key] = (filename, f_list[key])
-    
+
                         # 删除临时文件
                         if os.path.exists(tmp_file): os.remove(tmp_file)
-    
+
                     # 转发上传请求
-                    
+
                     p_res = session[s_key].post(proxy_url,self.form_to_dict(request.form),headers=headers,files=files,verify=False,allow_redirects=False)
-    
+
                     # 释放文件对象
                     for fkey in f_list.keys():
                         f_list[fkey].close()
@@ -256,7 +258,7 @@ class HttpProxy:
                     p_res = session[s_key].post(proxy_url,self.form_to_dict(request.form),headers=headers,verify=False,allow_redirects=False)
             else:
                 return Response('不支持的请求类型',500)
-            
+
             # PHP版本自动切换处理
             if proxy_url.find('phpmyadmin') != -1 and proxy_url.find('/index.php') != -1:
                 if len(p_res.content) < 1024:
@@ -267,7 +269,7 @@ class HttpProxy:
                     self.set_pma_phpversion()
                     session['set_pma_phpversion'] = True
                     return '不兼容的PHP版本,已尝试自动切换到兼容的PHP版本,请刷新页面重试!'
-            
+
             res = Response(p_res.content,headers=self.get_res_headers(p_res),content_type=p_res.headers.get('content-type',None),status=p_res.status_code)
             res = self.set_res_headers(res,p_res)
             return res

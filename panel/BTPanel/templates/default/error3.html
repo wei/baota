@@ -250,7 +250,7 @@
     $('.daily-product-buy').on('click', '.installWaf', function(){
       bt.soft.install('btwaf')
     });
-		
+
     $('.payPlugin').on('click',function(){
       bt.soft.get_soft_find('btwaf',function(rdata){
         bt.soft.product_pay_view({"name":rdata.title,"pid":rdata.pid,"type":rdata.type,"plugin":true,"ps":rdata.ps, 'totalNum': 25});
