@@ -5,6 +5,66 @@
 <link rel="stylesheet" type="text/css" href="{{g.cdn_url}}/css/files_style.css">
 <style id="file_list_info">.file_checkbox{width:40px !important;}.file_name{width:300px !important;}.file_ps{width:200px !important;}.file_size{width:100px !important;}.file_mtime{width:180px !important;}.file_user{width:80px !important;}.file_accept{width:80px !important;}.file_operation{width:220px !important;}.file_table_view.list_view .file_list_content .file_tr{width:auto;}.file_table_view.list_view .file_list_content{width:auto;}</style>
 <style>
+    /* 远程下载样式 */
+    .upload_download .nav_down_list li span:nth-child(2){width:140px}
+    /* 置顶样式 */
+    .file_list_content .glyphicon-pushpin{
+        font-size: 17px;
+        position: absolute;
+        color: #23527c;
+        margin-top: 11px;
+        cursor: pointer;
+    }
+    /* 置顶样式 end*/
+
+    /* 文件高级搜索 */
+    .replace_content_view.layui-layer-page .layui-layer-content{
+        overflow: inherit;
+    }
+    .file-expert-search	.tname{
+        width:70px
+    }
+    .file-expert-search .line{
+        padding:10px 0;
+    }
+    .file-expert-search .line:first-child{
+        padding-top: 0;
+    }
+    .file-expert-search .line .info-r{
+        margin-left:70px;
+        margin-bottom:0px;
+    }
+    .file-expert-search .line-no-pd{
+        padding-top:0px
+    }
+    .file-expert-search .bt_select_updown .bt_select_value,
+    .file-expert-search .bt_select_updown{
+        height: 36px;
+        line-height: 35px;
+    }
+
+    .file-expert-search-ext li {
+        display: inline-block;
+        padding: 2px 10px;
+        color: #767575;
+        background: #f7f7f7;
+        border-radius: 4px;
+        margin-right: 5px;
+        margin-bottom: 4px;
+        cursor: pointer;
+        border: 1px solid #eee;
+    }
+    .file-expert-search-ext li:hover{
+        background:#e5e5e5
+    }
+    .file-expert-search .inlineBlock.vertBootom{
+        vertical-align: bottom;
+    }
+    .file-expert-search .inlineBlock.vertBootom.pr8{
+        vertical-align: middle;
+    }
+
+    /* 文件高级搜索end */
 	/* 数据同步 */
 	.demo-class .line{
 		padding-left: 35px;
@@ -202,6 +262,51 @@
 		white-space: nowrap;
 	}
 	/* end */
+    /* 云存储样式 */
+    .cloud-head-box {
+        height: 62px;
+        border-bottom: 1px solid #ddd;
+    }
+    .cloud-content-box {
+        height: 510px;
+        overflow: auto;
+    }
+    .cloud-layer-view .btn {
+        border-radius: 0;
+    }
+
+    .cloud-layer-view .place-input {
+        background-color: #f3f3f3;
+        border: 1px solid #ccc;
+        height: 30px;
+        line-height: 28px;
+        overflow: hidden;
+        margin: 1px 0 0 -1px;
+        width: 340px;
+    }
+
+    .cloud-layer-view .place-input ul {
+        display: inline-block;
+        position: relative;
+        width: auto;
+    }
+
+    .cloud-layer-view .place-input ul li {
+        background: url("/static/img/ico/ico-ltr.png") no-repeat right center;
+        float: left;
+        padding-left: 10px;
+        padding-right: 18px;
+    }
+
+    .cloud-layer-view .place-input ul li a {
+        height: 28px;
+        cursor: pointer;
+        display: inline-block;
+    }
+    .cloud-content-box .list-list .cursor span {
+        line-height: 30px;
+    }
+    /* 云存储样式 end */
 </style>
 <div class="main-content">
     <a style="display: none;" id="recycle_bin" data="{{data['recycle_bin']}}"></a>
@@ -235,7 +340,8 @@
 			</div>
             <div class="nav_group">
 				<div class="nav_btn upload_download">
-					<span class="nav_btn_title">远程下载</span>
+					<span class="nav_btn_title">远程下载</span><i class="iconfont icon-xiala"></i>
+                    <ul class="nav_down_list"></ul>
 				</div>
 			</div>
 			<div class="nav_group">

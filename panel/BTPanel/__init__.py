@@ -21,7 +21,7 @@ if not os.name in ['nt']:
 if not 'class/' in sys.path:
     sys.path.insert(0, 'class/')
 
-from flask import Config, Flask, session, render_template, send_file, request, redirect, g, make_response, \
+from flask import Flask, session, render_template, send_file, request, redirect, g, make_response, \
     render_template_string, abort,stream_with_context, Response as Resp
 from cachelib import SimpleCache
 from werkzeug.wrappers import Response
@@ -29,7 +29,7 @@ from flask_session import Session
 from flask_compress import Compress
 
 
-cache = SimpleCache()
+cache = SimpleCache(5000)
 import public
 
 # 初始化Flask应用
@@ -77,7 +77,6 @@ if app.config['SSL']:
     app.config['SESSION_COOKIE_SECURE'] = True
 else:
     app.config['SESSION_COOKIE_SAMESITE'] = None
-
 
 Session(app)
 
@@ -176,6 +175,7 @@ def request_check():
     #     return abort(403)
 
     if session.get('debug') == 1: return
+    g.get_csrf_html_token_key = public.get_csrf_html_token_key()
 
 
     if app.config['BASIC_AUTH_OPEN']:
@@ -291,9 +291,9 @@ REQUEST_FORM: {request_form}
     request_date = public.getDate(),
     remote_addr = public.GetClientIp(),
     method = request.method,
-    full_path = request.full_path,
+    full_path = public.xsssec(request.full_path),
     request_form = _form,
-    user_agent = request.headers.get('User-Agent'),
+    user_agent = public.xsssec(request.headers.get('User-Agent')),
     panel_version = public.version(),
     os_version = public.get_os_version()
 )
@@ -492,18 +492,16 @@ def acme(pdata=None):
             'apply_cert_api', 'apply_dns_auth')
     return publicObject(acme_v2_object, defs, None, pdata)
 
-
+import panelMessage
+message_object = panelMessage.panelMessage()
 @app.route('/message/<action>', methods=method_all)
 def message(action=None):
     # 提示消息管理
     comReturn = comm.local()
     if comReturn: return comReturn
-    import panelMessage
-    message_object = panelMessage.panelMessage()
     defs = (
     'get_messages', 'get_message_find', 'create_message', 'status_message', 'remove_message', 'get_messages_all')
     return publicObject(message_object, defs, action, None)
-
 
 
 
@@ -562,7 +560,7 @@ def ssh_security(pdata=None):
     firewallObject = ssh_security.ssh_security()
     defs = ('san_ssh_security', 'set_password', 'set_sshkey', 'stop_key', 'get_config',
             'stop_password', 'get_key', 'return_ip', 'add_return_ip', 'del_return_ip', 'start_jian', 'stop_jian',
-            'get_jian', 'get_logs','set_root','stop_root','start_auth_method','stop_auth_method','get_auth_method','check_so_file','get_so_file','get_pin')
+            'get_jian', 'get_logs','set_root','stop_root','start_auth_method','stop_auth_method','get_auth_method','check_so_file','get_so_file','get_pin','set_login_send','get_login_send','get_msg_push_list','clear_login_send')
     return publicObject(firewallObject, defs, None, pdata)
 
 
@@ -601,13 +599,13 @@ def panel_password(pdata=None):
             )
     return publicObject(dataObject, defs, None, pdata)
 
-
 @app.route('/warning', methods=method_all)
 def panel_warning(pdata=None):
+
     # 首页安全警告
     comReturn = comm.local()
     if comReturn: return comReturn
-    if 'request_token' in session and 'login' in session:
+    if public.get_csrf_html_token_key() in session and 'login' in session:
         if not check_csrf(): return public.ReturnJson(False, 'INIT_CSRF_ERR'), json_header
     get = get_input()
     ikey = 'warning_list'
@@ -623,6 +621,7 @@ def panel_warning(pdata=None):
             except:
                 result = '{"ignore":[],"risk":[],"security":[]}'
         return result,json_header
+
     import panelWarning
     dataObject = panelWarning.panelWarning()
     defs = ('get_list', 'set_ignore', 'check_find')
@@ -670,6 +669,21 @@ def project(mod_name,def_name):
     get.mod_name = mod_name
     get.def_name = def_name
     return publicObject(project_obj,defs,None,get)
+
+
+@app.route('/msg/<mod_name>/<def_name>', methods=method_all)
+def msgcontroller(mod_name,def_name):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    from MsgController import MsgController
+    project_obj = MsgController()
+    defs = ('model',)
+    get = get_input()
+    get.action = 'model'
+    get.mod_name = mod_name
+    get.def_name = def_name
+    return publicObject(project_obj,defs,None,get)
+
 
 @app.route('/docker', methods=method_all)
 def docker(pdata=None):
@@ -824,7 +838,7 @@ def config(pdata=None):
     'user_mail_send', 'get_user_mail', 'set_dingding', 'get_dingding', 'get_settings', 'user_stmp_mail_send',
     'user_dingding_send','get_login_send','set_login_send','set_empty','clear_login_send','get_login_log','login_ipwhite',
     'set_ssl_verify','get_ssl_verify','get_password_config','set_password_expire','set_password_safe',"get_msg_configs",
-    "get_module_template","install_msg_module", "uninstall_msg_module", "set_msg_config"
+    "get_module_template","install_msg_module", "uninstall_msg_module", "set_msg_config", "set_default_channel","get_msg_fun","get_msg_push_list","get_msg_configs_by"
     )
     return publicObject(config.config(), defs, None, pdata)
 
@@ -834,6 +848,7 @@ def ajax(pdata=None):
     # 面板系统服务状态接口
     comReturn = comm.local()
     if comReturn: return comReturn
+
     import ajax
     ajaxObject = ajax.ajax()
     defs = ('get_lines', 'php_info', 'change_phpmyadmin_ssl_port', 'set_phpmyadmin_ssl', 'get_phpmyadmin_ssl','get_pd','get_pay_type',
@@ -869,7 +884,7 @@ def deployment(pdata=None):
     if comReturn: return comReturn
     import plugin_deployment
     sysObject = plugin_deployment.plugin_deployment()
-    defs = ('GetList', 'AddPackage', 'DelPackage', 'SetupPackage', 'GetSpeed', 'GetPackageOther')
+    defs = ('GetList','GetSiteList', 'AddPackage', 'DelPackage', 'SetupPackage', 'GetSpeed', 'GetPackageOther')
     return publicObject(sysObject, defs, None, pdata)
 
 
@@ -898,7 +913,8 @@ def ssl(pdata=None):
             'download_cert', 'set_cert', 'cancel_cert_order','ApplyDVSSL','apply_cert_order_pay',
             'get_order_list', 'get_order_find', 'apply_order_pay', 'get_pay_status', 'apply_order', 'get_verify_info',
             'get_verify_result', 'get_product_list', 'set_verify_info','renew_cert_order',
-            'GetSSLInfo', 'downloadCRT', 'GetSSLProduct', 'Renew_SSL', 'Get_Renew_SSL','GetAuthToken','GetBindCode','apply_cert_install_pay')
+            'GetSSLInfo', 'downloadCRT', 'GetSSLProduct', 'Renew_SSL', 'Get_Renew_SSL','GetAuthToken','GetBindCode','apply_cert_install_pay',
+            'check_ssl_method')
     get = get_input()
 
     if get.action == 'download_cert':
@@ -906,7 +922,7 @@ def ssl(pdata=None):
         import base64
         result = toObject.download_cert(get)
         fp = BytesIO(base64.b64decode(result['data']))
-        return send_file(fp, attachment_filename=result['filename'], as_attachment=True, mimetype='application/zip')
+        return send_file(fp, download_name=result['filename'], as_attachment=True, mimetype='application/zip')
     result = publicObject(toObject, defs, get.action, get)
     return result
 
@@ -994,10 +1010,10 @@ def download():
         if extName in ['png', 'gif', 'jpeg', 'jpg']: mimetype = None
         return send_file(filename, mimetype=mimetype,
                          as_attachment=True,
-                         add_etags=True,
+                         etag=True,
                          conditional=True,
-                         attachment_filename=os.path.basename(filename),
-                         cache_timeout=0)
+                         download_name=os.path.basename(filename),
+                         max_age=0)
 
 
 @app.route('/cloud', methods=method_all)
@@ -1079,7 +1095,7 @@ def send_favicon():
     if comReturn: return abort(404)
     s_file = '/www/server/panel/BTPanel/static/favicon.ico'
     if not os.path.exists(s_file): return abort(404)
-    return send_file(s_file, conditional=True, add_etags=True)
+    return send_file(s_file, conditional=True, etag=True)
 
 @app.route('/rspamd', defaults={'path': ''},methods=method_all)
 @app.route('/rspamd/<path:path>',methods=method_all)
@@ -1096,9 +1112,9 @@ def proxy_rspamd_requests(path):
         headers[h] = request.headers[h]
     if request.method == "GET":
         if re.search("\.(js|css)$",path):
-            return send_file('/usr/share/rspamd/www/rspamd/'+path,conditional=True,add_etags=True)
+            return send_file('/usr/share/rspamd/www/rspamd/'+path,conditional=True,etag=True)
         if path == "/":
-            return send_file('/usr/share/rspamd/www/rspamd/',conditional=True,add_etags=True)
+            return send_file('/usr/share/rspamd/www/rspamd/',conditional=True,etag=True)
         url = "http://127.0.0.1:11334/rspamd/" + path + "?" +param
         for i in ['stat','auth','neighbours','list_extractors','list_transforms','graph','maps','actions','symbols','history','errors','check_selector','saveactions','savesymbols','getmap']:
             if i in path:
@@ -1191,7 +1207,9 @@ def login():
                 s_file = 'data/session/{}'.format(session['tmp_login_id'])
                 if os.path.exists(s_file):
                     os.remove(s_file)
-            del(session['request_token_head'])
+            token_key = public.get_csrf_html_token_key()
+            if token_key in session:
+                del(session[token_key])
             session.clear()
             sess_file = 'data/sess_files/' + public.get_sess_key()
             if os.path.exists(sess_file):
@@ -1307,7 +1325,7 @@ def code():
     cache.set("codeStr", public.md5("".join(codeImage[1]).lower()), 180)
     cache.set("codeOut", 1, 0.1)
     out.seek(0)
-    return send_file(out, mimetype='image/png', cache_timeout=0)
+    return send_file(out, mimetype='image/png', max_age=0)
 
 
 @app.route('/down/<token>', methods=method_all)
@@ -1390,8 +1408,8 @@ def down(token=None, fname=None):
             b_name = os.path.basename(filename)
             return send_file(filename, mimetype=mimetype,
                              as_attachment=True,
-                             attachment_filename=b_name,
-                             cache_timeout=0)
+                             download_name=b_name,
+                             max_age=0)
     except:
         return abort(404)
 
@@ -1408,6 +1426,42 @@ def databaseModel(mod_name, def_name):
     get.def_name = def_name
 
     return publicObject(project_obj, defs, None, get)
+
+#系统安全模型页面
+@app.route('/safe/<mod_name>/<def_name>', methods=method_all)
+def safeModel(mod_name, def_name):
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    from panelSafeController import SafeController
+    project_obj = SafeController()
+    defs = ('model',)
+    get = get_input()
+    get.action = 'model'
+    get.mod_name = mod_name
+    get.def_name = def_name
+
+    return publicObject(project_obj, defs, None, get)
+
+# 通用模型路由
+@app.route('/<index>/<mod_name>/<def_name>', methods=method_all)
+def allModule(index,mod_name,def_name):
+    p_path = public.get_plugin_path() + '/' + index
+    if os.path.exists(p_path):
+        return panel_other(index,mod_name,def_name)
+
+    comReturn = comm.local()
+    if comReturn: return comReturn
+    from panelController import Controller
+    controller_obj = Controller()
+    defs = ('model',)
+    get = get_input()
+    get.model_index = index
+    get.action = 'model'
+    get.mod_name = mod_name
+    get.def_name = def_name
+    return publicObject(controller_obj, defs, None, get)
+
+
 
 @app.route('/public', methods=method_all)
 def panel_public():
@@ -1491,7 +1545,7 @@ def panel_other(name=None, fun=None, stype=None):
             elif stype=='html':
                 pass
             else:
-                if 'request_token' in session and 'login' in session:
+                if public.get_csrf_cookie_token_key() in session and 'login' in session:
                     if not check_csrf(): return public.ReturnJson(False, 'INIT_CSRF_ERR'), json_header
         args = None
     else:
@@ -1535,7 +1589,7 @@ def panel_other(name=None, fun=None, stype=None):
         if not re.match(r"^[\w\./-]+$", s_file): return abort(404)
         if not public.path_safe_check(s_file): return abort(404)
         if not os.path.exists(s_file): return abort(404)
-        return send_file(s_file, conditional=True, add_etags=True)
+        return send_file(s_file, conditional=True, etag=True)
 
     # 准备参数
     if not args: args = get_input()
@@ -1606,7 +1660,6 @@ def panel_hook():
 @app.route('/install', methods=method_all)
 def install():
     # 初始化面板接口
-    if not session.get('login',None): return public.error_not_login()
     if not os.path.exists('install.pl'): return redirect('/login')
     if public.M('config').where("id=?", ('1',)).getField('status') == 1:
         if os.path.exists('install.pl'): os.remove('install.pl')
@@ -1733,20 +1786,16 @@ class run_exec:
 def check_csrf():
     # CSRF校验
     if app.config['DEBUG']: return True
-    request_token = request.cookies.get('request_token')
-    if session['request_token'] != request_token: return False
     http_token = request.headers.get('x-http-token')
     if not http_token: return False
-    if http_token != session['request_token_head']: return False
-    cookie_token = request.headers.get('x-cookie-token')
-    if cookie_token != session['request_token']: return False
+    if http_token != public.get_csrf_sess_html_token_value(): return False
     return True
 
 
 def publicObject(toObject, defs, action=None, get=None):
     try:
         # 模块访问前置检查
-        if 'request_token' in session and 'login' in session:
+        if public.get_csrf_sess_html_token_value() and session.get('login',None):
             if not check_csrf(): return public.ReturnJson(False, 'INIT_CSRF_ERR'), json_header
 
         if not get: get = get_input()
@@ -1782,7 +1831,7 @@ def check_login(http_token=None):
     if 'login' in session:
         loginStatus = session['login']
         if loginStatus and http_token:
-            if session['request_token_head'] != http_token: return False
+            if public.get_csrf_sess_html_token_value() != http_token: return False
         return loginStatus
     return False
 
@@ -1917,19 +1966,21 @@ def is_login(result):
     # 判断是否登录2
     if 'login' in session:
         if session['login'] == True:
-            result = make_response(result)
-            request_token = public.GetRandomString(48)
-            session['request_token'] = request_token
-            samesite = app.config['SESSION_COOKIE_SAMESITE']
-            secure = app.config['SESSION_COOKIE_SECURE']
-            if app.config['SSL'] and request.full_path.find('/login?tmp_token=') == 0:
-                samesite = 'None'
-                secure = True
-            result.set_cookie('request_token', request_token,
-            max_age=86400 * 30,
-            samesite= samesite,
-            secure=secure
-            )
+            # result = make_response(result)
+            # request_token = public.GetRandomString(48)
+            # request_token_key = public.get_csrf_cookie_token_key()
+            # session[request_token_key] = request_token
+            # samesite = app.config['SESSION_COOKIE_SAMESITE']
+            # secure = app.config['SESSION_COOKIE_SECURE']
+            # if app.config['SSL'] and request.full_path.find('/login?tmp_token=') == 0:
+            #     samesite = 'None'
+            #     secure = True
+            # result.set_cookie(request_token_key, request_token,
+            # max_age=86400 * 30,
+            # samesite= samesite,
+            # secure=secure
+            # )
+            pass
     return result
 
 
@@ -2131,8 +2182,8 @@ def ws_project(ws):
     get = json.loads(get)
     if not check_csrf_websocket(ws,get): return
 
-    from panelProjectController import ProjectController
-    project_obj = ProjectController()
+    from panelController import Controller
+    project_obj = Controller()
     while True:
         pdata = ws.receive()
         if pdata in '{}': break
@@ -2279,12 +2330,7 @@ def check_csrf_websocket(ws,args):
         is_success = False
 
     if is_success:
-        if session['request_token_head'] != args['x-http-token']:
-            is_success = False
-
-    if is_success and 'request_token' in session:
-        cookie_token = request.cookies.get('request_token')
-        if cookie_token != session['request_token']:
+        if public.get_csrf_sess_html_token_value() != args['x-http-token']:
             is_success = False
 
     if not is_success:
@@ -2420,5 +2466,5 @@ def push(pdata = None):
     import panelPush
     toObject = panelPush.panelPush()
     defs = ('set_push_status','get_push_msg_list','get_modules_list','install_module','uninstall_module','get_module_template','set_push_config','get_push_config','del_push_config','get_module_logs','get_module_config')
-    result = publicObject(toObject,defs,None,pdata);
-    return result;
+    result = publicObject(toObject,defs,None,pdata)
+    return result

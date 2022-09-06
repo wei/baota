@@ -22,6 +22,11 @@ sys.path.insert(0, "/www/server/panel/class/")
 import time
 import public
 import db
+import threading
+import panelTask
+import PluginLoader
+task_obj = panelTask.bt_task()
+task_obj.not_web = True
 global pre, timeoutCount, logPath, isTask, oldEdate, isCheck
 pre = 0
 timeoutCount = 0
@@ -30,6 +35,7 @@ oldEdate = None
 logPath = '/tmp/panelExec.log'
 isTask = '/tmp/panelTask.pl'
 python_bin = None
+thread_dict = {}
 
 def get_python_bin():
     global python_bin
@@ -113,8 +119,6 @@ def WriteLogs(logMsg):
 def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):
     try:
         global logPath
-        import shlex
-        import datetime
         import subprocess
         import time
         sub = subprocess.Popen(cmdstring+' &> '+logPath, cwd=cwd,
@@ -130,8 +134,9 @@ def ExecShell(cmdstring, cwd=None, timeout=None, shell=True):
 
 # 任务队列
 def startTask():
-    global isTask,logPath
+    global isTask,logPath,thread_dict
     tip_file = '/dev/shm/.panelTask.pl'
+    n = 0
     while 1:
         try:
             if os.path.exists(isTask):
@@ -158,9 +163,16 @@ def startTask():
                     sql.close()
                     taskArr = None
             public.writeFile(tip_file, str(int(time.time())))
+
+            # 线程检查
+            n+=1
+            if n > 60:
+                run_thread()
+                n = 0
         except:
             pass
         time.sleep(2)
+
 
 
 # 网站到期处理
@@ -499,8 +511,10 @@ def check502Task():
             mysql_quota_check()
             siteEdate()
             time.sleep(600)
+            PluginLoader.daemon_panel()
     except Exception as ex:
         logging.info(ex)
+        PluginLoader.daemon_panel()
         time.sleep(600)
         check502Task()
 
@@ -546,29 +560,36 @@ def check_panel_ssl():
     except Exception as e:
         public.writeFile("/tmp/panelSSL.pl", str(e), "a+")
 
-# 监控面板状态
-def panel_status():
-    time.sleep(1)
-    panel_pid = get_panel_pid()
-    while True:
-        time.sleep(30)
-        if not panel_pid:
-            panel_pid = get_panel_pid()
-        if not panel_pid:
-            service_panel('start')
+# 面板进程守护
+def daemon_panel():
+    cycle = 10
+    panel_pid_file = "{}/logs/panel.pid".format(public.get_panel_path())
+    while 1:
+        time.sleep(cycle)
 
-        try:
-            f = Process(panel_pid).cmdline()[-1]
-            if f.find('runserver') == -1 and f.find('BT-Panel') == -1:
-                service_panel('start')
-                time.sleep(3)
-                panel_pid = get_panel_pid()
-                continue
-        except:
-            service_panel('start')
-            time.sleep(3)
-            panel_pid = get_panel_pid()
+        # 检查pid文件是否存在
+        if not os.path.exists(panel_pid_file):
             continue
+
+        # 读取pid文件
+        panel_pid = public.readFile(panel_pid_file)
+        if not panel_pid:
+            service_panel('start')
+            continue
+
+        # 检查进程是否存在
+        comm_file = "/proc/{}/comm".format(panel_pid)
+        if not os.path.exists(comm_file):
+            service_panel('start')
+            continue
+
+        # 是否为面板进程
+        comm = public.readFile(comm_file)
+        if comm.find('BT-Panel') == -1:
+            service_panel('start')
+            continue
+
+
 
 
 def update_panel():
@@ -580,6 +601,8 @@ def service_panel(action='reload'):
         update_panel()
     else:
         os.system("nohup bash /www/server/panel/init.sh {} > /dev/null 2>&1 &".format(action))
+    logging.info("面板服务: {}".format(action))
+
 
 # 重启面板服务
 def restart_panel_service():
@@ -658,32 +681,6 @@ def update_software_list():
             time.sleep(1800)
             update_software_list()
 
-# 检查面板文件完整性
-def check_files_panel():
-    python_bin = get_python_bin()
-    while True:
-        time.sleep(600)
-        try:
-            result = loads(
-                os.popen('{} /www/server/panel/script/check_files.py'.format(python_bin)).read()
-                )
-        except:
-            continue
-        if result in ['0']:
-            continue
-
-        if type(result) != list:
-            continue
-        class_path = '/www/server/panel/class/'
-        for i in result:
-            cf = class_path + i['name']
-            if not os.path.exists(cf):
-                continue
-            if public.FileMd5(cf) == i['md5']:
-                continue
-            public.writeFile(cf, i['body'])
-            os.system("bash /www/server/panel/init.sh reload &")
-
 
 # 面板消息提醒
 def check_panel_msg():
@@ -691,6 +688,7 @@ def check_panel_msg():
     while True:
         os.system('nohup {} /www/server/panel/script/check_msg.py > /dev/null 2>&1 &'.format(python_bin))
         time.sleep(3600)
+        PluginLoader.daemon_task()
 
 # 面板推送消息
 def push_msg():
@@ -852,6 +850,28 @@ class process_task:
 
         self.__sql.close()
 
+def run_thread():
+    global thread_dict,task_obj
+    tkeys = thread_dict.keys()
+
+    thread_list = {
+        "start_task": task_obj.start_task,
+        "systemTask": systemTask,
+        "check502Task": check502Task,
+        "daemon_panel": daemon_panel,
+        "restart_panel_service": restart_panel_service,
+        "check_panel_ssl": check_panel_ssl,
+        "update_software_list": update_software_list,
+        "send_mail_time": send_mail_time,
+        "check_panel_msg": check_panel_msg,
+        "push_msg": push_msg
+    }
+
+    for skey in thread_list.keys():
+        if not skey in tkeys or not thread_dict[skey].is_alive():
+            thread_dict[skey] = threading.Thread(target=thread_list[skey])
+            thread_dict[skey].setDaemon(True)
+            thread_dict[skey].start()
 
 
 def main():
@@ -877,55 +897,8 @@ def main():
                         datefmt='%Y-%m-%d %H:%M:%S', filename=task_log_file, filemode='a+')
     logging.info('服务已启动')
     time.sleep(5)
-    import threading
-    import panelTask
-    task_obj = panelTask.bt_task()
-    task_obj.not_web = True
-    p = threading.Thread(target=task_obj.start_task)
-    # p.setDaemon(True)
-    p.start()
 
-
-    t = threading.Thread(target=systemTask)
-    # t.setDaemon(True)
-    t.start()
-
-    p = threading.Thread(target=check502Task)
-    # p.setDaemon(True)
-    p.start()
-
-    pl = threading.Thread(target=panel_status)
-    # pl.setDaemon(True)
-    pl.start()
-
-    p = threading.Thread(target=restart_panel_service)
-    # p.setDaemon(True)
-    p.start()
-
-    p = threading.Thread(target=check_panel_ssl)
-    # p.setDaemon(True)
-    p.start()
-
-    p = threading.Thread(target=update_software_list)
-    # p.setDaemon(True)
-    p.start()
-
-    p = threading.Thread(target=send_mail_time)
-    # p.setDaemon(True)
-    p.start()
-
-    p = threading.Thread(target=check_files_panel)
-    # p.setDaemon(True)
-    p.start()
-
-
-    p = threading.Thread(target=check_panel_msg)
-    # p.setDaemon(True)
-    p.start()
-
-    p = threading.Thread(target=push_msg)
-    p.start()
-
+    run_thread()
     startTask()
 
 

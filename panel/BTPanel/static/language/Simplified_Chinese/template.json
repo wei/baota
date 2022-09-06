@@ -79,6 +79,7 @@
 		"H4":"SQLServer",
 		"H5":"MongoDB",
 		"H6":"Redis",
+		"H7": "PgSQL",
 		"SEARCH":"搜索数据库",
 		"BTN1":"添加数据库",
 		"BTN2":"root密码",

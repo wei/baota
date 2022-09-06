@@ -1477,7 +1477,7 @@ bt.pub = {
       if (callback) callback(rdata);
     })
   },
-  on_edit_file: function (type, fileName) {
+  on_edit_file: function (type, fileName, mode) {
     if (type != 0) {
       var l = $("#PathPlace input").val();
       var body = encodeURIComponent($("#textBody").val());
@@ -1506,7 +1506,7 @@ bt.pub = {
       var m = "";
       var o = "";
       for (var p = 0; p < u.length; p++) {
-        m = rdata.encoding == u[p] ? "selected" : "";
+        m = rdata.encoding === u[p] ? "selected" : "";
         n += '<option value="' + u[p] + '" ' + m + ">" + u[p] + "</option>"
       }
       var aceEditor = {},
@@ -1514,26 +1514,36 @@ bt.pub = {
             type: 1,
             shift: 5,
             closeBtn: 1,
-            area: ["90%", "90%"],
+            area: ["80%", "80%"],
             shade: false,
             title: lan.bt.edit_title + "[" + fileName + "]",
             btn: [lan['public'].save, lan['public'].close],
-            content: '<form class="bt-form pd20 pb70"><div class="line"><p style="color:red;margin-bottom:10px">' + lan.bt.edit_ps +
-                '		<select class="bt-input-text" name="encoding" style="width: 74px;position: absolute;top: 31px;right: 19px;height: 22px;z-index: 9999;border-radius: 0;">' +
-                n + '</select></p><div class="mCustomScrollbar bt-input-text ace_config_editor_scroll" id="textBody" style="width:100%;margin:0 auto;line-height: 1.8;position: relative;top: 10px;"></div></div></form>',
+            content: '\
+						<form class="bt-form pd20">\
+							<div class="line">\
+								<p style="position: relative; color:red;margin-bottom:10px">' + lan.bt.edit_ps +
+                '<select class="bt-input-text" name="encoding" style="width: 74px;position: absolute;top: 0;right: 0;height: 22px;z-index: 9999;border-radius: 0;">' + n + '</select>\
+								</p>\
+								<div class="mCustomScrollbar bt-input-text ace_config_editor_scroll" id="textBody" style="width:100%;margin:0 auto;line-height: 1.8;position: relative;top: 10px;min-height:300px;"></div>\
+							</div>\
+						</form>',
             yes: function (layer, index) {
               bt.saveEditor(aceEditor);
             },
             btn2: function (layer, index) {
               r.close();
             },
-            success: function () {
-              var q = $(window).height() * 0.9;
-              $("#textBody").height(q - 160);
+            success: function (layers) {
+              function resize(){
+                var $layers = $(layers).find('.layui-layer-content').height();
+                $("#textBody").height($layers - 80);
+              }
+              resize()
+              $(window).on('resize', resize)
               aceEditor = bt.aceEditor({
                 el: 'textBody',
                 content: rdata.data,
-                mode: 'html',
+                mode: mode,
                 saveCallback: function (val) {
                   bt.send('SaveFileBody', 'files/SaveFileBody', {
                     path: fileName,
@@ -1566,7 +1576,7 @@ bt.index = {
         var m = "<input id='data_" + l[h].name + "' data-info='" + l[h].name + " " + l[h].versions[0].version + "' type='checkbox' checked>";
         for (var b = 0; b < l[h].versions.length; b++) {
           var d = "";
-          if ((l[h].name == "PHP" && (l[h].versions[b].version == "5.6" || l[h].versions[b].version == "5.6")) || (l[h].name == "MySQL" && l[h].versions[b].version == "5.6") || (l[h].name == "phpMyAdmin" && l[h].versions[b].version == "4.4")) {
+          if ((l[h].name == "PHP" && (l[h].versions[b].version == "7.4" || l[h].versions[b].version == "7.4")) || (l[h].name == "MySQL" && l[h].versions[b].version == "5.7") || (l[h].name == "phpMyAdmin" && l[h].versions[b].version == "5.2")) {
             d = "selected";
             m = "<input id='data_" + l[h].name + "' data-info='" + l[h].name + " " + l[h].versions[b].version + "' type='checkbox' checked>"
           }
@@ -1689,20 +1699,23 @@ bt.index = {
       function j (p, r, q) {
         var n = "4.4";
         switch (p) {
-          case "5.2":
-            n = "4.0";
-            break;
-          case "5.3":
-            n = "4.0";
-            break;
           case "5.4":
             n = "4.4";
             break;
           case "5.5":
-            n = "4.4";
+            n = "4.9";
+            break;
+          case "5.6":
+            n = "4.9";
+            break;
+          case "7.0":
+            n = "4.9";
+            break;
+          case "7.1":
+            n = "5.1";
             break;
           default:
-            n = "4.9"
+            n = "5.2"
         }
         $("#" + r + "phpMyAdmin option[value='" + n + "']").attr("selected", "selected").siblings().removeAttr("selected");
         $("#" + q + "phpMyAdmin").attr("data-info", "phpmyadmin " + n)
@@ -4038,10 +4051,10 @@ bt.soft = {
       }
       return unit;
     },
-    get_product_discount_by: function (pluginName, callback) {
-      if (pluginName) {
+    get_product_discount_by: function (pid, callback) {
+      if (pid) {
         bt.send('get_plugin_price', 'auth/get_plugin_price', {
-          pluginName: pluginName
+          pid: pid
         }, function (rdata) {
           if (callback) callback(rdata)
         })
@@ -4177,7 +4190,6 @@ bt.soft = {
     var bt_user_info = bt.get_cookie('bt_user_info'),
         ltd_end = bt.get_cookie('ltd_end'),
         pro_end = bt.get_cookie('pro_end');
-
     var totalNum = config.totalNum ? config.totalNum : '';
     if (totalNum) {
       bt.set_cookie('pay_source', parseInt(totalNum));
@@ -4221,7 +4233,7 @@ bt.soft = {
       type: 1,
       title: false,
       skin: 'libPay-view',
-      area: ['1000px', '640px'],
+      area: ['1000px', '740px'],
       shadeClose: false,
       content: '<div class="libPay-content-box" ' + (config.totalNum ? 'data-index="'+config.totalNum+'"' : '') + '>\
                 <div class="libPay-menu ' + (config.plugin ? 'is_plugin' : 'is_ops') + ' '+(typeof config.closePro != 'undefined' && config.closePro?'closePro':'')+'">\
@@ -4235,7 +4247,7 @@ bt.soft = {
                         <p>适用于官网，电商、教育、医疗等企业用户</p>\
                     </div>'+
                     (config.plugin ? '' : '<div class="libPay-menu-type lib_ops" >\
-                        <p><span class="glyphicon glyphicon-vip"></span><span style="margin-left:8px">企业运维版</span></p>\
+                        <p><span class="glyphicon glyphicon-vip"></span><span style="margin-left:8px">企业运维服务</span></p>\
                         <p>适用于无专业运维，需专业运维维护的企业用户</p>\
                     </div>')+
                     '<div class="libPay-menu-type lib_ver" >\
@@ -4249,7 +4261,10 @@ bt.soft = {
                         <div class="libPay-line-item proS" id="libPay-theme-tips">\
                           <p>企业版特权:</p>\
                         </div>\
+                        <div class="libPay-line-item proTname" style="margin-top: 0px;">产品周期</div>\
                         <div class="libPay-line-item proP" id="libPay-theme-price"><ul class="pay-pro-cycle"></ul></div>\
+                        <div class="libPay-line-item proTname">授权数量</div>\
+                        <div class="libPay-line-item proN" id="libPay-theme-nums"></div>\
                         <div class="libPay-line-item prokf hide">\
                             <label>\
                                 <i class="libPay-kf-consul"></i>\
@@ -4266,24 +4281,34 @@ bt.soft = {
                                   <div class="pay-type-btn" data-condition="3">\
                                       <label class="pay-type-label"><span class="pay-radio-ati"></span><span class="pay-radio-tit">支付宝扫码支付</span></label>\
                                   </div>\
+                                  <div class="pay-type-btn" data-condition="4">\
+                                      <label class="pay-type-label"><span class="pay-radio-ati"></span><span class="pay-radio-tit">对公转账</span></label>\
+                                  </div>\
                               </div>\
                           </div>\
                           <div class="libPay-qcode-right">\
                               <div class="libPay-loading"><p><img src="/static/images/loading-2.gif"></p><p>正在生成订单,请稍候...</p></div>\
                               <div class= "libPaycode-box">\
-                                  <div class="pay-wx" style="height:145px;width: 145px" id="PayQcode" ></div>\
+                              <div class="pay-wx" style="height:145px;width: 145px;margin-right: 20px;" id="PayQcode" ></div>\
                                   <div class="payqcode-box" >\
                                       <span class="wx-pay-ico mr5 wechat"></span>\
                                   </div>\
                                   <div class="libPaycode-foo-txt" >\
                                     <div class="payment_results_tips">提示：支付后请耐心等待支付结果，请勿刷新浏览器，否则将会导致购买异常。</div>\
-                                    <div class="userinfo">\
-                                        <div class="info_label mb-5">当前账号：</div>\
-                                        <div class="info_value">' + username + '</div>\
-                                        <a class="btlink" onclick="bt.pub.bind_btname()" href="javascript:;">切换账号</a>\
+                                    <div class="box">\
+                                       <div class="userinfo">\
+                                          <div class="info_label mb-5">当前账号：</div>\
+                                          <div class="info_value">' + username + '</div>\
+                                          <a class="btlink" onclick="bt.pub.bind_btname()" href="javascript:;">切换账号</a>\
+                                      </div>\
+                                      <p> 订单总价:</p> <span class="libPayTotal">---</span> /<lable class="libPayCycle">--年</lable>\
+                                      <div class= "libPaycode-pro-cylce">低至--元/天 </div>\
                                     </div>\
-                                    <p> 订单总价:</p> <span class="libPayTotal">---</span> /<lable class="libPayCycle">--年</lable>\
-                                    <div class= "libPaycode-pro-cylce">低至--元/天 </div>\
+                                  </div>\
+                                  <div class="libBank-box">\
+                                    <div><span>开户名称：</span>广东堡塔安全技术有限公司</div>\
+                                    <div><span>开户银行：</span>招商银行股份有限公司东莞天安数码城支行</div>\
+                                    <div><span>银行账号：</span><a class="btlink service_buy_before">联系客服</a></div>\
                                   </div>\
                               </div >\
                           </div>\
@@ -4300,7 +4325,7 @@ bt.soft = {
                         <div class="libVoucher-list"><ul class="pay-btn-group"></ul></div>\
                         <div class="libPay-voucher-submit" style="margin:33px 0">\
                             <div class="paymethod-submit text-center" >\
-                                <button class="btn btn-success btn-sm f16 disabled" style="width: 200px; height: 40px;">暂无抵扣劵，请先购买</button>\
+                                <button class="btn btn-success btn-sm f16 disabled" style="width: 200px; height: 40px;">暂无抵扣券，请先购买</button>\
                             </div>\
                         </div>\
                     </div>\
@@ -4352,7 +4377,7 @@ bt.soft = {
             name: '企业运维版',
             pid: 100000068,
             type: 'ops',
-            rlist: ['企业版所有特权 ','企业群服务群','企业微信一对一技术支持','面板所有功能配置协助','证书人工部署服务','系统漏洞排查协助','软件环境升级协助','磁盘挂载清理协助','站点性能优化协助']
+            rlist: ['企业版所有特权 ','企业群服务群','企业微信一对一技术支持','面板所有功能配置协助','证书人工部署服务','服务器安全巡检','服务器并发性能优化','CPU内存占满应急处理','50x/40x网站排错','磁盘挂载空间清理','CC防御配置','文件防篡改配置','文件同步部署','负载均衡部署','数据库主从部署']
           })
           $('.libPay-menu .libPay-menu-type').each(function (index) {
             $(this).data('data',arry[index])
@@ -4476,7 +4501,7 @@ bt.soft = {
       })
 
       that.get_product_discount_cache(_data, function (rdata) {
-        var _ul = $("#libPay-theme-price ul").empty(),_nums = $("#libPay-theme-nums").empty(),numsList = [1,5,10,20,50]
+        var _ul = $("#libPay-theme-price ul").empty(),_nums = $("#libPay-theme-nums").empty()
             num = 0,
             html = '',
             payList = [];
@@ -4504,16 +4529,44 @@ bt.soft = {
             }
           }
         }
+        render_num(rdata['12'].nums)
         $.each(payList, function (index, item) {
           var keys = item.cycle;
-          var _li = $('<li class="pay-cycle-btns" data-type="' + keys + '"><div class="pay-head-price"><span><div class="libPrice"><i>' + item.price + '</i>元</div>/' + that.pro.conver_unit(item.cycle + '') + '</span><p>原价:' + item.sprice + '元</p></div><div class="pay-foo-price">低至' + (item.price / ((item.cycle / 12) * 365)).toFixed(2) + '元/天</div>' + (item.tip ? '<em>' + item.tip + '</em>' : '') + '</li>')
+          var _li = $('<li class="pay-cycle-btns" data-type="' + keys + '"><div class="pay-head-price"><span><div class="libPrice">￥<i>' + item.price + '</i></div>/' + that.pro.conver_unit(item.cycle + '') + '</span><p>原价:' + item.sprice + '元</p></div><div class="pay-foo-price">低至' + (item.price / ((item.cycle / 12) * 365)).toFixed(2) + '元/天</div>' + (item.tip ? '<em>' + item.tip + '</em>' : '') + '</li>')
           _li.data('data', item).click(function () {
-            that.create_pay_code($(this).index());
+            $('.pay-cycle-btns').eq($(this).index()).addClass('active').siblings().removeClass('active');
+            _nums.html('')
+            render_num(item.nums)
+            $('.btn_nums').eq(0).click()
           });
           _ul.append(_li);
         });
+        if(btype === 'ops') $('.libPay-line-item.proP ul').append('<div class="ops_msg"><img src="/static/images/icon-ops-peo.svg">高级技术专家支持<br><img src="/static/images/icon-ops-time.svg">工作时间内响应速度低于5分钟<br><img src="/static/images/icon-ops-solve.svg">问题解决率达99%</div>')
+        $('.btn_nums').eq(0).addClass('active').siblings().removeClass('active');
         // if(num >= 4) $('#libPay-theme-price .pay-cycle-btns').css('width',((910  - ((num - 1) * 10)) / num) + 'px')
         that.create_pay_code(0)
+
+        function render_num(nums) {
+          for (var i = 0; i < nums.length; i++) {
+            if (btype != 'ops' || (btype === 'ops' && i===0)){
+              var count = nums[i].count
+              var discount = nums[i].discount
+              var _btn = $('<button data-nums="' + count + '" class="btn_nums">'+count+'台'+(discount < 1 ?'<em>'+ discount*10 +'折</em>' : '')+'</button>')
+              _btn.data('data', count).click(function () {
+                var num = $(this).data('data')
+                if(num === 1) $('.more_msg').hide()
+                if(num > 1){
+                  $('.more_msg').show()
+                  $('.more_msg').remove()
+                  $('.libPay-line-item.proN').append('<div class="more_msg">购买多台授权会默认减1台用于本机授权，剩余的授权台数以抵扣券的方式发放到当前账号，购买后请切换至抵扣券查看</div>')
+                }
+                $(this).addClass('active').siblings().removeClass('active');
+                that.create_pay_code($('.pay-cycle-btns.active').index());
+              });
+              _nums.append(_btn)
+            }
+          }
+        }
       })
     } else {
       var _voucherList = _data.data;
@@ -4576,7 +4629,7 @@ bt.soft = {
               });
             })
           } else {
-            sub_btn.addClass('disabled').text('暂无抵扣劵，请先购买').unbind('click')
+            sub_btn.addClass('disabled').text('暂无抵扣券，请先购买').unbind('click')
           }
         })
         //企业版、专业版靠前
@@ -4588,12 +4641,12 @@ bt.soft = {
       })
 
       //判断企业版、专业版未到期的产品
-      if (_ltd_end > 0) {
-        var ltd = _ul.find('li[data-id=100000032]');
-        if (ltd.length) ltd.trigger('click')
-      } else if (_pro_end > 0) {
-        var pro = _ul.find('li[data-id=100000011]')
-        if (pro.length) pro.trigger('click')
+      var ltd = _ul.find('li[data-id=100000032]');
+      var pro = _ul.find('li[data-id=100000011]')
+      if (_ltd_end > 0 && ltd.length) {
+        ltd.trigger('click')
+      } else if (_pro_end > 0 && pro.length) {
+        pro.trigger('click')
       } else {
         _ul.find('li').eq(0).trigger('click')
       }
@@ -4605,6 +4658,7 @@ bt.soft = {
     var that = this,
         _product = $('.libPay-menu-type.active').data('data'),
         _cycle = $(".pay-cycle-btns.active").data('data'),
+        _nums = $('.btn_nums.active').data('data'),
         _source = 0,
         _locahostURL = window.location.pathname;
     var pay_source = parseInt(bt.get_cookie('pay_source') || 0)
@@ -4628,17 +4682,17 @@ bt.soft = {
     that.pro.create_order({
       pid: _product.pid,
       cycle: _cycle.cycle,
-      source: pay_source
+      source: pay_source,
+      num: _nums
     }, function (rdata) {
       var start = that.pay_loading.get('start')
       var end = that.pay_loading.set('end')
       if (end < start) return
 
       $(".libPay-loading").hide()
-      var active_idx = $('.pay-cycle-btns.active').index(),active_product = $('.libPay-menu-type.active').data('data');
-
+      var active_idx = $('.pay-cycle-btns.active').index(),active_product = $('.libPay-menu-type.active').data('data'),nums_idx = $('.btn_nums.active').index();
       //判断创建订单完成后，前端选择的产品和周期是否发生改变
-      if ((idx != active_idx || _product.pid != active_product.pid) && active_product.type != 'ver'){
+      if ((idx != active_idx || _product.pid != active_product.pid) && active_product.type != 'ver' || _nums != _cycle.nums[nums_idx].count){
         that.create_pay_code(active_idx)
         return
       }
@@ -4679,14 +4733,36 @@ bt.soft = {
   show_pay_code: function (idx) {
     var _data = $(".pay-radio-type").data('data'),
         _cycle = $(".pay-cycle-btns.active").data('data'),
-        _obj = $(".libPay-content-box .pay-type-btn").eq(idx)
+        _obj = $(".libPay-content-box .pay-type-btn").eq(idx),
+        _num = $('.btn_nums.active').data('data'),
+        _n = $('.btn_nums.active').index()
 
     if (!_data) return
-
-    $('.libPaycode-foo-txt .libPayTotal').text('¥' + _cycle.price)
-    $(".libPayCycle").text(this.pro.conver_unit(_cycle.cycle))
-    $('.libPaycode-pro-cylce').text('低至' + (_cycle.price / (_cycle.cycle / 12 * 365)).toFixed(2) + "元 / 天")
-
+    var cash_fee = parseFloat(_data.data.cash_fee/100),
+        pre_price = parseFloat(parseFloat(_cycle.sprice*_num - cash_fee).toFixed(2)),
+        org_price = parseFloat(parseFloat(_cycle.sprice*_num).toFixed(2)),
+        day_price = (_cycle.price*_cycle.nums[_n].discount / (_cycle.cycle / 12 * 365)).toFixed(2)
+    $('.libPaycode-foo-txt .libPayTotal').html('<span style="font-size:18px;margin-right:2px;">¥</span>' + parseFloat(_data.data.cash_fee/100))
+    $(".libPayCycle").text(this.pro.conver_unit(_cycle.cycle)).append('<i>'+_num+'台'+(pre_price > 0 ? '（已优惠<span class="pre_price">'+ pre_price +'</span>元）':'')+'</i>')
+    $('.libPaycode-pro-cylce').text('低至' + day_price + "元 / 天").prepend('<span class="org_price">原价：'+ org_price +'元</span>')
+    if (cash_fee >= 6000 && idx === 0) {
+      $('.libPay-content-box .pay-type-btn').eq(0).click(function () {
+        layer.tips(
+          '支付金额已超过微信单笔支付额度,请使用支付宝支付',
+          $('.pay-type-btn:eq(0)'),
+          { tips: [3, 'red'], skin:'wechat_pay_tips' },
+        )
+        $('.layui-layer-tips').css({ left: $('.pay-type-btn:eq(0)').offset().left, top: $('.pay-type-btn:eq(0)').offset().top-45 })
+        return false
+      })
+      $('.libPay-content-box .pay-type-btn').eq(1).click();
+      return
+    }
+    if (idx != 2) {
+      $('.libPaycode-foo-txt').css('padding-top','0')
+      $('.libBank-box').hide()
+      $('.payqcode-box,.pay-wx,.payment_results_tips').show()
+    }
     switch (idx) {
         //微信支付
       case 0:
@@ -4697,6 +4773,11 @@ bt.soft = {
       case 1:
         $('#PayQcode').empty().qrcode(_data.ali_msg);
         $(".payqcode-box span").removeClass('wechat').addClass('alipay')
+        break;
+      case 2://对公转账
+        $('.libPaycode-foo-txt').css('padding-top','15px')
+        $('.libBank-box').css('display','inline-block')
+        $('.payqcode-box,.pay-wx,.payment_results_tips').hide()
         break;
     }
     _obj.addClass('active').siblings().removeClass('active');
@@ -4730,7 +4811,7 @@ bt.soft = {
     $(".libVoucher-loading").show()
     that.pay_loading.set('start_price')
 
-    bt.soft.pro.get_product_discount_by(config.name, function (rdata) {
+    bt.soft.pro.get_product_discount_by(config.pid, function (rdata) {
       if (that.pay_loading.set('end_price') == that.pay_loading.get('start_price')) {
         $(".libVoucher-loading").hide()
       }
@@ -6196,10 +6277,11 @@ bt.database = {
     })
   },
   set_root: function (type) {
-    if(type == 'mongo'){
+    if(type == 'mongo' || type == 'pgsql'){
       bt_tools.send('database/'+bt.data.db_tab_name+'/get_root_pwd',function(rdata){
+        if (type == 'pgsql') bt.data.database.mongo['list'][0]['title'] = '管理员密码';
         var bs = bt.render_form(bt.data.database.mongo);
-        $('.password' + bs).val(rdata.root);
+        $('.password' + bs).val(rdata.msg);
       })
     } else {
       bt.database.get_root_pass(function (rdata) {
@@ -6245,6 +6327,7 @@ bt.database = {
       switch(bt.data.db_tab_name){
         case 'sqlserver':
         case 'mongodb':
+        case 'pgsql':
           delete copyDataAdd.list[0].items[1]
           copyDataAdd.list.splice(3)
           copyDataAdd.list.push(bt.data.database.data_add.list[4])
@@ -7010,7 +7093,7 @@ bt.site = {
   // 获取消息推送配置
   get_msg_configs:function(callback){
     var loadT = bt.load('正在获取消息推送配置，请稍后...');
-    bt.send('get_push_msg_list', 'push/get_push_msg_list',{}, function (rdata) {
+    bt.send('get_msg_configs', 'config/get_msg_configs',{}, function (rdata) {
       loadT.close();
       if (callback) callback(rdata);
     })
@@ -7278,9 +7361,12 @@ bt.site = {
           vhref = '/www/server/panel/data/404.html';
           break;
         case 2:
-          var serverType = bt.get_cookie('serverType');
+					var type = '';
+					try {
+						type = bt.get_cookie('serverType') || serverType;
+					} catch (err) {}
           vhref = '/www/server/apache/htdocs/index.html';
-          if (serverType == 'nginx') vhref = '/www/server/nginx/html/index.html';
+          if (type == 'nginx') vhref = '/www/server/nginx/html/index.html';
           break;
         case 3:
           vhref = '/www/server/stop/index.html';
@@ -7487,8 +7573,9 @@ bt.data = {
       btns: [
         bt.form.btn.close(),
         bt.form.btn.submit('提交', function (rdata, load) {
-          var loading = bt.load();
-          bt_tools.send({url:'database/'+bt.data.db_tab_name+'/set_auth_status',data:{data:JSON.stringify($.extend(rdata,{status:1}))}},function(rRet){
+          var loading = bt.load(),url = 'database/' + bt.data.db_tab_name + '/set_auth_status';
+          if (bt.data.db_tab_name == 'pgsql') url = 'database/' + bt.data.db_tab_name + '/set_root_pwd';
+          bt_tools.send({url:url,data:{data:JSON.stringify($.extend(rdata,{status:1}))}},function(rRet){
             loading.close();
             bt.msg(rRet);
             load.close();
@@ -7514,13 +7601,14 @@ bt.data = {
             name: 'codeing',
             type: 'select',
             width: '27%',
-            items: [{
-              title: 'utf-8',
-              value: 'utf8'
-            },
+            items: [
               {
                 title: 'utf8mb4',
                 value: 'utf8mb4'
+              },
+              {
+                title: 'utf-8',
+                value: 'utf8'
               },
               {
                 title: 'gbk',
@@ -8125,11 +8213,10 @@ var form_group = {
         select_val = select_group.find('.select_val'),
         select_icon = select_group.find('.glyphicon');
     php_data = {
-      '4.0': [ '5.2', '5.3', '5.4', '5.5', '5.6', '7.0', '7.1', '7.2', '7.3', '7.4' ],
-      '4.4': [ '5.4', '5.5', '5.6', '7.0', '7.1', '7.2', '7.3' ],
-      '4.9': [ '5.6', '7.0', '7.1', '7.2', '7.3', '7.4', '8.0' ],
-      '5.0': [ '7.2', '7.3', '7.4', '8.0' ],
-      '5.1': [ '7.2', '7.3', '7.4', '8.0' ]
+      '4.4': [ '5.4'],
+      '4.9': [ '5.6', '7.0'],
+      '5.1': ['7.1'],
+      '5.2': [ '7.2', '7.3', '7.4', '8.0' , '8.1']
     };
     select_el.find('option').each(function (index, el) {
       var active = select_el.val() === $(el).val(),
@@ -8376,6 +8463,16 @@ bt.public = {
             '</div>'
       },
       event:function(row, index, ev){
+        if(typeof row.quota.status === 'boolean'){
+          // bt_tools.msg(row.quota);
+          bt.confirm({
+            title: '提示',
+            msg: '此功能为企业版专享功能，是否购买企业版？'
+          }, function () {
+            bt.soft.product_pay_view({totalNum:51,limit:'ltd',closePro:true})
+          });
+          return false
+        }
         var quota = row.quota;
         var size = quota.size * 1024 * 1024
         var usedList = bt.format_size(quota.used).split(' ');

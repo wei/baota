@@ -115,7 +115,6 @@ class Compress(object):
             return response
 
         response.direct_passthrough = False
-
         if self.cache:
             key = self.cache_key(response)
             gzip_content = self.cache.get(key) or self.compress(app, response)

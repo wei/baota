@@ -9,11 +9,11 @@
 # +-------------------------------------------------------------------
 from gevent import monkey
 monkey.patch_all()
-import os,sys,ssl
+import os,sys,ssl,time,logging
 
 _PATH = '/www/server/panel'
 os.chdir(_PATH)
-
+os.system("nohup btpython class/jobs.py &>/dev/null &")
 upgrade_file = 'script/upgrade_flask.sh'
 if os.path.exists(upgrade_file):
     os.system("nohup bash {} &>/dev/null &".format(upgrade_file))
@@ -22,11 +22,9 @@ if os.path.exists('class/flask'):
     os.system('rm -rf class/flask')
 
 
-
-
 if not 'class/' in sys.path:
     sys.path.insert(0,'class/')
-from BTPanel import app, plugin,sys,public
+from BTPanel import app,sys,public
 is_debug = os.path.exists('data/debug.pl')
 
 
@@ -46,7 +44,7 @@ check_plugin_loader()
 
 
 if is_debug:
-    import pyinotify,time,logging,re
+    import pyinotify,time,re
     logging.basicConfig(level=logging.DEBUG,format="[%(asctime)s][%(levelname)s] - %(message)s")
     logger = logging.getLogger()
 
@@ -116,6 +114,38 @@ if is_debug:
         notifier = pyinotify.Notifier(watchManager, event)
         notifier.loop()
 
+def run_task():
+    public.ExecShell("chmod 700 {}/BT-Task".format(_PATH))
+    public.ExecShell("{}/BT-Task".format(_PATH))
+
+def daemon_task():
+    cycle = 60
+    task_pid_file = "{}/logs/task.pid".format(_PATH)
+    while 1:
+        time.sleep(cycle)
+
+        # 检查pid文件是否存在
+        if not os.path.exists(task_pid_file):
+            continue
+
+        # 读取pid文件
+        task_pid = public.readFile(task_pid_file)
+        if not task_pid:
+            run_task()
+            continue
+
+        # 检查进程是否存在
+        comm_file = "/proc/{}/comm".format(task_pid)
+        if not os.path.exists(comm_file):
+            run_task()
+            continue
+
+        # 是否为面板进程
+        comm = public.readFile(comm_file)
+        if comm.find('BT-Task') == -1:
+            run_task()
+            continue
+
 if __name__ == '__main__':
     pid_file = "{}/logs/panel.pid".format(_PATH)
     if os.path.exists(pid_file):
@@ -153,14 +183,9 @@ if __name__ == '__main__':
         err_f.close()
 
     import threading
-    os.system("nohup {} {}/jobs.py &>/dev/null &".format(public.get_python_bin(),public.get_class_path()))
-    # import task
-    # p1 = threading.Thread(target=task.systemTask)
-    # p1.start()
-    # p2 = threading.Thread(target=task.check502Task)
-    # p2.start()
-    # p3 = threading.Thread(target=task.update_software_list)
-    # p3.start()
+    task_thread = threading.Thread(target=daemon_task)
+    task_thread.setDaemon(True)
+    task_thread.start()
 
     if is_ssl:
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
@@ -183,19 +208,26 @@ if __name__ == '__main__':
             ssl_context.verify_mode = ssl.CERT_REQUIRED
             ssl_context.set_default_verify_paths()
 
+    # 设置日志格式
+    _level = logging.WARNING
+    if is_debug: _level = logging.NOTSET
+    logging.basicConfig(level=_level,format="[%(asctime)s][%(levelname)s] - %(message)s")
+    logger = logging.getLogger()
+    app.logger = logger
+
     from  gevent.pywsgi import WSGIServer
     try:
         import flask_sock
         if is_ssl:
-            http_server = WSGIServer((HOST, PORT), app,ssl_context = ssl_context)
+            http_server = WSGIServer((HOST, PORT), app,ssl_context = ssl_context,log=app.logger)
         else:
-            http_server = WSGIServer((HOST, PORT), app)
+            http_server = WSGIServer((HOST, PORT), app,log=app.logger)
     except:
         from geventwebsocket.handler import WebSocketHandler
         if is_ssl:
-            http_server = WSGIServer((HOST, PORT), app,ssl_context = ssl_context,handler_class=WebSocketHandler)
+            http_server = WSGIServer((HOST, PORT), app,ssl_context = ssl_context,handler_class=WebSocketHandler,log=app.logger)
         else:
-            http_server = WSGIServer((HOST, PORT), app,handler_class=WebSocketHandler)
+            http_server = WSGIServer((HOST, PORT), app,handler_class=WebSocketHandler,log=app.logger)
 
 
     if is_debug:

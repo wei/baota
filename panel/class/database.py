@@ -225,8 +225,14 @@ class database(datatool.datatools):
         try:
             import db_mysql
             if not 'db_name' in conn_config: conn_config['db_name'] = None
-            mysql_obj = db_mysql.panelMysql().set_host(conn_config['db_host'],conn_config['db_port'],conn_config['db_name'],conn_config['db_user'],conn_config['db_password'])
+            mysql_obj = db_mysql.panelMysql()
+            mysql_obj.set_host(conn_config['db_host'],conn_config['db_port'],conn_config['db_name'],conn_config['db_user'],conn_config['db_password'])
             result = mysql_obj.query("show databases")
+            if isinstance(result,str):
+                if mysql_obj._ex:
+                    return public.returnMsg(False,self.GetMySQLError(mysql_obj._ex))
+                else:
+                    return public.returnMsg(False,self.GetMySQLError(result))
             if not conn_config['db_name']: return True
             for i in result:
                 if i[0] == conn_config['db_name']:
@@ -238,19 +244,21 @@ class database(datatool.datatools):
             return public.returnMsg(False,res)
 
     def GetMySQLError(self,e):
+        if isinstance(e,str):
+            return e
         res = ''
         if e.args[0] == 1045:
             res = '用户名或密码错误!'
         if e.args[0] == 1049:
             res = '数据库不存在!'
         if e.args[0] == 1044:
-            res = '没有指定数据库的访问权限，或指定数据库不存在!'
+            res = '没有指定数据库的访问权限!<br>1、检查数据库用户是否有访问该数据库的权限!<br>2、面板所在服务器IP可能没有访问目标用户的权限!'
         if e.args[0] == 1062:
             res = '数据库已存在!'
         if e.args[0] == 1146:
             res = '数据表不存在!'
         if e.args[0] == 2003:
-            res = '数据库服务器连接失败!'
+            res = '数据库服务器连接失败!<br>1、检查远程数据库服务器是否正确放行端口!<br>2、检查远程数据库服务器是否开启!<br>3、检查远程地址或端口输入是正确!'
         if res:
             res = res + "<pre>" + str(e) + "</pre>"
         else:
@@ -374,6 +382,7 @@ class database(datatool.datatools):
         if "using password:" in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_PASS')
         if "Connection refused" in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_CONNECT')
         if "1133" in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_NOT_EXISTS')
+        if "3679" in mysqlMsg: return public.returnMsg(False,'从数据库删除失败，数据目录不存在!')
         if "libmysqlclient" in mysqlMsg:
             self.rep_lnk()
             public.ExecShell("pip uninstall mysql-python -y")
@@ -495,6 +504,7 @@ SetLink
         id=get['id']
         name = get['name']
         find = public.M('databases').where("id=?",(id,)).field('id,sid,pid,name,username,password,accept,ps,addtime,db_type').find()
+        if not find: return public.returnMsg(False,'数据库[{}]不存在!'.format(name))
         self.sid = find['sid']
         if find['db_type'] in ['0',0] or self.sid: # 删除本地数据库
             if os.path.exists('data/recycle_bin_db.pl') and not self.sid: return self.DeleteToRecycleBin(name)
@@ -502,6 +512,7 @@ SetLink
             username = find['username']
             #删除MYSQL
             mysql_obj = public.get_mysql_obj_by_sid(self.sid)
+            if not mysql_obj: return public.returnMsg(False,'数据库[{}]连接失败'.format(name))
             result = mysql_obj.execute("drop database `" + name + "`")
             isError=self.IsSqlError(result)
             if  isError != None: return isError
@@ -541,8 +552,11 @@ SetLink
         users = panelMysql.panelMysql().query("select Host from mysql.user where User='" + username + "' AND Host!='localhost'")
         if isinstance(users,str):
             return public.returnMsg(False,'删除失败,连接数据库失败!')
-        for us in users:
-            panelMysql.panelMysql().execute("drop user '" + username + "'@'" + us[0] + "'")
+        try:
+            for us in users:
+                panelMysql.panelMysql().execute("drop user '" + username + "'@'" + us[0] + "'")
+        except Exception:
+            pass
         panelMysql.panelMysql().execute("flush privileges")
         rPath = '/www/.Recycle_bin/'
         data['rmtime'] = int(time.time())
@@ -573,20 +587,36 @@ SetLink
             if public.M('databases').where("name=?",( data['name'],)).count():
                 os.remove(filename)
                 return public.returnMsg(True,'DEL_SUCCESS')
-            result = panelMysql.panelMysql().execute("drop database `" + data['name'] + "`")
+        else:
+            if os.path.exists(filename):
+                data = json.loads(public.readFile(filename + '/config.json'))
+            else:
+                return public.returnMsg(False,'指定数据库回收目录不存在!')
+
+        db_obj = panelMysql.panelMysql()
+        if self.database_exists_for_mysql(db_obj,data['name']):
+            u_name = self.db_name_to_unicode(data['name'])
+            datadir = public.get_datadir()
+            db_path = '{}/{}'.format(datadir,u_name)
+            if not os.path.exists(db_path):
+                os.makedirs(db_path)
+                public.ExecShell("chown mysql:mysql {}".format(db_path))
+            result = db_obj.execute("drop database `" + data['name'] + "`")
             isError=self.IsSqlError(result)
             if  isError != None: return isError
-            panelMysql.panelMysql().execute("drop user '" + data['username'] + "'@'localhost'")
-            users = panelMysql.panelMysql().query("select Host from mysql.user where User='" + data['username'] + "' AND Host!='localhost'")
+            db_obj.execute("drop user '" + data['username'] + "'@'localhost'")
+            users = db_obj.query("select Host from mysql.user where User='" + data['username'] + "' AND Host!='localhost'")
             for us in users:
-                panelMysql.panelMysql().execute("drop user '" + data['username'] + "'@'" + us[0] + "'")
-            panelMysql.panelMysql().execute("flush privileges")
+                db_obj.execute("drop user '" + data['username'] + "'@'" + us[0] + "'")
+            db_obj.execute("flush privileges")
+
+
+        if os.path.isfile(filename):
             os.remove(filename)
         else:
             import shutil
-            if os.path.exists(filename):
-                data = json.loads(public.readFile(filename + '/config.json'))
-                shutil.rmtree(filename)
+            shutil.rmtree(filename)
+
         try:
             public.WriteLog("TYPE_DATABASE", 'DATABASE_DEL_SUCCESS',(data['name'],))
         except:

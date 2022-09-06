@@ -92,7 +92,7 @@ class ssh_terminal:
         import paramiko
 
         self._tp = paramiko.Transport(sock)
-
+        pkey = None
         try:
             self._tp.start_client()
             if not self._pass and not self._pkey:
@@ -111,19 +111,40 @@ class ssh_terminal:
                     p_file = StringIO(self._pkey)
 
                 try:
-                    pkey = paramiko.RSAKey.from_private_key(p_file)
-                except:
+                    if self._key_passwd:
+                        pkey = paramiko.RSAKey.from_private_key(p_file,password=self._key_passwd)
+                    else:
+                        pkey = paramiko.RSAKey.from_private_key(p_file)
+                except Exception as ex:
                     try:
                         p_file.seek(0) # 重置游标
-                        pkey = paramiko.Ed25519Key.from_private_key(p_file)
+                        if self._key_passwd:
+                            pkey = paramiko.Ed25519Key.from_private_key(p_file,password=self._key_passwd)
+                        else:
+                            pkey = paramiko.Ed25519Key.from_private_key(p_file)
                     except:
                         try:
                             p_file.seek(0)
-                            pkey = paramiko.ECDSAKey.from_private_key(p_file)
+                            if self._key_passwd:
+                                pkey = paramiko.ECDSAKey.from_private_key(p_file,password=self._key_passwd)
+                            else:
+                                pkey = paramiko.ECDSAKey.from_private_key(p_file)
                         except:
                             p_file.seek(0)
-                            pkey = paramiko.DSSKey.from_private_key(p_file)
-
+                            if self._key_passwd:
+                                try:
+                                    pkey = paramiko.DSSKey.from_private_key(p_file,password=self._key_passwd)
+                                except Exception as ex:
+                                    ex = str(ex)
+                                    if ex.find('OpenSSH private key file checkints do not match') != -1:
+                                        return public.returnMsg(False,'私钥密码错误: {}'.format(ex))
+                                    elif ex.find('encountered RSA key, expected DSA key') != -1:
+                                        pkey = paramiko.RSAKey.from_private_key(p_file,password=self._key_passwd)
+                                    else:
+                                        return public.returnMsg(False,'私钥错误: {}'.format(ex))
+                            else:
+                                pkey = paramiko.DSSKey.from_private_key(p_file)
+                if not pkey: return public.returnMsg(False,'私钥错误!')
                 self._tp.auth_publickey(username=self._user, key=pkey)
             else:
                 try:
@@ -150,6 +171,11 @@ class ssh_terminal:
                 return returnMsg(False,'认证超时,请按回车重试!{}'.format(e))
             if e.find('Authentication failed') != -1:
                 self.debug('认证失败{}'.format(e))
+                if self._key_passwd:
+                    sshd_config = public.readFile('/etc/ssh/sshd_config')
+                    if sshd_config and sshd_config.find('ssh-dss') == -1:
+                        return returnMsg(False,'私钥验证失败，可能私钥不正确，也可能/etc/ssh/sshd_config配置文件中未开启ssh-dss私钥认证类型')
+                    return returnMsg(False,'认证失败，请检查私钥是否正确: {}'.format(e + "," + self._user + "@" + self._host + ":" +str(self._port)))
                 return returnMsg(False,'帐号或密码错误: {}'.format(e + "," + self._user + "@" + self._host + ":" +str(self._port)))
             if e.find('Bad authentication type; allowed types') != -1:
                 self.debug('认证失败{}'.format(e))
@@ -522,7 +548,7 @@ class ssh_terminal:
 
                 self._ws.send(result)
 
-                self.history_recv(result)
+                # self.history_recv(result)
         except Exception as e:
             e = str(e)
             if e.find('closed') != -1:
@@ -555,7 +581,7 @@ class ssh_terminal:
                         self.resize(client_data)
                         continue
                 self._ssh.send(client_data)
-                self.history_send(client_data)
+                # self.history_send(client_data)
         except Exception as ex:
             ex = str(ex)
 
@@ -753,6 +779,7 @@ class ssh_terminal:
             self.close()
         else:
             self._ws.send(result['msg'])
+            self.close()
 
     def __del__(self):
         '''

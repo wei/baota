@@ -39,7 +39,13 @@ class http:
                     urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
 
                 result = requests.get(url,timeout=timeout,headers=get_headers(headers),verify=verify)
-            except:
+            except Exception as ex:
+                # 可能使用了错误的family，尝试清除相关配置
+                if(str(ex).find('Cannot assign requested address') != -1):
+                    v_file = '{}/data/v4.pl'.format(public.get_panel_path())
+                    public.writeFile(v_file,'')
+                    self._ip_type = 'auto'
+
                 try:
                     # IPV6？
                     urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
@@ -47,7 +53,8 @@ class http:
                 except:
                     # 使用CURL
                     result = self._get_curl(url,timeout,headers,verify)
-            urllib3_conn.allowed_gai_family = old_family
+            finally:
+                urllib3_conn.allowed_gai_family = old_family
 
         elif type == 'curl':
             result = self._get_curl(url,timeout,headers,verify)

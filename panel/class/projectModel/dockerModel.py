@@ -22,7 +22,7 @@ class main :#line:15
         O00OOO0O0O0O0O00O =panelPlugin .panelPlugin ().get_soft_list (O0OOOO000000OO0O0 )#line:33
         __OOO0000OOO00000O0 =int (O00OOO0O0O0O0O00O ['ltd'])>1 #line:34
         __OO0O00O00O0OOOOOO =public .to_string ([20307 ,39564 ,26102 ,38388 ,32467 ,26463 ,65292 ,32487 ,32493 ,20351 ,29992 ,35831 ,36141 ,20080 ,20225 ,19994 ,29256 ,65281 ])#line:36
-        if time .time ()>1660622560 :#line:37
+        if time .time ()>1665904796 :#line:37
             if not __OOO0000OOO00000O0 :#line:38
                 return public .returnMsg (False ,__OO0O00O00O0OOOOOO )#line:39
         try :#line:40

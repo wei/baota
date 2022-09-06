@@ -16,10 +16,10 @@
 import os,sys,re,public,json
 
 _title = 'MySQL端口安全'
-_version = 1.0                              # 版本
+_version = 1.1                              # 版本
 _ps = "检测当前服务器的MySQL端口是否安全"      # 描述
 _level = 2                                  # 风险级别： 1.提示(低)  2.警告(中)  3.危险(高)
-_date = '2020-08-03'                        # 最后更新时间
+_date = '2022-08-18'                        # 最后更新时间
 _ignore = os.path.exists("data/warning/ignore/sw_mysql_port.pl")
 _tips = [
     "若非必要，在【安全】页面将MySQL端口的放行删除",
@@ -31,16 +31,16 @@ _help = ''
 def check_run():
     '''
         @name 开始检测
-        @author hwliang<2020-08-03>
+        @author hwliang<2022-08-18>
         @return tuple (status<bool>,msg<string>)
 
-        @example   
+        @example
             status, msg = check_run()
             if status:
                 print('OK')
             else:
                 print('Warning: {}'.format(msg))
-        
+
     '''
     mycnf_file = '/etc/my.cnf'
     if not os.path.exists(mycnf_file):
@@ -49,25 +49,33 @@ def check_run():
     port_tmp = re.findall(r"port\s*=\s*(\d+)",mycnf)
     if not port_tmp:
         return True,'未安装MySQL'
-    if not public.ExecShell("lsof -i :{}".format(port_tmp[0]))[0]:
+    if not public.is_mysql_process_exists():
         return True,'未启动MySQL'
-    
+
     result = public.check_port_stat(int(port_tmp[0]),public.GetLocalIp())
     #兼容socket能连通但实际端口不通情况
     if result != 0:
         res=''
         if os.path.exists('/usr/sbin/firewalld'):
-            res=public.ExecShell('firewall-cmd --list-all')
+            res=public.readFile("/etc/firewalld/zones/public.xml")
+            if res and res.find('"{}"'.format(port_tmp[0]) == -1):
+                return True,'无风险'
         elif os.path.exists('/usr/sbin/ufw'):
-            try: 
-                res=public.ExecShell('sudo ufw status verbose')
-            except:
-                res=public.ExecShell('ufw status verbose')
-        else:
-            pass
-        check_str=' '+port_tmp[0]+'/'
-        if res[0].find(check_str) == -1:
-            return True,'无风险'
+            rule_file = '/etc/ufw/user.rules'
+            if os.path.exists(rule_file):
+                res=public.readFile(rule_file)
+                if res and res.find('input -p tcp --dport {} -j ACCEPT'.format(port_tmp[0])) == -1:
+                    return True,'无风险'
+            else:
+                res=public.ExecShell('ufw status verbose|grep {}'.format(port_tmp[0]))
+                check_str=' '+port_tmp[0]+'/'
+                if res[0].find(check_str) == -1:
+                    return True,'无风险'
+        elif os.path.exists('/usr/sbin/iptables'):
+                res=public.ExecShell("iptables --list-rules|grep -v '\-s '|grep {}".format(port_tmp[0]))[0]
+                if res and res.find('-p tcp -m state --state NEW -m tcp --dport {} -j ACCEPT'.format(port_tmp[0])) == -1:
+                    return True,'无风险'
+
     else:return True,'无风险'
 
 

@@ -12,21 +12,79 @@
 #+--------------------------------------------------------------------
 
 import public,json,os,time,sys,re
-from BTPanel import session,cache
+try:
+    from BTPanel import session,cache
+except:
+    pass
 class obj: id=0
 class plugin_deployment:
-    __setupPath = 'data'
+
     __panelPath = '/www/server/panel'
+    __setupPath = '{}/data'.format(__panelPath)
     logPath = 'data/deployment_speed.json'
     __tmp = '/www/server/panel/temp/'
     timeoutCount = 0
     oldTime = 0
     _speed_key = 'dep_download_speed'
 
+    def GetSiteList(self,get):
+        """
+        @name 获取网站一键部署列表
+        """
+        jsonFile = self.__panelPath + '/data/deployment_list.json'
+        if not os.path.exists(jsonFile) or hasattr(get,'force'):
+            self.GetCloudList(get)
+
+        if not os.path.exists(jsonFile): return public.returnMsg(False,'配置文件不存在!')
+        data = {}
+        data = self.get_input_list(json.loads(public.readFile(jsonFile)))
+
+        if not hasattr(get,'type'):
+            get.type = 0
+        else:
+            get.type = int(get.type)
+        if not hasattr(get,'search'):
+            search = None
+            m = 0
+        else:
+            m = 1
+
+        tmp = []
+
+        for d in data['list']:
+            i=0
+            if get.type > 0:
+                if get.type == d['type']: i+=1
+            else:
+                i+=1
+            if search:
+                if d['name'].lower().find(search) != -1: i+=1
+                if d['title'].lower().find(search) != -1: i+=1
+                if d['ps'].lower().find(search) != -1: i+=1
+                if get.type > 0 and get.type != d['type']: i -= 1
+
+            if i > m:
+                del(d['versions'][0]['download'])
+                del(d['versions'][0]['md5'])
+                d = self.get_icon(d)
+
+
+                if 'is_site_show' in d and d['is_site_show']:
+                    d['is_many'] = 0
+                    if d['is_site_show'] >= 1000: d['is_many'] = 1
+
+                    tmp.append(d)
+
+        tmp = sorted(tmp, key=lambda x: x['is_site_show'], reverse=False)
+        data['list'] = tmp
+        return data
+
     #获取列表
     def GetList(self,get):
-        self.GetCloudList(get)
         jsonFile = self.__panelPath + '/data/deployment_list.json'
+        if not os.path.exists(jsonFile) or hasattr(get,'force'):
+            self.GetCloudList(get)
+
         if not os.path.exists(jsonFile): return public.returnMsg(False,'配置文件不存在!')
         data = {}
         data = self.get_input_list(json.loads(public.readFile(jsonFile)))
@@ -103,15 +161,14 @@ class plugin_deployment:
     def GetCloudList(self,get):
         try:
             jsonFile = self.__setupPath + '/deployment_list.json'
-            if not 'package' in session or not os.path.exists(jsonFile) or hasattr(get,'force'):
-                downloadUrl = 'https://www.bt.cn/api/panel/get_deplist'
-                pdata = public.get_pdata()
-                tmp = json.loads(public.httpPost(downloadUrl,pdata,3))
-                if not tmp: return public.returnMsg(False,'从云端获取失败!')
-                public.writeFile(jsonFile,json.dumps(tmp))
-                session['package'] = True
-                return public.returnMsg(True,'更新成功!')
-            return public.returnMsg(True,'无需更新!')
+            downloadUrl = 'https://www.bt.cn/api/panel/get_deplist'
+            pdata = public.get_pdata()
+            tmp = public.httpPost(downloadUrl,pdata,30)
+            public.print_log('更新成功.')
+            tmp = json.loads(tmp)
+            if not tmp: return public.returnMsg(False,'从云端获取失败!')
+            public.writeFile(jsonFile,json.dumps(tmp))
+            return public.returnMsg(True,'更新成功!')
         except:
             return public.returnMsg(False,'从云端获取失败!')
 

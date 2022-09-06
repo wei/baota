@@ -79,4 +79,12 @@ def check_run():
     # if not_mode_list:
     #     return False,'以下关键文件或目录权限错误: <br />' + ("<br />".join(not_mode_list))
 
+    #如果是管理员账号，检查是否有root权限
+
+
+
+    #检测
+
+
+
     return True,'无风险'

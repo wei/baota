@@ -321,12 +321,14 @@ class databaseBase:
         elif get['type'] == 'sqlserver':
             pass
         elif get['type'] == 'mongodb':            
-            if os.path.exists('/www/server/mongodb'):
+            if os.path.exists('/www/server/mongodb/bin'):
                 data.insert(0,{'id':0,'db_host':'127.0.0.1','db_port':27017,'db_user':'root','db_password':'','ps':'本地服务器','addtime':0,'db_type':'mongodb'})
         elif get['type'] == 'redis':            
             if os.path.exists('/www/server/redis'):
                 data.insert(0,{'id':0,'db_host':'127.0.0.1','db_port':6379,'db_user':'root','db_password':'','ps':'本地服务器','addtime':0,'db_type':'redis'})
-        
+        elif get['type'] == 'pgsql':            
+            if os.path.exists('/www/server/pgsql'):
+                data.insert(0,{'id':0,'db_host':'127.0.0.1','db_port':5432,'db_user':'postgres','db_password':'','ps':'本地服务器','addtime':0,'db_type':'pgsql'})
         return data
 
     def RemoveBaseCloudServer(self,get):

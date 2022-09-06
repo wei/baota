@@ -147,5 +147,5 @@ class main :#line:19
         OOOO00OOO00O00O00 ="安装Docker服务"#line:198
         O0O0O0O00OO0OO000 ="/bin/bash /www/server/panel/install/install_soft.sh 0 install docker_install"#line:201
         public .M ('tasks').add ('id,name,type,status,addtime,execstr',(None ,OOOO00OOO00O00O00 ,'execshell','0',time .strftime ('%Y-%m-%d %H:%M:%S'),O0O0O0O00OO0OO000 ))#line:202
-        public .httpPost (public .GetConfigValue ('home')+'/api/panel/plugin_total',{"pid":"1111111",'p_name':"Docker商用模块"},3 )#line:203
+        # public .httpPost (public .GetConfigValue ('home')+'/api/panel/plugin_total',{"pid":"1111111",'p_name':"Docker商用模块"},3 )#line:203
         return public .returnMsg (True ,"已将安装任务添加到队列!")#line:204

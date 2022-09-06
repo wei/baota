@@ -27,6 +27,7 @@ class panelMysql:
     __OPT_FIELD  = "*"             # field条件
     __OPT_PARAM  = ()              # where值
     _USER = None
+    _ex = None
 
     def __init__(self):
         pass
@@ -48,15 +49,26 @@ class panelMysql:
         self._USER = str(username)
         self.__DB_PASS = str(password)
         self.__DB_PREFIX = prefix
-        self.__GetConn()
+        if not self.__GetConn(): return False
         return self
 
     #连接MYSQL数据库
     def __GetConn(self):
         try:
+            print(self.__DB_HOST,self.__DB_PORT,self.__DB_NAME,self.__DB_USER,self.__DB_PASS)
             self.__DB_CONN = pymysql.connect(host=self.__DB_HOST,user=self.__DB_USER,passwd=str(self.__DB_PASS),db=self.__DB_NAME,port=self.__DB_PORT,connect_timeout=15,read_timeout=60,write_timeout=60)
-        except:
-            self.__DB_CONN = pymysql.connect(host=self.__DB_HOST,user=self.__DB_USER,passwd=str(self.__DB_PASS),db=self.__DB_NAME,port=self.__DB_PORT)
+        except Exception as ex:
+            self.__DB_ERR = "error: " + str(ex)
+            self._ex = ex
+            print(ex)
+            if self.__DB_ERR.find("timed out") != -1 or self.__DB_ERR.find("is not allowed to connect") != -1: return False
+            try:
+                self.__DB_CONN = pymysql.connect(host=self.__DB_HOST,user=self.__DB_USER,passwd=str(self.__DB_PASS),db=self.__DB_NAME,port=self.__DB_PORT)
+            except Exception as ex:
+                self.__DB_ERR = "error: " + str(ex)
+                self._ex = ex
+                print(ex)
+                return False
         self.__DB_CUR  = self.__DB_CONN.cursor()
         return True
 
@@ -136,6 +148,7 @@ class panelMysql:
             self.__close()
             return data
         except Exception as ex:
+            self._ex = ex
             return "error: " + str(ex)
 
     def get(self):
@@ -212,6 +225,7 @@ class panelMysql:
             self.__DB_CONN.commit()
             return id
         except Exception as ex:
+            self._ex = ex
             return "error: " + str(ex)
 
     #插入数据
@@ -253,6 +267,7 @@ class panelMysql:
             result = self.__DB_CUR.execute(sql,self.__to_tuple(param))
             return True
         except Exception as ex:
+            self._ex = ex
             return "error: " + str(ex)
 
     def commit(self):
@@ -284,6 +299,7 @@ class panelMysql:
             self.__DB_CONN.commit()
             return self.__DB_CUR.rowcount
         except Exception as ex:
+            self._ex = ex
             return "error: " + str(ex)
 
     def delete(self,id=None):
@@ -314,6 +330,7 @@ class panelMysql:
             self.__close()
             return result
         except Exception as ex:
+            self._ex = ex
             return ex
 
 
@@ -332,6 +349,7 @@ class panelMysql:
             if is_close: self.__Close()
             return data
         except Exception as ex:
+            self._ex = ex
             return ex
 
 

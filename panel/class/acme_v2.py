@@ -358,6 +358,45 @@ class acme_v2:
         index = self.save_order(s_json, index)
         return index
 
+    def get_site_run_path_byid(self,site_id):
+        '''
+            @name 通过site_id获取网站运行目录
+            @author hwliang
+            @param site_id<int> 网站标识
+            @return None or string
+        '''
+        if public.M('sites').where('id=? and project_type=?', (site_id, 'PHP')).count()>=1:
+            site_path = public.M('sites').where('id=?',site_id).getField('path')
+            if not site_path: return None
+            if not os.path.exists(site_path): return None
+            args = public.dict_obj()
+            args.id = site_id
+            import panelSite
+            run_path = panelSite.panelSite().GetRunPath(args)
+            if run_path in ['/']: run_path = ''
+            if run_path:
+                if run_path[0] == '/': run_path = run_path[1:]
+            site_run_path = os.path.join(site_path,run_path)
+            if not os.path.exists(site_run_path): return site_path
+            return site_run_path
+        else:
+            return False
+
+    def get_site_run_path(self,domains):
+        '''
+            @name 通过域名列表获取网站运行目录
+            @author hwliang
+            @param domains<list> 域名列表
+            @return None or string
+        '''
+        site_id = 0
+        for domain in domains:
+            site_id = public.M('domain').where("name=?",domain).getField('pid')
+            if site_id: break
+
+        if not site_id: return None
+        return self.get_site_run_path_byid(site_id)
+
     # 获取验证信息
     def get_auths(self, index):
         if not index in self._config['orders']:
@@ -368,6 +407,9 @@ class acme_v2:
             # 检查授权信息是否过期
             if time.time() < self._config['orders'][index]['auths'][0]['expires']:
                 return self._config['orders'][index]['auths']
+
+        site_run_path = self.get_site_run_path(self._config['orders'][index]['domains'])
+        if site_run_path: self._config['orders'][index]['auth_to'] = site_run_path
 
         #清理旧验证
         self.claer_auth_file(index)
@@ -397,6 +439,7 @@ class acme_v2:
             identifier_auth['expires'] = s_body['expires']
             identifier_auth['auth_to'] = self._config['orders'][index]['auth_to']
             identifier_auth['type'] = self._config['orders'][index]['auth_type']
+
             # 设置验证信息
             self.set_auth_info(identifier_auth)
             auths.append(identifier_auth)
@@ -594,6 +637,7 @@ class acme_v2:
 
     # 格式化错误输出
     def get_error(self, error):
+        write_log("error_result: " + str(error))
         if error.find("Max checks allowed") >= 0:
             return "CA无法验证您的域名，请检查域名解析是否正确，或等待5-10分钟后重试."
         elif error.find("Max retries exceeded with") >= 0 or error.find('status_code=0 ') != -1:
@@ -1312,6 +1356,7 @@ fullchain.pem       粘贴到证书输入框
 
     # 申请证书 - api
     def apply_cert_api(self, args):
+        if not 'id' in args: return public.returnMsg(False,'网站id不能为空!')
         # 是否为指定站点
         if public.M('sites').where('id=? and project_type=?', (args.id, 'Java')).count() or public.M('sites').where('id=? and project_type=?', (args.id, 'Go')).count() or public.M('sites').where('id=? and project_type=?', (args.id, 'Other')).count():
                 project_info = public.M('sites').where('id=?', (args.id,)).getField('project_config')
@@ -1652,11 +1697,11 @@ fullchain.pem       粘贴到证书输入框
                             write_log('|-本次跳过域名:{}，因第上次续签失败，还需要等待{}小时后再重试'.format(self._config['orders'][i]['domains'],int(timeout / 60 / 60)))
                             continue
 
-                    # 是否到了最大重试次数
-                    if 'retry_count' in self._config['orders'][i]:
-                        if self._config['orders'][i]['retry_count'] >= 5:
-                            write_log('|-本次跳过域名:{}，因连续5次续签失败，不再续签此证书(可尝试手动续签此证书，成功后错误次数将被重置)'.format(self._config['orders'][i]['domains']))
-                            continue
+                    # # 是否到了最大重试次数
+                    # if 'retry_count' in self._config['orders'][i]:
+                    #     if self._config['orders'][i]['retry_count'] >= 5:
+                    #         write_log('|-本次跳过域名:{}，因连续5次续签失败，不再续签此证书(可尝试手动续签此证书，成功后错误次数将被重置)'.format(self._config['orders'][i]['domains']))
+                    #         continue
 
                     # 加入到续签订单
                     order_index.append(i)

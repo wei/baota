@@ -14,7 +14,7 @@
     align-items: center;
     color: #999;
     line-height: 30px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
   }
   .rank .diskName {
@@ -74,7 +74,7 @@
 </style>
 <div class="main-content">
     <div class="container-fluid" style="padding-bottom: 66px;">
-		<div class="index-pos-box bgw mtb15 radius4">
+        <div class="index-pos-box bgw mtb15 radius4">
             <div class="position f12 c6 pull-left" style="background:none;padding-left:15px">
                 <span class="bind-user c4">
                     <a href="javascript:bt.pub.bind_btname();" class="btlink">宝塔账户</a>
@@ -86,20 +86,20 @@
                 {% endif %}
                 <span class="ico-system">系统:</span><span id="info" style="margin-left:10px;">{{data['lan']['S2']}}</span>&#12288;&#12288;{{data['lan']['S3']}} <span id="running">{{data['lan']['S4']}}</span>
             </div>
-			<span class="pull-right f12 c6" style="line-height:52px; margin-right:15px">
-				{{data['pd']|safe}} <span id="btversion" style="margin-right:10px"><a onclick="index.open_log()">{{session['version']}}</a></span>
-				<span id="toUpdate"><a class="btlink" href="javascript:index.check_update();">更新</a></span>
-				<span style="margin:0 10px"><a class="btlink" href="javascript:index.re_panel();">修复</a></span>
-				<span style="margin-right:10px"><a class="btlink" href="javascript:index.re_server();">重启</a></span>
-			</span>
-		</div>
+            <span class="pull-right f12 c6" style="line-height:52px; margin-right:15px">
+                {{data['pd']|safe}} <span id="btversion" style="margin-right:10px"><a onclick="index.open_log()">{{session['version']}}</a></span>
+                <span id="toUpdate"><a class="btlink" href="javascript:index.check_update();">更新</a></span>
+                <span style="margin:0 10px"><a class="btlink" href="javascript:index.re_panel();">修复</a></span>
+                <span style="margin-right:10px"><a class="btlink" href="javascript:index.re_server();">重启</a></span>
+            </span>
+        </div>
     <div class="col-xs-24 col-sm-24 col-md-24" id="home-recommend"></div>
     <div class="danger-tips">
       <div class="important-title" id="messageError" style="display: none; margin-top:15px"></div>
     </div>
     <div class="server bgw mtb15 radius4">
-            <div class="title c6 f16 plr15">
-                <h3 class="c6 f16 pull-left">状态</h3>
+            <div class="title c6">
+                <div class="plr20 f15">状态</div>
             </div>
             <div class="server-circle">
                 <ul class="row" id="systemInfoList">
@@ -131,7 +131,9 @@
             </div>
         </div>
     <div class="system-info bgw clearfix mtb15 radius4">
-            <div class="title c6 f16 plr15">概览</div>
+            <div class="title c6">
+                <div class="plr20 f15">概览</div>
+            </div>
             <div class="system-info-con mtb20">
                 <ul class="clearfix text-center">
                 <li class="sys-li-box col-xs-4 col-sm-4 col-md-4 col-lg-3 radius2">
@@ -156,7 +158,9 @@
         <div class="col-xs-12 col-sm-12 col-md-6 pull-left pd0">
             <div class="pr8">
             <div class="bgw radius4">
-                    <div class="title c6 f16 plr15">{{data['lan']['P4']}}</div>
+                    <div class="title c6">
+                        <div class="plr20 f15">{{data['lan']['P4']}}</div>
+                    </div>
                     <div class="setting-con" style="padding:0; height:442px; margin-right: -4px; overflow: hidden;">
                         <div class="container-fluid soft-man">
                             <input name="list1SortOrder" type="hidden" value="" />

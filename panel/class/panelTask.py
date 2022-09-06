@@ -11,7 +11,6 @@
 # 消息队列
 # ------------------------------
 import json
-import downloadFile
 import time
 import public
 import sys
@@ -94,7 +93,7 @@ class bt_task:
         if not public.M(self.__table).where('status=?', ('-1',)).count():
             tip_file = "/dev/shm/.start_task.pl"
             tip_time = public.readFile(tip_file)
-            if not tip_time or time.time() - int(tip_time) > 60:
+            if not tip_time or time.time() - int(tip_time) > 600:
                 public.ExecShell("/www/server/panel/BT-Task")
                 public.print_log("已重启后台任务")
         return task_id
@@ -206,21 +205,22 @@ class bt_task:
         while True:
             try:
                 time.sleep(1)
+                public.writeFile(tip_file, str(int(time.time())))
                 n += 1
                 if not os.path.exists(self.__task_tips) and noe and n < 60:
-                    public.writeFile(tip_file, str(int(time.time())))
                     continue
                 if os.path.exists(self.__task_tips):
                     os.remove(self.__task_tips)
                 n = 0
-                public.M(self.__table).where('status=?', ('-1',)).setField('status', 0)
+                public.M(self.__table).where(
+                    'status=?', ('-1',)).setField('status', 0)
                 task_list = self.get_task_list(0)
                 for task_info in task_list:
-                    self.execute_task(task_info['id'], task_info['type'], task_info['shell'], task_info['other'])
+                    self.execute_task(
+                        task_info['id'], task_info['type'], task_info['shell'], task_info['other'])
                 noe = True
-                public.writeFile(tip_file, str(int(time.time())))
             except:
-                public.print_log(public.get_error_info())
+                print(public.get_error_info())
 
     # 前端通过任务ID取某一个任务的日志
     def get_task_log_by_id(self, get):
@@ -335,6 +335,14 @@ class bt_task:
                 self.install_rar()
             public.ExecShell("cd '" + path + "' && "+rar_file +
                              " a -r '" + dfile + "' " + sfiles + " &> " + log_file)
+        elif z_type == '7z':
+            _7z_bin = self.get_7z_bin()
+            if not _7z_bin:
+                self.install_7zip()
+                err_msg = 'p7zip组件未安装，无法压缩为7z压缩包，已尝试自动安装，请稍等几分钟重试!'
+                public.WriteLog("文件管理","压缩文件失败，原因：{}，文件: {}".format(err_msg,sfile))
+                return public.returnMsg(False, err_msg)
+            public.ExecShell("cd {} && {} a -t7z {} {} -y &> {}".format(path, _7z_bin, dfile, sfiles, log_file))
         else:
             return public.returnMsg(False, '指定压缩格式不支持!')
 
@@ -352,8 +360,7 @@ class bt_task:
 
         # 判断压缩包格式
         if sfile[-4:] == '.zip':
-            public.ExecShell("unzip -P '"+password+"' -o '" +
-                             sfile + "' -d '" + dfile + "' &> " + log_file)
+            public.ExecShell("unzip -P '"+password+"' -o '" + sfile + "' -d '" + dfile + "' &> " + log_file)
         elif sfile[-7:] == '.tar.gz' or sfile[-4:] == '.tgz':
             public.ExecShell("tar zxvf '" + sfile +
                              "' -C '" + dfile + "' &> " + log_file)
@@ -361,16 +368,50 @@ class bt_task:
             rar_file = '/www/server/rar/unrar'
             if not os.path.exists(rar_file):
                 self.install_rar()
-            public.ExecShell('echo "'+password+'"|' + rar_file +
-                             ' x -u -y "' + sfile + '" "' + dfile + '" &> ' + log_file)
+            pass_opt = '-p-'
+            if password:
+                password = password.replace("&","\&").replace('"','\"')
+                pass_opt = '-p"{}"'.format(password)
+
+            public.ExecShell(rar_file + ' x '+ pass_opt +' -u -y "' + sfile + '" "' + dfile + '" &> ' + log_file)
+
         elif sfile[-4:] == '.war':
             public.ExecShell("unzip -P '"+password+"' -o '" +
                              sfile + "' -d '" + dfile + "' &> " + log_file)
         elif sfile[-4:] == '.bz2':
             public.ExecShell("tar jxvf '" + sfile +
                              "' -C '" + dfile + "' &> " + log_file)
+        elif sfile[-3:] == '.7z':
+            _7zbin = self.get_7z_bin()
+            if not _7zbin:
+                self.install_7zip()
+                err_msg = 'p7zip组件未安装，无法解压7z文件，已尝试自动安装，请稍等几分钟重试!'
+                public.WriteLog("文件管理","解压文件失败，原因：{}，文件: {}".format(err_msg,sfile))
+                return public.returnMsg(False, err_msg)
+            pass_opt = ""
+            if password:
+                pass_opt = '-p"{}"'.format(password)
+            public.ExecShell('{} x "{}" -o"{}" -y {} &> {}'.format(_7zbin,sfile,dfile,pass_opt,log_file))
         else:
             public.ExecShell("gunzip -c " + sfile + " > " + sfile[:-3])
+
+        # 异常处理
+        log_msg = public.readFile(log_file)
+        err_msg = None
+        if log_msg:
+            if log_msg.find("incorrect password") != -1 \
+                or log_msg.find("The specified password is incorrect.") != -1 \
+                or log_msg.find("Data Error in encrypted file. Wrong password") != -1:
+                err_msg = '解压密码错误!'
+                public.WriteLog("文件管理","解压文件失败，原因：{}，文件: {}".format(err_msg,sfile))
+            elif log_msg.find("unsupported compression method 99") != -1:
+                err_msg = '不支持的Zip加密压缩方式，对于ZIP压缩包只支持ZIP传统加密方式!'
+                public.WriteLog("文件管理","解压文件失败，原因：{}，文件: {}".format(err_msg,sfile))
+            elif log_msg.find("is not RAR archive") != -1:
+                err_msg = "不是rar压缩包,检查是否为其它压缩格式修改扩展名为rar的文件!"
+                public.WriteLog("文件管理","解压文件失败，原因：{}，文件: {}".format(err_msg,sfile))
+
+        if err_msg: return public.returnMsg(False, err_msg)
 
         # 检查是否设置权限
         if self.check_dir(dfile):
@@ -383,8 +424,45 @@ class bt_task:
                 user = pwd.getpwuid(os.stat(dfile).st_uid).pw_name
                 public.ExecShell("chown %s:%s %s" % (user, user, dfile))
 
-        #public.WriteLog("TYPE_FILE", 'UNZIP_SUCCESS', (sfile, dfile),not_web = self.not_web)
+        public.WriteLog("TYPE_FILE", 'UNZIP_SUCCESS', (sfile, dfile))
         return public.returnMsg(True, 'UNZIP_SUCCESS')
+
+    def get_7z_bin(self):
+        '''
+            @name 获取7z命令路径
+            @author hwliang
+            @return {string} 7z命令路径
+        '''
+        _7z_bins = ["/usr/bin/7z","/usr/bin/7za","/usr/bin/7zr"]
+        for _7z_bin in _7z_bins:
+            if os.path.exists(_7z_bin):
+                return _7z_bin
+        return None
+
+    def install_7zip(self):
+        '''
+            @name 安装7zip
+            @author hwliang
+            @return {bool} True/False
+        '''
+        _7z_bin = self.get_7z_bin()
+        if _7z_bin:
+            return True
+
+        # 是否已经尝试安装过
+        install_tip = '{}/data/7z_install.pl'.format(public.get_panel_path())
+        if os.path.exists(install_tip):
+            return False
+
+        if os.path.exists("/usr/bin/apt-get"):
+            public.ExecShell("nohup apt-get -y install p7zip-full &> /dev/null &")
+        elif os.path.exists("/usr/bin/yum"):
+            public.ExecShell("nohup yum -y install p7zip &> /dev/null &")
+        elif os.path.exists("/usr/bin/dnf"):
+            public.ExecShell("nohup dnf -y install p7zip &> /dev/null &")
+        else:
+            return False
+        return True
 
     # 备份网站
     def backup_site(self, id, log_file):

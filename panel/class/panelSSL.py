@@ -166,15 +166,19 @@ class panelSSL:
         '''
         try:
             data = {}
-            for x in domains:
-                root,zone = public.get_root_domain(x)
-                ret = public.query_dns(root,'CAA')
-                if ret:
+            for domain in domains:
+                root,zone = public.get_root_domain(domain)
+                for d in [domain,root,'_acme-challenge.{}'.format(root),'_acme-challenge.{}'.format(domain)]:
+                    ret = public.query_dns(d,'CAA')
+                    if not ret: continue
+
                     slist = []
-                    for x in ret:
-                        if x['value'] in clist: continue
-                        slist.append(x)
-                    if len(slist) > 0: data[root] = slist
+                    for val in ret:
+                        if val['value'] in clist: continue
+                        slist.append(val)
+
+                    if len(slist) > 0:
+                        data[d] = slist
             if data:
                 result = {}
                 result['status'] = False
@@ -309,12 +313,12 @@ class panelSSL:
         return path
 
     #验证URL是否匹配
-    def check_url_txt(self,args):
+    def check_url_txt(self,args,timeout=5):
         url = args.url
         content = args.content
 
         import http_requests
-        res = http_requests.get(url,s_type='curl',timeout=6)
+        res = http_requests.get(url,s_type='curl',timeout=timeout)
         result = res.text
         if not result: return 0
 
@@ -872,6 +876,11 @@ class panelSSL:
         #     print(public.get_error_info())
         #     return None
 
+    def get_unixtime(self,data,format = "%Y-%m-%d %H:%M:%S"):
+        import time
+        timeArray = time.strptime(data,format )
+        timeStamp = int(time.mktime(timeArray))
+        return timeStamp
 
     # 获取指定证书基本信息
     def get_cert_init(self, pem_file):
@@ -927,6 +936,7 @@ class panelSSL:
                         result['dns'].append(result['subject'])
                 else:
                     result['subject'] = result['dns'][0]
+            result['endtime'] = int(int(time.mktime(time.strptime(result['notAfter'], "%Y-%m-%d")) - time.time()) / 86400)
             return result
         except:
             return None
@@ -1012,6 +1022,8 @@ class panelSSL:
             @author cjx
             @version 1.0
         '''
+        if not 'pdata' in args:
+            return public.returnMsg(False,'pdata参数不能为空!')
         pdata = json.loads(args.pdata)
         self.__PDATA['data'] = pdata
 
@@ -1042,7 +1054,7 @@ class panelSSL:
         pdata['data'] = self.De_Code(data)
         try:
             rtmp = public.httpPost(self.__BINDURL,pdata)
-            result = json.loads(rtmp);
+            result = json.loads(rtmp)
             result['data'] = self.En_Code(result['data'])
             if not result['status']: return result
 
@@ -1056,7 +1068,12 @@ class panelSSL:
             session['focre_cloud'] = True
             return result
         except Exception as ex:
-            raise public.error_conn_cloud(str(ex))
+            error = str(ex)
+            if error.lower().find('json') >= 0:
+                error = '<br>错误：连接宝塔官网异常，请按照以下方法排除问题后重试：<br>解决方法：<a target="_blank" class="btlink" href="https://www.bt.cn/bbs/thread-87257-1-1.html">https://www.bt.cn/bbs/thread-87257-1-1.html</a><br>'
+                raise public.PanelError(error)
+            else:
+                raise public.error_conn_cloud(error)
             # return public.returnMsg(False,'连接服务器失败!<br>{}'.format(rtmp))
 
     def GetBindCode(self,get):
@@ -1141,3 +1158,61 @@ class panelSSL:
         self.__PDATA['data'] = pdata
         result = self.request('apply_cert_install_pay')
         return result
+
+
+
+    def check_ssl_method(self,get):
+        """
+        @name 检测ssl验证方式
+        @domain string 域名
+        """
+
+        domain = get.domain
+        if public.M('sites').where('id=?',(public.M('domain').where('name=?',(domain)).getField('pid'),)).getField('project_type') == 'Java':
+            siteRunPath='{}/java_node_ssl'.format(public.M("config").getField("sites_path"))
+        else:
+            siteRunPath = self.get_domain_run_path(domain)
+
+        if not siteRunPath:
+            return public.returnMsg(False,'获取网站路径失败，请检查网站是否存在.')
+
+        verify_path = siteRunPath + '/.well-known/pki-validation'
+        if not os.path.exists(verify_path):  os.makedirs(verify_path)
+
+        #生成临时文件
+        check_val =  public.GetRandomString(16)
+        verify_file = '{}/{}.txt'.format(verify_path,check_val)
+        public.writeFile(verify_file,check_val)
+        if not os.path.exists(verify_file):
+            return public.returnMsg(False,'创建验证文件失败，请检测是否写入被拦截.')
+
+        res = {}
+        msg = [     '域名【{}】无法正确访问验证文件'.format(domain),
+                    '可能的原因',
+                    '1、未正确解析，或解析未生效 [请正确解析域名，或等待解析生效后重试]',
+                    '2、检查是否有设置301/302重定向 [请暂时关闭重定向相关配置]',
+                    '3、检查该网站是否已经开启反向代理 [请暂时关闭反向代理配置]'
+                ]
+
+        res['HTTP_CSR_HASH'] = msg
+        res['HTTPS_CSR_HASH'] = msg
+
+        #检测HTTP/https访问
+        args = public.dict_obj()
+        for stype in ['http','https']:
+            args.url = '{}://{}/.well-known/pki-validation/{}.txt'.format(stype,domain,check_val)
+            args.content = check_val
+            if self.check_url_txt(args,2) == 1:
+                res['{}_CSR_HASH'.format(stype).upper()] = 1
+
+        #检测caa记录
+        result =  self.check_ssl_caa([domain])
+        if not result:
+            res['CNAME_CSR_HASH'] = 1
+        else:
+            res['CNAME_CSR_HASH'] = json.loads(result['data'])
+
+        if os.path.exists(verify_file):
+            os.remove(verify_file)
+        return res
+

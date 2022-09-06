@@ -88,7 +88,9 @@ var controlObj = {
         var e = (new Date($(this).parent().find(".etime").val()).getTime()) / 1000;
         b = Math.round(b);
         e = Math.round(e);
-        eval('that.' + $(this).attr('data-type') + '(' + b + ',' + e + ')');
+        var type = $(this).attr('data-type')
+        var callback = that[type]
+        if (callback) callback(b, e);
       });
     },
 
@@ -326,7 +328,7 @@ var controlObj = {
 
     //cpu
     cpu: function (b, e) {
-      var that = this;
+      var that = controlObj.conTrolView;
       $.get('/ajax?action=GetCpuIo&start=' + b + '&end=' + e, function (rdata) {
         that.set_data(rdata, b, e);
         var myChartCpu = echarts.init(document.getElementById('cpuview'));
@@ -383,7 +385,7 @@ var controlObj = {
 
     //内存
     mem: function (b, e) {
-      var that = this;
+      var that = controlObj.conTrolView;
       $.get('/ajax?action=GetCpuIo&start=' + b + '&end=' + e, function (rdata) {
         that.set_data(rdata, b, e);
         var myChartMen = echarts.init(document.getElementById('memview'));
@@ -440,7 +442,7 @@ var controlObj = {
 
     //磁盘io
     disk: function (b, e) {
-      var that = this;
+      var that = controlObj.conTrolView;
       $.get('/ajax?action=GetDiskIo&start=' + b + '&end=' + e, function (rdata) {
         that.set_data(rdata, b, e);
         var diskview = document.getElementById('diskview'), myChartDisk = echarts.init(diskview), rData = [], wData = [], xData = [],zData = [],yData = [], unit_size = 1, _unit = getCookie('disk-unitType');
@@ -479,8 +481,8 @@ var controlObj = {
             var read_GB = read_MB / 1024;
             var write_GB = write_MB / 1024;
             if ((read_GB >= 1 || write_GB >= 1) && !is_gt_GB) {
-              console.log(read_GB);
-              console.log(write_GB);
+              // console.log(read_GB);
+              // console.log(write_GB);
               is_gt_GB = true;
             }
           }
@@ -589,7 +591,7 @@ var controlObj = {
 
     //网络Io
     network: function (b, e) {
-      var that = this;
+      var that = controlObj.conTrolView;
       $.get('/ajax?action=GetNetWorkIo&start=' + b + '&end=' + e, function (rdata) {
         that.set_data(rdata, b, e);
         var anetwork = document.getElementById('network'), myChartNetwork = echarts.init(anetwork), aData = [], bData = [], cData = [], dData = [], xData = [], yData = [], zData = [], unit_size = 1, _unit = getCookie('network-unitType'), network_io = [{ title: '全部', value: 'all' }], network_select = $('[name="network-io"]'), network_html = '<option value="">全部</option>', is_network = 0, network_io_key = bt.get_cookie('network_io_key') || '';
@@ -864,7 +866,7 @@ var controlObj = {
 
     // 系统负载
     getload: function (b, e) {
-      var that = this;
+      var that = controlObj.conTrolView;
       $.get('/ajax?action=get_load_average&start=' + b + '&end=' + e, function (rdata) {
         that.set_data(rdata, b, e);
         var myChartgetload = echarts.init(document.getElementById('getloadview'));
@@ -1002,11 +1004,12 @@ var controlObj = {
         {
           scale: true,
           name: '资源使用率',
-          boundaryGap: [0, '100%'],
           min: 0,
           max: function (value) {
+            // 最大值超过100
+            if (value.max >= 100) return Math.ceil(value.max);
             // 最大值超过80
-            if(value.max == 100 || (value.max + 20 > 100)) return 100;
+            if (value.max >= 80) return 100;
             // 小于80取当前最大值的首位数字
             return parseInt((value.max + 10).toString().slice(0,1) + '0')
           },

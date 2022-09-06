@@ -920,7 +920,7 @@ var docker = {
                     return '<span class="size_ellipsis" style="width:250px" title="'+row.name+'">'+row.name+'</span>'
                 }
             },
-            {fid:'driver',title: '显示'},
+            {fid:'driver',title: '设备'},
             {fid:'subnet',title: '网络号'},
             {fid:'gateway',title: '网关'},
             {

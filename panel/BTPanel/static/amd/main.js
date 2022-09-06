@@ -27,9 +27,17 @@ require.config({
     "jquery.qrcode": "../js/jquery.qrcode.min", // 二维码
     "language": "../language/Simplified_Chinese/lan", // 语言包
     "clipboard": "../js/clipboard.min", // 复制
-    "polyfill":"../vue/polyfill.min"
+    "polyfill":"../vue/polyfill.min",
+    "public":"../js/public",
+    "public_backup":"../js/public_backup"
   },
   shim: {
+    "public":{
+      exports:"socket" //欺骗程序
+    },
+    "public_backup":{
+      exports:"bt" //欺骗程序
+    },
     "language": {
       exports: "lan"
     },
@@ -40,13 +48,13 @@ require.config({
   }
 })
 
-var requestList = ['jquery', 'layer', 'language']
+var requestList = ['jquery', 'layer', 'language','public','public_backup']
 var detectBrowser = function (){
   var userAgent = navigator.userAgent,
-    isLessIE11 = userAgent.indexOf('compatible') > -1 && userAgent.indexOf('MSIE') > -1,
-    isEdge = userAgent.indexOf('Edge') > -1 && !isLessIE11,
-    isIE11 = userAgent.indexOf('Trident') > -1 && userAgent.indexOf('rv:11.0') > -1,
-    IEVersionNum = 0
+      isLessIE11 = userAgent.indexOf('compatible') > -1 && userAgent.indexOf('MSIE') > -1,
+      isEdge = userAgent.indexOf('Edge') > -1 && !isLessIE11,
+      isIE11 = userAgent.indexOf('Trident') > -1 && userAgent.indexOf('rv:11.0') > -1,
+      IEVersionNum = 0
   if (isLessIE11) {
     var IEReg = new RegExp('MSIE (\\d+\\.\\d+);');
     IEReg.test(userAgent);
@@ -58,12 +66,10 @@ var detectBrowser = function (){
 detectBrowser()
 requestList.push('utils')
 require(requestList, function () {
-  switch (location.pathname) {
-    case "/config":
-      require(['config'], function (param1) {
-        var Config = param1['Config']
-        new Config()
-      })
-      break
+  if(location.pathname.indexOf('/config') > -1){
+    require(['config'], function (param1) {
+      var Config = param1['Config']
+      new Config()
+    })
   }
 })

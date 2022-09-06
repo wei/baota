@@ -1880,7 +1880,7 @@ class main(projectBase):
             p = public.ExecShell("bash {}".format(script_file),user=project_find['project_config']['run_user'])
             time.sleep(1)
             if not os.path.exists(pid_file):
-                return public.returnMsg(False,'启动失败{}'.format(p))
+                return public.returnMsg(False,'启动失败{}<script>setTimeout(function(){{$(".layui-layer-msg").css("width","800px");}},100)</script>'.format(p.replace("\n","<br>")))
 
             # 获取PID
             try:

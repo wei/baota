@@ -10,7 +10,7 @@
 #--------------------------------
 # 宝塔公共库
 #--------------------------------
-import json,os,sys,time,re,socket,importlib,binascii,base64,io,string
+import json,os,sys,time,re,socket,importlib,binascii,base64,string,psutil
 _LAN_PUBLIC = None
 _LAN_LOG = None
 _LAN_TEMPLATE = None
@@ -20,6 +20,7 @@ if sys.version_info[0] == 2:
     sys.setdefaultencoding('utf8')
 else:
     from importlib import reload
+
 
 def M(table):
     """
@@ -296,10 +297,10 @@ def ReadFile(filename,mode = 'r'):
     except Exception as ex:
         if sys.version_info[0] != 2:
             try:
-                fp = open(filename, mode,encoding="utf-8")
+                fp = open(filename, mode,encoding="utf-8",errors='ignore')
                 f_body = fp.read()
             except:
-                fp = open(filename, mode,encoding="GBK")
+                fp = open(filename, mode,encoding="GBK",errors='ignore')
                 f_body = fp.read()
         else:
             return False
@@ -529,6 +530,7 @@ def ExecShell(cmdstring, timeout=None, shell=True,cwd=None,env=None,user = None)
         rx = md5(cmdstring)
         succ_f = tempfile.SpooledTemporaryFile(max_size=4096,mode='wb+',suffix='_succ',prefix='btex_' + rx ,dir=tmp_dir)
         err_f = tempfile.SpooledTemporaryFile(max_size=4096,mode='wb+',suffix='_err',prefix='btex_' + rx ,dir=tmp_dir)
+        # env = {"BT-NAME":"panel"}
         sub = subprocess.Popen(cmdstring, close_fds=True, shell=shell,bufsize=128,stdout=succ_f,stderr=err_f,cwd=cwd,env=env,preexec_fn=preexec_fn)
         if timeout:
             s = 0
@@ -632,8 +634,9 @@ def GetHost(port = False):
     host_tmp = request.headers.get('host')
 
     # 验证基本格式
-    if not re.match("^[\w\.\-]+$", host_tmp):
-        host_tmp = ''
+    if host_tmp:
+        if not re.match("^[\w\.\-]+$", host_tmp):
+            host_tmp = ''
 
     if not host_tmp:
         if request.url_root:
@@ -748,9 +751,8 @@ def checkInput(data):
 #取文件指定尾行数
 def GetNumLines(path,num,p=1):
     pyVersion = sys.version_info[0]
-    max_len = 1024*128
+    max_len = 1024*1024*10
     try:
-        from cgi import html
         if not os.path.exists(path): return ""
         start_line = (p - 1) * num
         count = start_line + num
@@ -788,9 +790,8 @@ def GetNumLines(path,num,p=1):
                     fp.seek(-to_read, 1)
                     t_buf = fp.read(to_read)
                     if pyVersion == 3:
-                        try:
-                            if type(t_buf) == bytes: t_buf = t_buf.decode('utf-8')
-                        except:t_buf = str(t_buf)
+                        t_buf = t_buf.decode('utf-8',errors='ignore')
+
                     buf = t_buf + buf
                     fp.seek(-to_read, 1)
                     if pos - to_read == 0:
@@ -999,9 +1000,9 @@ REQUEST_FORM: {request_form}
     request_date = getDate(),
     remote_addr = GetClientIp(),
     method = request.method,
-    full_path = url_encode(request.full_path),
+    full_path = url_encode(xsssec(request.full_path)),
     request_form = request.form.to_dict(),
-    user_agent = request.headers.get('User-Agent'),
+    user_agent = xsssec(request.headers.get('User-Agent')),
     panel_version = version(),
     os_version = get_os_version()
 )
@@ -2804,8 +2805,7 @@ def get_login_token():
     return token_s
 
 def get_sess_key():
-    from BTPanel import session
-    return md5(get_login_token() + session.get('request_token_head',''))
+    return md5(get_login_token() + get_csrf_sess_html_token_value())
 
 
 def password_salt(password,username=None,uid=None):
@@ -3106,13 +3106,23 @@ def send_file(data,fname='',mimetype = ''):
     if not mimetype: mimetype = "application/octet-stream"
     if not fname: fname = 'doan.txt'
 
-    return send_to(fp,
-                    mimetype=mimetype,
-                    as_attachment=True,
-                    add_etags=True,
-                    conditional=True,
-                    attachment_filename=fname,
-                    cache_timeout=0)
+    import flask
+    if flask.__version__ < "2.1.0":
+        return send_to(fp,
+                        mimetype=mimetype,
+                        as_attachment=True,
+                        add_etags=True,
+                        conditional=True,
+                        attachment_filename=fname,
+                        cache_timeout=0)
+    else:
+        return send_to(fp,
+                        mimetype=mimetype,
+                        as_attachment=True,
+                        etag=True,
+                        conditional=True,
+                        download_name=fname,
+                        max_age=0)
 
 def gen_password(length=8,chars=string.ascii_letters+string.digits):
     from random import choice
@@ -3461,60 +3471,62 @@ def check_app(check='app'):
 
 #宝塔邮件报警
 def send_mail(title,body,is_logs=False,is_type="堡塔登录提醒"):
-    if is_logs:
-        try:
-            import send_mail
-            send_mail22 = send_mail.send_mail()
-            tongdao = send_mail22.get_settings()
-            if tongdao['user_mail']['mail_list']==0:return False
-            if not tongdao['user_mail']['info']: return False
-            if len(tongdao['user_mail']['mail_list'])==1:
-                send_mail=tongdao['user_mail']['mail_list'][0]
-                send_mail22.qq_smtp_send(send_mail, title=title, body=body)
-            else:
-                send_mail22.qq_smtp_send(tongdao['user_mail']['mail_list'], title=title, body=body)
-            if is_logs:
-                WriteLog2(is_type, body)
-        except:
-            return False
-    else:
-        try:
-            import send_mail
-            send_mail22 = send_mail.send_mail()
-            tongdao = send_mail22.get_settings()
-            if tongdao['user_mail']['mail_list'] == 0: return False
-            if not tongdao['user_mail']['info']: return False
-            if len(tongdao['user_mail']['mail_list']) == 1:
-                send_mail = tongdao['user_mail']['mail_list'][0]
-                return send_mail22.qq_smtp_send(send_mail, title=title, body=body)
-            else:
-                return send_mail22.qq_smtp_send(tongdao['user_mail']['mail_list'], title=title, body=body)
-        except:
-            return False
+    try:
+        import panelPush
+        msg_data = {
+            "msg": body.replace("\n", "<br/>"),
+            "title": title
+        }
+        if is_logs: WriteLog2(is_type,body)
+        return panelPush.panelPush().push_message_immediately({"mail":msg_data})
+    except Exception as ex:
+        return returnMsg(False,'发送失败: {}'.format(ex))
 
-#宝塔钉钉 or 微信告警
+#发送钉钉告警
 def send_dingding(body,is_logs=False,is_type="堡塔登录提醒"):
-    if is_logs:
-        try:
-            import send_mail
-            send_mail22 = send_mail.send_mail()
-            tongdao = send_mail22.get_settings()
-            if not tongdao['dingding']['info']: return False
-            tongdao = send_mail22.get_settings()
-            if is_logs:
-                WriteLog2(is_type,body)
-            return send_mail22.dingding_send(body)
-        except:
-            return False
-    else:
-        try:
-            import send_mail
-            send_mail22 = send_mail.send_mail()
-            tongdao = send_mail22.get_settings()
-            if not tongdao['dingding']['info']: return False
-            tongdao = send_mail22.get_settings()
-            return send_mail22.dingding_send(body)
-        except:return False
+    try:
+        import panelPush
+        if is_logs: WriteLog2(is_type,body)
+        return panelPush.panelPush().push_message_immediately({"dingding":{"msg":body}})
+    except Exception as ex:
+        return returnMsg(False,'发送失败: {}'.format(ex))
+
+# 发送微信告警
+def send_weixin(body,is_logs=False,is_type="堡塔登录提醒"):
+    try:
+        import panelPush
+        if is_logs: WriteLog2(is_type,body)
+        return panelPush.panelPush().push_message_immediately({"weixin":{"msg":body}})
+    except Exception as ex:
+        return returnMsg(False,'发送失败: {}'.format(ex))
+
+# 发送飞书告警
+def send_feishu(body,is_logs=False,is_type="堡塔登录提醒"):
+    try:
+        import panelPush
+        if is_logs: WriteLog2(is_type,body)
+        return panelPush.panelPush().push_message_immediately({"feishu":{"msg":body}})
+    except Exception as ex:
+        return returnMsg(False,'发送失败: {}'.format(ex))
+
+# 发送除短信以外的所有告警通道
+def send_all(body,title=None):
+    try:
+        import panelPush
+        msg_dict = {"msg":body}
+        msg_all = {
+            "feishu":msg_dict,
+            "weixin":msg_dict,
+            "dingding":msg_dict,
+            "mail":{
+                "msg": body.replace("\n", "<br/>"),
+                "title": title
+            }
+        }
+        return panelPush.panelPush().push_message_immediately(msg_all)
+    except Exception as ex:
+        return returnMsg(False,'发送失败: {}'.format(ex))
+
 
 #获取服务器IP
 def get_ip():
@@ -3569,16 +3581,58 @@ def check_ip_white(path,ip):
 
 #登陆告警
 def login_send_body(is_type,username,login_ip,port):
-    login_send_mail = "{}/data/login_send_mail.pl".format(get_panel_path())
-    send_login_white = '{}/data/send_login_white.json'.format(get_panel_path())
-    login_send_dingding = "{}/data/login_send_dingding.pl".format(get_panel_path())
-    if os.path.exists(login_send_mail):
-        if check_ip_white(send_login_white,login_ip):return False
-        send_mail("堡塔登录提醒","堡塔登录提醒：您的服务器"+get_ip()+"通过"+is_type+"登录成功，账号："+username+"，登录IP："+login_ip+":"+port+"，登录时间："+time.strftime('%Y-%m-%d %X',time.localtime()), True)
-    if os.path.exists(login_send_dingding):
-        if check_ip_white(send_login_white,login_ip):return False
-        send_dingding("#### 堡塔登录提醒\n\n > 服务器　："+get_ip()+"\n\n > 登录方式："+is_type+"\n\n > 登录账号："+username+"\n\n > 登录ＩＰ："+login_ip+":"+port+"\n\n > 登录时间："+time.strftime('%Y-%m-%d %X',time.localtime())+'\n\n > 登录状态:  <font color=#20a53a>成功</font>', True)
+    send_type = ""
+    panel_path = get_panel_path()
+    login_send_type_conf = "/www/server/panel/data/panel_login_send.pl"
+    if os.path.exists(login_send_type_conf):
+        send_type=ReadFile(login_send_type_conf).strip()
+    else:
+        # 兼容之前的
+        if os.path.exists("/www/server/panel/data/login_send_type.pl"):
+            send_type = readFile("/www/server/panel/data/login_send_type.pl")
+        else:
+            if os.path.exists('/www/server/panel/data/login_send_mail.pl'):
+                send_type = "mail"
+            if os.path.exists('/www/server/panel/data/login_send_dingding.pl'):
+                send_type = "dingding"
+    if not send_type:return False
+    object = init_msg(send_type.strip())
+    if not object:return
+    send_login_white = '{}/data/send_login_white.json'.format(panel_path)
+    if check_ip_white(send_login_white, login_ip): return False
+    if send_type == "mail":
+        data = {}
+        data['title'] = "堡塔登录提醒"
+        data['msg'] = "堡塔登录提醒：您的服务器"+get_ip()+"通过"+is_type+"登录成功，账号："+username+"，登录IP："+login_ip+":"+port+"，登录时间："+time.strftime('%Y-%m-%d %X',time.localtime())
+        object.push_data(data)
+    elif send_type == "wx_account":
+        body="堡塔登录提醒\n > 服务器　："+get_ip()+"\n > 登录方式："+is_type+"\n > 登录账号："+username+"\n > 登录ＩＰ："+login_ip+":"+port+"\n > 登录时间："+time.strftime('%Y-%m-%d %X',time.localtime())+'\n > 登录状态: 成功'
+        object.send_msg(body)
+    elif send_type == 'sms':
+        data={}
+        data['ip'] = get_server_ip()
+        data['local_ip'] = get_network_ip()
+        ip="{}(外) {}(内)".format(data['ip'],data['local_ip'])
+        sm_args = {'name': '[' + ip+ ']', 'time': time.strftime('%Y-%m-%d %X',time.localtime()), 'type': '[' + is_type + ']',
+                   'user': username}
+        rdata = object.send_msg('login_panel', check_sms_argv(sm_args))
+    else:
+        msg = "> 登录方式：" + is_type + "\n\n > 登录账号：" + username + "\n\n > 登录IP：" + login_ip + ":" + port + "\n\n > 登录时间：" + time.strftime(
+            '%Y-%m-%d %X', time.localtime()) + '\n\n > 登录状态: 成功'
+        msg = get_push_info("面板登录告警", [msg])['msg']
+        object.send_msg(msg)
 
+
+
+        # if send_type == "dingding":
+        #     msg = "#### 堡塔登录提醒\n\n > 服务器　："+get_ip()+"\n\n > 登录方式："+is_type+"\n\n > 登录账号："+username+"\n\n > 登录ＩＰ："+login_ip+":"+port+"\n\n > 登录时间："+time.strftime('%Y-%m-%d %X',time.localtime())+'\n\n > 登录状态:  <font color=#20a53a>成功</font>'
+        #     send_dingding(msg, False)
+        # elif send_type == "weixin":
+        #     msg = "#### 堡塔登录提醒\n\n > 服务器　："+get_ip()+"\n\n > 登录方式："+is_type+"\n\n > 登录账号："+username+"\n\n > 登录ＩＰ："+login_ip+":"+port+"\n\n > 登录时间："+time.strftime('%Y-%m-%d %X',time.localtime())+'\n\n > 登录状态:  <font color=#20a53a>成功</font>'
+        #     send_weixin(msg, False)
+        # elif send_type == "feishu":
+        #     msg = "堡塔登录提醒\n > 服务器　："+get_ip()+"\n > 登录方式："+is_type+"\n > 登录账号："+username+"\n > 登录ＩＰ："+login_ip+":"+port+"\n > 登录时间："+time.strftime('%Y-%m-%d %X',time.localtime())+'\n > 登录状态: 成功'
+        #     send_feishu(msg, False)
 
 #普通模式下调用发送消息【设置登陆告警后的设置】
 #title= 发送的title
@@ -4042,6 +4096,7 @@ def return_error(error_msg,status_code = -1,data = []):
         @param data<mixed> 响应数据
         @return dict
     '''
+    if not data: data = error_msg
     return return_data(False,data,status_code,str(error_msg))
 
 
@@ -4054,6 +4109,7 @@ def error(error_msg,status_code = -1,data = []):
         @param data<mixed> 响应数据
         @return dict
     '''
+    if not data: data = error_msg
     return return_error(error_msg,status_code,data)
 
 def success(data = [],status_code = 1,error_msg = ''):
@@ -4335,7 +4391,7 @@ def error_not_login(e = None,_src = None):
 
 def error_403(e):
     from BTPanel import Response,session
-    if not session.get('login',None): return error_not_login()
+    # if not session.get('login',None): return error_not_login()
     errorStr = '''<html>
 <head><title>403 Forbidden</title></head>
 <body>
@@ -4350,7 +4406,7 @@ def error_403(e):
 
 def error_404(e):
     from BTPanel import Response,session
-    if not session.get('login',None): return error_not_login()
+    # if not session.get('login',None): return error_not_login()
     errorStr = '''<html>
 <head><title>404 Not Found</title></head>
 <body>
@@ -4608,18 +4664,27 @@ def get_recycle_bin_list():
     default_path = '/www/.Recycle_bin'
     default_path_src = '/www/Recycle_bin'
     if os.path.exists(default_path_src) and not os.path.exists(default_path):
-        os.rename(default_path_src,default_path)
+        try:
+            os.rename(default_path_src,default_path)
+        except:
+            ExecShell("mv {} {}".format(default_path_src,default_path))
 
     if not os.path.exists(default_path):
         os.makedirs(default_path,384)
 
     # 获取回收站列表
     recycle_bin_list = []
+    mtime_list = []  # 修改时间
     for mountpoint in get_mountpoint_list():
         recycle_bin_path = '{}.Recycle_bin/'.format(mountpoint)
+
         try:
             if not os.path.exists(recycle_bin_path):
                 os.mkdir(recycle_bin_path,384)
+            if not os.path.exists(recycle_bin_path): continue
+            mtime = os.path.getmtime(recycle_bin_path)
+            if mtime in mtime_list: continue  # 通过修改时间去重
+            mtime_list.append(mtime)
             recycle_bin_list.append(recycle_bin_path)
         except:
             continue
@@ -4803,3 +4868,715 @@ def version_to_tuple(version):
     version = version.split('.')
     version = tuple(map(int, version))
     return version
+
+
+def set_search_history(mod_name,key,val):
+    """
+    @保存搜索历史
+    @mod_name 模块名称
+    @key 关键字
+    @val string 搜索内容
+    """
+    if not val: return False
+
+    max = 10
+    p_file = get_panel_path()
+    m_file = p_file + '/data/search.limit'
+    d_file = p_file + '/data/search.json'
+    try:
+         sdata = int(readFile(m_file))
+         if sdata: max = sdata
+    except: pass
+
+    result = {}
+    try:
+        result = json.loads(readFile(d_file))
+    except :pass
+
+    if not mod_name in result: result[mod_name] = {}
+    if not key in result[mod_name]:  result[mod_name][key] = []
+
+    n_list = []
+    for item in result[mod_name][key]:
+        if item['val'].strip() != val.strip(): n_list.append(item)
+
+    n_list.append({'val':val,'time':int(time.time())})
+    result[mod_name][key] = n_list[0:max]
+
+    writeFile(d_file,json.dumps(result))
+    return True
+
+def get_search_history(mod_name,key):
+    """
+    @获取搜索历史
+    @mod_name string 模块名称
+    @key string 关键字
+    """
+    print(mod_name,key)
+    result = []
+    d_file = get_panel_path() + '/data/search.json'
+    try:
+        result = json.loads(readFile(d_file))[mod_name][key]
+    except :pass
+
+    result = sorted(result, key=lambda x: x['time'], reverse=True)
+
+    return result
+
+
+def set_dir_history(mod_name,key,val):
+    """
+    @设置目录打开历史
+    @mod_name string 模块名称
+    @key string 函数名
+    @val string 路径
+    """
+    if not val:  return False
+
+    max = 10
+    result = {}
+    d_file = get_panel_path() + '/data/dir_history.json'
+    try:
+        result = json.loads(readFile(d_file))
+    except :pass
+
+    if not mod_name in result: result[mod_name] = {}
+    if not key in result[mod_name]:  result[mod_name][key] = []
+
+    data = result[mod_name][key]
+    for info in data:
+        if val.find(info['val']) >= 0:
+            if time.time() - info['time'] < 15:
+                data.remove(info)
+
+    data.append({'val':val,'time':int(time.time())})
+    result[mod_name][key] = data[0:max]
+    writeFile(d_file,json.dumps(result))
+    return True
+
+
+def get_dir_history(mod_name,key):
+    """
+    @获取目录打开历史
+    @mod_name string 模块名称
+    @key string 关键字
+    """
+    result = []
+    d_file = get_panel_path() + '/data/dir_history.json'
+    try:
+        result = json.loads(readFile(d_file))[mod_name][key]
+    except :pass
+    return result
+
+def get_run_pip():
+    pass
+
+def install_pip(shell):
+    """
+    @name 安装pip模块
+    @author cjxin
+    @param shell<string> 安装命令
+    """
+    if get_os('windows'):
+        os.system(get_run_pip(shell.replace('pip','[PIP]')))
+    else:
+        os.system(shell.replace('pip','btpip'))
+
+
+def is_domain(domain):
+    """
+    @验证是否域名
+    """
+    reg = "^([\w\-\*]{1,100}\.){1,10}([\w\-]{1,24}|[\w\-]{1,24}\.[\w\-]{1,24})$";
+    if re.match(reg, domain): return True
+    return False
+
+def init_msg(module):
+    """
+    初始化消息通道
+    @module 消息通道模块名称
+    """
+    import os, sys
+    if not os.path.exists('class/msg'): os.makedirs('class/msg')
+    panelPath = get_panel_path()
+
+    sfile = 'class/msg/{}_msg.py'.format(module)
+    if not os.path.exists(sfile): return False
+    sys.path.insert(0, "{}/class/msg".format(panelPath))
+
+    msg_main = __import__('{}_msg'.format(module))
+    try:
+        mod_reload(msg_main)
+    except:
+        pass
+    return eval('msg_main.{}_msg()'.format(module))
+
+
+def push_argv(msg):
+    """
+    @处理短信参数，否则会被拦截
+    """
+    if is_ipv4(msg):
+        tmp1 = msg.split('.')
+        msg = '{}.***.***.{}'.format(tmp1[0], tmp1[3])
+    else:
+        if is_domain(msg):
+            msg = msg.replace('.', '_')
+    return msg
+
+
+def check_sms_argv(data):
+    """
+    @批量处理短信参数，否则会被拦截
+    """
+    for key in data:
+        val = data[key]
+        if type(val) == str:
+            data[key] = push_argv(val)
+    return data
+
+"""
+@获取推送ip
+"""
+def get_push_address():
+    ip = push_argv(GetLocalIp())
+    return ip
+
+
+def get_ips_area(ips):
+    '''
+    @name 获取ip地址所在地
+    @author cjxin
+    @param ips<list>
+    @return list
+    '''
+    import PluginLoader
+
+    args = dict_obj()
+    args.model_index = 'safe'
+    args.ips = ips
+
+    res = PluginLoader.module_run("ips","get_ip_area",args)
+    return res
+
+def return_area(result,key):
+    """
+    @name 格式化返回带IP归属地的数组
+    @param result<list> 数据数组
+    @param key<str> ip所在字段
+    @return list
+    """
+    tmps = []
+    for data in result:
+        data['area'] = ''
+        tmps.append(data[key])
+
+    res = get_ips_area(tmps)
+    if 'status' in res: return result
+
+    for data in result:
+        if data[key] in res:
+            data['area'] = res[data[key]]
+    return result
+
+def get_network_ip():
+    """
+    @name 获取本机ip
+    @return string
+    """
+
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+        return ip
+    finally:
+        s.close()
+    return '127.0.0.1'
+
+def get_server_ip():
+    """
+    @获取服务器外网ip
+    """
+
+    user_file = '{}/data/userInfo.json'.format(get_panel_path())
+    if os.path.exists(user_file):
+        try:
+            userTmp = json.loads(readFile(user_file))
+            return userTmp['address']
+        except: pass
+
+    return GetLocalIp()
+
+
+def get_push_info(title,slist = []):
+    """
+    @name 获取推送信息
+    @param title<str> 推送标题
+    @param slist<list> 推送追加的列表
+            如：slist = ['>发送内容:xxx']
+    @return dict
+    """
+    data = {}
+    data['title'] = title
+    data['ip'] = get_server_ip()
+
+    data['local_ip'] = get_network_ip()
+    data['time'] = format_date()
+    data['server_name'] = GetConfigValue('title')
+
+    dlist = [
+        "#### {}".format(data['title']),
+        ">服务器："+ data['server_name'] ,
+        ">IP地址：{}(外) {}(内)".format(data['ip'],data['local_ip']) ,
+        ">发送时间：" + data['time']
+    ]
+    dlist.extend(slist)
+    msg = "\n\n".join(dlist)
+    data['msg'] = msg
+    data['list'] = dlist
+    return data
+
+def write_push_log(module,msg,res):
+    """
+    @name 写推送日志
+    @module string 模块名称
+    @msg string 消息内容
+    @res dict 推送结果
+    """
+    user = ''
+    for key in res:
+        status = '<span style="color:#20a53a;">成功</span>'
+        if res[key] == 0: status = '<span style="color:red;">成功</span>'
+        user += '[ {}:{} ] '.format(key,status)
+
+    if not user: user = '[ 默认 ] '
+    try:
+        msg_obj = init_msg(module)
+        if msg_obj: module = msg_obj.get_version_info(None)['title']
+    except:pass
+
+    log = '[{}]  发送给{},  发送内容：[{}]'.format(module,user,xsssec(msg))
+    WriteLog('消息推送',log)
+    return True
+
+def push_msg(module,data):
+    """
+    @name 推送消息
+    @param module<str> 模块名称
+    @param msg<str> 消息内容
+    @return dict
+    """
+    msg_obj = init_msg(module)
+    if not msg_obj:
+        returnMsg(False,'模块{}不存在!'.format(module))
+
+    res = msg_obj.push_data(data)
+    return res
+
+def check_chinese(data):
+    """
+    @name 判断字符串是否包含中文
+    """
+    if re.search('[\u4e00-\u9fa5]',data):
+        return True
+    return False
+
+def is_ssl():
+    '''
+        @name 是否开启SSL
+        @author hwliang
+        @return bool
+    '''
+    return os.path.exists(get_panel_path() + '/data/ssl.pl')
+
+def get_cookie(key,default=None):
+    '''
+        @name 获取指定Cookie值
+        @author hwliang
+        @param key<str> Cookie键
+        @param default<str> 默认值
+        @return str
+    '''
+    from flask import request
+    return request.cookies.get(key,default)
+
+def get_csrf_cookie_token_key():
+    '''
+        @name 获取CSRF Cookie Key
+        @author hwliang
+        @return string
+    '''
+    if is_ssl():
+        token_key = 'https_request_token'
+    else:
+        token_key = 'request_token'
+    return token_key
+
+
+def get_csrf_cookie_token_value():
+    '''
+        @name 获取CSRF Cookie Value
+        @author hwliang
+        @return string
+    '''
+    token_key = get_csrf_cookie_token_key()
+    return get_cookie(token_key)
+
+
+def get_csrf_html_token_key():
+    '''
+        @name 获取CSRF HTML Key
+        @author hwliang
+        @return string
+    '''
+    if is_ssl():
+        token_key = 'https_request_token_head'
+    else:
+        token_key = 'request_token_head'
+    return token_key
+
+def get_csrf_html_token_value():
+    '''
+        @name 获取CSRF HTML Value
+        @author hwliang
+        @return string
+    '''
+    token_key = get_csrf_html_token_key()
+    return get_cookie(token_key)
+
+def get_csrf_sess_html_token_value():
+    '''
+        @name 从SESSION获取CSRF HTML value
+        @author hwliang
+        @return string
+    '''
+    from flask import session
+    return session.get(get_csrf_html_token_key(),"")
+
+def get_csrf_sess_cookie_token_value():
+    '''
+        @name 从SESSION获取CSRF Cookie value
+        @author hwliang
+        @return string
+    '''
+    from flask import session
+    return session.get(get_csrf_cookie_token_key(),"")
+
+def get_sys_install_bin():
+    '''
+        @name 获取系统包管理器命令
+        @author hwliang
+        @return string
+    '''
+    install_bins = ['/usr/bin/yum','/usr/bin/apt-get','/usr/bin/dnf']
+    for bin in install_bins:
+        if os.path.exists(bin):
+            return bin
+    return ''
+
+
+
+def get_firewall_status():
+    '''
+        @name 获取系统防火墙状态
+        @author hwliang
+        @return int 0.关闭 1.开启 -1.未安装
+    '''
+    import psutil
+    firewall_files = {'/usr/sbin/firewalld':"pid",'/usr/bin/firewalld':"pid",'/usr/sbin/ufw':"ufw status verbose|grep 'Status: active'",'/usr/sbin/iptables':"service iptables status|grep 'Chain INPUT'"}
+    for f in firewall_files.keys():
+        if not os.path.exists(f): continue
+        _cmd = firewall_files[f]
+        if _cmd != "pid":
+            res = ExecShell(_cmd)
+            if res[0].strip():
+                return 1
+            else:
+                return 0
+        for pid  in psutil.pids():
+            try:
+                p = psutil.Process(pid)
+                if f in p.cmdline():
+                    return 1
+            except: pass
+        return 0
+    return -1
+
+def get_panel_port():
+    '''
+        @name 获取面板端口
+        @author hwliang
+        @return int
+    '''
+    port_file = '{}/data/port.pl'.format(get_panel_path())
+    if not os.path.exists(port_file):
+        return 8888
+    try:
+        return int(readFile(port_file))
+    except:
+        return 8888
+
+def install_sys_firewall():
+    '''
+        @name 安装系统防火墙
+        @author hwliang
+        @return bool
+    '''
+    if get_firewall_status() != -1: return True
+
+    install_bin = get_sys_install_bin()
+    if not install_bin: return False
+    if install_bin.find('apt-get') != -1:
+        ExecShell("{} install -y ufw".format(install_bin))
+        if get_firewall_status() != -1:
+            _cmd = '''ufw allow 20/tcp
+ufw allow 21/tcp
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw allow ${panelPort}/tcp
+ufw allow ${sshPort}/tcp
+ufw allow 39000:40000/tcp
+ufw_status=`ufw status`
+echo y|ufw enable
+ufw default deny
+ufw reload
+'''.format(panelPort=get_panel_port(),sshPort=get_ssh_port())
+            ExecShell(_cmd)
+    elif install_bin.find('yum') != -1 or install_bin.find('dnf') != -1:
+        ExecShell("{} install -y firewalld".format(install_bin))
+        if get_firewall_status() != -1:
+            _cmd = '''systemctl enable firewalld
+			systemctl start firewalld
+			firewall-cmd --set-default-zone=public > /dev/null 2>&1
+			firewall-cmd --permanent --zone=public --add-port=20/tcp > /dev/null 2>&1
+			firewall-cmd --permanent --zone=public --add-port=21/tcp > /dev/null 2>&1
+			firewall-cmd --permanent --zone=public --add-port=22/tcp > /dev/null 2>&1
+			firewall-cmd --permanent --zone=public --add-port=80/tcp > /dev/null 2>&1
+            firewall-cmd --permanent --zone=public --add-port=443/tcp > /dev/null 2>&1
+			firewall-cmd --permanent --zone=public --add-port={panelPort}/tcp > /dev/null 2>&1
+			firewall-cmd --permanent --zone=public --add-port={sshPort}/tcp > /dev/null 2>&1
+			firewall-cmd --permanent --zone=public --add-port=39000-40000/tcp > /dev/null 2>&1
+			firewall-cmd --reload
+'''.format(panelPort = get_panel_port(),sshPort = get_ssh_port())
+            ExecShell(_cmd)
+
+    return False
+
+
+def check_firewall_rule(port):
+    '''
+    @name 检测防火墙是否已经添加规则
+    @author cjxin
+    @param port int 端口号
+    '''
+
+    args = dict_obj()
+    args.model_index = 'safe'
+    args.port = port
+
+    import PluginLoader
+    res = PluginLoader.module_run("firewall","check_firewall_rule",args)
+    return res
+
+def add_firewall_rule(port,protocol = 'tcp',types = 'accept',address = '0.0.0.0/0',brief = None):
+    """
+    @name 添加防火墙规则
+    @author cjxin
+    @param port int 端口号
+    @param protocol string 协议类型 tcp udp
+    @param types string 添加类型 accept reject
+    @param address string 地址
+    @param brief string 描述
+    """
+
+    args = dict_obj()
+    args.model_index = 'safe'
+    args.port = port
+    args.protocol = protocol
+    args.types = types
+    args.address = address
+    args.brief = brief
+    if not brief: args.brief = str(port)
+
+    import PluginLoader
+    res = PluginLoader.module_run("firewall","create_rules",args)
+    return res
+
+def del_firewall_rule(port,protocol = 'tcp',types = 'accept',address = '0.0.0.0/0'):
+    '''
+    @name 删除防火墙规则
+    @author cjxin
+    @param port int 端口号
+    @param protocol str 协议
+    @param types str 类型
+    @param address str 地址
+    '''
+
+
+    args = dict_obj()
+    args.model_index = 'safe'
+    args.port = port
+    args.protocol = protocol
+    args.types = types
+    args.address = address
+    import PluginLoader
+    res = PluginLoader.module_run("firewall","remove_rules",args)
+    return res
+
+
+def is_aarch():
+    '''
+        @name 是否是arm架构
+        @author hwliang
+        @return bool
+    '''
+    uname = None
+    if hasattr(os,'uname'): uname = os.uname()
+    aarch_list = ['aarch64','aarch']
+    try:
+        return uname.machine in aarch_list
+    except:
+        if uname:
+            return uname[-1] in aarch_list
+    return False
+
+def is_process_exists_by_cmdline(_cmd):
+        '''
+            @name 根据命令行参数查找进程是否存在
+            @author hwliang
+            @param _cmd 命令行
+            @return bool
+        '''
+        if isinstance(_cmd,str):
+            _cmd = [_cmd]
+        if not isinstance(_cmd,list):
+            return False
+        for pid in psutil.pids():
+            try:
+                p = psutil.Process(pid)
+                cmd_line = p.cmdline()
+                for _c in _cmd:
+                    if _c in cmd_line:
+                        return True
+            except:
+                continue
+        return False
+
+def is_process_exists_by_exe(_exe):
+    '''
+        @name 根据执行文件路径查找进程是否存在
+        @author hwliang
+        @param _exe 命令行
+        @return bool
+    '''
+    if isinstance(_exe,str):
+        _exe = [_exe]
+    if not isinstance(_exe,list):
+        return False
+    for pid in psutil.pids():
+        try:
+            p = psutil.Process(pid)
+            _exe_bin = p.exe()
+            for _e in _exe:
+                if _exe_bin == _e: return True
+        except:
+            continue
+    return False
+
+def is_process_exists_by_name(_name):
+    '''
+        @name 根据进程名查找进程是否存在
+        @author hwliang
+        @param _name 命令行
+        @return bool
+    '''
+    if isinstance(_name,str):
+        _name = [_name]
+    if not isinstance(_name,list):
+        return False
+    for pid in psutil.pids():
+        try:
+            p = psutil.Process(pid)
+            name = p.name()
+            for _n in _name:
+                if name == _n: return True
+        except:
+            continue
+    return False
+
+
+def is_mysql_process_exists():
+    '''
+        @name 检查mysql进程是否存在
+        @author hwliang
+        @return bool
+    '''
+    _exe = ['/www/server/mysql/bin/mysqld_safe','/www/server/mysql/bin/mariadbd','/www/server/mysql/bin/mysqld']
+    return is_process_exists_by_exe(_exe)
+
+def is_redis_process_exists():
+    '''
+        @name 检查redis进程是否存在
+        @author hwliang
+        @return bool
+    '''
+    _exe = ['/www/server/redis/src/redis-server']
+    return is_process_exists_by_exe(_exe)
+
+def is_pure_ftpd_process_exists():
+    '''
+        @name 检查pure-ftpd进程是否存在
+        @author hwliang
+        @return bool
+    '''
+    _exe = ['/www/server/pure-ftpd/sbin/pure-ftpd']
+    return is_process_exists_by_exe(_exe)
+
+def is_php_fpm_process_exists(name):
+    '''
+        @name 检查php-fpm进程是否存在
+        @author hwliang
+        @return bool
+    '''
+    _php_version = name.split('-')[-1]
+    _exe = ['/www/server/php/{}/sbin/php-fpm'.format(_php_version)]
+    return is_process_exists_by_exe(_exe)
+
+def is_nginx_process_exists():
+    '''
+        @name 检查nginx进程是否存在
+        @author hwliang
+        @return bool
+    '''
+    _exe = ['/www/server/nginx/sbin/nginx']
+    return is_process_exists_by_exe(_exe)
+
+def is_httpd_process_exists():
+    '''
+        @name 检查httpd进程是否存在
+        @author hwliang
+        @return bool
+    '''
+    _exe = ['/www/server/apache/bin/httpd']
+    return is_process_exists_by_exe(_exe)
+
+def is_memcached_process_exists():
+    '''
+        @name 检查memcached进程是否存在
+        @author hwliang
+        @return bool
+    '''
+    _exe = ['/usr/local/memcached/bin/memcached']
+    return is_process_exists_by_exe(_exe)
+
+def is_mongodb_process_exists():
+    '''
+        @name 检查mongodb进程是否存在
+        @author hwliang
+        @return bool
+    '''
+    _exe = ['/www/server/mongodb/bin/mongod']
+    return is_process_exists_by_exe(_exe)

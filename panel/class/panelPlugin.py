@@ -350,7 +350,7 @@ class panelPlugin:
         opts = {'i':'安装','u':'更新','r':'修复'}
         i_opts = {'i':'install.sh install','u':'upgrade.sh','r':'repair.sh'}
 
-        if not os.path.exists(filename): return public.returnMsg(False,'临时文件不存在,请重新上传!')
+        if not os.path.exists(filename): return public.returnMsg(False,'文件校验失败，请重新安装此插件!')
         plugin_path_panel = self.__plugin_path + input_plugin_name
         if input_install_opt == 'r' and os.path.exists(filename + '/' + i_opts[input_install_opt]):
             i_opts[input_install_opt] = 'install.sh install'
@@ -364,12 +364,13 @@ class panelPlugin:
         self.__plugin_info = p_info
         self.__copy_path(filename,plugin_path_panel,p_info['not_substituted'])
         self.__set_pyenv(plugin_path_panel + '/install.sh')
+        log_file = '/tmp/panelShell.pl'
+        if os.path.exists(log_file): os.remove(log_file)
         public.ExecShell('cd ' + plugin_path_panel + ' && bash {} &> /tmp/panelShell.pl'.format(i_opts[input_install_opt]))
 
 
         # 清理临时文件
         if os.path.exists(filename): shutil.rmtree(filename)
-
         if p_info:
             # 复制图标
             icon_sfile = plugin_path_panel + '/icon.png'
@@ -382,11 +383,14 @@ class panelPlugin:
             reload_file = os.path.join(self.__panel_path,'data/{}.pl'.format(input_plugin_name))
             public.writeFile(reload_file,'')
             pluginInfo = self.__get_plugin_find(input_plugin_name)
-            public.httpPost(public.GetConfigValue('home') + '/api/panel/plugin_total',{"pid":pluginInfo['id'],'p_name':input_plugin_name},3)
+            public.run_thread(public.httpPost,(public.GetConfigValue('home') + '/api/panel/plugin_total',{"pid":pluginInfo['id'],'p_name':input_plugin_name},10)) # 线程
+            # public.httpPost(public.GetConfigValue('home') + '/api/panel/plugin_total',{"pid":pluginInfo['id'],'p_name':input_plugin_name},3)
+            if os.path.exists(log_file): os.remove(log_file)
             return public.returnMsg(True,'{}成功!'.format(opts[input_install_opt]))
 
         # 安装失败清理安装文件？
         if os.path.exists(plugin_path_panel): shutil.rmtree(plugin_path_panel)
+        if os.path.exists(log_file): os.remove(log_file)
         return public.returnMsg(False,'{}失败!'.format(opts[input_install_opt]))
 
 
@@ -400,7 +404,6 @@ class panelPlugin:
         s_tmp_path = self.__tmp_path
         if not os.path.exists(s_tmp_path):
             os.makedirs(s_tmp_path,mode=384)
-
         if tmp_file:
             if not os.path.exists(tmp_file): return public.returnMsg(False,'文件下载失败!')
             import panelTask as plu_panelTask
@@ -744,7 +747,8 @@ class panelPlugin:
         try:
             if 'status' in result:
                 if result['status']:
-                    public.httpPost(public.GetConfigValue('home') + '/api/panel/plugin_total',{"pid":pluginInfo['id'],'p_name':pluginInfo['name']},3)
+                    public.run_thread(public.httpPost,(public.GetConfigValue('home') + '/api/panel/plugin_total',{"pid":pluginInfo['id'],'p_name':pluginInfo['name']},3)) # 走线程
+                    # public.httpPost(public.GetConfigValue('home') + '/api/panel/plugin_total',{"pid":pluginInfo['id'],'p_name':pluginInfo['name']},3)
         except:pass
         return result
 
@@ -883,7 +887,7 @@ class panelPlugin:
         if not public.M('tasks').where("status=?", ('-1',)).count():
             tip_file = '/dev/shm/.panelTask.pl'
             tip_time = public.readFile(tip_file)
-            if not tip_time or time.time() - int(tip_time) > 60:
+            if not tip_time or time.time() - int(tip_time) > 600:
                 public.ExecShell("/www/server/panel/BT-Task")
                 public.print_log("已重启后台任务")
         return public.returnMsg(True,'已将安装任务添加到队列!')
@@ -917,7 +921,7 @@ class panelPlugin:
             return public.returnMsg(True,'PLUGIN_UNINSTALL')
         else:
             if pluginInfo['name'] == 'mysql':
-                if public.M('databases').where('db_type=?',0).count() > 0: return public.returnMsg(False,"本地数据库列表非空，为了您的数据安全，请先<span style='color:red;'>备份所有本地数据库数据</span>后删除现有本地数据库<br>强制卸载命令：rm -rf /www/server/mysql")
+                if public.M('databases').where('db_type=? AND type=?',(0,"MySQL")).count() > 0: return public.returnMsg(False,"本地数据库列表非空，为了您的数据安全，请先<span style='color:red;'>备份所有本地数据库数据</span>后删除现有本地数据库<br>强制卸载命令：rm -rf /www/server/mysql")
             get.type = '0'
             if session['server_os']['x'] != 'RHEL': get.type = '3'
             get.sName = get.sName.lower()
@@ -947,6 +951,12 @@ class panelPlugin:
         force  = False
         if hasattr(get,'force'):
             if int(get.force) == 1: force = True
+        tkey = 'is_flush_plugin_list'
+        if not session.get(tkey): # 更新最新的软件列表
+            session[tkey] = 1
+            _cmd = "nohup {} {}/script/flush_plugin.py > /dev/null 2>&1 &".format(public.get_python_bin(),public.get_panel_path())
+            public.ExecShell(_cmd)
+
         self.__is_bind_user()
         skey = 'TNaMJdG3mDHKRS6Y'
         softList = cache.get(skey)
@@ -960,10 +970,14 @@ class panelPlugin:
                 else:
                     public.writeFile('data/v4.pl',' -4 ')
         sType = 0
+        qType = 0
         try:
             if hasattr(get,'type'): sType = int(get['type'])
             if hasattr(get,'query'):
-                if get.query: sType = 0
+                if get.query:
+                    qType = sType
+                    sType = 0
+
         except:pass
 
 
@@ -987,13 +1001,38 @@ class panelPlugin:
                 public.total_keyword(get.query)
                 tmpList = []
                 for softInfo in softList['list']:
-                    if softInfo['name'].lower().find(get.query) != -1 or \
-                        softInfo['title'].lower().find(get.query) != -1 or \
-                        softInfo['ps'].lower().find(get.query) != -1:
+
+                    if qType > 0 and softInfo['type'] != qType: continue
+
+                    #查询默认命中关键词
+                    softInfo['keys'] = ''
+                    n_info = self.check_soft_keyword(softInfo,get.query)
+                    if n_info:
                         tmpList.append(softInfo)
+                    else:
+                        ps = re.sub('<[0-9a-zA-Z\.\"\/\:\=\s\-_\?;@&\'\%\+\#]+>','',softInfo['ps'].lower())
+                        if softInfo['name'].lower().find(get.query) != -1 or softInfo['title'].lower().find(get.query) != -1 or ps.find(get.query) != -1:
+                            tmpList.append(softInfo)
+
                 softList['list'] = tmpList
         return softList
 
+
+    def check_soft_keyword(self,softInfo,query):
+        """
+        @name 检查命中关键词
+        """
+        keyword = {}
+        try:
+            if 'keyword' in softInfo:
+                keyword = json.loads(softInfo['keyword'])
+        except:pass
+
+        for key in keyword.keys():
+            if key.lower().find(query) != -1:
+                softInfo['keys'] = keyword[key]
+                return softInfo
+        return False
 
 
     #取提醒标记
@@ -1438,6 +1477,8 @@ class panelPlugin:
                             sTmp['s_version'] = sTmp['s_version'].replace('{VERSION}',v)
                             sTmp['versions'] = []
                             sTmp['versions'].append(versionA)
+                            if 'keys' in sTmp:
+                                sTmp['keys'] = sTmp['keys'].replace('{VERSION}',v).replace('{NAME}',sTmp['name'])
                             softList.append(sTmp)
                         except: continue
                 else:
@@ -1462,6 +1503,14 @@ class panelPlugin:
         softInfo['task'] = self.check_setup_task(softInfo['name'])
         softInfo['is_beta'] = self.is_beta_plugin(softInfo['name'])
 
+        key_info = ''
+        if 'keys' in softInfo:
+            softInfo['keys'] = softInfo['keys'].split('|')
+            if len(softInfo['keys']) > 0:
+                key_info = softInfo['keys'][0]
+                if softInfo['setup']: key_info = ' '.join(softInfo['keys'])
+            softInfo['ps'] += key_info
+
         if softInfo['name'].find('php-') != -1: softInfo['fpm'] = False
         if softInfo['setup']:
             softInfo['shell'] = softInfo['version']
@@ -1478,9 +1527,9 @@ class panelPlugin:
                     else:
                         softInfo['status'] = self.process_exists(pName)
                     if softInfo['status']: break
-
         else:
             softInfo['version'] = ""
+
         if softInfo['version_coexist'] == 1:
             if softInfo['id'] != 10000:
                 self.get_icon(softInfo['name'].split('-')[0])
@@ -2460,12 +2509,21 @@ class panelPlugin:
         mimetype = 'text/html'
         cache_time = 0 if public.is_debug() else 86400
         self.plugin_open_total(get.name)
-        return send_file(filename,
-                    mimetype = mimetype,
-                    as_attachment = True,
-                    add_etags = True,
-                    conditional = True,
-                    cache_timeout = cache_time)
+        import flask
+        if flask.__version__ < "2.1.0":
+            return send_file(filename,
+                        mimetype = mimetype,
+                        as_attachment = True,
+                        add_etags = True,
+                        conditional = True,
+                        cache_timeout = cache_time)
+        else:
+            return send_file(filename,
+                        mimetype = mimetype,
+                        as_attachment = True,
+                        etag = True,
+                        conditional = True,
+                        max_age = cache_time)
 
 
     def creatab_open_total_table(self,sql):
@@ -2726,7 +2784,6 @@ class panelPlugin:
         if not hasattr(get,'name'): return public.returnMsg(False,'PLUGIN_INPUT_A')
         try:
             p = Plugin(get.name)
-            if not p.isdef(get.s): return public.returnMsg(False,'PLUGIN_INPUT_C',(get.s,))
             return p.exec_fun(get)
         except:
             return public.get_error_object(None,plugin_name=get.name)

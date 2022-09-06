@@ -27,9 +27,12 @@ panel_init(){
         if [ "${is_sed}" = "" ];then
                 sed -i "s@^#!.*@#!$pythonV@" $panel_path/BT-Panel
         fi
-        is_sed=$(cat $panel_path/BT-Task|head -n 1|grep -E $reg)
-        if [ "${is_sed}" = "" ];then
-                sed -i "s@^#!.*@#!$pythonV@" $panel_path/BT-Task
+        is_python=$(cat $panel_path/BT-Task|grep import)
+        if [ "${is_python}" != "" ];then
+            is_sed=$(cat $panel_path/BT-Task|head -n 1|grep -E $reg)
+            if [ "${is_sed}" = "" ];then
+                    sed -i "s@^#!.*@#!$pythonV@" $panel_path/BT-Task
+            fi
         fi
         chmod 700 $panel_path/BT-Panel
         chmod 700 $panel_path/BT-Task

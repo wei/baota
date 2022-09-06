@@ -86,7 +86,9 @@ class main(projectBase):
         plugin_name = None
         for pid_name in os.listdir(self._go_pid_path):
             pid_file = '{}/{}'.format(self._go_pid_path,pid_name)
-            s_pid = int(public.readFile(pid_file))
+            try:
+                s_pid = int(public.readFile(pid_file))
+            except:continue
             if pid == s_pid:
                 plugin_name = pid_name[:-4]
                 break
@@ -146,7 +148,9 @@ class main(projectBase):
         if get: project_name = get.project_name.strip()
         pid_file = "{}/{}.pid".format(self._go_pid_path,project_name)
         if not os.path.exists(pid_file): return False
-        pid = int(public.readFile(pid_file))
+        try:
+            pid = int(public.readFile(pid_file))
+        except:return False
         pids = self.get_project_pids(pid=pid)
         if not pids: return False
         return True
@@ -333,7 +337,9 @@ class main(projectBase):
         load_info = {}
         pid_file = "{}/{}.pid".format(self._go_pid_path,project_name)
         if not os.path.exists(pid_file): return load_info
-        pid = int(public.readFile(pid_file))
+        try:
+            pid = int(public.readFile(pid_file))
+        except:return load_info
         pids = self.get_project_pids(pid=pid)
         if not pids: return load_info
         for i in pids:
@@ -739,7 +745,9 @@ class main(projectBase):
         '''
         pid_file = "{}/{}.pid".format(self._go_pid_path,get.project_name)
         if not os.path.exists(pid_file): return public.return_error('项目未启动')
-        pid = int(public.readFile(pid_file))
+        try:
+            pid = int(public.readFile(pid_file))
+        except:return public.return_error('项目未启动')
         pids = self.get_project_pids(pid=pid)
         if not pids: return public.return_error('项目未启动')
         self.kill_pids(pids=pids)
@@ -778,7 +786,7 @@ class main(projectBase):
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
  cd {jar_path}
-nohup {project_cmd} 2>&1 >> {log_file} &
+nohup {project_cmd} >> {log_file} 2>&1 &
 echo $! > {pid_file}'''.format(
                 jar_path=jar_path,
                 project_cmd=project_cmd,
@@ -796,13 +804,15 @@ echo $! > {pid_file}'''.format(
         p = public.ExecShell("bash {}".format(script_file),user=project_find['project_config']['run_user'])
         time.sleep(1)
         if not os.path.exists(pid_file):
-            return public.returnMsg(False,'启动失败{}'.format(p))
+            return public.returnMsg(False,'启动失败{}'.format(p.replace("\n","<br>")))
         # 获取PID
-        pid = int(public.readFile(pid_file))
+        try:
+            pid = int(public.readFile(pid_file))
+        except:return public.returnMsg(False,'启动失败{}'.format(p.replace("\n","<br>")))
         pids = self.get_project_pids(pid=pid)
         if not pids:
             if os.path.exists(pid_file): os.remove(pid_file)
-            return public.returnMsg(False,'启动失败<br>{}'.format(public.GetNumLines(log_file,20)))
+            return public.returnMsg(False,'启动失败<br>{}'.format(public.GetNumLines(log_file,20).replace("\n","<br>")))
         # return public.returnMsg(True, '启动成功')
 
         return public.return_data(True, '启动成功')
@@ -985,7 +995,13 @@ echo $! > {pid_file}'''.format(
             return public.return_error('项目目录不存在: {}'.format(get.project_exe))
 
         # 端口占用检测
-        if self.check_port_is_used(get.get('port/port')):
+        try:
+            ports=int(get.port)
+            if ports<10 and ports>65535:
+                return public.return_error('端口号不合法，请输入10-65535之间的数字')
+        except:
+            return public.return_error('端口号不合法，请输入10-65535之间的数字')
+        if self.check_port_is_used(get.port):
             return public.return_error('指定端口已被其它应用占用，请修改您的项目配置使用其它端口, 端口: {}'.format(get.port))
         # if 'domains' in get:
         #     domains = json.loads(get.domains)
@@ -996,6 +1012,7 @@ echo $! > {pid_file}'''.format(
         # else:
         #     get.domains=[]
         #     get.bind_extranet=0
+        
         domains = []
         if get.bind_extranet == 1:
             domains = get.domains

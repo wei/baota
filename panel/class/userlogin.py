@@ -224,7 +224,10 @@ class userlogin:
 
     #生成request_token
     def set_request_token(self):
-        session['request_token_head'] = public.GetRandomString(48)
+        html_token_key = public.get_csrf_html_token_key()
+        session[html_token_key] = public.GetRandomString(48)
+        session[html_token_key.replace("https_","")] = public.GetRandomString(48)
+
 
     def set_cdn_host(self,get):
         try:

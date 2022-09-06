@@ -457,6 +457,8 @@ export PATH
         if not isinstance(get,public.dict_obj): return public.return_error('参数类型错误，需要dict_obj对像')
         if not self.is_install_nodejs(get):
             return public.return_error('请先安装nodejs版本管理器，并安装至少1个node.js版本')
+        if not 'project_script' in get:
+            return public.return_error("请选择【启动选项】")
 
         project_name = get.project_name.strip()
         if not re.match("^\w+$",project_name):
@@ -1303,7 +1305,7 @@ echo $! > {pid_file}
                 if os.path.exists('{}/bt_security'.format(public.get_plugin_path())):
                     return public.return_error('启动命令被【堡塔防入侵】拦截，请关闭{}用户的防护'.format(project_find['project_config']['run_user']))
                 return public.return_error('启动命令被未知安全软件拦截，请检查安装软件日志')
-            return public.return_error('启动失败<pre>{}</pre>'.format(p))
+            return public.returnMsg(False,'启动失败{}<script>setTimeout(function(){{$(".layui-layer-msg").css("width","800px");}},100)</script>'.format(p.replace("\n","<br>")))
 
         # 获取PID
         try:

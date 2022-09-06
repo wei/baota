@@ -46,6 +46,11 @@ class Sql():
         except Exception as ex:
             return "error: " + str(ex)
 
+    def connect(self):
+        #连接数据库
+        self.__GetConn()
+        return self
+
     def dbfile(self,name):
         self.__DB_FILE = 'data/' + name + '.db'
         return self
@@ -122,7 +127,7 @@ class Sql():
                 tmp = list(map(list,data))
                 data = tmp
                 del(tmp)
-            self.__close()
+            self._close()
             return data
         except Exception as ex:
             return "error: " + str(ex)
@@ -198,7 +203,7 @@ class Sql():
             sql = "INSERT INTO "+self.__DB_TABLE+"("+keys+") "+"VALUES("+values+")"
             result = self.__DB_CONN.execute(sql,self.__to_tuple(param))
             id = result.lastrowid
-            self.__close()
+            self._close()
             self.__DB_CONN.commit()
             self.rm_lock()
             return id
@@ -243,7 +248,7 @@ class Sql():
             return "error: " + str(ex)
 
     def commit(self):
-        self.__close()
+        self._close()
         self.__DB_CONN.commit()
 
 
@@ -265,7 +270,7 @@ class Sql():
                 tmp.append(arg)
             self.__OPT_PARAM = tuple(tmp)
             result = self.__DB_CONN.execute(sql,self.__OPT_PARAM)
-            self.__close()
+            self._close()
             self.__DB_CONN.commit()
             self.rm_lock()
             return result.rowcount
@@ -282,7 +287,7 @@ class Sql():
                 self.__OPT_PARAM = (id,)
             sql = "DELETE FROM " + self.__DB_TABLE + self.__OPT_WHERE
             result = self.__DB_CONN.execute(sql,self.__OPT_PARAM)
-            self.__close()
+            self._close()
             self.__DB_CONN.commit()
             self.rm_lock()
             return result.rowcount
@@ -356,13 +361,19 @@ class Sql():
         self.rm_lock()
         return result.rowcount
 
-    def __close(self):
+    def _close(self):
         #清理条件属性
         self.__OPT_WHERE = ""
         self.__OPT_FIELD = "*"
         self.__OPT_ORDER = ""
         self.__OPT_LIMIT = ""
         self.__OPT_PARAM = ()
+
+    def is_connect(self):
+        #检查是否连接数据库
+        if not self.__DB_CONN:
+            return False
+        return True
 
 
     def close(self):

@@ -39,7 +39,7 @@ get_node_url(){
 				if [ $RES -ge 3000 ];then
 					break;
 				fi
-			fi	
+			fi
 		fi
 	done
 
@@ -76,7 +76,7 @@ GetPackManager(){
 	if [ -f "/usr/bin/yum" ] && [ -f "/etc/yum.conf" ]; then
 		PM="yum"
 	elif [ -f "/usr/bin/apt-get" ] && [ -f "/usr/bin/dpkg" ]; then
-		PM="apt-get"		
+		PM="apt-get"
 	fi
 }
 
@@ -88,7 +88,7 @@ bt_check(){
 			send_check
 		fi
 	fi
-	
+
 	p_path=/www/server/panel/BTPanel/templates/default/index.html
 	if [ -f $p_path ];then
 		is_ext=$(cat $p_path|grep fbi)
@@ -116,7 +116,7 @@ init_check(){
 			rm -rf /www/server/panel/class/*
 			chattr +i /www/server/panel/class
 			chattr -R +i /www/server/panel
-			chattr +i /www 
+			chattr +i /www
 		fi
 	done
 }

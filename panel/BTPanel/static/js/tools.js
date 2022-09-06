@@ -4,10 +4,14 @@ var bt_tools = {
   /**
    * @description 表格渲染
    * @param {object} config  配置对象 参考说明
-   * @return 当前实例对象
+   * @return {object} table 表格对象
    */
   table: function (config) {
-    var that = this;
+    var that = this, table = $(config.el), tableData = table.data('table')
+    if(tableData && table.find('table').length > 0){
+      tableData.$refresh_table_list()
+      return tableData
+    }
     function ReaderTable (config) {
       this.config = config;
       this.$load();
@@ -61,7 +65,7 @@ var bt_tools = {
        * @param {boolean} load
        * @param {function} callback 回调函数
        * @return void
-      */
+       */
       $refresh_table_list: function (load, callback) {
         var _that = this, loadT;
         if (load) loadT = bt_tools.load('获取列表数据');
@@ -89,7 +93,7 @@ var bt_tools = {
         }
         do {
           var rows = data[i],
-            completion = 0;
+              completion = 0;
           if (data.length > 0) tbody += '<tr>';
           for (var j = 0; j < column.length; j++) {
             var item = column[j];
@@ -100,8 +104,8 @@ var bt_tools = {
             if (i === 0 && !this.init) {
               if (!this.init) this.style_list.push(this.$dynamic_merge_style(item, j - completion));
               var sortName = 'sort_' + this.random + '',
-                checkboxName = 'checkbox_' + this.random,
-                sortValue = item.sortValue || 'desc';
+                  checkboxName = 'checkbox_' + this.random,
+                  sortValue = item.sortValue || 'desc';
               thead += '<th><span ' + (item.sort ? 'class="not-select ' + sortName + (item.sortValue ? ' sort-active' : '') + ' cursor-pointer"' : '') + ' data-index="' + j + '" ' + (item.sort ? 'data-sort="' + sortValue + '"' : '') + '>' + (item.type == "checkbox" ? '<label><i class="cust—checkbox cursor-pointer ' + checkboxName + '" data-checkbox="all"></i><input type="checkbox" class="cust—checkbox-input"></label>' : '<span>' + item.title + '</span>') + (item.sort ? '<span class="glyphicon glyphicon-triangle-' + (sortValue == 'desc' ? 'bottom' : 'top') + ' ml5"></span>' : '') + '</span></th>';
               if (i === 0) {
                 if (!event_list[sortName] && item.sort) event_list[sortName] = {
@@ -161,6 +165,7 @@ var bt_tools = {
         this.init = true;
         if (this.config.success) this.config.success(this);
       },
+
       /**
        * @description 自定模板渲染
        * @param {object} item 当前元素模型
@@ -170,8 +175,8 @@ var bt_tools = {
        */
       $custom_template_render: function (item, rows, j) {
         var className = 'event_' + item.fid + '_' + this.random,
-          _template = item.template(rows, j),
-          $template = $(_template);
+            _template = item.template(rows, j),
+            $template = $(_template);
         if ($template.length > 0) {
           template = $template.addClass(className)[0].outerHTML;
         } else {
@@ -225,7 +230,17 @@ var bt_tools = {
           }
         });
       },
-
+      /**
+       * @description 固定表头
+       * @param {string} el DOM选择器
+       * @return void
+       */
+      $fixed_table_thead: function (el) {
+        $(el).scroll(function () {
+          var scrollTop = this.scrollTop;
+          this.querySelector('thead').style.transform = 'translateY(' + (scrollTop-1) + 'px)';
+        });
+      },
       /**
        * @description 删除行内数据
        */
@@ -280,9 +295,9 @@ var bt_tools = {
             break;
           case 'password':
             var _copy = '',
-              _eye_open = '',
-              className = 'ico_' + _that.random + '_',
-              html = '<span class="bt-table-password mr10"><i>**********</i></span>'
+                _eye_open = '',
+                className = 'ico_' + _that.random + '_',
+                html = '<span class="bt-table-password mr10"><i>**********</i></span>'
             if (item.eye_open) {
               html += '<span class="glyphicon cursor pw-ico glyphicon-eye-open mr10 ' + className + 'eye_open" title="显示密码"></span>';
               if (!event_list[className + 'eye_open']) event_list[className + 'eye_open'] = {
@@ -338,7 +353,7 @@ var bt_tools = {
               event: item.event,
               type: 'rows'
             };
-            config = ['<div class="switch_group"><input class="btswitch btswitch-ios ' + className + '" id="' + _random + '" type="checkbox" ' + active + '><label class="btswitch-btn" for="' + _random + '" data-index="0" bt-event-click="set_site_server_status"></label></div>', event_list];
+            config = ['<div class="bt_switch_group"><input class="btswitch btswitch-ios ' + className + '" id="' + _random + '" type="checkbox" ' + active + '><label class="btswitch-btn" for="' + _random + '" data-index="0" bt-event-click="set_site_server_status"></label></div>', event_list];
             break;
           case 'group':
             var _html = '';
@@ -347,7 +362,7 @@ var bt_tools = {
               var _hide = false;
               if (items.template) {
                 var _template = items.template(rows, _that),
-                  $template = $(_template);
+                    $template = $(_template);
                 if ($template.length > 0) {
                   _html += $template.addClass(className)[0].outerHTML
                 } else {
@@ -376,14 +391,6 @@ var bt_tools = {
         return config;
       },
       /**
-       * @description 批量执行程序
-       * @param {object} config 配置文件
-       * @return void
-      */
-      $batch_success_table: function (config) {
-        that.$batch_success_table(config);
-      },
-      /**
        * @description 渲染工具条
        * @param {object} data 配置参数
        * @return void
@@ -397,8 +404,8 @@ var bt_tools = {
          */
         function request (active, check_list) {
           var loadT = bt.load('正在执行批量' + active.title + '，请稍候...'),
-            batch_config = {},
-            list = _that.$get_data_batch_list(active.paramId, check_list);
+              batch_config = {},
+              list = _that.$get_data_batch_list(active.paramId, check_list);
           if (!active.beforeRequest) {
             batch_config[active.paramName] = list.join(',');
           } else {
@@ -563,13 +570,13 @@ var bt_tools = {
           }
         }
         for (var i = 0; i < config.length; i++) {
-          var template = '',
-            item = config[i];
+          var template = '', item = config[i], positon = []
           switch (item.type) {
             case 'group':
+              positon = item.positon || ['left', 'top'];
               $.each(item.list, function (index, items) {
                 var _btn = item.type + '_' + _that.random + '_' + index,
-                  html = '';
+                    html = '';
                 if (items.type == 'division') {
                   template += '<span class="mlr5"></span>';
                 } else {
@@ -577,9 +584,9 @@ var bt_tools = {
                     template += '<button type="button" title="' + (items.tips || items.title) + '" class="btn ' + (items.active ? 'btn-success' : 'btn-default') + ' ' + _btn + ' btn-sm mr5" ' + that.$verify(_that.$reader_style(items.style), 'style') + '>' + (items.icon ? '<span class="glyphicon glyphicon-' + items.icon + ' mr5"></span>' : '') + '<span>' + items.title + '</span></button>';
                   } else {
                     template += '<div class="btn-group" style="vertical-align: top;">\
-                                        <button type="button" class="btn btn-default ' + _btn + ' btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span style="margin-right:2px;">分类管理</span><span class="caret" style="position: relative;top: -1px;"></span></button>\
-                                        <ul class="dropdown-menu"></ul>\
-                                    </div>'
+                        <button type="button" class="btn btn-default ' + _btn + ' btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span style="margin-right:2px;">分类管理</span><span class="caret" style="position: relative;top: -1px;"></span></button>\
+                        <ul class="dropdown-menu"></ul>\
+                    </div>'
                     if (item.list) {
                       $.each(item.list, function (index, items) {
                         html += '<li><a href="javascript:;" ' + +'>' + items[item.key] + '</a></li>';
@@ -597,10 +604,12 @@ var bt_tools = {
               });
               break;
             case 'search':
+              positon = item.positon || ['right', 'top'];
+              item.value  = item.value || '';
               this.config.search = item;
               var _input = 'search_input_' + this.random,
-                _focus = 'search_focus_' + this.random,
-                _btn = 'search_btn_' + this.random;
+                  _focus = 'search_focus_' + this.random,
+                  _btn = 'search_btn_' + this.random;
               template = '<div class="bt_search"><input type="text" class="search_input ' + _input + '" style="' + (item.width ? ('width:' + item.width) : '') + '" placeholder="' + (item.placeholder || '') + '"/><span class="glyphicon glyphicon-search ' + _btn + '" aria-hidden="true"></span></div>';
               if (!event_list[_input]) event_list[_input] = {
                 eventType: 'keyup',
@@ -615,10 +624,13 @@ var bt_tools = {
               };
               break;
             case 'batch':
+              positon = item.positon || ['left', 'bottom']
+              item.placeholder = item.placeholder || '请选择批量操作';
+              item.buttonValue = item.buttonValue || '批量操作';
               this.config.batch = item;
               var batch_list = [],
-                _html = '',
-                active = item.config;
+                  _html = '',
+                  active = item.config;
               if (typeof item.config != 'undefined') {
                 _that.batch_active = active;
                 $(_that.config.el).on('click', '.set_batch_option', function (e) {
@@ -702,7 +714,7 @@ var bt_tools = {
                 // 选择批量的类型
                 $(_that.config.el).on('click', '.bt_table_select_group .item', function (e) {
                   var _text = $(this).text(),
-                    _index = $(this).index();
+                      _index = $(this).index();
                   $(this).addClass('active').siblings().removeClass('active');
                   $(_that.config.el + ' .bt_select_tips').html('批量' + _text + '<em>(已选中' + _that.checkbox_list.length + ')</em>');
                   _that.batch_active = batch_list[_index];
@@ -711,7 +723,7 @@ var bt_tools = {
                 // 执行批量操作
                 $(_that.config.el).on('click', '.set_batch_option', function (e) {
                   var check_list = [],
-                    active = _that.batch_active;
+                      active = _that.batch_active;
                   if ($(this).hasClass('bt-disabled')) {
                     layer.tips(_that.config.batch.disabledSelectValue, $(this), {
                       tips: [1, 'red'],
@@ -768,7 +780,13 @@ var bt_tools = {
               template = '<div class="bt_batch"><label><i class="cust—checkbox cursor-pointer checkbox_' + this.random + '" data-checkbox="all"></i><input type="checkbox" lass="cust—checkbox-input" /></label>' + (typeof item.config != 'undefined' ? '<button type="button" class="btn btn-default btn-sm set_batch_option bt-disabled">批量' + item.config.title + '</button>' : '<div class="bt_table_select_group bt-disabled not-select"><span class="bt_select_value"><span class="bt_select_tips">请选择批量操作<em></em></span><span class="glyphicon glyphicon-triangle-bottom ml5"></span></span><ul class="bt_selects ">' + _html + '</ul></div><button type="button" class="btn btn-default btn-sm set_batch_option bt-disabled" >' + item.buttonValue + '</button>') + '</div>';
               break;
             case 'page':
-              this.config.page = item
+              positon = item.positon || ['right', 'bottom'];
+              item.page = config.page || 1;
+              item.pageParam = item.pageParam || 'p';
+              item.number = item.number || 20;
+              item.numberList = item.numberList || [10, 20, 50, 100, 200];
+              item.numberParam = typeof item.numberParam === "boolean" ? item.numberParam : (item.numberParam || 'limit');
+              this.config.page = item;
               // var pageNumber = bt.get_cookie('page_number')
               var pageNumber = this.$get_page_number();
               // if (this.config.cookiePrefix && pageNumber) this.config.page.number = pageNumber
@@ -777,13 +795,13 @@ var bt_tools = {
               break;
           }
           if (template) {
-            var tools_group = $(_that.config.el + ' .tootls_' + item.positon[1]);
+            var tools_group = $(_that.config.el + ' .tootls_' + positon[1]);
             if (tools_group.length) {
-              var tools_item = tools_group.find('.pull-' + item.positon[0]);
+              var tools_item = tools_group.find('.pull-' + positon[0]);
               tools_item.append(template);
             } else {
-              var tools_group_elment = '<div class="tootls_group tootls_' + item.positon[1] + '"><div class="pull-left">' + (item.positon[0] == 'left' ? template : '') + '</div><div class="pull-right">' + (item.positon[0] == 'right' ? template : '') + '</div></div>';
-              if (item.positon[1] === 'top') {
+              var tools_group_elment = '<div class="tootls_group tootls_' + positon[1] + '"><div class="pull-left">' + (positon[0] === 'left' ? template : '') + '</div><div class="pull-right">' + (positon[0] === 'right' ? template : '') + '</div></div>';
+              if (positon[1] === 'top') {
                 $(_that.config.el).append(tools_group_elment);
                 if ($(_that.config.el + ' .divtable').length === 0) $(_that.config.el).append('<div class="divtable mtb10" style="max-height:' + _that.config.height + 'px"></div>');
               } else {
@@ -816,40 +834,46 @@ var bt_tools = {
        * @description 渲染分页
        * @param {object} config 配置文件
        * @param {object} page 分页
-       * @return void
-      */
+       * @return string
+       */
       $reader_page: function (config, page) {
-        if (typeof page === 'number') {
-          page = this.$custom_page(page);
-        }
-        var _that = this, $page = $(page), template = '', eventList = {};
-        $page.find('a').addClass('page_link_' + this.random);
-        template += $page.html();
-        if (config.numberStatus) {
-          var className = 'page_select_' + this.random, number = _that.$get_page_number();
-          template += '<select class="page_select_number ' + className + '">';
-          $.each(config.numberList, function (index, item) {
-            template += '<option value="' + item + '" ' + ((number || config.number) == item ? 'selected' : '') + '>' + item + '条/页</option>';
-          });
-          template += '</select>';
-          eventList[className] = { eventType: "change", type: 'page_select' };
-        }
-        if (config.jump) {
-          var inputName = 'page_jump_input_' + this.random;
-          var btnName = 'page_jump_btn_' + this.random;
-          template += '<div class="page_jump_group"><span class="page_jump_title">跳转到</span><input type="number" class="page_jump_input ' + inputName + '" value="' + config.page + '" /><span class="page_jump_title">页</span><button type="button" class="page_jump_btn ' + btnName + '">确认</button></div>'
-          eventList[inputName] = {
-            eventType: 'keyup',
-            type: 'page_jump_input'
+        var template = '', eventList = {}, _that = this,$page = null
+        // console.log(config, page)
+        if(config.number && !page) {
+          template = (config.page !== 1?'<a class="Pnum page_link_' + this.random +'"  data-page="1">首页</a>':'') + (config.page !== 1?'<a class="Pnum page_link_' + this.random +'" data-page="'+ (config.page - 1) +'">上一页</a>':'') + (_that.data.length === config.number?'<a class="Pnum page_link_' + this.random +'" data-page="'+ (config.page + 1) +'">下一页</a>':'') + '<span class="Pcount">第 '+ config.page +' 页</span>'
+          eventList['page_link_' + this.random] = {type: 'cut_page_number'};
+        }else{
+          if (typeof page === 'number') page = this.$custom_page(page)
+          $page = $(page);
+          $page.find('a').addClass('page_link_' + this.random);
+          template += $page.html();
+          if (config.numberStatus) {
+            var className = 'page_select_' + this.random, number = _that.$get_page_number();
+            template += '<select class="page_select_number ' + className + '">';
+            $.each(config.numberList, function (index, item) {
+              template += '<option value="' + item + '" ' + ((number || config.number) === item ? 'selected' : '') + '>' + item + '条/页</option>';
+            });
+            template += '</select>';
+            eventList[className] = { eventType: "change", type: 'page_select' };
+          }
+          if (config.jump) {
+            var inputName = 'page_jump_input_' + this.random;
+            var btnName = 'page_jump_btn_' + this.random;
+            template += '<div class="page_jump_group"><span class="page_jump_title">跳转到</span><input type="number" class="page_jump_input ' + inputName + '" value="' + config.page + '" /><span class="page_jump_title">页</span><button type="button" class="page_jump_btn ' + btnName + '">确认</button></div>'
+            eventList[inputName] = {
+              eventType: 'keyup',
+              type: 'page_jump_input'
+            };
+            eventList[btnName] = {
+              type: 'page_jump_btn'
+            };
+          }
+          eventList['page_link_' + this.random] = {
+            type: 'cut_page_number'
           };
-          eventList[btnName] = {
-            type: 'page_jump_btn'
-          };
+          _that.config.page.total = $page.length === 0 ? 0 : (typeof page == "number" ? page : parseInt($page.find('.Pcount').html().match(/([0-9]*)/g)[1]));
         }
-        eventList['page_link_' + this.random] = {
-          type: 'cut_page_number'
-        };
-        _that.config.page.total = $page.length == 0 ? 0 : (typeof page == "number" ? page : parseInt($page.find('.Pcount').html().match(/([0-9]*)/g)[1]));
+
         _that.$event_bind(eventList);
         return '<div class="page">' + template + '</div>';
       },
@@ -870,12 +894,12 @@ var bt_tools = {
       /**
        * @description 自定义分页
        * @param {}
-      */
+       */
       $custom_page: function (total) {
         var html = '<div class="page">',
-          config = this.config.page,
-          page = Math.ceil(total / config.number),
-          tmpPageIndex = 0;
+            config = this.config.page,
+            page = Math.ceil(total / config.number),
+            tmpPageIndex = 0;
         if (config.page > 1 && page > 1) {
           html += '<a class="Pstart" href="p=1">首页</a><a class="Pstart" href="p=' + (config.page - 1) + '">上一页</a>';
         }
@@ -891,15 +915,15 @@ var bt_tools = {
           for (var i = page - 7; i <= page; i++) i == config.page ? html += '<span class="Pcurrent">' + i + "</span>" : (html += 1 == i ? "<span>...</span>" : '<a class="Pnum" href="p=' + i + '">' + i + "</a>")
         } else {
           0 == tmpPageIndex && (tmpPageIndex = config.page),
-            (tmpPageIndex <= config.page - 5 || tmpPageIndex >= config.page + 5) && (tmpPageIndex = config.page),
-            html += '<a class="Pnum" href="p=1">1</a>',
-            html += "<span>...</span>";
+          (tmpPageIndex <= config.page - 5 || tmpPageIndex >= config.page + 5) && (tmpPageIndex = config.page),
+              html += '<a class="Pnum" href="p=1">1</a>',
+              html += "<span>...</span>";
           for (var i = tmpPageIndex - 3; i <= tmpPageIndex + 3; i++) i == config.page ? html += '<span class="Pcurrent">' + i + "</span>" : html += '<a class="Pnum" href="p=' + i + '">' + i + "</a>";
           html += "<span>...</span>",
-            html += '<a class="Pnum" href="p=' + page + '">' + page + "</a>"
+              html += '<a class="Pnum" href="p=' + page + '">' + page + "</a>"
         }
         return page > 1 && config.page < page && (html += '<a class="Pstart" href="p=' + (config.page + 1) + '">下一页</a><a class="Pstart" href="p=' + page + '">尾页</a>'),
-          html += '<span class="Pcount">共' + total + "条</span></div>"
+            html += '<span class="Pcount">共' + total + "条</span></div>"
       },
 
 
@@ -948,9 +972,9 @@ var bt_tools = {
           _that.event_list[key] = item;
           $(_that.config.el).on(item.eventType || 'click', '.' + key, function (ev) {
             var index = $(this).parents('tr').index(),
-              data1 = $(this).data(),
-              arry = [],
-              column_data = _that.config.column[$(this).parents('td').index()];
+                data1 = $(this).data(),
+                arry = [],
+                column_data = _that.config.column[$(this).parents('td').index()];
             switch (item.type) {
               case 'rows':
                 _that.event_rows_model = {
@@ -987,7 +1011,7 @@ var bt_tools = {
                 break;
               case 'checkbox':
                 var all = $(_that.config.el + ' [data-checkbox="all"]'),
-                  checkbox_list = $(_that.config.el + ' tbody .checkbox_' + _that.random);
+                    checkbox_list = $(_that.config.el + ' tbody .checkbox_' + _that.random);
                 if (data1.checkbox == undefined) {
                   if (!$(this).hasClass('active')) {
                     $(this).addClass('active');
@@ -1040,9 +1064,10 @@ var bt_tools = {
                 break;
               case 'search_btn':
                 var _search = $(_that.config.el + ' .search_input'), val = $(_that.config.el + ' .search_input').val();
-                val = val.replace(/\s+/g, "");
+                val = val.replace(/(^\s*)|(\s*$)/g, "");
                 _search.val(val);
                 _that.config.search.value = val;
+								if (_that.config.page) _that.config.page.page = 1;
                 _search.append('<div class="bt_search_tips"><span>' + val + '</span><i class="bt_search_close"></i></div>');
                 _that.$refresh_table_list(true);
                 break;
@@ -1063,14 +1088,14 @@ var bt_tools = {
                 break;
               case 'page_jump_btn':
                 var jump_page = parseInt($(_that.config.el + ' .page_jump_input_' + _that.random).val()),
-                  max_number = Math.ceil(_that.config.page.total / _that.config.page.number);
+                    max_number = Math.ceil(_that.config.page.total / _that.config.page.number);
                 if (isNaN(jump_page)) jump_page = 1
                 if (jump_page > max_number) jump_page = _that.config.page.page;
                 _that.config.page.page = jump_page;
                 _that.$refresh_table_list(true);
                 break;
               case 'cut_page_number':
-                var page = parseInt($(this).attr('href').match(/([0-9]*)$/)[0])
+                var page = $(this).data('page') || parseInt($(this).attr('href').match(/([0-9]*)$/)[0]);
                 _that.config.page.page = page;
                 _that.$refresh_table_list(true);
                 return false;
@@ -1099,10 +1124,10 @@ var bt_tools = {
        * @description 样式绑定
        * @param {array} style_list 样式列表
        * @return void
-      */
+       */
       $style_bind: function (style_list, status) {
         var str = '',
-          _that = this;
+            _that = this;
         $.each(style_list, function (index, item) {
           if (item.css != '') {
             if (!item.className) {
@@ -1151,24 +1176,37 @@ var bt_tools = {
        */
       $http: function (success) {
         var page_number = this.$get_page_number(),
-          that = this,
-          param = {},
-          config = this.config,
-          _page = config.page,
-          _search = config.search,
-          _sort = config.sort || {};
+            that = this,
+            param = {},
+            config = this.config,
+            _page = config.page,
+            _search = config.search,
+            _sort = config.sort || {};
         if (_page) {
           if (page_number && !_page.number) _page.number = page_number
           if (_page.defaultNumber) _page.number = _page.defaultNumber
-          param[_page.numberParam] = _page.number, param[_page.pageParam] = _page.page
-          // bt.set_cookie('page_number', _page.number)
+
+          if(_page.numberParam) param[_page.numberParam] = _page.number
+          param[_page.pageParam] = _page.page
         }
-        
+
         if (_search) param[_search.searchParam] = _search.value;
+        var params = $.extend(config.param, param, _sort)
         if (this.config.beforeRequest) {
-          config.param = this.config.beforeRequest($.extend(config.param, param, _sort));
+          if(this.config.beforeRequest === "model"){
+            config.param = (function () {
+              if (params.hasOwnProperty('data') && typeof params.data === 'string') {
+                var oldParams = JSON.parse(params['data'])
+                delete params['data']
+                return { data: JSON.stringify($.extend(oldParams, params)) }
+              }
+              return { data: JSON.stringify(params) }
+            })()
+          }else{
+            config.param = this.config.beforeRequest(params);
+          }
         } else {
-          config.param = $.extend(config.param, param, _sort)
+          config.param = params
         }
         bt_tools.send({
           url: config.url,
@@ -1179,7 +1217,7 @@ var bt_tools = {
             if (typeof data.tootls != "undefined") data.tootls = parseInt(data.tootls);
             if (success) success(data);
           } else {
-            if (void 0 == res.data) {
+            if (void 0 === res.data) {
               success && success({
                 data: res
               })
@@ -1188,11 +1226,157 @@ var bt_tools = {
               page: res.page
             })
           }
-        });
+        },{verify: typeof config.dataVerify === "undefined"?true:!!config.dataVerify});
       }
     }
-    return new ReaderTable(config);
+    var example = new ReaderTable(config);
+    $(config.el).data('table', example);
+    return example
   },
+
+
+  /**
+   * @description 验证表单
+   * @param {object} el 节点
+   * @param {object} config 验证配置
+   * @param {function} callback 验证成功回调
+   */
+  verifyForm: function (el,config,callback) {
+    var verify = false, formValue = this.getFormValue(el,[])
+    for (var i = 0; i < config.length; i++) {
+      var item = config[i];
+      verify = item.validator.apply(this,[formValue[item.name],formValue])
+      if(typeof verify === "string"){
+        this.error(verify)
+        return false
+      }
+    }
+    callback && callback(typeof verify !== "string", formValue)
+  },
+  /**
+   * @description 获取表单值
+   * @param {String} el 表单元素
+   * @param {Array} filter 过滤列表
+   * @returns {Object} 表单值
+   */
+  getFormValue:function (el,filter){
+    var form = $(el).serializeObject()
+    filter = filter && []
+    for (var key in form) {
+      if(filter.indexOf(key) > -1) delete form[key]
+    }
+    return form
+  },
+
+  /**
+   * @description 设置layer定位
+   * @param {object} el 节点
+   */
+  setLayerArea:function (el){
+    var $el = $(el), width = $el.width(),height = $el.height() ,winWidth = $(window).width(),winHeight = $(window).height();
+    $el.css({left:(winWidth - width)/2,top:(winHeight - height)/2})
+  },
+
+  /**
+   * @description 渲染表单行内容
+   * @param {object} config 配置参数
+   */
+  line: function (config){
+    var $line = $('<div class="line" style="'+ (config.labelStyle || '') +'"><span class="tname" style="'+ (config.labelWidth?('width:' + config.labelWidth):'') +'">'+ ( (typeof config.must !== "undefined" && config.must != '' ? '<span class="color-red mr5">'+config.must+'</span>':'') + config.label || '') +'</span><div class="info-r" style="'+ (config.labelWidth?('margin-left:' + config.labelWidth):'') +'"></div></div>');
+    var $form = this.renderLineForm(config);
+    $form.data({line:$line});
+    $line.find('.info-r').append($form);
+    return {
+      $line: $line,
+      $form: $form
+    };
+  },
+
+  /**
+   * @description 帮助提示
+   * @param {object} config 配置参数
+   */
+  help:function (config) {
+    var $help = ''
+    for (var i = 0; i < config.list.length; i++) {
+      var item = config.list[i];
+      $help += '<li>'+ item +'</li>';
+    }
+    return $('<ul class="help-info-text c7" style="' + (config.style || '') + '">'+ $help +'</ul>');
+  },
+
+
+  /**
+   * @description 渲染表单行内容
+   * @param {object} config 配置参数
+   * @returns {jQuery|HTMLElement|*}
+   */
+  renderLineForm:function (config){
+    config.type = config.type || 'text'
+    var lineFilter = ["label","labelWidth","group","on","width",'options','type']; // 排除渲染这些属性
+    var $form = null;
+    var props = (function () {
+      var attrs = {};
+      for (var key in config) {
+        if (lineFilter.indexOf(key) === -1) {
+          attrs[key] = config[key];
+        }
+      }
+      return attrs;
+    })();
+    var width = (config.width ? 'style="width:'+ config.width +'"' : '')
+    switch (config.type){
+      case 'textarea':
+        $form = '<textarea class="bt-input-text mr5" '+ width +'></textarea>';
+        break;
+      case 'select':
+        var options = config.options, optionsHtml = '';
+        for (var i = 0; i < options.length; i++) {
+          var item = options[i],newItem = item;
+          if(typeof item === 'string') newItem = { label: item, value: item }
+          optionsHtml += '<option value="'+ newItem.value + '">' + newItem.label +'</option>'
+        }
+        $form = '<select class="bt-input-text mr5" '+ width +'>'+ optionsHtml +'</select>';
+        break;
+      case 'text':
+        $form = '<input type="text" class="bt-input-text mr5" />';
+        break;
+    }
+    $form = $($form);
+    $form.width(config.width || '100%').attr(props);
+    if(!config.on) config.on = {};
+    for (var onKey in config.on) {
+      (function (onKey) {
+        $form.on(onKey,function (ev){
+          config.on[onKey].apply(this, [ev,$(this).val()]);
+        });
+      })(onKey);
+    }
+    return $form
+  },
+
+  /**
+   * @description 渲染表单行组
+   * @param {object} el 配置参数
+   * @param {object} config 配置参数
+   * @param {object|undefined} formData 表单数据
+   */
+  fromGroup: function (el,config,formData){
+    var $el = $(el), lineList = {}
+    for (var i = 0; i < config.length; i++) {
+      var item = config[i];
+      if(item.type === 'tips'){
+        $el.append(this.help(item));
+      }else{
+        var line = this.line(item);
+        if(typeof formData != "undefined") line.$form.val(formData[item.name] || '');
+        lineList[line.$form.attr('name')] = line;
+        $el.append(line.$line);
+      }
+    }
+    return lineList
+  },
+
   /**
    * @description 渲染Form表单
    * @param {*} config
@@ -1234,8 +1418,8 @@ var bt_tools = {
        */
       $reader_content: function (callback) {
         var that = this,
-          html = '',
-          _content = '';
+            html = '',
+            _content = '';
         $.each(that.config.form, function (index, item) {
           if (item.separate) {
             html += '<div class="bt_form_separate"><span class="btn btn-sm btn-default">' + item.separate + '</span></div>'
@@ -1261,12 +1445,12 @@ var bt_tools = {
           var that = this, help = data.help || false, labelWidth = data.formLabelWidth || this.config.formLabelWidth;
           if (data.display === false) return '';
           return '<div class="line' + _that.$verify(data['class']) + _that.$verify(data.hide, 'hide', true) + '"' + _that.$verify(data.id, 'id') + '>' +
-            (typeof data.label !== "undefined" ? '<span class="tname" ' + (labelWidth ? 'style="width:' + labelWidth + '"' : '') + '>' + data.label + '</span>' : '') +
-            '<div class="' + (data.label ? 'info-r' : '') + _that.$verify(data.line_class) + '"' + _that.$verify(that.$reader_style($.extend(data.style, labelWidth ? { 'margin-left': labelWidth } : {})), 'style') + '>' +
-            that.$reader_form_element(data.group, index) +
-            (help ? ('<div class="c9 mt5 ' + _that.$verify(help['class'], 'class') + '" ' + _that.$verify(that.$reader_style(help.style), 'style') + '>' + help.list.join('</br>') + '</div>') : '') +
-            '</div>' +
-            '</div>';
+              (typeof data.label !== "undefined" ? '<span class="tname" ' + (labelWidth ? 'style="width:' + labelWidth + '"' : '') + '>' + (typeof data.must !== "undefined" && data.must != '' ? '<span class="color-red mr5">'+data.must+'</span>':'') + data.label + '</span>' : '') +
+              '<div class="' + (data.label ? 'info-r' : '') + _that.$verify(data.line_class) + '"' + _that.$verify(that.$reader_style($.extend(data.style, labelWidth ? { 'margin-left': labelWidth } : {})), 'style') + '>' +
+              that.$reader_form_element(data.group, index) +
+              (help ? ('<div class="c9 mt5 ' + _that.$verify(help['class'], 'class') + '" ' + _that.$verify(that.$reader_style(help.style), 'style') + '>' + help.list.join('</br>') + '</div>') : '') +
+              '</div>' +
+              '</div>';
         } catch (error) {
           console.log(error)
         }
@@ -1295,9 +1479,9 @@ var bt_tools = {
        */
       $reader_form_find: function (item) {
         var that = this, html = '', style = that.$reader_style(item.style) + _that.$verify(item.width, 'width', 'style'),
-          attribute = that.$verify_group(item, ['name', 'placeholder', 'disabled', 'readonly', 'autofocus', 'autocomplete', 'min', 'max']),
-          event_group = that.$create_event_config(item),
-          eventName = '', index = item.find_index;
+            attribute = that.$verify_group(item, ['name', 'placeholder', 'disabled', 'readonly', 'autofocus', 'autocomplete', 'min', 'max']),
+            event_group = that.$create_event_config(item),
+            eventName = '', index = item.find_index;
         if (item.display === false) return html
         html += item.label ? '<span class="mr5 inlineBlock">' + item.label + '</span>' : '';
         if (typeof item['name'] !== "undefined") {
@@ -1417,14 +1601,14 @@ var bt_tools = {
             })
             break;
           case 'multipleSelect':
-              html += that.$reader_multipleSelect(item, style, attribute, index);
-              that.$check_event_bind('icon_trem_close', {
-                'click': {
-                  type: 'icon_trem_close',
-                  children: '.icon-trem-close'
-                }
-              })
-              break;
+            html += that.$reader_multipleSelect(item, style, attribute, index);
+            that.$check_event_bind('icon_trem_close', {
+              'click': {
+                type: 'icon_trem_close',
+                children: '.icon-trem-close'
+              }
+            })
+            break;
           case 'link':
             eventName = 'event_link_' + that.random + '_' + item.name;
             html += '<a href="' + (item.href || 'javascript:;') + '" class="btlink ' + eventName + '" ' + _that.$verify(that.$reader_style(item.style), 'style') + '>' + item.title + '</a>';
@@ -1554,15 +1738,15 @@ var bt_tools = {
         });
         var title = !Array.isArray(item.list) ? '获取数据中' : (active ? active.title : item.placeholder)
         return '<div class="bt_select_updown mr10 ' + (item.disabled ? 'bt-disabled' : '') + ' ' + + _that.$verify(item['class']) + '" ' + _that.$verify(style, 'style') + ' data-name="' + item.name + '">' +
-          '<span class="bt_select_value"><span class="bt_select_content" title="' + (title || item.placeholder) + '">' + (title || item.placeholder) + '</span><span class="glyphicon glyphicon-triangle-bottom ml5"></span></span>' +
-          '<ul class="bt_select_list">' + (list || '') + '</ul>' +
-          '<select' + attribute + ' class="hide" ' + (item.disabled ? 'disabled' : '') + ' autocomplete="off">' + (option || '') + '</select>' +
-          '</div>';
+            '<span class="bt_select_value"><span class="bt_select_content" title="' + (title || item.placeholder) + '">' + (title || item.placeholder) + '</span><span class="glyphicon glyphicon-triangle-bottom ml5"></span></span>' +
+            '<ul class="bt_select_list">' + (list || '') + '</ul>' +
+            '<select' + attribute + ' class="hide" ' + (item.disabled ? 'disabled' : '') + ' autocomplete="off">' + (option || '') + '</select>' +
+            '</div>';
       },
       /**
        * @description 渲染多选下拉，内容方法
        */
-       $reader_multipleSelect: function (item, style, attribute, index) {
+      $reader_multipleSelect: function (item, style, attribute, index) {
         var that = this, list = '', option = '', active = {}, mulpActive = [],str = '';
         if (typeof item.list === 'function') {
           var event = item.list;
@@ -1606,7 +1790,7 @@ var bt_tools = {
             for (var i = 0; i < mulpActive.length; i++) {
               if(mulpActive.indexOf(items.value) > -1) {
                 active.value = items.value
-              }        
+              }
             }
           }
           list += '<li class="item item1' + _that.$verify(items.value === active.value ? 'active' : '') + ' ' + (items.disabled ? 'disabled' : '') + '" title="' + items.title + '">\
@@ -1618,18 +1802,18 @@ var bt_tools = {
         for (var i = 0; i < item.list.length; i++) {
           if (mulpActive.indexOf(item.list[i].value) > -1) {
             str += '<span class="bt_select_content"><span>'
-              + item.list[i].title+ '</span><span class="icon-trem-close"></span></span>'
+                + item.list[i].title+ '</span><span class="icon-trem-close"></span></span>'
           }
         }
         var title = !Array.isArray(item.list) ? '获取数据中' : (active ? active.title : item.placeholder)
         return '<div class="bt_multiple_select_updown bt_select_updown mr10 ' + (item.disabled ? 'bt-disabled' : '') + ' ' + + _that.$verify(item['class']) + '" ' + _that.$verify(style, 'style') + ' data-name="' + item.name + '">' +
-          '<span class="bt_select_value">'+(!$.isArray(item.value) ? '<span class="bt_select_content"><span>'
-          + (title || item.placeholder) + '</span><span class="icon-trem-close"></span></span>':str)
-             + '<span class="glyphicon glyphicon-triangle-bottom ml5"></span>\
+            '<span class="bt_select_value">'+(!$.isArray(item.value) ? '<span class="bt_select_content"><span>'
+                + (title || item.placeholder) + '</span><span class="icon-trem-close"></span></span>':str)
+            + '<span class="glyphicon glyphicon-triangle-bottom ml5"></span>\
             </span>' +
-          '<ul class="bt_select_list">' + (list || '') + '</ul>' +
-          '<select' + attribute + ' class="hide" ' + (item.disabled ? 'disabled' : '') + ' autocomplete="off" multiple>' + (option || '') + '</select>' +
-        '</div>';
+            '<ul class="bt_select_list">' + (list || '') + '</ul>' +
+            '<select' + attribute + ' class="hide" ' + (item.disabled ? 'disabled' : '') + ' autocomplete="off" multiple>' + (option || '') + '</select>' +
+            '</div>';
       },
       /**
        * @description 替换渲染内容
@@ -1731,6 +1915,7 @@ var bt_tools = {
                       if (!$(this).hasClass('active') && !$(this).hasClass('disabled')) {
                         var value = item_config.value.toString();
                         $(this).parent().prev().find('.bt_select_content').text($(this).text());
+                        $(this).parent().prev().find('.bt_select_content').prop('title',$(this).text());
                         if (config.type != "multipleSelect"){
                           $(this).addClass('active').siblings().removeClass('active');
                           $(this).parent().next().val(value)
@@ -1742,7 +1927,7 @@ var bt_tools = {
                         if (config.type == "multipleSelect"){
                           // if($(this).parent().find('.active').length <= 1) return layer.msg('最少选择一个！！！')
                           $(this).removeClass('active')
-                        } 
+                        }
                       }
                       if(config.type == "multipleSelect"){
                         for (var i = 0; i < item.length; i++) {
@@ -1753,7 +1938,7 @@ var bt_tools = {
                         for (var i = 0; i < config.list.length; i++) {
                           if(arry.indexOf(config.list[i].title) > -1){
                             mulpVal.push(config.list[i].value)
-                          }                          
+                          }
                         }
                         if (arry.length == 0) {
                           _html += '<span class="bt_select_content_def">请选择备份类型</span>'
@@ -1785,15 +1970,15 @@ var bt_tools = {
                       ev.stopPropagation()
                       break;
                     case 'icon_trem_close':
-                        var str = $(this).siblings().text().trim().replace(/\s/g,""),
-                            item = $(this).parent().parent().siblings('.bt_select_list').find('.item')
-                        for (var i = 0; i < item.length; i++) {
-                          if (str == item.eq(i).prop('title')) {
-                            item.eq(i).click()
-                          }
+                      var str = $(this).siblings().text().trim().replace(/\s/g,""),
+                          item = $(this).parent().parent().siblings('.bt_select_list').find('.item')
+                      for (var i = 0; i < item.length; i++) {
+                        if (str == item.eq(i).prop('title')) {
+                          item.eq(i).click()
                         }
-                        return false
-                        break
+                      }
+                      return false
+                      break
                     case 'select_path':
                       bt.select_path('event_' + $(this).prev().attr('name') + '_' + that.random, items.select || "", !items.callback || items.callback.bind(that));
                       break;
@@ -1849,7 +2034,7 @@ var bt_tools = {
        */
       $get_form_element: function (afresh) {
         var form = {},
-          that = this;
+            that = this;
         if (afresh || $.isEmptyObject(that.form_element)) {
           this.element.find(':input').each(function (index) {
             form[$(this).attr('name')] = $(this);
@@ -1866,7 +2051,7 @@ var bt_tools = {
        */
       $verify_group: function (config, group) {
         var that = this,
-          str = '';
+            str = '';
         $.each(group, function (index, item) {
           if (typeof config[item] === "undefined") return true;
           if (['disabled', 'readonly'].indexOf(item) > -1) {
@@ -1918,7 +2103,7 @@ var bt_tools = {
       },
       /**
        * @description 验证form表单
-      */
+       */
       $verify_form: function () {
         var form_list = {}, form = this.config.form, form_value = this.$get_form_value(), form_element = this.$get_form_element(true),is_verify = true
         for (var key = 0; key < form.length; key++) {
@@ -1941,7 +2126,7 @@ var bt_tools = {
        * @description 提交内容，需要传入url
        * @param {Object|Function} param 附加参数或回调函数
        * @param {Function} callback 回调
-      */
+       */
       $submit: function (param, callback, tips) {
         var form = this.$verify_form();
         if (typeof param === "function") tips = callback, callback = param, param = {};
@@ -1985,18 +2170,18 @@ var bt_tools = {
         body: 'tab-con',
         active: 'on'
       },
-      {
-        content: 'bt-w-body',
-        nav: 'bt-w-menu',
-        body: 'bt-w-con'
-      }
+        {
+          content: 'bt-w-body',
+          nav: 'bt-w-menu',
+          body: 'bt-w-con'
+        }
       ],
       random: bt.get_random(5),
       $init: function () {
         var that = this,
-          active = this.config.active,
-          config = that.config.list,
-          _theme = {};
+            active = this.config.active,
+            config = that.config.list,
+            _theme = {};
         this.$event_bind();
         if (config[that.active].success) config[that.active].success();
         config[that.active]['init'] = true;
@@ -2017,7 +2202,7 @@ var bt_tools = {
         if (config.type && $.isEmptyObject(config.theme)) this.theme = this.theme_list[that.active];
         $.each(_list, function (index, item) {
           var active = (that.active === index),
-            _active = _theme['active'] || 'active';
+              _active = _theme['active'] || 'active';
           _tab += '<span class="' + (active ? _active : '') + '">' + item.title + '</span>';
           _tab_con += '<div class="tab-block ' + (active ? _active : '') + '">' + (active ? item.content : '') + '</div>';
         });
@@ -2030,11 +2215,11 @@ var bt_tools = {
        */
       $event_bind: function () {
         var that = this, _theme = that.theme,
-          active = _theme['active'] || 'active';
+            active = _theme['active'] || 'active';
         if (!that.el) that.element = $('#tab_' + that.random);
         that.element.on('click', ('.' + _theme['nav'].replace(/\s+/g, '.') + ' span'), function () {
           var index = $(this).index(),
-            config = that.config.list[index];
+              config = that.config.list[index];
           $(this).addClass(active).siblings().removeClass(active);
           $('#tab_' + that.random + ' .' + _theme['body'] + '>div:eq(' + index + ')').addClass(active).siblings().removeClass(active);
           that.active = index;
@@ -2112,17 +2297,17 @@ var bt_tools = {
    */
   msg: function (param1, param2) {
     var layerT = null,
-      msg = '',
-      config = {};
+        msg = '',
+        config = {};
     if (typeof param1 === "object") {
       if (typeof param1.status === "boolean") {
         msg = param1.msg, config = { icon: param1.status ? 1 : 2 };
-        if (!param1.status) config = $.extend(config, { time: (!param2 ? 0 : 3000), closeBtn: 2, shade: .3 });
+        if (!param1.status) config = $.extend(config, { time: (!param2 ? 0 : 3000), closeBtn: 2, shade: .3, shadeClose: true });
       }
     }
     if (typeof param1 === "string") {
       msg = param1, config = {
-        icon: typeof param2 !== 'undefined' ? param2 : 1
+        icon: typeof param2 !== 'undefined' ? param2 : 1, shadeClose:true
       }
     }
     layerT = layer.msg(msg, config);
@@ -2131,6 +2316,23 @@ var bt_tools = {
         layer.close(layerT);
       }
     }
+  },
+
+
+  /**
+   * @description 成功提示
+   * @param {string} msg 信息
+   */
+  success: function (msg) {
+    this.msg({ msg: msg, status: true });
+  },
+
+  /**
+   * @description 错误提示
+   * @param {string} msg 信息
+   */
+  error: function (msg) {
+    this.msg({msg: msg, status: false });
   },
   /**
    * @description 请求封装
@@ -2141,10 +2343,10 @@ var bt_tools = {
    */
   send: function (param1, param2, param3, param4, param5, param6) {
     var params = {},
-      success = null,
-      error = null,
-      config = [],
-      param_one = '';
+        success = null,
+        error = null,
+        config = [],
+        param_one = '';
     $.each(arguments, function (index, items) {
       config.push([items, typeof items]);
     });
@@ -2367,6 +2569,7 @@ var bt_tools = {
         });
         this.socket.addEventListener('close', function (ev) {
           if (!that.forceExit) {
+            console.log(ev.code,that.retry)
             if (ev.code !== 1000 && that.retry <= 10) {
               that.socket = that.create_websocket_connect(that.config.route, that.config.shell)
               that.retry++;
@@ -2379,7 +2582,6 @@ var bt_tools = {
           if (!result) return;
           that.refresh_data(result)
           if (that.message) that.message(result)
-
         })
         return this.socket
       },
@@ -2394,18 +2596,18 @@ var bt_tools = {
       htmlEncodeByRegExp: function (str) {
         if (str.length == 0) return "";
         return str.replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/ /g, "&nbsp;")
-          .replace(/\'/g, "&#39;")
-          .replace(/\"/g, "&quot;");
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/ /g, "&nbsp;")
+            .replace(/\'/g, "&#39;")
+            .replace(/\"/g, "&quot;");
       },
 
       /**
        * @description 刷新Pre数据
        * @param {object} data 需要插入的数据
-      */
-       refresh_data: function (data) {
+       */
+      refresh_data: function (data) {
         var rdata = this.htmlEncodeByRegExp(data)
         this.el = $(this.config.el)
         if(!this.el) return false;
@@ -2416,7 +2618,9 @@ var bt_tools = {
         } else {
           this.el.append(rdata)
         }
-        if(this.el.length) this.el.scrollTop(this.el[0].scrollHeight)
+				if (this.el[0]) {
+        	this.el.scrollTop(this.el[0].scrollHeight)
+				}
       },
 
 
@@ -2438,7 +2642,7 @@ var bt_tools = {
        * @description 断开命令响应和websocket连接
        */
       close_connect: function () {
-        this.socket.send('')
+        this.forceExit = true
         this.socket.close()
         delete _that.commandConnectionPool[this.uuid];
       }
@@ -2452,7 +2656,7 @@ var bt_tools = {
   /**
    * @description 清理验证提示样式
    * @param {object} element  元素节点
-  */
+   */
   $clear_verify_tips: function (element) {
     element.removeClass('bt-border-error bt-border-sucess');
     layer.close('tips');
@@ -2463,7 +2667,7 @@ var bt_tools = {
    * @param {object} element  元素节点
    * @param {string} tips 警告提示
    * @return void
-  */
+   */
   $verify_tips: function (element, tips, is_error) {
     if (typeof is_error === "undefined") is_error = true;
     element.removeClass('bt-border-error bt-border-sucess').addClass(is_error ? 'bt-border-error' : 'bt-border-sucess');
@@ -2475,7 +2679,7 @@ var bt_tools = {
    * @param {String} value 内容/值
    * @param {String|Boolean} attr 属性
    * @param {String} type 属性
-  */
+   */
   $verify: function (value, attr, type) {
     if (!value) return '';
     if (type === true) return value ? ' ' + attr : '';
@@ -2486,7 +2690,7 @@ var bt_tools = {
   /**
    * @description 批量操作的结果
    * @param {*} config
-  */
+   */
   $batch_success_table: function (config) {
     var _that = this, length = $(config.html).length;
     bt.open({
@@ -2505,7 +2709,7 @@ var bt_tools = {
    * @description 固定表头
    * @param {string} el DOM选择器
    * @return void
-  */
+   */
   $fixed_table_thead: function (el) {
     $(el).scroll(function () {
       var scrollTop = this.scrollTop;
@@ -2516,7 +2720,7 @@ var bt_tools = {
    * @description 插件视图设置
    * @param {object|string} layid dom元素或layer_id
    * @param {object} config 插件宽度高度或其他配置
-  */
+   */
   $piugin_view_set: function (layid, config) {
     var element = $(typeof layid === "string" ? ('#layui-layer' + layid) : layid).hide(), win = $(window);
     setTimeout(function () {

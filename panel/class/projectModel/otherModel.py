@@ -123,7 +123,9 @@ class main(projectBase):
         plugin_name = None
         for pid_name in os.listdir(self._go_pid_path):
             pid_file = '{}/{}'.format(self._go_pid_path, pid_name)
-            s_pid = int(public.readFile(pid_file))
+            try:
+                s_pid = int(public.readFile(pid_file))
+            except:continue
             if pid == s_pid:
                 plugin_name = pid_name[:-4]
                 break
@@ -185,7 +187,9 @@ class main(projectBase):
         if get: project_name = get.project_name.strip()
         pid_file = "{}/{}.pid".format(self._go_pid_path, project_name)
         if not os.path.exists(pid_file): return False
-        pid = int(public.readFile(pid_file))
+        try:
+            pid = int(public.readFile(pid_file))
+        except:return False
         pids = self.get_project_pids(pid=pid)
         if not pids: return False
         return True
@@ -373,7 +377,9 @@ class main(projectBase):
         load_info = {}
         pid_file = "{}/{}.pid".format(self._go_pid_path, project_name)
         if not os.path.exists(pid_file): return load_info
-        pid = int(public.readFile(pid_file))
+        try:
+            pid = int(public.readFile(pid_file))
+        except:return load_info
         pids = self.get_project_pids(pid=pid)
         if not pids: return load_info
         for i in pids:
@@ -781,7 +787,10 @@ class main(projectBase):
         '''
         pid_file = "{}/{}.pid".format(self._go_pid_path, get.project_name)
         if not os.path.exists(pid_file): return public.return_error('项目未启动')
-        pid = int(public.readFile(pid_file))
+        try:
+            pid = int(public.readFile(pid_file))
+        except:
+            return public.return_error('项目未启动')
         pids = self.get_project_pids(pid=pid)
         if not pids: return public.return_error('项目未启动')
         self.kill_pids(pids=pids)
@@ -841,7 +850,9 @@ echo $! > {pid_file}'''.format(
         if not os.path.exists(pid_file):
             return public.returnMsg(False, '启动失败{}'.format(p))
         # 获取PID
-        pid = int(public.readFile(pid_file))
+        try:
+            pid = int(public.readFile(pid_file))
+        except:return  public.returnMsg(False, '启动失败{}'.format(p))
         pids = self.get_project_pids(pid=pid)
         if not pids:
             if os.path.exists(pid_file): os.remove(pid_file)

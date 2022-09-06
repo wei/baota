@@ -259,7 +259,7 @@ var index = {
             cpuText += 'CPU-' + i + '：' + cpuUse + '%&nbsp;|&nbsp;'
           } else {
             cpuText += 'CPU-' + i + '：' + cpuUse + '%'
-            cpuText += '\n'
+            cpuText += '</br>'
           }
         }
 
@@ -421,7 +421,7 @@ var index = {
    * @description 渲染系统信息
    * @param rdata 接口返回值
    *
-  */
+   */
   reander_system_info: function (callback) {
     var _this = this;
     bt.system.get_net(function (res) {
@@ -525,7 +525,7 @@ var index = {
   /**
    * @description 渲染画布视图
    *
-  */
+   */
   init_chart_view: function () {
     // 所有图表对象装进chart_view
     this.chart_view['load'] = echarts.init(document.querySelector("#loadChart"))
@@ -599,7 +599,7 @@ var index = {
   /**
    * @description 赋值chart的数据
    *
-  */
+   */
   set_chart_data: function () {
     this.chart_active("load")
     this.chart_active("cpu")
@@ -620,7 +620,7 @@ var index = {
   /**
    * @description 赋值chart的数据
    *
-  */
+   */
   chart_active: function (name) {
     // 图表数据
     this.series_option.series[0].data[0].value = this.chart_json[name].val
@@ -650,7 +650,7 @@ var index = {
   /**
    * @description 赋值chart的颜色
    *
-  */
+   */
   chart_color_active: function (number) {
     var activeInfo = {};
     for (var i = 0; i < this.load_config.length; i++) {
@@ -757,23 +757,38 @@ var index = {
     var loadT = bt.load();
     bt.system.check_update(function (rdata) {
       loadT.close();
-      var data = rdata.msg, is_beta = data.is_beta, beta = data.beta, versionData = is_beta ? beta : data, versionType = is_beta?'测试版':'正式版'
-      bt.open({
+      if (rdata.status === false && typeof rdata.msg === 'string') {
+				try {
+					messagebox()
+				} catch (err) {}
+				layer.msg(rdata.msg, { icon: 2 });
+				return
+			}
+      var data = rdata.msg
+			var is_beta = data.is_beta
+			var beta = data.beta
+			var versionData = is_beta ? beta : data
+			var versionType = is_beta ? '测试版' : '正式版'
+			bt.open({
         type: 1,
         title: ' 版本更新-'+ bt.os + '面板' + versionType,
         area: '480px',
         shadeClose: false,
         skin: 'layui-layer-dialog',
         closeBtn: 2,
-        content: '<div class="setchmod bt-form">\
-              <div class="update_title"><i class="layui-layer-ico layui-layer-ico'+ (rdata.status?0:1) +'"></i><span>'+ (!rdata.status?'恭喜您，当前已经是最新版本':'发现新的面板版本，是否立即更新？') +'</span></div>\
-              '+ (function () {
-                if (!rdata.status) {
-                  return '<div class="update_version">当前版本：<a href="https://www.bt.cn/bbs/forum-36-1.html" target="_blank" class="btlink" title="查看当前版本日志">宝塔'+ bt.os + versionType + versionData.version + '</a>&nbsp;&nbsp;发布时间：' + versionData.uptime + '</div>'
-                }else{
-                  return '<div class="update_conter"><div class="update_version"><span style="width:60%;">最新版本：<a href="https://www.bt.cn/bbs/forum-36-1.html" target="_blank" class="btlink" title="查看版本更新日志">宝塔'+ bt.os + versionType +' '+ versionData.version + '</a></span><span style="text-align: right;width:40%;">更新日期：' + versionData.uptime + '</span></div><div class="update_logs">'+ versionData.updateMsg + '</div></div>'
-                }
-              })() + '\
+        content: '\
+				<div class="setchmod bt-form">\
+					<div class="update_title">\
+						<i class="layui-layer-ico layui-layer-ico'+ (rdata.status?0:1) +'"></i>\
+						<span>'+ (!rdata.status?'恭喜您，当前已经是最新版本':'发现新的面板版本，是否立即更新？') +'</span>\
+					</div>\
+					'+ (function () {
+						if (!rdata.status) {
+							return '<div class="update_version">当前版本：<a href="https://www.bt.cn/bbs/forum-36-1.html" target="_blank" class="btlink" title="查看当前版本日志">宝塔'+ bt.os + versionType + versionData.version + '</a>&nbsp;&nbsp;发布时间：' + versionData.uptime + '</div>'
+						}else{
+							return '<div class="update_conter"><div class="update_version"><span style="width:60%;">最新版本：<a href="https://www.bt.cn/bbs/forum-36-1.html" target="_blank" class="btlink" title="查看版本更新日志">宝塔'+ bt.os + versionType +' '+ versionData.version + '</a></span><span style="text-align: right;width:40%;">更新日期：' + versionData.uptime + '</span></div><div class="update_logs">'+ versionData.updateMsg + '</div></div>'
+						}
+					})() + '\
               <div class="update_conter">\
                   <div class="update_tips">'+ (is_beta?'正式版':'测试版') + '最新版本为：&nbsp;' + (is_beta?data.version:beta.version) + '&nbsp;&nbsp;&nbsp;更新时间:&nbsp;&nbsp;' + (is_beta?data.uptime:beta.uptime) + '&nbsp;&nbsp;&nbsp;\
                   '+ (!is_beta ? '<span>如需更新测试版请点击<a href="javascript:;" onclick="index.beta_msg()" class="btlink btn_update_testPanel">查看详情</a></span>' : '<span>如需切换回正式版请点击<a href="javascript:;" onclick="index.to_not_beta()" class="btlink btn_update_testPanel">切换到正式版</a></span>') + '\
@@ -801,19 +816,15 @@ var index = {
             .bt-form-btn .btn:nth-child(2) {margin-right: 0;}\
         </style>',
         success:function (layers,indexs) {
-          $('.ignore-renew').on('click', function () {
-            bt.confirm({
-              title: '忽略本次更新',
-              msg: '是否忽略本次更新，忽略后，当前版本将不再提示更新！',
-            }, function () {
-              bt.send('ignore_version', 'ajax/ignore_version', { version: versionData.version }, function (rdata) {
-                bt.msg(rdata);
-                if(rdata.status) layer.close(indexs)
-                console.log('1111',versionData)
-              })
-
+          $('.ignore-renew').on('click',function () {
+            bt.send('ignore_version', 'ajax/ignore_version', { version: versionData.version }, function (rdata) {
+              bt.msg(rdata);
+              if(rdata.status) layer.close(indexs);
             })
           })
+        },
+        cancel:function (){
+          if(rdata.status) bt.send('ignore_version', 'ajax/ignore_version', { version: versionData.version })
         }
       })
     })
@@ -1075,7 +1086,7 @@ var index = {
    * @description 获取时间简化缩写
    * @param {Numbre} dateTimeStamp 需要转换的时间戳
    * @return {String} 简化后的时间格式
-  */
+   */
   get_simplify_time: function (dateTimeStamp) {
     if (dateTimeStamp === 0) return '刚刚';
     if (dateTimeStamp.toString().length == 10) dateTimeStamp = dateTimeStamp * 1000
@@ -1100,7 +1111,7 @@ var index = {
   /**
    * @description 渲染安全模块视图
    * @return 无返回值
-  */
+   */
   reader_warning_view: function () {
     var that = this;
     if(!that.warning_num && that.warning_num !== 0) {
@@ -1112,56 +1123,56 @@ var index = {
       bt.each(arry, function (index, item) {
         var data_item = data[item[0]], data_title = item[1];
         html += '<li class="module_item ' + item[0] + '">' +
-          '<div class="module_head">' +
-          '<span class="module_title">' + data_title + '</span>' +
-          '<span class="module_num">' + data_item.length + '</span>' +
-          '<span class="module_cut_show">' + (item[index] == 'risk' && that.warning_num > 0 ? '<i>点击折叠</i><span class="glyphicon glyphicon-menu-up" aria-hidden="false"></span>' : '<i>查看详情</i><span class="glyphicon glyphicon-menu-down" aria-hidden="false"></span>') + '</span>' +
-          '</div>' +
-          (function (index, item) {
-            var htmls = '<ul class="module_details_list ' + (item[0] == 'risk' && that.warning_num > 0 ? 'active' : '') + '">';
-            bt.each(data_item, function (indexs, items) {
-              scan_time = items.check_time;
-              htmls += '<li class="module_details_item">' +
-                '<div class="module_details_head">' +
-                '<span class="module_details_title"><span title="' + items.ps + '">' + items.ps + '</span><i>（&nbsp;检测时间：' + (that.get_simplify_time(items.check_time) || '刚刚') + '，耗时：' + (items.taking > 1 ? (items.taking + '秒') : ((items.taking * 1000).toFixed(2) + '毫秒')) + '&nbsp;，等级：' + (function (level) {
-                  var level_html = '';
-                  switch (level) {
-                    case 3:
-                      level_html += '<span style="color:red">高危</span>';
-                      break;
-                    case 2:
-                      level_html += '<span style="color:#E6A23C">中危</span>';
-                      break;
-                    case 1:
-                      level_html += '<span style="color:#e8d544">低危</span>';
-                      break;
-                  }
-                  return level_html;
-                }(items.level)) + '）</i></span>' +
-                '<span class="operate_tools">' + (item[0] != 'security' ? ('<a href="javascript:;" class="btlink cut_details">详情</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="javascript:;" data-model="' + items.m_name + '" data-title="' + items.title + '" ' + (item[0] == 'ignore' ? 'class=\"btlink\"' : '') + ' data-type="' + item[0] + '">' + (item[0] != 'ignore' ? '忽略' : '移除忽略') + '</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="javascript:;" class="btlink" data-model="' + items.m_name + '" data-title="' + items.title + '">检测</a>') : '<a href="javascript:;" class="btlink cut_details">详情</a>') + '</span>' +
-                '</div>' +
-                '<div class="module_details_body">' +
-                '<div class="module_details_line">' +
-                '<div class="module_details_block"><span class="line_title">检测类型：</span><span class="line_content">' + items.title + '</span></div>' +
-                '<div class="module_details_block"><span class="line_title">风险等级：</span><span class="line_content" style="color:' + level[items.level - 1][1] + '">' + level[items.level - 1][0] + '</span></div>' +
-                '</div>' +
-                '<div class="module_details_line"><span class="line_title">风险描述：</span><span class="line_content">' + items.msg + '</span></div>' +
-                '<div class="module_details_line"><span class="line_title">' + (item[0] != 'security' ? '解决方案：' : '配置建议') + '</span><span class="line_content">' +
-                (function () {
-                  var htmlss = '';
-                  bt.each(items.tips, function (indexss, itemss) {
-                    htmlss += '<i>' + (indexss + 1) + '、' + itemss + '</i></br>';
-                  });
-                  return htmlss;
-                }()) + '</span></div>' +
-                (items.help != '' ? ('<div class="module_details_line"><span class="line_title">帮助文档：</span><span class="line_content"><a href="' + items.help + '" target="_blank" class="btlink">' + items.help + '</span></div>') : '') +
-                '</div>' +
-                '</li>';
-            });
-            htmls += '</ul>';
-            return htmls;
-          }(index, item))
-          + '</li>'
+            '<div class="module_head">' +
+            '<span class="module_title">' + data_title + '</span>' +
+            '<span class="module_num">' + data_item.length + '</span>' +
+            '<span class="module_cut_show">' + (item[index] == 'risk' && that.warning_num > 0 ? '<i>点击折叠</i><span class="glyphicon glyphicon-menu-up" aria-hidden="false"></span>' : '<i>查看详情</i><span class="glyphicon glyphicon-menu-down" aria-hidden="false"></span>') + '</span>' +
+            '</div>' +
+            (function (index, item) {
+              var htmls = '<ul class="module_details_list ' + (item[0] == 'risk' && that.warning_num > 0 ? 'active' : '') + '">';
+              bt.each(data_item, function (indexs, items) {
+                scan_time = items.check_time;
+                htmls += '<li class="module_details_item">' +
+                    '<div class="module_details_head">' +
+                    '<span class="module_details_title"><span title="' + items.ps + '">' + items.ps + '</span><i>（&nbsp;检测时间：' + (that.get_simplify_time(items.check_time) || '刚刚') + '，耗时：' + (items.taking > 1 ? (items.taking + '秒') : ((items.taking * 1000).toFixed(2) + '毫秒')) + '&nbsp;，等级：' + (function (level) {
+                      var level_html = '';
+                      switch (level) {
+                        case 3:
+                          level_html += '<span style="color:red">高危</span>';
+                          break;
+                        case 2:
+                          level_html += '<span style="color:#E6A23C">中危</span>';
+                          break;
+                        case 1:
+                          level_html += '<span style="color:#e8d544">低危</span>';
+                          break;
+                      }
+                      return level_html;
+                    }(items.level)) + '）</i></span>' +
+                    '<span class="operate_tools">' + (item[0] != 'security' ? ('<a href="javascript:;" class="btlink cut_details">详情</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="javascript:;" data-model="' + items.m_name + '" data-title="' + items.title + '" ' + (item[0] == 'ignore' ? 'class=\"btlink\"' : '') + ' data-type="' + item[0] + '">' + (item[0] != 'ignore' ? '忽略' : '移除忽略') + '</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="javascript:;" class="btlink" data-model="' + items.m_name + '" data-title="' + items.title + '">检测</a>') : '<a href="javascript:;" class="btlink cut_details">详情</a>') + '</span>' +
+                    '</div>' +
+                    '<div class="module_details_body">' +
+                    '<div class="module_details_line">' +
+                    '<div class="module_details_block"><span class="line_title">检测类型：</span><span class="line_content">' + items.title + '</span></div>' +
+                    '<div class="module_details_block"><span class="line_title">风险等级：</span><span class="line_content" style="color:' + level[items.level - 1][1] + '">' + level[items.level - 1][0] + '</span></div>' +
+                    '</div>' +
+                    '<div class="module_details_line"><span class="line_title">风险描述：</span><span class="line_content">' + items.msg + '</span></div>' +
+                    '<div class="module_details_line"><span class="line_title">' + (item[0] != 'security' ? '解决方案：' : '配置建议') + '</span><span class="line_content">' +
+                    (function () {
+                      var htmlss = '';
+                      bt.each(items.tips, function (indexss, itemss) {
+                        htmlss += '<i>' + (indexss + 1) + '、' + itemss + '</i></br>';
+                      });
+                      return htmlss;
+                    }()) + '</span></div>' +
+                    (items.help != '' ? ('<div class="module_details_line"><span class="line_title">帮助文档：</span><span class="line_content"><a href="' + items.help + '" target="_blank" class="btlink">' + items.help + '</span></div>') : '') +
+                    '</div>' +
+                    '</li>';
+              });
+              htmls += '</ul>';
+              return htmls;
+            }(index, item))
+            + '</li>'
       });
       $('.warning_scan_body').html(html);
       scan_time = Date.now() / 1000;
@@ -1173,13 +1184,14 @@ var index = {
       area: ['750px', '700px'],
       skin: 'warning_scan_view',
       content: '<div class="warning_scan_view" style="height: 100%;">' +
-        '<div class="warning_scan_head">' +
-        '<span class="warning_scan_ps">' + (that.warning_num > 0 ? ('本次扫描共检测到风险项<i>' + that.warning_num + '</i>个,请及时修复！') : '本次扫描检测无风险项，请继续保持！') + '</span>' +
-        '<span class="warning_scan_time"></span>' +
-        '<button class="warning_again_scan">重新检测</button>' +
-        '</div>' +
-        '<ol class="warning_scan_body" style="min-height: 528px;"></ol>' +
-        '</div>',
+          '<div class="warning_scan_head">' +
+          '<span class="warning_scan_ps">' + (that.warning_num > 0 ? ('本次扫描共检测到风险项<i>' + that.warning_num + '</i>个,请及时修复！') : '本次扫描检测无风险项，请继续保持！') + '</span>' +
+          '<span class="warning_scan_time"></span>' +
+          '<button class="warning_repair_scan">人工修复</button>' +
+          '<button class="warning_again_scan" style="right:160px;">重新检测</button>' +
+          '</div>' +
+          '<ol class="warning_scan_body" style="min-height: 528px;"></ol>' +
+          '</div>',
       success: function () {
         $('.warning_again_scan').click(function () {
           var loadT = layer.msg('正在重新检测安全风险，请稍候...', { icon: 16 });
@@ -1206,6 +1218,28 @@ var index = {
             }
           }
         });
+        $('.warning_repair_scan').click(function () {
+          layer.open({
+            type: 1,
+            area: ['300px', '260px'],
+            title: false,
+            closeBtn: 2,
+            shift: 0,
+            content: '<div class="service_consult">\
+                        <div class="service_consult_title">使用微信扫描二维码，联系客服，付费修复</div>\
+                        <div class="contact_consult" style="margin-bottom: 5px;"><div id="contact_consult_qcode"></div><i class="wechatEnterprise"></i></div>\
+                        <div>【人工客服】</div>\
+                      </div>',
+            success:function(){
+              $('#contact_consult_qcode').qrcode({
+                render: "canvas",
+                width: 140,
+                height: 140,
+                text:'https://work.weixin.qq.com/kfid/kfc72fcbde93e26a6f3'
+              });
+            }
+          })
+        })
         $('.warning_scan_body').on('click', '.operate_tools a', function () {
           var index = $(this).index(), data = $(this).data();
           switch (index) {
@@ -1263,7 +1297,7 @@ var index = {
    * @param {String} model_name 模块名称
    * @param {Function} callback 成功后的回调
    * @return 无返回值
-  */
+   */
   waring_check_find: function (model_name, callback) {
     var loadT = layer.msg('正在检测指定模块，请稍候...', { icon: 16, time: 0 });
     bt.send('check_find', 'warning/check_find', { m_name: model_name }, function (res) {
@@ -1280,7 +1314,7 @@ var index = {
    * @param {String} model_name 模块名称
    * @param {Function} callback 成功后的回调
    * @return 无返回值
-  */
+   */
   warning_set_ignore: function (model_name, callback) {
     var loadT = layer.msg('正在设置模块状态，请稍候...', { icon: 16, time: 0 });
     bt.send('set_ignore', 'warning/set_ignore', { m_name: model_name }, function (res) {
@@ -1293,7 +1327,7 @@ var index = {
   /**
    * @description 获取当前的产品状态
    */
-   get_product_status: function (callback) {
+  get_product_status: function (callback) {
     // var loadT = layer.msg('正在获取产品状态，请稍候...', { icon: 16, time: 0 })
     bt.send('get_pd', 'ajax/get_pd', {}, function (res) {
       $('.btpro-gray').replaceWith($(res[0]));
@@ -1302,12 +1336,12 @@ var index = {
       if(res[1] === 0){
         $(".btpro span").click(function(e){
           layer.confirm('切换回免费版可通过解绑账号实现', { icon: 3, btn: ['解绑账号'], closeBtn: 2, title: '是否取消授权' }, function () {
-              $.post('/ssl?action=DelToken', {}, function (rdata) {
-                  layer.msg(rdata.msg);
-                  setTimeout(function () {
-                      window.location.reload();
-                  },2000);
-              });
+            $.post('/ssl?action=DelToken', {}, function (rdata) {
+              layer.msg(rdata.msg);
+              setTimeout(function () {
+                window.location.reload();
+              },2000);
+            });
           });
           e.stopPropagation();
         });
@@ -1317,7 +1351,7 @@ var index = {
   },
   /**
    * @description 推荐进阶版产品
-  */
+   */
   recommend_paid_version: function () {
     try {
       var recomConfig = product_recommend.get_recommend_type(0)
@@ -1337,10 +1371,10 @@ var index = {
         if(is_pay){
           pay_html = '<div class="product-buy '+ (advanced || item.name) +'-type">到期时间：<span>'+ (end_time === 0?'永久授权':(end_time === -2?'已过期':bt.format_data(end_time,'yyyy-MM-dd')) + '&nbsp;&nbsp;<a class="btlink" href="javascript:;" onclick="product_recommend.pay_product_sign(\''+ advanced +'\','+ item.pay +',\''+ advanced +'\')">续费</a>') +'</span></div>'
         }else{
-          pay_html = '<div class="product-buy"><button type="button" class="btn btn-xs btn-success" onclick="product_recommend.pay_product_sign(\''+ (advanced || item.name) +'\','+ item.pay +',\'ltd\')">立即购买</button></div>'
+          pay_html = '<div class="product-buy"><button type="button" class="btn btn-xs btn-success" onclick="product_recommend.pay_product_sign(\''+ (advanced || item.name) +'\','+ item.pay +',\'ltd\')">立即开通</button></div>'
         }
         html = '<div class="conter-box bgw">\
-          <div class="recommend-top pd15 '+ (is_pay?( advanced +'-bg'):'') +'">'+ (!is_pay?pay_html:'') +'<div class="product-ico '+ (advanced || item.name) +''+ (!is_pay?'-pay':'') +'-ico"></div>' + (is_pay?pay_html:'') +'\
+          <div class="recommend-top radius4 pd15 '+ (is_pay?( advanced +'-bg'):'') +'">'+ (!is_pay?pay_html:'') +'<div class="product-ico '+ (advanced || item.name) +''+ (!is_pay?'-pay':'') +'-ico"></div>' + (is_pay?pay_html:'') +'\
             <div class="product-label">'+ list_html +'</div>\
           </div>\
         </div>'
@@ -1352,7 +1386,7 @@ var index = {
   },
   /**
    * @description 推荐任务管理器
-  */
+   */
   recommend_task_manager: function () {
 
   }

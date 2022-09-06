@@ -1,462 +1,464 @@
-#coding: utf-8
-#-------------------------------------------------------------------
-# 宝塔Linux面板
-#-------------------------------------------------------------------
-# Copyright (c) 2015-2017 宝塔软件(http:#bt.cn) All rights reserved.
-#-------------------------------------------------------------------
-# Author: hwliang <hwl@bt.cn>
-#-------------------------------------------------------------------
-
-#------------------------------
-# 磁盘配额管理
-#------------------------------
-import os,public,psutil,json,time,re
-from projectModel.base import projectBase
-
-class main(projectBase):
-    __config_path = '{}/config/quota.json'.format(public.get_panel_path())
-    __mysql_config_file = '{}/config/mysql_quota.json'.format(public.get_panel_path())
-    __auth_msg = public.to_string([27492, 21151, 33021, 20026, 20225, 19994, 29256, 19987, 20139, 21151, 33021, 65292, 35831, 20808, 36141, 20080, 20225, 19994, 29256])
-
-    def __init__(self):
-        _is_install_file = '{}/data/quota_install.pl'.format(public.get_panel_path())
-        if not os.path.exists(_is_install_file):
-            xfs_quota_bin = '/usr/sbin/xfs_quota'
-            if not os.path.exists(xfs_quota_bin):
-                if os.path.exists('/usr/bin/apt-get'):
-                    public.ExecShell('nohup apt-get install xfsprogs -y > /dev/null &')
-                else:
-                    public.ExecShell('nohup yum install xfsprogs -y > /dev/null &')
-            public.writeFile(_is_install_file,'True')
-
-
-    def __get_xfs_disk(self,args=None):
-        '''
-            @name 获取xfs磁盘信息列表
-            @author hwliang<2022-02-14>
-            @return list
-        '''
-        disks = []
-        for disk in psutil.disk_partitions():
-            if disk.fstype == 'xfs':
-                disks.append(
-                    (
-                        disk.mountpoint,
-                        disk.device,
-                        psutil.disk_usage(disk.mountpoint).free,
-                        disk.opts.split(',')
-                    )
-                )
-
-        return disks
-
-    def __get_path_free_quota_size(self,args = None):
-        '''
-            @name 获取可用的磁盘配额容量
-            @author hwliang<2022-02-14>
-            @param args.path<string> 需要检查的目录
-            @return int
-        '''
-        return self.__get_free_quota_size(args.path)
-
-    def __get_path_dev_mountpoint(self,path):
-        '''
-            @name 获取目录所在挂载点
-            @author hwliang<2022-02-15>
-            @param path<string> 目录
-            @return string or tuple
-        '''
-        disks = self.__get_xfs_disk()
-        for disk in disks:
-            if path.find(disk[0] + '/') == 0:
-                if not 'prjquota' in disk[3]:
-                    return disk
-                return disk[1]
-        return ''
-
-
-
-    def __get_free_quota_size(self,path):
-        '''
-            @name 获取可用的磁盘配额容量
-            @author hwliang<2022-02-14>
-            @param path<string> 需要检查的目录
-            @return int
-        '''
-        if not os.path.exists(path): return -1
-        if not os.path.isdir(path): return -2
-        xfs_disks = self.__get_xfs_disk()
-        for disk in xfs_disks:
-            if path.find(disk[0] + '/') == 0:
-                return disk[2] / 1024 / 1024
-        return -3
-
-
-    def get_quota_path(self,path):
-        return self.get_quota_path_list(get_path = path)
-
-
-    def get_quota_path_list(self,args = None,get_path = None):
-        '''
-            @name 获取磁盘配额的目录列表
-            @author hwliang<2022-02-14>
-            @param args<dict> 参数列表
-            @return list
-        '''
-        if not os.path.exists(self.__config_path):
-            public.writeFile(self.__config_path,'[]')
-
-        quota_list = json.loads(public.readFile(self.__config_path))
-
-        new_quota_list = []
-        for quota in quota_list:
-            if not os.path.exists(quota['path']) or not os.path.isdir(quota['path']) or os.path.islink(quota['path']):continue
-            if get_path:
-                if quota['path'] == get_path:
-                    usage_info = psutil.disk_usage(quota['path'])
-                    quota['used'] = usage_info.used
-                    quota['free'] = usage_info.free
-                    return quota
-                else:
-                    continue
-            usage_info = psutil.disk_usage(quota['path'])
-            quota['used'] = usage_info.used
-            quota['free'] = usage_info.free
-            new_quota_list.append(quota)
-
-        if get_path:
-            return {'size':0,'used':0,'free':0}
-
-        if len(new_quota_list) != len(quota_list):
-            public.writeFile(self.__config_path,json.dumps(new_quota_list))
-
-        return quota_list
-
-    def get_quota_mysql(self,name):
-        return self.get_quota_mysql_list(get_name = name)
-
-    def get_quota_mysql_list(self,args = None,get_name = None):
-        '''
-            @name 获取数据库配额列表
-            @author hwliang<2022-02-14>
-            @param args<dict> 参数列表
-            @return list
-        '''
-        if not os.path.exists(self.__mysql_config_file):
-            public.writeFile(self.__mysql_config_file,'[]')
-
-        quota_list = json.loads(public.readFile(self.__mysql_config_file))
-        new_quota_list = []
-        db_obj = public.M('databases')
-        for quota in quota_list:
-            if get_name:
-                if quota['db_name'] == get_name:
-                    quota['used'] = quota['used'] = int(public.get_database_size_by_name(quota['db_name']))
-                    _size = quota['size'] * 1024 * 1024
-                    if (quota['used'] > _size and quota['insert_accept']) or (quota['used'] < _size and not quota['insert_accept']):
-                        self.mysql_quota_check()
-                    return quota
-            else:
-                if db_obj.where('name=?',quota['db_name']).count():
-                    if args:quota['used'] = int(public.get_database_size_by_name(quota['db_name']))
-                    new_quota_list.append(quota)
-        db_obj.close()
-        if get_name:
-            return {'size':0,'used':0}
-        if len(new_quota_list) != len(quota_list):
-            public.writeFile(self.__mysql_config_file,json.dumps(new_quota_list))
-        return new_quota_list
-
-    def __rm_mysql_insert_accept(self,mysql_obj,username,db_name,db_host):
-        '''
-            @name 移除数据库用户的插入权限
-            @author hwliang<2022-02-14>
-            @param mysql_obj<object> 数据库对象
-            @param username<string> 用户名
-            @param db_name<string> 数据库名称
-            @param db_host<string> host
-            @return bool
-        '''
-        res = mysql_obj.execute("REVOKE ALL PRIVILEGES ON `{}`.* FROM '{}'@'{}';".format(db_name,username,db_host))
-        if res: raise public.PanelError('移除数据库用户的插入权限失败: {}'.format(res))
-        res = mysql_obj.execute("GRANT SELECT, DELETE, CREATE, DROP, REFERENCES, INDEX, CREATE TEMPORARY TABLES, LOCK TABLES, CREATE VIEW, EVENT, TRIGGER, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, EXECUTE ON `{}`.* TO '{}'@'{}';".format(db_name,username,db_host))
-        if res: raise public.PanelError('移除数据库用户的插入权限失败: {}'.format(res))
-        mysql_obj.execute("FLUSH PRIVILEGES;")
-        return True
-
-    def __rep_mysql_insert_accept(self,mysql_obj,username,db_name,db_host):
-        '''
-            @name 恢复数据库用户的插入权限
-            @author hwliang<2022-02-14>
-            @param mysql_obj<object> 数据库对象
-            @param username<string> 用户名
-            @param db_name<string> 数据库名称
-            @param db_host<string> host
-            @return bool
-        '''
-        res = mysql_obj.execute("REVOKE ALL PRIVILEGES ON `{}`.* FROM '{}'@'{}';".format(db_name,username,db_host))
-        if res: raise public.PanelError('恢复数据库用户的插入权限失败: {}'.format(res))
-        res = mysql_obj.execute("GRANT ALL PRIVILEGES ON `{}`.* TO '{}'@'{}';".format(db_name,username,db_host))
-        if res: raise public.PanelError('恢复数据库用户的插入权限失败: {}'.format(res))
-        mysql_obj.execute("FLUSH PRIVILEGES;")
-        return True
-
-
-    def mysql_quota_service(self):
-        '''
-            @name 启动MySQL配额监测服务
-            @author hwliang<2022-02-14>
-            @return void
-        '''
-        while 1:
-            time.sleep(600)
-            self.mysql_quota_check()
-
-
-    def __map_to_list(self,map_obj):
-        try:
-            if type(map_obj) != list and type(map_obj) != str: map_obj = list(map_obj)
-            return map_obj
-        except: return []
-
-    def mysql_quota_check(self):
-        '''
-            @name 检查MySQL配额
-            @author hwliang<2022-02-14>
-            @return void
-        '''
-        if not self.__check_auth(): return public.returnMsg(False,self.__auth_msg)
-        quota_list = self.get_quota_mysql_list()
-        for quota in quota_list:
-            try:
-                used_size = public.get_database_size_by_name(quota['db_name']) / 1024 / 1024
-                username = public.M('databases').where('name=?',(quota['db_name'],)).getField('username')
-                mysql_obj = public.get_mysql_obj(quota['db_name'])
-                accept = self.__map_to_list(mysql_obj.query("select Host from mysql.user where User='" + username + "'"))
-                if quota['size'] < 1:
-                    if not quota['insert_accept']:
-                        for host in accept:
-                            self.__rep_mysql_insert_accept(mysql_obj,username,quota['db_name'],host[0])
-                        quota['insert_accept'] = True
-                        public.WriteLog('磁盘配额','已关闭数据库[{}]配额,恢复插入权限'.format(quota['db_name']))
-                        continue
-
-                if used_size < quota['size']:
-                    if not quota['insert_accept']:
-                        for host in accept:
-                            self.__rep_mysql_insert_accept(mysql_obj,username,quota['db_name'],host[0])
-                        quota['insert_accept'] = True
-                        public.WriteLog('磁盘配额','数据库[{}]因低于配额[{}MB],恢复插入权限'.format(quota['db_name'],quota['size']))
-                    if hasattr(mysql_obj,'close'): mysql_obj.close()
-                    continue
-
-                if quota['insert_accept']:
-                    for host in accept:
-                        self.__rm_mysql_insert_accept(mysql_obj,username,quota['db_name'],host[0])
-                    quota['insert_accept'] = False
-                    public.WriteLog('磁盘配额','数据库[{}]因超出配额[{}MB],移除插入权限'.format(quota['db_name'],quota['size']))
-                if hasattr(mysql_obj,'close'): mysql_obj.close()
-            except:
-                public.print_log(public.get_error_info())
-        public.writeFile(self.__mysql_config_file,json.dumps(quota_list))
-
-    def __create_mysql_quota(self,args):
-        '''
-            @name 创建磁盘配额
-            @author hwliang<2022-02-14>
-            @param args<dict>{
-                db_name<string> 数据库名称
-                size<int> 配额大小(MB)
-            }
-            @return dict
-        '''
-        if not self.__check_auth(): return public.returnMsg(False,self.__auth_msg)
-        if not os.path.exists(self.__mysql_config_file):
-            public.writeFile(self.__mysql_config_file,'[]')
-        size = int(args['size'])
-        db_name = args.db_name.strip()
-        quota_list = json.loads(public.readFile(self.__mysql_config_file))
-        for quota in quota_list:
-            if quota['db_name'] == db_name:
-                return public.returnMsg(False,'数据库配额已存在')
-
-        quota_list.append({
-            'db_name':db_name,
-            'size':size,
-            'insert_accept':True
-        })
-        public.writeFile(self.__mysql_config_file,json.dumps(quota_list))
-        public.WriteLog('磁盘配额','创建数据库[{db_name}]的配额限制为: {size}MB'.format(db_name=db_name,size=size))
-        self.mysql_quota_check()
-        return public.returnMsg(True,'添加成功')
-
-
-    def __check_auth(self):
-        from pluginAuth import Plugin
-        plugin_obj = Plugin(False)
-        plugin_list = plugin_obj.get_plugin_list()
-        return int(plugin_list['ltd']) > time.time()
-
-    def modify_mysql_quota(self,args):
-        '''
-            @name 修改数据库配额
-            @author hwliang<2022-02-14>
-            @param args<dict>{
-                db_name<string> 数据库名称
-                size<int> 配额大小(MB)
-            }
-            @return dict
-        '''
-        if not self.__check_auth(): return public.returnMsg(False,self.__auth_msg)
-        if not os.path.exists(self.__mysql_config_file):
-            public.writeFile(self.__mysql_config_file,'[]')
-        if not re.match(r"^\d+$",args.size): return public.returnMsg(False,'配额大小必须是整数!')
-        size = int(args['size'])
-        db_name = args.db_name.strip()
-        quota_list = json.loads(public.readFile(self.__mysql_config_file))
-        is_exists = False
-        for quota in quota_list:
-            if quota['db_name'] == db_name:
-                quota['size'] = size
-                is_exists = True
-                break
-
-        if is_exists:
-            public.writeFile(self.__mysql_config_file,json.dumps(quota_list))
-            public.WriteLog('磁盘配额','修改数据库[{db_name}]的配额限制为: {size}MB'.format(db_name=db_name,size=size))
-            self.mysql_quota_check()
-            return public.returnMsg(True,'修改成功')
-        return self.__create_mysql_quota(args)
-
-
-
-    def __get_xfs_quota_id(self,mountpoint):
-        '''
-            @name 获取xfs文件系统中的配额ID
-            @author hwliang<2022-02-15>
-            @param mountpoint<string> 挂载点
-            @return int
-        '''
-        id_list = []
-        result = public.ExecShell("xfs_quota -x -c report {mountpoint}|awk '{{print $1}}'|grep '#'".format(mountpoint=mountpoint))[0]
-        if not result: return id_list
-        for id in result.split('\n'):
-            if id: id_list.append(int(id.split('#')[-1]))
-        return id_list
-
-    def __get_quota_id(self,quota_path_list,mountpoint):
-        '''
-            @name 获取下一个项目配额ID
-            @author hwliang<2022-02-15>
-            @param quota_path_list<list> 配额列表
-            @return int
-        '''
-        quota_id = 1001
-        if not quota_path_list: return quota_id
-        quota_id = quota_path_list[-1]['id'] + 1
-        xfs_quota_id_list = sorted(self.__get_xfs_quota_id(mountpoint))
-        if xfs_quota_id_list:
-            if xfs_quota_id_list[-1] > quota_id:
-                quota_id = xfs_quota_id_list[-1] + 1
-        return quota_id
-
-
-    def __create_path_quota(self,args):
-        '''
-            @name 创建磁盘配额
-            @author hwliang<2022-02-14>
-            @param args<dict>{
-                path<string> 目录
-                size<int> 配额大小(MB)
-            }
-            @return dict
-        '''
-        if not self.__check_auth(): return public.returnMsg(False,self.__auth_msg)
-        path = args.path.strip()
-        size = int(args.size)
-        if not os.path.exists(path): return public.returnMsg(False,'指定目录不存在')
-        if os.path.isfile(path): return public.returnMsg(False,'指定目录不是目录!')
-        if os.path.islink(path): return public.returnMsg(False,'指定目录是软链接!')
-        quota_path_list = self.get_quota_path_list()
-        for quota in quota_path_list:
-            if quota['path'] == path: return public.returnMsg(False,'指定目录已经设置过配额!')
-
-        free_quota_size = self.__get_free_quota_size(path)
-        if free_quota_size == -3: return public.returnMsg(False,'指定目录所在分区不是XFS分区,不支持目录配额!')
-        if free_quota_size == -2: return public.returnMsg(False,'这不是一个有效的目录!')
-        if free_quota_size == -1: return public.returnMsg(False,'指定目录不存在!')
-
-        if size > free_quota_size: return public.returnMsg(False,'指定磁盘可用的配额容量不足!')
-
-        mountpoint = self.__get_path_dev_mountpoint(path)
-        if not mountpoint: return public.returnMsg(False,'指定目录不在xfs磁盘分区中!')
-        if isinstance(mountpoint,tuple): return public.returnMsg(False,
-        '指定xfs分区未开启目录配额功能,请在挂载该分区时增加prjquota参数<p>/etc/fstab文件配置示例：<pre>{mountpoint}       {path}           xfs             defaults,prjquota       0 0</pre></p><p>注意：配置好后需重新挂载分区或重启服务器才能生效</p>'.format(mountpoint=mountpoint[1],path=mountpoint[0]))
-        quota_id = self.__get_quota_id(quota_path_list,mountpoint)
-
-        res = public.ExecShell("xfs_quota -x -c 'project -s -p {path} {quota_id}'".format(path=path,quota_id=quota_id))
-        if res[1]: return public.returnMsg(False,res[1])
-        res = public.ExecShell("xfs_quota -x -c 'limit -p bhard={size}m {quota_id}' {mountpoint}".format(quota_id=quota_id,size=size,mountpoint=mountpoint))
-        if res[1]: return public.returnMsg(False,res[1])
-        quota_path_list.append({
-            'path':args.path,
-            'size':size,
-            'id': quota_id
-        })
-        public.writeFile(self.__config_path,json.dumps(quota_path_list))
-        public.WriteLog('磁盘配额','创建目录[{path}]的配额限制为: {size}MB'.format(path=path,size=size))
-        return public.returnMsg(True,'添加成功')
-
-
-    def modify_path_quota(self,args):
-        '''
-            @name 修改磁盘配额
-            @author hwliang<2022-02-14>
-            @param args<dict>{
-                path<string> 目录
-                size<int> 配额大小(MB)
-            }
-            @return dict
-        '''
-        if not self.__check_auth(): return public.returnMsg(False,self.__auth_msg)
-        path = args.path.strip()
-        if not re.match(r"^\d+$",args.size): return public.returnMsg(False,'配额大小必须是整数!')
-        size = int(args.size)
-        if not os.path.exists(path): return public.returnMsg(False,'指定目录不存在')
-        if os.path.isfile(path): return public.returnMsg(False,'指定目录不是目录!')
-        if os.path.islink(path): return public.returnMsg(False,'指定目录是软链接!')
-        quota_path_list = self.get_quota_path_list()
-        quota_id = 0
-        for quota in quota_path_list:
-            if quota['path'] == path:
-                quota_id = quota['id']
-                break
-        if not quota_id: return self.__create_path_quota(args)
-
-        free_quota_size = self.__get_free_quota_size(path)
-        if free_quota_size == -3: return public.returnMsg(False,'指定目录所在分区不是XFS分区,不支持目录配额!')
-        if free_quota_size == -2: return public.returnMsg(False,'这不是一个有效的目录!')
-        if free_quota_size == -1: return public.returnMsg(False,'指定目录不存在!')
-        if size > free_quota_size: return public.returnMsg(False,'指定磁盘可用的配额容量不足!')
-
-        mountpoint = self.__get_path_dev_mountpoint(path)
-        if not mountpoint: return public.returnMsg(False,'指定目录不在xfs磁盘分区中!')
-        if isinstance(mountpoint,tuple): return public.returnMsg(False,
-        '指定xfs分区未开启目录配额功能,请在挂载该分区时增加prjquota参数<p>/etc/fstab文件配置示例：<pre>{mountpoint}       {path}           xfs             defaults,prjquota       0 0</pre></p><p>注意：配置好后需重新挂载分区或重启服务器才能生效</p>'.format(mountpoint=mountpoint[1],path=mountpoint[0]))
-        res = public.ExecShell("xfs_quota -x -c 'project -s -p {path} {quota_id}'".format(path=path,quota_id=quota_id))
-        if res[1]: return public.returnMsg(False,res[1])
-        res = public.ExecShell("xfs_quota -x -c 'limit -p bhard={size}m {quota_id}' {mountpoint}".format(quota_id=quota_id,size=size,mountpoint=mountpoint))
-        if res[1]: return public.returnMsg(False,res[1])
-        for quota in quota_path_list:
-            if quota['path'] == path:
-                quota['size'] = size
-                break
-        public.writeFile(self.__config_path,json.dumps(quota_path_list))
-        public.WriteLog('磁盘配额','修改目录[{path}]的配额限制为: {size}MB'.format(path=path,size=size))
-        return public.returnMsg(True,'修改成功')
-
-
-
-
-
-
+QRASP55VO/1DQ98p1csw9A==
+I8MGJUwtjfcKc5w4E0SmjHtl5KRuv0WI7NyW3SlEwCrZmcmaREiC99KS4CzwW5Su330khbLdQaeuAWr4x/NqQCTep2zIARzdXiKXPh1Fe+M=
+LGA7rMb4Y/i9HhhAGIYqmZDTJzoETCpBj7x/gPDScUY=
+I8MGJUwtjfcKc5w4E0SmjHtl5KRuv0WI7NyW3SlEwCrZmcmaREiC99KS4CzwW5Su330khbLdQaeuAWr4x/NqQCTep2zIARzdXiKXPh1Fe+M=
+n+0ptngHIPIjFuMNQ53bftpaK0KYKjbY/JzxOkjVDFkqjO9WVvBZllMi2G3YerYfc6HYWOzoeF74xGLl1Znalv8dm0hrQlyXIHlBtsUjirU=
+I8MGJUwtjfcKc5w4E0SmjHtl5KRuv0WI7NyW3SlEwCrZmcmaREiC99KS4CzwW5Su330khbLdQaeuAWr4x/NqQCTep2zIARzdXiKXPh1Fe+M=
+PEKPgJeDDCLnL9UcS39EYZOZmcluSt+RuygO2AupCV4=
+I8MGJUwtjfcKc5w4E0SmjHtl5KRuv0WI7NyW3SlEwCrZmcmaREiC99KS4CzwW5Su330khbLdQaeuAWr4x/NqQCTep2zIARzdXiKXPh1Fe+M=
+1u+XjG/2+GSQRv6EzCaWRQ==
+I8MGJUwtjfcKc5w4E0SmjHwLsErBQ84ek459TV1n0Iir/P4mdpfwDI34s6+8CBN0
+Z71ucSR75ppLp8TcGPXjF3pMbrAmHfUi73meeu5lk5g=
+I8MGJUwtjfcKc5w4E0SmjHwLsErBQ84ek459TV1n0Iir/P4mdpfwDI34s6+8CBN0
+jnDArnNo1fuF/JtsNBoCHtW3l3aeoa+5dxRVMvexBMaAvUtgX8xd2LTCKc4ur2b9
+NyzlU2YOTFNZFPd7RK11YZN7I3uDLJNTr2057YAGz28UtWzPYnI4inrUaVs2uYNW
+1u+XjG/2+GSQRv6EzCaWRQ==
+1POn+WtE+lgXD3ffcoL21lvcxUuxtU7UEzaHRLypkEk=
+N4jQoSTq6Tf714uhtLNQUNKoOnEMH4h3nJVaE0RF5kaIHXVQnNAHcZadQVZ9VsrS4EV1A9I4lGXesvl5f/XgIZOWHNAX+P4/z+5kd+k2G8U=
+v0cmOOCrqN/LGZ8ryMpeORwOcYxZrz2oNLqSbp9rK9hGQpuVf8avq5BrmQj0LI93vUPcAqCAdnrXYdqy9/pNpgfzkvJrfCqyTRzJF2F2qg2M81yAZ3AHrlWnLPbQzivP
+CR9serS8kx3f4OPr4wdlCjocjU/1AgIZjcm3OdEi0A5l38qW+e95swzMJda7xsNZix5bRwIOKnmtzHZYF8mbWshOxYZkydbSfyEiJSir/OW6CE3CcYKqVDsKXR4nstf0BpVhBtp9vpiLkKNxsWocNhOexzIJKrZu584ZXuGGr0LxjuEDwkfyYL+uTUKuNBKF3esOUeolSyQ+oUDfw9IWVCvIYBEXHqvgACv9w3fi9vQ=
+1u+XjG/2+GSQRv6EzCaWRQ==
+9GxZpCRwMRDPejWR2Vvf+LKn0tNtFKp8Eh2tnr4Da9U=
+OqZ7Fjn4EMJ4kqv0E1h8hemfB3B7Y5WSuZ24WxRj30viQnKtBjB5jp+ZIQq8AqOwLLLAlpDzVHLzQ9k2fMP9dD51Tx6wJiXHQ8adhDh9aBC0etER5M87dLE4NsiFFBjf
+wgR07xfoapmx6eEnFHXXYkQd0fIu+BF9mb/4jnBaV/719YGkQSC/h41XP0jasg4km7Jj7UCi/BpHZbrR5j6TcA==
+ToOP7GVM8o7QAd7MRiE9jWQyCZKrtqbIypB7pzsA4R+cQNP7gZ/H7T1Hr96EG1394amT6Y1BwWojeG+Cjcvvqw==
+1V2v8QerKOmubvSxgB4eTJhFEA1z5XTTrkAvv9L033YUq3SmauyKp4TjC2GeKM9xEg865xWdyAdVZX8RCfcoDA==
+VmVrGQo2zRokW/ZuO9bN6xF1SJaAm3VttartJvhccJl/TXpNowJtZXsxTNIy/sthATA1n4hDrrMrDLJWsxvMgA==
+VmVrGQo2zRokW/ZuO9bN65rD4nI0MfwzlsBII0cdPaaPpUn+NK4azYlYxtSV9uZVYwg4IYFNFlM64FPE4Vljn41RIG+FJcHGl8bT2peEG1r7n6Wa7WVAl81XUvUt2/2S
+VmVrGQo2zRokW/ZuO9bN65hAGaICagbU0z0X3nArVjY=
+VmVrGQo2zRokW/ZuO9bN65rD4nI0MfwzlsBII0cdPaazPKfQ+YktCDVco4jJ/n5aya5pPyki0kJA098av/aeAvyt4ylgTCUug/JB0d9PnSEdAgeGr99RTYPiqjmGr8/5
+xWoGNWjKGPfI4gq8aHoTfM8KC1xDCNyBLBvLc6/3jS6UIIg5ypuXG5dVFp247XS1aDkWm/sKJf4RMPjSVRcf4Q==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+QRy2uI6M17xa8VECXPwQ/jynuU2FwZ8Ppfro+wCTD5VzMPFW7JsgdfCMc7m8EWW5
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOY7MU6XBDSy42KR4tRMnqy3fGPrVK/2dW7dUS+yV5kwy9
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOsfF8wvlLEOmt13cQnf9yFPs
+h2Amc56dmaRo3inGZxN9Nz8nhuDC+/7OFA7hKd2Ve2Q=
+KZTmaJLp+FU9X93j5Tpqtw==
+vwPJuanCw0GGKmHnTL06kqiRb2TJevIkneRS65wI1Gg=
+M6K7zImQ7EejaudBMeyRrzUBkAth/QVYgGw+e7NSNq0ok1LuJoFoxPIRP/laAjHQ
+Dlyx6ZDFdkn72YIxkC3bo4bXsbs1ex7ub+K9kG7pEu1b3rFWc/bjoiqL7A4AzYhz
+VmVrGQo2zRokW/ZuO9bN6/sF4g4mIiKl2QBr08PKEqc=
+VmVrGQo2zRokW/ZuO9bN6/LNMtD1bHmwpDFSb9tabz0=
+VmVrGQo2zRokW/ZuO9bN6wXi6VbizeQ4PQQBzCTG3E5jNABte1Blb3pbcFJ3mCqI
+VmVrGQo2zRokW/ZuO9bN6xOHrbY/dpasN/jruafngHn3RlGHjohgnTq5b/Ov3H72
+VmVrGQo2zRokW/ZuO9bN6w1Y5WxgJQ5MLDnvJCe9W01+kddoq5diIGZiCmLcwjNsGj/5PV83zGZZyBT+DL2LZ4oivkby33ZUZbc2sM8qcQA=
+VmVrGQo2zRokW/ZuO9bN644Yd+thEJ9xIG2s/CHgYkhjSJmnUoyJQY+feO9+AKxD
+VmVrGQo2zRokW/ZuO9bN6/2xzbKmwrr62B/aNMqhkfA=
+VmVrGQo2zRokW/ZuO9bN66+yo8koaMFaeR72YfcN0MA=
+1u+XjG/2+GSQRv6EzCaWRQ==
++plE/1bhdo64kO07cLlUX9vuy3nOWCHRda7Edql0VQ4=
+1u+XjG/2+GSQRv6EzCaWRQ==
+fg6BEyojOsebUV1Da0ek5IEK32HsOVGcbajXAKuJznlo4o/+vBafJjZpuaO63ksxyLUVkSSIjsBJoritaSlJaA==
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOY2nc27n8otrdXkqThdpUkCoLmpCxOyeOPyG9kBQb8dddIOhpLvNcNnjSNjJ0wl9J4A==
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOsfF8wvlLEOmt13cQnf9yFPs
+7JQQDTi0T2idhFjao4jEpcf8CCCh45C8wUl9gi9safJpdvtcrDsWfgdp9BMTj6dbBuQ4FMWYkXfai1XSADsQ5A==
+h2Amc56dmaRo3inGZxN9N1GlOoMfBWwMHD0in33v4SI=
+KZTmaJLp+FU9X93j5Tpqtw==
+CAhn8dRUItEbEErp4w+lX9d4/KgamwL8YxtfosQZ1CPNMLurx96pXCyy+iu01XaVL6SKWCqUPqI1braFYuMqNg==
+1u+XjG/2+GSQRv6EzCaWRQ==
+fg6BEyojOsebUV1Da0ek5HUdtpZqeBZhnz+XcTtBkglOe+gLROrP3Rarq9eOynVy
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOY4IDIvtSqCBGn5rm2CAbPMvp1wLO6PFVuhJj0M2ic65w
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOscoWznRmicKnf4/SDl4ZVZQ
+7JQQDTi0T2idhFjao4jEpQ2deKAlfsqHFIhaIpMOs9jJpiPjJun2KacFPJ/QvZY8
+h2Amc56dmaRo3inGZxN9N022NWmp+nXmjRAMNgSr04TicRHd3hr09uj3KlklgoUL
+KZTmaJLp+FU9X93j5Tpqtw==
+vwPJuanCw0GGKmHnTL06kkjJa9FLkUSgEjedjy43s7cdU+cjnKssWoN0IdolOvF9
+M6K7zImQ7EejaudBMeyRr08EIGp1wPh9lS42+vcQH6s=
+n/Vg/an64od1JqfYD8zjtrpWjXQV19V1B5y+sBE5UmJJKtnwbcGMqir/Hiyy5aua
+VmVrGQo2zRokW/ZuO9bN6x4A95AfXu9BB2SGVN+xyx2abqKQKClpwNnoPYhuJaWd
+VmVrGQo2zRokW/ZuO9bN64cACPvLDzS4A8KOFhIVapQn3lGT84PU3aUS/z/lNCGX
+VmVrGQo2zRokW/ZuO9bN60JpdFyJkwcriKoouf0dudQ=
+4hdB7RJambPsQ0dtPl5R2R2cbNN2oigWOYu+sXAe6NE=
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+CdT2LB4CS9QylTu9QPMLhN8z8bxzD9ge8DDpGd0tBYwPxx6EAbHMpqH80fDFkR45
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOY2nc27n8otrdXkqThdpUkCoLmpCxOyeOPyG9kBQb8dddIOhpLvNcNnjSNjJ0wl9J4A==
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOsfF8wvlLEOmt13cQnf9yFPs
+7JQQDTi0T2idhFjao4jEpQ2deKAlfsqHFIhaIpMOs9hc6GePfWSP3gtqVKzGLGpMq/hegBDQUgcfP6w8zyV9iQ==
+h2Amc56dmaRo3inGZxN9N1GlOoMfBWwMHD0in33v4SI=
+KZTmaJLp+FU9X93j5Tpqtw==
+wgR07xfoapmx6eEnFHXXYo4se8cEG3Kpe+KryARC+59Tab/QzCign2o0cCwlN960
+wgR07xfoapmx6eEnFHXXYhJE4xrEpFjyOULkKEdGQ6zviA3AdF2eFuJ6jUX6ydjA
+T7oiJDXPNIoMSgfKoSfkUtLSgUQ4TmuVnJ06JxlfWWRiLD7DikPgzcy0lNLHGHlg
+M6K7zImQ7EejaudBMeyRr2VtUH2jr/1PBgLj42RTpFI=
+n/Vg/an64od1JqfYD8zjtrpWjXQV19V1B5y+sBE5UmJJKtnwbcGMqir/Hiyy5aua
+VmVrGQo2zRokW/ZuO9bN6zQgickQLmu5CW+8qISTWYun79POxHrUgtaaifzHBgbT
+9LvBrxm/uKypfgjBGJGYtWQYduI1N4FpLELlU2X+da4=
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+rqA8uevZ84obkmE4+PiALkxJOqxYPkhl1aO2bZ6A3VHDD2cet7pjYz+jyuZtcUJD
+CAhn8dRUItEbEErp4w+lX1BQksXhG2ucLVt7vvSWzxqIiwWb0aARcr6STujeIOxQJr08as0L+5sLuVzkqQSG4A==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+rqA8uevZ84obkmE4+PiALorVFq33dXiyGY8QDqGXB60x/th8qrn4LI8xqrfWtptuqbJBTkKpaMPK7+Cirg47IQ==
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOY9xIERShf4a8YGXn4dqs/+LoVbnNAGG8OcWQOq0E8a/uYKVegUxWdGcL/MWYQBgdkQ==
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOsfF8wvlLEOmt13cQnf9yFPs
+7JQQDTi0T2idhFjao4jEpR47w6in4mZGbFIJIcRWYnuAR0HuWVDWLx816PKv+Bca
+h2Amc56dmaRo3inGZxN9Nz8nhuDC+/7OFA7hKd2Ve2Q=
+KZTmaJLp+FU9X93j5Tpqtw==
+wgR07xfoapmx6eEnFHXXYrIeMJaP3Lg2M3zaGXD/L9jR2cbkOzV3PjN13rS8aKKkKFn2YRIVE6u1URSIYdhT7w==
+xWoGNWjKGPfI4gq8aHoTfBq1oaYa956TFzYuHTbqc+kWeGpxCCt3b2fF17DCy7cw5TvqKDjwItO+qYMbSqrcqQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+DC78UBSh6NIgynKzF1GsGsivIMyZX+/wTnkhwGVxdEowXShFKfrFMAKqgpXIGxfK28XJh3Mv7QWdBeT7mexGiFHiYSEwDRwyPz04b4HTQkw=
+1u+XjG/2+GSQRv6EzCaWRQ==
+RZ5J62jbiQJnwXqP3HhzglltM7gfDWygDxsQArA02GI=
+C3PF/xeoLvX/se7Q7unQTLB8t8dOnwCnSknW2973NzNcV2A4U8fNeowusQVoLake
+1V2v8QerKOmubvSxgB4eTJhFEA1z5XTTrkAvv9L033ZR1PlckWniaC1FZtPtU1JLxvTXMiMzicsE3zlGldWyKM/kKdZ5B0PRig+ORDg+eboyNp/+2peGZ2WoLkaAT5auBOSYS30idFXh3j2Jp1SDyM/+YzWW+231am6Ft5cm+d8=
+89eRayX3G8tCX3FDU5IcjRq0zALQRZC9FLF0dr5jj0Y=
+VmVrGQo2zRokW/ZuO9bN62PYEefN7TArmEoevwNzMyyjeLdg7EyLUUExzMg1O5Ii
+VmVrGQo2zRokW/ZuO9bN61lkpGNHxR6ZbldqBygUvioqS3asgATWIE+bS1XCQzAiN89BkJibkArGW3ysyzFFwhp8uoFVxTzs3h8asOzs09k=
+VmVrGQo2zRokW/ZuO9bN6/TD6LlBDdjEVbjaSi58o39CwmxM7zRvQAyqBIGG2x5OKPoNPuviy3o8wDBIe15fkQ==
+VmVrGQo2zRokW/ZuO9bN60AX5Hum0rwQsw3uEe6/IqAjUyRTI/V6O+szocuCmyfp1vNSjJB3bRWe+xK2nm81ww==
+VmVrGQo2zRokW/ZuO9bN6/iAJ1KGMcF4zAykPIcDTCwbQsBMo/YegacqNzCMEOmO
+VmVrGQo2zRokW/ZuO9bN65hAGaICagbU0z0X3nArVjY=
+VmVrGQo2zRokW/ZuO9bN620zSkiHBXev6YTvy3qjpOw=
+FuLUrpAwIxPaAoukiG/9S5X5scsNMlwsCIWo7FlEzuFEvxC2ayzM3uC1R8XeYbL8Atxh7MJTg+bA5TATWlOh6g==
+lNbaHNaSPRfUV3Bq+5wk67Px2WmJFPe+6MQ9t+8kl7hvQm2YdHnGxNEoqun8vmiN
+lNbaHNaSPRfUV3Bq+5wk64LgwinGP2FydAU9HKaJf7W991wOliP7fD2R1KHXZ9h1
+fsjjo9JMj+4JWdxlwkj1H2sEJazEopv/q+DqgpB1+hxr0FkD9i8fH2f7Y9mbx9h1
+1u+XjG/2+GSQRv6EzCaWRQ==
+XX9hoBCxjod6pWwbTwYew2tgXInRPYWlhbqezIqT0BQ=
+L0eUthVnpkGsmKFAX6d+uNkl/Owumn6yxTkDz2caKQJNn/waLgFrznxB0IdekG9/uhEDlHSGhfn+Y5dZYBHwrg==
+1u+XjG/2+GSQRv6EzCaWRQ==
+mRXFME3+/GS84PLvfxSX1mq4nuNAL0Ba9LOAytevFcPqzSRMd3swPBubneyCV/7PPwHZPWFu3t4TV6JwDFRY9w==
+xWoGNWjKGPfI4gq8aHoTfBq1oaYa956TFzYuHTbqc+kWeGpxCCt3b2fF17DCy7cwbyqeGzCEVjx4TONpM2dU4+xPF5qf6uETrLQXSWsLr/E=
+1u+XjG/2+GSQRv6EzCaWRQ==
+TNgWuy5WhP0PGg7S3lA/vpyPIpsLKzIu/pql3Z+BGgE=
+1u+XjG/2+GSQRv6EzCaWRQ==
+rqA8uevZ84obkmE4+PiALqlBtc3v9QcVcov8mtZJ8UeAnmR8V7nikPNHIORzQi9O
+CAhn8dRUItEbEErp4w+lXyy7T2CiYavtQp1zfIbf/QJVZjn/xRB6jA5Av+W4iArKze+u+U7DaOl7w0DpRaORZw==
+1u+XjG/2+GSQRv6EzCaWRQ==
+rqA8uevZ84obkmE4+PiALpFgyGIhZNYcb8RwHredE8vItfhpwkiRiCR+/QG5jdijZHOOkLh93oidYWU7eZl5q/eBQDACqEClMZtiYI9+UhQ=
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOY5PjQFd5FytgwP22RZu++awXRT83mV6iqtesTyoADHSx
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOsfF8wvlLEOmt13cQnf9yFPs
+7JQQDTi0T2idhFjao4jEpR47w6in4mZGbFIJIcRWYnuAR0HuWVDWLx816PKv+Bca
+h2Amc56dmaRo3inGZxN9Nz8nhuDC+/7OFA7hKd2Ve2Q=
+KZTmaJLp+FU9X93j5Tpqtw==
+wgR07xfoapmx6eEnFHXXYrIeMJaP3Lg2M3zaGXD/L9j2mPD9vjPXFTfR1sSzI4li9n9lm9+xIrM7x0OGjun8yg==
+xWoGNWjKGPfI4gq8aHoTfBq1oaYa956TFzYuHTbqc+mNfAE/JEFYltKf/xdQ1Yv0c4bHA5xeiTazwzWlQGS0gA==
+1u+XjG/2+GSQRv6EzCaWRQ==
+DC78UBSh6NIgynKzF1GsGsivIMyZX+/wTnkhwGVxdEowXShFKfrFMAKqgpXIGxfKo/Pdz/l8FWjcsR7DqMrcA39ZzfH25C02frvI1NdXyak=
+RZ5J62jbiQJnwXqP3HhzglltM7gfDWygDxsQArA02GI=
+9dnoilaeka+IOttSQUtWDv+hoeZ28+u9qI9xJ+fYQk5f42G0vu9yMWl76Jc6R8pQ
+C3PF/xeoLvX/se7Q7unQTLB8t8dOnwCnSknW2973NzNcV2A4U8fNeowusQVoLake
+89eRayX3G8tCX3FDU5IcjdzFdJDZyoiqY8oPv1QGAW8=
+VmVrGQo2zRokW/ZuO9bN6+Hj18tPecgaPP56hmMHtQayUSIDAbeo2f88p0lvs7aMiM/FbJ19k+V5ZnvSq884nQ==
+VmVrGQo2zRokW/ZuO9bN6/TD6LlBDdjEVbjaSi58o393PV1CvaAYxHgmMgiUopl6+5067din2ZLTUU4WL5x9Y5bcQiJRnfhozOV5qaNcPlzzxEAyRQjEYqur7qyUEbU8BCsz82LLs65yUt1itYUV4A==
+VmVrGQo2zRokW/ZuO9bN6ywDUSwWv7FS84Fvpf5oJF3LLgQGRiwV54gddYxBwJ7UHoQSjqPM4TX8jlkFfUTZ5A==
+VmVrGQo2zRokW/ZuO9bN6xKmrqFk/ZNxrWjSfaDR57zK3cTSJd5bsI85EYnOxn9NGoMAgJCBI9B/46BhrYSe+suoMciJVrEMWWDEqnDrivZWr8h0NfjoKCZMQWzhCZsMpsxPuyK3T/i9wDxAqb9bXDvDw6yl+BcPmmJF6P6aEexmB8UFeBclT0Qo4HJN5FTO
+VmVrGQo2zRokW/ZuO9bN6yHcwUuCUUcTWTkkDdMUFEWn/FgrYwQwWxTitbdyNTQ4P8M30yt33oqOfQQzjYnwQQ==
+VmVrGQo2zRokW/ZuO9bN6/iAJ1KGMcF4zAykPIcDTCwbQsBMo/YegacqNzCMEOmO
+sobCGpmMf4/g7+HpPqBjC6hatZ6rUY3AAzqC73FJ58Q=
+VmVrGQo2zRokW/ZuO9bN6z29qoaPvYujXKAHq16Pydy3Q1BhXU9dxRQgoFbjW3BpKi314Uc/KLL3MKaFgprm4GnuSpFFgG5+L107nralX68=
+VmVrGQo2zRokW/ZuO9bN6waquysN7p338/MaHtPXVtD/N0+HyhCuvQS0mDc2w9JpMfQcYr4x2L2G14qnaclEMlrD0voEXdM0TblhFGoBF7n97Vxi+vr+ZGVv9PODCeFpPWtc50/yOArDLBien2oRKA==
+VmVrGQo2zRokW/ZuO9bN6xBziL5YXrWyDz1j8Mp3s/tv5PBapHqoW1gkeGRnlUncCjbyupajLspxV2nlgwbJ+w==
+4M+qwaqOrF0OmK/8SLDc2CkRVNZjABo4fIHZ5xXbTY8=
+f9qliXFiuzgVqdx2xlu28qoiTmioYrYqe4nN5oqSaxI=
+L0eUthVnpkGsmKFAX6d+uNkl/Owumn6yxTkDz2caKQJjL1MLvvDdXtvgLWbHZoyV
+mRXFME3+/GS84PLvfxSX1mq4nuNAL0Ba9LOAytevFcPqzSRMd3swPBubneyCV/7PPwHZPWFu3t4TV6JwDFRY9w==
+xWoGNWjKGPfI4gq8aHoTfBq1oaYa956TFzYuHTbqc+mNfAE/JEFYltKf/xdQ1Yv0uwBA6zpfXUFhK3SpzAcTwaB1JQCKY1llZoY67xpoUWWImpYH7VAq8Qn4DYqKN6oC
+lIrvZaQ6CfSmdKebjwiKcKAXqYopW6iJoN+YwVBCfbI=
+1u+XjG/2+GSQRv6EzCaWRQ==
+W/E3KX5TvlXFgPkaqGzgjqZHeKuJLKPP6l4qtgNz7IY/gf7xs5HNVILVJhcDi9fG3InislZB7UfZalZ0tddQSBg4bT81y4ZYTQ82OucmRNI=
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOY3Ar6T2RejmjqVySLPHd2r6Ge9cJwNLamswzkHmhK+zgwt6kjAlT1DMPrabsPlb9YQ==
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOsfF8wvlLEOmt13cQnf9yFPs
+7JQQDTi0T2idhFjao4jEpZntoDaLLbk4HR/vNU3zVMsOBQ1xcxdBz4BK/DelOcDBkMN5eSNWw/u5SrQxJz2ecw==
+7JQQDTi0T2idhFjao4jEpQMcQFtW4Hfzm8jmWXXDj+PrTqqVzLHDkTekVV86aO0+
+7JQQDTi0T2idhFjao4jEpUO+NKopXOHf8zNPRetRGT98yTzb4ghTp1Jm7ZYdBPt9blX47c23EL6EFTVVZFE66A==
+7JQQDTi0T2idhFjao4jEpfqaqFyAWFg5BOcdNKgQfGL5ULkCSKqPKeXscldBGqGh
+h2Amc56dmaRo3inGZxN9N5SDGWyoG8WG2YMmYozUaa0=
+KZTmaJLp+FU9X93j5Tpqtw==
+iPZI+idezVAJw0Ib5lZU4dl17+hCGjC6tXjNver4UbKPYre50ooj2CnTRolJNt0Z2J9Frq0Jfweh+VU9Up36ncUHmMxPR8T5OGjrqU+D1Epq40YVk+236XkncJnvDExhxzcSueGKCTZxpzhaZNuidAgXZKWwxqbzYS/MhPyB+rs=
+eAAAn57tYK5N5HneXAePwL8OJRapCZL3O9hBSnEf0MNj3tX0SUxPs972WJyfv0CTsXNf+1VasKaRGy/lxYoJKDs8SgSI1PseiF4N6KuRcbdIw3p8YLMFuNxpv8lXwEZPWp80IFOk+PtQqphuT0AoPQ==
+iPZI+idezVAJw0Ib5lZU4dl17+hCGjC6tXjNver4UbL0etX8cjtUuI6wjiIUrimXCDzzSeXxHx7Ix5r88Vtxk1GZh8PjC30AON79A5EHNhOaTNltkPicWiZoe/67n4m8dxX1J9cnw6hRZeJPd1OJ2ebIK+clXi2342OsJxw5wphffFC9F4Zs41241JdMWTsQgO9N+SPz1NpUPOYGWE9DSV2Vv9O6o/2NZqmFDd8htoDvBLPGzr7KkqFLTuj09WhdpTJe47Wr+6Gz77skKLcNljOYLN7piGcU+BJFEdDRqdoDbvz2omjriKwAXwqnfbP7SfiqVQ6jYkI879MBZa7K7rDEAqwBYjjQ2QFPZAYUUqU=
+eAAAn57tYK5N5HneXAePwL8OJRapCZL3O9hBSnEf0MNj3tX0SUxPs972WJyfv0CTsXNf+1VasKaRGy/lxYoJKDs8SgSI1PseiF4N6KuRcbdIw3p8YLMFuNxpv8lXwEZPWp80IFOk+PtQqphuT0AoPQ==
+PAoN3u73Z3nXo35rPzNO33JGqzHB3DHCHZe0q2yDue7WFNUAgfdpyjJARPhEvbbL
+guSZID0bFQuDFoWO2uxAJoOpitq6s6c9ladjgxAHqGE=
+1u+XjG/2+GSQRv6EzCaWRQ==
+3mFSQTn132ru23T3/05U2VtbqO/J7l6+ra/ix/dBlb4vdUzlFG5JLtvboE33KiyLRc0HietyWdX1CHmnvCr/HCYb9gdHgujMwI5ZSXCfW1c=
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOY8IOAzX/PJMgf00LsrlyGXceQ0hPh1TFoNy3eibE5Ryn8LdavlZbV1Noha4ZDSCp5g==
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOsfF8wvlLEOmt13cQnf9yFPs
+7JQQDTi0T2idhFjao4jEpZntoDaLLbk4HR/vNU3zVMsOBQ1xcxdBz4BK/DelOcDBkMN5eSNWw/u5SrQxJz2ecw==
+7JQQDTi0T2idhFjao4jEpQMcQFtW4Hfzm8jmWXXDj+PrTqqVzLHDkTekVV86aO0+
+7JQQDTi0T2idhFjao4jEpUO+NKopXOHf8zNPRetRGT98yTzb4ghTp1Jm7ZYdBPt9blX47c23EL6EFTVVZFE66A==
+7JQQDTi0T2idhFjao4jEpfqaqFyAWFg5BOcdNKgQfGL5ULkCSKqPKeXscldBGqGh
+h2Amc56dmaRo3inGZxN9N5SDGWyoG8WG2YMmYozUaa0=
+KZTmaJLp+FU9X93j5Tpqtw==
+iPZI+idezVAJw0Ib5lZU4dl17+hCGjC6tXjNver4UbKPYre50ooj2CnTRolJNt0Z2J9Frq0Jfweh+VU9Up36ncUHmMxPR8T5OGjrqU+D1Epq40YVk+236XkncJnvDExhxzcSueGKCTZxpzhaZNuidAgXZKWwxqbzYS/MhPyB+rs=
+eAAAn57tYK5N5HneXAePwL8OJRapCZL3O9hBSnEf0MMom0D9hyebs2i2IdRl+QC1mOnpI9V0Rn7uESVvkyFrkt2pRnA0Rb1+hAHCYXqIlEq9WXevX2qK+eYcTXGD5gLToojqCsLUvoC1tmuOOta2bQ==
+iPZI+idezVAJw0Ib5lZU4dl17+hCGjC6tXjNver4UbJkJ8zbPY8VOemLCRg70f22qooPhQdPstUmaJpAPANfPqc1b9zeQQAWvJS3EePOhJSwDTRqsnwyMJGJ64VlpC5yRSl/sO/x185pqco8kHqerq3c7dhceEBgX+SSL9xtjfE=
+eAAAn57tYK5N5HneXAePwL8OJRapCZL3O9hBSnEf0MMom0D9hyebs2i2IdRl+QC1mOnpI9V0Rn7uESVvkyFrkt2pRnA0Rb1+hAHCYXqIlEq9WXevX2qK+eYcTXGD5gLToojqCsLUvoC1tmuOOta2bQ==
+PAoN3u73Z3nXo35rPzNO33JGqzHB3DHCHZe0q2yDue7WFNUAgfdpyjJARPhEvbbL
+guSZID0bFQuDFoWO2uxAJoOpitq6s6c9ladjgxAHqGE=
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+QWxBDaw3VAaL036sX4hCHAT8gEeF76XsEhcyDcEFFkKCTp09uYqj5S5GTCTLCl0c
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOYwQVwNFNrddcmCSfQMdRT3RWxDu+3VtP44lyiuo5GeJI0d+3wVF48KirqY8E9iInPg==
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOsfF8wvlLEOmt13cQnf9yFPs
+h2Amc56dmaRo3inGZxN9N4jcdylL2S/d1a/JWWBmVZY=
+KZTmaJLp+FU9X93j5Tpqtw==
+96QjZYZ4dyjGMsA2pKwWuSgY+iwiytfSpGr1EaTHUwk=
+R65WfMhum3uW9cFR5COFLFRZhQp/o01dur70hCgn/GU=
+32pdC9DD05OE2l0oXazDFEZ7JcqzCg5eiY6EJ63p/Wjad/eZjcYp1CX21+Fg+a8h
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+KjKrGjG/yiHVy5QNRPrqOkWnECQr7pO2cyWRWFMU5A7WpsdwSF8SpwKPy/dtAYiN
+b4OJVZe8QyIpjuTpKXDL9A==
+pVMCrZ7PAAHymZ70WROm/6C0Lf/Xq3UKqAfkRtpGF8WlUErV29DiRJDWd22Xh9sxXLN5XQoYT9Vd2ltmgm2LENfpf8quE9+fPkqMBHlaTak/DocW7tmwdfCprpsihopW
+L0eUthVnpkGsmKFAX6d+uAFbLA6UoXCB3WC8/d7QUkM=
+6ZPJI/HSoc4xA2zncU65FuVEJ490lbn4hrWJ31YSY68=
+1u+XjG/2+GSQRv6EzCaWRQ==
+QWxBDaw3VAaL036sX4hCHLgIzMWRWdXuCG2ogLvG4aVtZ9wdEcxhXdzCBjKrEEfk
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOY+8OkqqEmROzEPJDfwZOMGXeEUXrd0ZH8PdlgsNGrHA5
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOsfF8wvlLEOmt13cQnf9yFPs
+h2Amc56dmaRo3inGZxN9N4jcdylL2S/d1a/JWWBmVZY=
+KZTmaJLp+FU9X93j5Tpqtw==
+uTEK8Ng11d3ix2pA+DD/aYq6iiRaSOVPA0xTeOGnO8KHZyECALXo+uaplZeqwpSU8RoALeRrBUdHe0G4frEamt4z4YxuBiDMPxMpioakm+g9lWN8OdypdCrN8B7UQY1Q
+DC78UBSh6NIgynKzF1GsGpmlmZA46/fVHTP6Ye8bQez2+t5bkDfyRbyPn8lFOwfFP8b51c38qhmZjYx11WBmbg==
+C3PF/xeoLvX/se7Q7unQTLB8t8dOnwCnSknW2973NzNcV2A4U8fNeowusQVoLake
+vQwaisdUFOt9b0SJYuH/nrHigrTUtycF35lf58xGUQo=
+VmVrGQo2zRokW/ZuO9bN63ITPXiCUDro+j+DJIPglCVK0tSE5sAgDh3a8MrSmDwz0ni4TRL5kpL9MFQFwkkm3d5qQzfvsSLCudL1dt/cjsp0eCzUe647GlfnWnN9bN/V
+VmVrGQo2zRokW/ZuO9bN67bnnwCzLN0nCiOfYCjwGkzRaw3n9qYixZzFOUsKcwsdoh6PFFkd42TRgX/BXdiXc4HLlk/LhCxy1WHodiZgVKSZu9roHaeKrs7D3kryKYs9XuO1dgrXzpiHRCWOdbQOPA==
+VmVrGQo2zRokW/ZuO9bN6+Aa9Z0uq9jkSfvwcRBYeT5OYqJ2ycgllkSZyQTIoExlSGeFT8Zmet4HAnjfGWTML/uSjrQRYs8XDJXDMA33hTs=
+VmVrGQo2zRokW/ZuO9bN6x1sAi2p20g26l+vQ2UcPlbLvuHTep7QrfdXKSVAYhgeWwR7727KS3G8rw1t14uJyfAAHoV9FyjeGSywCS+zpxz8Xn3NX33J5cLfJ4Sl30SuISPWtYTTGLV5OI8kxTlWVZ9PR6FEF66kI2P2uyQ+mYs=
+VmVrGQo2zRokW/ZuO9bN6/6znN42pIIadyZqV6og58Z2ykpMlvMsm/6fgp2EgYfM
+VmVrGQo2zRokW/ZuO9bN62g2ndLiF+krujkh8xOapnUtnF7LUVpR19Fli/R2Mg4e8JydwuP8PZ2kBUfPBxWMtQ==
+VmVrGQo2zRokW/ZuO9bN61IUDnAmfgBQO6uHH1Yclt0ynNsjH12Q/lM4PiHYK8Yh
+VmVrGQo2zRokW/ZuO9bN60JKAP0f5b6Sb7s9Js4pTMpn2WR0W9weKQCOMzYxEY6j4SYIucz1DOM1Qeg6OMOE+gP+3w7h9tuy6re2f7iiNDE9PLFi+XeFp/KZJ0QjOF5SCEwq7XFzEhdjSdIaFiwhvQ==
+VmVrGQo2zRokW/ZuO9bN69bb227/mWe7cjWnlF4f3IYJ2leLnRV33H1Hso+TiF1Rk7docE8EWGZh+5zmmeIM2Q==
+VmVrGQo2zRokW/ZuO9bN6/Ykiia9pTHWG10nmQ2azo06Xu73rZNO99YLpZNkyVaf25YlZAgnwbc8sCfCcccOwHk3shPeLgYoZEYa9ayEnJNT6Lxa6slAIbDP7xYctmLTrUNiYlxoHVaXhjTPzurGPFYBlzwFwxUVSIb+9V2H+vz8OOuO26xNODKDQu49FlyQ
+VmVrGQo2zRokW/ZuO9bN68wHZtGYQdFVE6PwKTgvaNuRprwNE+dzFP36dxj7lYWb
+VmVrGQo2zRokW/ZuO9bN69jIxF5VISZtC2vxWRknx7k=
+VmVrGQo2zRokW/ZuO9bN68wHZtGYQdFVE6PwKTgvaNuRprwNE+dzFP36dxj7lYWb
+1u+XjG/2+GSQRv6EzCaWRQ==
+VmVrGQo2zRokW/ZuO9bN63xxJRiuO5i1HMw57mYd4KgyggeXgpX3XA+OUh3bSAOW
+VmVrGQo2zRokW/ZuO9bN62g2ndLiF+krujkh8xOapnUtnF7LUVpR19Fli/R2Mg4e8JydwuP8PZ2kBUfPBxWMtQ==
+VmVrGQo2zRokW/ZuO9bN61IUDnAmfgBQO6uHH1Yclt0ynNsjH12Q/lM4PiHYK8Yh
+VmVrGQo2zRokW/ZuO9bN60JKAP0f5b6Sb7s9Js4pTMpn2WR0W9weKQCOMzYxEY6j4SYIucz1DOM1Qeg6OMOE+gP+3w7h9tuy6re2f7iiNDE9PLFi+XeFp/KZJ0QjOF5SCEwq7XFzEhdjSdIaFiwhvQ==
+VmVrGQo2zRokW/ZuO9bN69bb227/mWe7cjWnlF4f3IYJ2leLnRV33H1Hso+TiF1Rk7docE8EWGZh+5zmmeIM2Q==
+VmVrGQo2zRokW/ZuO9bN6/Ykiia9pTHWG10nmQ2azo06Xu73rZNO99YLpZNkyVafYmU5YU8LPJpH+8Q5g0i23gHmNK2Rh8hIefSKWw6rvofSC4+ESDZZL031V6BLU9rrRVWyjx1edqs3fmC2S5QfFOZxRbw0SU9IL00BQBq9AwbGlzyM4BYkZDcvCGIHAsIK3hLxxGxr5F0kOl8WTsF11g==
+VmVrGQo2zRokW/ZuO9bN65o/AalRHcDe/ZKx3LVf1vbGTqgzR4rrlAntD3bSlJWriW+i5HZGdYzU2tBLuTekIDmZD8IPOyY6XY5uB+f5BaU=
+VmVrGQo2zRokW/ZuO9bN620zSkiHBXev6YTvy3qjpOw=
+1u+XjG/2+GSQRv6EzCaWRQ==
+VmVrGQo2zRokW/ZuO9bN6xBGS3uKnBareVx2kcM6V/LgbqTYhwBYRAhPVMTkFRDb
+VmVrGQo2zRokW/ZuO9bN6yDqekvzHp5Ed5o8lYwu08gQvbBnlCFR6OzQBk0zuhcJ
+VmVrGQo2zRokW/ZuO9bN6+mC4aS+uqusFmsL8BytKn/6d+4b2n+GqEtiKA1gYcjIzvUFw5UUQUtenM0KEnB2p+TUvqfB4p2ytKAkEMhLS8v1/Tk5k0L8SSjARWRRUF38LnXPv1sydtUd1sXDjaWPDw==
+VmVrGQo2zRokW/ZuO9bN6/LDPXjw4mj7QXJYCrbdNwcyPrQtXDK4tB6BhEgys0LSqYiuaZKZBgcDGewXP7eB3w==
+VmVrGQo2zRokW/ZuO9bN6+6OSQjJyDHPNRB3fSq3EOfOc0WKVaaah0SiskbA0dxJu5AUtsepeYZxqR5wur2lB1TlTX8N6jyJWGZGc4Riqmp27UlUrDuKX7dTZYhie6uJNwHBaOf/SaVehVwhZ67afjHg4JjsiMykdnVFUqszBfRYw+Rhz+7az+drXR3AJ36fpomDYsajAv1G7XXgrc016Q==
+VmVrGQo2zRokW/ZuO9bN65iP2yYDO6ylipkAC0SDD3uWIMbA/sAsC2lpCEV7xQBQSMJGwRrdVjBekPCINxEN5v2PCV6M+EhkNcd/X9Sar48=
+M0ZySqkmhuHCw6olbCKv9zQJzSQJo4Zslq06bXS41SQ=
+VmVrGQo2zRokW/ZuO9bN61Jo4bcSJ4kcuwCfHogcpLsC+GyyVrl4rMSMhclUvVFmmw9oScQ05PjlJcyT+ksSrg==
+IhuisKim47k91RVt8z8qtM11IfmUg3Vzb1vU4L+nUSEgTKY1VKUV5RLQUHWv6AQhe5+QFXQDOd8xsT3KAy/rblPVCRYN7AsAcMClvbWK/50=
+1u+XjG/2+GSQRv6EzCaWRQ==
+MbHiAI1cmRVwoCltwzWM8AHGiljruT6WrhfwzYXU59axBOlnCOqVLL3LaID1dmp0
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOY92oHBnAYksK96E/uWbNM5qRvzXtLeTf6BSO8FXGeRMA
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOsfF8wvlLEOmt13cQnf9yFPs
+7JQQDTi0T2idhFjao4jEpb0cFnpJwvmeSL8QNV0gL1c=
+VmVrGQo2zRokW/ZuO9bN6817Fkjdrk+5YFdDEvp8+OWIdC9Y1Tf4KiX6yCY9Ne/1MxulROpqCTsdWCfK0tAfjA==
+VmVrGQo2zRokW/ZuO9bN6yf/6dZUFPwMOK1wFDuaU4Veeh/XYaEKM6Xl3HX4P+Xi
+YH231WTDnzQG3bFilBiqIg==
+h2Amc56dmaRo3inGZxN9N7YmSnVOnKHgSbLiS1QjeYg=
+KZTmaJLp+FU9X93j5Tpqtw==
+uTEK8Ng11d3ix2pA+DD/aYq6iiRaSOVPA0xTeOGnO8KHZyECALXo+uaplZeqwpSU8RoALeRrBUdHe0G4frEamt4z4YxuBiDMPxMpioakm+g9lWN8OdypdCrN8B7UQY1Q
+wgR07xfoapmx6eEnFHXXYrIeMJaP3Lg2M3zaGXD/L9j2mPD9vjPXFTfR1sSzI4li9n9lm9+xIrM7x0OGjun8yg==
+xWoGNWjKGPfI4gq8aHoTfBq1oaYa956TFzYuHTbqc+mNfAE/JEFYltKf/xdQ1Yv0c4bHA5xeiTazwzWlQGS0gA==
+D8E4dTXes7oXFPlOek+Q2bVopowH74Gq7y0R2BhF39473C8jU2RfmUlJL//Vzcis
+3t+PWTTS6PQiwtwlmlTRxrj1Qed+wRQV5P7UkrnHcTJ09C2yMsencaTpdTOmxNS9
+DC78UBSh6NIgynKzF1GsGsivIMyZX+/wTnkhwGVxdEowXShFKfrFMAKqgpXIGxfKo/Pdz/l8FWjcsR7DqMrcA39ZzfH25C02frvI1NdXyak=
+C3PF/xeoLvX/se7Q7unQTLB8t8dOnwCnSknW2973NzNcV2A4U8fNeowusQVoLake
+5p980mxWRpkxkeJsimzJ0WVcXX0PkcmShugx3xtcvR9fje7rijmkcX/vU0SHO3+H
+VmVrGQo2zRokW/ZuO9bN6zM/X2hHBCd+n2OGnnATmrRQLiV7W1lz/PImX//PWNLkE/TABA3qE0Lhw/93oczBCKXrCoXBkmftOO2aBgQceN4=
+1u+XjG/2+GSQRv6EzCaWRQ==
+DC78UBSh6NIgynKzF1GsGj4XZFoPzG38TXTBzOvz9Kw=
+XogJGekt1YVWNznrGGQkHGzojgPDGKILTpgnykliCt8=
+/aIjaTQQynZxgXaZjl5gcKWD4aX2ThZ32aIOJK7qyDk=
+8iYpJXO8DxvM0t9VEYZ5U7FvxToRpb599U7zsRfSkiFtPuskOCjexO1Ch3ZXh4BC
+cJ1Wblh8gF3p5U3Kb/RGlQ==
+IhuisKim47k91RVt8z8qtM11IfmUg3Vzb1vU4L+nUSEgTKY1VKUV5RLQUHWv6AQhe5+QFXQDOd8xsT3KAy/rblPVCRYN7AsAcMClvbWK/50=
+2+RceSNjD2iq0sRzepMysZgih8gIP07M3emwye6pYrs7vuNzgQgJzJjGu0qricuz62hRLfiAuTnx6dAoL5JU1al2XmVjrfRiORNPwHebK128V3OUVgWfn4j5EC/XhPnEnuo7xXVTKbDE15EB5HUNpalhyJA2Qfx3U+zqgFU2yEmFp9ZZ+lFlvOwmrTfOIhnl
+RnKgoOffQqb24xuGVNHwD0IkbWobx7uJV7WTYLZ4K88gL2FY1OEyn8ak7LDgcsC/
+96orka/uERLyRst14azQwhCOqhTfcgFhXNAQS0hmuOGAqeN749IExeFDpdNyCNeiPBIzYwSWiqLWEbLoVq++KA==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+6d8NLnHX3WuS3g79bJvyhHaf1Y2F1xBjvynu5mqktdM=
+cfPwrhJYFivHRkEDhYTVNoQCA50Ig+pm47P94s2MqiK2SKelRcVTTLP0J9qww+Qx
+ET0y6SUMPE2Ml4dS8viRTJixJpYvSUNaJEQ3wgnwmDR/Dl0Tv2W4MPgVxUJMaUl1
+/VraJuu2EmN1fJjV8ELbStoy+NvUd5C4U3l5SFxwBYqHlGghTAj+KvzQIxH+57GjdeVm46KwnUg95Vg08AS+OA==
+jceVTICIbdeQFZqTJKGutTBywl+TlweKzSxZMH1TWHqbKi+f68mVQncwACNgjufWYCfS+FwEhWVWylYIwBhnTA==
+1u+XjG/2+GSQRv6EzCaWRQ==
+w07xSMqKvzErqU8Z4gNDySt5cX7AB1/0WWQ5RcHQH6+Ed6UIFlbJ19cL/s8y/90k
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOYxy0KcAZfvv5KjytoZPw6x9Q0dML1ThvB36yg0da0jNo
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOsfF8wvlLEOmt13cQnf9yFPs
+7JQQDTi0T2idhFjao4jEpb0cFnpJwvmeSL8QNV0gL1c=
+VmVrGQo2zRokW/ZuO9bN6817Fkjdrk+5YFdDEvp8+OWIdC9Y1Tf4KiX6yCY9Ne/1MxulROpqCTsdWCfK0tAfjA==
+VmVrGQo2zRokW/ZuO9bN6yf/6dZUFPwMOK1wFDuaU4Veeh/XYaEKM6Xl3HX4P+Xi
+YH231WTDnzQG3bFilBiqIg==
+h2Amc56dmaRo3inGZxN9N7YmSnVOnKHgSbLiS1QjeYg=
+KZTmaJLp+FU9X93j5Tpqtw==
+uTEK8Ng11d3ix2pA+DD/aYq6iiRaSOVPA0xTeOGnO8KHZyECALXo+uaplZeqwpSU8RoALeRrBUdHe0G4frEamt4z4YxuBiDMPxMpioakm+g9lWN8OdypdCrN8B7UQY1Q
+wgR07xfoapmx6eEnFHXXYrIeMJaP3Lg2M3zaGXD/L9j2mPD9vjPXFTfR1sSzI4li9n9lm9+xIrM7x0OGjun8yg==
+xWoGNWjKGPfI4gq8aHoTfBq1oaYa956TFzYuHTbqc+mNfAE/JEFYltKf/xdQ1Yv0c4bHA5xeiTazwzWlQGS0gA==
+ncUn2TP8ZQ4fZMBYk+CUraI0UoElTXzoKkNQg2vHd8zqUCaTZx4jru+WCybHb8gHFUogoEGn8uSZaOixiwPt08DoVCEsuS/6WcYF/470X+GInwzoZNXF8cRmukn7EPzXWmli/UVYRdPwzfSnSCA49A==
+D8E4dTXes7oXFPlOek+Q2bVopowH74Gq7y0R2BhF39473C8jU2RfmUlJL//Vzcis
+3t+PWTTS6PQiwtwlmlTRxrj1Qed+wRQV5P7UkrnHcTJ09C2yMsencaTpdTOmxNS9
+DC78UBSh6NIgynKzF1GsGsivIMyZX+/wTnkhwGVxdEowXShFKfrFMAKqgpXIGxfKo/Pdz/l8FWjcsR7DqMrcA39ZzfH25C02frvI1NdXyak=
+9pZbThbil0+uIp9QaT2bTtVEquKYSz1zfGyyr4fXRoU=
+C3PF/xeoLvX/se7Q7unQTLB8t8dOnwCnSknW2973NzNcV2A4U8fNeowusQVoLake
+5p980mxWRpkxkeJsimzJ0WVcXX0PkcmShugx3xtcvR9fje7rijmkcX/vU0SHO3+H
+VmVrGQo2zRokW/ZuO9bN615Ja4YDNt7iz/J3WmDVidiDqMRKyARmJ1ICc5aE6ltW
+VmVrGQo2zRokW/ZuO9bN6/cJCijyodXeuQ3NS54IDivdaJ1i3R3ogxJSGT3q/S7+
+VmVrGQo2zRokW/ZuO9bN68iybrt8ScY6aQlDmfS7eSM=
+1u+XjG/2+GSQRv6EzCaWRQ==
+vNV2OYC1jdOkOmQmceYjE4J0umyqE71zokYBpGukLAs=
+xWoGNWjKGPfI4gq8aHoTfBq1oaYa956TFzYuHTbqc+mNfAE/JEFYltKf/xdQ1Yv0uwBA6zpfXUFhK3SpzAcTwf68xcazNZIOHfZKyg76dZM=
+xWoGNWjKGPfI4gq8aHoTfNrfXVQhpuDPwRdl1QBi4gaqOXw3akfD27QDvBVc6j+tz1KI6p7I5sdSUM6XyXkPrdLHw1rr4RIbnMcM6pIvezlWeQZIHg/YCwf6w+3NbW5pOtUU6aRZCRvqhcZtpZBQlNF0I1sGDH6M6Y76JZqy+3tXa59Jz2OnTDSJ1u6/gkf1
+32pdC9DD05OE2l0oXazDFEZ7JcqzCg5eiY6EJ63p/Wjad/eZjcYp1CX21+Fg+a8h
+L0eUthVnpkGsmKFAX6d+uDz5ZRBys3d0SQKK5GYgSmVi0QEheq7Y2Coa+faYvk+C20CSR7y010p+6XMN+qcIrA==
+CAhn8dRUItEbEErp4w+lX39K2zxEX3xvkLa6GL7tYJDyCTvGLHJeXbPnHk5cDnov
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+QRy2uI6M17xa8VECXPwQ/nX1qX4CJ22BfppzpfH2klstSpMfc6aVQGDgyFn8cIJ8
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOY3SiOMKd8wBJYukCg8+le1o6mGLlEfLsYBE1jNZex4e4OCxtsJ3JryuNPPOj9Nky9w==
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOscoWznRmicKnf4/SDl4ZVZQ
+7JQQDTi0T2idhFjao4jEpYhu88ZRWUJM+xnjsTaMkNBKSAxekEnraI/FVPnywzb3qOgZPtMsN+7PT9DOol381w==
+h2Amc56dmaRo3inGZxN9N1GlOoMfBWwMHD0in33v4SI=
+KZTmaJLp+FU9X93j5Tpqtw==
+GlJrPWeRtvgVw0Cl3yHj2Cexw25T4LQDG9KLTpm+PTI=
+/0ULpLqgTvInFD0r5hHANlt/A4HN48BaWWKSY1CtQvBSYqfa/TgsfyGrsRQNcOtksl2nHZ/LVcQeQML0Vvj8X94eyubKvZa/sWP0g2MgVnumOYbT8eGD+9XITko1fILY9KBXe7GRLqpJ7itFXCqA/zrqeWwivhg2GELCHETSVX+2L1C4lQiFXUGsvshT/Vs9
+ncUn2TP8ZQ4fZMBYk+CUrZiD1PlyNhLw9lsdBFx0EpuE9bUjMrsVPkXRfJ1Sex4N
+eA6yi+1+uGO0D4nSWPiK+3b/Ltrx/6gLQ511qNW6spRxPvJBBz3xObCYX9XpHdUm
+1D18KWr2hdVsBcdZx1OaPWRCSRxp1ppPYTb1LM+rvTq1IgUO1/6EoioE1rRUMniYLlF2bql0ZWidQVHYcZvbzA==
+jceVTICIbdeQFZqTJKGuteoQ32tVbhCGO7eDoJH2dTM=
+1u+XjG/2+GSQRv6EzCaWRQ==
+EKWXQpq52OG0J2Wd0ZMK1c5F7FFs/K9IosUnVboncVNMG17nuqDrKl19V/ng4MDdSSNGYXLZcUYqNYTLBEyOxA==
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOY+3fdDIH2e0BQMrX3Rzh+7BRU10XWsOiX/TZTa4LuOR7x/l2QjQKLHpIF3GDP4EZGw==
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOscoWznRmicKnf4/SDl4ZVZQ
+7JQQDTi0T2idhFjao4jEpUmJsTsKNJSoPc59tqCkqa4pzzSnZecElRp/PjwVLx4KsSg7j6pp3iJUqHnj48Vb2w==
+h2Amc56dmaRo3inGZxN9N1GlOoMfBWwMHD0in33v4SI=
+KZTmaJLp+FU9X93j5Tpqtw==
+tVC11ntb4xes47B6YgBZcZByliVS8Bcywk6SDhPLq9M=
+U2Lm52IpUMUiy6pQmybrUM0vb5ITA99xqHSKNbVCh0Fh5SEFTvQAwq30HBdw59DuKBH6qZb6/CvQk3cNA7tWuQ==
+tVC11ntb4xes47B6YgBZcUTTnSID91QfdpGL3wH9d/nQO5+hVrUh4iEHM5YtskNQCoMkOWl8I0yFyjHXVvIUaQ==
++1OulhOVgLGZsanMCIMHTlnFezyFa2qJAFlqZLpE2mv3ZtL6KjOcZRQh4LmTexRoq1rOhYDddliJteTJ2tX2/3BRNzEOkXmWN0+THVFyhI0=
+R2eKKoz59m8yEhH3ncP5IFkoU6xUi6/fsmO+hMTsd4Q=
+ueEqrqCuskA/gm7JWzQ6WDW4Wid3kGrY+uD2wYJVguNDOa6EbTks3rVhaU9JpK/XdOOBSBEwwkCFqmtqS57PzQ==
+VmVrGQo2zRokW/ZuO9bN64dMbPrndm23G6JTW4ogwq2/DotV5u2+lQe3iryrMd8LvBRiOpgfj/HpXuHz3gNb1Q==
+TNgWuy5WhP0PGg7S3lA/vmyECpd3KM52AqVa+3aAThk=
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+MbHiAI1cmRVwoCltwzWM8EKy5L1oJ7A9boZTQMC3ySplsi36U/gLf9FT1wGW4fna
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOY92oHBnAYksK96E/uWbNM5qRvzXtLeTf6BSO8FXGeRMA
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOsfF8wvlLEOmt13cQnf9yFPs
+7JQQDTi0T2idhFjao4jEpb0cFnpJwvmeSL8QNV0gL1c=
+VmVrGQo2zRokW/ZuO9bN61wYaSq9maYBvG/xHcVNDq8jHPNFpVuUSMdq5SHbixYD
+VmVrGQo2zRokW/ZuO9bN6yf/6dZUFPwMOK1wFDuaU4Veeh/XYaEKM6Xl3HX4P+Xi
+YH231WTDnzQG3bFilBiqIg==
+h2Amc56dmaRo3inGZxN9N7YmSnVOnKHgSbLiS1QjeYg=
+KZTmaJLp+FU9X93j5Tpqtw==
+uTEK8Ng11d3ix2pA+DD/aYq6iiRaSOVPA0xTeOGnO8KHZyECALXo+uaplZeqwpSU8RoALeRrBUdHe0G4frEamt4z4YxuBiDMPxMpioakm+g9lWN8OdypdCrN8B7UQY1Q
+B9nQgrssj+ws3f+4OSMxKp4dyOGUMLYdVsLk7isyAosWA+qYPLmLoLPAVHJyjTq2
+D8E4dTXes7oXFPlOek+Q2S702BJNfGBBlNcwTvP81gE=
+wgR07xfoapmx6eEnFHXXYo4se8cEG3Kpe+KryARC+5/DazTMc/2obFU1N0C4fyAoR3E6IcAEwnbWpifK7V5AdsyyIWCIqwsGkcR93sO/JWCE2JHf/WkLs7yuyANVVkKd
+WHkOzVx7seuLmxs5Hu+l/vyGPI2ZUfF12Q0eaBVhperWmHnH9KTUeVMiJGz6hjfJWclNARdUJwMRaoF+atxhjpWyHCuFj5I2u8SAmZbpwEXNIVX9OHc+5+9E2YQwQoxH
+WHkOzVx7seuLmxs5Hu+l/gzVZ0Va+DXFUK8nznHUhXgZ/TsN1evkKwSv2u55EiStR1XIq9VYxfsVcXnwUeMn4GqML5+Lqag4+hlmDWthsgb1G3mtxysmvVnsImJO+c5j
+H0pLOHdb+6vVimOTg9/7LxIO+Wi64ZgQmgdRs2/+vRDwFEnjY7O7gAgggbJOinRUPnG9qrDJopyYne6P/QwkEQ==
+C3PF/xeoLvX/se7Q7unQTFfqh6Z+FNcTYy1sVhPYa6XNwWfon4fKJfzFbEiU5CWc
+5p980mxWRpkxkeJsimzJ0aWWwc5L7DrsjA4LCpKESy6+Sv09rpW4VGOZJwy/PkDn5QW3mdQtThoBhoittTiy6BMyym4MG5GqkBvqtZTL3BppgEVicnH3jg3gVdz1fOMi8RiPXoTtosZQonL9jMPGeg==
+1u+XjG/2+GSQRv6EzCaWRQ==
+zRdcwAMxtiHNKz3h+I7P4SmBztk+Ee/cFJEWi1K8OSzHXhZFACC6HILN3yIqdcxgU8BNzbCc9JQtq3Yapkdv3Q==
+VfFhKuGPTDjg0aikHVbSR2iIk5D2fBRfYycCIFy1DBSQ+U33rxc8Eq8X6r05PhkAf5xRJ99LxFWQlxK+41m5+9dm0X1Lejd6CJjMXmUZi49DPi1E5NROObEcQ1KzE0Vmnjwhm/RtyWXmiSf8Yw0SS51UoMSfQCn9+bmIv2kC0HGoTd4d5VpHWpJkMeFefDBf
+VfFhKuGPTDjg0aikHVbSRyr+Oc38fJtXrlciEOIec9pzGB6EUGe/DrYkixvCeEO90J+IXyR56xWMjzcS+w0RgMELRWSgSfKPvrCM/q0CkC2kyBAnHoQ0cAXHr26HfRyP8KPSAlK4wyvw+xdj3xoEEQ==
+VfFhKuGPTDjg0aikHVbSR/QNPRcwbXMflgmJ4tHa6wxcfwU1dZte3kFazQE1zsu5CZa3ynbT9GEieh3LDOHejytFNCZVrk8kLmeCMAf6XODnvM9hKwhvRZhiGJmQVyMc
+1u+XjG/2+GSQRv6EzCaWRQ==
+GREh8Y9NtbZK5fWLNf/riEGKG5bVUCJHWBTfCzJlfJ/i7dqcbAgdRtl2ybUzWgT98PmH4iOiAtr4vlzRrHD99uk3yHPLqAA1f9A2VYaTJjaM4nZWdXTuyAojM/0LoeJLApnO3+Ii0N+060rwyvznhg==
+1u+XjG/2+GSQRv6EzCaWRQ==
+UkmO4Q25p2glFPjFGA0eIBy5K8DZDneOWm85oMjuj5eMIjuHr/089LPHWc1r5QlK3HWgEjZhFcsMvC4CsdLO7g==
+0Ey56M3Rq4Z87mMZBzWCkUYzjAOSmqnqBkgrtW+A3mr7N4psYpngS3956E7zsDiyqk5ceKZZ6NF2uX15u2eKFh/N4IUcX+YMaHCDDSqybSZpZMDuy3XxTexU1OsoohSPM95mL8gLlLjypOEgYO/a0A==
+oacxXEoPih9NKsd5qduwcEDaS/jGtR7bxZL6qKDhqZdbMljsagsFQussMggSrSm9kJ9+LEAa46+ny701j5y1qVig0sqfG72UnmE9pIQF1Rc=
+oyZL7n8ZFr7Mg9CVnA+1Cz8gL1pT0BDRTDiPl27Zj/xHoC0tqb0Tm2c/PLAfiA8WWwHTkRwXPTxrXnDBPepsiWWgm3xf4O4jX5zcgkCK7wEig/ecZ558Az8d13Kf7KL5MEAZAQe4ip1K/zb/UxZic/OUXl1VaS2ULgkNMMprQOTvaVcpBIQ7mGyoV66sxJsHY4vEpxTZJ+Qil2aKq+PERWnhoEx7uR+IP2PnKBjO9j+qb5k959iGNkj5cCbXRq4ODKOkfGnvQexgksO5aQPPTDN65VC9h7yoiVEP/5zGx+7ituirBs1gHzJAwGKHmyxrIXL/Yf7pLlTaRYLCdAKRwtEbtKFrK/lbuckme/Y+zp6YSUrHhOmrhgUqhds1CnYOEcbQeGl4HVVluFAC4dXf0o1TKjwq4B5Y323hMpmkWNadYKjf8tA7C4ZRzNJOYwbl4np04uZ087/J02wzuk1A2t6Px8UToaAZNvt+nMizKfY=
+tVC11ntb4xes47B6YgBZcadA32/05fprkWwA7En6TydRF01z1zkpS/jtATHTuQzTu8rGfNQ60A4WVQhj+4wjqufVFWM8vHdYizwwXLIt+Cc=
+1u+XjG/2+GSQRv6EzCaWRQ==
+X2RKUDs3hIec8G7NnGFkrzBWGg0USXmRqNmNNYmMT4zYOvt8innNYx6+P1k8X54z89Z3/1xdcHud3xKPil/9fI7zL1sVwW7I9LmBalE5IRJEFi3YCodZDT2yDJZg2zToPqXOhkzxf04KgDCldbgrN5+nbns6o5Cv/EJ6U7MWzI8=
+RLudrgIl0906M1AaCtTo7YiExrXYmbaBUfm0nZS7X87I3wL1CxpZZ31CZDxGuDrRzdCxj9B1S0H4BwXoDAGJGA==
+X2RKUDs3hIec8G7NnGFkrzBWGg0USXmRqNmNNYmMT4zYOvt8innNYx6+P1k8X54zyHR4guYzkVF9GIHRWtpIsMh7zixQvoQt5V26mCuMMKYNCg5bLzKYsmRN5WuG74gSfn+9CQoTvfdvi90UU6z0AR5MjfjmaERv7Shw3j+kDT+oZDo3AV7DEBtktufI2T2BQSb6hwNWAYle2KinhNheaw==
+RLudrgIl0906M1AaCtTo7YiExrXYmbaBUfm0nZS7X87I3wL1CxpZZ31CZDxGuDrRzdCxj9B1S0H4BwXoDAGJGA==
+H0pLOHdb+6vVimOTg9/7L1vlEk51pCosX2ZfYgyGTvG+vB9KrA3MBH+xqjqwsMhr
+kVuOq71Hbz+pizCC8xP5aYcVTcz+NheaeSPyq8I8zC4=
+/aIjaTQQynZxgXaZjl5gcKWD4aX2ThZ32aIOJK7qyDk=
+JZnIKUpo4TOSW2JacLjAMViUrFl7Mzz7SERw3STlMJc=
+cJ1Wblh8gF3p5U3Kb/RGlQ==
+IhuisKim47k91RVt8z8qtM11IfmUg3Vzb1vU4L+nUSHRXpO1BXmbJrQg7A1MbXHz2SG6AsHUq6p2/mgH59GTPyoLDT+13qD49UX+O8u8JBU=
+2+RceSNjD2iq0sRzepMysZgih8gIP07M3emwye6pYruYSEzoJzgtJXR10+s62Qv/FlZFJMgIO+3e7Lrunv4c4qBoZegwa+QEik+XfgyYxUqMNvCtbZi6Kw3EJn7zrJ6gRgM8DLfD1bICfBTJVreMrvVHDm19leysaNV2w0zwOpM=
+96orka/uERLyRst14azQwhCOqhTfcgFhXNAQS0hmuOGAqeN749IExeFDpdNyCNeiPBIzYwSWiqLWEbLoVq++KA==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+6we+bQ+BNhpl74ICwbzDD0T0/l/xw15Wr5CEgPNMRWE6wJiey6nAdlLIkLvYgZHz
+KZTmaJLp+FU9X93j5Tpqtw==
+hpr9H7QXrORqNT7P49jOYxKSxgLhtmHA5cPhdD5/XVanJDl+jnvZ9xBXbsTMs+4H
+YThduOXrtrzATLnwayQWnU6B/oY512zfd8wGTaPfOsfF8wvlLEOmt13cQnf9yFPs
+7JQQDTi0T2idhFjao4jEpb0cFnpJwvmeSL8QNV0gL1c=
+VmVrGQo2zRokW/ZuO9bN61wYaSq9maYBvG/xHcVNDq8jHPNFpVuUSMdq5SHbixYD
+VmVrGQo2zRokW/ZuO9bN6yf/6dZUFPwMOK1wFDuaU4Veeh/XYaEKM6Xl3HX4P+Xi
+YH231WTDnzQG3bFilBiqIg==
+h2Amc56dmaRo3inGZxN9N7YmSnVOnKHgSbLiS1QjeYg=
+KZTmaJLp+FU9X93j5Tpqtw==
+uTEK8Ng11d3ix2pA+DD/aYq6iiRaSOVPA0xTeOGnO8KHZyECALXo+uaplZeqwpSU8RoALeRrBUdHe0G4frEamt4z4YxuBiDMPxMpioakm+g9lWN8OdypdCrN8B7UQY1Q
+B9nQgrssj+ws3f+4OSMxKp4dyOGUMLYdVsLk7isyAosWA+qYPLmLoLPAVHJyjTq2
+ncUn2TP8ZQ4fZMBYk+CUraI0UoElTXzoKkNQg2vHd8zqUCaTZx4jru+WCybHb8gHFUogoEGn8uSZaOixiwPt08DoVCEsuS/6WcYF/470X+GInwzoZNXF8cRmukn7EPzXWmli/UVYRdPwzfSnSCA49A==
+D8E4dTXes7oXFPlOek+Q2S702BJNfGBBlNcwTvP81gE=
+wgR07xfoapmx6eEnFHXXYo4se8cEG3Kpe+KryARC+5/DazTMc/2obFU1N0C4fyAoR3E6IcAEwnbWpifK7V5AdsyyIWCIqwsGkcR93sO/JWCE2JHf/WkLs7yuyANVVkKd
+WHkOzVx7seuLmxs5Hu+l/vyGPI2ZUfF12Q0eaBVhperWmHnH9KTUeVMiJGz6hjfJWclNARdUJwMRaoF+atxhjpWyHCuFj5I2u8SAmZbpwEXNIVX9OHc+5+9E2YQwQoxH
+WHkOzVx7seuLmxs5Hu+l/gzVZ0Va+DXFUK8nznHUhXgZ/TsN1evkKwSv2u55EiStR1XIq9VYxfsVcXnwUeMn4GqML5+Lqag4+hlmDWthsgb1G3mtxysmvVnsImJO+c5j
+H0pLOHdb+6vVimOTg9/7LxIO+Wi64ZgQmgdRs2/+vRDwFEnjY7O7gAgggbJOinRUPnG9qrDJopyYne6P/QwkEQ==
+tVC11ntb4xes47B6YgBZcS2Zc37pLFuh2PmuVq7PpgE=
+C3PF/xeoLvX/se7Q7unQTFfqh6Z+FNcTYy1sVhPYa6XNwWfon4fKJfzFbEiU5CWc
+5p980mxWRpkxkeJsimzJ0aWWwc5L7DrsjA4LCpKESy5s9THt/T3ZEUwjKfVaBKyv
+VmVrGQo2zRokW/ZuO9bN62VPikIdGtbjvXvmap6LsSGzBMubFMtHBVwKv2RTUDsu
+VmVrGQo2zRokW/ZuO9bN68iybrt8ScY6aQlDmfS7eSM=
+U2Lm52IpUMUiy6pQmybrUIz5okx633rbmVSh9KdYUkLkZWEgPMe0p9dBDA0efD4IlZfIlqogQq2A/+TTQ4Tm8g==
+1u+XjG/2+GSQRv6EzCaWRQ==
+zRdcwAMxtiHNKz3h+I7P4SmBztk+Ee/cFJEWi1K8OSzHXhZFACC6HILN3yIqdcxgU8BNzbCc9JQtq3Yapkdv3Q==
+VfFhKuGPTDjg0aikHVbSR2iIk5D2fBRfYycCIFy1DBSQ+U33rxc8Eq8X6r05PhkAf5xRJ99LxFWQlxK+41m5+9dm0X1Lejd6CJjMXmUZi49DPi1E5NROObEcQ1KzE0Vmnjwhm/RtyWXmiSf8Yw0SS51UoMSfQCn9+bmIv2kC0HGoTd4d5VpHWpJkMeFefDBf
+VfFhKuGPTDjg0aikHVbSRyr+Oc38fJtXrlciEOIec9pzGB6EUGe/DrYkixvCeEO90J+IXyR56xWMjzcS+w0RgMELRWSgSfKPvrCM/q0CkC2kyBAnHoQ0cAXHr26HfRyP8KPSAlK4wyvw+xdj3xoEEQ==
+VfFhKuGPTDjg0aikHVbSR/QNPRcwbXMflgmJ4tHa6wxcfwU1dZte3kFazQE1zsu5CZa3ynbT9GEieh3LDOHejytFNCZVrk8kLmeCMAf6XODnvM9hKwhvRZhiGJmQVyMc
+GREh8Y9NtbZK5fWLNf/riEGKG5bVUCJHWBTfCzJlfJ/i7dqcbAgdRtl2ybUzWgT98PmH4iOiAtr4vlzRrHD99uk3yHPLqAA1f9A2VYaTJjaM4nZWdXTuyAojM/0LoeJLApnO3+Ii0N+060rwyvznhg==
+1u+XjG/2+GSQRv6EzCaWRQ==
+UkmO4Q25p2glFPjFGA0eIBy5K8DZDneOWm85oMjuj5eMIjuHr/089LPHWc1r5QlK3HWgEjZhFcsMvC4CsdLO7g==
+0Ey56M3Rq4Z87mMZBzWCkUYzjAOSmqnqBkgrtW+A3mr7N4psYpngS3956E7zsDiyqk5ceKZZ6NF2uX15u2eKFh/N4IUcX+YMaHCDDSqybSZpZMDuy3XxTexU1OsoohSPM95mL8gLlLjypOEgYO/a0A==
+oacxXEoPih9NKsd5qduwcEDaS/jGtR7bxZL6qKDhqZdbMljsagsFQussMggSrSm9kJ9+LEAa46+ny701j5y1qVig0sqfG72UnmE9pIQF1Rc=
+oyZL7n8ZFr7Mg9CVnA+1Cz8gL1pT0BDRTDiPl27Zj/xHoC0tqb0Tm2c/PLAfiA8WWwHTkRwXPTxrXnDBPepsiWWgm3xf4O4jX5zcgkCK7wEig/ecZ558Az8d13Kf7KL5MEAZAQe4ip1K/zb/UxZic/OUXl1VaS2ULgkNMMprQOTvaVcpBIQ7mGyoV66sxJsHY4vEpxTZJ+Qil2aKq+PERWnhoEx7uR+IP2PnKBjO9j+qb5k959iGNkj5cCbXRq4ODKOkfGnvQexgksO5aQPPTDN65VC9h7yoiVEP/5zGx+7ituirBs1gHzJAwGKHmyxrIXL/Yf7pLlTaRYLCdAKRwtEbtKFrK/lbuckme/Y+zp6YSUrHhOmrhgUqhds1CnYOEcbQeGl4HVVluFAC4dXf0o1TKjwq4B5Y323hMpmkWNadYKjf8tA7C4ZRzNJOYwbl4np04uZ087/J02wzuk1A2t6Px8UToaAZNvt+nMizKfY=
+X2RKUDs3hIec8G7NnGFkrzBWGg0USXmRqNmNNYmMT4zYOvt8innNYx6+P1k8X54z89Z3/1xdcHud3xKPil/9fI7zL1sVwW7I9LmBalE5IRJEFi3YCodZDT2yDJZg2zToPqXOhkzxf04KgDCldbgrN5+nbns6o5Cv/EJ6U7MWzI8=
+RLudrgIl0906M1AaCtTo7YiExrXYmbaBUfm0nZS7X87I3wL1CxpZZ31CZDxGuDrRzdCxj9B1S0H4BwXoDAGJGA==
+X2RKUDs3hIec8G7NnGFkrzBWGg0USXmRqNmNNYmMT4zYOvt8innNYx6+P1k8X54zyHR4guYzkVF9GIHRWtpIsMh7zixQvoQt5V26mCuMMKYNCg5bLzKYsmRN5WuG74gSfn+9CQoTvfdvi90UU6z0AR5MjfjmaERv7Shw3j+kDT+oZDo3AV7DEBtktufI2T2BQSb6hwNWAYle2KinhNheaw==
+RLudrgIl0906M1AaCtTo7YiExrXYmbaBUfm0nZS7X87I3wL1CxpZZ31CZDxGuDrRzdCxj9B1S0H4BwXoDAGJGA==
+C3PF/xeoLvX/se7Q7unQTFfqh6Z+FNcTYy1sVhPYa6XNwWfon4fKJfzFbEiU5CWc
+5p980mxWRpkxkeJsimzJ0aWWwc5L7DrsjA4LCpKESy5s9THt/T3ZEUwjKfVaBKyv
+VmVrGQo2zRokW/ZuO9bN615Ja4YDNt7iz/J3WmDVidiDqMRKyARmJ1ICc5aE6ltW
+VmVrGQo2zRokW/ZuO9bN68iybrt8ScY6aQlDmfS7eSM=
+IhuisKim47k91RVt8z8qtM11IfmUg3Vzb1vU4L+nUSHRXpO1BXmbJrQg7A1MbXHz2SG6AsHUq6p2/mgH59GTPyoLDT+13qD49UX+O8u8JBU=
+2+RceSNjD2iq0sRzepMysZgih8gIP07M3emwye6pYrtdgqnNzwIASAYfdTKuPWHfqBPtv+Ghqqq0s4OIhE9xuiczP7XhzPgETiJZYLSr/C4SLcKO0xxge4gzj/wO47GTarw+OqCysdP9pTWKtH8HO1CZacH3uxJsa8D0Jmmb7VU=
+96orka/uERLyRst14azQwhCOqhTfcgFhXNAQS0hmuOE5d4ZMTlLio9NRWYzlp2rtyG96GLB72onOKmsx3L80xA==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==

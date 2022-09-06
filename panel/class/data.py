@@ -14,6 +14,8 @@ import json
 
 class data:
     __ERROR_COUNT = 0
+    #自定义排序字段
+    __SORT_DATA = ['site_ssl','php_version','backup_count']
     DB_MySQL = None
     web_server = None
     setupPath = '/www/server'
@@ -229,6 +231,8 @@ class data:
                             if (data['data'][i]['filename'].find('/www/') != -1 or data['data'][i]['filename'].find(backup_path) != -1) and data['data'][i]['filename'][0] == '/' and data['data'][i]['filename'].find('|') == -1:
                                 data['data'][i]['size'] = 0
                                 data['data'][i]['ps'] = '文件不存在'
+                            if (data['data'][i]['filename'].find('/www/') != -1 or data['data'][i]['filename'].find(backup_path) != -1) and data['data'][i]['filename'][0] == '/' and data['data'][i]['filename'].find('|') != -1:
+                                data['data'][i]['filename']=data['data'][i]['filename'].split('|')[0]
 
             elif table == 'sites' or table == 'databases':
                 type = '0'
@@ -265,9 +269,40 @@ class data:
                 pass
 
             #返回
-            return data
+            return self.get_sort_data(data)
         except:
             return public.get_error_info()
+
+
+
+    def get_sort_data(self,data):
+        """
+        @获取自定义排序数据
+        @param data: 数据
+        """
+        if 'plist' in data:
+            plist = data['plist']
+            o_list = plist['order'].split(' ')
+
+            reverse = False
+            sort_key = o_list[0].strip()
+
+            if o_list[1].strip()  == 'desc':
+                reverse = True
+
+            if sort_key in ['site_ssl']:
+                for info in data['data']:
+                    if type(info['ssl']) == int:
+                        info[sort_key] = info['ssl']
+                    else:
+                        try:
+                           info[sort_key] = info['ssl']['endtime']
+                        except :
+                           info[sort_key] = ''
+
+            data['data'] = sorted(data['data'],key=lambda x:x[sort_key],reverse=reverse)
+            data['data'] = data['data'][plist['shift'] : plist['row'] ]
+        return data
 
     '''
      * 取数据库行
@@ -323,6 +358,7 @@ class data:
             if re.match(r"^[\w\s\-\.]+$",get.order):
                 order = get.order
 
+        search_key = 'get_list'
         limit = 20
         if hasattr(get,'limit'):
             limit = int(get.limit)
@@ -337,8 +373,10 @@ class data:
         data = {}
         #取查询条件
         where = ''
+        search = ''
         param = ()
         if hasattr(get,'search'):
+            search = get.search
             if sys.version_info[0] == 2: get.search = get.search.encode('utf-8')
             where,param = self.GetWhere(get.table,get.search)
             if get.table == 'backup':
@@ -353,6 +391,7 @@ class data:
                         where += "id=" + str(pid)
 
         if get.table == 'sites':
+            search_key = 'php'
             if where:
                 where = "({}) AND project_type='PHP'".format(where)
             else:
@@ -382,6 +421,7 @@ class data:
         field = self.GetField(get.table)
         #实例化数据库对象
 
+        public.set_search_history(get.table,search_key,search)  #记录搜索历史
 
         #是否直接返回所有列表
         if hasattr(get,'list'):
@@ -420,7 +460,17 @@ class data:
         #获取分页数据
         data['page'] = page.GetPage(info,result)
         #取出数据
-        data['data'] = SQL.table(get.table).where(where,param).order(order).field(field).limit(str(page.SHIFT)+','+str(page.ROW)).select()
+        #data['data'] = SQL.table(get.table).where(where,param).order(order).field(field).limit(str(page.SHIFT)+','+str(page.ROW)).select()
+
+        o_list = order.split(' ')
+        if o_list[0] in self.__SORT_DATA:
+            data['data'] = SQL.table(get.table).where(where,param).field(field).select()
+            data['plist'] = {'shift':page.SHIFT,'row':page.ROW,'order':order}
+        else:
+            data['data'] = SQL.table(get.table).where(where,param).order(order).field(field).limit(str(page.SHIFT)+','+str(page.ROW)).select()      #取出数据
+
+        data['search_history'] =  public.get_search_history(get.table,search_key)
+
         return data
 
     #获取条件

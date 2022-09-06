@@ -171,7 +171,7 @@ var soft = {
           } else if(webTypeCache == 'ols' && distribution.indexOf('centos') == -1 && item.name.indexOf('php-8.1') >= 0){
             click_opt = ' title="不兼容此版本"';
           }
-          return '<span ' + click_opt + ' ' + sStyle + ' ><img ' + (item.type === 10 ? 'style="height:20px;width:22px"' : '') + ' src="/static/img/soft_ico/ico-' + fName + '.png">' + item.title + ' ' + version + (item.is_beta ? '-<span style="color:#FC6D26">[测试版]</span>' : '') + '</span>';
+          return '<span ' + click_opt + ' ' + sStyle + ' ><img ' + (item.type === 10 ? 'style="height:20px;width:22px"' : '') + ' src="/static/img/soft_ico/ico-' + fName + '.png">' + (!is_php || !item.version?item.title:'PHP-'+ item.version) + ' ' + version + (item.is_beta ? '-<span style="color:#FC6D26">[测试版]</span>' : '') + '</span>';
         }
       },
         {
@@ -207,11 +207,11 @@ var soft = {
         {
           field: 'price',
           title: '价格',
-          width: 72,
+          width: 80,
           templet: function (item) {
             var price = '免费';
             if (item.price > 0) {
-              price = '<span style="color:#fc6d26">￥' + item.price + '</span>';
+              price = '<span style="color:#fc6d26">￥' + (item.price / 30).toFixed(2) + '/天</span>';
             }
             return price;
           }
@@ -702,7 +702,7 @@ var soft = {
     } else {
       if (bt.get_cookie('productPurchase') != null) return false
       var pro_introduce = '<div class="pro_introduce">',
-          genre = true,
+          genre = false,
           is_buy = false,
           advantage_list = [];
       tips_info.removeClass('ltd')
@@ -904,7 +904,7 @@ var soft = {
 				                <th>简介</th>\
 				                <th>支持PHP版本</th>\
                                 <th>提供者</th>\
-                                <th>评价</th>\
+                                <th>评分</th>\
 				                <th style="text-align: right;" width="150">操作</th>\
 			                </tr>\
 		                </thead>';
@@ -1333,23 +1333,25 @@ var soft = {
           $(this).addClass("bgw").siblings().removeClass("bgw");
         });
         $(".bt-w-menu p:eq(0)").trigger("click");
-        bt.soft.get_soft_find('apache', function (rdata) {
-          if (rdata.setup) {
-            if (rdata.version.indexOf('2.2') >= 0) {
-              if (name.indexOf('php-') != -1) {
-                $(".apache24").hide();
-                $(".bt_server").remove();
-                $(".bt-w-menu p:eq(0)").trigger("click");
-              }
+            if(name.indexOf('php-') != -1 || name.indexOf('apache') != -1 ){
+                bt.soft.get_soft_find('apache', function (rdata) {
+                if (rdata.setup) {
+                    if (rdata.version.indexOf('2.2') >= 0) {
+                    if (name.indexOf('php-') != -1) {
+                        $(".apache24").hide();
+                        $(".bt_server").remove();
+                        $(".bt-w-menu p:eq(0)").trigger("click");
+                    }
 
-              if (name.indexOf('apache') != -1) {
-                $(".bt-soft-menu p:eq(3)").remove()
-                $(".bt-soft-menu p:eq(3)").remove()
-              }
+                    if (name.indexOf('apache') != -1) {
+                        $(".bt-soft-menu p:eq(3)").remove()
+                        $(".bt-soft-menu p:eq(3)").remove()
+                    }
+                    }
+                }
+                })
             }
-          }
-        })
-      }, 100)
+        }, 100)
     })
   },
   get_tab_contents: function (key, obj) //获取设置菜单操作

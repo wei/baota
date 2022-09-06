@@ -17,8 +17,8 @@
     }
     .btn_num{
         font-weight: bold;
-        margin-left: 10px;
-        padding: 2px;
+        margin-left: 5px;
+        padding: 1px 5px;
         text-align: center;
         border-radius: 3px;
         color:#fff;
@@ -169,6 +169,7 @@
     .warning_scan_body .module_head {
         height: 45px;
         line-height: 45px;
+        overflow: hidden;
     }
     .module_details_list.active{
         overflow:hidden;
@@ -380,26 +381,26 @@
         -webkit-animation: load8 1.3s infinite linear;
         animation: load8 1.3s infinite linear;
     }
+		/* php分类选择器宽度 */
+		.site_class_type.bt_select_updown {
+			width: 130px;
+		}
 </style>
 <!--suppress SpellCheckingInspection, CheckEmptyScriptTag -->
 <div class="main-content pb55">
     <div class="container-fluid">
-        <!-- <div class="pos-box bgw mtb15">
-            <div class="position f14 c9 pull-left">
-                <a class="plr10 c4" href="/">{{data['lan']['H1']}}</a>/<span
-                    class="plr10 c4">{{data['lan']['H2']}}</span>
-            </div>
-        </div> -->
-    <div class="pos-box bgw mtb15">
-            <div class="tab-list" id="cutMode">
-                <div class="tabs-item" data-type="php">PHP项目</div>
-                <div class="tabs-item" data-type="java">Java项目</div>
-                <div class="tabs-item" data-type="nodejs">Node项目</div>
-                <div class="tabs-item" data-type="go">Go项目</div>
-                <div class="tabs-item" data-type="other">其他项目</div>
-                <!-- <div class="control-item" data-type="go">Go项目</div> -->
-            </div>
+    <div class="pos-box bgw mtb15 flex justify-between">
+        <div class="tab-list flex" id="cutMode">
+            <div class="tabs-item" data-type="php">PHP项目</div>
+            <div class="tabs-item" data-type="java">Java项目</div>
+            <div class="tabs-item" data-type="nodejs">Node项目</div>
+            <div class="tabs-item" data-type="go">Go项目</div>
+            <div class="tabs-item" data-type="other">其他项目</div>
         </div>
+<!--        <span class="pull-right f12 c6 flex " style="line-height:52px; margin-right:15px;display: flex;align-items: center;">-->
+<!--            <span class="btltd">到期时间：<span style="color: #fc6d26;font-weight: bold;margin-right:5px">2023-07-13</span><a class="btlink" onclick="bt.soft.updata_ltd()">续费</a></span>-->
+<!--        </span>-->
+    </div>
     <div class="site_table_view bgw mtb15 pd15 tab-view-box">
             <!-- <div class="info-title-tips">
                 <p><span class="glyphicon glyphicon-alert"
@@ -687,8 +688,9 @@
 {% block scripts %}
 {{ super() }}
 <script type="text/javascript">
+	var serverType = "{{session['webserver']}}";
 	bt.set_cookie('sites_path', "{{session['config']['sites_path']}}");
-	bt.set_cookie('serverType', "{{session['webserver']}}");
+	bt.set_cookie('serverType', serverType);
 	var isSetup = "{{data['isSetup']}}" === 'True' ? true : false
 </script>
 <script type="text/javascript" src="{{g.cdn_url}}/laydate/laydate.js?version={{g['version']}}"></script>

@@ -168,6 +168,11 @@ def control_init():
     if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'users','%salt%')).count():
         public.M('users').execute("ALTER TABLE 'users' ADD 'salt' TEXT",())
 
+
+    if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'messages','%retry_num%')).count():
+        public.M('messages').execute("alter TABLE messages add send integer DEFAULT 0",())
+        public.M('messages').execute("alter TABLE messages add retry_num integer DEFAULT 0",())
+
     public.chdck_salt()
 
 
@@ -245,28 +250,41 @@ def control_init():
     check_default_curl_file()
     null_html()
     remove_other()
-    show_docker()
+    deb_bashrc()
+    upgrade_gevent()
+
+def upgrade_gevent():
+    '''
+        @name 升级gevent
+        @author hwliang
+        @return void
+    '''
+    tip_file = '{}/data/upgrade_gevent.lock'.format(public.get_panel_path())
+    upgrade_script_file = '{}/script/upgrade_gevent.sh'.format(public.get_panel_path())
+    if os.path.exists(upgrade_script_file) and not os.path.exists(tip_file):
+        public.writeFile(tip_file,'1')
+        os.system("bash {}".format(upgrade_script_file))
+        if os.path.exists(tip_file): os.remove(tip_file)
 
 
-def show_docker():
-    hide_menu_file = 'config/hide_menu.json'
-    tip_file = 'data/show_docker'
-    menu_docker_name = 'memuDocker'
-    if os.path.exists(tip_file):
-        if not os.path.exists(hide_menu_file):
-            public.writeFile(hide_menu_file,'[]')
-        hide_menu = public.readFile(hide_menu_file)
-        if hide_menu:
-            try:
-                hide_menu = json.loads(hide_menu)
-                if menu_docker_name in hide_menu:
-                    hide_menu.remove(menu_docker_name)
-                    public.writeFile(hide_menu_file,json.dumps(hide_menu))
-            except:
-                pass
+def deb_bashrc():
+    '''
+        @name 针对debian/ubuntu未调用bashrc导致的问题
+        @author hwliang
+        @return void
+    '''
+    bashrc = '/root/.bashrc'
+    bash_profile = '/root/.bash_profile'
+    apt_get = '/usr/bin/apt-get'
+    if not os.path.exists(apt_get): return
+    if not os.path.exists(bashrc): return
+    if not os.path.exists(bash_profile): return
 
-        if os.path.exists(tip_file):
-            os.remove(tip_file)
+    profile_body = public.readFile(bash_profile)
+    if not isinstance(profile_body,str): return
+    if profile_body.find('.bashrc') == -1:
+        public.writeFile(bash_profile,'source ~/.bashrc\n' + profile_body.strip() + "\n")
+
 
 
 def remove_other():
@@ -278,11 +296,13 @@ def remove_other():
         "class/pluginAuth.cpython-37m-loongarch64-linux-gnu.so",
         "class/pluginAuth.cpython-37m-aarch64-linux-gnu.so",
         "class/pluginAuth.cpython-37m-x86_64-linux-gnu.so",
+        "class/pluginAuth.cpython-37m.so",
         "class/libAuth.loongarch64.so",
         "class/libAuth.x86.so",
         "class/libAuth.x86-64.so",
         "class/libAuth.glibc-2.14.x86_64.so",
         "class/libAuth.aarch64.so",
+        "script/check_files.py"
     ]
 
     for f in rm_files:
@@ -501,7 +521,14 @@ def files_set_mode():
         ["/dev/shm/session_py3","","root",600,True],
         ["/dev/shm/session_py2","","root",600,True],
         ["/www/server/phpmyadmin","","root",755,True],
-        ["/www/server/coll","","root",700,True]
+        ["/www/server/coll","","root",700,True],
+        ["/www/server/panel/init.sh","","root",600,False],
+        ["/www/server/panel/license.txt","","root",600,False],
+        ["/www/server/panel/requirements.txt","","root",600,False],
+        ["/www/server/panel/update.sh","","root",600,False],
+        ["/www/server/panel/default.pl","","root",600,False],
+        ["/www/server/panel/hooks","","root",600,True],
+        ["/www/server/panel/cache","","root",600,True]
     ]
 
     recycle_list = public.get_recycle_bin_list()
@@ -516,6 +543,9 @@ def files_set_mode():
         if m[1]:
             public.ExecShell("chown {U}:{U} {P}".format(P=m[0],U=m[2],R=rr[m[4]]))
             public.ExecShell("chmod {M} {P}".format(P=m[0],M=m[3],R=rr[m[4]]))
+
+    # 移除面板目录下所有文件的所属组、其它用户的写权限
+    public.ExecShell("chmod -R go-w /www/server/panel")
 
 #获取PMA目录
 def get_pma_path():

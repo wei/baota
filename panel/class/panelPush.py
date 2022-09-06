@@ -150,14 +150,44 @@ class panelPush:
         module = get.name
         id = get.id
         p_list = public.get_modules('class/push')
-
         if not module in p_list:
             return public.returnMsg(False, '指定模块{}未安装.'.format(module))
+
+        result = None
         push_module = getattr(p_list[module], module)()
         if not hasattr(push_module,'get_push_config'):
             push_list = self._get_conf()
-            return push_list[module][id]
-        return push_module.get_push_config(get)
+            result = push_list[module][id]
+        else:
+            result = push_module.get_push_config(get)
+
+
+        return self.get_push_user(result)
+
+
+    def get_push_user(self,result):
+
+        #获取发送给谁
+        if not 'to_user' in result:
+            result['to_user'] = {}
+            for s_module in result['module'].split(','):
+                result['to_user'][s_module] = 'default'
+
+        info = {}
+        for s_module in result['module'].split(','):
+            msg_obj = public.init_msg(s_module)
+            if not msg_obj: return False
+
+            info[s_module] = {}
+            data = msg_obj.get_config(None)
+
+            if 'list' in data:
+                for key in result['to_user'][s_module].split(','):
+                    if not key in data['list']:
+                        continue
+                    info[s_module][key] = data['list'][key]
+        result['user_info'] = info
+        return result
 
     """
     @设置推送配置
@@ -364,9 +394,11 @@ class panelPush:
             conf = public.readFile(cpath)
             data = json.loads(conf)
         except :
-            time.sleep(0.5)
-            conf = public.readFile(cpath)
-            data = json.loads(conf)
+            try:
+                time.sleep(0.5)
+                conf = public.readFile(cpath)
+                data = json.loads(conf)
+            except:pass
 
         return data
 
@@ -420,6 +452,7 @@ class panelPush:
         for x in os.listdir(path):
             try:
                 spath = '{}/{}'.format(path,x)
+                if os.path.isdir(spath): continue
                 data = json.loads(public.readFile(spath))
 
                 msg_obj = pm.init_msg_module(data['module'])
@@ -454,10 +487,6 @@ class panelPush:
                     data = json.loads(data)
 
                 p = public.get_modules('class/push')
-
-                from panelMessage import panelMessage
-                pm = panelMessage()
-
                 for skey in data:
                     if len(data[skey]) <= 0: continue
                     if skey in ['panelLogin_push']: continue #面板登录主动触发
@@ -471,20 +500,21 @@ class panelPush:
                             if not item['status']: continue
                             if not 'index' in item: item['index'] = 0
 
-
                             if not total: total = obj.get_total()
                             rdata = obj.get_push_data(item,total)
 
                             for m_module in item['module'].split(','):
-                                print(m_module,rdata)
                                 if not m_module in rdata: continue
 
-                                msg_obj = pm.init_msg_module(m_module)
-                                if not msg_obj:continue;
+                                msg_obj = public.init_msg(m_module)
+                                if not msg_obj:continue
 
+                                #2022-09-02 cjxin 增加指定发送者
+                                rdata[m_module]['to_user'] = 'default'
+                                if 'to_user' in item and m_module in item['to_user']:
+                                    rdata[m_module]['to_user'] = item['to_user'][m_module]
 
                                 ret = msg_obj.push_data(rdata[m_module])
-
                                 if ret['status']:
                                     is_write = True
                                     data[skey][x]['index'] = rdata['index']
@@ -492,7 +522,7 @@ class panelPush:
                         except :
                             print(public.get_error_info())
 
-                if is_write: public.writeFile(path,json.dumps(data));
+                if is_write: public.writeFile(path,json.dumps(data))
                 # time.sleep(interval)
         except :
 

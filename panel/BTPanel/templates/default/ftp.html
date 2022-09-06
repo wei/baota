@@ -10,7 +10,7 @@
     </div>
     <div class="safe bgw mtb15 pd15 tab-view-box">
       <div class="info-title-tips">
-          <p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>{{data['lan']['PS']}} <a target="_blank" class="btlink" href=" ftp://{{session['address']}}:{{session['port']}}"> ftp://{{session['address']}}:{{session['port']}}</a></p>
+          <p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>{{data['lan']['PS']}} ftp://{{session['address']}}:{{session['port']}}</p>
       </div>
       <div id="bt_ftp_table"></div>
     </div>
@@ -150,6 +150,9 @@
 					}
 				}]}
 			],
+			sortParam: function (data) {
+				return { 'order': data.name + ' ' + data.sort };
+			},
 			tootls:[{
 				type:'group',
 				positon:['left','top'],

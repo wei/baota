@@ -22,14 +22,13 @@ function CreateWebsiteModel(config) {
 	this.bindHttp(); //将请求映射到对象
 	this.reanderProjectList(); // 渲染列表
 }
-
 /**
  * @description 渲染获取项目列表
  */
 CreateWebsiteModel.prototype.reanderProjectList = function () {
 	var _that = this;
 	$('#bt_' + this.type + '_table').empty();
-	var model_table = bt_tools.table({
+	site.model_table = bt_tools.table({
 		el: '#bt_' + this.type + '_table',
 		url: '/project/' + _that.type + '/get_project_list',
 		minWidth: '1000px',
@@ -200,7 +199,7 @@ CreateWebsiteModel.prototype.reanderProjectList = function () {
 												status: res.status,
 												msg: res.data || res.error_msg,
 											});
-											model_table.$refresh_table_list(true);
+											site.model_table.$refresh_table_list(true);
 										}
 									);
 								}
@@ -222,7 +221,7 @@ CreateWebsiteModel.prototype.reanderProjectList = function () {
 						active: true,
 						event: function (ev) {
 							_that.reanderAddProject(function () {
-								model_table.$refresh_table_list(true);
+								site.model_table.$refresh_table_list(true);
 							});
 						},
 					},
@@ -273,12 +272,12 @@ CreateWebsiteModel.prototype.reanderProjectList = function () {
 													: item.requests.error_msg) +
 												'</span></div></td></tr>';
 										}
-										model_table.$batch_success_table({
+										site.model_table.$batch_success_table({
 											title: '批量删除项目',
 											th: '项目名称',
 											html: html,
 										});
-										model_table.$refresh_table_list(true);
+										site.model_table.$refresh_table_list(true);
 									});
 								}
 							);
@@ -313,9 +312,10 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 		config = [
 			{
 				label: '项目执行文件',
+				must: '*',
 				group: {
 					type: 'text',
-					width: '370px',
+					width: '400px',
 					value: '',
 					name: 'project_exe',
 					placeholder: '请选择项目可执行文件',
@@ -349,10 +349,11 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 			},
 			{
 				label: '项目名称',
+				must: '*',
 				group: {
 					type: 'text',
 					name: 'project_name',
-					width: '370px',
+					width: '400px',
 					placeholder: '请输' + that.tips + '项目名称',
 					disabled: data.type != 'edit' ? false : true,
 					input: function (formData, formElement, formConfig) {
@@ -370,6 +371,7 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 			},
 			{
 				label: '项目端口',
+				must: '*',
 				group: {
 					type: 'number',
 					name: 'port',
@@ -386,10 +388,11 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 			},
 			{
 				label: '执行命令',
+				must: '*',
 				group: {
 					type: 'text',
 					name: 'project_cmd',
-					width: '370px',
+					width: '400px',
 					placeholder: '请输入项目执行的命令',
 					value: '',
 					verify: function (val) {
@@ -427,7 +430,7 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 				group: {
 					type: 'text',
 					name: 'project_ps',
-					width: '370px',
+					width: '400px',
 					placeholder: '请输入项目备注',
 					value: '',
 				},
@@ -437,7 +440,7 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 				group: {
 					type: 'textarea', //当前表单的类型 支持所有常规表单元素、和复合型的组合表单元素
 					name: 'domains', //当前表单的name
-					style: { width: '370px', height: '120px', 'line-height': '22px' },
+					style: { width: '400px', height: '120px', 'line-height': '22px' },
 					tips: {
 						//使用hover的方式显示提示
 						text: '<span>如果需要绑定外网，请输入需要绑定的域名，该选项可为空</span><br>如需填写多个域名，请换行填写，每行一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88',
@@ -468,6 +471,7 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 				event: function (fromData) {
 					// 编辑项目
 					fromData.is_power_on = fromData.is_power_on ? 1 : 0;
+					if (parseInt(fromData.port) < 0 || parseInt(fromData.port) > 65535) return layer.msg('项目端口号应为[0-65535]',{icon:2})
 					that.modifyProject(fromData, function (res) {
 						bt.msg({ status: res.status, msg: res.data });
 						that.simulatedClick(0);
@@ -517,6 +521,7 @@ CreateWebsiteModel.prototype.reanderAddProject = function (callback) {
 				delete formData.domains;
 			}
 			formData.is_power_on = formData.is_power_on ? 1 : 0;
+			if (parseInt(formData.port) < 0 || parseInt(formData.port) > 65535) return layer.msg('项目端口号应为[0-65535]',{icon:2})
 			that.createProject(formData, function (res) {
 				if (res.status) {
 					layer.close(indexs);
@@ -674,6 +679,9 @@ CreateWebsiteModel.prototype.reanderProjectConfigView = function (el, row) {
 		class: 'ptb15',
 		form: that.getAddProjectConfig({ type: 'edit' }),
 	});
+	setTimeout(function () {
+		$('[name="project_cmd"]').val(param.project_cmd);
+	},50)
 	if (row.listen.length && !(row.listen.indexOf(parseInt($('input[name=port]').val())) > -1)) {
 		$('.error_port').remove()
 		$('input[name=port]').next().after('<div class="error_port" style="margin-top: 10px;color: red;">项目端口可能有误，检测到当前项目监听了以下端口'+ row.listen +'</div>')

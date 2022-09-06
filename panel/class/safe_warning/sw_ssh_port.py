@@ -19,7 +19,7 @@ _title = 'SSH端口安全'
 _version = 1.0                              # 版本
 _ps = "检测当前服务器的SSH端口是否安全"      # 描述
 _level = 1                                  # 风险级别： 1.提示(低)  2.警告(中)  3.危险(高)
-_date = '2020-08-04'                        # 最后更新时间
+_date = '2022-08-18'                        # 最后更新时间
 _ignore = os.path.exists("data/warning/ignore/sw_ssh_port.pl")
 _tips = [
     "在【安全】页面修改SSH端口，并考虑在【SSH安全管理】中关闭【SSH密码登录】，开启【SSH密钥登录】",
@@ -34,7 +34,7 @@ _help = ''
 def check_run():
     '''
         @name 开始检测
-        @author hwliang<2020-08-03>
+        @author hwliang<2022-08-18>
         @return tuple (status<bool>,msg<string>)
 
         @example
@@ -45,16 +45,7 @@ def check_run():
                 print('Warning: {}'.format(msg))
 
     '''
-
-    file = '/etc/ssh/sshd_config'
-    conf = public.readFile(file)
-    if not conf: conf = ''
-    rep = r"#*Port\s+([0-9]+)\s*\n"
-    tmp1 = re.search(rep,conf)
-    port = '22'
-    if tmp1:
-        port = tmp1.groups(0)[0]
-
+    port = public.get_sshd_port()
 
     version = public.readFile('/etc/redhat-release')
     if not version:
@@ -62,16 +53,7 @@ def check_run():
     else:
         version = version.replace('release ','').replace('Linux','').replace('(Core)','').strip()
 
-    if os.path.exists('/usr/bin/apt-get'):
-        if os.path.exists('/etc/init.d/sshd'):
-            status = public.ExecShell("service sshd status | grep -P '(dead|stop)'|grep -v grep")
-        else:
-            status = public.ExecShell("service ssh status | grep -P '(dead|stop)'|grep -v grep")
-    else:
-        if version.find(' 7.') != -1 or version.find(' 8.') != -1 or version.find('Fedora') != -1:
-            status = public.ExecShell("systemctl status sshd.service | grep 'dead'|grep -v grep")
-        else:
-            status = public.ExecShell("/etc/init.d/sshd status | grep -e 'stopped' -e '已停'|grep -v grep")
+    status = public.get_sshd_status()
 
     fail2ban_file = '/www/server/panel/plugin/fail2ban/config.json'
     if os.path.exists(fail2ban_file):

@@ -7,6 +7,7 @@
 # | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
 import sys,os,public,re,firewalld,time
+
 class firewalls:
     __isFirewalld = False
     __isUfw = False
@@ -63,20 +64,21 @@ class firewalls:
 
     #取防火墙状态
     def CheckFirewallStatus(self):
-        if self.__isUfw:
-            res = public.ExecShell('ufw status verbose')[0]
-            if res.find('inactive') != -1: return False
-            return True
+        # if self.__isUfw:
+        #     res = public.ExecShell('ufw status verbose')[0]
+        #     if res.find('inactive') != -1: return False
+        #     return True
 
-        if self.__isFirewalld:
-            res = public.ExecShell("systemctl status firewalld")[0]
-            if res.find('active (running)') != -1: return True
-            if res.find('disabled') != -1: return False
-            if res.find('inactive (dead)') != -1: return False
-        else:
-            res = public.ExecShell("/etc/init.d/iptables status")[0]
-            if res.find('not running') != -1: return False
-            return True
+        # if self.__isFirewalld:
+        #     res = public.ExecShell("systemctl status firewalld")[0]
+        #     if res.find('active (running)') != -1: return True
+        #     if res.find('disabled') != -1: return False
+        #     if res.find('inactive (dead)') != -1: return False
+        # else:
+        #     res = public.ExecShell("/etc/init.d/iptables status")[0]
+        #     if res.find('not running') != -1: return False
+        #     return True
+        return public.get_firewall_status() == 1
 
     def SetFirewallStatus(self,get=None):
         '''
@@ -350,4 +352,8 @@ class firewalls:
         data['ping'] = isPing
         data['firewall_status'] = self.CheckFirewallStatus()
         return data
+
+
+
+
 

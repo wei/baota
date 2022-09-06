@@ -340,7 +340,7 @@
   "INSTALL_USER_EMPTY": "用户名不能为空!",
   "INSTALL_PASS_EMPTY": "密码不能为空!",
   "INSTALL_PASS_CHECK": "两次输入的密码不一致，请重新输入!",
-  "INIT_CSRF_ERR": "CSRF校验失败，请重新登录面板",
+  "INIT_CSRF_ERR": "权限认证失败，请尝试刷新页面，若多次出现请重新登录面板",
   "INIT_PATH_NOT_SAFE": "不安全的路径",
   "INIT_ACCEPT_NOT": "越权的操作!",
   "INIT_DEBUG_INFO": "以上调试信息仅在开发者模式显示",

@@ -12,6 +12,7 @@
 #------------------------------
 from cgi import test
 import io,re,public,os,sys,shutil,json,hashlib,socket,time
+
 import OpenSSL
 import base64
 try:
@@ -205,6 +206,11 @@ class panelSite(panelRedirect):
     #一键申请SSL证书验证目录相关设置
     location ~ \.well-known{{
         allow all;
+    }}
+
+    #禁止在证书验证目录放入敏感文件
+    if ( $uri ~ "^/\.well-known/.*\.(php|jsp|py|js|css|lua|ts|go|zip|tar\.gz|rar|7z|sql|bak)$" ) {{
+        return 403;
     }}
 
     location ~ .*\\.(gif|jpg|jpeg|png|bmp|swf)$
@@ -970,12 +976,12 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
             if opid:
                 siteName = public.M('sites').where('id=?',(opid,)).getField('name')
                 if siteName:
-                    return public.returnMsg(False,'指定域名已被网站[{}]绑定过了'.format(siteName))
+                    return public.returnMsg(False,'指定域名[{}]已被网站[{}]绑定过了'.format(get.domain,siteName))
                 sql.where('pid=?',(opid,)).delete()
             opid = public.M('binding').where('domain=?',(get.domain,)).getField('pid')
             if opid:
                 siteName = public.M('sites').where('id=?',(opid,)).getField('name')
-                return public.returnMsg(False,'指定域名已被被网站[{}]的子目录绑定过了!'.format(siteName))
+                return public.returnMsg(False,'指定域名[{}]已被被网站[{}]的子目录绑定过了!'.format(get.domain,siteName))
 
             #写配置文件
             self.NginxDomain(get)
@@ -1727,12 +1733,17 @@ listener SSL443 {
                     return public.returnMsg(True, 'SITE_SSL_OPEN_SUCCESS')
 
                 conf = conf.replace('#error_page 404/404.html;', sslStr)
+                conf = re.sub(r"\s+\#SSL\-END","\n\t\t#SSL-END",conf)
 
                 # 添加端口
                 rep = "listen.*[\s:]+(\d+).*;"
                 tmp = re.findall(rep, conf)
                 if not public.inArray(tmp, '443'):
-                    listen = re.search(rep,conf).group()
+                    listen_re =  re.search(rep,conf)
+                    if not listen_re:
+                        conf = re.sub(r"server\s*{\s*","server\n{\n\t\tlisten 80;\n\t\t",conf)
+                        listen_re =  re.search(rep,conf)
+                    listen = listen_re.group()
                     versionStr = public.readFile('/www/server/nginx/version.pl')
                     http2 = ''
                     if versionStr:
@@ -1741,8 +1752,8 @@ listener SSL443 {
                     if conf.find('default_server') != -1: default_site = ' default_server'
 
                     listen_ipv6 = ';'
-                    if self.is_ipv6: listen_ipv6 = ";\n\tlisten [::]:443 ssl"+http2+default_site+";"
-                    conf = conf.replace(listen,listen + "\n\tlisten 443 ssl"+http2 + default_site + listen_ipv6)
+                    if self.is_ipv6: listen_ipv6 = ";\n\t\tlisten [::]:443 ssl"+http2+default_site+";"
+                    conf = conf.replace(listen,listen + "\n\t\tlisten 443 ssl"+http2 + default_site + listen_ipv6)
                 shutil.copyfile(file, self.nginx_conf_bak)
 
                 public.writeFile(file, conf)
@@ -2208,6 +2219,7 @@ listener SSL443 {
         @param siteName 网站名称
         @param stype 类型 ssl
         """
+        import panelPush
         if get:
             siteName = get.siteName
             stype = get.stype
@@ -2235,13 +2247,16 @@ listener SSL443 {
                     ssl_data[key]['s_module'] = 'site_push'
 
                     if project == siteName:
-                        return ssl_data[key]
+                        result = ssl_data[key]
+                        break
 
                     if project == 'all':
                         result = ssl_data[key]
         except:
             pass
-        return result
+
+        p_obj = panelPush.panelPush()
+        return p_obj.get_push_user(result)
 
     def set_site_status_multiple(self,get):
         '''
@@ -2679,7 +2694,11 @@ listener SSL443 {
         for dname in data['binding']:
             _path = os.path.join(path,dname['path'])
             if not os.path.exists(_path):
-                dname['path'] += '<a style="color:red;"> >> 错误: 目录不存在</a>'
+                _path = _path.replace(run_path,'')
+                if not os.path.exists(_path):
+                    dname['path'] += '<a style="color:red;"> >> 错误: 目录不存在</a>'
+                else:
+                    dname['path'] = '../' + dname['path']
         return data
 
     #添加子目录绑定
@@ -2706,6 +2725,10 @@ listener SSL443 {
 
         webdir = root_path + '/' + dirName
         webdir = webdir.replace('//','/').strip()
+        if not os.path.exists(webdir): # 如果在运行目录找不到指定子目录，尝试到根目录查找
+            root_path = siteInfo['path']
+            webdir = root_path + '/' + dirName
+            webdir = webdir.replace('//','/').strip()
 
         sql = public.M('binding')
         if sql.where("domain=?",(domain,)).count() > 0: return public.returnMsg(False, 'SITE_ADD_ERR_DOMAIN_EXISTS')
@@ -2939,7 +2962,7 @@ server
         if(public.get_webserver() != 'nginx'):
             filename = site['path']+'/'+find['path']+'/.htaccess'
         else:
-            filename = self.setupPath + '/panel/vhost/rewrite/'+site['name']+'_'+find['path']+'.conf'
+            filename = self.setupPath + '/panel/vhost/rewrite/'+site['name']+'_'+find['path'].replace('/','_')+'.conf'
 
         if hasattr(get,'add'):
             public.writeFile(filename,'')
@@ -2949,7 +2972,7 @@ server
                 domain = find['domain']
                 rep = "\n#BINDING-"+domain+"-START(.|\n)+BINDING-"+domain+"-END"
                 tmp = re.search(rep, conf).group()
-                dirConf = tmp.replace('rewrite/'+site['name']+'.conf;', 'rewrite/'+site['name']+'_'+find['path']+'.conf;')
+                dirConf = tmp.replace('rewrite/'+site['name']+'.conf;', 'rewrite/'+site['name']+'_'+find['path'].replace('/','_')+'.conf;')
                 conf = conf.replace(tmp, dirConf)
                 public.writeFile(file,conf)
         data = {}
@@ -3753,6 +3776,8 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
             nocheck = get.nocheck
         except:
             nocheck = ""
+        if not get.get('proxysite',None):
+            return public.returnMsg(False, '目标URL不能为空')
         if not nocheck:
             if self.__CheckStart(get,"create"):
                 return self.__CheckStart(get,"create")
@@ -3825,6 +3850,8 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
 
     # 修改反向代理
     def ModifyProxy(self, get):
+        if not get.get('proxysite',None):
+            return public.returnMsg(False, '目标URL不能为空')
         proxyname_md5 = self.__calc_md5(get.proxyname)
         ap_conf_file = "{p}/panel/vhost/apache/proxy/{s}/{n}_{s}.conf".format(
         p=self.setupPath, s=get.sitename, n=proxyname_md5)
@@ -4015,6 +4042,17 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
         ap_file = self.setupPath + "/panel/vhost/apache/" + sitename + ".conf"
         p_conf = self.__read_config(self.__proxyfile)
         random_string = public.GetRandomString(8)
+
+        # websocket前置map
+        map_file = self.setupPath + "/panel/vhost/nginx/0.websocket.conf"
+        if not os.path.exists(map_file):
+            map_body = '''map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''  close;
+}
+'''
+            public.writeFile(map_file,map_body)
+
         # 配置Nginx
         # 构造清理缓存连接
 
@@ -4051,6 +4089,9 @@ location ^~ %s
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header REMOTE-HOST $remote_addr;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    # proxy_hide_header Upgrade;
 
     add_header X-Cache $upstream_cache_status;
 
@@ -5014,7 +5055,7 @@ location ^~ %s
                     conf = re.sub(rep,'',conf)
                     # 再替换配置部分
                     rep = "\s+#SECURITY-START(\n|.){1,500}#SECURITY-END\n?"
-                    conf = re.sub(rep,'',conf)
+                    conf = re.sub(rep,'\n',conf)
                     public.WriteLog('网站管理','站点['+get.name+']已关闭防盗链设置!')
                 else:
                     return_rule = 'return 404'

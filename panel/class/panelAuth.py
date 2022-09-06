@@ -97,18 +97,35 @@ class panelAuth:
         return True
 
     def get_plugin_price(self,get):
+        """
+        @name 获取插件价格
+        @author cjxin<2022-07-28>
+        @param get.pid 插件id
+        @param get.pluginName 插件名称
+        @return dict
+        """
         try:
             userPath = 'data/userInfo.json'
-            if not 'pluginName' in get: return public.returnMsg(False,'参数错误!')
-            if not os.path.exists(userPath): return public.returnMsg(False,'请先登陆宝塔官网帐号!')
+            if not os.path.exists(userPath):
+                return public.returnMsg(False,'请先登陆宝塔官网帐号!')
+
+            pid = 0
+            if 'pid' in get: pid = get.pid
+            if not pid:
+                if not 'pluginName' in get:
+                    return public.returnMsg(False,'参数错误!')
+                pid = self.get_plugin_info(get.pluginName)['id']
+
+            if not pid: return public.returnMsg(False,'参数错误!')
+
             params = {}
-            params['pid'] = self.get_plugin_info(get.pluginName)['id']
-            #params['ajax2'] = '1';
+            params['pid'] = pid
             data = self.send_cloud('get_product_discount', params)
             return data
         except:
             del(session['get_product_list'])
             return public.returnMsg(False,'正在同步信息，请重试!' + public.get_error_info())
+
 
     def get_plugin_info(self,pluginName):
         data = self.get_business_plugin(None)
@@ -144,6 +161,8 @@ class panelAuth:
         params = {}
         params['pid'] = get.pid
         params['cycle'] = get.cycle
+        params['num'] = 1 #购买数量
+        if 'num' in get: params['num'] = get.num
         if 'source' in get: params['source'] = get.source
 
 

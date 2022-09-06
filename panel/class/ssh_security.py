@@ -11,6 +11,8 @@
 import public,os,re,send_mail,json
 from datetime import datetime
 
+
+
 class ssh_security:
     __SSH_CONFIG='/etc/ssh/sshd_config'
     __ip_data = None
@@ -33,6 +35,14 @@ class ssh_security:
         if os.path.exists('/usr/bin/python'):return '/usr/bin/python'
         if os.path.exists('/usr/bin/python3'):return '/usr/bin/python3'
         return 'python'
+
+
+    def return_profile(self):
+        if os.path.exists('/root/.bash_profile'): return '/root/.bash_profile'
+        if os.path.exists('/etc/profile'): return '/etc/profile'
+        fd = open('/root/.bash_profil', mode="w", encoding="utf-8")
+        fd.close()
+        return '/root/.bash_profil'
 
     def return_bashrc(self):
         if os.path.exists('/root/.bashrc'):return '/root/.bashrc'
@@ -111,23 +121,41 @@ class ssh_security:
         return data
 
     ################## SSH 登陆报警设置 ####################################
-    def send_mail_data(self,title,body,type='mail'):
-        if type=='mail':
-            if self.__mail_config['user_mail']['user_name']:
-                if len(self.__mail_config['user_mail']['mail_list'])>=1:
-                    for i in self.__mail_config['user_mail']['mail_list']:
-                        self.__mail.qq_smtp_send(i, title, body)
-        elif type=='dingding':
-            if self.__mail_config['dingding']['dingding']:
-                self.__mail.dingding_send(title+body)
-        return True
+    def send_mail_data(self,title,body,type=None):
+        login_send_type_conf = "/www/server/panel/data/ssh_send_type.pl"
+        if not os.path.exists(login_send_type_conf):
+                login_type = "mail"
+        else:
+            login_type = public.readFile(login_send_type_conf).strip()
+            if not login_type:
+                login_type = "mail"
+        object = public.init_msg(login_type.strip())
+        if login_type=="mail":
+            data={}
+            data['title'] = title
+            data['msg'] = body
+            object.push_data(data)
+        elif login_type=="wx_account":
+            object.send_msg(body)
+        else:
+            msg = public.get_push_info("SSH登录告警",['>发送内容：' + body])
+            object.push_data(msg)
 
     #检测非UID为0的账户
     def check_user(self):
-        data=public.ExecShell('''cat /etc/passwd | awk -F: '($3 == 0) { print $1 }'|grep -v '^root$'  ''')
-        data=data[0]
-        if re.search("\w+",data):
-            self.send_mail_data(public.GetLocalIp()+'服务器存在后门用户',public.GetLocalIp()+'服务器存在后门用户'+data+'检查/etc/passwd文件')
+        ret = []
+        cfile = '/etc/passwd'
+        if os.path.exists(cfile):
+            f = open(cfile, 'r')
+            for i in f:
+                i = i.strip().split(":")
+                if i[2] == '0' and i[3] == '0':
+                    if i[0] == 'root': continue
+                    ret.append(i[0])
+        if ret:
+            data=''.join(ret)
+            public.run_thread(self.send_mail_data,args=(public.GetLocalIp()+'服务器存在后门用户',public.GetLocalIp()+'服务器存在后门用户'+data+'检查/etc/passwd文件',))
+            # self.send_mail_data(public.GetLocalIp()+'服务器存在后门用户',public.GetLocalIp()+'服务器存在后门用户'+data+'检查/etc/passwd文件')
             return True
         else:
             return False
@@ -177,14 +205,26 @@ class ssh_security:
         data = re.findall("(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)",data[0])
         return data
 
-    def get_logs(self, args):
-        if 'p' in args: p = int(args.p)
-        rows = 10
-        if 'rows' in args: rows = int(args.rows)
+    def get_logs(self, get):
+        import page
+        page = page.Page();
         count = public.M('logs').where('type=?', ('SSH安全',)).count()
-        data = public.get_page(count, int(args.p), int(rows))
-        data['data'] = public.M('logs').where('type=?', ('SSH安全',)).limit(data['shift'] + ',' + data['row']).order(
-            'addtime desc').select()
+        limit = 10
+        info = {}
+        info['count'] = count
+        info['row'] = limit
+        info['p'] = 1
+        if hasattr(get, 'p'):
+            info['p'] = int(get['p'])
+        info['uri'] = get
+        info['return_js'] = ''
+        if hasattr(get, 'tojs'):
+            info['return_js'] = get.tojs
+        data = {}
+        # 获取分页数据
+        data['page'] = page.GetPage(info, '1,2,3,4,5,8')
+        data['data'] = public.M('logs').where('type=?', (u'SSH安全',)).order('id desc').limit(
+            str(page.SHIFT) + ',' + str(page.ROW)).field('log,addtime').select()
         return data
 
     def get_server_ip(self):
@@ -197,7 +237,6 @@ class ssh_security:
     #登陆的情况下
     def login(self):
         self.check_files()
-        if not self.__mail_config['user_mail']['user_name']:return False
         self.check_user()
         self.__ip_data = json.loads(public.ReadFile(self.__ClIENT_IP))
         ip=self.get_ip()
@@ -211,36 +250,52 @@ class ssh_security:
                 return False
             else:
                 if public.M('logs').where('type=? addtime', ('SSH安全', mDate,)).count(): return False
-                self.send_mail_data(self.get_server_ip()+'服务器异常登陆',public.GetLocalIp()+'服务器存在异常登陆登陆IP为'+ip[0]+'登陆用户为root')
+                # self.send_mail_data(self.get_server_ip()+'服务器异常登陆',public.GetLocalIp()+'服务器存在异常登陆登陆IP为'+ip[0]+'登陆用户为root')
+                public.run_thread(self.send_mail_data,args=(self.get_server_ip()+'服务器异常登陆',public.GetLocalIp()+'服务器存在异常登陆登陆IP为'+ip[0]+'登陆用户为root',))
                 public.WriteLog('SSH安全',public.GetLocalIp()+'服务器存在异常登陆登陆IP为'+ip[0]+'登陆用户为root')
                 return True
         except:
             pass
 
+
+
+    #修复bashrc文件
+    def repair_bashrc(self):
+        data = public.ReadFile(self.return_bashrc())
+        if re.search(self.return_python() + ' /www/server/panel/class/ssh_security.py', data):
+            public.WriteFile(self.return_bashrc(),data.replace(self.return_python()+' /www/server/panel/class/ssh_security.py login',''))
+            #遗留的错误信息
+            datassss = public.ReadFile(self.return_bashrc())
+            if re.search(self.return_python(),datassss):
+                public.WriteFile(self.return_bashrc(),datassss.replace(self.return_python(),''))
+
+
     #开启监控
     def start_jian(self,get):
-        data=public.ReadFile(self.return_bashrc())
+        self.repair_bashrc()
+        data=public.ReadFile(self.return_profile())
         if not re.search(self.return_python()+' /www/server/panel/class/ssh_security.py',data):
-            public.WriteFile(self.return_bashrc(),data.strip()+'\n'+self.return_python()+ ' /www/server/panel/class/ssh_security.py login\n')
+            public.WriteFile(self.return_profile(),data.strip()+'\n'+self.return_python()+ ' /www/server/panel/class/ssh_security.py login\n')
             return public.returnMsg(True, '开启成功')
         return public.returnMsg(False, '开启失败')
 
     #关闭监控
     def stop_jian(self,get):
-        data = public.ReadFile(self.return_bashrc())
+        data = public.ReadFile(self.return_profile())
         if re.search(self.return_python()+' /www/server/panel/class/ssh_security.py', data):
-            public.WriteFile(self.return_bashrc(),data.replace(self.return_python()+' /www/server/panel/class/ssh_security.py login',''))
-            if os.path.exists('/etc/bashrc'):
-                data22=public.ReadFile('/etc/bashrc')
-                if re.search('python /www/server/panel/class/ssh_security.py', data):
-                    public.WriteFile(self.return_bashrc(),data.replace('python /www/server/panel/class/ssh_security.py login',''))
+            public.WriteFile(self.return_profile(),data.replace(self.return_python()+' /www/server/panel/class/ssh_security.py login',''))
+            #遗留的错误信息
+            datassss = public.ReadFile(self.return_profile())
+            if re.search(self.return_python(),datassss):
+                public.WriteFile(self.return_profile(),datassss.replace(self.return_python(),''))
+
             return public.returnMsg(True, '关闭成功')
         else:
             return public.returnMsg(True, '关闭成功')
 
     #监控状态
     def get_jian(self,get):
-        data = public.ReadFile(self.return_bashrc())
+        data = public.ReadFile(self.return_profile())
         if re.search('/www/server/panel/class/ssh_security.py login', data):
             return public.returnMsg(True, '1')
         else:
@@ -299,6 +354,63 @@ class ssh_security:
             return public.returnMsg(False, '开启失败')
 
         # 取SSH信息
+
+    def get_msg_push_list(self,get):
+        """
+        @name 获取消息通道配置列表
+        @auther: cjxin
+        @date: 2022-08-16
+        """
+        cpath = 'data/msg.json'
+        data = {}
+        if os.path.exists(cpath):
+            msgs = json.loads(public.readFile(cpath))
+            for x in msgs:
+                x['setup'] = False
+                x['info'] = False
+                key = x['name']
+                try:
+                    obj =  public.init_msg(x['name'])
+                    if obj:
+                        x['setup'] = True
+                        x['info'] = obj.get_version_info(None)
+                except :
+                    continue
+                data[key] = x
+        return data
+
+    #取消告警
+    def clear_login_send(self,get):
+        login_send_type_conf = "/www/server/panel/data/ssh_send_type.pl"
+        os.remove(login_send_type_conf)
+        return public.returnMsg(True, '取消登录告警成功！')
+
+    #设置告警
+    def set_login_send(self,get):
+        login_send_type_conf = "/www/server/panel/data/ssh_send_type.pl"
+        set_type=get.type.strip()
+        msg_configs = self.get_msg_push_list(get)
+        if set_type not in msg_configs.keys():
+            return public.returnMsg(False,'不支持该发送类型')
+
+        from panelMessage import panelMessage
+        pm = panelMessage()
+        obj = pm.init_msg_module(set_type)
+        if not obj:
+            return public.returnMsg(False, "消息通道未安装。")
+
+        public.writeFile(login_send_type_conf, set_type)
+        self.start_jian(get)
+        return public.returnMsg(True, '设置成功')
+
+    #查看告警
+    def get_login_send(self, get):
+        login_send_type_conf = "/www/server/panel/data/ssh_send_type.pl"
+        if os.path.exists(login_send_type_conf):
+            send_type = public.readFile(login_send_type_conf).strip()
+        else:
+            send_type ="error"
+        return public.returnMsg(True, send_type)
 
     def GetSshInfo(self):
         port = public.get_ssh_port()

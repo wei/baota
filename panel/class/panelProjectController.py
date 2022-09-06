@@ -62,6 +62,10 @@ class ProjectController:
         else:
             pdata = args
 
+        if isinstance(pdata,dict): pdata =  public.to_dict_obj(pdata)
+
+        pdata.model_index = 'project'
+
         # 前置HOOK
         hook_index = '{}_{}_LAST'.format(mod_name.upper(),def_name.upper())
         hook_result = public.exec_hook(hook_index,pdata)
@@ -79,8 +83,9 @@ class ProjectController:
         result = PluginLoader.module_run(module_name,def_name,pdata)
         if isinstance(result,dict):
             if 'status' in result and result['status'] == False and 'msg' in result:
-                if result['msg'].find('加载失败') != -1 or result['msg'].find('Traceback ') == 0:
-                    raise public.PanelError(result['msg'])
+                if isinstance(result['msg'],str):
+                    if result['msg'].find('Traceback ') != -1:
+                        raise public.PanelError(result['msg'])
 
         # 后置HOOK
         hook_index = '{}_{}_END'.format(mod_name.upper(),def_name.upper())

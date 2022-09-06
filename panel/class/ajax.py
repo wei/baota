@@ -6,7 +6,7 @@
 # +-------------------------------------------------------------------
 # | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
-from BTPanel import plugin, session,request,cache
+from flask import session,request
 import public,os,json,time,apache,psutil
 class ajax:
 
@@ -553,13 +553,22 @@ class ajax:
                 #updateInfo['msg'] = msg;
                 session['updateInfo'] = updateInfo
 
+
+            # 输出忽略的版本
+            updateInfo['ignore'] = []
+            no_path = '{}/data/no_update.pl'.format(public.get_panel_path())
+            if os.path.exists(no_path):
+                try:
+                    updateInfo['ignore'] = json.loads(public.readFile(no_path))
+                except:
+                    pass
+
             #检查是否需要升级
             if not hasattr(get,'toUpdate'):
                 if updateInfo['is_beta'] == 1:
-                    if public.version_to_tuple(updateInfo['beta']['version']) <= public.version_to_tuple(session['version']): return public.returnMsg(False,updateInfo)
+                    if updateInfo['beta']['version'] == session['version']: return public.returnMsg(False,updateInfo)
                 else:
-                    if public.version_to_tuple(updateInfo['version']) <= public.version_to_tuple(session['version']): return public.returnMsg(False,updateInfo)
-
+                    if updateInfo['version'] == session['version']: return public.returnMsg(False,updateInfo)
 
             #是否执行升级程序
             if(updateInfo['force'] == True or hasattr(get,'toUpdate') == True or os.path.exists('data/autoUpdate.pl') == True):
@@ -582,20 +591,7 @@ class ajax:
                 public.writeFile('data/restart.pl','True')
                 return public.returnMsg(True,'PANEL_UPDATE',(updateInfo['version'],))
 
-            #输出新版本信息
-            data = {
-                'status' : True,
-                'version': updateInfo['version'],
-                'updateMsg' : updateInfo['updateMsg']
-            }
-            # 输出忽略的版本
-            updateInfo['ignore'] = []
-            no_path = '{}/data/no_update.pl'.format(public.get_panel_path())
-            if os.path.exists(no_path):
-                try:
-                    updateInfo['ignore'] = json.loads(public.readFile(no_path))
-                except:
-                    pass
+
             public.ExecShell('rm -rf /www/server/phpinfo/*')
             return public.returnMsg(True,updateInfo)
         except Exception as ex:
@@ -1318,12 +1314,7 @@ class ajax:
                                             116, 97, 95, 112, 114, 111, 40, 41, 34, 62, 32493, 36153, 60, 47, 97, 62, 60,
                                             47, 115, 112, 97, 110, 62]).format(tmp2)
             else:
-                tmp3 = public.to_string([60, 115, 112, 97, 110, 32, 99, 108, 97, 115, 115, 61, 34, 98, 116, 112,
-                                        114, 111, 45, 103, 114, 97, 121, 34, 32, 111, 110, 99, 108, 105, 99, 107,
-                                        61, 34, 98, 116, 46, 115, 111, 102, 116, 46, 117, 112, 100, 97, 116, 97,
-                                        95, 112, 114, 111, 40, 41, 34, 32, 116, 105, 116, 108, 101, 61, 34, 28857,
-                                        20987, 21319, 32423, 21040, 19987, 19994, 29256, 34, 62, 20813, 36153,
-                                        29256, 60, 47, 115, 112, 97, 110, 62])
+                tmp3 = public.to_string([60, 115, 112, 97, 110, 32, 99, 108, 97, 115, 115, 61, 34, 98, 116, 108, 116, 100, 45, 103, 114, 97, 121, 34, 32, 111, 110, 99, 108, 105, 99, 107, 61, 34, 98, 116, 46, 115, 111, 102, 116, 46, 117, 112, 100, 97, 116, 97, 95, 108, 116, 100, 40, 41, 34, 32, 116, 105, 116, 108, 101, 61, 34, 28857, 20987, 21319, 32423, 21040, 20225, 19994, 29256, 34, 62, 20813, 36153, 29256, 60, 47, 115, 112, 97, 110, 62])
         else:
             tmp3 = public.to_string([60, 115, 112, 97, 110, 32, 99, 108, 97, 115, 115, 61, 34, 98, 116, 108, 116,
                                     100, 34, 62, 21040, 26399, 26102, 38388, 65306, 60, 115, 112, 97, 110, 32, 115, 116,
@@ -1391,7 +1382,8 @@ class ajax:
     #取指定行
     def get_lines(self,args):
         if not os.path.exists(args.filename): return public.returnMsg(False,'指定日志文件不存在!')
-        s_body = public.ExecShell("tail -n {} {}".format(args.num,args.filename))[0]
+        num = args.get('num/d',10)
+        s_body = public.GetNumLines(args.filename,num)
         return public.returnMsg(True,s_body)
 
     def log_analysis(self,get):
@@ -1427,10 +1419,8 @@ class ajax:
             @name 获取推荐列表
         """
         spath = '{}/data/pay_type.json'.format(public.get_panel_path())
-        down = cache.get('pay_type')
-        if not down:
+        if not os.path.exists(spath):
             public.run_thread(self.download_pay_type,(spath,))
-            cache.set('pay_type',1,86400)
         try:
             data = json.loads(public.readFile("data/pay_type.json"))
         except :

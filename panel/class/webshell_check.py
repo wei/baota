@@ -220,21 +220,19 @@ class webshell_check:
         if not rule:return []
         result = self.scan(file, rule)
         return_data = self.upload_shell(result)
-        tongdao = self.get_settings()
         if len(return_data) >= 1:
-            if send == 'dingding':
-                if tongdao['dingding']:
-                    msg = "webshell查杀发现%s目录中存在木马如下:%s" % (path, return_data)
-                    self.mail.dingding_send(msg)
-            elif send == 'mail':
-                if tongdao['user_mail']:
-                    title = "webshell查杀发现%s目录中存在木马如下" % (path)
-                    body = "webshell查杀发现%s目录中存在木马如下:%s" % (path, return_data)
-                    if len(self.__mail_list) == 0:
-                        self.mail.qq_smtp_send(str(tongdao['user_mail']['info']['qq_mail']), title=title, body=body)
-                    else:
-                        for i in self.__mail_list:
-                            self.mail.qq_smtp_send(str(i), title=title, body=body)
+            object = public.init_msg(send.strip())
+            if send=="mail":
+                data={}
+                data['title'] ="webshell查杀发现%s目录中存在木马如下" % (path)
+                data['msg'] = "webshell查杀发现%s目录中存在木马如下:%s" % (path, return_data)
+                object.push_data(data)
+            elif send=="wx_account":
+                object.send_msg("webshell查杀发现%s目录中存在木马如下:%s" % (path, return_data))
+            else:
+                body="webshell查杀发现%s目录中存在木马如下:%s" % (path, return_data)
+                msg = public.get_push_info("木马查杀",['>发送内容：' + body])['msg']
+                object.send_msg(msg)
         return return_data
 
     def webshellchop(self,filename,url):

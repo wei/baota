@@ -4,393 +4,1383 @@
 <div class="main-content">
   <div class="container-fluid" style="padding-bottom:54px">
     <div class="pos-box bgw mtb15 radius4" >
-      <div class="tab-list" id="configTab">
-        <div class="tabs-item active" data-type="allConfig">全部设置</div>
-        <div class="tabs-item" data-type="panelConfig">{{data['lan']['H2']}}</div>
-        <div class="tabs-item" data-type="securityConfig">安全设置</div>
-        <div class="tabs-item" data-type="pushConfig">通知设置</div>
+      <div class="flex tab-list" id="configTab" style="justify-content: space-between;">
+				<div class="flex">
+					<div class="tabs-item" data-type="allConfig">全部设置</div>
+					<div class="tabs-item" data-type="baseConfig">基础设置</div>
+					<div class="tabs-item" data-type="panelConfig">{{data['lan']['H2']}}</div>
+					<div class="tabs-item" data-type="securityConfig">安全设置</div>
+					<div class="tabs-item" data-type="pushConfig">通知设置</div>
+				</div>
+				<form class="search">
+					<input type="text" id="search-val" name="search_keyword" class="ser-text pull-left" placeholder="搜索设置" />
+					<button type="button" class="ser-sub pull-left" id="search-btn"></button>
+				</form>
       </div>
     </div>
-    <div class="setbox bgw mtb15 tab-view-box configure-box" >
-      <div class="panel-config hide" data-type="panelConfig">
-        <div class="configure-title">面板设置</div>
-        <div class="configure-block">
+    <div class="setbox bgw mtb15 tab-view-box configure-box">
+			<div class="panel-search hide" data-type="searchConfig">
+				<div class="configure-title">搜索设置</div>
+				<div style="padding-top: 25px"></div>
+				<div class="panel-search-box text-center"></div>
+			</div>
+			<div class="panel-config panel-base hide" data-type="baseConfig">
+				<div class="configure-title">基础设置</div>
+				<div class="configure-block">
+					<div class="line" title="关闭面板">
+						<div class="line-title">关闭面板</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										id="closePanel"
+										class="btswitch btswitch-ios"
+										type="checkbox"
+										name="close_panel"
+									/>
+									<label
+										class="btswitch-btn"
+										for="closePanel"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+							</div>
+							<div class="line-row-tips">
+								仅关闭当前的面板服务，不影响web服务器，数据库等程序运行
+							</div>
+						</div>
+					</div>
 
-          <div class="line" title="关闭面板">
-            <div class="line-title">关闭面板</div>
-            <div class="line-form">
-              <div class="line-row">
-                <div class="ssh-item" style="margin-left: 0;padding: 0;">
-                  <input class="btswitch btswitch-ios" id="closePanel" type="checkbox" name="close_panel"/>
-                  <label class="btswitch-btn" for="closePanel" style="margin-bottom: 0;"></label>
-                </div>
-              </div>
-              <div class="line-row-tips">仅关闭当前的面板服务，不影响web服务器，数据库等程序运行</div>
-            </div>
-          </div>
+					<div class="line" title="面板SSL">
+						<div class="line-title">面板SSL</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="panelSsl"
+										type="checkbox"
+										name="ssl"
+									/>
+									<label
+										class="btswitch-btn"
+										for="panelSsl"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+								<button
+									ype="button"
+									class="btn btn-default btn-xs panelSslConfig"
+									style="vertical-align: middle; margin-left: 10px"
+								>
+									面板SSL配置
+								</button>
+							</div>
+							<div class="line-row-tips">
+								为面板设置https协议访问，提升面板访问安全性，<a
+									href="https://www.bt.cn/bbs/thread-704-1-1.html"
+									class="btlink"
+									target="_blank"
+									>了解详情</a
+								>
+							</div>
+						</div>
+					</div>
 
-          <div class="line" title="监听IPv6">
-            <div class="line-title">监听IPv6</div>
-            <div class="line-form">
-              <div class="line-row">
-                <div class="ssh-item" style="margin-left: 0;padding: 0;">
-                  <input class="btswitch btswitch-ios" id="monitorIPv6" type="checkbox" name="ipv6"/>
-                  <label class="btswitch-btn" for="monitorIPv6" style="margin-bottom: 0;"></label>
-                </div>
-              </div>
-              <div class="line-row-tips">监听IPv6地址的访问</div>
-            </div>
-          </div>
+					<div class="line" title="API接口">
+						<div class="line-title">API接口</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="apiInterface"
+										type="checkbox"
+										name="api"
+									/>
+									<label
+										class="btswitch-btn"
+										for="apiInterface"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+								<button
+									ype="button"
+									class="btn btn-default btn-xs apiInterfaceBtn"
+									style="vertical-align: middle; margin-left: 10px"
+								>
+									API接口配置
+								</button>
+							</div>
+							<div class="line-row-tips">
+								提供面板API接口访问的支持（堡塔APP需要开启该功能），<a
+									href="https://www.bt.cn/bbs/thread-20376-1-1.html"
+									class="btlink"
+									target="_blank"
+									>了解详情</a
+								>
+							</div>
+						</div>
+					</div>
 
-          <div class="line" title="离线模式">
-            <div class="line-title">离线模式</div>
-            <div class="line-form">
-              <div class="line-row">
-                <div class="ssh-item" style="margin-left: 0;padding: 0;">
-                  <input class="btswitch btswitch-ios" id="offlineMode" type="checkbox" name="is_local"/>
-                  <label class="btswitch-btn" for="offlineMode" style="margin-bottom: 0;"></label>
-                </div>
-              </div>
-            </div>
-            <div class="line-row-tips">离线模式下，面板更新，插件购买等联网服务将无法使用</div>
-          </div>
+					<div class="line" title="监听IPv6">
+						<div class="line-title">监听IPv6</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="monitorIPv6"
+										type="checkbox"
+										name="ipv6"
+									/>
+									<label
+										class="btswitch-btn"
+										for="monitorIPv6"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+							</div>
+							<div class="line-row-tips">监听IPv6地址的访问</div>
+						</div>
+					</div>
 
-          <div class="line" title="开发者模式">
-            <div class="line-title">开发者模式</div>
-            <div class="line-form">
-              <div class="line-row">
-                <div class="ssh-item" style="margin-left: 0;padding: 0;">
-                  <input class="btswitch btswitch-ios" id="developerMode" type="checkbox" name="debug"/>
-                  <label class="btswitch-btn" for="developerMode" style="margin-bottom: 0;"></label>
-                </div>
-              </div>
-              <div class="line-row-tips">仅第三方开发者开发阶段使用（普通用户请勿开启）</div>
-            </div>
-          </div>
+					<div class="line" title="BasicAuth认证">
+						<div class="line-title">BasicAuth认证</div>
+						<div class="line-form">
+							<div class="line">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="basicAuth"
+										type="checkbox"
+										name="basic_auth"
+									/>
+									<label
+										class="btswitch-btn"
+										for="basicAuth"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+							</div>
+						</div>
+						<div class="line-row-tips">
+							为面板增加一道基于BasicAuth的认证服务，有效防止面板被扫描，<a
+								href="https://www.bt.cn/bbs/thread-34374-1-1.html"
+								class="btlink"
+								target="_blank"
+								>了解详情</a
+							>
+						</div>
+					</div>
 
-          <div class="line" title="API接口">
-            <div class="line-title">API接口</div>
-            <div class="line-form">
-              <div class="line-row">
-                <div class="ssh-item" style="margin-left: 0;padding: 0;">
-                  <input class="btswitch btswitch-ios" id="apiInterface" type="checkbox" name="api" />
-                  <label class="btswitch-btn" for="apiInterface" style="margin-bottom: 0;"></label>
-                </div>
-                <button ype="button" class="btn btn-default btn-xs apiInterfaceBtn" style="vertical-align: middle;
-                margin-left: 10px;">API接口配置</button>
-              </div>
-              <div class="line-row-tips">提供面板API接口访问的支持（堡塔APP需要开启该功能），<a href="https://www.bt.cn/bbs/thread-20376-1-1.html" class="btlink" target="_blank">了解详情</a></div>
-            </div>
-          </div>
+					<div class="line" title="动态口令认证">
+						<div class="line-title">动态口令认证</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="checkTwoStep"
+										type="checkbox"
+										name="check_two_step"
+									/>
+									<label
+										class="btswitch-btn"
+										for="checkTwoStep"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+								<button
+									ype="button"
+									class="btn btn-default btn-xs checkTwoStepConfig"
+									style="vertical-align: middle; margin-left: 10px"
+								>
+									动态口令配置
+								</button>
+							</div>
+							<div class="line-row-tips">
+								(Google
+								Authenticator，谷歌身份认证)为面板提供动态口令的登录的验证，<a
+									href="https://www.bt.cn/bbs/forum.php?mod=viewthread&tid=37437"
+									class="btlink"
+									target="_blank"
+									>了解详情</a
+								>
+							</div>
+						</div>
+					</div>
 
-          <div class="line"  title="在线客服">
-            <div class="line-title">在线客服</div>
-            <div class="line-form">
-              <div class="line-row">
-                <div class="ssh-item" style="margin-left: 0;padding: 0;">
-                  <input class="btswitch btswitch-ios" id="onlineService" type="checkbox" name="show_workorder"/>
-                  <label class="btswitch-btn" for="onlineService" style="margin-bottom: 0;"></label>
-                </div>
-              </div>
-              <div class="line-row-tips">显示在线客服功能按钮</div>
-            </div>
-          </div>
+					<div class="line" title="面板别名">
+						<div class="line-title">面板别名</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{session['title']}}"
+								name="webname"
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 savePanelConfig"
+							disabled
+						>
+							保存
+						</button>
+						<div class="line-row-tips">给面板取个别的名称，用于网页标题</div>
+					</div>
 
-          <div class="line" title="面板别名">
-            <div class="line-title">面板别名</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" value="{{session['title']}}" name="webname" />
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 savePanelConfig" disabled>保存</button>
-            <div class="line-row-tips">给面板取个别的名称，用于网页标题</div>
-          </div>
+					<div class="line" title="绑定域名">
+						<div class="line-title">绑定域名</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['panel']['domain']}}"
+								name="domain"
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 savePanelConfig"
+							disabled
+						>
+							保存
+						</button>
+						<div class="line-row-tips">
+							为面板绑定一个访问域名，<span class="color-red"
+								>注意：一旦绑定域名，只能通过域名访问面板</span
+							>
+						</div>
+					</div>
 
-          <div class="line" title="超时时间">
-            <div class="line-title">超时时间</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" value="{{data['session_timeout']}}" name="session_timeout" />
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 savePanelConfig" disabled>保存</button>
-            <div class="line-row-tips">如果用户超过以上时间 <span class="color-red">{{data['session_timeout']}}秒</span>，未操作面板，面板将自动退出登录</div>
-          </div>
+					<div class="line" title="授权IP">
+						<div class="line-title">授权IP</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								placeholder="示例: 1.1.1.1,2.2.2.1-2.2.2.2"
+								name="limitip"
+								value="{{data['panel']['limitip']}}"
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 savePanelConfig"
+							disabled
+						>
+							保存
+						</button>
+						<div class="line-row-tips">
+							设置访问授权IP，多个IP地址，请使用“,”分割，<span class="color-red"
+								>注意：一旦设置授权IP，只有指定IP的电脑能访问面板</span
+							>
+						</div>
+					</div>
 
-          <div class="line" title="默认建站目录">
-            <div class="line-title">默认建站目录</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" value="{{data['sites_path']}}" name="sites_path" />
-              <div class="selected-file sitesPath"><span class="glyphicon glyphicon-folder-open cursor"></span></div>
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 savePanelConfig" disabled>保存</button>
-            <div class="line-row-tips">创建的站点，默认将保存到该目录下</div>
-          </div>
+					<div class="line" title="服务器IP">
+						<div class="line-title">服务器IP</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['panel']['address']}}"
+								name="address"
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 savePanelConfig"
+							disabled
+						>
+							保存
+						</button>
+						<div class="line-row-tips">
+							默认为外网IP,若您在本地虚拟机测试，请填写虚拟机内网IP
+						</div>
+					</div>
 
-          <div class="line" title="默认备份目录">
-            <div class="line-title">默认备份目录</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" value="{{data['backup_path']}}" name="backup_path" />
-              <div class="selected-file backupPath"><span class="glyphicon glyphicon-folder-open cursor"></span></div>
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 savePanelConfig"  disabled>保存</button>
-            <div class="line-row-tips">网站和站点默认的备份目录</div>
-          </div>
+					<div class="line" title="服务器时间">
+						<div class="line-title">服务器时间</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['systemdate']}}"
+								name="systemdate"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 syncDateBtn"
+						>
+							同步
+						</button>
+						<div class="line-row-tips">同步当前服务器时间</div>
+					</div>
 
-          <div class="line" title="服务器IP">
-            <div class="line-title">服务器IP</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" value="{{data['panel']['address']}}" name="address"/>
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 savePanelConfig"disabled>保存</button>
-            <div class="line-row-tips">默认为外网IP,若您在本地虚拟机测试，请填写虚拟机内网IP</div>
-          </div>
+					<div class="line" title="默认建站目录">
+						<div class="line-title">默认建站目录</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['sites_path']}}"
+								name="sites_path"
+							/>
+							<div class="selected-file sitesPath">
+								<span class="glyphicon glyphicon-folder-open cursor"></span>
+							</div>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 savePanelConfig"
+							disabled
+						>
+							保存
+						</button>
+						<div class="line-row-tips">创建的站点，默认将保存到该目录下</div>
+					</div>
 
-          <div class="line" title="服务器时间">
-            <div class="line-title">服务器时间</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" value="{{data['systemdate']}}" name="systemdate" disabled />
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 syncDateBtn">同步</button>
-            <div class="line-row-tips">同步当前服务器时间</div>
-          </div>
+					<div class="line" title="默认备份目录">
+						<div class="line-title">默认备份目录</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['backup_path']}}"
+								name="backup_path"
+							/>
+							<div class="selected-file backupPath">
+								<span class="glyphicon glyphicon-folder-open cursor"></span>
+							</div>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 savePanelConfig"
+							disabled
+						>
+							保存
+						</button>
+						<div class="line-row-tips">网站和站点默认的备份目录</div>
+					</div>
 
-          <div class="line" title="面板账号">
-            <div class="line-title">面板账号</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" name="username" value="{{session['username']}}" disabled />
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 editPanelAccount">设置</button>
-            <div class="line-row-tips">设置面板账号</div>
-          </div>
+					<div class="line" title="面板端口">
+						<div class="line-title">面板端口</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['panel']['port']}}"
+								name="port"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 setPanelPort"
+						>
+							设置
+						</button>
+						<div class="line-row-tips">
+							建议端口范围8888 - 65535，<span class="color-red"
+								>注意：有安全组的服务器请提前在安全组放行新端口</span
+							>
+						</div>
+					</div>
 
-          <div class="line" title="面板密码">
-            <div class="line-title">面板密码</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" name="password" value="********" disabled />
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 editPanelPassword">设置</button>
-            <div class="line-row-tips">设置面板密码</div>
-          </div>
+					<div class="line" title="安全入口">
+						<div class="line-title">安全入口</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['panel']['admin_path']}}"
+								name="entrance"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 setSafetyEntrance"
+						>
+							设置
+						</button>
+						<div class="line-row-tips">
+							面板管理入口，设置后只能通过指定安全入口登录面板,如: /www_bt_cn
+						</div>
+					</div>
 
-          <div class="line" title="绑定宝塔账号">
-            <div class="line-title">绑定宝塔账号</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" name="bind_user_info" disabled />
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 bindBtUser">设置</button>
-            <button type="button" class="btn btn-default btn-sm ml5 unbindBtUser">解绑</button>
-            <div class="line-row-tips">面板大多数功能依赖云端服务(证书申请，产品购买，软件列表等)，该功能仅用于云端服务，不涉及敏感操作</div>
-          </div>
+					<div class="line" title="面板账号">
+						<div class="line-title">面板账号</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								name="username"
+								value="{{session['username']}}"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 editPanelAccount"
+						>
+							设置
+						</button>
+						<div class="line-row-tips">设置面板账号</div>
+					</div>
 
-          <div class="line" title="面板菜单栏隐藏">
-            <div class="line-title">面板菜单栏隐藏</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" name="menu_hide_list" disabled />
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 menuBarManage">设置</button>
-            <div class="line-row-tips">隐藏左侧菜单栏目</div>
-          </div>
-          <div class="line" title="面板云端请求方式">
-            <div class="line-title">面板云端请求方式</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" name="request_type" disabled />
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 request_type">设置</button>
-            <div class="line-row-tips">面板请求云端时，使用的请求方式，默认支持python、curl、php，请根据实际情况切换</div>
-          </div>
-          <div class="line" title="面板云端请求线路">
-            <div class="line-title">面板云端请求线路</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" name="request_iptype" disabled />
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 request_iptype">设置</button>
-            <div class="line-row-tips">面板请求云端时，使用的请求线路，默认支持auto、ipv4、ipv6，请根据实际情况切换</div>
-          </div>
-          <div class="line" title="面板云端通讯节点配置">
-            <div class="line-title">面板云端通讯节点配置</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" name="node_config" disabled />
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 node_config">设置</button>
-            <div class="line-row-tips">请勿随意调整节点配置，仅获取云端数据出现未响应或错误时，可尝试切换该节点</div>
-          </div>
-        </div>
-      </div>
-      <div class="panel-config hide" data-type="securityConfig">
-        <div class="configure-title">安全设置</div>
-        <div class="configure-block">
+					<div class="line" title="面板密码">
+						<div class="line-title">面板密码</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								name="password"
+								value="********"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 editPanelPassword"
+						>
+							设置
+						</button>
+						<div class="line-row-tips">设置面板密码</div>
+					</div>
 
-          <div class="line" title="面板SSL">
-            <div class="line-title">面板SSL</div>
-            <div class="line-form">
-              <div class="line-row">
-                <div class="ssh-item" style="margin-left: 0;padding: 0;">
-                  <input class="btswitch btswitch-ios" id="panelSsl" type="checkbox" name="ssl">
-                  <label class="btswitch-btn" for="panelSsl" style="margin-bottom: 0;"></label>
-                </div>
-                <button ype="button" class="btn btn-default btn-xs panelSslConfig" style="vertical-align: middle;
-                margin-left: 10px;">面板SSL配置</button>
-              </div>
-              <div class="line-row-tips">为面板设置https协议访问，提升面板访问安全性，<a href="https://www.bt.cn/bbs/thread-704-1-1.html" class="btlink" target="_blank">了解详情</a></div>
-            </div>
-          </div>
+					<div class="line" title="绑定宝塔账号">
+						<div class="line-title">绑定宝塔账号</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								name="bind_user_info"
+								disabled
+							/>
+						</div>
+						<button type="button" class="btn btn-success btn-sm ml5 bindBtUser">
+							设置
+						</button>
+						<button
+							type="button"
+							class="btn btn-default btn-sm ml5 unbindBtUser"
+						>
+							解绑
+						</button>
+						<div class="line-row-tips">
+							面板大多数功能依赖云端服务(证书申请，产品购买，软件列表等)，该功能仅用于云端服务，不涉及敏感操作
+						</div>
+					</div>
 
-          <div class="line" title="BasicAuth认证">
-            <div class="line-title">BasicAuth认证</div>
-            <div class="line-form">
-              <div class="line">
-                <div class="ssh-item" style="margin-left: 0;padding: 0;">
-                  <input class="btswitch btswitch-ios" id="basicAuth" type="checkbox" name="basic_auth"/>
-                  <label class="btswitch-btn" for="basicAuth" style="margin-bottom: 0;"></label>
-                </div>
-              </div>
-            </div>
-            <div class="line-row-tips">为面板增加一道基于BasicAuth的认证服务，有效防止面板被扫描，<a href="https://www.bt.cn/bbs/thread-34374-1-1.html" class="btlink" target="_blank">了解详情</a></div>
-          </div>
+					<div class="line" title="临时访问授权">
+						<div class="line-title">临时访问授权</div>
+						<div class="line-input">
+							<button
+								type="button"
+								class="btn btn-success btn-sm setTempAuthView"
+							>
+								临时访问授权管理
+							</button>
+						</div>
+						<div class="line-row-tips">为非管理员临时提供面板访问权限</div>
+					</div>
 
-          <div class="line" title="动态口令认证">
-            <div class="line-title">动态口令认证</div>
-            <div class="line-form">
-              <div class="line-row">
-                <div class="ssh-item" style="margin-left: 0;padding: 0;">
-                  <input class="btswitch btswitch-ios" id="checkTwoStep" type="checkbox" name="check_two_step"/>
-                  <label class="btswitch-btn" for="checkTwoStep" style="margin-bottom: 0;"></label>
-                </div>
-                <button ype="button" class="btn btn-default btn-xs checkTwoStepConfig" style="vertical-align: middle;
-                margin-left: 10px;">动态口令配置</button>
-              </div>
-              <div class="line-row-tips">(Google Authenticator，谷歌身份认证)为面板提供动态口令的登录的验证，<a href="https://www.bt.cn/bbs/forum.php?mod=viewthread&tid=37437" class="btlink" target="_blank">了解详情</a></div>
-            </div>
-          </div>
+					<div class="line" title="消息通道">
+						<div class="line-title">消息通道</div>
+						<div class="line-input">
+							<div class="line-row">
+								<a href="javascript:;" class="bt_warning setMessageChannelMail"
+									>邮箱未配置</a
+								>
+								<span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+								<a
+									href="javascript:;"
+									class="bt_warning setMessageChannelNailNail"
+									>钉钉/飞书/企业微信未配置</a
+								>
+								<span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+								<a href="javascript:;" class="bt_warning setMessageChannelSMS"
+									>短信未配置</a
+								>&nbsp;&nbsp;&nbsp;&nbsp;
+							</div>
+							<button
+								type="button"
+								class="btn btn-success btn-xs setMessageChannelMailBtn"
+							>
+								设置消息通道
+							</button>
+						</div>
+						<div class="line-row-tips">
+							设置消息推送配置，设置后可以将消息推送至邮箱、钉钉/飞书/企业微信、短信
+						</div>
+					</div>
 
-          <div class="line" title="访问设备验证">
-            <div class="line-title">访问设备验证</div>
-            <div class="line-form">
-              <div class="line-row">
-                <div class="ssh-item" style="margin-left: 0;padding: 0;">
-                  <input class="btswitch btswitch-ios" id="sslVerify" type="checkbox" name="ssl_verify"/>
-                  <label class="btswitch-btn" for="sslVerify" style="margin-bottom: 0;"></label>
-                </div>
-                <button ype="button" class="btn btn-default btn-xs sslVerifyConfig" style="vertical-align: middle;
-                margin-left: 10px;">访问设备验证配置</button>
-              </div>
-              <div class="line-row-tips">基于SSL证书双向验证，开启后电脑需要安装此证书，否则将无法访问，属于极高安全级别的访问限制方式，类似银行账号U盘密钥登录。<a href="https://www.bt.cn/bbs/thread-77863-1-1.html" class="btlink" target="_blank">了解详情</a></div>
-            </div>
-          </div>
+					<div class="line login-alarm-line" title="面板登录告警">
+						<div class="line-title">面板登录告警</div>
+						<div class="line-input">
+							<div class="line-row">
+								<a href="javascript:;" class="bt_warning setAlarmMail"
+									>告警通知未配置</a
+								>
+							</div>
+							<button
+								type="button"
+								class="btn btn-success btn-xs setAlarmMailBtn"
+								style="margin-left: 8px"
+							>
+								设置登录告警
+							</button>
+						</div>
+						<div class="line-row-tips">
+							设置面板登录告警提示，每次登录面板都会使用消息推送功能，发送消息至<span
+							></span>
+						</div>
+					</div>
 
-          <div class="line" title="密码复杂度验证">
-            <div class="line-title">密码复杂度验证</div>
-            <div class="line-form">
-              <div class="line-row">
-                <div class="ssh-item" style="margin-left: 0;padding: 0;">
-                  <input class="btswitch btswitch-ios" id="passwordSafe" type="checkbox" name="paw_complexity"/>
-                  <label class="btswitch-btn" for="passwordSafe" style="margin-bottom: 0;"></label>
-                </div>
-              </div>
-              <div class="line-row-tips">为面板密码提供复杂度验证方式，复杂度验证规则：<span class="color-red">密码必须满足密码长度大于8位且大写字母、小写字母、数字、特殊字符至少3项组合</span></div>
-            </div>
-          </div>
+					<div class="line" title="消息推送">
+						<div class="line-title">消息推送</div>
+						<div class="line-input">
+							<button type="button" class="btn btn-success btn-xs setAlarmType">
+								设置推送
+							</button>
+						</div>
+						<div class="line-row-tips">
+							设置消息推送提示，服务停止时将消息发送至邮件、钉钉/飞书/企业微信、短信
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="panel-config hide" data-type="panelConfig">
+				<div class="configure-title">面板设置</div>
+				<div class="configure-block">
+					<div class="line" title="关闭面板">
+						<div class="line-title">关闭面板</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="closePanel"
+										type="checkbox"
+										name="close_panel"
+									/>
+									<label
+										class="btswitch-btn"
+										for="closePanel"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+							</div>
+							<div class="line-row-tips">
+								仅关闭当前的面板服务，不影响web服务器，数据库等程序运行
+							</div>
+						</div>
+					</div>
 
-          <div class="line" title="面板端口">
-            <div class="line-title">面板端口</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" value="{{data['panel']['port']}}" name="port" disabled/>
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 setPanelPort">设置</button>
-            <div class="line-row-tips">建议端口范围8888 - 65535，<span class="color-red">注意：有安全组的服务器请提前在安全组放行新端口</span></div>
-          </div>
+					<div class="line" title="监听IPv6">
+						<div class="line-title">监听IPv6</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="monitorIPv6"
+										type="checkbox"
+										name="ipv6"
+									/>
+									<label
+										class="btswitch-btn"
+										for="monitorIPv6"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+							</div>
+							<div class="line-row-tips">监听IPv6地址的访问</div>
+						</div>
+					</div>
 
-          <div class="line" title="安全入口">
-            <div class="line-title">安全入口</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" value="{{data['panel']['admin_path']}}" name="entrance" disabled />
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 setSafetyEntrance">设置</button>
-            <div class="line-row-tips">面板管理入口，设置后只能通过指定安全入口登录面板,如: /www_bt_cn</div>
-          </div>
+					<div class="line" title="离线模式">
+						<div class="line-title">离线模式</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="offlineMode"
+										type="checkbox"
+										name="is_local"
+									/>
+									<label
+										class="btswitch-btn"
+										for="offlineMode"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+							</div>
+						</div>
+						<div class="line-row-tips">
+							离线模式下，面板更新，插件购买等联网服务将无法使用
+						</div>
+					</div>
 
-          <div class="line" title="未认证的响应状态">
-            <div class="line-title">未认证响应状态</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" value="" name="status_code" disabled />
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 setStatusCodeView">设置</button>
-            <div class="line-row-tips">用于在未登录且未正确输入安全入口时的响应，可用于隐藏面板特征</div>
-          </div>
+					<div class="line" title="开发者模式">
+						<div class="line-title">开发者模式</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="developerMode"
+										type="checkbox"
+										name="debug"
+									/>
+									<label
+										class="btswitch-btn"
+										for="developerMode"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+							</div>
+							<div class="line-row-tips">
+								仅第三方开发者开发阶段使用（普通用户请勿开启）
+							</div>
+						</div>
+					</div>
 
-          <div class="line" title="绑定域名">
-            <div class="line-title">绑定域名</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" value="{{data['panel']['domain']}}" name="domain"/>
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 savePanelConfig" disabled>保存</button>
-            <div class="line-row-tips">为面板绑定一个访问域名，<span class="color-red">注意：一旦绑定域名，只能通过域名访问面板</span></div>
-          </div>
+					<div class="line" title="API接口">
+						<div class="line-title">API接口</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="apiInterface"
+										type="checkbox"
+										name="api"
+									/>
+									<label
+										class="btswitch-btn"
+										for="apiInterface"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+								<button
+									ype="button"
+									class="btn btn-default btn-xs apiInterfaceBtn"
+									style="vertical-align: middle; margin-left: 10px"
+								>
+									API接口配置
+								</button>
+							</div>
+							<div class="line-row-tips">
+								提供面板API接口访问的支持（堡塔APP需要开启该功能），<a
+									href="https://www.bt.cn/bbs/thread-20376-1-1.html"
+									class="btlink"
+									target="_blank"
+									>了解详情</a
+								>
+							</div>
+						</div>
+					</div>
 
-          <div class="line" title="授权IP">
-            <div class="line-title">授权IP</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" placeholder="示例: 1.1.1.1,2.2.2.1-2.2.2.2" name="limitip" value="{{data['panel']['limitip']}}"/>
-            </div>
-            <button type="button" class="btn btn-success btn-sm ml5 savePanelConfig" disabled>保存</button>
-            <div class="line-row-tips">设置访问授权IP，多个IP地址，请使用“,”分割，<span class="color-red">注意：一旦设置授权IP，只有指定IP的电脑能访问面板</span></div>
-          </div>
+					<div class="line" title="在线客服">
+						<div class="line-title">在线客服</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="onlineService"
+										type="checkbox"
+										name="show_workorder"
+									/>
+									<label
+										class="btswitch-btn"
+										for="onlineService"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+							</div>
+							<div class="line-row-tips">显示在线客服功能按钮</div>
+						</div>
+					</div>
 
-          <div class="line" title="密码过期时间">
-            <div class="line-title">密码过期时间</div>
-            <div class="line-input">
-              <input type="text" class="bt-input-text" value="未设置" name="paw_expire_time" disabled />
-              <button type="button" class="btn btn-success btn-sm ml5 setPawExpiration">设置</button>
-            </div>
-            <div class="line-row-tips">为面板密码设置过期时间，过期后需要重新设置密码</div>
-          </div>
+					<div class="line" title="面板别名">
+						<div class="line-title">面板别名</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{session['title']}}"
+								name="webname"
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 savePanelConfig"
+							disabled
+						>
+							保存
+						</button>
+						<div class="line-row-tips">给面板取个别的名称，用于网页标题</div>
+					</div>
 
-          <div class="line" title="临时访问授权">
-            <div class="line-title">临时访问授权</div>
-            <div class="line-input">
-              <button type="button" class="btn btn-success btn-sm setTempAuthView">临时访问授权管理</button>
-            </div>
-            <div class="line-row-tips">为非管理员临时提供面板访问权限</div>
-          </div>
-        </div>
-      </div>
-      <div class="panel-config hide" data-type="pushConfig">
-        <div class="configure-title">通知设置</div>
-        <div class="configure-block">
-          <div class="line" title="消息通道">
-            <div class="line-title">消息通道</div>
-            <div class="line-input">
-              <div class="line-row">
-                <a href="javascript:;" class="bt_warning setMessageChannelMail">邮箱未配置</a>
-                <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
-                <a href="javascript:;" class="bt_warning setMessageChannelNailNail">钉钉/飞书/企业微信未配置</a>
-                <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
-                <a href="javascript:;" class="bt_warning setMessageChannelSMS">短信未设置</a>&nbsp;&nbsp;&nbsp;&nbsp;
-              </div>
-              <button type="button" class="btn btn-success btn-xs setMessageChannelMailBtn">设置消息通道</button>
-            </div>
-            <div class="line-row-tips">设置消息推送配置，设置后可以将消息推送至邮箱、钉钉/企业微信、短信</div>
-          </div>
-          <div class="line" title="登录告警">
-            <div class="line-title">登录告警</div>
-            <div class="line-input">
-              <div class="line-row">
-                <a href="javascript:;" class="bt_warning setAlarmMail">邮箱未配置</a>
-                <span class="interval">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
-                <a href="javascript:;" class="bt_warning setAlarmNailNail">钉钉/企业微信未配置</a>&nbsp;&nbsp;&nbsp;&nbsp;
-              </div>
-              <button type="button" class="btn btn-success btn-xs setAlarmMailBtn">设置登录告警</button>
-            </div>
-            <div class="line-row-tips">设置登录告警提示，每次登录面板都会使用消息推送功能，发送邮件或发送信息至钉钉/企业微信</div>
-          </div>
-          <div class="line" title="消息推送">
-            <div class="line-title">消息推送</div>
-            <div class="line-input">
-              <button type="button" class="btn btn-success btn-xs setAlarmType">设置推送</button>
-            </div>
-            <div class="line-row-tips">设置消息推送提示，服务停止时将消息发送至邮件、钉钉/飞书/企业微信、短信</div>
-          </div>
-        </div>
-      </div>
-    </div>
+					<div class="line" title="超时时间">
+						<div class="line-title">超时时间</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['session_timeout']}}"
+								name="session_timeout"
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 savePanelConfig"
+							disabled
+						>
+							保存
+						</button>
+						<div class="line-row-tips">
+							如果用户超过以上时间
+							<span class="color-red">{{data['session_timeout']}}秒</span
+							>，未操作面板，面板将自动退出登录
+						</div>
+					</div>
+
+					<div class="line" title="默认建站目录">
+						<div class="line-title">默认建站目录</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['sites_path']}}"
+								name="sites_path"
+							/>
+							<div class="selected-file sitesPath">
+								<span class="glyphicon glyphicon-folder-open cursor"></span>
+							</div>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 savePanelConfig"
+							disabled
+						>
+							保存
+						</button>
+						<div class="line-row-tips">创建的站点，默认将保存到该目录下</div>
+					</div>
+
+					<div class="line" title="默认备份目录">
+						<div class="line-title">默认备份目录</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['backup_path']}}"
+								name="backup_path"
+							/>
+							<div class="selected-file backupPath">
+								<span class="glyphicon glyphicon-folder-open cursor"></span>
+							</div>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 savePanelConfig"
+							disabled
+						>
+							保存
+						</button>
+						<div class="line-row-tips">网站和站点默认的备份目录</div>
+					</div>
+
+					<div class="line" title="服务器IP">
+						<div class="line-title">服务器IP</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['panel']['address']}}"
+								name="address"
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 savePanelConfig"
+							disabled
+						>
+							保存
+						</button>
+						<div class="line-row-tips">
+							默认为外网IP,若您在本地虚拟机测试，请填写虚拟机内网IP
+						</div>
+					</div>
+
+					<div class="line" title="服务器时间">
+						<div class="line-title">服务器时间</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['systemdate']}}"
+								name="systemdate"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 syncDateBtn"
+						>
+							同步
+						</button>
+						<div class="line-row-tips">同步当前服务器时间</div>
+					</div>
+
+					<div class="line" title="面板账号">
+						<div class="line-title">面板账号</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								name="username"
+								value="{{session['username']}}"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 editPanelAccount"
+						>
+							设置
+						</button>
+						<div class="line-row-tips">设置面板账号</div>
+					</div>
+
+					<div class="line" title="面板密码">
+						<div class="line-title">面板密码</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								name="password"
+								value="********"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 editPanelPassword"
+						>
+							设置
+						</button>
+						<div class="line-row-tips">设置面板密码</div>
+					</div>
+
+					<div class="line" title="绑定宝塔账号">
+						<div class="line-title">绑定宝塔账号</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								name="bind_user_info"
+								disabled
+							/>
+						</div>
+						<button type="button" class="btn btn-success btn-sm ml5 bindBtUser">
+							设置
+						</button>
+						<button
+							type="button"
+							class="btn btn-default btn-sm ml5 unbindBtUser"
+						>
+							解绑
+						</button>
+						<div class="line-row-tips">
+							面板大多数功能依赖云端服务(证书申请，产品购买，软件列表等)，该功能仅用于云端服务，不涉及敏感操作
+						</div>
+					</div>
+
+					<div class="line" title="面板菜单栏隐藏">
+						<div class="line-title">面板菜单栏隐藏</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								name="menu_hide_list"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 menuBarManage"
+						>
+							设置
+						</button>
+						<div class="line-row-tips">隐藏左侧菜单栏目</div>
+					</div>
+
+					<div class="line" title="面板云端请求方式">
+						<div class="line-title">面板云端请求方式</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								name="request_type"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 request_type"
+						>
+							设置
+						</button>
+						<div class="line-row-tips">
+							面板请求云端时，使用的请求方式，默认支持python、curl、php，请根据实际情况切换
+						</div>
+					</div>
+
+					<div class="line" title="面板云端请求线路">
+						<div class="line-title">面板云端请求线路</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								name="request_iptype"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 request_iptype"
+						>
+							设置
+						</button>
+						<div class="line-row-tips">
+							面板请求云端时，使用的请求线路，默认支持auto、ipv4、ipv6，请根据实际情况切换
+						</div>
+					</div>
+
+					<div class="line" title="面板云端通讯节点配置">
+						<div class="line-title">面板云端通讯节点配置</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								name="node_config"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 node_config"
+						>
+							设置
+						</button>
+						<div class="line-row-tips">
+							请勿随意调整节点配置，仅获取云端数据出现未响应或错误时，可尝试切换该节点
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="panel-config hide" data-type="securityConfig">
+				<div class="configure-title">安全设置</div>
+				<div class="configure-block">
+					<div class="line" title="面板SSL">
+						<div class="line-title">面板SSL</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="panelSsl"
+										type="checkbox"
+										name="ssl"
+									/>
+									<label
+										class="btswitch-btn"
+										for="panelSsl"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+								<button
+									ype="button"
+									class="btn btn-default btn-xs panelSslConfig"
+									style="vertical-align: middle; margin-left: 10px"
+								>
+									面板SSL配置
+								</button>
+							</div>
+							<div class="line-row-tips">
+								为面板设置https协议访问，提升面板访问安全性，<a
+									href="https://www.bt.cn/bbs/thread-704-1-1.html"
+									class="btlink"
+									target="_blank"
+									>了解详情</a
+								>
+							</div>
+						</div>
+					</div>
+
+					<div class="line" title="BasicAuth认证">
+						<div class="line-title">BasicAuth认证</div>
+						<div class="line-form">
+							<div class="line">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="basicAuth"
+										type="checkbox"
+										name="basic_auth"
+									/>
+									<label
+										class="btswitch-btn"
+										for="basicAuth"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+							</div>
+						</div>
+						<div class="line-row-tips">
+							为面板增加一道基于BasicAuth的认证服务，有效防止面板被扫描，<a
+								href="https://www.bt.cn/bbs/thread-34374-1-1.html"
+								class="btlink"
+								target="_blank"
+								>了解详情</a
+							>
+						</div>
+					</div>
+
+					<div class="line" title="动态口令认证">
+						<div class="line-title">动态口令认证</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="checkTwoStep"
+										type="checkbox"
+										name="check_two_step"
+									/>
+									<label
+										class="btswitch-btn"
+										for="checkTwoStep"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+								<button
+									ype="button"
+									class="btn btn-default btn-xs checkTwoStepConfig"
+									style="vertical-align: middle; margin-left: 10px"
+								>
+									动态口令配置
+								</button>
+							</div>
+							<div class="line-row-tips">
+								(Google
+								Authenticator，谷歌身份认证)为面板提供动态口令的登录的验证，<a
+									href="https://www.bt.cn/bbs/forum.php?mod=viewthread&tid=37437"
+									class="btlink"
+									target="_blank"
+									>了解详情</a
+								>
+							</div>
+						</div>
+					</div>
+
+					<div class="line" title="访问设备验证">
+						<div class="line-title">访问设备验证</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="sslVerify"
+										type="checkbox"
+										name="ssl_verify"
+									/>
+									<label
+										class="btswitch-btn"
+										for="sslVerify"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+								<button
+									ype="button"
+									class="btn btn-default btn-xs sslVerifyConfig"
+									style="vertical-align: middle; margin-left: 10px"
+								>
+									访问设备验证配置
+								</button>
+							</div>
+							<div class="line-row-tips">
+								基于SSL证书双向验证，开启后电脑需要安装此证书，否则将无法访问，属于极高安全级别的访问限制方式，类似银行账号U盘密钥登录。<a
+									href="https://www.bt.cn/bbs/thread-77863-1-1.html"
+									class="btlink"
+									target="_blank"
+									>了解详情</a
+								>
+							</div>
+						</div>
+					</div>
+
+					<div class="line" title="密码复杂度验证">
+						<div class="line-title">密码复杂度验证</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+										class="btswitch btswitch-ios"
+										id="passwordSafe"
+										type="checkbox"
+										name="paw_complexity"
+									/>
+									<label
+										class="btswitch-btn"
+										for="passwordSafe"
+										style="margin-bottom: 0"
+									></label>
+								</div>
+							</div>
+							<div class="line-row-tips">
+								为面板密码提供复杂度验证方式，复杂度验证规则：<span
+									class="color-red"
+									>密码必须满足密码长度大于8位且大写字母、小写字母、数字、特殊字符至少3项组合</span
+								>
+							</div>
+						</div>
+					</div>
+
+					<div class="line" title="绑定域名">
+						<div class="line-title">绑定域名</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['panel']['domain']}}"
+								name="domain"
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 savePanelConfig"
+							disabled
+						>
+							保存
+						</button>
+						<div class="line-row-tips">
+							为面板绑定一个访问域名，<span class="color-red"
+						>注意：一旦绑定域名，只能通过域名访问面板</span
+						>
+						</div>
+					</div>
+
+					<div class="line" title="授权IP">
+						<div class="line-title">授权IP</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								placeholder="示例: 1.1.1.1,2.2.2.1-2.2.2.2"
+								name="limitip"
+								value="{{data['panel']['limitip']}}"
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 savePanelConfig"
+							disabled
+						>
+							保存
+						</button>
+						<div class="line-row-tips">
+							设置访问授权IP，多个IP地址，请使用“,”分割，<span class="color-red"
+						>注意：一旦设置授权IP，只有指定IP的电脑能访问面板</span
+						>
+						</div>
+					</div>
+
+					<div class="line" title="面板端口">
+						<div class="line-title">面板端口</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['panel']['port']}}"
+								name="port"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 setPanelPort"
+						>
+							设置
+						</button>
+						<div class="line-row-tips">
+							建议端口范围8888 - 65535，<span class="color-red"
+								>注意：有安全组的服务器请提前在安全组放行新端口</span
+							>
+						</div>
+					</div>
+
+					<div class="line" title="安全入口">
+						<div class="line-title">安全入口</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="{{data['panel']['admin_path']}}"
+								name="entrance"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 setSafetyEntrance"
+						>
+							设置
+						</button>
+						<div class="line-row-tips">
+							面板管理入口，设置后只能通过指定安全入口登录面板,如: /www_bt_cn
+						</div>
+					</div>
+
+					<div class="line" title="未认证的响应状态">
+						<div class="line-title">未认证响应状态</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value=""
+								name="status_code"
+								disabled
+							/>
+						</div>
+						<button
+							type="button"
+							class="btn btn-success btn-sm ml5 setStatusCodeView"
+						>
+							设置
+						</button>
+						<div class="line-row-tips">
+							用于在未登录且未正确输入安全入口时的响应，可用于隐藏面板特征
+						</div>
+					</div>
+
+					<div class="line" title="密码过期时间">
+						<div class="line-title">密码过期时间</div>
+						<div class="line-input">
+							<input
+								type="text"
+								class="bt-input-text"
+								value="未设置"
+								name="paw_expire_time"
+								disabled
+							/>
+							<button
+								type="button"
+								class="btn btn-success btn-sm ml5 setPawExpiration"
+							>
+								设置
+							</button>
+						</div>
+						<div class="line-row-tips">
+							为面板密码设置过期时间，过期后需要重新设置密码
+						</div>
+					</div>
+
+					<div class="line" title="临时访问授权">
+						<div class="line-title">临时访问授权</div>
+						<div class="line-input">
+							<button
+								type="button"
+								class="btn btn-success btn-sm setTempAuthView"
+							>
+								临时访问授权管理
+							</button>
+						</div>
+						<div class="line-row-tips">为非管理员临时提供面板访问权限</div>
+					</div>
+				</div>
+			</div>
+			<div class="panel-config hide" data-type="pushConfig">
+				<div class="configure-title">通知设置</div>
+				<div class="configure-block">
+					<div class="line" title="消息通道">
+						<div class="line-title">消息通道</div>
+						<div class="line-input">
+							<div class="line-row">
+								<a href="javascript:;" class="bt_warning setMessageChannelMail">
+									邮箱未配置
+								</a>
+								<span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+								<a
+									href="javascript:;"
+									class="bt_warning setMessageChannelNailNail"
+								>
+									钉钉/飞书/企业微信未配置
+								</a>
+								<span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+								<a href="javascript:;" class="bt_warning setMessageChannelSMS">
+									短信未配置
+								</a>
+								<span>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+							</div>
+							<button
+								type="button"
+								class="btn btn-success btn-xs setMessageChannelMailBtn"
+							>
+								设置消息通道
+							</button>
+						</div>
+						<div class="line-row-tips">
+							设置消息推送配置，设置后可以将消息推送至邮箱、钉钉/飞书/企业微信、短信
+						</div>
+					</div>
+					<div class="line login-alarm-line" title="面板登录告警">
+						<div class="line-title">面板登录告警</div>
+						<div class="line-input">
+							<div class="line-row">
+								<a href="javascript:;" class="bt_warning setAlarmMail"
+									>告警通知未配置</a
+								>
+							</div>
+							<button
+								type="button"
+								class="btn btn-success btn-xs setAlarmMailBtn"
+								style="margin-left: 8px"
+							>
+								设置登录告警
+							</button>
+						</div>
+						<div class="line-row-tips">
+							设置面板登录告警提示，每次登录面板都会使用消息推送功能，发送消息至<span
+							></span>
+						</div>
+					</div>
+					<div class="line" title="消息推送">
+						<div class="line-title">消息推送</div>
+						<div class="line-input">
+							<button type="button" class="btn btn-success btn-xs setAlarmType">
+								设置推送
+							</button>
+						</div>
+						<div class="line-row-tips">
+							设置消息推送提示，服务停止时将消息发送至邮件、钉钉/飞书/企业微信/短信
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="panel-search hide" style="padding-top: 25px"></div>
+		</div>
   </div>
   <style>
     .configure-box{
@@ -554,14 +1544,35 @@
       line-height: 28px;
     }
     /*消息推送模块 end*/
+
+		.line-row-tips i,
+		.line-title i {
+			display: inline-flex;
+			line-height: 1.4;
+			background-color: yellow;
+			font-style: normal;
+		}
+
+	.show-default {
+			position: relative;
+			top: -3px;
+			display: inline-block;
+			width: 4px;
+			height: 4px;
+			margin-left: 6px;
+			background-color: #cbcbcb;
+			border-radius: 50%;
+		}
   </style>
   {% endblock %}
   {% block scripts %}
     <script type="text/javascript" src="{{g.cdn_url}}/js/jquery-2.2.4.min.js"></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/js/jquery.qrcode.min.js"></script>
     <script type="text/javascript" src="{{g.cdn_url}}/language/{{session['lan']}}/lan.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
     <script type="text/javascript" src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
     <script type="text/javascript" src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-    <script type="text/javascript" src="{{g.cdn_url}}/js/jquery.qrcode.min.js"></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/amd/require.min.js" data-main="{{g.cdn_url}}/amd/main"></script>
+    <script type="text/javascript" src="{{g.cdn_url}}/js/tools.js?version_20200217={{g['version']}}"></script>
     <script type="text/javascript">
       bt.set_cookie('order', 'id desc');
       bt.set_cookie('serverType', "{{session['webserver']}}");
@@ -606,27 +1617,27 @@
 
               if (task_list[i]['type'] == '1') {
                 msg_body +=
-                  '<div class="mw-con">\
-                                    <ul class="waiting-down-list">\
-                                      <li>\
-                                        <div class="down-filse-name"><span class="fname" style="width:80%;" title="正在下载: ' +
-                  task_list[i].shell + '">正在下载: ' + task_list[i].shell +
-                  '</span><span style="position: absolute;left: 84%;top: 25px;color: #999;">' + task_list[i].log
-                  .pre + '%</span><span class="btlink" onclick="remove_task(' + task_list[i].id + ')" style="position: absolute;top: 25px;right: 20px;">取消</span></div>\
+                        '<div class="mw-con">\
+                                          <ul class="waiting-down-list">\
+                                            <li>\
+                                              <div class="down-filse-name"><span class="fname" style="width:80%;" title="正在下载: ' +
+                        task_list[i].shell + '">正在下载: ' + task_list[i].shell +
+                        '</span><span style="position: absolute;left: 84%;top: 25px;color: #999;">' + task_list[i].log
+                                .pre + '%</span><span class="btlink" onclick="remove_task(' + task_list[i].id + ')" style="position: absolute;top: 25px;right: 20px;">取消</span></div>\
                                         <div class="down-progress"><div class="done-progress" style="width:' + task_list[i]
-                  .log.pre + '%"></div></div>\
+                                .log.pre + '%"></div></div>\
                                         <div class="down-info"><span class="total-size"> ' + task_list[i].log.used + '/' +
-                  ToSize(task_list[i].log.total) + '</span><span class="speed-size">' + (task_list[i].log.speed ==
-                    0 ? '正在连接..' : task_list[i].log.speed) + '/s</span><span style="margin-left: 20px;">预计还要: ' +
-                  task_list[i].log.time + '</span></div>\
+                        ToSize(task_list[i].log.total) + '</span><span class="speed-size">' + (task_list[i].log.speed ==
+                        0 ? '正在连接..' : task_list[i].log.speed) + '/s</span><span style="margin-left: 20px;">预计还要: ' +
+                        task_list[i].log.time + '</span></div>\
                                       </li>\
                                           </ul>\
                                       </div>'
               } else {
                 msg_body +=
-                  '<div class="mw-title"><span style="max-width: 88%;display: block;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;">' +
-                  task_list[i].name + ': ' + task_list[i].shell +
-                  '</span><span class="btlink" onclick="remove_task(' + task_list[i].id + ')"  style="position: absolute;top: 10px;right: 15px;">取消</span></div>\
+                        '<div class="mw-title"><span style="max-width: 88%;display: block;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;">' +
+                        task_list[i].name + ': ' + task_list[i].shell +
+                        '</span><span class="btlink" onclick="remove_task(' + task_list[i].id + ')"  style="position: absolute;top: 10px;right: 15px;">取消</span></div>\
                                       <div class="mw-con codebg">\
                                         <code>' + task_list[i].log + '</code>\
                                       </div>'
@@ -639,8 +1650,8 @@
                 is_add = true;
               }
               msg_body += '<li><span class="wt-list-name" style="width: 90%;">' + task_list[i].name + ': ' +
-                task_list[i].shell + '</span><span class="mw-cancel" onclick="remove_task(' + task_list[i].id +
-                ')">X</span></li>';
+                      task_list[i].shell + '</span><span class="mw-cancel" onclick="remove_task(' + task_list[i].id +
+                      ')">X</span></li>';
             }
           }
           if (task_open) {
@@ -692,18 +1703,16 @@
         });
       }
       task_stat();
-    </script>
-    <script type="text/javascript" src="{{g.cdn_url}}/amd/require.min.js" data-main="{{g.cdn_url}}/amd/main"></script>
-    <script type="text/javascript" src="{{g.cdn_url}}/js/tools.js?version_20200217={{g['version']}}"></script>
-    <script type="text/javascript">
       var sessionInfo  = {
         title:"{{session['title']}}",
         username:"{{session['username']}}",
         statusCode:"{{data['status_code']}}"
       }
 
-      //  设置消息通道
-      $('.setMessageChannelMail,.setMessageChannelMailBtn,.setMessageChannelNailNail,.setMessageChannelSMS').on('click', function(){open_three_channel_auth()});
+		//  设置消息通道
+		$('.setMessageChannelMail,.setMessageChannelMailBtn,.setMessageChannelNailNail,.setMessageChannelSMS').on('click', function(){
+			open_three_channel_auth()
+		});
 
       // 消息推送
       $('.setAlarmType').on('click', function(){open_three_channel_auth('MsgPush')});
@@ -719,14 +1728,17 @@
         var customer = $("#wechat-customer");
         var ltd_end = bt.get_cookie('ltd_end');
         if (!(ltd_end > 0)){
-          product_recommend.pay_product_sign('ltd',45,'ltd')
-          layer.msg('在线客服仅支持企业版用户使用', {icon: 5});
-          return false;
-        }
-        if(customer.hasClass('hide')){
-          customer.removeClass('hide');
+          if(!$('#pay_product_view').length > 0){
+            product_recommend.pay_product_sign('ltd',45,'ltd')
+            layer.msg('在线客服仅支持企业版用户使用', {icon: 5});
+            return false;
+          }
         }else{
-          customer.addClass('hide');
+          if(customer.hasClass('hide')){
+            customer.removeClass('hide');
+          }else{
+            customer.addClass('hide');
+          }
         }
       })
 

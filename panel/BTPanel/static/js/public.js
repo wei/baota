@@ -599,11 +599,11 @@ var aceEditor = {
       if ($(this).hasClass('edit_file_group')) return false;
       $('.ace_catalogue_list .has-children .file_fold').removeClass('bg');
       $(this).addClass('bg');
-      if ($(this).attr('data-file') == 'Dir') {
+      if ($(this).data('file') === 'Dir') {
         if (_menu.hasClass('glyphicon-menu-right')) {
           _menu.removeClass('glyphicon-menu-right').addClass('glyphicon-menu-down');
           $(this).next().show();
-          if ($(this).next().find('li').length == 0) _this.reader_file_dir_menu({ el: $(this).next(), path: _path, group: _group + 1 });
+          if ($(this).next().find('li').length === 0) _this.reader_file_dir_menu({ el: $(this).next(), path: _path, group: _group + 1 });
         } else {
           _menu.removeClass('glyphicon-menu-down').addClass('glyphicon-menu-right');
           $(this).next().hide();
@@ -856,7 +856,7 @@ var aceEditor = {
     $('.ace_catalogue_list').on('keyup', '.has-children .edit_file_group input', function (e) {
       var _type = $(this).parent().parent().attr('data-edit'),
         _arry = $('.has-children .file_fold.bg+ul>li');
-      if (_arry.length == 0 && $(this).parent().parent().attr('data-group') == 1) _arry = $('.cd-accordion-menu>li')
+      if (_arry.length == 0 && $(this).parent().parent().attr('data-group') === 1) _arry = $('.cd-accordion-menu>li')
       if (_type != 2) {
         for (var i = 0; i < _arry.length; i++) {
           if ($(_arry[i]).find('.file_title span').html() === $(this).val()) {
@@ -927,7 +927,6 @@ var aceEditor = {
       _group = parseInt(_active.attr('data-group')),
       _path = _active.parent().attr('data-menu-path'), //当前文件夹新建
       _this = this;
-    // console.log(_type);
     switch (_type) {
       case 0: //刷新目录
         _active.next().empty();
@@ -1384,7 +1383,6 @@ var aceEditor = {
     }else{
       readOnly.hide()
     }
-    console.log(_item.readOnly)
     $('.ace_conter_toolbar [data-type="lang"]').html('语言：<i>' + _item.type + '</i>');
     $('.ace_conter_toolbar span').attr('data-id', id);
     $('.file_fold').removeClass('bg');
@@ -1437,7 +1435,7 @@ var aceEditor = {
       encoding: (obj.encoding != undefined ? obj.encoding : 'utf-8'), //编码类型
       mode: (obj.fileName != undefined ? obj.mode : 'text'), //语言类型
       type: obj.type,
-      fileType: 0, //文件状态 
+      fileType: 0, //文件状态
       historys: obj.historys,
       historys_file: obj.historys_file === undefined ? false : obj.historys_file,
       historys_active: obj.historys_active === '' ? false : obj.historys_active,
@@ -1601,7 +1599,9 @@ var aceEditor = {
   },
   // 打开编辑器文件-方法
   openEditorView: function (path, callback) {
-    if (path == undefined) return false;
+    //最小化后，再点文件编辑，还原编辑器窗口
+    if($('.aceEditors .layui-layer-maxmin').length) $('.layui-layer-maxmin').click()
+    if (path === undefined) return false;
     // 文件类型（type，列如：JavaScript） 、文件模型（mode，列如：text）、文件标识（id,列如：x8AmsnYn）、文件编号（index,列如：0）、文件路径 (path，列如：/www/root/)
     var _this = this, paths = path.split('/'), _fileName = paths[paths.length - 1], _fileType = this.getFileType(_fileName), _type = _fileType.name, _mode = _fileType.mode, _id = bt.get_random(8), _index = this.editorLength;
     _this.is_file_open(path, function (is_state) {
@@ -1850,7 +1850,7 @@ function openEditorView (type, path, callback) {
  * @param {string} s_text 等待加密的字符串
  * @param {string} s_key 16位密钥
  * @param {array} ctx 可选，默认为 { mode: CryptoJS.mode.ECB,padding: CryptoJS.pad.ZeroPadding }
- * @return {string} 
+ * @return {string}
  */
 function aes_encrypt (s_text, s_key, ctx) {
   if (ctx == undefined) ctx = { mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.ZeroPadding }
@@ -1938,7 +1938,8 @@ function ajaxSetup () {
       my_headers['x-http-token'] = request_token
     }
   }
-  request_token_cookie = getCookie('request_token');
+  var request_token_key = window.location.protocol.indexOf("https:") == 0 ? "https_request_token" : "request_token";
+  request_token_cookie = getCookie(request_token_key);
   if (request_token_cookie) {
     my_headers['x-cookie-token'] = request_token_cookie
   }
@@ -1983,7 +1984,7 @@ function ajaxSetup () {
             error_msg = '<h3>' + jqXHR.responseText.split('<h3>')[1].split('</h3>')[0] + '</h3>'
             error_msg += '<a style="color:dimgrey;font-size:none">' + jqXHR.responseText.split('<h4 style="font-size: none;">')[1].split("</h4>")[0].replace("面板运行时发生错误:",'').replace("public.PanelError:",'').trim() + '</a>';
           }
-          
+
           error_msg += "<br><a class='btlink' onclick='show_error_message()'> >>点击查看详情</a>"+(isBuy?"<span class='ml33'><span class='wechatEnterpriseService' style='vertical-align: middle;'></span><span class='btlink error_kefu_consult'>微信客服</span>":'')+"</span>";
         }else if(jqXHR.responseText != 'Internal Server Error'){
           show_error_message()
@@ -2260,14 +2261,14 @@ function ChangePath (d) {
   setCookie("ChangePath", c);
   var b = $("#" + d).val();
   tmp = b.split(".");
-  if (tmp[tmp.length - 1] == "gz") {
+  // if (tmp[tmp.length - 1] == "gz") {
     tmp = b.split("/");
     b = "";
     for (var a = 0; a < tmp.length - 1; a++) {
       b += "/" + tmp[a]
     }
     setCookie("SetName", tmp[tmp.length - 1])
-  }
+  // }
   b = b.replace(/\/\//g, "/");
   GetDiskList(b);
   ActiveDisk()
@@ -3504,7 +3505,7 @@ function messagebox () {
       '<p>执行日志</p>' +
       '</div>' +
       '<div class="bt-w-con pd15">' +
-      '<div class="bt-w-item active" id="command_install_list"><ul class="cmdlist"></ul><div style="position: fixed;bottom: 15px;">若任务长时间未执行，请尝试在首页点【重启面板】来重置任务队列</div></div>' +
+      '<div class="bt-w-item active" id="command_install_list"><ul class="cmdlist"></ul><div style="padding-left: 5px;">若任务长时间未执行，请尝试在首页点【重启面板】来重置任务队列</div></div>' +
       '<div class="bt-w-item" id="messageContent"></div>' +
       '<div class="bt-w-item"><pre id="execLog" class="command_output_pre" style="height: 530px;"></pre></div>' +
       '</div>' +
@@ -3517,7 +3518,7 @@ function messagebox () {
         $(layers).find('.bt-w-con .bt-w-item:eq(' + index + ')').addClass('active').siblings().removeClass('active');
         switch (index) {
           case 0:
-            reader_realtime_tasks()
+            reader_realtime_tasks(true)
             break;
           case 1:
             reader_message_list()
@@ -3533,17 +3534,11 @@ function messagebox () {
             break;
         }
       })
-      reader_realtime_tasks()
-      setTimeout(function () {
-        reader_realtime_tasks()
-      }, 1000)
+      $(layers).find('.bt-w-menu p:eq(0)').trigger('click')
       reader_message_list()
     }
   })
 }
-
-
-
 
 
 //消息盒子
@@ -3572,7 +3567,6 @@ function message_box () {
   });
   tasklist();
 }
-
 
 
 function get_message_data (page, callback) {
@@ -3626,6 +3620,7 @@ function get_realtime_tasks (callback) {
   })
 }
 
+
 var initTime = null, messageBoxWssock = null;
 
 function reader_realtime_tasks (refresh) {
@@ -3637,24 +3632,13 @@ function reader_realtime_tasks (refresh) {
       task = res.task;
     $('#taskNum').html(typeof res.task === "undefined" ? 0 : res.task.length);
     if (typeof res.task === "undefined") {
-      html = '<div style="padding:5px;">当前没有任务！</div><div style="position: fixed;bottom: 15px;">若任务长时间未执行，请尝试在首页点【重启面板】来重置任务队列</div>'
+      html = '<div style="padding:5px;height: 510px;">当前没有任务！</div><div style="padding-left: 5px;">若任务长时间未执行，请尝试在首页点【重启面板】来重置任务队列</div>'
       command_install_list.html(html)
     } else {
-      var shell = '', message_split = message.split("\n"), del_task = '<a style="color:green" onclick="RemoveTask($id)" href="javascript:;">' + lan.public.del + '</a>', loading_img = "<img src='" + loading + "'/>";
+      var shell = '', message_split = message.split("\n"), del_task = '<a style="color:green" onclick="RemoveTask($id)" href="javascript:;">' + lan.public.del + '</a>', loading_img = "<img src='" + loading + "' />";
       for (var j = 0; j < message_split.length; j++) {
         shell += message_split[j] + "</br>";
       }
-      // if (command_install_list.find('li').length) {
-      //   if (command_install_list.find('li').length > res.task.length) command_install_list.find('li:eq(0)').remove();
-      //   if(task[0].status === '-1'){
-      //     var is_scan = task[0].name.indexOf("扫描") !== -1;
-      //     command_install_list.find('li:eq(0) .state').html((is_scan ? lan.bt.task_scan : lan.bt.task_install) + ' ' + loading_img + ' | ' + del_task.replace('$id', task[0].id));
-      //   }
-      //   if (task[0].status !== '0' && !command_install_list.find('pre').length){
-      //     command_install_list.find('li:eq(0)').append('<pre class=\'cmd command_output_pre\'>' + shell + '</pre>')
-      //     messageBoxWssock.el = command_install_list.find('pre');
-      //   }
-      // } else {
       for (var i = 0; i < task.length; i++) {
         var item = task[i], task_html = '';
         if (item.status === '-1' && item.type === 'download') {
@@ -3679,30 +3663,32 @@ function reader_realtime_tasks (refresh) {
         html += "<li>" + task_html + "</li>";
       }
       command_install_list.find('ul').html(html);
-      // }
+
       if (task.length > 0 && task[0].status === '0') {
         setTimeout(function () {
-          reader_realtime_tasks(true)
-        }, 100)
+          reader_realtime_tasks(refresh)
+        }, 200)
       }
       if (command_install_list.find('pre').length) {
         var pre = command_install_list.find('pre')
         pre.scrollTop(pre[0].scrollHeight)
       }
-      if (!refresh) {
+      if (task[0].status === '-1' && refresh) {
         messageBoxWssock = bt_tools.command_line_output({
           el: '#command_install_list .command_output_pre',
           area: ['100%', '200px'],
           shell: 'tail -n 100 -f /tmp/panelExec.log',
           message: function (res) {
+            clearTimeout(initTime)
             if (res.indexOf('|-Successify --- 命令已执行! ---') > -1) {
-              setTimeout(function () {
-                reader_realtime_tasks(true)
-                reader_message_list()
-              }, 100)
+              reader_realtime_tasks(true)
+              reader_message_list()
+              initTime = setTimeout(function () {
+                messageBoxWssock.close_connect()
+              },1000 * 30)
             }
           }
-        });
+        })
       }
     }
   })
@@ -4360,7 +4346,7 @@ function BindAccount (config) {
 BindAccount.prototype = {
   /**
    * @description 初始化
-   * 
+   *
    */
   init: function () {
     var _this = this;
@@ -4411,7 +4397,7 @@ BindAccount.prototype = {
 
   /**
    * @description 安装绑定账号
-   * @param {boolean} type  
+   * @param {boolean} type
    */
   bindUserView: function (type) {
     var _this = this;
@@ -4493,7 +4479,7 @@ BindAccount.prototype = {
 
   /**
    * @description 倒计时
-   * @param {object} param 
+   * @param {object} param
   */
   countDown: function (time, callback) {
     var _this = this;
@@ -4568,22 +4554,22 @@ var product_recommend = {
 
   /**
    * @description 或指定版本事件
-   * @param {} name 
+   * @param {} name
    */
-  get_version_event:function (item,param) {
+  get_version_event:function (item,param,config) {
     bt.soft.get_soft_find(item.name,function(res){
       if(!item.isBuy){
-        product_recommend.recommend_product_view(item)
+        product_recommend.recommend_product_view(item, config)
       }else if(!res.setup){
         bt.soft.install(item.name)
       }else{
         bt.plugin.get_plugin_byhtml(item.name,function(html){
           if(typeof html === "string"){
-            layer.open({ 
+            layer.open({
               type:1,
               shade:0,
               skin:'hide',
-              content:html, 
+              content:html,
               success:function(){
                 var is_event = false;
                 for (var i = 0; i < item.eventList.length; i++) {
@@ -4591,13 +4577,13 @@ var product_recommend = {
                   var oldVersion = data.version.replace('.',''),newVersion = res.version.replace('.','');
                   if(newVersion <= oldVersion){
                     is_event = true
-                    setTimeout(function () {                                                                                                                                                                                                                                                                                                                                                                                     
-                      new Function(data.event.replace('$siteName',param))() 
+                    setTimeout(function () {
+                      new Function(data.event.replace('$siteName',param))()
                     },100)
-                    break; 
+                    break;
                   }
                 }
-                if(!is_event) new Function(item.eventList[item.eventList.length - 1].event.replace('$siteName',param))() 
+                if(!is_event) new Function(item.eventList[item.eventList.length - 1].event.replace('$siteName',param))()
               }
             })
           }
@@ -4651,30 +4637,31 @@ var product_recommend = {
    * @description 推荐购买产品
    * @param {Object} pay_id 购买的入口id
   */
-  recommend_product_view: function (config) {
-    var name = config.name.split('_')[0];
-    var status = this.get_pay_status(config);
+  recommend_product_view: function (data, config) {
+    var name = data.name.split('_')[0];
+    var status = this.get_pay_status(data);
     bt.open({
       title:false,
-      area:'650px',
+      area: '650px',
       btn:false,
       content:'<div class="ptb15" style="display: flex;">\
         <div class="product_view"><img src="/static/images/recommend/'+ name +'.png"/></div>\
         <div class="product_describe ml10">\
-          <div class="describe_title">'+ config.pluginName +'</div>\
-          <div class="describe_ps">'+ config.ps +'</div>\
+          <div class="describe_title">'+ data.pluginName +'</div>\
+          <div class="describe_ps">'+ data.ps +'</div>\
           <div class="product_describe_btn">\
-            <a class="btn btn-default mr10 btn-sm productPreview '+ (!config.preview?'hide':'') +'" href="'+ config.preview +'" target="_blank">产品预览</a><button class="btn btn-success btn-sm buyNow">立即购买</button>\
+            <a class="btn btn-default mr10 btn-sm productPreview '+ (!data.preview?'hide':'') +'" href="'+ data.preview +'" target="_blank">产品预览</a><button class="btn btn-success btn-sm buyNow">立即购买</button>\
           </div>\
         </div>\
       </div>',
       success:function () {
+				var area = config && config.imgArea ? config.imgArea : ['650px','450px']
         // 产品预览
         $('.product_view img').click(function () {
           layer.open({
             type:1,
             title:'查看图片',
-            area:['650px','450px'],
+            area: area,
             closeBtn:2,
             btn:false,
             content:'<img src="/static/images/recommend/'+ name +'.png" style="width:100%" />'
@@ -4684,10 +4671,10 @@ var product_recommend = {
         $('.buyNow').click(function(){
           switch (status.advanced) {
             case 'pro':
-              bt.soft['updata_' + status.advanced](config.pay);
+              bt.soft['updata_' + status.advanced](data.pay);
               break;
             case 'ltd':
-              bt.soft['updata_' + status.advanced](false, config.pay);
+              bt.soft['updata_' + status.advanced](false, data.pay);
               break;
           }
         })
@@ -4696,87 +4683,124 @@ var product_recommend = {
   }
 }
 
-// 消息通道/消息推送
+// true: 消息推送 false: 消息通道
 var ConfigIsPush = false;
+// 消息推送弹框
+var ConfigIndex = -1;
 
-function open_three_channel_auth(stype){
-  var _title = '设置消息通道',
-      _area = '600px',
-      isPush = false,
-      assign = ''
-  if(stype == 'MsgPush'){  //消息推送
+// 打开消息通道/消息推送
+function open_three_channel_auth (stype) {
+  var _title = '设置消息通道';
+  var _area = '650px';
+  var isPush = false;
+  var assign = '';
+
+  if (stype === 'MsgPush') { // 类型为消息推送
     _title = '设置消息推送'
     _area = ['900px', '603px']
     isPush = true
-  }else if(typeof stype != 'undefined' && stype){   //指定选择消息通道的某个磨口哎
+  } else if (typeof stype != 'undefined' && stype) { // 指定选择消息通道的某个菜单
     assign = stype
   }
+
   ConfigIsPush = isPush
-  layer.open({
+
+  ConfigIndex = layer.open({
     type: 1,
     area: _area,
     title: _title,
     closeBtn: 2,
     shift: 5,
     shadeClose: false,
-    content: '<div class="bt-form alarm-view">\
-                      <div class="bt-w-main" >\
-                          <div class="bt-w-menu" '+(isPush?'style="width:160px"':'')+'></div>\
-                          <div class="bt-w-con pd15" '+(isPush?'style="margin-left:160px"':'')+'>\
-                              <div class="plugin_body">\
-                              </div>\
-                          </div>\
-                    </div>\
-              </div >',
-    success: function() {
-      getMsgConfig(assign?assign:'');
+    content: '\
+		<div class="bt-form alarm-view">\
+			<div class="bt-w-main" style="height: 560px;">\
+				<div class="bt-w-menu" ' + (isPush ? 'style="width: 160px;"' : '') + '></div>\
+				<div class="bt-w-con pd15" ' + (isPush ? 'style="margin-left: 160px;"' : '') + '>\
+					<div class="plugin_body"></div>\
+					<div class="plugin_update"></div>\
+				</div>\
+			</div>\
+		</div>',
+    success: function () {
+      // 获取菜单配置
+      getMsgConfig(assign ? assign : '');
+
+      // 卸载/禁用模块
+      $('.alarm-view').on('click', '.btn-uninstall', function () {
+        uninstallMsgModuleConfig();
+      });
+
+      // 立即更新
+      $('.alarm-view').on('click', '.btn-update', function () {
+        installMsgModuleConfig();
+      });
     }
   })
 }
 
-function getMsgConfig(openType){
+// 获取模板配置
+function getTemplateMsgConfig (item, shtml) {
+  $.post('/'+(ConfigIsPush?'push':'config') + '?action=get_module_template', {
+    module_name: item.name
+  }, function (res) {
+    if (res.status) {
+      // 添加菜单内容
+      $(".bt-w-main .plugin_body").html(res.msg.trim());
+      // 添加底部内容
+      var updateInfo = '';
+      // 是否更新
+      if (item.version !== item.info.version) {
+        updateInfo = '【' + item['title'] + '】模块存在新的版本，为了不影响使用，请更新。<button class="btn btn-success btn-sm btn-update">立即更新</button>';
+      }
+      $(".bt-w-main .plugin_update").html('\
+      <div class="box">\
+        <div class="info">' + updateInfo + '</div>\
+        <div><button class="btn btn-danger btn-sm btn-uninstall">卸载/禁用模块</button></div>\
+      </div>');
+    } else {
+      $(".bt-w-main .plugin_body").html(shtml);
+    }
+    new Function(item.name + '.init()')()
+  })
+}
+
+// 获取消息配置
+function getMsgConfig (openType) {
   var _api = '/config?action=get_msg_configs'
   if(ConfigIsPush) _api = '/push?action=get_modules_list'
 
   $.post(_api, function(rdata) {
-    var menu_data = $(".alarm-view .bt-w-menu p.bgw").data('data'),
-        _menu = ''
+    var _menu = '';
+    var menu_data = $(".alarm-view .bt-w-menu p.bgw").data('data');
     $('.alarm-view .bt-w-menu').html('');
     $.each(rdata, function(index, item) {
-      _menu = $('<p class=\'men_' + item['name'] + '\'>' + item['title'] + '</p>').data('data', item)
+			var _default = item.data && item.data.default;
+			var _flag = '';
+			if (_default) {
+				_flag = '<span class="show-default"></span>'
+			}
+      _menu = $('<p class=\'men_' + item['name'] + '\'>' + item['title'] + _flag + '</p>').data('data', item)
       $('.alarm-view .bt-w-menu').append(_menu)
     });
-    $('.alarm-view .bt-w-menu').append('<a style="position:absolute;bottom: 0;line-height: 40px;width:108px;text-align: center;" class="btlink" onclick="refreshThreeChannelAuth()">更新列表</a>')
+    $('.alarm-view .bt-w-menu').append('<a class="btlink update_list" onclick="refreshThreeChannelAuth()">更新列表</a>');
     $(".alarm-view .bt-w-menu p").click( function() {
       $(this).addClass('bgw').siblings().removeClass('bgw')
       var _item = $(this).data('data');
 
       var shtml = '<div class="plugin_user_info c7">\
-                            <p><b>名称：</b>' + _item.title + '</p>\
-                            <p><b>版本：</b>' + _item.version + '</p>\
-                            <p><b>时间：</b>' + _item.date + '</p>\
-                            <p><b>描述：</b>' + _item.ps + '</p>\
-                            <p><b>说明：</b><a class="btlink" href="' + _item.help + '" target=" _blank">' + _item.help + '</a></p>\
-                            <p><button class="btn btn-success btn-sm mt1" onclick="installMsgModuleConfig(\''+ _item.name +'\')">安装模块</button></p>\
-                     </div>'
+        <p><b>名称：</b>' + _item.title + '</p>\
+        <p><b>版本：</b>' + _item.version + '</p>\
+        <p><b>时间：</b>' + _item.date + '</p>\
+        <p><b>描述：</b>' + _item.ps + '</p>\
+        <p><b>说明：</b><a class="btlink" href="' + _item.help + '" target=" _blank">' + _item.help + '</a></p>\
+        <p><button class="btn btn-success btn-sm mt1" onclick="installMsgModuleConfig(\''+ _item.name +'\')">安装模块</button></p>\
+      </div>';
       if (_item['setup']) {
-        $.post('/'+(ConfigIsPush?'push':'config')+'?action=get_module_template', {
-          module_name: _item['name']
-        }, function(res) {
-          if (res.status) {
-            $(".bt-w-main .plugin_body").html(res.msg)
-
-            $(".bt-w-main .plugin_body").append('<div class="plugin_update" '+(ConfigIsPush?'style="width:738px"':'')+'><button class="btn btn-danger btn-sm" onclick="uninstallMsgModuleConfig()">卸载模块</button></div>')
-            if (_item['version'] != _item['info']['version']) {
-              $(".bt-w-main .plugin_body").append('<div class="plugin_update" style="width:408px" >【' + _item['title'] + '】模块存在新的版本,为了不影响使用,请更新.<button class="btn btn-success btn-sm" onclick="installMsgModuleConfig()" >立即更新</button></div>')
-            }
-          } else {
-            $(".bt-w-main .plugin_body").html(shtml);
-          }
-          new Function(_item['name'] + '.init()')()
-        })
+        getTemplateMsgConfig(_item, shtml)
       } else {
         $(".bt-w-main .plugin_body").html(shtml);
+        $(".bt-w-main .plugin_update").html('');
       }
     });
     if (menu_data) {
@@ -4789,14 +4813,13 @@ function getMsgConfig(openType){
       }
     }
   })
-
 }
 
 function installMsgModuleConfig (name) {
   var _api = '/config?action=install_msg_module'
   if(ConfigIsPush) _api = '/push?action=install_module'
-  console.log(this)
-  var _item = $(".bt-w-menu p.bgw.men_" +  name ).data('data');
+	name = name ? '.men_' + name : '';
+  var _item = $(".alarm-view .bt-w-menu p.bgw" +  name ).data('data');
   var spt = '安装'
   if (_item.setup) spt = '更新'
 
@@ -4811,8 +4834,8 @@ function installMsgModuleConfig (name) {
       shade: [0.3, '#000']
     });
     $.post(_api+'&name=' + _item.name + '', function(res) {
-      layer.close(loadT)
       getMsgConfig()
+      layer.close(loadT)
       layer.msg(res.msg, {
         icon: res.status ? 1 : 2
       })
@@ -4824,7 +4847,7 @@ function uninstallMsgModuleConfig () {
   var _api = '/config?action=uninstall_msg_module'
   if(ConfigIsPush) _api = '/push?action=uninstall_module'
 
-  var _item = $(".bt-w-menu p.bgw").data('data');
+  var _item = $(".alarm-view .bt-w-menu p.bgw").data('data');
 
   layer.confirm('是否确定要卸载【' + _item.title + '】模块', {
     title: '卸载模块',
@@ -4859,8 +4882,9 @@ function refreshThreeChannelAuth () {
     title: '刷新列表',
     closeBtn: 2,
     icon: 0
-  }, function() {
-    layer.closeAll()
+  }, function(index) {
+    layer.close(index);
+    layer.close(ConfigIndex);
     $.post(_api, {
       force: 1
     }, function(rdata) {
@@ -4870,3 +4894,371 @@ function refreshThreeChannelAuth () {
   })
 }
 
+// 文件管理
+var fileManage = {
+	/**
+   * @description 回收站视图
+   * @return void
+   */
+	recycle_bin_view: function () {
+    var that = this;
+    layer.open({
+      title: lan.files.recycle_bin_title,
+      type: 1,
+      skin: 'recycle_view',
+      area: ['1100px', '672px'],
+      closeBtn: 2,
+      content: '\
+			<div class="recycle_bin_view">\
+					<div class="re-head">\
+							<div style="margin-left: 3px;" class="ss-text">\
+									<em>' + lan.files.recycle_bin_on + '</em>\
+									<div class="ssh-item">\
+													<input class="btswitch btswitch-ios" id="Set_Recycle_bin" type="checkbox">\
+													<label class="btswitch-btn" for="Set_Recycle_bin"></label>\
+									</div>\
+									<em style="margin-left: 20px;">' + lan.files.recycle_bin_on_db + '</em>\
+									<div class="ssh-item">\
+													<input class="btswitch btswitch-ios" id="Set_Recycle_bin_db" type="checkbox">\
+													<label class="btswitch-btn" for="Set_Recycle_bin_db"></label>\
+									</div>\
+							</div>\
+							<span style="line-height: 32px; margin-left: 30px;">' + lan.files.recycle_bin_ps + '</span>\
+							<button style="float: right" class="btn btn-default btn-sm btn-clear-database">' + lan.files.recycle_bin_close + '</button>\
+					</div>\
+					<div class="re-con">\
+							<div class="re-con-menu">\
+									<p class="on" data-type="1">' + lan.files.recycle_bin_type1 + '</p>\
+									<p data-type="2">' + lan.files.recycle_bin_type2 + '</p>\
+									<p data-type="3">' + lan.files.recycle_bin_type3 + '</p>\
+									<p data-type="4">' + lan.files.recycle_bin_type4 + '</p>\
+									<p data-type="5">' + lan.files.recycle_bin_type5 + '</p>\
+									<p data-type="6">' + lan.files.recycle_bin_type6 + '</p>\
+							</div>\
+							<div class="re-con-con pd15" id="recycle_table"></div>\
+					</div>\
+			</div>',
+      success: function () {
+        if (window.location.href.indexOf("database") != -1) {
+          $(".re-con-menu p:last-child").addClass("on").siblings().removeClass("on");
+          $(".re-con-menu p:eq(5)").click();
+        } else {
+          $(".re-con-menu p:eq(0)").click();
+        }
+        var render_config = that.render_recycle_list();
+        $(".re-con-menu").on('click', 'p', function () {
+          var _type = $(this).data('type');
+          $(this).addClass("on").siblings().removeClass("on");
+          render_config.$refresh_table_list(true);
+        });
+				// 文件回收站
+				$('#Set_Recycle_bin').change(function () {
+					that.set_Recycle_bin();
+				});
+				// 数据库回收站
+				$('#Set_Recycle_bin_db').change(function () {
+					that.set_Recycle_bin(1);
+				});
+				// 清空数据库
+				$('.btn-clear-database').click(function () {
+					that.closeRecycleBin();
+				})
+      }
+    })
+  },
+  // 回收站渲染列表
+  render_recycle_list: function () {
+    var that = this;
+    $('#recycle_table').empty()
+    var recycle_list = bt_tools.table({
+      el: '#recycle_table',
+      url: '/files?action=Get_Recycle_bin',
+      height: 480,
+      dataFilter: function (res) {
+        var files = [];
+        switch ($('.re-con-menu p.on').index()) {
+          case 0:
+            for (var i = 0; i < res.dirs.length; i++) {
+              var item = res.dirs[i];
+              files.push($.extend(item, { type: 'folder' }));
+            }
+            for (var j = 0; j < res.files.length; j++) {
+              var item = res.files[j], ext_list = item.dname.split('.'), ext = that.determine_file_type(ext_list[ext_list.length - 1]);
+              if (item.name.indexOf('BTDB_') > -1) {
+                item.dname = item.dname.replace('BTDB_', '');
+                item.name = item.name.replace('BTDB_', '');
+                files.push($.extend(item, { type: 'files' }));
+              } else if (ext == 'images') {
+                files.push($.extend(item, { type: ext }));
+              } else {
+                files.push($.extend(item, { type: 'files' }));
+              }
+            }
+            break;
+          case 1:
+            for (var i = 0; i < res.dirs.length; i++) {
+              var item = res.dirs[i];
+              files.push($.extend(item, { type: 'folder' }));
+            }
+
+            break;
+          case 2:
+            for (var j = 0; j < res.files.length; j++) {
+              var item = res.files[j], ext_list = item.dname.split('.'), ext = that.determine_file_type(ext_list[ext_list.length - 1]);
+              if (item.name.indexOf('BTDB') == -1) files.push($.extend(item, { type: ext }));
+            }
+            break;
+          case 3:
+            for (var j = 0; j < res.files.length; j++) {
+              var item = res.files[j], ext_list = item.dname.split('.'), ext = that.determine_file_type(ext_list[ext_list.length - 1]);
+              if (ext == 'images') files.push($.extend(item, { type: ext }));
+            }
+
+            break;
+          case 4:
+            for (var j = 0; j < res.files.length; j++) {
+              var item = res.files[j], ext_list = item.dname.split('.'), ext = that.determine_file_type(ext_list[ext_list.length - 1]);
+              if (ext != 'images' && ext != 'compress' && ext != 'video' && item.name.indexOf('BTDB') == -1) files.push($.extend(item, { type: ext }));
+            }
+            break;
+          case 5:
+            for (var j = 0; j < res.dirs.length; j++) {
+              var item = res.dirs[j];
+              if (item.name.indexOf('BTDB_') > -1) {
+                item.dname = item.dname.replace('BTDB_', '');
+                item.name = item.name.replace('BTDB_', '');
+                files.push($.extend(item, { type: 'files' }));
+              }
+            }
+            // for (var filesKey in files) {
+            //     if(files.hasOwnProperty(filesKey))
+            // }
+            break;
+        }
+        $('#Set_Recycle_bin').attr('checked', res.status);
+        $('#Set_Recycle_bin_db').attr('checked', res.status_db);
+        return { data: files }
+      },
+      column: [
+        { type: 'checkbox', 'class': '', width: 18 },
+        {
+          fid: 'name', title: lan.files.recycle_bin_th1, width: 155, template: function (row) {
+            return '<div class="text-overflow" title="' + row.name + '"><i class="file_icon file_' + row.type + '"></i><span style="width:100px">' + row.name + '</span></div>';
+          }
+        },
+        {
+          fid: 'dname', title: lan.files.recycle_bin_th2, width: 310, template: function (row) {
+            return '<span class="text-overflow" style="width:310px" title="' + row.dname + '">' + row.dname + '</span>';
+          }
+        },
+        {
+          fid: 'size', title: lan.files.recycle_bin_th3, width: 70, template: function (row) {
+            return '<span class="text-overflow" style="width:70px" title="' + row.size + '">' + bt.format_size(row.size) + '</span>';
+          }
+        },
+        {
+          fid: 'time', title: lan.files.recycle_bin_th4, width: 120, template: function (row, index) {
+            return '<span class="text-overflow" style="width:120px" title="' + row.time + '">' + bt.format_data(row.time) + '</span>'
+          }
+        },
+        {
+          type: 'group', align: 'right', width: 95, title: lan.files.recycle_bin_th5, group: [{
+            title: lan.files.recycle_bin_re,
+            event: function (row, index, ev, key, _that) {
+              that.ReRecycleBin(row.rname, function () {
+                _that.$delete_table_row(index);
+								that.refresh_page();
+							})
+            }
+          }, {
+            title: lan.files.recycle_bin_del,
+            event: function (row, index, ev, key, _that) {
+              that.DelRecycleBin(row, function () {
+                _that.$delete_table_row(index);
+              });
+            }
+          }]
+        }
+      ],
+      tootls: [{ // 批量操作
+        type: 'batch',//batch_btn
+        positon: ['left', 'bottom'],
+        placeholder: '请选择批量操作',
+        buttonValue: '批量操作',
+        disabledSelectValue: '请选择需要批量操作的端口!',
+        selectList: [{
+          title: "恢复",
+          url: '/files?action=Re_Recycle_bin',
+          load: true,
+          param: function (row) {
+            return { path: row.rname };
+          },
+          callback: function (_that) {
+            bt.confirm({ title: '批量恢复文件', msg: '是否批量恢复选中的文件，是否继续？', icon: 0 }, function (index) {
+              layer.close(index);
+              _that.start_batch({}, function (list) {
+                var html = '';
+                for (var i = 0; i < list.length; i++) {
+                  var item = list[i];
+                  html += '<tr><td>' + item.name + '</td><td><div style="float:right;"><span style="color:' + (item.request.status ? '#20a53a' : 'red') + '">' + (item.request.status ? '恢复成功' : '恢复失败') + '</span></div></td></tr>';
+                }
+                recycle_list.$batch_success_table({ title: '批量恢复文件', th: '文件名称', html: html });
+                recycle_list.$refresh_table_list(true);
+								that.refresh_page()
+              });
+            });
+          }
+        }, {
+          title: "永久删除文件",
+          url: '/files?action=Del_Recycle_bin',
+          load: true,
+          param: function (row) {
+            return { path: row.rname };
+          },
+          callback: function (that) {
+            bt.confirm({ title: '批量删除文件', msg: '是否批量删除选中的文件，文件将彻底删除，不可恢复，是否继续？', icon: 0 }, function (index) {
+              layer.close(index);
+              that.start_batch({}, function (list) {
+                var html = '';
+                for (var i = 0; i < list.length; i++) {
+                  var item = list[i];
+                  html += '<tr><td>' + item.name + '</td><td><div style="float:right;"><span style="color:' + (item.request.status ? '#20a53a' : 'red') + '">' + (item.request.status ? '删除成功' : '删除失败') + '</span></div></td></tr>';
+                }
+                recycle_list.$batch_success_table({ title: '批量删除文件', th: '文件名称', html: html });
+                recycle_list.$refresh_table_list(true);
+              });
+            });
+          }
+        }]
+      }]
+    });
+    bt_tools.$fixed_table_thead('#recycle_table .divtable');
+    return recycle_list
+  },
+	// 恢复文件后刷新当前页面表格数据
+	refresh_page: function () {
+		// 非数据库类型 && 文件路由
+		if (window.location.href.indexOf("files") != -1) {
+			try {
+				bt_file.reader_file_list({ path: bt_file.file_path });
+			} catch (err) {}
+		}
+		// 数据库类型 && 数据库路由
+		if (window.location.href.indexOf("database") != -1) {
+			try {
+				database_table.$refresh_table_list();
+			} catch(err) {}
+		}
+	},
+  // 回收站开关
+  set_Recycle_bin: function (db) {
+    var loadT = layer.msg(lan['public'].the, { icon: 16, time: 0, shade: [0.3, '#000'] });
+    var that = this,
+        data = {}
+    if (db == 1) {
+      data = { db: db };
+    }
+    $.post('/files?action=Recycle_bin', data, function (rdata) {
+      layer.close(loadT);
+      if (rdata.status) {
+        if (db == undefined) {
+          var _status = $('#Set_Recycle_bin').prop('checked')
+          bt.set_cookie('file_recycle_status', _status);
+					try {
+						bt_file.is_recycle = _status;
+					} catch (err) {}
+        } else {
+					try {
+						recycle_bin_db_open = !recycle_bin_db_open
+					} catch (err) {}
+				}
+      }
+      layer.msg(rdata.msg, { icon: rdata.status ? 1 : 5 });
+    });
+  },
+  // 回收站恢复
+  ReRecycleBin: function (path, callback) {
+    layer.confirm(lan.files.recycle_bin_re_msg, { title: lan.files.recycle_bin_re_title, closeBtn: 2, icon: 3 }, function () {
+      var loadT = layer.msg(lan.files.recycle_bin_re_the, { icon: 16, time: 0, shade: [0.3, '#000'] });
+      $.post('/files?action=Re_Recycle_bin', 'path=' + encodeURIComponent(path), function (rdata) {
+        layer.close(loadT);
+        layer.msg(rdata.msg, { icon: rdata.status ? 1 : 5 });
+        if (callback) callback(rdata)
+      });
+    });
+  },
+  //回收站删除
+  DelRecycleBin: function (row, callback) {
+    bt.prompt_confirm(lan.files.recycle_bin_del_title, '您确定要删除文件[' + row.name + ']吗，该操作将<span style="color:red;">永久删除该文件</span>，是否继续操作？', function () {
+      var loadT = layer.msg(lan.files.recycle_bin_del_the, { icon: 16, time: 0, shade: [0.3, '#000'] });
+      $.post('/files?action=Del_Recycle_bin', 'path=' + encodeURIComponent(row.rname), function (rdata) {
+        layer.close(loadT);
+        layer.msg(rdata.msg, { icon: rdata.status ? 1 : 5 });
+        if (callback) callback(rdata)
+      });
+    });
+  },
+  //清空回收站
+  closeRecycleBin: function () {
+    var _this = this;
+    bt.prompt_confirm(lan.files.recycle_bin_close, '您确定要清空回收站吗，该操作将<span style="color:red;">永久删除文件</span>，是否继续操作？', function () {
+      var loadT = layer.msg("<div class='myspeed'>" + lan.files.recycle_bin_close_the + "</div>", { icon: 16, time: 0, shade: [0.3, '#000'] });
+      setTimeout(function () {
+        getSpeed('.myspeed');
+      }, 1000);
+      $.post('/files?action=Close_Recycle_bin', '', function (rdata) {
+        layer.close(loadT);
+        layer.msg(rdata.msg, { icon: rdata.status ? 1 : 5 });
+        _this.render_recycle_list()
+        $("#RecycleBody").html('');
+      });
+    });
+  },
+	/**
+   * @description 文件类型判断，或返回格式类型(不传入type)
+   * @param {String} ext
+   * @param {String} type
+   * @return {Boolean|Object} 返回类型或类型是否支持
+   */
+	determine_file_type: function (ext, type) {
+    var config = {
+          images: ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'tiff', 'ico', 'JPG', 'webp'],
+          compress: ['zip', 'rar', 'gz', 'war', 'tgz','tar', '7z'],
+          video: ['mp4', 'mp3', 'mpeg', 'mpg', 'mov', 'avi', 'webm', 'mkv', 'mkv', 'mp3', 'rmvb', 'wma', 'wmv'],
+          ont_text: ['iso', 'xlsx', 'xls', 'doc', 'docx', 'tiff', 'exe', 'so', 'bz', 'dmg', 'apk', 'pptx', 'ppt', 'xlsb', 'pdf']
+        },
+        returnVal = false;
+    if (type != undefined) {
+      if (type == 'text') {
+        $.each(config, function (key, item) {
+          $.each(item, function (index, items) {
+            if (items == ext) {
+              returnVal = true;
+              return false;
+            }
+          })
+        });
+        returnVal = !returnVal
+      } else {
+        if (typeof config[type] == "undefined") return false;
+        $.each(config[type], function (key, item) {
+          if (item == ext) {
+            returnVal = true;
+            return false;
+          }
+        });
+      }
+    } else {
+      $.each(config, function (key, item) {
+        $.each(item, function (index, items) {
+          if (items == ext) {
+            returnVal = key;
+            return false;
+          }
+        })
+      });
+      if (typeof returnVal == "boolean") returnVal = 'text';
+    }
+    return returnVal;
+  },
+}

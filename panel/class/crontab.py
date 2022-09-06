@@ -288,7 +288,10 @@ class crontab:
     #取数据列表
     def GetDataList(self,get):
         data = {}
-        data['data'] = public.M(get['type']).field('name,ps').select()
+        if get['type'] == 'databases':
+            data['data'] = public.M(get['type']).where("type=?","MySQL").field('name,ps').select()
+        else:
+            data['data'] = public.M(get['type']).field('name,ps').select()
         data['orderOpt'] = []
         import json
         tmp = public.readFile('data/libList.conf')

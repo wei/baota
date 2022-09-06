@@ -902,8 +902,45 @@ class system:
         if get.type != 'test':
             public.WriteLog("TYPE_SOFT", 'SYS_EXEC_SUCCESS',(execStr,))
 
-        if len(result[1]) > 1 and get.name != 'pure-ftpd' and get.name != 'redis': return public.returnMsg(False, '<p>警告消息： <p>' + result[1].replace('\n','<br>'))
+
+        if get.type != 'stop':
+            if not self.check_service_status(get.name):
+                if len(result[1]) > 1 and get.name != 'pure-ftpd' and get.name != 'redis':
+                    return public.returnMsg(False, '<p>启动失败： <p>' + result[1].replace('\n','<br>'))
+                else:
+                    return public.returnMsg(False,'{}服务启动失败'.format(get.name))
+        else:
+            if self.check_service_status(get.name): return public.returnMsg(False, '服务停止失败!')
         return public.returnMsg(True,'SYS_EXEC_SUCCESS')
+
+    def check_service_status(self,name):
+        '''
+            @name 检查服务管理状态
+            @author hwliang
+            @param name<string> 服务名称
+            @return bool
+        '''
+        if name in ['mysqld','mariadbd']:
+            return public.is_mysql_process_exists()
+        elif name == 'redis':
+            return public.is_redis_process_exists()
+        elif name == 'pure-ftpd':
+            return public.is_pure_ftpd_process_exists()
+        elif name.find('php-fpm') != -1:
+            return public.is_php_fpm_process_exists(name)
+        elif name == 'nginx':
+            return public.is_nginx_process_exists()
+        elif name in ['httpd','apache']:
+            return public.is_httpd_process_exists()
+        elif name == 'memcached':
+            return public.is_memcached_process_exists()
+        elif name == 'mongodb':
+            return public.is_mongodb_process_exists()
+        else:
+            return True
+
+
+
 
     def RestartServer(self,get):
         if not public.IsRestart(): return public.returnMsg(False,'EXEC_ERR_TASK')

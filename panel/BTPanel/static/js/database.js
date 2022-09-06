@@ -1,59 +1,9 @@
 $('.database-pos .tabs-item').click(function () {
-  var type = $(this).data('type');
   var index = $(this).index();
-  bt.set_cookie('db_page_model', type);
-  bt.data.db_tab_name = type
   $(this).addClass('active').siblings().removeClass('active');
   $('.db_table_view .tab-con .tab-con-block').eq(index).removeClass('hide').siblings().addClass('hide');
-  if(type == 'redis'){
-    $('.info-title-tips').hide()
-  }else{
-    $('.info-title-tips').show()
-  }
-  var loadT = layer.msg('正在获取远程服务器列表,请稍候...', {
-    icon: 16,
-    time: 0,
-    shade: [0.3, '#000']
-  });
 
-  var requestParam = {url:'database/'+bt.data.db_tab_name+'/GetCloudServer',data:{data:JSON.stringify({type:bt.data.db_tab_name})}}
-  if(bt.data.db_tab_name == 'mysql') requestParam = {url:'database?action=GetCloudServer',data:{type:bt.data.db_tab_name}}
-  bt_tools.send(requestParam,function(cloudData){
-    layer.close(loadT);
-    cloudDatabaseList = cloudData
-    //是否安装本地或远程服务器
-    if(cloudData.length <= 0){
-      var tips = '当前未安装本地服务器/远程服务器,<a class="btlink install_server">点击安装</a> | <a class="btlink" onclick="db_public_fn.get_cloud_server_list()">添加远程服务器</a>'
-      if(bt.data.db_tab_name == 'sqlserver')tips = '当前未配置远程服务器,<a class="btlink" onclick="db_public_fn.get_cloud_server_list()">添加远程服务器</a>'
-      $('.mask_layer').removeAttr('style');
-      $('.prompt_description').html(tips)
-
-      //安装docker
-      $('.install_server').click(function(){
-        bt.soft.install(bt.data.db_tab_name)
-      })
-    }else{
-      $('.mask_layer').hide()
-    }
-    switch (type) {
-      case 'mysql':
-        database.database_table_view();
-        break;
-      case 'sqlserver':
-        sql_server.database_table_view();
-        break;
-      case 'mongodb':
-        bt_tools.send({url:'database/'+bt.data.db_tab_name+'/get_root_pwd'},function(_status){
-          mongoDBAccessStatus = _status.authorization == 'enabled'?true:false
-          mongodb.database_table_view();
-        },'获取访问状态')
-        break;
-      case 'redis':
-        redis.database_table_view();
-        break;
-    }
-
-  })
+  db_public_fn.showDatabase(true);
 });
 
 
@@ -63,7 +13,7 @@ var database_table = null,
     mongoDBAccessStatus = false;
 
 var database = {
-  backuptoList: [{ title: '本地服务器', value: 'localhost' },
+  backuptoList: [{ title: '服务器磁盘', value: 'localhost' },
   { title: '阿里云OSS', value: 'alioss' },
   { title: '腾讯云COS', value: 'txcos' },
   { title: '七牛云存储', value: 'qiniu' },
@@ -83,6 +33,7 @@ var database = {
       autoHeight: true,
       default: "数据库列表为空", // 数据为空时的默认提示
       pageName: 'database',
+      load:'获取数据库列表，可能需要较长时间，请耐心等待...',
       beforeRequest: function(){
         var db_type_val = $('.database_type_select_filter').val()
         switch(db_type_val){
@@ -277,7 +228,7 @@ var database = {
                     <a href="javascript:;"  style="font-size:13px;border-radius:2px;">通过公共访问</a>\
                   </div>\
                 </div>\
-                <ul class="help-info-text c7"><li>面板访问需要登录面板后，才能通过面板访问phpMyAdmin</li>'+ (isEnable?
+                <ul class="help-info-text c7"><li>面板访问需要登录面板后，才能通过面板访问phpMyAdmin</li><li>若通过面板为phpMyAdmin开启了密码访问，请使用【通过公共访问】</li>'+ (isEnable?
                       '<li class="color-red">关闭公共访问权限可提升安全性，可到软件商店-&gt;phpMyAdmin中关闭</li>':
                       '<li>未开启公共访问权限，可到软件商店-&gt;phpMyAdmin中开启</li><li class="color-red">注意：开启公共访问权限存在安全风险，建议非必要不启用</li>'
               ) + '</ul>\
@@ -287,7 +238,14 @@ var database = {
                   layer.close(indexs)
                 })
                 $('.panel_visit').click(function () {
-                  bt.database.open_phpmyadmin('', 'root', bt.config.mysql_root)
+
+                  bt.soft.get_soft_find('phpmyadmin',function(rdata){
+                    if(rdata.ext.auth){
+                        layer.msg('当前phpMyAdmin已开启密码访问，请使用【通过公共访问】');
+                        return;
+                    }
+                    bt.database.open_phpmyadmin('', 'root', bt.config.mysql_root)
+                  })
                 })
                 $('.public_visit').click(function () {
                   if(isEnable){
@@ -365,7 +323,8 @@ var database = {
             title: '回收站',
             icon: 'trash',
             event: function () {
-              bt.recycle_bin.open_recycle_bin(6)
+              // bt.recycle_bin.open_recycle_bin(6)
+              fileManage.recycle_bin_view()
             }
           }]
       }, {
@@ -865,9 +824,9 @@ var database = {
                       },
                       { fid: 'name', title: '名称', type: 'text' },
                       { fid: 'full_size', title: '备份大小', type: 'text',width: '120px' },
-                      { 
-                        title: '备份计划任务', 
-                        width: 100, 
+                      {
+                        title: '备份计划任务',
+                        width: 100,
                         type: 'text',
                         template: function (row){
                           return (row.cron_id == [] || row.cron_id.length == 0 ? '<span class="color-red cursor-pointer">丢失</span>' : '<span>正常</span>')
@@ -902,7 +861,7 @@ var database = {
                               },'恢复计划任务')
                             })
                           }
-                        } 
+                        }
                       },
                       {
                         title: '操作',
@@ -1278,7 +1237,7 @@ var database = {
                                       type: 'text',
                                       name: 'zip_password',
                                       width: '390px',
-                                      placeholder: '请输入压缩密码',
+                                      placeholder: '请输入压缩密码，可为空',
                                       unit: '<span class="glyphicon glyphicon-repeat cursor mr5"></span>'
                                     }
                                   },
@@ -1342,14 +1301,13 @@ var database = {
                               $('#addDbbackup .unit .glyphicon-repeat').click(function (){
                                 $('#addDbbackup input[name=zip_password]').val(bt.get_random(bt.get_random_num(6,10)))
                               })
-                              $('#addDbbackup .unit .glyphicon-repeat').click()
                             },
                             yes: function (indexs) {
                               var formData = addDBbackup.$get_form_value()
                               if(formData.backup_cycle == '') return layer.msg("备份周期不能为空！")
                               if(formData.backup_cycle < 0) return layer.msg("备份周期不能小于0！")
                               if(formData.backup_type == 'tables'){
-                                if(formData.table_name == '0') return layer.msg("当前数据库下没有表，不能添加")
+                                if(formData.table_name == '') return layer.msg("当前数据库下没有表，不能添加")
                               }else{
                                 delete formData['table_name']
                               }
@@ -1521,7 +1479,7 @@ var database = {
   },
   /**
  * @description 日志
- * @param {object} 
+ * @param {object}
  */
 backupLogs: function (row, index, ev, key, that) {
   var _that = this
@@ -1679,17 +1637,13 @@ backupLogs: function (row, index, ev, key, that) {
         }
       }
       table()
-      var selectDbList = []
-      for (var i = 0; i < database.databaseName.length; i++) {
-        selectDbList.push({title: database.databaseName[i].name+' '+ (database.databaseName[i].cron_id == null ? '[无备份任务]':''),value: database.databaseName[i].name})
-      }
       $('#dbbackup_list .tootls_group.tootls_top .pull-right').prepend('\
       <div class="selects_conter">\
         <span class="select_text">数据库</span>\
         <div class="select_conter">\
         <span style="display: none;" class="database_hide_value"></span>\
         <input type="text" placeholder="请选择" autocomplete="off" class="inbox_input database_input"\
-            name="inbox_input" style="border: none;" value="'+ res +'">\
+            name="inbox_input" style="border: none;" value="'+ (res ? res : '') +'">\
         <ul class="database_list" id="database_select_list"></ul>\
         <span class="select_down"></span>\
       </div>\
@@ -1701,35 +1655,48 @@ backupLogs: function (row, index, ev, key, that) {
             database_default = $(this).prev(),
             html = '';
         _list.siblings().removeClass('active')
-        for (var i = 0; i < database.databaseName.length; i++) {
-          var item = database.databaseName[i]
-          html += '<li '+ (_that.val() == item.name ? 'class="active"': '') + '>'+ item.name + '</li>'
+        for (var i = 0; i < arry1.length; i++) {
+          var item = arry1[i]
+          html += '<li '+ (_that.val() == item.value ? 'class="active"': '') + '>'+ item.value + '</li>'
         }
         $('.database_list').html(html)
-        database_list.width($(this)[0].clientWidth).show();
+        database_list.width($(this)[0].clientWidth);
         $(document).unbind('click').on('click', function (ev) {
-          if (ev.target.className.indexOf('inbox_input') == -1) {
+          if (ev.target.className.indexOf('inbox_input') == -1 && ev.target.className.indexOf('select_down') == -1) {
             if (_that.val() == '' || _that.val() != database_default.text()) {
               _that.val(database_default.text())
             }
             database_list.hide();
+          }else{
+            if (ev.target.className == 'select_down') {
+							if (database_list.css('display') == 'block') {
+								database_list.hide()
+							}else{
+								database_list.show()
+							}
+						}else{
+							database_list.show()
+						}
           }
           ev.stopPropagation();
         });
         return false;
       })
+      $('.select_conter .select_down').on('click',function () {
+				$('.select_conter input').focus()
+			})
       $('.select_conter input').on('input', function (e) {
         var html = '',_that = $(this)
-        for (var i = 0; i < database.databaseName.length; i++) {
-          var item = database.databaseName[i]
+        for (var i = 0; i < arry1.length; i++) {
+          var item = arry1[i]
           if (_that.val() != '') {
-            if (item.name.indexOf(_that.val()) > -1) {
-              html += '<li '+ (_that.val() == item.name ? 'class="active"': '') + '>'+ item.name + '</li>'
+            if (item.value.indexOf(_that.val()) > -1) {
+              html += '<li '+ (_that.val() == item.value ? 'class="active"': '') + '>'+ item.value + '</li>'
             }else{
               html += ''
             }
           }else{
-            html += '<li>' + item.name + '</li>'
+            html += '<li>' + item.value + '</li>'
           }
           $('.database_list').html(html)
         }
@@ -1751,7 +1718,7 @@ backupLogs: function (row, index, ev, key, that) {
         input.val(item_val);
       })
     }
-    function getTables(res){
+    function getTables(res,callabck){
       alltablesname = [],arry = []
       //获取指定数据库表名
       bt_tools.send({url:'project/binlog/get_tables' , data: {db_name:res}}, function (res) {
@@ -1766,6 +1733,7 @@ backupLogs: function (row, index, ev, key, that) {
             arry.push({ title: item.name+(item.cron_id == null || item.cron_id.length == 0 ? ' [无备份任务]':''), value: item.name })
           })
         }
+        if(callabck) callabck(arry)
       })
     }
     function table() {
@@ -1780,9 +1748,9 @@ backupLogs: function (row, index, ev, key, that) {
           { fid: 'excute_time', title: '备份时间', width: 150, type: 'text' },
           { fid: 'name', title: type === 0 ? '数据库名' : '表名', type: 'text' },
           { fid: 'full_size', title: '备份大小', width: 80, type: 'text' },
-          { 
-            title: '备份计划任务', 
-            width: 100, 
+          {
+            title: '备份计划任务',
+            width: 100,
             type: 'text',
             template: function (row){
               return (row.cron_id == [] || row.cron_id.length == 0 ? '<span class="color-red cursor-pointer">丢失</span>' : '<span>正常</span>')
@@ -1817,7 +1785,7 @@ backupLogs: function (row, index, ev, key, that) {
                   },'恢复计划任务')
                 })
               }
-            } 
+            }
          },
           {
             title: '操作',
@@ -2147,11 +2115,10 @@ backupLogs: function (row, index, ev, key, that) {
                           list: arry1,
                           change: function (formData, element, that) {
                             if (type == 1) {
-                              getTables(formData.datab_name)
-                              setTimeout(function() {
-                                that.config.form[1].group.list = arry
+                              getTables(formData.datab_name,function (res) {
+                                that.config.form[1].group.list = res
                                 that.$replace_render_content(1)
-                              },200)
+                              })
                             }
                           }
                         }
@@ -2181,7 +2148,7 @@ backupLogs: function (row, index, ev, key, that) {
                           type: 'text',
                           name: 'zip_password',
                           width: '390px',
-                          placeholder: '请输入压缩密码',
+                          placeholder: '请输入压缩密码，可为空',
                           unit: '<span class="glyphicon glyphicon-repeat cursor mr5"></span>'
                         }
                       },
@@ -2245,7 +2212,6 @@ backupLogs: function (row, index, ev, key, that) {
                   $('#addDbbackup .unit .glyphicon-repeat').click(function (){
                     $('#addDbbackup input[name=zip_password]').val(bt.get_random(bt.get_random_num(6,10)))
                   })
-                  $('#addDbbackup .unit .glyphicon-repeat').click()
                 },
                 yes: function (indexs) {
                   var formData = addDBbackup.$get_form_value()
@@ -2254,7 +2220,7 @@ backupLogs: function (row, index, ev, key, that) {
                   formData['cron_type'] = 'hour-n'
                   formData['backup_type'] = type === 0 ? 'databases' : 'tables'
                   if(formData.backup_type == 'tables'){
-                    if(formData.table_name == '0') return layer.msg("当前数据库下没有表，不能添加")
+                    if(formData.table_name == '') return layer.msg("当前数据库下没有表，不能添加")
                   }else{
                     delete formData['table_name']
                   }
@@ -2636,11 +2602,12 @@ backupLogs: function (row, index, ev, key, that) {
   },
   // 删除
   del_database: function (wid, dbname,obj, callback) {
+    var type = $('.database-pos .tabs-item.active').data('type')
     var rendom = bt.get_random_code(),
         num1 = rendom['num1'],
         num2 = rendom['num2'],
         title = '',
-        tips = '是否确认【删除数据库】，删除后可能会影响业务使用！';
+        tips = '是否确认【删除数据库】，'+ (type !== 'mysql'?'当前数据库暂不支持数据库回收站，删除后将无法恢复，请谨慎操作':'，删除后可能会影响业务使用！');
     if(obj && obj.db_type > 0) tips = '远程数据库不支持数据库回收站，删除后将无法恢复，请谨慎操作';
     title = typeof dbname === "function" ? '批量删除数据库' : '删除数据库 [ ' + dbname + ' ]';
     layer.open({
@@ -3428,7 +3395,8 @@ var redis = {
   },  //当前远程信息
   database_table_view:function(){
     var that = this;
-    this.cloudInfo.sid = 0
+    this.cloudInfo.sid = cloudDatabaseList.length == 0 ? 0 : cloudDatabaseList[0].id
+    this.cloudInfo.title = cloudDatabaseList.length == 0 ? '本地数据库' : cloudDatabaseList[0].ps
     $('#bt_redis_view').empty()
 
     $('#bt_redis_view').html('<div class="pull-right redis_cloud_server"></div>')
@@ -3533,11 +3501,11 @@ var redis = {
         return {data:JSON.stringify($.extend(param,{db_idx:id,limit:beforeData.limit}))}
       },
       column:[
-        {type: 'checkbox',width: 20},
+        // {type: 'checkbox',width: 20},
         {fid: 'name',title: '键',type:'text'},
         {fid: 'val',title: '值',type:'text',template:function(row){
             var _val = $('<div></div>').text(row.val)
-            return '<div class="flex" style="width:350px" title="'+_val.html()+'"><span class="size_ellipsis">'+_val.html()+'</span><span class="ico-copy cursor btcopy ml5" title="复制密码"></span></div>'
+            return '<div class="flex" style="width:350px" title="'+_val.text().replace(/\"/g, '\&quot;')+'"><span class="size_ellipsis">'+_val.text()+'</span><span class="ico-copy cursor btcopy ml5" title="复制密码"></span></div>'
           },event:function(row,index,ev,key){
             if($(ev.target).hasClass('btcopy')){
               bt.pub.copy_pass(row.val);
@@ -3560,6 +3528,7 @@ var redis = {
               return (rows.type == 'string' || rows.type == 'int')?false:true
             },
             event: function (row) {
+							row.db_idx = id;
               that.set_redis_library(row)
             }
           },{
@@ -3572,6 +3541,7 @@ var redis = {
                 bt_tools.send({url:'database/redis/del_redis_val',data:{data:JSON.stringify({db_idx:id,key:row.name,sid:that.cloudInfo.sid})}},function(rdata){
                   if(rdata.status){
                     that.render_redis_table(id);
+										that.change_tabs_num();
                   }
                   bt_tools.msg(rdata)
                   layer.close(index)
@@ -3604,10 +3574,19 @@ var redis = {
           arry.push($('.size_ellipsis').eq(i).width())
         }
         maxWidth = Math.max.apply(null,arry)
-        $('.size_ellipsis').width(maxWidth)
+        $('.size_ellipsis').width(maxWidth+5)
       }
     });
   },
+	// 设置tabs的数量
+	change_tabs_num: function () {
+		var text = $('#redis_content_tab .tab-nav .on').text();
+		var num = text.match(/(?<=\()(.+?)(?=\))/g)[0];
+		if (!isNaN(num)) {
+			num--;
+			$('#redis_content_tab .tab-nav .on').text(text.replace(/\([0-9]\)/ig, '(' + num + ')'));
+		}
+	},
   // redis备份列表
   backup_redis_list:function(){
     var that = this,redisBackupTable = null;
@@ -3721,10 +3700,10 @@ var redis = {
     $.each(cloudDatabaseList,function(index,item){
       var _tips = item.ps != ''?(item.ps+' ('+item.db_host+')'):item.db_host
       cloudList.push({title:_tips,value:item.id})
-    })
+    });
     bt_tools.open({
       title:(row?('编辑['+row.name+']'):'添加')+'Key'+(!row?('至【'+this.cloudInfo.title+'】'):''),
-      area:'400px',
+      area: ['400px', '440px'],
       btn:[(row?'保存':'添加'),'取消'],
       content: '<div class="ptb20" id="redis_library_form"></div>',
       success: function (layers) {
@@ -3768,9 +3747,15 @@ var redis = {
           },{
             label:'值',
             group:{
-              type:'text',
+              type:'textarea',
               name:'val',
               width:'260px',
+              style: {
+                'min-height': '100px',
+                'line-height': '22px',
+                'padding-top': '5px',
+                'resize': 'both'
+              },
               placeholder:'请输入值',
             }
           },{
@@ -3951,7 +3936,313 @@ var redis = {
     return result;
   }
 }
+var pgsql ={
+  database_table_view :function(search){
+    var param = {
+      table: 'databases',
+      search: search || ''
+    }
+    $('#bt_pgsql_table').empty();
+    database_table = bt_tools.table({
+      el: '#bt_pgsql_table',
+      url: 'database/'+bt.data.db_tab_name+'/get_list',
+      param: param, //参数
+      minWidth: '1000px',
+      load: true,
+      autoHeight: true,
+      default: "数据库列表为空", // 数据为空时的默认提示
+      pageName: 'database',
+      beforeRequest:function(beforeData){
+        var db_type_val = $('.sqlserver_type_select_filter').val()
+        switch(db_type_val){
+          case 'all':
+            delete param['db_type']
+            delete param['sid']
+            break;
+          case 0:
+            param['db_type'] = 0;
+            break;
+          default:
+            delete param['db_type'];
+            param['sid'] = db_type_val
+        }
+        if (beforeData.hasOwnProperty('data') && typeof beforeData.data === 'string') {
+          delete beforeData['data']
+          return { data: JSON.stringify($.extend(param,beforeData)) }
+        }
+        return {data:JSON.stringify(param)}
+      },
+      column:[
+        {type: 'checkbox',width: 20},
+        {fid: 'name',title: '数据库名',type:'text'},
+        {fid: 'username',title: '用户名',type:'text',sort:true},
+        {fid:'password',title:'密码',type:'password',copy:true,eye_open:true},
+        {
+          fid:'backup',
+          title: '备份',
+          width: 130,
+          template: function (row) {
+            var backup = '点击备份',
+                _class = "bt_warning";
+            if (row.backup_count > 0) backup = lan.database.backup_ok, _class = "bt_success";
+            return '<span><a href="javascript:;" class="btlink ' + _class + '" onclick="database.database_detail('+row.id+',\''+row.name+'\')">' + backup + (row.backup_count > 0 ? ('(' + row.backup_count + ')') : '') + '</a> | ' +
+                '<a href="javascript:database.input_database(\''+row.name+'\')" class="btlink">'+lan.database.input+'</a></span>';
+          }
+        },
+        {
+          title:'数据库位置',
+          type: 'text',
+          width: 116,
+          template: function (row) {
+            var type_column = '-'
+            switch(row.db_type){
+              case 0:
+                type_column = '本地数据库'
+                break;
+              case 1:
+                type_column = ('远程库('+row.conn_config.db_host+':'+row.conn_config.db_port+')').toString()
+                break;
+              case 2:
+                $.each(cloudDatabaseList,function(index,item){
+                  if(row.sid == item.id){
+                    if(item.ps !== ''){ // 默认显示备注
+                      type_column = item.ps
+                    }else{
+                      type_column = ('远程服务器('+item.db_host+':'+item.db_port+')').toString()
+                    }
+                  }
+                })
+                break;
+            }
+            return '<span class="flex" style="width:100px" title="'+type_column+'"><span class="size_ellipsis" style="width: 0; flex: 1;">'+type_column+'</span></span>'
+          }
+        },
+        {
+          fid: 'ps',
+          title: '备注',
+          type: 'input',
+          blur: function (row, index, ev) {
+            bt.pub.set_data_ps({
+              id: row.id,
+              table: 'databases',
+              ps: ev.target.value
+            }, function (res) {
+              layer.msg(res.msg, (res.status ? {} : {
+                icon: 2
+              }));
+            });
+          },
+          keyup: function (row, index, ev) {
+            if (ev.keyCode === 13) {
+              $(this).blur();
+            }
+          }
+        },
+        {
+          type: 'group',
+          title: '操作',
+          width: 220,
+          align: 'right',
+          group: [{
+            title: '改密',
+            tips: '修改数据库密码',
+            hide:function(rows){return rows.db_type == 1},
+            event: function (row) {
+              database.set_data_pass(row.id, row.username, row.password);
+            }
+          }, {
+            title: '删除',
+            tips: '删除数据库',
+            event: function (row) {
+              database.del_database(row.id, row.name,row, function (res) {
+                if (res.status) database_table.$refresh_table_list(true);
+                layer.msg(res.msg, {
+                  icon: res.status ? 1 : 2
+                })
+              });
+            }
+          }]
+        }
+      ],
+      sortParam: function (data) {
+        return {
+          'order': data.name + ' ' + data.sort
+        };
+      },
+      tootls: [{ // 按钮组
+        type: 'group',
+        positon: ['left', 'top'],
+        list: [{
+          title: '添加数据库',
+          active: true,
+          event: function () {
+            if(cloudDatabaseList.length == 0) return layer.msg('至少添加一个远程服务器或安装本地数据库',{time:0,icon:2,closeBtn: 2, shade: .3})
+            var cloudList = []
+            $.each(cloudDatabaseList,function(index,item){
+              var _tips = item.ps != ''?(item.ps+' ('+item.db_host+')'):item.db_host
+              cloudList.push({title:_tips,value:item.id})
+            })
+            bt.database.add_database(cloudList,function (res) {
+              if (res.status) database_table.$refresh_table_list(true);
+            })
+          }
+        },{
+          title: '管理员密码',
+          event: function () {
+            bt.database.set_root('pgsql')
+          }
+        },{
+          title:'远程服务器',
+          event:function(){
+            db_public_fn.get_cloud_server_list();
+          }
+        },{
+          title: '同步所有',
+          style:{'margin-left':'30px'},
+          event: function () {
+            database.sync_to_database({type:0,data:[]},function(res){
+              if(res.status) database_table.$refresh_table_list(true);
+            })
+          }
+        },{
+          title: '从服务器获取',
+          event: function () {
+            if(cloudDatabaseList.length == 0) return layer.msg('至少添加一个远程服务器或安装本地数据库',{time:0,icon:2,closeBtn: 2, shade: .3})
+            var _list = [];
+            $.each(cloudDatabaseList,function (index,item){
+              var _tips = item.ps != ''?(item.ps+' (服务器地址:'+item.db_host+')'):item.db_host
+              _list.push({title:_tips,value:item.id})
+            })
+            bt_tools.open({
+              title:'选择数据库位置',
+              area:'450px',
+              btn: ['确认','取消'],
+              skin: 'databaseCloudServer',
+              content: {
+                'class':'pd20',
+                form:[{
+                  label:'数据库位置',
+                  group:{
+                    type:'select',
+                    name:'sid',
+                    width:'260px',
+                    list:_list
+                  }
+                }]
+              },
+              success:function(layers){
+                $(layers).find('.layui-layer-content').css('overflow','inherit')
+              },
+              yes:function (form,layers,index){
+                bt.database.sync_database(form.sid,function (rdata) {
+                  if (rdata.status){
+                    database_table.$refresh_table_list(true);
+                    layer.close(layers)
+                  }
+                })
+              }
+            })
+          }
+        }]
+      },{
+        type: 'batch', //batch_btn
+        positon: ['left', 'bottom'],
+        placeholder: '请选择批量操作',
+        buttonValue: '批量操作',
+        disabledSelectValue: '请选择需要批量操作的数据库!',
+        selectList: [{
+          title:'同步选中',
+          url:'/database/'+bt.data.db_tab_name+'/SyncToDatabases',
+          paramName: 'data', //列表参数名,可以为空
+          th:'数据库名称',
+          beforeRequest: function(list) {
+            var arry = [];
+            $.each(list, function (index, item) {
+              arry.push(item.id);
+            });
+            return JSON.stringify({ids:JSON.stringify(arry),type:1})
+          },
+          success: function (res, list, that) {
+            layer.closeAll();
+            var html = '';
+            $.each(list, function (index, item) {
+              html += '<tr><td>' + item.name + '</td><td><div style="float:right;"><span style="color:' + (res.status ? '#20a53a' : 'red') + '">' + res.msg + '</span></div></td></tr>';
+            });
+            that.$batch_success_table({
+              title: '批量同步选中',
+              th: '数据库名称',
+              html: html
+            });
+          }
+        },{
+          title: "删除数据库",
+          url: '/database/'+bt.data.db_tab_name+'/DeleteDatabase',
+          load: true,
+          param: function (row) {
+            return {data:JSON.stringify({
+                id: row.id,
+                name: row.name
+              })}
+          },
+          callback: function (that) { // 手动执行,data参数包含所有选中的站点
+            var ids = [];
+            for (var i = 0; i < that.check_list.length; i++) {
+              ids.push(that.check_list[i].id);
+            }
+            database.del_database(ids,function(param){
+              that.start_batch(param, function (list) {
+                layer.closeAll()
+                var html = '';
+                for (var i = 0; i < list.length; i++) {
+                  var item = list[i];
+                  html += '<tr><td>' + item.name + '</td><td><div style="float:right;"><span style="color:' + (item.request.status ? '#20a53a' : 'red') + '">' + item.request.msg + '</span></div></td></tr>';
+                }
+                database_table.$batch_success_table({
+                  title: '批量删除',
+                  th: '数据库名称',
+                  html: html
+                });
+                database_table.$refresh_table_list(true);
+              });
+            })
+          }
+        }]
+      }, {
+        type: 'search',
+        positon: ['right', 'top'],
+        placeholder: '请输入数据库名称/备注',
+        searchParam: 'search', //搜索请求字段，默认为 search
+        value: '',// 当前内容,默认为空
+      }, { //分页显示
+        type: 'page',
+        positon: ['right', 'bottom'], // 默认在右下角
+        pageParam: 'p', //分页请求字段,默认为 : p
+        page: 1, //当前分页 默认：1
+        numberParam: 'limit', //分页数量请求字段默认为 : limit
+        number: 20, //分页数量默认 : 20条
+        numberList: [10, 20, 50, 100, 200], // 分页显示数量列表
+        numberStatus: true, //　是否支持分页数量选择,默认禁用
+        jump: true, //是否支持跳转分页,默认禁用
+      }],
+      success:function(config){
+        //搜索前面新增数据库位置下拉
+        if($('.sqlserver_type_select_filter').length == 0){
+          var _option = '<option value="all">全部</option>'
+          $.each(cloudDatabaseList,function(index,item){
+            var _tips = item.ps != ''?item.ps:item.db_host
+            _option +='<option value="'+item.id+'">'+_tips+'</option>'
+          })
+          $('#bt_pgsql_table .bt_search').before('<select class="bt-input-text mr5 sqlserver_type_select_filter" style="width:110px" name="db_type_filter">'+_option+'</select>')
 
+          //事件
+          $('.sqlserver_type_select_filter').change(function(){
+            database_table.$refresh_table_list(true);
+          })
+        }
+      }
+    });
+  }
+}
 var db_public_fn = {
   // 远程服务器列表
   get_cloud_server_list:function(){
@@ -3961,8 +4252,8 @@ var db_public_fn = {
       area:'860px',
       btn: false,
       skin: 'databaseCloudServer',
-      content: '<div id="db_cloud_server_table" class="pd20" style="padding-bottom:40px;"></div>',
-      success:function(){
+      content: '<div id="db_cloud_server_table" class="pd20"></div>',
+      success:function($layer){
         var tdHTML = [{
           fid:'db_host',
           title:'服务器地址',
@@ -4020,8 +4311,14 @@ var db_public_fn = {
               active: true,
               event:function(){that.render_db_cloud_server_view()}
             }]
-          }]
-        })
+          }],
+					success: function () {
+						var height = $(window).height();
+						var layerHeight = $layer.height();
+						var top = (height - layerHeight) / 2;
+						$layer.css('top', top);
+					}
+        });
         that.render_cloud_server_table();
       }
     })
@@ -4043,17 +4340,31 @@ var db_public_fn = {
   },
   // 添加/编辑远程服务器视图
   render_db_cloud_server_view:function(config,is_edit){
-    var that = this;
-    if(!config) config = {db_host:'',db_port:'3306',db_user:'',db_password:'',db_user:'root',ps:''}
-    if(bt.data.db_tab_name == 'sqlserver'){
-      config['db_port'] = 1433
-      config['db_user'] = 'sa'
-    }else if(bt.data.db_tab_name == 'redis'){
-      config['db_port'] = 6379
-      config['db_user'] = ''
-    }else if(bt.data.db_tab_name == 'mongodb'){
-      config['db_port'] = 27017
+    var that = this,_type = bt.data.db_tab_name;
+    if(!config){
+      config = {db_host:'',db_port:'3306',db_user:'',db_password:'',db_user:'root',ps:''}
+      if(_type == 'sqlserver'){
+        config['db_port'] = 1433
+        config['db_user'] = 'sa'
+      }else if(_type == 'redis'){
+        config['db_port'] = 6379
+        config['db_user'] = ''
+      }else if(_type == 'mongodb'){
+        config['db_port'] = 27017
+      }else if(_type == 'pgsql'){
+        config['db_port'] = 5432
+        config['db_user'] = 'postgres'
+      }
     }
+		var tips = [
+			'支持MySQL5.5、MariaDB10.1及以上版本',
+			'支持阿里云、腾讯云等云厂商的云数据库',
+			'注意1：请确保本服务器有访问数据库的权限',
+			'注意2：请确保填写的管理员帐号具备足够的权限',
+		]
+		if (bt.data.db_tab_name === 'mysql') {
+			tips.push('注意3：通过宝塔安装的数据库root默认不支持远程权限');
+		}
     bt_tools.open({
       title: (is_edit?'编辑':'添加')+bt.data.db_tab_name+'远程服务器',
       area:'450px',
@@ -4070,8 +4381,19 @@ var db_public_fn = {
             value:config.db_host,
             placeholder:'请输入服务器地址',
             event:function(){
-              $('[name=db_host]').on('input',function(){
-                $('[name=db_ps]').val($(this).val())
+              $('[name=db_host]').on('input blur',function(e){
+                switch(e.type){
+                  case 'input':
+                    $('[name=db_ps]').val($(this).val())
+                    break;
+                  case 'blur':
+                    if($(this).val().indexOf(':') != -1){
+                      var reg = /:(\d+)/,_post = $(this).val().match(reg)
+                      $('[name=db_port]').val(_post[1])
+                      $(this).val($(this).val().replace(reg,''))
+                    }
+                    break;
+                }
               })
             }
           }
@@ -4116,12 +4438,7 @@ var db_public_fn = {
           group:{
             type:'help',
             style:{'margin-top':'0'},
-            list:[
-              '支持MySQL5.5、MariaDB10.1及以上版本',
-              '支持阿里云、腾讯云等云厂商的云数据库',
-              '注意1：请确保本服务器有访问数据库的权限',
-              '注意2：请确保填写的管理员帐号具备足够的权限'
-            ]
+            list: tips
           }
         }]
       },
@@ -4175,9 +4492,91 @@ var db_public_fn = {
   // 重新加载服务
   reset_server_config:function(){
     this.render_cloud_server_table(function(){
-      if(bt.data.db_tab_name == 'redis') redis.cloudInfo.sid = 0  //redis恢复默认是本地服务器
-      $('.database-pos .tabs-item[data-type="' + bt.data.db_tab_name + '"]').trigger('click');
+      if (bt.data.db_tab_name == 'redis') redis.cloudInfo.sid = 0  //redis恢复默认是本地服务器
+      db_public_fn.showDatabase();
     });
-  }
+  },
+	// 显示当前数据库
+	showDatabase: function (showTips) {
+		var type = $('.database-pos .tabs-item.active').data('type');
+		bt.set_cookie('db_page_model', type);
+		bt.data.db_tab_name = type;
+		if (type == 'redis') {
+			$('.info-title-tips').hide();
+		} else {
+			$('.info-title-tips').show()
+		}
+		var loadT = layer.msg('正在获取远程服务器列表,请稍候...', {
+			icon: 16,
+			time: 0,
+			shade: [0.3, '#000']
+		});
+
+		var requestParam = {url:'database/'+bt.data.db_tab_name+'/GetCloudServer',data:{data:JSON.stringify({type:bt.data.db_tab_name})}}
+		if (bt.data.db_tab_name == 'mysql') requestParam = {url:'database?action=GetCloudServer',data:{type:bt.data.db_tab_name}}
+		bt_tools.send(requestParam,function(cloudData){
+			layer.close(loadT);
+			cloudDatabaseList = cloudData
+			//是否安装本地或远程服务器
+			if(cloudData.length <= 0){
+				var tips = '当前未安装本地服务器/远程服务器,<a class="btlink install_server">点击安装</a> | <a class="btlink" onclick="db_public_fn.get_cloud_server_list()">添加远程服务器</a>'
+				if(bt.data.db_tab_name == 'sqlserver')tips = '当前未配置远程服务器,<a class="btlink" onclick="db_public_fn.get_cloud_server_list()">添加远程服务器</a>'
+				$('.mask_layer').removeAttr('style');
+				$('.prompt_description').html(tips)
+
+				// 安装pgsql
+				$('.install_server').click(function(){
+					var db_type = bt.data.db_tab_name
+					if(db_type == 'pgsql'){
+						bt.soft.get_soft_find('pgsql_manager',function(rdata){   //判断是否安装插件
+							for (var i = 0; i < rdata.versions.length; i++) {
+								if (rdata.versions[i].setup == true) {  //判断是否安装版本
+									bt.soft.set_lib_config('pgsql_manager','PostgreSQL管理器')
+									break;
+								}else{
+									bt.soft.install('pgsql_manager')
+									break;
+								}
+							}
+						})
+					}else{
+						bt.soft.install(db_type)
+					}
+				})
+			}else{
+				$('.mask_layer').hide()
+				if (showTips && type == 'mysql' && !isSetup) {
+					layer.msg('未安装本地数据库，已隐藏无法使用的功能!', { time: 2000 });
+				}
+			}
+			switch (type) {
+				case 'mysql':
+					database.database_table_view();
+					if (cloudData.length > 0 && !isSetup) {
+						$('#bt_database_table .tootls_group.tootls_top .pull-left button').eq(1).hide();
+						$('#bt_database_table .tootls_group.tootls_top .pull-left button').eq(2).hide();
+						$('#bt_database_table .tootls_group.tootls_top .pull-left button').eq(4).hide();
+						$('#bt_database_table .tootls_group.tootls_top .pull-left button').eq(7).hide();
+					}
+					break;
+				case 'sqlserver':
+					sql_server.database_table_view();
+					break;
+				case 'mongodb':
+					bt_tools.send({url:'database/'+bt.data.db_tab_name+'/get_root_pwd'},function(_status){
+						mongoDBAccessStatus = _status.authorization == 'enabled'?true:false
+						mongodb.database_table_view();
+					},'获取访问状态')
+					break;
+				case 'redis':
+					redis.database_table_view();
+					break;
+				case 'pgsql':
+					pgsql.database_table_view();
+					break;
+			}
+		})
+	}
 }
+
 $('.database-pos .tabs-item[data-type="' + (bt.get_cookie('db_page_model') || 'mysql') + '"]').trigger('click');

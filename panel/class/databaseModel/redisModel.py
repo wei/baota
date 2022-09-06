@@ -9,13 +9,14 @@
 
 # sqlite模型
 #------------------------------
-import os,sys,re,json,shutil,psutil,time
+import os,re,json,shutil,time
 from databaseModel.base import databaseBase
-import public,panelMssql,random
+import public
 try:
     import redis
 except:
     public.ExecShell("btpip install redis")
+    import redis
 try:
     from BTPanel import session
 except :pass
@@ -34,16 +35,16 @@ class panelRedisDB():
     def __init__(self):
         self.__config = self.get_options(None)
 
-    def redis_conn(self,db_idx = 0):        
+    def redis_conn(self,db_idx = 0):
 
-        if self.__DB_HOST in ['127.0.0.1','localhost']:            
+        if self.__DB_HOST in ['127.0.0.1','localhost']:
             if not os.path.exists('/www/server/redis'): return False
 
-        if not self.__DB_CLOUD:            
+        if not self.__DB_CLOUD:
             self.__DB_PASS = self.__config['requirepass']
             self.__DB_PORT = int(self.__config['port'])
-            
-        try:                                           
+
+        try:
             redis_pool = redis.ConnectionPool(host=self.__DB_HOST, port= self.__DB_PORT, password= self.__DB_PASS, db= db_idx)
             self.__DB_CONN = redis.Redis(connection_pool= redis_pool)
             return self.__DB_CONN
@@ -69,13 +70,13 @@ class panelRedisDB():
     def get_options(self,get = None):
 
         result = {}
-        redis_conf = public.readFile("{}/redis/redis.conf".format(public.get_setup_path()))              
+        redis_conf = public.readFile("{}/redis/redis.conf".format(public.get_setup_path()))
         if not redis_conf: return False
-            
+
         keys = ["bind","port","timeout","maxclients","databases","requirepass","maxmemory"]
         for k in keys:
             v = ""
-            rep = "\n%s\s+([\w\.]+)" % k
+            rep = "\n%s\s+(.+)" % k
             group = re.search(rep,redis_conf)
             if not group:
                 if k == "maxmemory":
@@ -88,14 +89,14 @@ class panelRedisDB():
                 if k == "maxmemory":
                     v = int(group.group(1)) / 1024 / 1024
                 else:
-                    v = group.group(1)         
-            result[k] = v          
+                    v = group.group(1)
+            result[k] = v
         return result
-    
+
 
 
 class main(databaseBase):
-       
+
     _db_max = 16  #最大redis数据库
     def __init__(self):
         pass
@@ -108,7 +109,7 @@ class main(databaseBase):
             @return list
         '''
         return self.GetBaseCloudServer(args)
-        
+
 
     def AddCloudServer(self,args):
         '''
@@ -137,16 +138,16 @@ class main(databaseBase):
             try:
                 sid = int(sid)
             except :sid = 0
-          
+
         if sid:
-            if not conn_config: conn_config = public.M('database_servers').where("id=?" ,sid).find()    
+            if not conn_config: conn_config = public.M('database_servers').where("id=?" ,sid).find()
             db_obj = panelRedisDB()
-       
+
             try:
                 db_obj = db_obj.set_host(conn_config['db_host'],conn_config['db_port'],None,conn_config['db_user'],conn_config['db_password'])
             except Exception as e:
                 raise public.PanelError(e)
-        else:       
+        else:
             db_obj = panelRedisDB()
         return db_obj
 
@@ -156,24 +157,24 @@ class main(databaseBase):
         """
         @获取数据库列表
         @sql_type = redis
-        """         
+        """
         result = []
-        self.sid = args.get('sid/d',0) 
+        self.sid = args.get('sid/d',0)
         for x in range(0,self._db_max):
-          
+
             data = {}
             data['id'] = x
             data['name'] = 'DB{}'.format(x)
-           
-                
+
+
             try:
-                redis_obj = self.get_obj_by_sid(self.sid).redis_conn(x)     
-           
-                data['keynum'] = redis_obj.dbsize()  
-                if data['keynum'] > 0:                
+                redis_obj = self.get_obj_by_sid(self.sid).redis_conn(x)
+
+                data['keynum'] = redis_obj.dbsize()
+                if data['keynum'] > 0:
                     result.append(data)
             except :pass
-            
+
         #result = sorted(result,key= lambda  x:x['keynum'],reverse=True)
         return result
 
@@ -182,16 +183,16 @@ class main(databaseBase):
         """
         @设置或修改指定值
         """
-        
-        self.sid = args.get('sid/d',0) 
-        if not 'name' in args or not 'val' in args: 
-            return public.returnMsg(False,'参数传递错误.'); 
-       
+
+        self.sid = args.get('sid/d',0)
+        if not 'name' in args or not 'val' in args:
+            return public.returnMsg(False,'参数传递错误.');
+
         endtime = 0
         if 'endtime' in args : endtime = int(args.endtime)
 
         redis_obj = self.get_obj_by_sid(self.sid).redis_conn(args.db_idx)
-        if endtime:            
+        if endtime:
             redis_obj.set(args.name, args.val, endtime)
         else:
             redis_obj.set(args.name, args.val)
@@ -201,15 +202,15 @@ class main(databaseBase):
     def del_redis_val(self,args):
         """
         @删除key值
-        """      
-        self.sid = args.get('sid/d',0) 
-        if  not 'key' in args: 
-            return public.returnMsg(False,'参数传递错误.'); 
+        """
+        self.sid = args.get('sid/d',0)
+        if  not 'key' in args:
+            return public.returnMsg(False,'参数传递错误.');
 
         redis_obj = self.get_obj_by_sid(self.sid).redis_conn(args.db_idx)
         redis_obj.delete(args.key)
 
-        return public.returnMsg(True,'操作成功.'); 
+        return public.returnMsg(True,'操作成功.');
 
 
     def clear_flushdb(self,args):
@@ -217,14 +218,14 @@ class main(databaseBase):
         清空数据库
         @ids 清空数据库列表，不传则清空所有
         """
-        self.sid = args.get('sid/d',0) 
+        self.sid = args.get('sid/d',0)
         ids = json.loads(args.ids)
         #ids = []
         if len(ids) == 0:
              for x in range(0,self._db_max):
                  ids.append(x)
 
-        for x in ids:            
+        for x in ids:
             redis_obj = self.get_obj_by_sid(self.sid).redis_conn(x)
             redis_obj.flushdb()
 
@@ -234,47 +235,50 @@ class main(databaseBase):
         """
         @获取指定数据库key集合
         """
-        
+
         search = '*'
         if 'search' in args: search = "*" + args.search+"*"
         db_idx = args.db_idx
-        self.sid = args.get('sid/d',0)    
+        self.sid = args.get('sid/d',0)
 
         redis_obj = self.get_obj_by_sid(self.sid).redis_conn(db_idx)
         try:
             keylist = sorted(redis_obj.keys(search))
         except :
             keylist = []
-        
 
-        info = {'p':1,'row':10,'count':len(keylist)}         
 
-        if hasattr(args,'limit'): info['row'] = int(args.limit)       
+        info = {'p':1,'row':10,'count':len(keylist)}
+
+        if hasattr(args,'limit'): info['row'] = int(args.limit)
         if hasattr(args,'p'): info['p']  = int(args['p'])
 
         import page
         #实例化分页类
         page = page.Page();
-                
+
         info['uri']   = args
         info['return_js'] = ''
         if hasattr(args,'tojs'): info['return_js']   = args.tojs
-        
+
         slist = keylist[(info['p']-1) * info['row']:info['p'] * info['row']]
 
         rdata = {}
         rdata['page'] = page.GetPage(info,'1,2,3,4,5,8')
         rdata['where'] = ''
         rdata['data'] = []
-             
+
         idx = 0
         for key in slist:
             item = {}
-            item['name'] = key.decode()
-        
+            try:
+                item['name'] = key.decode()
+            except:
+                item['name'] = str(key)
+
             item['endtime'] = redis_obj.ttl(key)
             if item['endtime'] == -1: item['endtime'] = 0
-                
+
             item['type'] = redis_obj.type(key).decode()
 
             if item['type'] == 'string':
@@ -283,7 +287,7 @@ class main(databaseBase):
                 except:
                     item['val'] = str(redis_obj.get(key))
             elif item['type'] == 'hash':
-                item['val'] = redis_obj.hgetall(key)
+                item['val'] = str(redis_obj.hgetall(key))
             elif item['type'] == 'list':
                 item['val'] = str(redis_obj.lrange(key, 0, -1))
             elif item['type'] == 'set':
@@ -296,7 +300,9 @@ class main(databaseBase):
                 item['len'] = redis_obj.strlen(key)
             except:
                 item['len'] = len(item['val'])
-            rdata['data'].append(item)             
+            item['val'] = public.xssencode(item['val'])
+            item['name'] = public.xssencode(item['name'])
+            rdata['data'].append(item)
             idx += 1
         return rdata
 
@@ -305,22 +311,22 @@ class main(databaseBase):
         """
         @备份数据库
         """
-      
-        self.sid = args.get('sid/d',0)    
+
+        self.sid = args.get('sid/d',0)
 
         redis_obj = self.get_obj_by_sid(self.sid).redis_conn(0)
         redis_obj.save()
-        
+
         src_path = '{}/dump.rdb'.format(redis_obj.config_get()['dir'])
         if not os.path.exists(src_path):
             return public.returnMsg(False,'BACKUP_ERROR');
-        
-        backup_path = session['config']['backup_path'] + '/database/redis/' 
+
+        backup_path = session['config']['backup_path'] + '/database/redis/'
         if not os.path.exists(backup_path): os.makedirs(backup_path)
-            
-        fileName = backup_path + str(self.sid) + '_db_' + time.strftime('%Y%m%d_%H%M%S',time.localtime()) +'.rdb'   
+
+        fileName = backup_path + str(self.sid) + '_db_' + time.strftime('%Y%m%d_%H%M%S',time.localtime()) +'.rdb'
         os.rename(src_path,fileName)
-        if not os.path.exists(fileName): 
+        if not os.path.exists(fileName):
             return public.returnMsg(False,'BACKUP_ERROR');
 
         return public.returnMsg(True, 'BACKUP_SUCCESS')
@@ -331,22 +337,22 @@ class main(databaseBase):
         """
         file = args.file
         if os.path.exists(file): os.remove(file)
-       
+
         return public.returnMsg(True, 'DEL_SUCCESS');
 
     def InputSql(self,get):
         """
         @导入数据库
-        """       
-        file = get.file       
-        self.sid = get.get('sid/d',0)     
+        """
+        file = get.file
+        self.sid = get.get('sid/d',0)
 
         redis_obj = self.get_obj_by_sid(self.sid).redis_conn(0)
 
         rpath = redis_obj.config_get()['dir']
         dst_path = '{}/dump.rdb'.format(rpath)
         public.ExecShell("/etc/init.d/redis stop")
-        if os.path.exists(dst_path): os.remove(dst_path)            
+        if os.path.exists(dst_path): os.remove(dst_path)
         shutil.copy2(file, dst_path)
         public.ExecShell("chown redis.redis {dump} && chmod 644 {dump}".format(dump=dst_path))
         # self.restart_services()
@@ -362,13 +368,13 @@ class main(databaseBase):
         """
         search = ''
         if hasattr(get,'search'): search = get['search'].strip().lower();
-           
-        
+
+
         nlist = []
         cloud_list = {}
         for x in self.GetCloudServer({'type':'redis'}): cloud_list['id-' + str(x['id'])] = x
-        
-        path  = session['config']['backup_path'] + '/database/redis/'    
+
+        path  = session['config']['backup_path'] + '/database/redis/'
         if not os.path.exists(path): os.makedirs(path)
         for name in os.listdir(path):
             if search:
@@ -377,7 +383,7 @@ class main(databaseBase):
             arrs = name.split('_')
 
             filepath = '{}/{}'.format(path,name).replace('//','/')
-            stat = os.stat(filepath)          
+            stat = os.stat(filepath)
 
             item = {}
             item['name'] = name
@@ -390,7 +396,7 @@ class main(databaseBase):
             nlist.append(item)
         return nlist
 
-    
+
 
     def restart_services(self):
         """
@@ -405,12 +411,12 @@ class main(databaseBase):
         """
         @检测远程数据库是否连接
         @conn_config 远程数据库配置，包含host port pwd等信息
-        """ 
+        """
         try:
-            
-            sql_obj = panelRedisDB().set_host(conn_config['db_host'],conn_config['db_port'],conn_config['db_name'],conn_config['db_user'],conn_config['db_password'])            
-            keynum = sql_obj.redis_conn(0).dbsize()           
+
+            sql_obj = panelRedisDB().set_host(conn_config['db_host'],conn_config['db_port'],conn_config['db_name'],conn_config['db_user'],conn_config['db_password'])
+            keynum = sql_obj.redis_conn(0).dbsize()
             return True
         except Exception as ex:
-     
+
             return public.returnMsg(False,ex)

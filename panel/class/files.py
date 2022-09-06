@@ -350,6 +350,27 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 return '1'
         return '0'
 
+    def __get_topping_data(self):
+        """
+        @获取置顶配置
+        """
+        data = {}
+        conf_file = '{}/data/toping.json'.format(public.get_panel_path())
+        try :
+            if os.path.exists(conf_file):
+                data = json.loads(public.readFile(conf_file))
+        except:pass
+        return data
+
+    def __check_topping(self,filepath,top_info):
+        """
+        @name 检测文件或者目录是否置顶
+        @param filepath: 文件路径
+        """
+        if filepath in top_info:
+            return '1'
+        return '0'
+
     def __check_share(self,filename):
         my_table = 'download_token'
         result = public.M(my_table).where('filename=?',(filename,)).getField('id')
@@ -399,6 +420,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         search = None
         if hasattr(get, 'search'):
             search = get.search.strip().lower()
+            public.set_search_history('files','get_list',search)
         if hasattr(get, 'all'):
             return self.SearchFiles(get)
 
@@ -408,7 +430,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         page = page.Page()
         info = {}
         info['count'] = self.GetFilesCount(get.path, search)
-        info['row'] = 100
+        info['row'] = 500
         if 'disk' in get:
             if get.disk == 'true': info['row'] = 2000
         if 'share' in get and get.share:
@@ -434,8 +456,12 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         i = 0
         n = 0
 
+        top_data = self.__get_topping_data()
         data['STORE'] = self.get_files_store(None)
         data['FILE_RECYCLE'] = os.path.exists('data/recycle_bin.pl')
+
+
+
 
         if not hasattr(get, 'reverse'):
             for filename in os.listdir(get.path):
@@ -477,6 +503,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                     size = str(stat.st_size)
                     # 判断文件是否已经被收藏
                     favorite = self.__check_favorite(filePath,data['STORE'])
+
                     if os.path.isdir(filePath):
                         dirnames.append(self.__filename_flater(filename)+';'+size+';' + mtime+';'+accept+';'+user+';'+link + ';' +
                                         self.get_download_id(filePath)+';'+ self.is_composer_json(filePath)+';'
@@ -522,15 +549,38 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             data['DIR'] = dirnames
             data['FILES'] = filenames
         data['PATH'] = str(get.path)
-        for i in range(len(data['DIR'])):
-            data['DIR'][i] += ';' + self.get_file_ps( os.path.join(data['PATH'] , data['DIR'][i].split(';')[0]))
 
+        #2022-07-29,增加置顶排序
+        tmp_dirs = []
+        for i in range(len(data['DIR'])):
+            filepath = os.path.join(data['PATH'] , data['DIR'][i].split(';')[0])
+            toping = self.__check_topping(filepath,top_data)
+            info = data['DIR'][i] + ';' + self.get_file_ps(filepath)+';'+toping
+            if toping == '1':
+                tmp_dirs.insert(0, info)
+            else:
+                tmp_dirs.append(info)
+
+        tmp_files = []
         for i in range(len(data['FILES'])):
-            data['FILES'][i] += ';' + self.get_file_ps( os.path.join(data['PATH'] , data['FILES'][i].split(';')[0]))
+            filepath = os.path.join(data['PATH'] , data['FILES'][i].split(';')[0])
+            toping = self.__check_topping(filepath,top_data)
+            info = data['FILES'][i] + ';' + self.get_file_ps(filepath)+';'+toping
+            if toping == '1':
+                tmp_files.insert(0, info)
+            else:
+                tmp_files.append(info)
+        data['DIR'] = tmp_dirs
+        data['FILES'] = tmp_files
 
         if hasattr(get, 'disk'):
             import system
             data['DISK'] = system.system().GetDiskInfo()
+
+        data['dir_history'] = public.get_dir_history('files','GetDirList')
+        data['search_history'] = public.get_search_history('files','get_list')
+        public.set_dir_history('files','GetDirList',data['PATH'])
+
         return data
 
 
@@ -1196,6 +1246,9 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         except:
             return public.returnMsg(False, 'DIR_COPY_ERR')
 
+
+
+
     # 移动文件或目录
     def MvFile(self, get):
         if sys.version_info[0] == 2:
@@ -1383,8 +1436,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if not os.path.exists(get.path):
             if get.path.find('.htaccess') == -1:
                 return public.returnMsg(False, 'FILE_NOT_EXISTS')
-
-        if os.path.getsize(get.path) > 3145928:
+        elif os.path.getsize(get.path) > 3145928:
             return public.returnMsg(False, '不能在线编辑大于3MB的文件!')
 
         nginx_conf_path = public.get_vhost_path() + '/nginx/'
@@ -1506,7 +1558,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                          filename).replace('//', '/')
             if not os.path.exists(save_path):
                 return []
-            return sorted(os.listdir(save_path))
+            return sorted(os.listdir(save_path),reverse=True)
         except:
             return []
 
@@ -1559,17 +1611,72 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         except:
             return None
 
+
+    def is_max_size(self,path,max_size,max_num=10000,total_size=0,total_num=0):
+        '''
+            @name 是否超过最大大小
+            @path 文件路径
+            @max_size 最大大小
+            @max_num 最大文件数量
+            @return bool
+        '''
+        if not os.path.exists(path) or not max_size:
+            return False,total_size,total_num
+
+        # 是否为文件？
+        if os.path.isfile(path):
+            total_size = os.path.getsize(path)
+            total_num = 1
+            if total_size > max_size:
+                return True,total_size,total_num
+            return False,total_size,total_num
+
+        # 是否为目录？
+        for root, dirs, files in os.walk(path, topdown=True):
+            total_num += len(files)
+            total_num += len(dirs)
+            # 判断是否超过最大文件数量
+            if total_num > max_num:
+                return True,total_size,total_num
+
+            for f in files:
+                filename = os.path.normcase(root+os.path.sep+f)
+                if not os.path.exists(filename): continue
+                if os.path.islink(filename): continue
+                total_size += os.path.getsize(filename)
+
+            # 判断是否超过最大大小
+            if total_size > max_size:
+                return True,total_size,total_num
+
+        return False,total_size,total_num
+
+
     # 文件压缩
     def Zip(self, get):
         if not 'z_type' in get:
             get.z_type = 'rar'
 
         if get.z_type == 'rar':
-            if os.uname().machine == 'aarch64':
-                return public.returnMsg(False,'RAR组件不支持aarch64平台')
-
+            if os.uname().machine != 'x86_64':
+                return public.returnMsg(False,'RAR组件只支持x86_64平台')
         import panelTask
         task_obj = panelTask.bt_task()
+        max_size = 1024*1024*100
+        max_num = 10000
+        total_size = 0
+        total_num = 0
+        status = True
+        for file_name in get.sfile.split(','):
+            path = os.path.join(get.path,file_name)
+            status,total_size,total_num = self.is_max_size(path,max_size,max_num,total_size,total_num)
+            if not status: break
+
+        # 如果被压缩目标小于100MB或文件数量少于1W个，则直接在主线程压缩
+        if not status:
+            return task_obj._zip(get.path,get.sfile,get.dfile,'/tmp/zip.log',get.z_type)
+
+        # 否则在后台线程压缩
         task_obj.create_task('压缩文件', 3, get.path, json.dumps(
             {"sfile": get.sfile, "dfile": get.dfile, "z_type": get.z_type}))
         public.WriteLog("TYPE_FILE", 'ZIP_SUCCESS', (get.sfile, get.dfile))
@@ -1577,10 +1684,19 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
 
     # 文件解压
     def UnZip(self, get):
+        if get.sfile[-4:] == '.rar':
+            if os.uname().machine != 'x86_64':
+                return public.returnMsg(False,'RAR组件只支持x86_64平台')
         import panelTask
         if not 'password' in get:
             get.password = ''
+        if not os.path.exists(get.sfile):
+            return public.returnMsg(False, '指定压缩包不存在!')
+        zip_size = os.path.getsize(get.sfile)
         task_obj = panelTask.bt_task()
+        if zip_size < 1024 * 1024 * 50:
+            return task_obj._unzip(get.sfile, get.dfile, get.password,"/tmp/unzip.log")
+
         task_obj.create_task('解压文件', 2, get.sfile, json.dumps(
             {"dfile": get.dfile, "password": get.password}))
         public.WriteLog("TYPE_FILE", 'UNZIP_SUCCESS', (get.sfile, get.dfile))
@@ -2651,8 +2767,8 @@ cd %s
                 pdata['st_mtime'] = int(f)
                 pdata['st_size'] = f_stat.st_size
                 pdata['history_file'] = f_name
-                result.append(pdata)
-            return result
+                result.insert(0,pdata)
+            return sorted(result,key=lambda x:x['st_mtime'],reverse=True)
         except:
             return []
 

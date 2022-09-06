@@ -55,12 +55,15 @@ class Plugin:
         '''
         if not def_name:
             def_name = get_args.get("s","")
+        else:
+            if not 's' in get_args:
+                get_args.s = def_name
 
         res = PluginLoader.plugin_run(self.__plugin_name,def_name,get_args)
         if isinstance(res,dict):
             if 'status' in res and res['status'] == False and 'msg' in res:
                 if isinstance(res['msg'],str):
-                    if res['msg'].find('加载失败') != -1 or res['msg'].find('Traceback ') == 0:
+                    if res['msg'].find('Traceback ') != -1:
                         raise public.PanelError(res['msg'])
         return res
 

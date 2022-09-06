@@ -7,7 +7,7 @@
 # | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
 import base64
-from genericpath import exists
+
 import public,re,os,nginx,apache,json,time,ols
 try:
     import pyotp
@@ -788,7 +788,11 @@ class config:
     #同步时间
     def syncDate(self,get):
         time_str = public.HttpGet(public.GetConfigValue('home') + '/api/index/get_time')
-        new_time = int(time_str)
+        try:
+            new_time = int(time_str)
+        except:
+            return public.returnMsg(False,'连接时间服务器失败!')
+        if not new_time: public.returnMsg(False,'连接时间服务器失败!')
         time_arr = time.localtime(new_time)
         date_str = time.strftime("%Y-%m-%d %H:%M:%S", time_arr)
         public.ExecShell('date -s "%s"' % date_str)
@@ -919,6 +923,8 @@ class config:
                 g.rm_ssl = True
                 return public.returnMsg(True,'PANEL_SSL_CLOSE')
             else:
+                if not 'cert_type' in get:
+                    return public.returnMsg(False,'请刷新页面重试!')
                 if get.cert_type in [0,'0']:
                     result = self.SavePanelSSL(get)
                     if not result['status']: return result
@@ -1553,12 +1559,16 @@ class config:
         public.writeFile('data/reload.pl','True')
         return public.returnMsg(True,"设置成功!")
 
+    # xss 防御
+    def xsssec(self,text):
+        return text.replace('<', '&lt;').replace('>', '&gt;')
+
     #取面板运行日志
     def get_panel_error_logs(self,get):
         filename = 'logs/error.log'
         if not os.path.exists(filename): return public.returnMsg(False,'没有找到运行日志')
         result = public.GetNumLines(filename,2000)
-        return public.returnMsg(True,result)
+        return public.returnMsg(True,self.xsssec(result))
     #清空面板运行日志
     def clean_panel_error_logs(self,get):
         filename = 'logs/error.log'
@@ -1650,11 +1660,12 @@ class config:
     def get_php_session_path(self,get):
         import panelSite
         site_info = public.M('sites').where('id=?', (get.id,)).field('name,path').find()
-        run_path = panelSite.panelSite().GetSiteRunPath(get)["runPath"]
-        user_ini_file = "{site_path}{run_path}/.user.ini".format(site_path=site_info["path"], run_path=run_path)
-        conf = public.readFile(user_ini_file)
-        if conf and "session.save_path" in conf:
-            return True
+        if site_info:
+            run_path = panelSite.panelSite().GetSiteRunPath(get)["runPath"]
+            user_ini_file = "{site_path}{run_path}/.user.ini".format(site_path=site_info["path"], run_path=run_path)
+            conf = public.readFile(user_ini_file)
+            if conf and "session.save_path" in conf:
+                return True
         return False
 
     def _create_key(self):
@@ -1935,40 +1946,67 @@ class config:
         import file_execute_deny
         p = file_execute_deny.FileExecuteDeny()
         return p.del_file_deny(args)
+
     #查看告警
-    def get_login_send(self,get):
-        result={}
-        import time
-        time.sleep(0.01)
-        if os.path.exists('/www/server/panel/data/login_send_mail.pl'):
-            result['mail']=True
+    def get_login_send(self, get):
+        send_type = ""
+        if os.path.exists("/www/server/panel/data/login_send_type.pl"):
+            send_type = public.readFile("/www/server/panel/data/login_send_type.pl")
         else:
-            result['mail']=False
-        if os.path.exists('/www/server/panel/data/login_send_dingding.pl'):
-            result['dingding']=True
-        else:
-            result['dingding']=False
-        if result['mail'] or result['dingding']:
-            return public.returnMsg(True, result)
-        return public.returnMsg(False, result)
+            if os.path.exists('/www/server/panel/data/login_send_mail.pl'):
+                send_type = "mail"
+            if os.path.exists('/www/server/panel/data/login_send_dingding.pl'):
+                send_type = "dingding"
+        return public.returnMsg(True, send_type)
+
+    # def get_login_send(self,get):
+    #     result={}
+    #     import time
+    #     time.sleep(0.01)
+    #     if os.path.exists('/www/server/panel/data/login_send_mail.pl'):
+    #         result['mail']=True
+    #     else:
+    #         result['mail']=False
+    #     if os.path.exists('/www/server/panel/data/login_send_dingding.pl'):
+    #         result['dingding']=True
+    #     else:
+    #         result['dingding']=False
+    #     if result['mail'] or result['dingding']:
+    #         return public.returnMsg(True, result)
+    #     return public.returnMsg(False, result)
 
     #设置告警
     def set_login_send(self,get):
-        type=get.type.strip()
-        if type=='mail':
-            if not os.path.exists("/www/server/panel/data/login_send_mail.pl"):
-                os.mknod("/www/server/panel/data/login_send_mail.pl")
-            if os.path.exists("/www/server/panel/data/login_send_dingding.pl"):
-                os.remove("/www/server/panel/data/login_send_dingding.pl")
-            return public.returnMsg(True, '设置成功')
-        elif type=='dingding':
-            if not os.path.exists("/www/server/panel/data/login_send_dingding.pl"):
-                os.mknod("/www/server/panel/data/login_send_dingding.pl")
-            if os.path.exists("/www/server/panel/data/login_send_mail.pl"):
-                os.remove("/www/server/panel/data/login_send_mail.pl")
-            return public.returnMsg(True, '设置成功')
-        else:
+        login_send_type_conf = "/www/server/panel/data/login_send_type.pl"
+
+        set_type=get.type.strip()
+        msg_configs = self.get_msg_configs(get)
+        if set_type not in msg_configs.keys():
             return public.returnMsg(False,'不支持该发送类型')
+
+        from panelMessage import panelMessage
+        pm = panelMessage()
+        obj = pm.init_msg_module(set_type)
+        if not obj:
+            return public.returnMsg(False, "消息通道未安装。")
+
+        public.writeFile(login_send_type_conf, set_type)
+        return public.returnMsg(True, '设置成功')
+
+        # if type=='mail':
+        #     if not os.path.exists("/www/server/panel/data/login_send_mail.pl"):
+        #         os.mknod("/www/server/panel/data/login_send_mail.pl")
+        #     if os.path.exists("/www/server/panel/data/login_send_dingding.pl"):
+        #         os.remove("/www/server/panel/data/login_send_dingding.pl")
+        #     return public.returnMsg(True, '设置成功')
+        # elif type=='dingding':
+        #     if not os.path.exists("/www/server/panel/data/login_send_dingding.pl"):
+        #         os.mknod("/www/server/panel/data/login_send_dingding.pl")
+        #     if os.path.exists("/www/server/panel/data/login_send_mail.pl"):
+        #         os.remove("/www/server/panel/data/login_send_mail.pl")
+        #     return public.returnMsg(True, '设置成功')
+        # else:
+        #     return public.returnMsg(False,'不支持该发送类型')
 
     #取消告警
     def clear_login_send(self,get):
@@ -1976,13 +2014,14 @@ class config:
         if type == 'mail':
             if os.path.exists("/www/server/panel/data/login_send_mail.pl"):
                 os.remove("/www/server/panel/data/login_send_mail.pl")
-            return public.returnMsg(True, '取消成功')
         elif type == 'dingding':
             if os.path.exists("/www/server/panel/data/login_send_dingding.pl"):
                 os.remove("/www/server/panel/data/login_send_dingding.pl")
-            return public.returnMsg(True, '取消成功')
-        else:
-            return public.returnMsg(False, '不支持该发送类型')
+
+        login_send_type_conf = "/www/server/panel/data/login_send_type.pl"
+        if os.path.exists(login_send_type_conf):
+            os.remove(login_send_type_conf)
+        return public.returnMsg(True, '取消登录告警成功！')
 
 
     #告警日志
@@ -2349,54 +2388,17 @@ class config:
         """
         cpath = 'data/msg.json'
         try:
-            if 'force' in get or not os.path.exists(cpath):
+            if 'force' in get or not os.path.exists(cpath) or public.get_path_size(cpath)==0:
                 if not 'download_url' in session: session['download_url'] = public.get_url()
                 public.downloadFile('{}/linux/panel/msg/msg.json'.format(session['download_url']),cpath)
         except : pass
-
-        from panelMessage import panelMessage
-        pm = panelMessage()
-
+        try:
+            # 配置文件异常处理
+            json.loads(public.readFile(cpath))
+        except:
+            if os.path.exists(cpath): os.remove(cpath)
         data = {}
         if os.path.exists(cpath):
-
-            # 兼容已有配置安装已有模块
-            try:
-
-                panelPath = "/www/server/panel"
-                local_path = '{}/class/msg'.format(panelPath)
-
-                qq_mail_info = json.loads(public.ReadFile(self.__mail_config))
-                if qq_mail_info and len(qq_mail_info) > 0:
-                    sfile = '{}/{}_msg.py'.format(local_path,"mail")
-                    if not os.path.exists(sfile):
-                        g = public.dict_obj()
-                        g.name = "mail"
-                        self.install_msg_module(g)
-                dingding_info = json.loads(public.ReadFile(self.__dingding_config))
-                if dingding_info and len(dingding_info) > 0:
-                    dingding_url = dingding_info["dingding_url"]
-                    if dingding_url and dingding_url.find("dingtalk.com") != -1:
-                        sfile = '{}/{}_msg.py'.format(local_path,"dingding")
-                        if not os.path.exists(sfile):
-                            dg = public.dict_obj()
-                            dg.name = "dingding"
-                            self.install_msg_module(dg)
-                    if dingding_url and dingding_url.find("weixin.qq.com") != -1:
-                        sfile = '{}/{}_msg.py'.format(local_path,"weixin")
-                        if not os.path.exists(sfile):
-                            dg = public.dict_obj()
-                            dg.name = "weixin"
-                            self.install_msg_module(dg)
-                            dg.url = dingding_url
-                            dg.atall = dingding_info["isAtAll"]
-                            self.set_msg_config(dg)
-                            os.remove(self.__dingding_config)
-            except Exception as e:
-                print("兼容已有模块异常:")
-                print(e)
-
-            # 获取通道配置信息
             msgs = json.loads(public.readFile(cpath))
             for x in msgs:
                 x['data'] = {}
@@ -2404,14 +2406,12 @@ class config:
                 x['info'] = False
                 key = x['name']
                 try:
-                    obj =  pm.init_msg_module(x['name'])
+                    obj =  public.init_msg(x['name'])
                     if obj:
                         x['setup'] = True
                         x['data'] = obj.get_config(None)
-                        x['info'] = obj.get_version_info(None);
-                except :
-                    print(public.get_error_info())
-                    pass
+                        x['info'] = obj.get_version_info(None)
+                except : pass
                 data[key] = x
         return data
 
@@ -2419,13 +2419,64 @@ class config:
         """
         获取模块模板
         """
-        panelPath = "/www/server/panel"
-        sfile = '{}/class/msg/{}.html'.format(panelPath,get.module_name)
+        panelPath = public.get_panel_path()
+        module_name = get.module_name
+        sfile = '{}/class/msg/{}.html'.format(panelPath, module_name)
         if not os.path.exists(sfile):
             return public.returnMsg(False, '模板文件不存在.')
 
-        shtml = public.readFile(sfile)
-        return public.returnMsg(True, shtml)
+        if module_name in ["sms"]:
+
+            obj = public.init_msg(module_name)
+            if obj:
+                args = public.dict_obj()
+                args.reload = True
+                data = obj.get_config(args)
+                from flask import render_template_string
+                shtml = public.readFile(sfile)
+                return public.returnMsg(True, render_template_string(shtml, data=data))
+        else:
+            shtml = public.readFile(sfile)
+            return public.returnMsg(True, shtml)
+
+
+
+    def set_default_channel(self,get):
+        """
+        设置默认消息通道
+        """
+        default_channel_pl = "/www/server/panel/data/default_msg_channel.pl"
+
+        new_channel = get.channel
+        default = False
+        if "default" in get:
+            _default = get.default
+            if not _default or _default in ["false"]:
+                default = False
+            else:
+                default = True
+
+        ori_default_channel = ""
+        if os.path.exists(default_channel_pl):
+            ori_default_channel = public.readFile(ori_default_channel)
+
+        if default:
+            # 设置为默认
+            from panelMessage import panelMessage
+            pm = panelMessage()
+            obj =  pm.init_msg_module(new_channel)
+            if not obj: return public.returnMsg(False, '设置失败，【{}】未安装'.format(new_channel))
+
+            public.writeFile(default_channel_pl, new_channel)
+            if ori_default_channel:
+                return public.returnMsg(True, '已成功将[{}]改为[{}]面板默认消息通道。'.format(ori_default_channel, new_channel))
+            else:
+                return public.returnMsg(True, '已设置[{}]为默认消息通道。'.format(new_channel))
+        else:
+            # 取消默认设置
+            if os.path.exists(default_channel_pl):
+                os.remove(default_channel_pl)
+            return public.returnMsg(True, "已取消[{}]作为面板默认消息通道。".format(new_channel))
 
     def set_msg_config(self,get):
         """
@@ -2447,17 +2498,39 @@ class config:
             module_name = get.name
             down_url = public.get_url()
 
-            panelPath = "/www/server/panel"
-            local_path = '{}/class/msg'.format(panelPath)
+            local_path = '{}/class/msg'.format(public.get_panel_path())
             if not os.path.exists(local_path): os.makedirs(local_path)
 
-            sfile = '{}/{}_msg.py'.format(local_path,module_name)
-            public.downloadFile('{}/linux/panel/msg/{}_msg.py'.format(down_url,module_name),sfile)
-            if not os.path.exists(sfile): return public.returnMsg(False, '【{}】模块安装失败'.format(module_name))
-            if os.path.getsize(sfile) < 1024: return public.returnMsg(False, '【{}】模块安装失败'.format(module_name))
+            import panelTask
+            task_obj = panelTask.bt_task()
 
-            sfile = '{}/class/msg/{}.html'.format(panelPath,module_name)
-            public.downloadFile('{}/linux/panel/msg/{}.html'.format(down_url,module_name),sfile)
+            sfile1 = '{}/{}_msg.py'.format(local_path,module_name)
+            down_url1 = '{}/linux/panel/msg/{}_msg.py'.format(down_url,module_name)
+
+            sfile2 = '{}/class/msg/{}.html'.format(public.get_panel_path(),module_name)
+            down_url2 = '{}/linux/panel/msg/{}.html'.format(down_url,module_name)
+
+            public.WriteLog('安装模块', '安装【{}】'.format(module_name))
+            task_obj.create_task('下载文件', 1, down_url1, sfile1)
+            task_obj.create_task('下载文件', 1, down_url2, sfile2)
+
+            timeout = 0
+            is_install = False
+            while timeout < 5:
+                try:
+                    if os.path.exists(sfile1) and os.path.exists(sfile2):
+                        msg_obj = public.init_msg(module_name)
+                        if  msg_obj and msg_obj.get_version_info:
+                            is_install = True
+                            break
+                except: pass
+                time.sleep(0.1)
+                is_install = True
+
+            if not is_install:
+                return public.returnMsg(False, '安装[{}]模块失败，请检查网络原因。'.format(module_name))
+
+            public.set_module_logs('msg_push', 'install_module', 1)
             return public.returnMsg(True, '【{}】模块安装成功.'.format(module_name))
         except:
             pass
@@ -2467,14 +2540,92 @@ class config:
         """
         卸载消息通道模块
         @name 需要卸载的模块名称
+        @is_del 是否需要删除配置文件
         """
         module_name = get.name
-        from panelMessage import panelMessage
-        pm = panelMessage()
-        obj = pm.init_msg_module(module_name)
-        if hasattr(obj, "uninstall"):
-            obj.uninstall()
-        panelPath = "/www/server/panel"
-        sfile = '{}/class/msg/{}_msg.py'.format(panelPath,module_name)
+        obj = public.init_msg(module_name)
+        if 'is_del' in get:
+            try:
+                obj.uninstall()
+            except:pass
+
+        sfile = '{}/class/msg/{}_msg.py'.format(public.get_panel_path(),module_name)
         if os.path.exists(sfile): os.remove(sfile)
+
+        public.print_log(sfile)
+        default_channel_pl = "{}/data/default_msg_channel.pl".format(public.get_panel_path())
+        default_channel = public.readFile(default_channel_pl)
+        if default_channel and default_channel == module_name:
+            os.remove(default_channel_pl)
         return public.returnMsg(True, '【{}】模块卸载成功'.format(module_name))
+
+
+    def get_msg_fun(self,get):
+        """
+        @获取消息模块指定方法
+        @auther: cjxin
+        @date: 2022-08-16
+        @param: get.module_name 消息模块名称(如：sms,weixin,dingding)
+        @param: get.fun_name 消息模块方法名称(如：send_sms,push_msg)
+        """
+        module_name = get.module_name
+        fun_name = get.fun_name
+
+        m_objs = public.init_msg(module_name)
+        if not m_objs: return public.returnMsg(False, '设置失败，【{}】未安装'.format(module_name))
+
+        return getattr(m_objs,fun_name)(get)
+
+
+    def get_msg_configs_by(self,get):
+        """
+        @name 获取单独消息通道配置
+        @auther: cjxin
+        @date: 2022-08-16
+        @param: get.name 消息模块名称(如：sms,weixin,dingding)
+        """
+        name = get.name
+        res = {}
+        res['data'] = {}
+        res['setup'] = False
+        res['info'] = False
+        try:
+            obj =  public.init_msg(name)
+            if obj:
+                res['setup'] = True
+                res['data'] = obj.get_config(None)
+                res['info'] = obj.get_version_info(None);
+        except: pass
+        return res
+
+
+    def get_msg_push_list(self,get):
+        """
+        @name 获取消息通道配置列表
+        @auther: cjxin
+        @date: 2022-08-16
+        """
+        cpath = 'data/msg.json'
+        try:
+            if 'force' in get or not os.path.exists(cpath):
+                if not 'download_url' in session: session['download_url'] = public.get_url()
+                public.downloadFile('{}/linux/panel/msg/msg.json'.format(session['download_url']),cpath)
+        except : pass
+
+        data = {}
+        if os.path.exists(cpath):
+            msgs = json.loads(public.readFile(cpath))
+            for x in msgs:
+                x['setup'] = False
+                x['info'] = False
+                key = x['name']
+                try:
+                    obj =  public.init_msg(x['name'])
+                    if obj:
+                        x['setup'] = True
+                        x['info'] = obj.get_version_info(None)
+                except :
+                    print(public.get_error_info())
+                    pass
+                data[key] = x
+        return data

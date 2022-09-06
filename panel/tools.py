@@ -21,7 +21,7 @@ if sys.version_info[0] == 3: raw_input = input
 def set_mysql_root(password):
     import db,os
     sql = db.Sql()
-    
+
     root_mysql = '''#!/bin/bash
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
@@ -54,11 +54,11 @@ sleep 2
 echo '==========================================='
 echo "root密码成功修改为: ${pwd}"
 echo "The root password set ${pwd}  successuful"'''
-    
+
     public.writeFile('mysql_root.sh',root_mysql)
     os.system("/bin/bash mysql_root.sh " + password)
     os.system("rm -f mysql_root.sh")
-    
+
     result = sql.table('config').where('id=?',(1,)).setField('mysql_root',password)
     print(result)
 
@@ -168,7 +168,7 @@ history -c
         public.ExecShell("rm -f /www/server/panel/php_mysql_auto.pl")
     else:
         public.writeFile('/www/server/panel/php_mysql_auto.pl',"True")
-    
+
     print("|-请选择用户初始化方式：")
     print("="*50)
     print(" (1) 访问面板页面时显示初始化页面")
@@ -200,7 +200,7 @@ def CloseTask():
     os.system("kill `ps -ef |grep 'install_soft.sh'|grep -v grep|grep -v panelExec|awk '{print $2}'`")
     os.system('/etc/init.d/bt restart')
     print("成功清理 " + int(ncount) + " 个任务!")
-    
+
 #自签证书
 def CreateSSL():
     import OpenSSL
@@ -311,7 +311,7 @@ def ClearRecycle_Bin():
     import files
     f = files.files()
     f.Close_Recycle_bin(None)
-    
+
 #清理其它
 def ClearOther():
     clearPath = [
@@ -322,7 +322,7 @@ def ClearOther():
                  {'path':'/www/server/panel/install','find':'.zip'},
                  {'path':'/www/server/panel/install','find':'.gz'}
                  ]
-    
+
     total = count = 0
     print('|-正在清理临时文件及网站日志 ...')
     for c in clearPath:
@@ -379,13 +379,13 @@ def set_panel_username(username = None):
         sql.table('users').where('id=?',(1,)).setField('username',username)
         print("|-新用户名: %s" % username)
         return
-    
+
     username = sql.table('users').where('id=?',(1,)).getField('username')
-    if username == 'admin': 
+    if username == 'admin':
         username = public.GetRandomString(8).lower()
         sql.table('users').where('id=?',(1,)).setField('username',username)
     print('username: ' + username)
-    
+
 #设定idc
 def setup_idc():
     try:
@@ -405,7 +405,7 @@ def setup_idc():
         titleNew = pInfo['brand'] + u'面板'
         if os.path.exists(tFile):
             title = public.GetConfigValue('title')
-            if title == '' or title == '宝塔Linux面板': 
+            if title == '' or title == '宝塔Linux面板':
                 public.writeFile(tFile,titleNew)
                 public.SetConfigValue('title',titleNew)
         else:
@@ -486,7 +486,7 @@ def bt_cli(u_input = 0):
                         install_soft = ''
             else:
                 install_soft = install_args[2]
-                    
+
             print(raw_tip)
             if len(install_args) < 4:
                 install_version = ''
@@ -495,7 +495,7 @@ def bt_cli(u_input = 0):
                     install_version = input("请输入要安装的版本号(如：1.18)：")
             else:
                 install_version = install_args[3]
-            
+
             print(raw_tip)
             os.system("bash /www/server/panel/install/install_soft.sh {} {} {} {}".format(install_input,install_args[0],install_soft,install_version))
             exit()
@@ -559,7 +559,7 @@ def bt_cli(u_input = 0):
         if not re.match(rep, input_mysql):
             print("|-错误，密码中不能包含特殊符号")
             return
-        
+
         print(input_mysql)
         set_mysql_root(input_mysql.strip())
     elif u_input == 8:
@@ -694,7 +694,7 @@ if __name__ == "__main__":
     elif type == "cli":
         clinum = 0
         try:
-            if len(sys.argv) > 2: 
+            if len(sys.argv) > 2:
                 clinum = int(sys.argv[2]) if sys.argv[2][:6] not in ['instal','update'] else sys.argv[2]
         except:
             clinum = sys.argv[2]
