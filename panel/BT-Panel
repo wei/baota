@@ -13,7 +13,7 @@ import os,sys,ssl,time,logging
 
 _PATH = '/www/server/panel'
 os.chdir(_PATH)
-os.system("nohup btpython class/jobs.py &>/dev/null &")
+os.system("nohup ./pyenv/bin/python3 class/jobs.py &>/dev/null &")
 upgrade_file = 'script/upgrade_flask.sh'
 if os.path.exists(upgrade_file):
     os.system("nohup bash {} &>/dev/null &".format(upgrade_file))
@@ -31,7 +31,11 @@ is_debug = os.path.exists('data/debug.pl')
 # 检查加载器
 def check_plugin_loader():
     plugin_loader_file = 'class/PluginLoader.so'
-    machine = os.uname().machine
+    machine = 'x86_64'
+    try:
+        machine = os.uname().machine
+    except:
+        pass
     plugin_loader_src_file = "class/PluginLoader.{}.Python3.7.so".format(machine)
     if machine == 'x86_64':
         glibc_version = public.get_glibc_version()
@@ -163,13 +167,17 @@ if __name__ == '__main__':
     sys.stdout.flush()
     sys.stderr.flush()
 
-    f = open('data/port.pl')
-    PORT = int(f.read())
+
+    try:
+        f = open('data/port.pl')
+        PORT = int(f.read())
+        f.close()
+        if not PORT: PORT = 8888
+    except:
+        PORT = 8888
     HOST = '0.0.0.0'
     if os.path.exists('data/ipv6.pl'):
         HOST = "0:0:0:0:0:0:0:0"
-    f.close()
-
 
     keyfile = 'ssl/privateKey.pem'
     certfile = 'ssl/certificate.pem'
@@ -178,9 +186,12 @@ if __name__ == '__main__':
         is_ssl = True
 
     if not is_ssl or is_debug:
-        err_f = open('logs/error.log','a+')
-        os.dup2(err_f.fileno(),sys.stderr.fileno())
-        err_f.close()
+        try:
+            err_f = open('logs/error.log','a+')
+            os.dup2(err_f.fileno(),sys.stderr.fileno())
+            err_f.close()
+        except Exception as ex:
+            print(ex)
 
     import threading
     task_thread = threading.Thread(target=daemon_task)
@@ -237,4 +248,21 @@ if __name__ == '__main__':
         except:
             pass
 
-    http_server.serve_forever()
+    is_process = os.path.exists('data/is_process.pl')
+    if not is_process:
+        http_server.serve_forever()
+    else:
+        http_server.start()
+        from multiprocessing import Process
+        def serve_forever():
+            http_server.start_accepting()
+            http_server._stop_event.wait()
+
+        process_count = 2
+        for i in range(process_count):
+            p = Process(target=serve_forever)
+            p.daemon = True
+            p.start()
+
+        while 1:
+            time.sleep(1000)

@@ -635,7 +635,7 @@ def GetHost(port = False):
 
     # 验证基本格式
     if host_tmp:
-        if not re.match("^[\w\.\-]+$", host_tmp):
+        if not re.match("^[\w\.\:\-]+$", host_tmp):
             host_tmp = ''
 
     if not host_tmp:
@@ -643,7 +643,7 @@ def GetHost(port = False):
             tmp = re.findall(r"(https|http)://([\w:\.-]+)",request.url_root)
             if tmp: host_tmp = tmp[0][1]
     if not host_tmp:
-        host_tmp = GetLocalIp() + ':' + readFile('data/port.pl').strip()
+        host_tmp = '127.0.0.1:' + readFile('data/port.pl').strip()
     try:
         if host_tmp.find(':') == -1: host_tmp += ':80'
     except:
@@ -750,10 +750,14 @@ def checkInput(data):
 
 #取文件指定尾行数
 def GetNumLines(path,num,p=1):
+    if not os.path.exists(path): return ""
+    if isinstance(num,str) and not re.match("\d+",num):
+        return ""
+
     pyVersion = sys.version_info[0]
     max_len = 1024*1024*10
     try:
-        if not os.path.exists(path): return ""
+
         start_line = (p - 1) * num
         count = start_line + num
         fp = open(path,'rb')
@@ -800,8 +804,8 @@ def GetNumLines(path,num,p=1):
             if not b: break
         fp.close()
         result = "\n".join(data)
-        if not result: raise Exception('null')
     except:
+        if re.match("[`\$\&\;]+",path): return ""
         result = ExecShell("tail -n {} {}".format(num,path))[0]
         if len(result) > max_len:
             result = result[-max_len:]
@@ -1841,7 +1845,9 @@ def mod_reload(mode):
 def set_mode(filename,mode):
     if not os.path.exists(filename): return False
     mode = int(str(mode),8)
-    os.chmod(filename,mode)
+    try:
+        os.chmod(filename,mode)
+    except: return False
     return True
 
 def create_linux_user(user,group):
@@ -3612,7 +3618,8 @@ def login_send_body(is_type,username,login_ip,port):
         data={}
         data['ip'] = get_server_ip()
         data['local_ip'] = get_network_ip()
-        ip="{}(外) {}(内)".format(data['ip'],data['local_ip'])
+         #不加内网IP，否则短信模板参数长度超过限制
+        ip="{}(外)".format(data['ip'])
         sm_args = {'name': '[' + ip+ ']', 'time': time.strftime('%Y-%m-%d %X',time.localtime()), 'type': '[' + is_type + ']',
                    'user': username}
         rdata = object.send_msg('login_panel', check_sms_argv(sm_args))
@@ -5148,7 +5155,7 @@ def write_push_log(module,msg,res):
     user = ''
     for key in res:
         status = '<span style="color:#20a53a;">成功</span>'
-        if res[key] == 0: status = '<span style="color:red;">成功</span>'
+        if res[key] == 0: status = '<span style="color:red;">失败</span>'
         user += '[ {}:{} ] '.format(key,status)
 
     if not user: user = '[ 默认 ] '
@@ -5209,7 +5216,7 @@ def get_csrf_cookie_token_key():
         @return string
     '''
     if is_ssl():
-        token_key = 'https_request_token'
+        token_key = 'request_token'
     else:
         token_key = 'request_token'
     return token_key
@@ -5232,7 +5239,7 @@ def get_csrf_html_token_key():
         @return string
     '''
     if is_ssl():
-        token_key = 'https_request_token_head'
+        token_key = 'request_token_head'
     else:
         token_key = 'request_token_head'
     return token_key
@@ -5285,7 +5292,7 @@ def get_firewall_status():
         @return int 0.关闭 1.开启 -1.未安装
     '''
     import psutil
-    firewall_files = {'/usr/sbin/firewalld':"pid",'/usr/bin/firewalld':"pid",'/usr/sbin/ufw':"ufw status verbose|grep 'Status: active'",'/usr/sbin/iptables':"service iptables status|grep 'Chain INPUT'"}
+    firewall_files = {'/usr/sbin/firewalld':"pid",'/usr/bin/firewalld':"pid",'/usr/sbin/ufw':"ufw status verbose|grep 'Status: active'",'/sbin/ufw':"/sbin/ufw status |grep 'Status: active'",'/usr/sbin/iptables':"service iptables status|grep 'Chain INPUT'"}
     for f in firewall_files.keys():
         if not os.path.exists(f): continue
         _cmd = firewall_files[f]
@@ -5481,7 +5488,7 @@ def is_process_exists_by_exe(_exe):
             p = psutil.Process(pid)
             _exe_bin = p.exe()
             for _e in _exe:
-                if _exe_bin == _e: return True
+                if _exe_bin.find(_e) != -1: return True
         except:
             continue
     return False
@@ -5514,7 +5521,7 @@ def is_mysql_process_exists():
         @author hwliang
         @return bool
     '''
-    _exe = ['/www/server/mysql/bin/mysqld_safe','/www/server/mysql/bin/mariadbd','/www/server/mysql/bin/mysqld']
+    _exe = ['server/mysql/bin/mysqld_safe','server/mysql/bin/mariadbd','server/mysql/bin/mysqld']
     return is_process_exists_by_exe(_exe)
 
 def is_redis_process_exists():
@@ -5523,7 +5530,7 @@ def is_redis_process_exists():
         @author hwliang
         @return bool
     '''
-    _exe = ['/www/server/redis/src/redis-server']
+    _exe = ['server/redis/src/redis-server']
     return is_process_exists_by_exe(_exe)
 
 def is_pure_ftpd_process_exists():
@@ -5532,7 +5539,7 @@ def is_pure_ftpd_process_exists():
         @author hwliang
         @return bool
     '''
-    _exe = ['/www/server/pure-ftpd/sbin/pure-ftpd']
+    _exe = ['server/pure-ftpd/sbin/pure-ftpd']
     return is_process_exists_by_exe(_exe)
 
 def is_php_fpm_process_exists(name):
@@ -5542,7 +5549,7 @@ def is_php_fpm_process_exists(name):
         @return bool
     '''
     _php_version = name.split('-')[-1]
-    _exe = ['/www/server/php/{}/sbin/php-fpm'.format(_php_version)]
+    _exe = ['server/php/{}/sbin/php-fpm'.format(_php_version)]
     return is_process_exists_by_exe(_exe)
 
 def is_nginx_process_exists():
@@ -5551,7 +5558,7 @@ def is_nginx_process_exists():
         @author hwliang
         @return bool
     '''
-    _exe = ['/www/server/nginx/sbin/nginx']
+    _exe = ['server/nginx/sbin/nginx']
     return is_process_exists_by_exe(_exe)
 
 def is_httpd_process_exists():
@@ -5560,7 +5567,7 @@ def is_httpd_process_exists():
         @author hwliang
         @return bool
     '''
-    _exe = ['/www/server/apache/bin/httpd']
+    _exe = ['server/apache/bin/httpd']
     return is_process_exists_by_exe(_exe)
 
 def is_memcached_process_exists():
@@ -5578,5 +5585,37 @@ def is_mongodb_process_exists():
         @author hwliang
         @return bool
     '''
-    _exe = ['/www/server/mongodb/bin/mongod']
+    _exe = ['server/mongodb/bin/mongod']
     return is_process_exists_by_exe(_exe)
+
+
+def get_admin_path():
+    '''
+        @name 取安全入口
+        @author hwliang
+        @return string
+    '''
+    login_path = '/login'
+    path = '{}/data/admin_path.pl'.format(get_panel_path())
+    if not os.path.exists(path): return login_path
+    admin_path = readFile(path)
+    if not admin_path: return login_path
+    admin_path = admin_path.strip()
+    if admin_path in ['','/']:
+        return login_path
+    return admin_path
+
+
+def get_improvement():
+    '''
+        @name 获取用户体验改进计划状态
+        @author hwliang
+        @return bool
+    '''
+    tip_file = '{}/data/improvement.pl'.format(get_panel_path())
+    tip_file_set = '{}/data/is_set_improvement.pl'.format(get_panel_path())
+    if not os.path.exists(tip_file_set):
+        return True
+    return os.path.exists(tip_file)
+
+

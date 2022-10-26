@@ -492,13 +492,14 @@ def acme(pdata=None):
             'apply_cert_api', 'apply_dns_auth')
     return publicObject(acme_v2_object, defs, None, pdata)
 
-import panelMessage
-message_object = panelMessage.panelMessage()
+
 @app.route('/message/<action>', methods=method_all)
 def message(action=None):
     # 提示消息管理
     comReturn = comm.local()
     if comReturn: return comReturn
+    import panelMessage
+    message_object = panelMessage.panelMessage()
     defs = (
     'get_messages', 'get_message_find', 'create_message', 'status_message', 'remove_message', 'get_messages_all')
     return publicObject(message_object, defs, action, None)
@@ -551,17 +552,19 @@ def ssh_security(pdata=None):
     # SSH安全
     comReturn = comm.local()
     if comReturn: return comReturn
-    if request.method == method_get[0] and not pdata:
+    if request.method == method_get[0] and not pdata and not request.args.get('action','') in ['download_key']:
         data = {}
         data['lan'] = public.GetLan('firewall')
         data['js_random'] = get_js_random()
         return render_template('firewall.html', data=data)
     import ssh_security
     firewallObject = ssh_security.ssh_security()
-    defs = ('san_ssh_security', 'set_password', 'set_sshkey', 'stop_key', 'get_config',
+    is_csrf = True
+    if request.args.get('action','') in ['download_key']: is_csrf = False
+    defs = ('san_ssh_security', 'set_password', 'set_sshkey', 'stop_key', 'get_config','download_key',
             'stop_password', 'get_key', 'return_ip', 'add_return_ip', 'del_return_ip', 'start_jian', 'stop_jian',
             'get_jian', 'get_logs','set_root','stop_root','start_auth_method','stop_auth_method','get_auth_method','check_so_file','get_so_file','get_pin','set_login_send','get_login_send','get_msg_push_list','clear_login_send')
-    return publicObject(firewallObject, defs, None, pdata)
+    return publicObject(firewallObject, defs, None, pdata,is_csrf)
 
 
 @app.route('/monitor', methods=method_all)
@@ -657,8 +660,8 @@ def abnormal(pdata=None):
             )
     return publicObject(dataObject, defs, None, pdata)
 
-@app.route('/project/<mod_name>/<def_name>', methods=method_all)
-def project(mod_name,def_name):
+@app.route('/project/<mod_name>/<def_name>/<stype>', methods=method_all)
+def project(mod_name,def_name,stype=None):
     comReturn = comm.local()
     if comReturn: return comReturn
     from panelProjectController import ProjectController
@@ -668,7 +671,11 @@ def project(mod_name,def_name):
     get.action = 'model'
     get.mod_name = mod_name
     get.def_name = def_name
+    get.stype=stype
+    if stype=="html":
+        return project_obj.model(get)
     return publicObject(project_obj,defs,None,get)
+
 
 
 @app.route('/msg/<mod_name>/<def_name>', methods=method_all)
@@ -741,7 +748,7 @@ def files(pdata=None):
             'GetTmpFile', 'del_files_store', 'add_files_store', 'get_files_store', 'del_files_store_types',
             'add_files_store_types', 'exec_git','upload_file_exists',
             'RemoveTask', 'ActionTask', 'Re_Recycle_bin', 'Get_Recycle_bin', 'Del_Recycle_bin', 'Close_Recycle_bin',
-            'Recycle_bin', 'file_webshell_check', 'dir_webshell_check','files_search','files_replace','get_replace_logs'
+            'Recycle_bin', 'file_webshell_check', 'dir_webshell_check','files_search','files_replace','get_replace_logs','send_baota'
             )
     return publicObject(filesObject, defs, None, pdata)
 
@@ -818,7 +825,7 @@ def config(pdata=None):
 
     import config
     defs = (
-    'set_file_deny', 'del_file_deny', 'get_file_deny',
+    'set_file_deny', 'del_file_deny', 'get_file_deny','set_improvement',
     'get_ols_private_cache_status', 'get_ols_value', 'set_ols_value', 'get_ols_private_cache', 'get_ols_static_cache',
     'set_ols_static_cache', 'switch_ols_private_cache', 'set_ols_private_cache',
     'set_coll_open', 'get_qrcode_data', 'check_two_step', 'set_two_step_auth', 'create_user', 'remove_user',
@@ -948,7 +955,7 @@ def plugin(pdata=None):
     pluginObject = panelPlugin.panelPlugin()
     defs = (
     'set_score', 'get_score', 'update_zip', 'input_zip', 'export_zip', 'add_index', 'remove_index', 'sort_index',
-    'install_plugin', 'uninstall_plugin', 'get_soft_find', 'get_index_list', 'get_soft_list', 'get_cloud_list',
+    'install_plugin', 'uninstall_plugin', 'get_soft_find', 'get_index_list', 'get_soft_list', 'get_cloud_list','get_soft_list_thread',
     'check_deps', 'flush_cache', 'GetCloudWarning', 'install', 'unInstall', 'getPluginList', 'getPluginInfo','repair_plugin','upgrade_plugin',
     'get_make_args', 'add_make_args','input_package','export_zip','get_download_speed','get_usually_plugin','get_plugin_upgrades','close_install',
     'getPluginStatus', 'setPluginStatus', 'a', 'getCloudPlugin', 'getConfigHtml', 'savePluginSort', 'del_make_args',
@@ -1220,7 +1227,7 @@ def login():
             sess_tmp_file = public.get_full_session_file()
             if os.path.exists(sess_tmp_file): os.remove(sess_tmp_file)
             g.dologin = True
-            return redirect(login_path)
+            return redirect(public.get_admin_path())
 
     if is_auth_path:
         if route_path != request.path and route_path + '/' != request.path:
@@ -1792,10 +1799,10 @@ def check_csrf():
     return True
 
 
-def publicObject(toObject, defs, action=None, get=None):
+def publicObject(toObject, defs, action=None, get=None,is_csrf=True):
     try:
         # 模块访问前置检查
-        if public.get_csrf_sess_html_token_value() and session.get('login',None):
+        if is_csrf and public.get_csrf_sess_html_token_value() and session.get('login',None):
             if not check_csrf(): return public.ReturnJson(False, 'INIT_CSRF_ERR'), json_header
 
         if not get: get = get_input()
@@ -2182,8 +2189,8 @@ def ws_project(ws):
     get = json.loads(get)
     if not check_csrf_websocket(ws,get): return
 
-    from panelController import Controller
-    project_obj = Controller()
+    from panelProjectController import ProjectController
+    project_obj = ProjectController()
     while True:
         pdata = ws.receive()
         if pdata in '{}': break

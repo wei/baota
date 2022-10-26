@@ -495,6 +495,10 @@
 						<div class="line-title">消息通道</div>
 						<div class="line-input">
 							<div class="line-row">
+								<a href="javascript:;" class="bt_warning setMessageChannelWXAccount"
+								>微信公众号未配置</a
+								>
+								<span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
 								<a href="javascript:;" class="bt_warning setMessageChannelMail"
 									>邮箱未配置</a
 								>
@@ -710,7 +714,27 @@
 							<div class="line-row-tips">显示在线客服功能按钮</div>
 						</div>
 					</div>
-
+					<div class="line" title="用户体验改善计划">
+						<div class="line-title">用户体验改善计划</div>
+						<div class="line-form">
+							<div class="line-row">
+								<div class="ssh-item" style="margin-left: 0; padding: 0">
+									<input
+											class="btswitch btswitch-ios"
+											id="setImprovement"
+											type="checkbox"
+											name="improvement"
+									/>
+									<label
+											class="btswitch-btn"
+											for="setImprovement"
+											style="margin-bottom: 0"
+									></label>
+								</div>
+							</div>
+							<div class="line-row-tips">参加用户体验改善计划来帮助我们改进产品，<a href="https://www.bt.cn/new/agreement_privacy.html" target="_blank" class="btlink">查看隐私政策</a></div>
+						</div>
+					</div>
 					<div class="line" title="面板别名">
 						<div class="line-title">面板别名</div>
 						<div class="line-input">
@@ -1318,6 +1342,10 @@
 						<div class="line-title">消息通道</div>
 						<div class="line-input">
 							<div class="line-row">
+								<a href="javascript:;" class="bt_warning setMessageChannelWXAccount"
+								>微信公众号未配置</a
+								>
+								<span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
 								<a href="javascript:;" class="bt_warning setMessageChannelMail">
 									邮箱未配置
 								</a>
@@ -1583,6 +1611,9 @@
           $("input[name=id]").prop("checked", false);
         }
       });
+	  $('[name="limitip"]').keyup(function () {
+		$('[name="limitip"]').val($(this).val().replace(/，/g,','))
+	  })
       var is_files_html = false;
       var task_open = 0;
       var task_close = false;
@@ -1710,7 +1741,7 @@
       }
 
 		//  设置消息通道
-		$('.setMessageChannelMail,.setMessageChannelMailBtn,.setMessageChannelNailNail,.setMessageChannelSMS').on('click', function(){
+		$('.setMessageChannelWXAccount,.setMessageChannelMail,.setMessageChannelMailBtn,.setMessageChannelNailNail,.setMessageChannelSMS').on('click', function(){
 			open_three_channel_auth()
 		});
 

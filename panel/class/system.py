@@ -410,7 +410,7 @@ class system:
             n += 1
             try:
                 inodes = tempInodes1[n-1].split()
-                disk = re.findall(r"^(.+)\s+([\w\.]+)\s+([\w\.]+)\s+([\w\.]+)\s+([\w\.]+)\s+([\d%]{2,4})\s+(/.{0,100})$",tmp.strip())
+                disk = re.findall(r"^(.+)\s+([\w\.]+)\s+([\w\.]+)\s+([\w\.]+)\s+([\w\.]+)\s+([\d%]{2,4})\s+(/.{0,100})$",tmp.strip().replace(',','.'))
                 if disk: disk = disk[0]
                 if len(disk) < 6: continue
                 if disk[2].find('M') != -1: continue

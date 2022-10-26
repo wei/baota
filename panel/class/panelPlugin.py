@@ -715,7 +715,7 @@ class panelPlugin:
 
     #安装插件
     def install_plugin(self,get):
-        if not self.check_sys_write(): return public.returnMsg(False,'<a style="color:red;">错误：检测到系统关键目录不可写!</a><br>1、如果安装了[宝塔系统加固]，请先关闭<br><br>2、如果安装了云锁，请关闭[系统加固]功能<br>3、如果安装了安全狗，请关闭[系统防护]功能<br>4、如果使用了其它安全软件，请先卸载<br>')
+        if not self.check_sys_write(): return public.returnMsg(False,'<a style="color:red;">错误：检测到系统关键目录不可写!</a><br>1、如果安装了[宝塔系统加固]，请先关闭<br>2、如果安装了云锁，请关闭[系统加固]功能<br>3、如果安装了安全狗，请关闭[系统防护]功能<br>4、如果使用了其它安全软件，请先卸载<br>')
         if not 'sName' in get: return public.returnMsg(False,'请指定软件名称!')
         pluginInfo = self.get_soft_find(get.sName)
         p_node = '/www/server/panel/install/public.sh'
@@ -1002,7 +1002,8 @@ class panelPlugin:
                 tmpList = []
                 for softInfo in softList['list']:
 
-                    if qType > 0 and softInfo['type'] != qType: continue
+                    # 过滤分类
+                    # if qType > 0 and softInfo['type'] != qType: continue
 
                     #查询默认命中关键词
                     softInfo['keys'] = ''
@@ -1012,10 +1013,26 @@ class panelPlugin:
                     else:
                         ps = re.sub('<[0-9a-zA-Z\.\"\/\:\=\s\-_\?;@&\'\%\+\#]+>','',softInfo['ps'].lower())
                         if softInfo['name'].lower().find(get.query) != -1 or softInfo['title'].lower().find(get.query) != -1 or ps.find(get.query) != -1:
+                            skey = ''
+                            if softInfo['name'].lower().find(get.query) != -1:
+                                skey = "<span style='color:#fc6d26'>（匹配到插件名称：{}）</span>".format(softInfo['name'])
+                            softInfo['keys'] = skey
                             tmpList.append(softInfo)
 
                 softList['list'] = tmpList
         return softList
+
+    def get_soft_list_thread(self,get):
+        '''
+            @name 获取软件列表(线程)
+            @param get
+            @return dict
+        '''
+        session['is_flush_soft_list'] = 1
+        if not public.get_improvement():
+            get.cid = ''
+        public.ExecShell("nohup {} {}/script/flush_soft.py {} > /dev/null 2>&1 &".format(public.get_python_bin(),public.get_panel_path(),get.cid))
+        return public.returnMsg(True,"ok")
 
 
     def check_soft_keyword(self,softInfo,query):
@@ -1723,11 +1740,14 @@ class panelPlugin:
             if version == (versions[i]['m_version'] + '.' + versions[i]['version']):
                 versions[i]['setup'] = True
                 continue
-            vTmp = versions[i]['m_version'].split('_')
-            if len(vTmp) > 1:
-                vTmp = vTmp[1]
+            if versions[i]['m_version'].find('greatsql') == -1:
+                vTmp = versions[i]['m_version'].split('_')
+                if len(vTmp) > 1:
+                    vTmp = vTmp[1]
+                else:
+                    vTmp = vTmp[0]
             else:
-                vTmp = vTmp[0]
+                vTmp = [versions[i]['m_version']]
             vLen = len(vTmp)
             versions[i]['setup'] = (version[:vLen] == vTmp)
         return versions

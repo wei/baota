@@ -1,359 +1,606 @@
-#!/usr/bin/python
-from projectModel .base import projectBase #line:12
-from projectModel import scanningModel #line:13
-import sys ,json ,os ,public ,hashlib ,requests ,time #line:14
-from BTPanel import cache #line:15
-class main (projectBase ):#line:17
-    __OOO000OOOOOO0O0OO =scanningModel .main ()#line:18
-    __OO000OO00OO0OOOOO =0 #line:19
-    __OO00000OOO0O0OOOO ="/www/server/panel/data/webshell_check_shell.txt"#line:20
-    def GetWebInfo (OOO00OOO0OO0O0O00 ,O0000OO0O0OOOOO00 ):#line:22
-        ""#line:28
-        OO00000O0O0O0O000 =public .M ('sites').where ('project_type=? and name=?',('PHP',O0000OO0O0OOOOO00 .name )).count ()#line:29
-        if not OO00000O0O0O0O000 :return False #line:30
-        OO00000O0O0O0O000 =public .M ('sites').where ('project_type=? and name=?',('PHP',O0000OO0O0OOOOO00 .name )).select ()#line:31
-        return OO00000O0O0O0O000 [0 ]#line:32
-    def ScanWeb (OO0O0000O000OOOOO ,OOOOOOOO00OO0OO00 ):#line:35
-        ""#line:41
-        if '_ws'in OOOOOOOO00OO0OO00 :OOOOOOOO00OO0OO00 ._ws .send (public .getJson ({"end":False ,"ws_callback":OOOOOOOO00OO0OO00 .ws_callback ,"info":"正在扫描 %s 网站漏洞"%OOOOOOOO00OO0OO00 .name ,"type":"vulscan"}))#line:42
-        OO00O000OOOO0O0OO =OO0O0000O000OOOOO .__OOO000OOOOOO0O0OO .startScanWeb (OOOOOOOO00OO0OO00 )#line:43
-        if OO00O000OOOO0O0OO ['msg'][0 ]['is_vufix']:#line:44
-            if '_ws'in OOOOOOOO00OO0OO00 :OOOOOOOO00OO0OO00 ._ws .send (public .getJson ({"end":False ,"ws_callback":OOOOOOOO00OO0OO00 .ws_callback ,"info":"网站 %s 存在漏洞"%OOOOOOOO00OO0OO00 .name ,"type":"vulscan","is_error":True }))#line:45
-            return OO00O000OOOO0O0OO ['msg'][0 ]['cms']#line:46
-        return {}#line:47
-    def WebSSlSecurity (OOO0O00000O0O00O0 ,OO00O0O00OOOOOO0O ,O000O00000O0000OO ):#line:49
-        ""#line:55
-        if public .get_webserver ()=='nginx':#line:56
-            O000O0OOO00O0OOO0 ='/www/server/panel/vhost/nginx/{}.conf'.format (OO00O0O00OOOOOO0O ['name'])#line:57
-            if os .path .exists (O000O0OOO00O0OOO0 ):#line:58
-                OOO0O00O00OO0OO0O =public .ReadFile (O000O0OOO00O0OOO0 )#line:59
-                if 'TLSv1 'in OOO0O00O00OO0OO0O :#line:60
-                    if '_ws'in O000O00000O0000OO :O000O00000O0000OO ._ws .send (public .getJson ({"end":False ,"ws_callback":O000O00000O0000OO .ws_callback ,"info":"【%s】 网站启用了不安全的TLS1协议"%OO00O0O00OOOOOO0O ['name'],"type":"webscan","is_error":True ,"dangerous":2 }))#line:63
-                    OO00O0O00OOOOOO0O ['result']['webscan'].append ({"name":"【%s】 网站启用了不安全的TLS1协议"%OO00O0O00OOOOOO0O ['name'],"repair":"修复方案：打开配置文件去掉TLS1","dangerous":2 })#line:64
-    def WebInfoDisclosure (OO0O000O0OOO0OOOO ,OOOO00OOO0O0OO0O0 ):#line:68
-        ""#line:74
-        if '_ws'in OOOO00OOO0O0OO0O0 :OOOO00OOO0O0OO0O0 ._ws .send (public .getJson ({"end":False ,"callback":OOOO00OOO0O0OO0O0 .ws_callback ,"info":"正在扫描 %s 网站配置安全性"%OOOO00OOO0O0OO0O0 .name ,"type":"webscan"}))#line:76
-        OOOOOOO00000O0O00 =[]#line:77
-        if public .get_webserver ()=='nginx':#line:78
-            O000000O000OO0OOO ='/www/server/nginx/conf/nginx.conf'#line:79
-            if os .path .exists (O000000O000OO0OOO ):#line:80
-                OO0OOO00O0OOO00OO =public .ReadFile (O000000O000OO0OOO )#line:81
-                if not 'server_tokens off'in OO0OOO00O0OOO00OO :#line:82
-                    OOOOOOO00000O0O00 .append ({"name":"Nginx存在版本信息泄露","repair":"打开nginx.conf配置文件，在http { }里加上： server_tokens off;","dangerous":1 })#line:83
-        O0000OOOOOO000000 =public .get_site_php_version (OOOO00OOO0O0OO0O0 .name )#line:84
-        OOO0OOOOO000O00O0 ='/www/server/php/%s/etc/php.ini'%O0000OOOOOO000000 #line:85
-        if os .path .exists (OOO0OOOOO000O00O0 ):#line:86
-            O00OOO0OOO00O000O =public .ReadFile (OOO0OOOOO000O00O0 )#line:87
-            if not 'expose_php = Off'in O00OOO0OOO00O000O :#line:88
-                OOOOOOO00000O0O00 .append ({"name":"PHP %s 存在版本信息泄露"%O0000OOOOOO000000 ,"repair":"修复方案：打开php.ini配置文件，设置expose_php = Off","dangerous":1 })#line:89
-        if '_ws'in OOOO00OOO0O0OO0O0 :OOOO00OOO0O0OO0O0 ._ws .send (public .getJson ({"end":False ,"callback":OOOO00OOO0O0OO0O0 .ws_callback ,"info":"扫描 %s 网站配置安全性完成"%OOOO00OOO0O0OO0O0 .name ,"type":"webscan"}))#line:92
-        return OOOOOOO00000O0O00 #line:93
-    def _send_task (O00OOO0OO000O0000 ,O0O0O0OO0OO0O00O0 ):#line:96
-        ""#line:102
-        import panelAuth #line:103
-        OO00OOO0OO0O0OO00 =panelAuth .panelAuth ().create_serverid (None )#line:104
-        OO00OOO0OO0O0OO00 ['url']=O0O0O0OO0OO0O00O0 #line:105
-        try :#line:106
-            OOO0OO000O000O0O0 =public .httpPost ("http://www.bt.cn/api/local/boce",OO00OOO0OO0O0OO00 ,10 )#line:107
-            OOO0OO000O000O0O0 =json .loads (OOO0OO000O000O0O0 )#line:108
-            return OOO0OO000O000O0O0 #line:109
-        except :#line:110
-            return False #line:111
-    def WebBtBoce (OO000O00O00O0O0O0 ,O0OO0OO0O0OOOOOO0 ,O0OOO000OO000OOOO ):#line:114
-        ""#line:120
-        O0OOO000OO000OOOO ['result']['boce']=[]#line:121
-        for O000O0OO00O000O0O in O0OO0OO0O0OOOOOO0 .url :#line:122
-            if O000O0OO00O000O0O .find ('http://')==-1 and O000O0OO00O000O0O .find ('https://')==-1 :continue #line:123
-            if '_ws'in O0OO0OO0O0OOOOOO0 :O0OO0OO0O0OOOOOO0 ._ws .send (public .getJson ({"end":False ,"ws_callback":O0OO0OO0O0OOOOOO0 .ws_callback ,"info":"正在对URL %s 进行拨测"%O000O0OO00O000O0O ,"type":"boce"}))#line:125
-            OO0O0OOO0O000OO0O =OO000O00O00O0O0O0 ._send_task (O0OO0OO0O0OOOOOO0 .url )#line:126
-            if '_ws'in O0OO0OO0O0OOOOOO0 :O0OO0OO0O0OOOOOO0 ._ws .send (public .getJson ({"end":False ,"ws_callback":O0OO0OO0O0OOOOOO0 .ws_callback ,"info":OO0O0OOO0O000OO0O ,"type":"boce"}))#line:128
-            if OO0O0OOO0O000OO0O :#line:129
-                O0OOO000OO000OOOO ['result']['boce'].append (OO0O0OOO0O000OO0O )#line:130
-    def WebFilePermission (OOO00OO00O00OOO00 ,O0OOOO00OOOOOO000 ,OOOO000OOOOO0O0OO ):#line:132
-        ""#line:138
-        import pwd #line:139
-        OOO0O000000O0OOOO =[]#line:140
-        for OO0OOO0OO0O000O0O in os .listdir (O0OOOO00OOOOOO000 ['path']):#line:141
-            O000OO00O000O0000 =os .path .join (O0OOOO00OOOOOO000 ['path'],OO0OOO0OO0O000O0O )#line:142
-            if os .path .isdir (O000OO00O000O0000 ):#line:143
-                OOO0O000000O0OOOO .append (O000OO00O000O0000 )#line:144
-                for O0000OOO00OOO00OO in os .listdir (O000OO00O000O0000 ):#line:145
-                    OO00O00000O0OOO00 =O000OO00O000O0000 +'/'+O0000OOO00OOO00OO #line:146
-                    if os .path .isdir (OO00O00000O0OOO00 ):#line:147
-                        OOO0O000000O0OOOO .append (OO00O00000O0OOO00 )#line:148
-        if len (OOO0O000000O0OOOO )>=1 :#line:149
-            for OOOO00OO00OOO0OO0 in OOO0O000000O0OOOO :#line:150
-                if not os .path .exists (OOOO00OO00OOO0OO0 ):continue #line:151
-                O0OOO00OOO00O0O0O =os .stat (OOOO00OO00OOO0OO0 )#line:152
-                if int (oct (O0OOO00OOO00O0O0O .st_mode )[-3 :])==777 :#line:153
-                    if '_ws'in OOOO000OOOOO0O0OO :OOOO000OOOOO0O0OO ._ws .send (public .getJson ({"end":False ,"ws_callback":OOOO000OOOOO0O0OO .ws_callback ,"info":"  【%s】 目录权限错误"%OOOO00OO00OOO0OO0 ,"repair":"设置 【%s】 目录为755"%OOOO00OO00OOO0OO0 ,"type":"webscan","is_error":True ,"dangerous":1 }))#line:156
-                    O0OOOO00OOOOOO000 ['result']['webscan'].append ({"name":"  【%s】 目录权限错误"%OOOO00OO00OOO0OO0 ,"repair":"修复方案：设置 【%s】 目录为755"%OOOO00OO00OOO0OO0 ,"dangerous":1 })#line:157
-                if pwd .getpwuid (O0OOO00OOO00O0O0O .st_uid ).pw_name !='www':#line:158
-                    if '_ws'in OOOO000OOOOO0O0OO :OOOO000OOOOO0O0OO ._ws .send (public .getJson ({"end":False ,"ws_callback":OOOO000OOOOO0O0OO .ws_callback ,"info":"  【%s】 目录权限错误"%OOOO00OO00OOO0OO0 ,"repair":"修复方案：设置 【%s】 目录的用户权限为www"%OOOO00OO00OOO0OO0 ,"type":"webscan","is_error":True ,"dangerous":1 }))#line:161
-                    O0OOOO00OOOOOO000 ['result']['webscan'].append ({"name":"  【%s】 目录用户权限错误"%OOOO00OO00OOO0OO0 ,"repair":"设置 【%s】 目录的用户权限为www"%OOOO00OO00OOO0OO0 ,"dangerous":1 })#line:162
-    def Getdir (OOOOOOOO00OO0000O ,OO00OO0OO0OO0000O ):#line:165
-        ""#line:171
-        O00000O0OOO000OOO =[]#line:172
-        OOO00O0O00OOO0O0O =[]#line:173
-        [[O00000O0OOO000OOO .append (os .path .join (OO0OO000OO0O0000O ,OOOO0O00000OO0000 ))for OOOO0O00000OO0000 in O0OO00O0O00OO0OO0 ]for OO0OO000OO0O0000O ,OO0O000OO0OO00OOO ,O0OO00O0O00OO0OO0 in os .walk (OO00OO0OO0OO0000O )]#line:174
-        for O0OOOOOOO0000OOO0 in O00000O0OOO000OOO :#line:175
-            if str (O0OOOOOOO0000OOO0 .lower ())[-4 :]=='.php':#line:176
-                OOO00O0O00OOO0O0O .append (O0OOOOOOO0000OOO0 )#line:177
-        return OOO00O0O00OOO0O0O #line:178
-    def ReadFile (O0000000O00O000O0 ,OOOO0OOOO00O00O00 ,mode ='r'):#line:180
-        ""#line:186
-        import os #line:187
-        if not os .path .exists (OOOO0OOOO00O00O00 ):return False #line:188
-        try :#line:189
-            O000O0OO0000OOO0O =open (OOOO0OOOO00O00O00 ,mode )#line:190
-            OO00OO0000OOO000O =O000O0OO0000OOO0O .read ()#line:191
-            O000O0OO0000OOO0O .close ()#line:192
-        except Exception as O000O0OO0O0OOOOO0 :#line:193
-            if sys .version_info [0 ]!=2 :#line:194
-                try :#line:195
-                    O000O0OO0000OOO0O =open (OOOO0OOOO00O00O00 ,mode ,encoding ="utf-8")#line:196
-                    OO00OO0000OOO000O =O000O0OO0000OOO0O .read ()#line:197
-                    O000O0OO0000OOO0O .close ()#line:198
-                except Exception as OOOOO00OO00OO0O00 :#line:199
-                    return False #line:200
-            else :#line:201
-                return False #line:202
-        return OO00OO0000OOO000O #line:203
-    def FileMd5 (O00O0O0O00O0O0O0O ,O00O0O0O0OO0O000O ):#line:205
-        ""#line:211
-        if os .path .exists (O00O0O0O0OO0O000O ):#line:212
-            with open (O00O0O0O0OO0O000O ,'rb')as OOO0OO0O00OOO000O :#line:213
-                O0OO00O0OO00O00OO =OOO0OO0O00OOO000O .read ()#line:214
-            O0O0OOOO0O0000O0O =hashlib .md5 (O0OO00O0OO00O00OO ).hexdigest ()#line:215
-            return O0O0OOOO0O0000O0O #line:216
-        else :#line:217
-            return False #line:218
-    def WebshellChop (OO0OOOO0O00OO0O00 ,OO0O0O0OO000OO00O ,OOOO000O00OOO00O0 ,O0OOO00OO00O0O000 ):#line:220
-        ""#line:227
-        try :#line:228
-            OOO00OO0000O000O0 =OOOO000O00OOO00O0 #line:229
-            OOO000O0O0O000000 =os .path .getsize (OO0O0O0OO000OO00O )#line:230
-            if OOO000O0O0O000000 >1024000 :return False #line:231
-            OO0OO0O0OOOOOO000 ={'inputfile':OO0OOOO0O00OO0O00 .ReadFile (OO0O0O0OO000OO00O ),"md5":OO0OOOO0O00OO0O00 .FileMd5 (OO0O0O0OO000OO00O )}#line:232
-            public .print_log ("参数: "+json .dumps (OO0OO0O0OOOOOO000 ))#line:233
-            public .print_log ("URL "+OOO00OO0000O000O0 )#line:234
-            public .print_log (OO0OOOO0O00OO0O00 .FileMd5 (OO0O0O0OO000OO00O )+" "+OO0O0O0OO000OO00O )#line:235
-            OO0O00OO000OO0OOO =requests .post (OOO00OO0000O000O0 ,OO0OO0O0OOOOOO000 ,timeout =20 ).json ()#line:236
-            public .print_log ("返回:  "+json .dumps (OO0O00OO000OO0OOO ))#line:237
-            if OO0O00OO000OO0OOO ['msg']=='ok':#line:238
-                if (OO0O00OO000OO0OOO ['data']['data']['level']==5 ):#line:239
-                    return True #line:240
-                return False #line:241
-        except :#line:242
-            return False #line:243
-    def GetCheckUrl (OOOOOOO000OO0OOO0 ):#line:245
-        ""#line:250
-        try :#line:251
-            O0O0O0O0O0O0OO0OO =requests .get ('http://www.bt.cn/checkWebShell.php').json ()#line:252
-            if O0O0O0O0O0O0OO0OO ['status']:#line:253
-                return O0O0O0O0O0O0OO0OO ['url']#line:254
-            return False #line:255
-        except :#line:256
-            return False #line:257
-    def UploadShell (OO0OOOOOOOOOOOOOO ,O00O00OO0OO0O0O0O ,OOOOOOOOO00O0OO00 ,O00OOOOOOOO00OOO0 ):#line:259
-        ""#line:265
-        if len (O00O00OO0OO0O0O0O )==0 :return []#line:266
-        OOO0OO000000OO000 =OO0OOOOOOOOOOOOOO .GetCheckUrl ()#line:267
-        if not OOO0OO000000OO000 :return []#line:268
-        O00OOO0OOO0O000O0 =0 #line:269
-        O00O00000OO000000 =0 #line:270
-        OOOO000OO0O00OOO0 =[]#line:271
-        if os .path .exists (OO0OOOOOOOOOOOOOO .__OO00000OOO0O0OOOO ):#line:272
-            O00O00000OO000000 =1 #line:273
-            try :#line:274
-                OOOO000OO0O00OOO0 =json .loads (public .ReadFile (OO0OOOOOOOOOOOOOO .__OO00000OOO0O0OOOO ))#line:275
-            except :#line:276
-                public .WriteFile (OO0OOOOOOOOOOOOOO .__OO00000OOO0O0OOOO ,[])#line:277
-                O00O00000OO000000 =0 #line:278
-        for OOOOOO0000000OOO0 in O00O00OO0OO0O0O0O :#line:279
-            O00OOO0OOO0O000O0 +=1 #line:280
-            if '_ws'in OOOOOOOOO00O0OO00 :OOOOOOOOO00O0OO00 ._ws .send (public .getJson ({"end":False ,"callback":OOOOOOOOO00O0OO00 .ws_callback ,"info":"正在扫描文件是否是木马%s"%OOOOOO0000000OOO0 ,"type":"webscan","count":OO0OOOOOOOOOOOOOO .__OO000OO00OO0OOOOO ,"is_count":O00OOO0OOO0O000O0 }))#line:282
-            if O00O00000OO000000 :#line:284
-                if OOOOOO0000000OOO0 in OOOO000OO0O00OOO0 :continue #line:285
-            if OO0OOOOOOOOOOOOOO .WebshellChop (OOOOOO0000000OOO0 ,OOO0OO000000OO000 ,OOOOOOOOO00O0OO00 ):#line:286
-                if '_ws'in OOOOOOOOO00O0OO00 :OOOOOOOOO00O0OO00 ._ws .send (public .getJson ({"end":False ,"callback":OOOOOOOOO00O0OO00 .ws_callback ,"info":"%s 网站木马扫描发现当前文件为木马文件%s"%(OOOOOOOOO00O0OO00 .name ,len (O00OOOOOOOO00OOO0 ['result']['webshell'])),"type":"webscan","count":OO0OOOOOOOOOOOOOO .__OO000OO00OO0OOOOO ,"is_count":O00OOO0OOO0O000O0 ,"is_error":True }))#line:290
-                O00OOOOOOOO00OOO0 ['result']['webshell'].append (OOOOOO0000000OOO0 )#line:291
-        if '_ws'in OOOOOOOOO00O0OO00 :OOOOOOOOO00O0OO00 ._ws .send (public .getJson ({"end":False ,"callback":OOOOOOOOO00O0OO00 .ws_callback ,"info":"%s 网站木马扫描完成共发现 %s 个木马文件"%(OOOOOOOOO00O0OO00 .name ,len (O00OOOOOOOO00OOO0 ['result']['webshell'])),"type":"webscan","count":OO0OOOOOOOOOOOOOO .__OO000OO00OO0OOOOO ,"is_count":O00OOO0OOO0O000O0 }))#line:293
-    def GetDirList (O0OOOOOOO0O00OO0O ,O0O0000O0O00OOOO0 ):#line:296
-        ""#line:300
-        if os .path .exists (str (O0O0000O0O00OOOO0 )):#line:301
-            return O0OOOOOOO0O00OO0O .Getdir (O0O0000O0O00OOOO0 )#line:302
-        else :#line:303
-            return False #line:304
-    def SanDir (O0O000O0O0O000O00 ,O00OO0OOOO0O0OOOO ,O0O00OO0OOOO0OOO0 ):#line:306
-        ""#line:312
-        O0O000O0O0O000O00 .__OO000OO00OO0OOOOO =0 #line:313
-        O0000OOOO000OO000 =O0O000O0O0O000O00 .GetDirList (O00OO0OOOO0O0OOOO ['path'])#line:314
-        if not O0000OOOO000OO000 :#line:315
-            return []#line:316
-        O0O000O0O0O000O00 .__OO000OO00OO0OOOOO =len (O0000OOOO000OO000 )#line:318
-        O0000O000O00000O0 =O0O000O0O0O000O00 .UploadShell (O0000OOOO000OO000 ,O0O00OO0OOOO0OOO0 ,O00OO0OOOO0O0OOOO )#line:319
-        return O0000O000O00000O0 #line:320
-    def UpdateWubao (OOOO0000OO0OO0OO0 ,OO000000OO0O00OO0 ):#line:322
-        ""#line:327
-        if not os .path .exists (OOOO0000OO0OO0OO0 .__OO00000OOO0O0OOOO ):#line:328
-            public .WriteFile (OOOO0000OO0OO0OO0 .__OO00000OOO0O0OOOO ,[OO000000OO0O00OO0 .strip ()])#line:329
-        else :#line:330
-            try :#line:331
-                O0O00OO0OOO0000OO =json .loads (public .ReadFile (OOOO0000OO0OO0OO0 .__OO00000OOO0O0OOOO ))#line:332
-                if not OO000000OO0O00OO0 in O0O00OO0OOO0000OO :#line:333
-                    O0O00OO0OOO0000OO .append (OO000000OO0O00OO0 )#line:334
-                    public .WriteFile (OOOO0000OO0OO0OO0 .__OO00000OOO0O0OOOO ,json .dumps (O0O00OO0OOO0000OO ))#line:335
-            except :#line:336
-                pass #line:337
-    def SendWubao (OOOOO00O0O00OO0OO ,OOOOOO00O000O0O0O ):#line:340
-        ""#line:345
-        O00O0O000OOO000O0 =json .loads (public .ReadFile ('/www/server/panel/data/userInfo.json'))#line:346
-        OO0O00OOOO00OOOO0 ='http://www.bt.cn/api/bt_waf/reportTrojanError'#line:347
-        OOOOO00O0O00OO0OO .UpdateWubao (filename =OOOOOO00O000O0O0O .filename )#line:348
-        O000OOO00O00OO00O ={'name':OOOOOO00O000O0O0O .filename ,'inputfile':OOOOO00O0O00OO0OO .ReadFile (OOOOOO00O000O0O0O .filename ),"md5":OOOOO00O0O00OO0OO .FileMd5 (OOOOOO00O000O0O0O .filename ),"access_key":O00O0O000OOO000O0 ['access_key'],"uid":O00O0O000OOO000O0 ['uid']}#line:349
-        OOO00OO0OO0OO0O0O =public .httpPost (OO0O00OOOO00OOOO0 ,O000OOO00O00OO00O )#line:350
-        return public .returnMsg (True ,"提交误报完成")#line:351
-    def WebShellKill (O00000OOO0O0O0000 ,OOO0O0000000O00O0 ,O0O00OO000OOOOOOO ):#line:354
-        ""#line:360
-        O0O00OO000OOOOOOO ['result']['webshell']=[]#line:361
-        O00000OOO0O0O0000 .SanDir (O0O00OO000OOOOOOO ,OOO0O0000000O00O0 )#line:362
-    def WebFileDisclosure (OO0000OO0O0OOOO0O ,OOOO0OO000O000OO0 ,O0OOO0OO0O0O00O0O ):#line:365
-        ""#line:371
-        OOOO0OO000O000OO0 ['result']['filescan']=[]#line:372
-        for O00000OOOO0OOOOO0 in os .listdir (OOOO0OO000O000OO0 ['path']):#line:373
-            O00OOO000O0000OO0 =os .path .join (OOOO0OO000O000OO0 ['path'],O00000OOOO0OOOOO0 )#line:374
-            if os .path .isfile (O00OOO000O0000OO0 ):#line:375
-                if O00OOO000O0000OO0 .endswith (".sql"):#line:376
-                    OOOO0OO000O000OO0 ['result']['filescan'].append ({"name":"  【%s】 网站根目录存在sql备份文件%s"%(OOOO0OO000O000OO0 ['name'],O00OOO000O0000OO0 ),"repair":"修复方案：转移到其他目录或者下载到本地","dangerous":2 })#line:379
-                if O00OOO000O0000OO0 .endswith (".zip")or O00OOO000O0000OO0 .endswith (".gz")or O00OOO000O0000OO0 .endswith (".tar")or O00OOO000O0000OO0 .endswith (".7z"):#line:380
-                    if OOOO0OO000O000OO0 ['name']in O00OOO000O0000OO0 :#line:381
-                        if '_ws'in O0OOO0OO0O0O00O0O :O0OOO0OO0O0O00O0O ._ws .send (public .getJson ({"end":False ,"ws_callback":O0OOO0OO0O0O00O0O .ws_callback ,"info":"  【%s】 网站根目录存在备份文件 %s"%(OOOO0OO000O000OO0 ['name'],O00OOO000O0000OO0 ),"type":"filescan","is_error":True ,"dangerous":2 }))#line:384
-                        OOOO0OO000O000OO0 ['result']['filescan'].append ({"name":"  【%s】 网站根目录存在备份文件 %s"%(OOOO0OO000O000OO0 ['name'],O00OOO000O0000OO0 ),"repair":"修复方案：转移到其他目录或者下载到本地","dangerous":2 })#line:385
-    def IsBackupSite (O000000OOOO000OOO ,O0O00000OOO0OOOO0 ):#line:387
-        ""#line:392
-        import crontab #line:393
-        OOOOOOOO000OOOO0O =crontab .crontab ()#line:394
-        O000O0O000O0O0OOO =OOOOOOOO000OOOO0O .GetCrontab (None )#line:395
-        for O0OOOO00OO0OO00O0 in O000O0O000O0O0OOO :#line:396
-            if O0OOOO00OO0OO00O0 ['sType']=='site':#line:397
-                if O0OOOO00OO0OO00O0 ['sName']=='ALL':#line:398
-                    return True #line:399
-                if O0OOOO00OO0OO00O0 ['sName']==O0O00000OOO0OOOO0 :#line:400
-                    return True #line:401
-        return False #line:402
-    def WebBackup (OOOOO000OO0O0OOO0 ,OO00O00O000OO0O0O ,OOO0OO000OOO00O00 ):#line:404
-        ""#line:410
-        OO00O00O000OO0O0O ['result']['backup']=[]#line:411
-        if not OOOOO000OO0O0OOO0 .IsBackupSite (OO00O00O000OO0O0O ['name']):#line:412
-            if '_ws'in OOO0OO000OOO00O00 :OOO0OO000OOO00O00 ._ws .send (public .getJson ({"end":False ,"ws_callback":OOO0OO000OOO00O00 .ws_callback ,"info":"修复方案：【%s】 在计划任务中创建备份网站任务"%OO00O00O000OO0O0O ['name'],"type":"backup","is_error":True ,"dangerous":2 }))#line:413
-            OO00O00O000OO0O0O ['result']['backup'].append ({"name":"  【%s】 缺少计划任务备份"%(OO00O00O000OO0O0O ['name']),"repair":"修复方案：【%s】 在计划任务中创建备份网站任务"%OO00O00O000OO0O0O ['name'],"dangerous":2 })#line:414
-    def GetLevelRule (OOOO0OOO0000OOOOO ,O00OOO0O000000OO0 ):#line:416
-        O0O00O0O0OO000OOO =[]#line:417
-        OOOO0O0OOO00OOOOO =['364c2b553559697066445638','364c2b55354c326a66445638','3537364f3561577a66444577664f694a7375614468513d3d','365a79793649533466444977664f694a7375614468513d3d','36594b41364b2b3366444d7766413d3d','353436773659655266444d77664f574e6d75573971513d3d','63444a7766444d77664f6976694f6d716c773d3d','354c6974357061483561325835626d5666444d77664f694a7375614468513d3d','356232703536576f66445577664f574e6d75573971513d3d','364c53743562327066445577664f574e6d75573971513d3d','356f715635724f6f66445577664f574e6d75573971513d3d','354c71613559326166445577664f574e6d75573971513d3d','354c71613570435066445577664f574e6d75573971513d3d','357065673536434266445977664f694a7375614468513d3d','3570794a3536434266445977664f694a7375614468513d3d','35594733356f754e66445977664f694a7375614468513d3d','35705376354c755966445977664f57626d2b615775656155722b53376d413d3d','356f6951354c713635623278364b654766446377664f694a7375614468513d3d','356f6951354c7136353553313562327866446377664f694a7375614468513d3d','3662754536496d79353732523536755a66446377664f694a7375614468513d3d','3571796e3537364f3562656f354c6d7a66446377664f694a7375614468513d3d','35367973354c6941354c7961356f6d4166446377664f694a7375614468513d3d','36496d79356f4f4666446377664f694a7375614468513d3d','355a7539354c716e51585a384e7a423836496d79356f4f46','354c71613572537951585a384e7a423836496d79356f4f46','3570656c3570797359585a384e7a423836496d79356f4f46','354c6941357079733659475466446377664f694a7375614468513d3d','357065683536434266446377664f694a7375614468513d3d','354c6d463649324a66446377664f694a7375614468513d3d','356f32563662473866446377664f574e6d75573971513d3d','36494342364a6d4f3570793666446377664f574e6d75573971513d3d','35714f4c35346d4d66446377664f574e6d75573971513d3d','36492b6736492b6366446377664f574e6d75573971513d3d','3572367a365a656f66446377664f574e6d75573971513d3d','356f2b513534367766446377664f574e6d75573971513d3d','35615371365a697a355a2b4f66446377664f574e6d75573971513d3d','354c716b35706954356f6d4166446377664f6d376b656542734f533670773d3d','354c756c35615371355a324b6644637766413d3d','3559574e3536322b3537716d66446777664f57626d2b615775656155722b53376d413d3d','3537712f364c657635714f413572574c6644677766413d3d','355932613562327066446777664f574e6d75573971513d3d','364c574d365a4b7866446777664f574e6d75573971513d3d','35616978354c6d51355a793666446777664f574e6d75573971513d3d','624739755a7a68384f4442383559326135623270','3572367a365a656f35615371365a697a355a2b4f66446777664f574e6d75573971513d3d','364a4768354c717366446731664f574e6d75573971513d3d','3659655235724b5a66446731664f574e6d75573971513d3d','365a4f3235724b7a66446731664f574e6d75573971513d3d','3537712f354c694b354c694c35724f6f66446731664f574e6d75573971513d3d','35616978354c6d51355a2b4f66446b77664f574e6d75573971513d3d','3571796e354c7161355a7539365a6d4666446b77664f574e6d75573971513d3d','354c715335593261355a7539365a6d4666446b77664f574e6d75573971513d3d','354c6948364c4771355a7539365a6d4666446b77664f574e6d75573971513d3d','354c6948354c6977355a7539365a6d4666446b77664f574e6d75573971513d3d','354c716135593261355a7539365a6d4666446b77664f574e6d75573971513d3d','355a75623570613535705376354c755966446b77664f57626d2b615775656155722b53376d413d3d','35616942356243383570617666446b31664f574e6d75573971513d3d','35706177364a4768354c717366446b35664f574e6d75573971513d3d','364c574d355a793666446b35664f574e6d75573971513d3d','364c574d3559326166446b35664f574e6d75573971513d3d','35706532357065323562327066446b77664f574e6d75573971513d3d','35595774355a43493562327066446b35664f574e6d75573971513d3d','35616962357169433561433066446777664f574e6d75573971513d3d','3559574e3536322b35705376354c755966446777664f57626d2b615775656155722b53376d413d3d','364c53333571792b66446377664f6976694f6d716c773d3d','35726958365943503572574c364b2b5666445577664f6d376b656542734f533670773d3d','35705337365a697966445577664f6d376b656542734f533670773d3d','35356d39356269393561325166445577664f6d376b656542734f533670773d3d','36627552356269393561325166446377664f6d376b656542734f533670773d3d','35377169356269393561325166445977664f6d376b656542734f533670773d3d','3559614635373252357269583659435066445977664f6d376b656542734f533670773d3d','3559574e3570324166446777664f6d376b656542734f533670773d3d','35727950357253653562656c3559573366446777664f6d376b656542734f533670773d3d','56325669357269583659435066446777664f6d376b656542734f533670773d3d','36594347355a435266446777664f6d376b656542734f533670773d3d','366275523561366966445977664f6d376b656542734f533670773d3d','357036423561366966445177664f6d376b656542734f533670773d3d','35705777356f3275355a53753559325766446377664f6d376b656542734f533670773d3d','353665523561326d354c694b3537325266446b7766465a5154673d3d','35372b3735614b5a66446b7766465a5154673d3d','353732523537756335597167365943666644597766465a5154673d3d','566c424f66446b7766465a5154673d3d','55314e5366446b7766465a5154673d3d','35714b763561325166446b7766465a5154673d3d','646a4a7959586c384f544238566c424f','3559716736594366355a6d6f6644637766465a5154673d3d','3659573436595734354c6d7a66446b7766465a5154673d3d','626d56306432397961794277636d3934655877334d4878575545343d','3559364c355971623572574c364b2b5666446b77664f6d376b656542734f533670773d3d','3572574c3559364c66445177664f6d376b656542734f533670773d3d','35627941356f692f364b36773562325666445977664f6d376b656542734f533670773d3d','35613661354c324e354c2b68356f477666445977664f6d376b656542734f533670773d3d','364b36773562325635702b6c364b2b6966445177664f6d376b656542734f533670773d3d','3659575335627158364b36773562325666446777664f6d376b656542734f533670773d3d','355a794c365a716266444d77664f6976694f6d716c773d3d','356f7156364c4f4866445177664f6976694f6d716c773d3d','356f6951354c713666445977664f694a7375614468513d3d','353665423570794e66446377664f6d376b656542734f533670773d3d','35373252364c533366446377664f6976694f6d716c773d3d','364c326d364c533366446377664f6976694f6d716c773d3d','355943663571792b66446377664f6976694f6d716c773d3d','355969473570796666446377664f6976694f6d716c773d3d','35364342355a574766445531664f57626d2b615775656155722b53376d413d3d','35705376354c755935626d7a35592b7766446b77664f57626d2b615775656155722b53376d413d3d','35705376354c7559356f366c35592b6a66446b77664f57626d2b615775656155722b53376d413d3d','51584277356271553535536f3559694735592b526644597766413d3d','364b69383559693466445177664f6976694f6d716c773d3d','3649324a3571613066446377664f694a7375614468513d3d','35712b5535346d353562694266445977664f6d376b656542734f533670773d3d','56564e45564877324d487a707535486e6762446b7571633d','3535577135592b333537325266445977664f694a7375614468513d3d','3535577135592b333561536e3559576f66445977664f694a7375614468513d3d','3535577135592b333562715466445977664f694a7375614468513d3d','3535577135592b33357043633537536966445977664f694a7375614468513d3d','5156626c7062506c763664384e6a423836496d79356f4f46','356136463535533335366150355969703536532b66445977664f694a7375614468513d3d']#line:418
-        for OOO0OO000O0000OO0 in OOOO0O0OOO00OOOOO :#line:419
-            O0O00O0O0OO000OOO .append (public .en_hexb (OOO0OO000O0000OO0 ).split ('|'))#line:420
-        return O0O00O0O0OO000OOO #line:421
-    def WebIndexSecurity (O000O0O00OO0O0O00 ,O0OOO0OO0O00OOO0O ):#line:423
-        ""#line:429
-        O0O000OOOOOOO000O =[]#line:430
-        if 'urllist'in O0OOO0OO0O00OOO0O :#line:431
-            OOOOOOOOOO00OO00O =O000O0O00OO0O0O00 .GetLevelRule (None )#line:432
-            for OOO0OOO0O000O0000 in O0OOO0OO0O00OOO0O .urllist :#line:433
-                try :#line:434
-                    if not OOO0OOO0O000O0000 .find ('http://')==-1 and OOO0OOO0O000O0000 .find ('https://')==-1 :#line:435
-                        if '_ws'in O0OOO0OO0O00OOO0O :O0OOO0OO0O00OOO0O ._ws .send (public .getJson ({"end":False ,"ws_callback":O0OOO0OO0O00OOO0O .ws_callback ,"info":"正在对URL %s 进行内容风险检测"%O0OOO0OO0O00OOO0O .url ,"type":"index","is_error":True }))#line:436
-                        O0O0OO00000000O0O =requests .get (url =OOO0OOO0O000O0000 ,verify =False )#line:437
-                        OO0O000000OOO0OO0 =O0O0OO00000000O0O .text #line:438
-                        O00O00OOOOO0O0OO0 =0 #line:439
-                        O00OO000O0OOO00O0 =[]#line:440
-                        for O0000OO0O0OOOOO0O in OOOOOOOOOO00OO00O :#line:441
-                            if O0000OO0O0OOOOO0O [0 ]in OO0O000000OOO0OO0 :#line:442
-                                O00O00OOOOO0O0OO0 +=int (O0000OO0O0OOOOO0O [1 ])#line:443
-                                O00OO000O0OOO00O0 .append (O0000OO0O0OOOOO0O [0 ])#line:444
-                        if O00O00OOOOO0O0OO0 >=50 :#line:445
-                            if '_ws'in O0OOO0OO0O00OOO0O :O0OOO0OO0O00OOO0O ._ws .send (public .getJson ({"end":False ,"ws_callback":O0OOO0OO0O00OOO0O .ws_callback ,"info":"URL %s 存在内容风险"%OOO0OOO0O000O0000 ,"type":"index","is_error":True }))#line:448
-                            O0O000OOOOOOO000O .append ({"name":"url %s 存在内容风险 内容风险的关键词如下:【 %s 】"%(OOO0OOO0O000O0000 ,' , '.join (O00OO000O0OOO00O0 )),"type":"index","repair":"修复方案：检查该页面是否被篡改或清理掉此关键词"})#line:449
-                except :continue #line:450
-            return O0O000OOOOOOO000O #line:451
-        else :#line:452
-            return []#line:453
-    def GetDoamin (OOOO000O0OOO000OO ,OOOOO00OOO00OO0O0 ):#line:456
-        ""#line:462
-        OOO0OO0O00O0OOOOO =OOOO000O0OOO000OO .GetWebInfo (OOOOO00OOO00OO0O0 )#line:463
-        if not OOO0OO0O00O0OOOOO :return public .returnMsg (False ,'当前网站不存在')#line:464
-        if public .M ('domain').where ("pid=?",(OOO0OO0O00O0OOOOO ['id'])).count ()==0 :#line:465
-            if not OOO0OO0O00O0OOOOO :return public .returnMsg (False ,'当前网站不存在')#line:466
-        return public .returnMsg (True ,public .M ('domain').where ("pid=?",(OOO0OO0O00O0OOOOO ['id'])).select ())#line:467
-    def __O000OOO0OO00O00OO (OOO0O00OOOO00OO00 ):#line:470
-        try :#line:471
-            from pluginAuth import Plugin #line:472
-            O0O00O00OOOOO000O =Plugin (False )#line:473
-            OO0O00OO00OOOO0OO =O0O00O00OOOOO000O .get_plugin_list ()#line:474
-            if int (OO0O00OO00OOOO0OO ['ltd'])>time .time ():#line:475
-                return True #line:476
-            return False #line:477
-        except :return False #line:478
-    def ScanSingleSite (OO0OO0OO0OO0OOOO0 ,O0OO00OO00OO00O0O ):#line:480
-        ""#line:494
-        public .set_module_logs ('webscanning','ScanSingleSite',1 )#line:495
-        O000O00OO0000O0O0 =OO0OO0OO0OO0OOOO0 .__O000OOO0OO00O00OO ()#line:496
-        if not O000O00OO0000O0O0 :return public .returnMsg (False ,'当前功能为企业版专享')#line:497
-        O00OO0O0OOOO0000O =OO0OO0OO0OO0OOOO0 .GetWebInfo (O0OO00OO00OO00O0O )#line:498
-        if not O00OO0O0OOOO0000O :return public .returnMsg (False ,'当前网站不存在')#line:499
-        O00OO0O0OOOO0000O ['result']={}#line:500
-        if '_ws'in O0OO00OO00OO00O0O :#line:501
-            for O000O0OO0O000O00O in O0OO00OO00OO00O0O .scan_list :#line:503
-                if O000O0OO0O000O00O =='vulscan':#line:504
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"ws_callback":O0OO00OO00OO00O0O .ws_callback ,"info":"正在扫描漏洞","type":"vulscan"}))#line:505
-                    O00OO0O0OOOO0000O ['result']['vulscan']=OO0OO0OO0OO0OOOO0 .ScanWeb (O0OO00OO00OO00O0O )#line:506
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"ws_callback":O0OO00OO00OO00O0O .ws_callback ,"info":"漏洞扫描完成","type":"vulscan"}))#line:507
-                if O000O0OO0O000O00O =='webscan':#line:508
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"正在扫描网站配置安全性","type":"webscan"}))#line:509
-                    O00OO0O0OOOO0000O ['result']['webscan']=OO0OO0OO0OO0OOOO0 .WebInfoDisclosure (O0OO00OO00OO00O0O )#line:510
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"正在扫描网站权限配置","type":"webscan"}))#line:511
-                    OO0OO0OO0OO0OOOO0 .WebFilePermission (O00OO0O0OOOO0000O ,O0OO00OO00OO00O0O )#line:512
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"网站权限配置扫描完成","type":"webscan"}))#line:513
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"正在扫描SSL安全","type":"webscan"}))#line:515
-                    OO0OO0OO0OO0OOOO0 .WebSSlSecurity (O00OO0O0OOOO0000O ,O0OO00OO00OO00O0O )#line:516
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"网站SSL扫描完成","type":"webscan"}))#line:517
-                if O000O0OO0O000O00O =='filescan':#line:519
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"正在扫描文件泄漏","type":"filescan"}))#line:520
-                    OO0OO0OO0OO0OOOO0 .WebFileDisclosure (O00OO0O0OOOO0000O ,O0OO00OO00OO00O0O )#line:521
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"文件泄漏扫描完成","type":"filescan"}))#line:522
-                if O000O0OO0O000O00O =='backup':#line:524
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"正在扫描备份文件","type":"backup"}))#line:525
-                    OO0OO0OO0OO0OOOO0 .WebBackup (O00OO0O0OOOO0000O ,O0OO00OO00OO00O0O )#line:526
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"备份文件扫描完成","type":"backup"}))#line:527
-                if O000O0OO0O000O00O =='webshell':#line:528
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"正在扫描webshell","type":"webshell"}))#line:529
-                    OO0OO0OO0OO0OOOO0 .WebShellKill (O0OO00OO00OO00O0O ,O00OO0O0OOOO0000O )#line:530
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"webshell扫描完成","type":"webshell"}))#line:532
-                if O000O0OO0O000O00O =='boce':#line:533
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"正在进行拨测","type":"boce"}))#line:535
-                    if 'url'in O0OO00OO00OO00O0O :#line:536
-                        OO0OO0OO0OO0OOOO0 .WebBtBoce (O0OO00OO00OO00O0O ,O00OO0O0OOOO0000O )#line:537
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"拨测完成","type":"boce"}))#line:538
-                if O000O0OO0O000O00O =='index':#line:539
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"正在进行页内内容风险检测","type":"index"}))#line:541
-                    O00OO0O0OOOO0000O ['result']['index']=OO0OO0OO0OO0OOOO0 .WebIndexSecurity (O0OO00OO00OO00O0O )#line:542
-                    O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":False ,"callback":O0OO00OO00OO00O0O .ws_callback ,"info":"页内容风险检测完成","type":"index"}))#line:544
-                O0OO00OO00OO00O0O ._ws .send (public .getJson ({"end":True ,"ws_callback":O0OO00OO00OO00O0O .ws_callback ,"info":"扫描完成","type":O000O0OO0O000O00O ,"webinfo":O00OO0O0OOOO0000O }))#line:545
-            O0OOO00OO0000OO0O =int (time .time ())#line:546
-            public .WriteFile ("/www/server/panel/config/webscaning_time",str (O0OOO00OO0000OO0O ))#line:547
-        else :#line:548
-            if os .path .exists ("/www/server/panel/config/webscaning_time"):#line:549
-                try :#line:550
-                    O0OOO00OO0000OO0O =int (public .ReadFile ("/www/server/panel/config/webscaning_time"))#line:551
-                    return public .returnMsg (True ,O0OOO00OO0000OO0O )#line:552
-                except :#line:553
-                    return public .returnMsg (True ,0 )#line:554
-            else :#line:555
-                return public .returnMsg (True ,0 )#line:556
-    def ScanAllSite (O0O000OOO0OO0O00O ,O0000O0OOOOOOOOOO ):#line:578
-        ""#line:584
-        pass #line:585
-    def test2 (O0O0OOO00OOO00OO0 ,OO00OO00O00OO000O ):#line:587
-        OO00OO00O00OO000O ._ws .send (OO00OO00O00OO000O .ws_callback )#line:588
-        OO00OO00O00OO000O ._ws .send ("11111")#line:589
-        return '111'#line:590
+P4dhBv3vMWCFmfqL8mg+t6+N2NyFyKuTz7ndt4JLa/M=
+4wZIF38E5nxrLYkW2uUR7d3iaGQLSTjR4DuJynwT7k0=
+Scx2t1kAn3OIVypLSYwZvNAABeWU8cqP0xxUAB0RgjM=
+I8MGJUwtjfcKc5w4E0SmjHtl5KRuv0WI7NyW3SlEwCrZmcmaREiC99KS4CzwW5Su330khbLdQaeuAWr4x/NqQCTep2zIARzdXiKXPh1Fe+M=
+LGA7rMb4Y/i9HhhAGIYqmZDTJzoETCpBj7x/gPDScUY=
+I8MGJUwtjfcKc5w4E0SmjHtl5KRuv0WI7NyW3SlEwCrZmcmaREiC99KS4CzwW5Su330khbLdQaeuAWr4x/NqQCTep2zIARzdXiKXPh1Fe+M=
+n+0ptngHIPIjFuMNQ53bfpG7Xvg+DH5gX2yfrF9XzhSBwSVB7G6Mt6P1OyD1XgCvnc+Shj9nE/EbOu4W0birb1g++fA4q3jlkHA0rbJ1XxQ=
+I8MGJUwtjfcKc5w4E0SmjHtl5KRuv0WI7NyW3SlEwCrZmcmaREiC99KS4CzwW5Su330khbLdQaeuAWr4x/NqQCTep2zIARzdXiKXPh1Fe+M=
+QTAveoX0wt6CcmFoSPQdb/Ws+oZdmoqfiD38tXm6SVg=
+tIM1Wggd8teg4xCZfRwLxd93nHGKbOHSgNzAtvcvuVY=
+I8MGJUwtjfcKc5w4E0SmjHtl5KRuv0WI7NyW3SlEwCrZmcmaREiC99KS4CzwW5Su330khbLdQaeuAWr4x/NqQCTep2zIARzdXiKXPh1Fe+M=
+NyzlU2YOTFNZFPd7RK11YZN7I3uDLJNTr2057YAGz28UtWzPYnI4inrUaVs2uYNW
+OIQe8UKLz6Br7F+/JKzI/N2TJ+a7iU0aGCDMR9JrBjFHbENwHicUkzdHYZoI+rD+B6Z/utvhSFMvxENgUpe2mg==
+QtywOSt2jU7XEVQfd46hXhlGuDAcY6mFXPkzqinx4hA=
+91Vq6E7bdUowkkcQ+HPiMbw/VfPvS0rQub81nMjgvx8=
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1POn+WtE+lgXD3ffcoL21lvcxUuxtU7UEzaHRLypkEk=
+1u+XjG/2+GSQRv6EzCaWRQ==
+xF0FUH/dTg7W2UEMcGmxasYbTN0JxPLUfMiLy3243PNcxPUjif5anrC30IQJgcVj
+34sBwDa6OHwzIQcYeeIPmmli1z68Z7aESaF++LHj7Dk=
+xDiSIzZ0V7qd6yV/L+jTrDc/4uR5O7BayBxqFfkWGz1ERLAL+uSNyk/a/NOyUBbf9johhTuNpP76BKk4DdlrP5W0OOt2fV/yAjNXTCMYuOw=
+1u+XjG/2+GSQRv6EzCaWRQ==
+YJMPrzX6otTMSTzYdtXGnsUhgDhEGYdcq7YKjVEssu0=
+KZTmaJLp+FU9X93j5Tpqtw==
+NNh1PlSD8WUnUEbz+BU/P/X2MkFt9NNsqF/jEGswPoa/EAjgHSWdfpqCgPG0Q2Dk
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+bWa5NLmMcRfP7/pL4TxwVYd4mIlisM0CozBPqea6A9CwuCZ4/2r5kHoNFVHAtREw
+3AcPLYoMMn4rxWOUMA1wJdOmdYprhThTGxGyDnWq840=
+KZTmaJLp+FU9X93j5Tpqtw==
+Sg21howRRrEp1ZbEiwNnBOxbYdBYOqE9w1SWPF+6MQhtiL7GsmD9hlDq7deytcT8BP0pAvB+eK4/a2V2zYftli4865QuEK6Scvtare+l7EvpChuhfJ1Cc+jxS3AOVQrHXpom2dP2gW/5xBa5GF3ptQ==
+D9nFoWE/zqXaNxfAecYXR2S5U/HtyN9Xa35FWAfs/UTwUiNqYr2dJUsAsnqUApnS
+Sg21howRRrEp1ZbEiwNnBOxbYdBYOqE9w1SWPF+6MQhtiL7GsmD9hlDq7deytcT8BP0pAvB+eK4/a2V2zYftli4865QuEK6Scvtare+l7Euvhtxa15GbBylRy2PmSlp2Qe7LSPPOzrvCDLMzMsxAMQ==
+3PYuJCOiZH1sjGKjxSVU6HPaGIBs/3pV7Q53WqJ4uT4=
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+aOXoQqZLQ+trsO7CfYBuOck55F8rmnYmMqzXByFEM2Q=
+KZTmaJLp+FU9X93j5Tpqtw==
+NNh1PlSD8WUnUEbz+BU/P5GCdDXq5n+2UyPaJ/WmKK/UxG+YHXVnqcM5RzgW9L7O5RQeYxlXCMW7V+noVhparQ==
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+bWa5NLmMcRfP7/pL4TxwVYd4mIlisM0CozBPqea6A9CwuCZ4/2r5kHoNFVHAtREw
+3AcPLYoMMn4rxWOUMA1wJdOmdYprhThTGxGyDnWq840=
+KZTmaJLp+FU9X93j5Tpqtw==
+RsAJUVnKOugmMNukNx1VNDD5EuxvP0PFz/SA/ErfToEYKnlA9NXhTr9MfUhuE3MQjQJavuBshUx/kznfXVwEyD7ylY+USxxd5yp9tqzV1Y3ZYdpWlh0WvfrnPNyeAZofaelYshj8AeUQ6Y2SYFaYTvLdKsYsIztgX//eKYbzNBSnO/+1qKDLEh+PGnOgldDh4D08W5L/7cpb/rOKyV8AjZmcG2mk0rhEqabjN6t0sX4=
+1u+XjG/2+GSQRv6EzCaWRQ==
+TO2V1vUHRD55CAZM6SIEYiara1G+6mKWasAWWSB2Q3tfmdY9rgDS9il92Od57DmH
+2CKTbK0DxN0CGtmuctk0uIx7gJwsxCqR6t4HdYSeroBL4t4W6ScdO5k2Qc0b+j37
+RvlP9L0ngFuwvOCORNHG5pA56i54mhm1BBba/C0E01MOFA7BHzqirxa0NevxKp93jVW2Goxs7+ZO3l58+JutnA==
+1u+XjG/2+GSQRv6EzCaWRQ==
+Ew6vCUKVUJtk9OSATSYVB0fXG28S8GHY/io+oc+bzWjueJXO1cn92iuyTuDKvfzIc5d9yrtszaH/GhuSKKW6NRI8o3pFsfD3IezKkFIGi8k=
+1u+XjG/2+GSQRv6EzCaWRQ==
+2zuHEPQL0dMB8f0EtS62A/GDdCpU/3Ka+9k8CRZ3v2RmZYTDaX3uRUjDHRtB5R6WVU5xVVCNIEcERX53sYyNRA==
+Q4+ut8utiHgGrv53XeSkuxalTTva1fRoBPnIFmI2sRiyhAVpB8ZJV+X946GstIqP
+84Vymj90Wzn5yYuvz1pUuINLD5hNTMdhV9ByuVjyk+Qj6meRjH4D8xE1KvDeUQLQk0okuGb1+NlDWq4TIw2/EOSZ56AozaSfqA2GVFRq79ez0b887/ksUbfsG7DZgnu6aISEtG86lb9sdSBAhE52H2cUiz6lMvLLGFmq2iIUJJtUptwwSIO9thMJy7S0Cy7EQO8K8yl7l3yH5ElzHF0TqlTS8K8JpGxQdTloZhwDecUhW+TK/qCeKj1qByQs0elp
+L0eUthVnpkGsmKFAX6d+uFHO385RkkLO4ZKv0P6uu+7FTz/RAYUzHeQTlqH010y7
+AWid6G8ypXqQe9XxPPYED+HBeflYFHvm1XZMzZccC+Y=
+1u+XjG/2+GSQRv6EzCaWRQ==
+7l625GonKknQRc/qsGl7zxhFFA+A2ArVXXxOW/0XM6OAAXiCknjX9Us+V57qY1vY
+KZTmaJLp+FU9X93j5Tpqtw==
+FJoH8ANT+vaNanqqjLNUAbtjmY4dwuR6WgcqIWQ41yg8lAQPEIZlUhdoWkRnHGXE
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+bWa5NLmMcRfP7/pL4TxwVYd4mIlisM0CozBPqea6A9CwuCZ4/2r5kHoNFVHAtREw
+akHibliG6j9uvBEg96vReuW0IDeO12Q21cpcndOLVEMMrpv5mTf5k71os0038Tlo
+KZTmaJLp+FU9X93j5Tpqtw==
+TQRmC0vOvJ1P+lfyS3Os4WprL4M30aPh5ZZ8aCvQohmgcl33v9ffHwmpz2mM9v+y
+k1ktu/l6HFULD7Vyr8Cv0CtgqDjLOguzEq922OnPWYMQUz+54aQx8J+EuliZtav6bFsijuqxXewnc4apzokic8wqc6X5gNszMJ8rgWI74T8phFCSZN9eSXqlrnFP787m
+O3CUgrw2GJfB+mDjH5+NdtbkdTJdRhl+51HFBnR6kaH4/6DbnYid4U0U1SHEYx1n
+VmVrGQo2zRokW/ZuO9bN6+q9Hx3r4tzXWRQvOi24qdZ+UYhjfI3aNRST14xh18vi/lPpZo2RPfNAiPb0Nb5Euw==
+VmVrGQo2zRokW/ZuO9bN61PHMu5me8LOq0S3kllphp8C8H4PQGiCal/EelZT3lkN
+VmVrGQo2zRokW/ZuO9bN6wdl4whMoVAtcVh9k+ws3tB5HEUp2KEb0uHA+8YiIfmb/p1MGq1YU5tnbp2xwXA3dYvbu/76BFZ6T8fWy/AD93k=
+VmVrGQo2zRokW/ZuO9bN6yQKXbbvGsUeDpak7i0woCXdysefpgWqut8RY07VKflmC6OmtpwlKD9Q7fQkPLyshbWQ3OfdHazVGYdpnfIGEAxSBRD6xQE6CAEYsz1Y03X47PB0Kt11foTt7PM+/wP6AvnXhj0CYCfO2Fy627PGwduXAOjqsmFvCKyiw6b/koD4XF9DuF2YkyMeyTbWUjZxqQ==
+VmVrGQo2zRokW/ZuO9bN65+7SvxPkCHyjDcHg2jgNR78NpKaCb5rgh1rZ47Bxcyt5s0uMWrAvj0gLRK7XPxKOB9xqDfxDrtrm6Pkvacg5bQ=
+VmVrGQo2zRokW/ZuO9bN66NWb9gY/TJNwUqyWJaLr9nPluhge6lh8/YB3VRRrQZ5k6Aysfos0TH4qp/xwzNDC8hPHnC8nzbgtt++w3E72YBJ75+GFK4+GmmvnugQvMuw9auyraSgKmWxCpCgZqJevTm/2pdVEGbixMy6ilL0bUEov0x2lpU9A7beKmzjk3zv04FASSwyBV1JlZxD5eRIg8LoacAlHGwQdnq8K5OGWhb3Uo/mczZRWbwJR6bPePNFOdSl8kW+yKLyO2PlWHiCZQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+ci4HUndWk8qb09Nwv/hjC2PkcjdThUYen0EjtL5x0X+lHp3b3wjR/hx+o9Ilwq34
+KZTmaJLp+FU9X93j5Tpqtw==
+Bus2si3RzBVFhF+MrXXuw1vMx2TjGj4dGmVft/b21TyN3b4Y6YVdOZN2ZeylNbQS
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+bWa5NLmMcRfP7/pL4TxwVYd4mIlisM0CozBPqea6A9CwuCZ4/2r5kHoNFVHAtREw
+3AcPLYoMMn4rxWOUMA1wJdOmdYprhThTGxGyDnWq840=
+KZTmaJLp+FU9X93j5Tpqtw==
+RsAJUVnKOugmMNukNx1VNDD5EuxvP0PFz/SA/ErfToEmoDCDPI+mHl5/xAO0x1g2
+xWoGNWjKGPfI4gq8aHoTfIP925RCNcq0drT+hy2emrAQvaN9W4I55iIHbcGw/nNoZYfyx8UH11zsjBHtqeWOj9bmT3Bnvu6NgmfD4Oj9DTDfoPsPpPEqygT3R/rfReX6BCHIA66Ok9qxBn8SCHjZnR+BZKmQ0GBJ9LjRzK3uupPK7SajdlD3mcNXHSav5d6b3CGJ8WjTp232ObJXM6BlIg==
+Rgtq/0YlET7glgQN+/YYPx4ZB20DCbucDPtOq755FSs=
+TQRmC0vOvJ1P+lfyS3Os4WprL4M30aPh5ZZ8aCvQohmgcl33v9ffHwmpz2mM9v+y
+QUS70OYdt9peiASDI5xIXjwUCdyE4rU8xM03iaaPMRstqG2aWgrelHP8rbxABQ9jjZMCJeJNkdJQI1V65CxSTw==
+O3CUgrw2GJfB+mDjH5+NdmOzK/dUwE1wSPo2oHrgY4Dng2KtFeY91wCBnZn/QWHD
+VmVrGQo2zRokW/ZuO9bN65wVXLsuSlUtXWbTtAlaWiSxieTHaRA6kHeGBBVyj7hXegfaqHWarrcWktis2LBG4Q==
+VmVrGQo2zRokW/ZuO9bN61eYzCtb+kIn8QnOlReXiUg0kEDXGHaEw1gxRsx2+reSB7A0I2CKp2lDW3jOyFMtAw==
+VmVrGQo2zRokW/ZuO9bN61MEyHBjyzCNpNUpxJmXAqH6UnIXIXquClTj9XI8NT2vFJFcCpDArIs3+iMCAYzXG/C88u6b39fVy6OL9JIPFfED6Fjgcn3UAKTKyCLd5s1Z0//F+vYtet8IXTSXy/A0nNPu1OuKITzqT6A5Rsocc4Nas2i7gApe1WE4/rrkCOGomfLHbQuL4PgNN7ZnscVnVj8Caz8e/iuHFAVYK+g+yZE=
+HZcp8OL6p81oEDBT7f0aYY3NaHS728qyf4ENUUEoNdauD5U0K4zMza7BbJAX48IobQCBOkFJ48VsX7nuXjqWrQ==
+jkUynLush2Hdw2oQcJ87ABCwxFv5fdHpFxRrlNNqg2I7MR19JXq/6sgLfgIqmYgNYttCdaC4WACol1lpQkh68g==
+WHkOzVx7seuLmxs5Hu+l/iKv2V2TCthmnQjFRkDEGFt505SSktufSN8cQak5dPVP
+N2AxSv647SE8o7pH02PLTR4R8LVIAZeMqe1EmdaECvu5Hkz+Ya2ppANiYDzHdMiV
+1V2v8QerKOmubvSxgB4eTDuBCvaGWXI1+z9w649k3WmV1RO53QrETruyXZnEkzOtdo3YuhqFDfy87PGB8/lsFg==
+VmVrGQo2zRokW/ZuO9bN6+GxK5rJPQqX5C7kVZMv+u0M5a5TUO1oLDgfvd/KyZPF7Tad/0tfnb+uiGNASpRKgZHefFWApoUhKreIT7aGP8j9JUlxhl76B/rAwA6Hy/Di8bEI1biXmQDR1Tn5iu0SWZWkUKPIy43GVN3wJld/Jj8PtonQmEfSS/6GBv0g/1rm8z5DgUknlZFkVHbjt5EjpB5HvbOLjzHP1XWjiCZBnceJwRsg2MgpCAbDsB4kspy8
+bV/O/oNpil9T5jmH95Y0hrJepbG9iil+ShV0NiO2LzY=
+RsAJUVnKOugmMNukNx1VNDD5EuxvP0PFz/SA/ErfToEmoDCDPI+mHl5/xAO0x1g2
+xWoGNWjKGPfI4gq8aHoTfIP925RCNcq0drT+hy2emrAQvaN9W4I55iIHbcGw/nNoZYfyx8UH11zsjBHtqeWOj9bmT3Bnvu6NgmfD4Oj9DTDJ+tfd2HGfs+yjOZv+LhXfaJioVeweOGHjMcOmpXXgu5fVCJjjUUUg5CztSEwzLkWoZHAFtrbvYMAnoKE7dZ0b81j9BcQ8enjQVu+udUxliw==
+ruTTNFTdswRs4Mc+srnRk818d9d/TGGXzgPjSrVtMi8=
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+E7ULB+04AGj4OuJkqO8iLd6rCzUaC9Jt7W5m3Rap3jc=
+KZTmaJLp+FU9X93j5Tpqtw==
+qRU7oEDPPLAFdKKtT7f6tH4lF2jVIpfetPYz1+fzMP4qYLz4kM4H/I1VnbdPe6rK
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+xO6LQbXcUNH8nvzE7Jkx5DuG70pv2zFQYUvU3/gcqPY=
+3AcPLYoMMn4rxWOUMA1wJdOmdYprhThTGxGyDnWq840=
+KZTmaJLp+FU9X93j5Tpqtw==
+q4nc/jwATOMUyfSjLibfEbaPIXlSq0QXVzgQyGqO9Nc=
+91i5WM/SOLOPcU/w/QLCPIwz0hZM2NX8AAR6mAvd1TFbDUeYDPt9jb/nRaX1zx4iW/cCjfr6Xsdt31LZdWUqrQ==
+WfPpReQq1HsqUtjb7ZIKt5etYiaEJMaZXm6QFcyAiJw=
+b4OJVZe8QyIpjuTpKXDL9A==
+o6QhOIN2Sc4SHELnst17uaPD0ALtnYbQRKeYdv/2FfFPrRjZCqejcL4WJT3O/xeK9Eh9AmgZMvwr+a9quobOzGgTjukHHsAFZ7zdPIaSbqpyWdXiVo3FqJjPZJnpd+7d
+o6QhOIN2Sc4SHELnst17uR2orkEqLoBaXhfBs+Y3nYrvjeRXHkRW+c8NwextzNOP
+L0eUthVnpkGsmKFAX6d+uGkPqUsUWC4LzxhOoLQ9PX8=
+mfT8DrNbUmxQ2BnZ1bZFTLh9MEuZKOpmAfF70OnZ9TU=
+L0eUthVnpkGsmKFAX6d+uKdLEGlEXm+o7O9zcmHr26U=
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+T1jbAnxiPdtVyN8cG7RU8GMlsGHP46RYYSp6if27P/pk+ljapP6Wo0ydjQXN3LAq
+KZTmaJLp+FU9X93j5Tpqtw==
+qRU7oEDPPLAFdKKtT7f6tB7mjG8OU2sPv8BhjBxMQfM=
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+bWa5NLmMcRfP7/pL4TxwVYd4mIlisM0CozBPqea6A9CwuCZ4/2r5kHoNFVHAtREw
+3AcPLYoMMn4rxWOUMA1wJdOmdYprhThTGxGyDnWq840=
+KZTmaJLp+FU9X93j5Tpqtw==
+KIidqWYkRxfYlcknxiqVd5JfGkI5YS6krsdA0adSeOQActZ1fs0+L+NugUX+e6H5
+PgeNT0q6nW2Tsh220cw8as/tJSR1znf7J+n/8cK/O2M=
+7cEbnfYJ0swaXxvbv06hMAzKtDxUuy6bogF0IuJ4Xroiu2N25oE9o9AI8xJycOcUqYwBYMzJwtgAradabb3yJOFPHD7OUw8/7T26LzrG34k5FmryA3+ylzmRYJhGyHiQ
+84Vymj90Wzn5yYuvz1pUuINLD5hNTMdhV9ByuVjyk+Qj6meRjH4D8xE1KvDeUQLQAyZaAckjVScOq7J5e+5l4A==
+VmVrGQo2zRokW/ZuO9bN66lwyBofVWvYx8D2XNwaDS4E6yW9qeh8j6LpJlIXJDGQHZpEKhsna1TITFDOaWrDxgKZ3HfH5Z8ZHUZmKwaVQA8si2OKCL1g+eUb90hguyd5Qvw5YYGPX0jcIqVwcAR5TX82zimNf9JJa+fHChEbXeg=
+o6QhOIN2Sc4SHELnst17uVI+kHZufrDvEaSUp3HI9SNd8o5g3xcEgPe9XQESULUK
+84Vymj90Wzn5yYuvz1pUuINLD5hNTMdhV9ByuVjyk+Qj6meRjH4D8xE1KvDeUQLQAyZaAckjVScOq7J5e+5l4A==
+VmVrGQo2zRokW/ZuO9bN66lwyBofVWvYx8D2XNwaDS4E6yW9qeh8j6LpJlIXJDGQHZpEKhsna1TITFDOaWrDxr4z0agdYh63UALYPeTftj0LyR1Vm2lRVkJ5oWiaip0H2YfedegeMmWMaeWCrCz/AA==
+UbJuac0dxLiN+5ocS3w2vfMZklnXMT7upeLxf6PTTK8=
+VmVrGQo2zRokW/ZuO9bN67wM6ny9n4fKPjGaQTeom7FVUX/01XE23UJTyhzSW8SbOCu+OInEXBGYpEXEjhqClw==
+1u+XjG/2+GSQRv6EzCaWRQ==
+kAeg29qn9ZL8SlP4hfnUtbzrNkEbo5mWHGm+sS1E05TGn1AMGE0Iv5UWzdmaSuox
+KZTmaJLp+FU9X93j5Tpqtw==
+x4hnNo+jvylWsZE/QqxvueZRg0ZoGdBEdlvbjB54qQ4=
+s8YW556mjbD8/gjXd8hB8sur4BiJoX8W+DakBxJxCJI=
+2XG/anotOi82nAcKhrfu7YeXNf7p3xw4Opjx/I2gwIgbPp00Adz8jMzUO6NBMGLS
+FwUnopy6rf2anaGO6BmyTA==
+m0TCLSmtTI0mPAYiua7QzQ==
+q4nc/jwATOMUyfSjLibfEQ+nVsCkuVXEdAcBKpgjqkY=
+h1+7eTqbLT3kAneVFx+9/TnW42RmuwUKBacy48O7GKU=
+9zgnmC3+5N9XK5/NRaR4SEFLuk85i4qBzSX7jZTxu622LItYPLevFkjy6ppBUrg/
+7emMzMQJ4cFIhVP7cOehmPJ3CDrPvn+aG8xt4UYcuuwVEfoTB8G9afKaDxfvvjU/PCdCzPDYkXILAJ2PdiD7TA==
+O3CUgrw2GJfB+mDjH5+NdpVJ4Ga11INtIgpFnvIlIreNAeX4XxHzHu8FGNvi0QG0
+VmVrGQo2zRokW/ZuO9bN66kzK0PWZ7SLQTsc5D8hGHfhKHZ7mDQSEhI+yrfN6Dde
+VmVrGQo2zRokW/ZuO9bN66uw36YojlygV7nWYkeWWfHATiAEXN3thi7I1yUnOW2y
+VmVrGQo2zRokW/ZuO9bN6z4HdDEJRpOrXf2S3gk85yvoPYrzre5HdWyjPPUE0kza
+VmVrGQo2zRokW/ZuO9bN6yIV96dETdHvOTzc1eoxsu51WfVnQAattEqVm4jSHH+PTGGUxei1jRz1nmqRi1E90Q==
+VmVrGQo2zRokW/ZuO9bN61JCzx5DHV9aw5t+n+NXIYam0/yvIgch8QLx/hA0wjSSvCZMdqCKC44UgOgOGpyJ/Q==
+gApoKqs53F0hB+0nTxFBUA+oEKDepDxXl/3TZcN22oUT0y0uxwE7kAiWY/h4cqrq
+wlLHv6kT3Q/RmtMBN4nDAXy1YwPCLn/xp+HCXyWIACTIp0YIrmapNLk8iZRz8koV
+VmVrGQo2zRokW/ZuO9bN66V9gsLif7RpodOVxdJVsvO9VsZT+A6uCHfpRdECRflbzDS2DEAR+zmTUkjg85wRGA==
+VmVrGQo2zRokW/ZuO9bN61v1amE7MIRc/mtaocZ4vH7MrWfGP7QShYbR0jGiO0hL
+VmVrGQo2zRokW/ZuO9bN69gXDBxmHiY9CcoGpB8yE8WM5MlFuQ9s4ac+kj7NMT839pdWCyC1Yzkf7JXnAOhucQ==
+VmVrGQo2zRokW/ZuO9bN6wdl4whMoVAtcVh9k+ws3tB5HEUp2KEb0uHA+8YiIfmb/p1MGq1YU5tnbp2xwXA3dYvbu/76BFZ6T8fWy/AD93k=
+VmVrGQo2zRokW/ZuO9bN6yQKXbbvGsUeDpak7i0woCXdysefpgWqut8RY07VKflmC6OmtpwlKD9Q7fQkPLyshUf0Gsqqp1vZb8pa9gOi5jcLmp9iC8OLLIyyzgdAlapRrOkEHb8kiLycGqHUSzXUOfRZwHkUlVn54qhKmuHJKpRDN0Ze0g7FF4YE6lBCZ4vUCJQ3wiTAko91xvUVtEMl9qXSVEduO32zGTWVudtbNUc=
+VmVrGQo2zRokW/ZuO9bN65+7SvxPkCHyjDcHg2jgNR78NpKaCb5rgh1rZ47Bxcyt5s0uMWrAvj0gLRK7XPxKOMZ+mkOrs7divCkDuK5MzAM=
+VmVrGQo2zRokW/ZuO9bN66NWb9gY/TJNwUqyWJaLr9nPluhge6lh8/YB3VRRrQZ5k6Aysfos0TH4qp/xwzNDCzaoQ9/bFm45Vpz1hT29Wwm3oMRF6Ghq4P3xJSGGkt5nEBPKUWl93uF9/ZAx55iq9Ugx+ZQC8w6NggBI+2G08tRHhd4dmHDE1j7iIW+ItZcffx2nxfjPDxiwjS8e96WkOGmp8r2XdImWTg2wl3xr7RRy7i3/wwJnApt6A9e5JBJl
+VmVrGQo2zRokW/ZuO9bN6wO5MEBqJBxqXhkVtcpNNPsW2FMfKYZfiUGQ0BvV29M++3Yiov3BXzvNZk1q+E8uJg==
+VmVrGQo2zRokW/ZuO9bN6wdl4whMoVAtcVh9k+ws3tB5HEUp2KEb0uHA+8YiIfmb/p1MGq1YU5tnbp2xwXA3dYvbu/76BFZ6T8fWy/AD93k=
+VmVrGQo2zRokW/ZuO9bN6yQKXbbvGsUeDpak7i0woCXdysefpgWqut8RY07VKflmC6OmtpwlKD9Q7fQkPLyshUf0Gsqqp1vZb8pa9gOi5jcLmp9iC8OLLIyyzgdAlapRrOkEHb8kiLycGqHUSzXUOdu5g6RLOMNQEPD14bkKHFJU1aQPC0mc7EfkC9qyNgus7woBr+EjdRd9rIa8ZFGcx4i5AyszixFL0EiuFcCQYv7lsl5ru9W8NV7pJtc+9wFNbWiMstdafUGYafw6zp27QA==
+VmVrGQo2zRokW/ZuO9bN65+7SvxPkCHyjDcHg2jgNR78NpKaCb5rgh1rZ47Bxcyt5s0uMWrAvj0gLRK7XPxKOMZ+mkOrs7divCkDuK5MzAM=
+VmVrGQo2zRokW/ZuO9bN66NWb9gY/TJNwUqyWJaLr9nPluhge6lh8/YB3VRRrQZ5k6Aysfos0TH4qp/xwzNDCyrdcYuX6wdlg2Rn8atL+8ToJU219lGnuK8ZQ+fJUeWlUam8NetofVFjYp/LJGUlt/4oPLsJWfM9CtRkDUryLR8f8X06j10E6zaI4/VCOe7tTh6TJgIFOucyc2g2opCnCqjINdSt3dj6C91pbHIsOkLCcZs3AqyZskOfSyIsKrE4
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+lRJxf6rbAnZKvQCeYDwSIVikh74Lqm6qnmLKVYRpRQI=
+KZTmaJLp+FU9X93j5Tpqtw==
+NNh1PlSD8WUnUEbz+BU/P8CO9vmzrgxmYnlcHi1JbiLVCctiCUXN1X80HcoEIv8KurCauhwQfn5S27yCe33WHA==
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+eeFiPlXUI0Fos82HYztSmTi4mgPvJ94YYNkxM/VN2mYBJU96RaJG6rv/IBOwe65c
+akHibliG6j9uvBEg96vRer/Fg5zTlM8oj8hSAsYq018=
+KZTmaJLp+FU9X93j5Tpqtw==
+h1+7eTqbLT3kAneVFx+9/TnW42RmuwUKBacy48O7GKU=
+XfieXi4UrALd7rcNWZdy+18Y7nnO1vNcHRf/OKhGRUQ=
+rcFgprYg/oVIUr333hVF7JN50EiV23LIPuuXFqRwhnA8z0Rl8EY5+SMUJR/ivY61QhgIsWF7eDXteU5MZnPPAUip8ef5v6bs2AajSEq/mCRhgLwR4hBpdwtj0EZeER3wj9T0NMVRw5twMA/dI0iD0mQ0evDp4IqKpzJOvsguhgs=
+9zgnmC3+5N9XK5/NRaR4SOfTlMvCgT9fpwQqU1HSmUI=
+J1UGlXkKhKXD36OrXXhN8B9fSkn044AsyA+uU1ICCBd0jkhcXrDBH7gkuezYGYlS
+VmVrGQo2zRokW/ZuO9bN6w15KECbNuXNcPSmFZ01QC5LHPq8DU++Cjfeg1MW8A3d
++plE/1bhdo64kO07cLlUX538ptnRIYvbSJMuLbI5ZJ4=
+1u+XjG/2+GSQRv6EzCaWRQ==
+sF4hfvSAn9Ws0rDIizmQvuv2xn/muDZ0ogByc5keQTRiO0kgVLHIvZ9rNMrFWSgy
+KZTmaJLp+FU9X93j5Tpqtw==
+0BAbCq904Il+ApsqZN+tv3bpTjiTcEHSVURwcxJLEyx7bOT5p+6u5cDOhjidLP6R
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+wOl7lRII4ZgqRTj9M//0b0Hmiipql0KqOySDsulvH0Su8cx+3vVrHwSELz95Nt4O
+akHibliG6j9uvBEg96vReooX+TUef/6RJbcWDzhLpaM=
+KZTmaJLp+FU9X93j5Tpqtw==
+2QWYSFzkMw7ZzarmBeqIBSJUFsBa6n0/Op0IMuy2Ntw=
+wgR07xfoapmx6eEnFHXXYsXheOqb+ac7ivrKomECGJj3wNo5VfagCmoPbgNkkDjHG1VjJ4+pA4O72eztLnQ5yQ==
+b4OJVZe8QyIpjuTpKXDL9A==
+GL/yLvMwjflJNfDPl5ASjWVPfbksCTJqqynR90DGiP5MVPpM/qhkR8Z54oKP7Ey8
+u9wxfj5eQ9dXp14BStBg3dvB93jCau1cWUNmjFrYTCk=
+QPiJZBcZo3Zu5kDhrrGzbI3GQxTKN1tlSYOd4wqk4Qk=
+A50UO/kAI17YP7MCbTvBkF1QxWGO4d7iFEjQyMKkG7Et7gIkhal1mvZiTsAv76s9
+J1UGlXkKhKXD36OrXXhN8El6Wh2/43x+rQwUFnw/3tgLkttoLntBWhiXJMdG3ExJ
+VmVrGQo2zRokW/ZuO9bN63zFN5O/w1krXKBn8bzERXc=
+VmVrGQo2zRokW/ZuO9bN6+1Xzjf2YSmxlcGmAo78JNaI/CmmODXIW7z3Kf9LXWBWQca+5PgKAM/XzRSZq8bXqaRvWTrQQ8dbNktahSbD620=
+VmVrGQo2zRokW/ZuO9bN68q0rWTN4SSUIfUIXdnAyXMp2kEoSEvAOmIUACVl6JK0
+VmVrGQo2zRokW/ZuO9bN62G/UoDVA4kdb68U+Fu0+R4=
+VmVrGQo2zRokW/ZuO9bN6/xDysL+wsJSb13AswERz4d4Q1WltD/yACVmIs7m9L3X
+VmVrGQo2zRokW/ZuO9bN65TzVBWAeCBq5TcommFw7+kfVs32RxWmxzPfmrHD++36
+sobCGpmMf4/g7+HpPqBjC6hatZ6rUY3AAzqC73FJ58Q=
+VmVrGQo2zRokW/ZuO9bN65x96E+pC4TupOHurj34PBY=
+5wsVwKLrIjIWqeTNpSVp9dYsDjQRjZ/3WKfKdGE7S+U=
+1u+XjG/2+GSQRv6EzCaWRQ==
+r009QxQI944x7ep/SNwsKzVgiEQLVsQUDScMdWJGR4Mga432NOeTDf2cC9pDoyIh
+KZTmaJLp+FU9X93j5Tpqtw==
+NNh1PlSD8WUnUEbz+BU/P7Cijei559cDGO6uikrxvVSilXcAh+dE1cLpEv6hhL+c
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+wOl7lRII4ZgqRTj9M//0b0Hmiipql0KqOySDsulvH0Su8cx+3vVrHwSELz95Nt4O
+akHibliG6j9uvBEg96vReldTOnS8WE+JZcaIeiLo3ow=
+KZTmaJLp+FU9X93j5Tpqtw==
+WHkOzVx7seuLmxs5Hu+l/mt+prymKiWuchfjxdwNhv1+jo8qeFNLQTn5ogsiKCHf
+1hs1FfIPISXmd7TJ/r+Vl20P/yfp1nvjLuNOvIMEPE4S9ElWmIDk2uuBihLWRyB9
+VmVrGQo2zRokW/ZuO9bN62LK2pTliB/Z481K7pF9TK/MTOz7mdRiIT6VxMzLGzAe
+PRG/YRzXVD8iVR3bzEcUntwpFAJKJAO69vgJ8wWhaAQRpJr9M9wcofMFxXY9Hh522/4zxib5/5boAKgULtsHUQ==
+L0eUthVnpkGsmKFAX6d+uElnkht+ltQRdp8JwZ5x1fQ=
+l2FJPs4YkAmmok1ulDRuSA==
+L0eUthVnpkGsmKFAX6d+uKdLEGlEXm+o7O9zcmHr26U=
+1u+XjG/2+GSQRv6EzCaWRQ==
+Dbg4RsEufQRbpizlyopHl+n+keGyOOuk/OcRjE/GX8nO9NoQN7Z6moVXPvFJuViJ
+KZTmaJLp+FU9X93j5Tpqtw==
+n3tXewq2IYqiwFREjJjsxSJhZNlY3x3gzpVmrGS3mC6vjIzo+ush4KqTDacqujQkCn14OlvMS4+rxSRbr7PdCQ==
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+wOl7lRII4ZgqRTj9M//0b0Hmiipql0KqOySDsulvH0Su8cx+3vVrHwSELz95Nt4O
+xO6LQbXcUNH8nvzE7Jkx5FkVMEYxiX37gG7nes8mUGk=
+akHibliG6j9uvBEg96vRehUZmhX3a+KyYm/Obf/H764=
+KZTmaJLp+FU9X93j5Tpqtw==
+b4OJVZe8QyIpjuTpKXDL9A==
+OWwBeUUPi6E+b2xP/kLzkhbAQLf1QBhJsVG9vccxC/o=
+N5/4MVITy7EOJTlZiwcB9Ucqr7vE3ymROreQhMBuSwNwocKCpYQ5SQRETGjiho55
+J1UGlXkKhKXD36OrXXhN8KLDncCsi0cOJB1ZxquABuTrwb4sfFMms6matRhI5K5Q
+OWwBeUUPi6E+b2xP/kLzkhUUhtO54HSoitsAKsSc8rZ4yrGtc8dsXBtwnKrALZg5GkieYv3dfIadIBoc5YF60vy8GjNf8EIz+9LaMzRX7ALYBq3suXIN9GhqwP3YXbN0
+PV+X4fvCTN/6758fJ9HMv5j1rIdIns/7znoDNzo50vzjjjUbCVT2Jd5AN1TGeN5Ph2K2MVW/rLwbfcpTMP+3c6CBk5FGGZCMqurfdrAJOwc=
+PV+X4fvCTN/6758fJ9HMv5j1rIdIns/7znoDNzo50vy365s7xOz+awLOrwDmYL4LSOklPQPJjcAiCcVJczFvcA==
+PV+X4fvCTN/6758fJ9HMv3nNcFXmrRNXCqsjwXbvWIH/d052j63NgUNMN45B3+9/e8N3Sas5WW4LuG4vp6JnTUN5QK2dKBCps5OZ2Uh5K84=
+OWwBeUUPi6E+b2xP/kLzkpHEDM+G7aC8zGqeLmt8rtL5AVkn0xuBIB0gX+QTawV0SjeRrBAzhyaedW3LOsA2r+017r+NmxzgJcE3tW0C7aPtitn0cA2bzo5qST2tOAAk
+PV+X4fvCTN/6758fJ9HMv5j1rIdIns/7znoDNzo50vyEgNI7Jrjsgx8ovIuuX+w3Lqj2/OMAt5DAuFjWYiVaV1xwYzOM0/NuKt2ELw3geac=
+7cEbnfYJ0swaXxvbv06hMDFv/Nq52fscUqDehjQ1o3PHmeoRtxiMWDCzM3H80svh
+VmVrGQo2zRokW/ZuO9bN6/5lkK7l4KsEg32kNj/DIY+FPeYTb0IvGvrlUCmqNoAymGwdF4VQ9sxh7pgsUWRW+w==
+VmVrGQo2zRokW/ZuO9bN69h0W3AGoL6Fh678416+Hu2KoilysLPFqxJJbiCWg0kt
+VmVrGQo2zRokW/ZuO9bN65x96E+pC4TupOHurj34PBY=
+mfT8DrNbUmxQ2BnZ1bZFTLh9MEuZKOpmAfF70OnZ9TU=
+L0eUthVnpkGsmKFAX6d+uKdLEGlEXm+o7O9zcmHr26U=
+1u+XjG/2+GSQRv6EzCaWRQ==
+neXt5Hvvcwl2NDwAN7D1qGB6z6F1FNRmcp0aGZsp3OA=
+KZTmaJLp+FU9X93j5Tpqtw==
+NNh1PlSD8WUnUEbz+BU/P4axldFSjV+KJ8PH0gHvc8716a6IaFJgL95U6epaGU5f
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+akHibliG6j9uvBEg96vRegVSiAELlrNYXMZVU575jOY=
+KZTmaJLp+FU9X93j5Tpqtw==
+b4OJVZe8QyIpjuTpKXDL9A==
+hXT2t9VByKm2S2nbMgk+0qAGgUg+/TDPIOaaoUzb4W3SlRSyG6Lbar+HWg7+vh5I/J7KbWLeQdNMXnRtklxY+vg2/rAAn84MQpIOWrU9Fvc=
+UbJuac0dxLiN+5ocS3w2vQsec87eDnbyhq6DMFy8PII=
+VmVrGQo2zRokW/ZuO9bN6/qc2YBDkyPTiniqSQkmzj4cdUE6LmdrhyMnYAzL/1bV
+L0eUthVnpkGsmKFAX6d+uKdLEGlEXm+o7O9zcmHr26U=
+mfT8DrNbUmxQ2BnZ1bZFTLh9MEuZKOpmAfF70OnZ9TU=
+L0eUthVnpkGsmKFAX6d+uKdLEGlEXm+o7O9zcmHr26U=
+1u+XjG/2+GSQRv6EzCaWRQ==
+Az+nOROjahc5UbEH8g8yh+wtgnbUd/9EzFw7jcqdz1MCMhO/tPrjAU50Lk4ytj9u
+KZTmaJLp+FU9X93j5Tpqtw==
+n3tXewq2IYqiwFREjJjsxdsmTJgFP/Eb2iJLMOhvnno=
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+vPgTNKnHCM+ykPDJGfC5NARLQ1gQWgncdBenfAWBsbSDw1wr6kIstmQ1/etdGCbr
+akHibliG6j9uvBEg96vRetqUSzMg+geldNNhaoO6fLZgzj9kzoOO2i5zBFW3Rc/B
+KZTmaJLp+FU9X93j5Tpqtw==
+qQq1ENzi4LIeT3yEG/uCFLlJepPehn5/fXVljO5DJL+JvzSF0KeQnKDidJmGHGwW
+E9Eh8Zgi7NL7ZrdHiIuIHm2aUTxKjZOS/MdwzOFw4EoqZRRgO4aeJdQK3Dl8kF2W
+w/B86sEfaNMLlqtRnyiM0fxcfdzkozAKWAYRdS3zmfM=
+blmlG6qfvRPckY4P30JkNz21UkOvXcccMNfr1mCGGEI=
+bg708ynbs9nNTwM4aJGH5Wz+6oRUb65G0NVcV6xC2NM=
++lncdxNxhgHEMltB+RY/kx7Z0yPWO7LSs0XNItComo4=
+WHkOzVx7seuLmxs5Hu+l/rPH5+mQcujSxbSmaq50dGDDXRdL6SsFYILDLWcE4gxu
+SynNsxaq1TNbBk4nh1i3Lyw0Q3yQLW3RLa7NxAXxEUs=
+vQwaisdUFOt9b0SJYuH/nrHigrTUtycF35lf58xGUQo=
+VmVrGQo2zRokW/ZuO9bN63IiVzr+5XuJXOcHuBFKMIOpNMHPyzHfwC0N0StgkjxNSrgPu9eV9KCf7VwMFcjszaLynk10duIMN3ogRHE8Bzs=
+M0ZySqkmhuHCw6olbCKv9zQJzSQJo4Zslq06bXS41SQ=
+VmVrGQo2zRokW/ZuO9bN6+NM+EEAOXoul34lVekTk9WUvtFDSVsGJghaTr4bgU8LSafigvib7vPmj8fGM7qB7g==
+VmVrGQo2zRokW/ZuO9bN604EFyRXswYS3X12UpR0zAo=
+9zgnmC3+5N9XK5/NRaR4SIaJjF1qZLEeAn7hd1V2VGY=
+wI4EEWzdSnynhqFxMCzFmmIt4WReBu6tb0L30O6c5gc=
+84Vymj90Wzn5yYuvz1pUuINLD5hNTMdhV9ByuVjyk+QwqBRvKFzuG8NouZB6ybgl
+VmVrGQo2zRokW/ZuO9bN6xA57qdw8/aOkwkb2GLtNsPCRvdM42e0NV07FqTAO2Qs3/Oioj1p67JCkG2/G7jSLTniG062VWmYyf9AQY1WFN36paQW4egKGvr13k0RCGoLNE8jdnbjDOB4pTb7qDYJDKdo19jVDfDkFXy0NWm+jF/CI0jtVe877po/WrbwxV5SgGRoLXlukeGa3yt9ajT096ksro4pSw+m3cJIdPMKDBMUqSyMjaYAba2QkWYF/onW
+j68Kflsr65DN7ZBrzXCJE5LEi4ZmZPPGYzawPkg7FiOp2C3bPzArq6niUFoYiaLqa8JDJtVJTmBr0oWZgbbnUw==
+W15L7Vl4niMZUGqXxD6c3d8tzGs8XaqdGJdtamflsNM=
+VmVrGQo2zRokW/ZuO9bN69BS3lu3yL6qCWQJqlc8KWIFu9iFtCxFgcxMjyMYXDXM
+J1UGlXkKhKXD36OrXXhN8EdgdkXLMkAONf6KC7KTpGoCJDS32p86gGoqeJBZ4Kcy
+VmVrGQo2zRokW/ZuO9bN68J077wtNBODzatLHbrOVImAgXQv2qm9DbHUugrY8sm2
+VmVrGQo2zRokW/ZuO9bN66AnqHISKFWgaxa6i1eykZmAqTN2q2b0tYfZPm0sU+oGecVMy3MDHPsKw12LUQamqoKpzKn2EgbElDWf6m72ovo=
+VmVrGQo2zRokW/ZuO9bN64ZTCtjiSIe1Vj/8GYr6Hkl3JblJsyJdZat1vmr/r0s9XDQ6Y4QN9FZ7DQQrEZbzZAe0yzBM1CREEJ2YcUEjUwd2uingwMI0FFb4Eodq9/9uWoVQrUs//TDpZh+15e5l5T4TE0ygZCL9TaKB5XBJ7T82U9EPNoSzPxpCaHHmQEWfEqFTcLwcATTK/9OXkIfDzQ==
+VmVrGQo2zRokW/ZuO9bN64ZTCtjiSIe1Vj/8GYr6HklOUFoZ9JbqLlQWuRZfcFliIKKe+9xsbnEvwusF1Wa8xSJPjIED80KtJTkpPpXjKRy1OxiQZVwpAhQ9nD5NsFzsE6Q8MWGppHNIu2hVzOEtt072YL2xsvUHSneyee7ikw8=
+VmVrGQo2zRokW/ZuO9bN67wM6ny9n4fKPjGaQTeom7HsdsbltxlHB+eRP8Cv75rD5fF6nnF/UOo/jk2KcwMMyQ==
+RsAJUVnKOugmMNukNx1VNFI6XbTaDXUOa9C9jU88nU38TV0qav2QKoNu3pc44bqx
+xWoGNWjKGPfI4gq8aHoTfIP925RCNcq0drT+hy2emrAQvaN9W4I55iIHbcGw/nNoZYfyx8UH11zsjBHtqeWOj9bmT3Bnvu6NgmfD4Oj9DTAPWqFkgtMYAagjvh40Nc7x28v+bcPMY4n2YL5E8IxTa9jyZKY2ytPPCj2+VqjvoNPYVQM+/ip+Pjz6gJmipako/Lgs49Hdbs236VzNPA59D7XU19NK//Gc9RaklKDpoBt/AFOpbQPmq5iRGl/6F6oYIrODVcCIrrkoWeFNjLwzmCY/g5eiXODMhhjrhAjm8A3CjurfXo27ioOYcVzlgkrxl35I2Kuh6wdpcb2TNqadFg==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+Lj/lQ/qWrBxaVlOpS216kxrtAo98crKzvh8hgaSexxD1sfnDASlK45AV/QXqIgPL
+KZTmaJLp+FU9X93j5Tpqtw==
+NNh1PlSD8WUnUEbz+BU/P0FjfevTQMcC4/zB6fcshpRs15oAMLWMEIfyIy7tmkgnjSM6/roj90XXD8IZ6shN6Q==
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+KZTmaJLp+FU9X93j5Tpqtw==
+WHkOzVx7seuLmxs5Hu+l/ih+1gBQ85c7hJjLO1DtjAayXdkG99tTIQB5HJHcLf2A
+L0eUthVnpkGsmKFAX6d+uO/nzl24NGaqu6WwQbr6y+aESLnssiYJu4QzAwIUC3BJ
+l2FJPs4YkAmmok1ulDRuSA==
+L0eUthVnpkGsmKFAX6d+uKdLEGlEXm+o7O9zcmHr26U=
+1u+XjG/2+GSQRv6EzCaWRQ==
+1RFyOtFuIf9z7kTVNWdGprfqGgrDePS6UojOWPaRGlrQEhidDrmMWf2FE5+y5FRR
+KZTmaJLp+FU9X93j5Tpqtw==
+STrTDhTLgfmd1cf+j5rEUifvDT9sdNQToxa1iOZnPtvEeF71V2pkyklGpd87z+Ar
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+eeFiPlXUI0Fos82HYztSmQi2xiFVgnBWkSU3R37VlbdW4tms14JYo8udq4/YXZFR
+akHibliG6j9uvBEg96vRek+N8OS/zRI8+W0umy333qhol0E2ivWtIugLrNICDVaM
+KZTmaJLp+FU9X93j5Tpqtw==
+k92oDIqD3u/zM2W83z4Ppb+XchYenm+Odgwp/Y0cXPE=
+EJwjVz+1Jf2GEZ0oGW74kRVV4SBCuwRcoCuRiRtwpmtogflv7J1/CK6J7sFpVhgk8Xz3RNz5wklDfa/kHJH1qA==
+tEuQ8WQCn4wUYOYYdMt3NRN6bJp66b5Jnjckzu6kiZY=
+L0eUthVnpkGsmKFAX6d+uLib58fjFLHLA3nq/44o/Cw=
+M0gT5AB3O7i+PONt9WLuyWyMI6DA8rcTjGtwOktAf1Q=
+k92oDIqD3u/zM2W83z4PpVwoB2ZSHvCR5trdrd/Nrnn9TBaTwyWLveTStbCzLPj+
+h1+7eTqbLT3kAneVFx+9/VXsvlmthzUbczG7YnpeNEmSAJDZUfP8n2P2pFh1gqvJTGn9jrDfCZ5X3tJoYF50ww==
+ruTTNFTdswRs4Mc+srnRk81Cxo+3GQMHdV+fzd0Bv8c=
+1u+XjG/2+GSQRv6EzCaWRQ==
+kw+7gqAvvHDoBw+IkVcdMLsYZhZZN+7fFsBN3WgQ6l4QNemfQC9wiuST0e9/oe3N
+KZTmaJLp+FU9X93j5Tpqtw==
+K0FOgK5mh0B5pEUVGx4wWzSupgN5NB7pKj6NUBjSDMMCEA356TWNgdYMvpL3Riul
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+wOl7lRII4ZgqRTj9M//0b+EyKOTGcwiCRECJwTX+5Swf4fVRsgIUgmb7cvLiImz1
+KZTmaJLp+FU9X93j5Tpqtw==
+wgR07xfoapmx6eEnFHXXYrIeMJaP3Lg2M3zaGXD/L9icinrPQgsac3AH93HY0Z2u
+xWoGNWjKGPfI4gq8aHoTfEqKjy/gKwJlHr8gW57qOoCukSLx4CgIBcaVmiyeNuAN+TpgxP+aNqMZWOmBEko0lg==
+l2FJPs4YkAmmok1ulDRuSA==
+vQwaisdUFOt9b0SJYuH/nrHigrTUtycF35lf58xGUQo=
+VmVrGQo2zRokW/ZuO9bN63IiVzr+5XuJXOcHuBFKMIOpNMHPyzHfwC0N0StgkjxNSrgPu9eV9KCf7VwMFcjszaLynk10duIMN3ogRHE8Bzs=
+VmVrGQo2zRokW/ZuO9bN69kt9vRvRtZQwsx7T07gN7Z7L4p4XMAODW64KzYMQyye
+VmVrGQo2zRokW/ZuO9bN66fk4MWYzPDlIl2QjOr6u6jPr+H5qXOVsX+mJ/JHvPJLEzZtNRfesyLSBcOinHWtfA==
+VmVrGQo2zRokW/ZuO9bN6+6OSQjJyDHPNRB3fSq3EOeAlY1i5s3A15jWFhihVHKmqTjThR8A4+HRUe3K2vJGWi3sDEN0ALmdrCFa0Yb1jd0=
+M0ZySqkmhuHCw6olbCKv9zQJzSQJo4Zslq06bXS41SQ=
+VmVrGQo2zRokW/ZuO9bN64/n5EL8V7CIqhp9FPzHEuQ=
+1u+XjG/2+GSQRv6EzCaWRQ==
+pK1tWLzPbRfpQstgK5yt8j2lWrQXlj0mwNLvoWI9CIw=
+6GPbS8DLu+izJ/xrS8+vAg3Yzx7tJfHLuui1PgGFURo=
+KZTmaJLp+FU9X93j5Tpqtw==
+z8WDlKu1TY33OBcv47kCQP1Sn2kgrWASJVrMYShHvJQ=
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+ho/Q+jrWDtBeg9J9ZTnKi/Yy4/5J10p6Wqpx90o12uiyda42f6LAwumJHTAjrPXW
+KZTmaJLp+FU9X93j5Tpqtw==
+tVow9mB6V4Z4AVTJeRFk5epji9JVKEDC4vA1jmQTU9FA0sq9kMgzhGtkpjOGcZllrS8qA7rZFht2U5C6TsunpHp+4lDyoQrRzq01Yc/vOcjdKMgLu7p/N6Ih1nJVwDGY
+SDmSYhLeqGnsDher8FKEMFH+EGNU9edpT+q2FMfbX3kKh6OnzMYJksqDJ16Bz+pGBuu7taT0V+UpVm3EjPbVQWN/P7PAYV6YV0QM9d1SwGA=
+nWPPeRatwFrNsX3r+vjiiuj9VbpXEXpA/PXTsfub1hXONyTkdgj38bIvVEEBNQFAUSAY1MPlFbH6Jtypd9fMpA==
+91i5WM/SOLOPcU/w/QLCPHE0fhXvo/2Jis+mvZqMEXN5ASZ+SYYcffVY2IFGdtWdMaSMfNHgyA+bL1gZFe5JQnhoTh53Oen10L3KXj9k/bONPsZ6BTDhh9Oe/ccii+Vwn9K52tKG8dZpv6Oy560l4IKEcxHXJzSEZNZbFKelaHaMl306/XHJY/Zq5wVHMKv8m6BG91mUElPCf8FbZv3GL2yetN+/1awYVk2TThQhZZc=
+B/8tHf1tMtA91ZxDwlovwYOAFbeL4Hs7GifrXLC2/xLSNxUzqTWiNUBhWSUIfXQC
+96orka/uERLyRst14azQwhCOqhTfcgFhXNAQS0hmuOFzJOyXUdSvTQO4Qv+4KqsmJm2Cf1BlYFyLTh0YU0gFYA==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+AZP8UUnDVdKjuKVjsec2jrmCiQGFJktl1M+1ywWDD9wdvwiE6xm6FijHY/VEbhxB
+KZTmaJLp+FU9X93j5Tpqtw==
+zknS0sL08M8DgFiTfDzdv++bCMSvah2pUddZ4NW+by0=
+s8YW556mjbD8/gjXd8hB8sur4BiJoX8W+DakBxJxCJI=
+2XG/anotOi82nAcKhrfu7YeXNf7p3xw4Opjx/I2gwIgbPp00Adz8jMzUO6NBMGLS
+FwUnopy6rf2anaGO6BmyTA==
+m0TCLSmtTI0mPAYiua7QzQ==
+KIidqWYkRxfYlcknxiqVd3vpeSTugjI7Unl5Pa7SRBWOGVRcxgCBD4LKyuzxabbU
+6u7/Fq+fmO3ZvGtZeIOF/fDcZblw/TxcHh4HnFHqc4k74YOweFm0ejhBzdDfRjg5
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+7pftPU6lZFqGIUqYzI0qsLcYv5c36pz/GILk9qBTmZXDvanYnxtc/YGmPHwWmMCK
+KZTmaJLp+FU9X93j5Tpqtw==
+x4hnNo+jvylWsZE/QqxvuTS2Gc0GupW0uQJHs2sdUVioqESZ/76yQfM/qE3PKSxJ
+s8YW556mjbD8/gjXd8hB8sur4BiJoX8W+DakBxJxCJI=
+2XG/anotOi82nAcKhrfu7YeXNf7p3xw4Opjx/I2gwIgbPp00Adz8jMzUO6NBMGLS
+FwUnopy6rf2anaGO6BmyTA==
+m0TCLSmtTI0mPAYiua7QzQ==
+KIidqWYkRxfYlcknxiqVd1Ug8j4bjF9PRFneD2stPIWOdN3ZY+yin3Gaa3U3oXPc
+9zgnmC3+5N9XK5/NRaR4SEFLuk85i4qBzSX7jZTxu622LItYPLevFkjy6ppBUrg/
+7emMzMQJ4cFIhVP7cOehmPJ3CDrPvn+aG8xt4UYcuuwVEfoTB8G9afKaDxfvvjU/PCdCzPDYkXILAJ2PdiD7TA==
+O3CUgrw2GJfB+mDjH5+NdjZqilR3dvaBD1y3zSTyETzLh87xFRpHJWHpGgKVi15Y
+VmVrGQo2zRokW/ZuO9bN6xDh3KeiV5zhPJM4thyv0eoMbUftJQp2PWQruB5CKffB
+VmVrGQo2zRokW/ZuO9bN66NWb9gY/TJNwUqyWJaLr9nGJqonmNMXRF0uzhxpzdT0xLT1ixvfuMYlj01qy2fsyg==
+VmVrGQo2zRokW/ZuO9bN6xVY7ix4S0Ouh1KVp8cSeJXWyw48YrSSj+InxpJ907Mc5+d3MhQlFeZM3IqfkObsdW2403FCY1I8nOilQVqdzh0gZWjPC4NTm/eaQKBXOLjFzJ59mBnExK4eWWTDKufsBeWkXz7CuQJazbX8ECCqBlqg4j9QEm0Dz8rWMPWAfqA4RSXYF/WprcDWrKX6ZZmQiLUZ8tQXnSb4gaxlBFA+bgGNrquRgixIftMtfTy12mgu
+VmVrGQo2zRokW/ZuO9bN688/AlhyG+u3ASNapdCjFWQJP7PosZO6Zy5uCEJz0UsX
+VmVrGQo2zRokW/ZuO9bN6xDh3KeiV5zhPJM4thyv0eqKbMhZXzdul0E2kvpluOl1ig9rPEEbRgupmrKaquXjvvAX+XTQPeqgxtIBY4kcgNV9wpm3WwBNJDWymCc10cJP5wBrZ8pxFDecSvaJf/Dj+NkQWkGo/qc++q9+KF8Rru4=
+VmVrGQo2zRokW/ZuO9bN6/9XlTMEH6+1TwfmfK632QE1OpeMIKjPwRmNv28QIXsSEV30QjsQFJKxcc0i5TQyzA==
+VmVrGQo2zRokW/ZuO9bN6ykI7uPko+2XIPh+s0bRT0BKxVMVFaX+ZUGf0hw0GgD1OTPDjXNFsIl/IHyaWNSKBSp1C5ukvl5y3QlFlMDXqI4=
+VmVrGQo2zRokW/ZuO9bN6yAGIY6Yu3NB38nw9gsyuEEpA6Yakhmq7CT5tbV0wQ1WO9O3DxZKjjgpq8aXh1GGHGkNXTKI4x5YHbEzkmqdhl9dsTnZguAGQQnAmW0RCPJIJSN1QQ8gMOGiGTGNXLMVL8d0eHCHTBTn3r7b9mHdH2BZ3fvEQnZyY4Nlrs7CouipTlZhJG5Ig7GvQXm3fIo6XPb7527ew1yFDOEhRrLpgAM=
+VmVrGQo2zRokW/ZuO9bN623epnRBgu/MKTTCdMROWuiRSje6W3jS/fYaWLy1sj9R2+GCw+JiuNWt1pLPZds6fYwn3OVxZwwUL+E71+EpquiA3748CA3OSHwLSLAorjaX
+VmVrGQo2zRokW/ZuO9bN65li16yqy/f5RUKPX/L3KRSMvM0+7p1DXMK20tzlKpsmojk9ISPRZ6K/g6KBDFhXB5H8p3Ev5wtjOmJjt2iXHOIhwTMVEawv51qH2B/rG3OAyDQyYg3NZNSY7+Kw91sJlQzHjkIYsCqLniia0ferYAF+CzR8y+UVmT5J1NvcpbrIZX7p9IkaNy18NzyOCeN0k6zedV31lXOEBcpBOKZVLS5CdqESB3krYoEXrSK56IIVk8BNdC7fUrDEMsNfpQhGtg4PuugKTeV6xdf5iQcA7ezZe4fe4/GNF5qNVhMOOAwg
+1u+XjG/2+GSQRv6EzCaWRQ==
+30yn+J8pF5yED8fB2ZQQuYYs9kIv+Kjy02xmx/lpnzOLYGipit2R8gMYf4PiIBlK
+KZTmaJLp+FU9X93j5Tpqtw==
+VuhB6RTh4Sxbx0lQW1KiqxjWx8XxcyCMeDRG0/TRhSRNlLYkF0K+dur6dpMbephV
+s8YW556mjbD8/gjXd8hB8sur4BiJoX8W+DakBxJxCJI=
+FwUnopy6rf2anaGO6BmyTA==
+m0TCLSmtTI0mPAYiua7QzQ==
+KbLSYqE/CR9TL3ZELtBVgxmWrwAXvlf+ZAt0WDpGZ0g=
+VkN4ygNQQ/fLX6SrrkenraTYzzu5gWeDvhXOwqv6peJjoEgPyTj2/Wq9eKOZiL0l
+Zlk2SG0MJaZt6EfRBI0kp4SwahMUWQh87CfVZB9Jlcq5Q2y0N1W4xmV3yBJIOlb6
+9zgnmC3+5N9XK5/NRaR4SIaJjF1qZLEeAn7hd1V2VGY=
+1D18KWr2hdVsBcdZx1OaPUrvdDLKxKewqLh7ouBVeBT8JZI4NioDe0v0VLb4DsuB
+VmVrGQo2zRokW/ZuO9bN69Yc7bsV4ZcoJl/Cld3X46GRpAkASIPS2P3SQOmVbxbg
+VmVrGQo2zRokW/ZuO9bN69h0W3AGoL6Fh678416+Hu2KoilysLPFqxJJbiCWg0kt
+VmVrGQo2zRokW/ZuO9bN62Ly4C1CtstdssrTvCHrhxrTtS1iAJn8yzuYyHazqHxa
+VmVrGQo2zRokW/ZuO9bN69h0W3AGoL6Fh678416+Hu2KoilysLPFqxJJbiCWg0kt
+VMfVrQporTLzVAs+KagENs0jVofd/mPyGKFNcwoEK/8=
+1u+XjG/2+GSQRv6EzCaWRQ==
+gxa6pbQDt2PnU+iSqvV/WQpvYfHVW36Z+skFghmY9TFAhwLgetYpCU4dtyytOW3V
+KZTmaJLp+FU9X93j5Tpqtw==
+UBk98xMynsZGYlsdUNXl+O9QJuwZyZIn/ieZA2WW69+umbcL2EMzuEhhtbkR0MJM
+s8YW556mjbD8/gjXd8hB8sur4BiJoX8W+DakBxJxCJI=
+2XG/anotOi82nAcKhrfu7YeXNf7p3xw4Opjx/I2gwIgbPp00Adz8jMzUO6NBMGLS
+FwUnopy6rf2anaGO6BmyTA==
+m0TCLSmtTI0mPAYiua7QzQ==
+KIidqWYkRxfYlcknxiqVd2YcLkXqXrVLC3YDnreWHunKqIZkh/kNNN2FjqV2XoXW
+uTEK8Ng11d3ix2pA+DD/aQ9YUi8Ug59ik0qeooqWvvGZLlW51lf/JVl6Z53OyUJPRPHIroeNcVJxJbgUxk9wEw==
+84Vymj90Wzn5yYuvz1pUuINLD5hNTMdhV9ByuVjyk+Qj6meRjH4D8xE1KvDeUQLQk0okuGb1+NlDWq4TIw2/EOSZ56AozaSfqA2GVFRq79ez0b887/ksUbfsG7DZgnu6RozvIKma4UylQXjcIlg+i+ZXppKHrmN6lFth2lLuDjpTN4DC8pxQ1nwUiEyokSQh/A47yWdp5+E2wYxexvWeVBrOck9oooYcBivEXsqMgs1ij9acpl1QolJkx1Y2KdlTQz8LNz3uP0cmeyiBABN59uZIAscXgwwmpGAUxbJB+P8xdcgpHTpc2e6CKY85Jk2K2ecJwjaxevKeZrXt84zMUA==
+NtbMKWDZoA8EED2kLq2GdhqA0ZGkzYcDO6+wB0p48dWnDHm6xpSS/FQ+pGWh33RwtiT+PF4CtPyALM4UPDOukfNs51NeeVeg9wImU7vfMFotXF0Sr9nx0HffLZS/06yzhcTozbCojOxG7ILJ3BZ+Q9zH2V2ITUERboWiz55ekC/gA0D2c1eTwbpLO7h+EsE42wdbJ7ZKumg2DjR+/T6IO/7NxVxCPpEd5JrWzvB8jZOJ7DLUl3eEQm1lWOugBzlkeZ8xCidVUY4nNQLyDl9yx/jYouQ/dRkvWkaxBIyVdCDTxSkRE+8prmwlR+9mO6QV
+1u+XjG/2+GSQRv6EzCaWRQ==
+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
+1u+XjG/2+GSQRv6EzCaWRQ==
+O131TBB6gh4f8XEOD79fEo8u3k9wGjWjrL41a9lI2wvRnO0obCe8Pla8Hx5Kk9BL
+KZTmaJLp+FU9X93j5Tpqtw==
+OY7AclRgeZm8cfUMBs6/NiqNvOs2Vqq7FdPZansXXSk2PCbRy2NEVOqaCIf1vizt
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+xO6LQbXcUNH8nvzE7Jkx5J5KuSQrfQTZeMd9YW0A7FDoNEecbGZzSCAwsSy+Jmou
+3AcPLYoMMn4rxWOUMA1wJdOmdYprhThTGxGyDnWq840=
+KZTmaJLp+FU9X93j5Tpqtw==
+Zdohx2fVgJ+uvGtyE5u4L6Kfg2TycrvqIHeHnqN7iyY=
+dXVV6PIPaDXSd7mBOdRSJ4CbKR/910+VEGwDMHNwlTs=
+EmiM0xcWXBe87Q1hFTzRIWjqgm99V5GkF86ZnBhQzV8slPZbv7joW7tT/s0EBf2N6kxX8dqLQncfVOaSeFXTew==
+wlLHv6kT3Q/RmtMBN4nDAXPlNGq5Avs+CROBCoMUZYeotQ0wnyw2fs9hdCvUp44h
+VmVrGQo2zRokW/ZuO9bN63zFN5O/w1krXKBn8bzERXc=
+VmVrGQo2zRokW/ZuO9bN65xfLmGIQq7EbJCknO/otzkXWZvvHAnLAqgPQZEB2vCXbWP3d5mAqUMJZ23nROcAKzgBkMd0kDRFKTQQudGO5p6lI2936Rs6vY1wBEcEVsjs
+VmVrGQo2zRokW/ZuO9bN6ykI7uPko+2XIPh+s0bRT0BKxVMVFaX+ZUGf0hw0GgD1OTPDjXNFsIl/IHyaWNSKBUctSomBJecQlY4tj7AY8eSbiwSz2dmra4SvF/snOkH5lfOyvjMAgv5T7+NyrbzcYTf3FDQ064P7NQvC9E7k79zPTvrjoTfQezm/SYAQRzImC8WUr3sEHz56t952kTKfoqeSOft9l5SzDwfZAszXnQ9Xc7iJnwcBp+1Fg5b9XDq3SV0ORTBE4w65WYatKMxCqFllKSRew/gBqsxu/8kotqo=
+VmVrGQo2zRokW/ZuO9bN64oe3mzoQZv/6Ibz5KtP8HwxeadNbp7CiVApax5plbDwqAXkayNvUA0Q7rDHAUZYvA==
+VmVrGQo2zRokW/ZuO9bN6/bYtPcb0yFlApACbyJh/za7mwGMbXZXSK4X1aAISA69
+VmVrGQo2zRokW/ZuO9bN6w2LqsM5aqRjRQBxuR1vFJiH+NEJc8SGXBGRcM/mg6At
+VmVrGQo2zRokW/ZuO9bN6/Xr+uFp1SAeFYIDSQJFIgqiB9CMtGaE8JV7dF3ISoFW
+VmVrGQo2zRokW/ZuO9bN6ytILMTU8P/H1Dynor1v2rNof8XeIvxwEx+41lEtYIoZbMb5abbCSYhLDjXB5ZJTvw==
+VmVrGQo2zRokW/ZuO9bN69jzSpHadiEPTz774Uy5h5M5/qAE/ZBlundoXAdqTWdWMxufx1jsHbbTEgdSqVjbdg==
+VmVrGQo2zRokW/ZuO9bN64ZTCtjiSIe1Vj/8GYr6HknmOHun9OB3abxPWOSZE8NzQH8ocpq+KYojVC1NkwR4TQ==
+VmVrGQo2zRokW/ZuO9bN64ZTCtjiSIe1Vj/8GYr6HkkLy3A+BGl+0T0eTFTJb8I9iZ1tw888bcY986Y+CmWzuQ==
+VmVrGQo2zRokW/ZuO9bN69M4URCwp6kuYmh1rRuWI7Igv2WwPj/D785M/+heTcsp
+VmVrGQo2zRokW/ZuO9bN67JeIeiYGs5UBd0XMQ9WocAQGI72YmaN3G4TjS9nytQV0cgwWark9ecr6blJuGlKN0qsGeuF/HNnXgl1vmGJObY=
+VmVrGQo2zRokW/ZuO9bN64ZTCtjiSIe1Vj/8GYr6Hknqwawc1KA1e12te8CtUp6uxHuMvNpW+uvUkbO2sQOTbmmAxvtVYh7mkzEShiLYr0We/MGvBO8tgqKg5qKFPfvDoSUAOUE6i34giSqCHPLKI9pXGHAHiGPjUfKDQKQfgqw=
+VmVrGQo2zRokW/ZuO9bN64ZTCtjiSIe1Vj/8GYr6HkkUEVPRLd3/zfhiiYQDk0Q5+LhQhvygk4A6RnsITUVozxNdVUfvOu9aTibpXWBhfbo=
+VmVrGQo2zRokW/ZuO9bN64XGRgg0Y7vSycxMx4nOBfcWKelGNkp1X6W/T651dHkGyz5B9qm6Q407Or8KWqzVf/MqOu+ESkPHP3QItAojvrk5b0xCSjimreYgyWdN2sCIQuGronPA3EYWT3ohHDYK5JwGH3ko3WwgCfu8rq13PKcaIwES0sq+wJg1JPCaR87sSfLmxXSxrNjXY8eaFXlMykM4r7/2yaNDUo3JXQjj+V1Xy8kjqVxI1LDqsMUUJXSTpsQgPOaEPBvUwGroX+yTNRo3B0RY4mDZhsSNZW1uPN0GRdazvIX4g2CPjC4X6K0W+sNoPgoDoW83Q3QvA1OGkg==
+VmVrGQo2zRokW/ZuO9bN63NsHASm18s/QkoYbwnupUAghaY5ZquVAhttEFvMtLtm
+L0eUthVnpkGsmKFAX6d+uCZIWQa760FIb2GrgWEochnCL33nwZOp1yYxHm6Y7IQt
+l2FJPs4YkAmmok1ulDRuSA==
+L0eUthVnpkGsmKFAX6d+uLib58fjFLHLA3nq/44o/Cw=
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+EgFH88DlgCaBlSP3AVXRj3WID0i+3NLg9cLk8q8vkhQ=
+KZTmaJLp+FU9X93j5Tpqtw==
+NNh1PlSD8WUnUEbz+BU/P3Ww6luMj1m/eyjyxP/NteBmDTURR0lLQX5s+lTDXM99
+vyYQukiyWticSXOwUY8Mi+n+uHwTJA457ahj7jTekS4=
+bWa5NLmMcRfP7/pL4TxwVTb2B7mcwlSV+gzfxduWJYC9/ChHxpOgjUQmxZEIOumS
+akHibliG6j9uvBEg96vRerVsZEnl0Xx8jqpolq/+wgcnlydbxwmvphf9tNtQMqRx
+KZTmaJLp+FU9X93j5Tpqtw==
+Sg21howRRrEp1ZbEiwNnBB5EAFYs5Txk9bK2T59+aTlOl+1bmNoJ4f1IUusQFonz
+D9nFoWE/zqXaNxfAecYXRxd8osLXnLDALQstQp8fEbJxwaT3wYyxwAaTcIxWthJ7nQCB02+Mb0ULpoApqEgv2/FaJskaeI4YR8QSN+ZfPv7AdJVJYjaOrmS2nNqqxoz6
+TQRmC0vOvJ1P+lfyS3Os4S86VrEypeaCMrvGzHRRGS0XYRaU5qm4jDgeZGqF/QLF0KcZx+SgbBeAW4IwsBKRJmvQI29qKu9fKixA7SYYNw4=
+1V2v8QerKOmubvSxgB4eTG1J6IWh9XVnzhB59bJtAYf5xML2xbrrOrJOyzeGhyNDK/lAgfPhicbKAZXOX4aqcAnsLDcPPo0Dgc6yldCoDcCqxFR20eaBPcmFc/lWRa3p
+96orka/uERLyRst14azQwhCOqhTfcgFhXNAQS0hmuOFvtP6ATjAEIFZ7ZgM/73HYmddrqen4dkQBEt9aqzRW6zu15TsEelQKBvD/q3oZGwiiqRKp6YoaOnC4d3JdLUJGZoQxYr1292ipbkA9Zrv/Qg==
+1u+XjG/2+GSQRv6EzCaWRQ==
+1u+XjG/2+GSQRv6EzCaWRQ==
+6d8NLnHX3WuS3g79bJvyhHaf1Y2F1xBjvynu5mqktdM=
+b4OJVZe8QyIpjuTpKXDL9A==
+I5csN8e3J/KIFkMa5t+SJMjRGbcX7JmnaA+s1n5QfBDmBtzTZ4xfvB44RNlV7fOP
+8eMNwOFVbk4AtLbMoBZ3WTJylC8gGuKXwsoa33uaVOilo+eTav4x4B/CBPvAjTgn
+8eMNwOFVbk4AtLbMoBZ3WXGvCdkUE1lCv740F/AYpZTVXZWXz/0Lz1ev0SYqBf0gjG5iXFTmyoAlt7NDxvLnEA==
+1D18KWr2hdVsBcdZx1OaPUsMwm4cgl6jk2itXDIC9y92bfUGR0OdJzh+AbS0QYj5UgvpjQBZbf2w0qzAeK9UhA==
+VmVrGQo2zRokW/ZuO9bN66b1EQBxDDTQrHy92SlIikM=
+L0eUthVnpkGsmKFAX6d+uKdLEGlEXm+o7O9zcmHr26U=
+VFFaAZF/RSdnVp3JFwc93PXfKCoPgV4X6E/JcdshdYc=
+1u+XjG/2+GSQRv6EzCaWRQ==
+Xp3/fbm7HTj0RnsfakBuUuuhbZ7tiLArzgzZR9w/sq4bNiICdCBlcexDxrfvWCM0
+KZTmaJLp+FU9X93j5Tpqtw==
+ez0xtxRyCvkdyLLtYyjyFv7/rpXkx3i2bECP/ize83V2zdgU+SSM+UAr0WUbZaAo
+s8YW556mjbD8/gjXd8hB8sur4BiJoX8W+DakBxJxCJI=
+2XG/anotOi82nAcKhrfu7YeXNf7p3xw4Opjx/I2gwIgbPp00Adz8jMzUO6NBMGLS
+NYeUKj9qBFc9MJ3fTnE5dH27PPrWZ/axL//uECDG5ueLe4/rX6GTDB+dcjf3A0i1
+QjAxj8Fs1Zyynq+peAScaejrQKsUmAFSnZ8nPsWqPqCPoKfFE2/03qqmy+0SQx9UFarWo3YkH7QHjIHm5uSc519jlFlacORJ9wt5hF1/BRwFERvJw4clhRFpMbQ6WtOr4g6CgK4XgmyHiSlfP1O29m2P0/k0qDI6BQlWE5mMoKI=
+aFP7OMJN6FoaCpKYw7+0ss2ZnFxpFoDdrTjMTR4Vz3Q=
+icFIfFUXALwKlzWF4DOy9scM43nm41lgGjgyp3xUQ5TOno6xHnl66UShd9ducDjv
+76QRap34IjiLN6z6rc736C46AZU4rsha1pujoivwK1I=
+vnY9ljqib6t5d61uMc5Klw1hkGMUI82fRdZVUelF7ZE=
+cuL+v/ov4RTGK/Z3rO7ETAosG419NHGE1IdMCZ8LQgOuTbUHn+qSGv3nXAtxNjs8
+8y+y289KA1I3aVXfTJPWV3mxQAujjHd9hPSCGIk3OIg=
+FwUnopy6rf2anaGO6BmyTA==
+m0TCLSmtTI0mPAYiua7QzQ==
+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
+1u+XjG/2+GSQRv6EzCaWRQ==
+VmVrGQo2zRokW/ZuO9bN690D+V9iLxYJpHT3mFmhW1DZfK7Rve25ognSFkggGMx6eZAFzykqlKp5Cu9jbK4Ct/WC672NfZqs15VxNk85nxOad1Q3BOLO9Acw4E4+j4EtKjQV8s98w7MNtEzoIWwycB6SUK13MRwEgc8a1jlK3ijQQSCGNgLjcIUIJSK89vgF7vYt/6nL+YHfwXtcC7KgBg==
+VmVrGQo2zRokW/ZuO9bN62Fahg3JramXev4JEPCrop8Tq2RafNO2y7f6PgHlzghojej5ms72eBC7uZU/lWVQNQ==
+VmVrGQo2zRokW/ZuO9bN690D+V9iLxYJpHT3mFmhW1DZfK7Rve25ognSFkggGMx6eZAFzykqlKp5Cu9jbK4Ct/WC672NfZqs15VxNk85nxOad1Q3BOLO9Acw4E4+j4EtK3q1oxj7GR1bPEDAg6PGc3IHF12j88siDnFMx5yW/KvNDjSmAEfKmoyRU3TGaisF/JzwwMKNjcoTRWo9ctxQgg==
+1u+XjG/2+GSQRv6EzCaWRQ==
+VmVrGQo2zRokW/ZuO9bN64ELLqLny7UvRBC+HbUVZHD/0j6y9BTT1dbYXFFShdZ/
+VmVrGQo2zRokW/ZuO9bN690D+V9iLxYJpHT3mFmhW1DZfK7Rve25ognSFkggGMx6eZAFzykqlKp5Cu9jbK4Ct/WC672NfZqs15VxNk85nxOad1Q3BOLO9Acw4E4+j4EtKjQV8s98w7MNtEzoIWwycG7pe83+AfCbqJ7dwzAOisJb5hUVB5dUg/Y7MJXA/qb1laaXcpaRai2fNnj3/ga9pA==
+VmVrGQo2zRokW/ZuO9bN65EL97AG/PaENpue8yQ3c1g4g9HtU2L0s32ModfK3zycKdm1uWkhGKHljELL7sUhjA==
+VmVrGQo2zRokW/ZuO9bN690D+V9iLxYJpHT3mFmhW1DZfK7Rve25ognSFkggGMx6eZAFzykqlKp5Cu9jbK4Ct/WC672NfZqs15VxNk85nxOad1Q3BOLO9Acw4E4+j4EtX6B99laR/WDrQ+geMvEZjaE6zCc8Y/y8Sur/swUPGOm9TCTyER8zGbWOiZ08GQ35q7j4rgn+6fn6ZF3Erodsng==
+1u+XjG/2+GSQRv6EzCaWRQ==
+VmVrGQo2zRokW/ZuO9bN64xicQPC/osCqJ5/4vmQZAypdVXzRRfN7JyHesPxjT6R
+VmVrGQo2zRokW/ZuO9bN690D+V9iLxYJpHT3mFmhW1DZfK7Rve25ognSFkggGMx6eZAFzykqlKp5Cu9jbK4Ct/WC672NfZqs15VxNk85nxOad1Q3BOLO9Acw4E4+j4EtKjQV8s98w7MNtEzoIWwycCKmUa3e3keVKDhb3cDM2Y2LTf/W9u8yfENMdUu+lxHKi/LfV8fAdvG3eL8JnGizWQ==
+VmVrGQo2zRokW/ZuO9bN6+QzSwHoODp8KPlFPmbv0vteVVzuZRDqiU8kySy9/PRSEk97UM75roGF5RUgB1HAoA==
+VmVrGQo2zRokW/ZuO9bN690D+V9iLxYJpHT3mFmhW1DZfK7Rve25ognSFkggGMx6eZAFzykqlKp5Cu9jbK4Ct/WC672NfZqs15VxNk85nxOad1Q3BOLO9Acw4E4+j4EtMb7zN4k7MyDG+V+EL/mBd/9HQwr9Zcd2Qma5vJe+HCbeEaf5Ti4VMDHfRGmgvbA30me/giOf/9GZXPfbfiJIMQ==
+VmVrGQo2zRokW/ZuO9bN675s9AgLSvVhNtI2QXAeIY8bC42PBlwXGfDsgZNfj6J6
+VmVrGQo2zRokW/ZuO9bN690D+V9iLxYJpHT3mFmhW1DZfK7Rve25ognSFkggGMx6eZAFzykqlKp5Cu9jbK4Ct/WC672NfZqs15VxNk85nxOad1Q3BOLO9Acw4E4+j4EtKjQV8s98w7MNtEzoIWwycKknKg+VVWsUQYqiLSlJ7cevGfENvzGp8tZhP8Q0PpBG2YiLiVVdRDzT7xXO5YG0kw==
+VmVrGQo2zRokW/ZuO9bN69g0+KbcuSKEbEGTLE5rFgUijEgo94aDDECf260cmPS3KDp9SuV6aoWgnbRr3lWQPA==
+VmVrGQo2zRokW/ZuO9bN690D+V9iLxYJpHT3mFmhW1DZfK7Rve25ognSFkggGMx6zvncNGfa7wo2Wfy+xOhbgA==
+VmVrGQo2zRokW/ZuO9bN6yQKXbbvGsUeDpak7i0woCWcZdCBwYcRr8UkytOtNzvu/pyYOr6uDhzH7fNKYDGyVcjFu95fRjWIoaucAoxthJ8OmSwOpZ1cWu7ciorjm9fkOt6aIuNGRffh9Zj2RGpHyraJjpKaPhr78cnp3/6hBbk=
+VmVrGQo2zRokW/ZuO9bN64St/3z3+j06iXWty1gz4F8dH5QsGNBRz3iGV+3QvBdr
+VmVrGQo2zRokW/ZuO9bN690D+V9iLxYJpHT3mFmhW1DZfK7Rve25ognSFkggGMx6zvncNGfa7wo2Wfy+xOhbgA==
+VmVrGQo2zRokW/ZuO9bN6yQKXbbvGsUeDpak7i0woCWcZdCBwYcRr8UkytOtNzvu/pyYOr6uDhzH7fNKYDGyVbrz0ZtX5WIXDBujyEupo3qKzbugIt79A8AUzD23B0BHgUlEGchdtgD8K9Vy0vXOronJwT7AU81/b9oisTN35TM=
+VmVrGQo2zRokW/ZuO9bN6wXQ71xAZh3SlR9RFP2Bvims4ewlzw/lpat56G4kQnDA
+VmVrGQo2zRokW/ZuO9bN6yd6WO+MEuau/Q7ZccA53b7K43Kv9grqa7LiDZjGSJAmqKboeaI8kKc/MdrU5KdVkg==
+VmVrGQo2zRokW/ZuO9bN690D+V9iLxYJpHT3mFmhW1DZfK7Rve25ognSFkggGMx6eZAFzykqlKp5Cu9jbK4Ct/WC672NfZqs15VxNk85nxOad1Q3BOLO9Acw4E4+j4EtcUNqLGHRX2TyVKMeQiR+cKAZWoiwWz73lJ8dllt76nzTENt1/deu/BctjyNH9fMl
+VmVrGQo2zRokW/ZuO9bN61+FfW1HL4Tbo5W4Vo9hq50EB9/AdnByZDqQ6y7YRvVo
+VmVrGQo2zRokW/ZuO9bN690D+V9iLxYJpHT3mFmhW1DZfK7Rve25ognSFkggGMx6zvncNGfa7wo2Wfy+xOhbgA==
+VmVrGQo2zRokW/ZuO9bN6yQKXbbvGsUeDpak7i0woCWcZdCBwYcRr8UkytOtNzvu/pyYOr6uDhzH7fNKYDGyVbrz0ZtX5WIXDBujyEupo3oKFyLAGUd2yqczKuEcZ2IiJRycVE5cnsSoai7LdJM6mMgadQCoC9E1MOXcqrsqFWONjbRG11XIL4kT+RXb8mTr
+VmVrGQo2zRokW/ZuO9bN66NWb9gY/TJNwUqyWJaLr9mVUmlEZLhpfyKqBdyXGONfD8a2JedMW0KPEs7MiIGdl6+ORPtkl4/QIXz9nbTRjvI=
+VmVrGQo2zRokW/ZuO9bN690D+V9iLxYJpHT3mFmhW1DZfK7Rve25ognSFkggGMx6zvncNGfa7wo2Wfy+xOhbgA==
+VmVrGQo2zRokW/ZuO9bN6yQKXbbvGsUeDpak7i0woCWcZdCBwYcRr8UkytOtNzvu/pyYOr6uDhzH7fNKYDGyVehkEuZ1ewwAvEAcrdarLA3lMkdblpLaosBAiiakGLngTBYrI96iM7NbYK8K9TKePOyR31iz81OuhjsknFZvJ98=
+VmVrGQo2zRokW/ZuO9bN62+Yt671XUypaCSY1GHJXLUAWBRCVg8kHW3o0krlKZ2OmTYnhay1/M3SPQDYgJaT4NX9ZfFIblyytSFrHYOOClSyYrRCQZND3fa6wXpBk1Yo6+GCoGJy4dXGSlB7rnYukaiceWPdNrPsEZ0x1dALZNYMUKuxB9ko8SjYZjQXH3n+RoDN1KwKDDQ4BxxBv0/6OQ==
+R65WfMhum3uW9cFR5COFLGfWbE+Ls+vLKcc6IAhuJNjghrLcDTS9yZV/LhBAYeNv
+xWoGNWjKGPfI4gq8aHoTfK8Zx+T5OPHWizhilGtSWohREGYrjj4uBs5uno1HHnFQQlWwOPJ0Eo2oV61xm2j3mpDwPeziTmUNkFUXYApyheqMUq7gm86ce7zTpGqrVfpL
+l2FJPs4YkAmmok1ulDRuSA==
+O3CUgrw2GJfB+mDjH5+NdnceC2jE7ElwqGvUxIcW3ir9k0gveaP/0TCp01ptrzj9zxZTz7oCLQ0DUnrLmRQ48I+leRqF7eRbkotFf8RKYWQ=
+VmVrGQo2zRokW/ZuO9bN63zFN5O/w1krXKBn8bzERXc=
+VmVrGQo2zRokW/ZuO9bN6yazxoRctMqJRvvT016JlyI/leSIRa6Hw7rMtIjYtO+36X0/nAz9Wd6FzA+LatVYOgU2OKBIw1amfkxXRgTseV1Jli+e2vpnv2NtLgGntGRS
+VmVrGQo2zRokW/ZuO9bN6y1I47Lsjes5Xkzm/KZ2HUgoP3Lunu5usLK4cIchJCsMdL2LQgFoWfAPI5Ew3VCgFw==
+VmVrGQo2zRokW/ZuO9bN6xoaa3pLsxXyLdB8GbtG2YY=
+VmVrGQo2zRokW/ZuO9bN6y1I47Lsjes5Xkzm/KZ2HUgoP3Lunu5usLK4cIchJCsMDicMua9IAQkVtafLL6kWXg==
+sobCGpmMf4/g7+HpPqBjC6hatZ6rUY3AAzqC73FJ58Q=
+VmVrGQo2zRokW/ZuO9bN6zM/X2hHBCd+n2OGnnATmrRILg6fXkovSmBPWkowZ8xO5JEItM5cTart0OftBRPnXQ==
+yfuvHkYk2cLx8EA7LKEWpwfYQEzXqOQVDqwrsokrZhQ=
+3W5ILeM0JZ9iXzlHvguO5LSobhy3oF+HREtEHVsnNrGZheNKAu/na1qQHvVxabXr
+IwNSi3B49UePWkec9h2aVtNHC7BX4IyT717A6/LJHthsAt09AMK5O4nG/GRkHDFh
+IwNSi3B49UePWkec9h2aVn+/p4dt7SlyZVRaquAuUCRDsL98y+79Qxj4NwKiHzsrZKDr0lEgF1SJpS62ZT9gYP5YPPMtjovw8Jjng5Cs93E=
+IwNSi3B49UePWkec9h2aVnTNDGi8T6cUjY25MvJLUl0ehaePdgy5kAFnRUmAjr1R
+IwNSi3B49UePWkec9h2aVn+/p4dt7SlyZVRaquAuUCQ7pnLVRwMy2jVuxCFn/ryOvwg5ope2z5kjHPXwagC0S5K7N7Ld1VRO/7wfBSlp97M=
+IwNSi3B49UePWkec9h2aVq78BwNkiCNoD1GZPPcuhHnD3yu7kor0v6ZiQCUiDzhfufp8evUQZ1X3oS3+7wskmw==
+IwNSi3B49UePWkec9h2aVmXuEo35rfSPxELa7SyO59Ftm745TO23Cl72ntCrl290wBRMCFenisOe9eUgLjZhCw==
+IwNSi3B49UePWkec9h2aVuDccF6MTerTDvO5gfdRNP2T1m/JtFPa6nM/7cLhVsCA
+IwNSi3B49UePWkec9h2aVq78BwNkiCNoD1GZPPcuhHmOCqtIFrO7TZ5Wa/UGHwPDDOl4dmHe3gakl6pjBL7Dqg==
+IwNSi3B49UePWkec9h2aVl2KpeFQpdQ9+A+dKZNRTTq9/jWMHEUKoFKhXgUJGGr0
+IwNSi3B49UePWkec9h2aVtSzKJrx2FUqVm+nNZcBI3IY2bsHVV38zp1MtXpZhOWZ
+IwNSi3B49UePWkec9h2aVm6fVA23HLDyMcfFF/oQJnp+KlF1/AmvEpVgicSTTgta
+IwNSi3B49UePWkec9h2aVtUB2Xa61DifRBT3InmazyA7zvKkBnFFGe0lyCe9Bxva+dbkAoHk2Jz7aDiAK073aA==
+IwNSi3B49UePWkec9h2aVu3lEqByCsI13+Xj7TO+H7ESiV5eQGIQYhSvaowiul7I
+IwNSi3B49UePWkec9h2aVl5eeOnjE3oKe9L2Nu4xzSoqShl8xEJO7qCiGoR/g9zU
+IwNSi3B49UePWkec9h2aVnB5rkxgKXQNtE0neAV2jpBS0uQ+VZ2AgIT5TjdYmFJvrt2/xsg/Z6uXM91AihDRDw==
+IwNSi3B49UePWkec9h2aVtU3ob0uxLQmmOTbGfXmH8LxiPzFhw3/gz9OLeBg4rjl
+IwNSi3B49UePWkec9h2aVuhtl8xyMxeGRnXoLtB0HIo=
+CMKtd2m/qJ9i2WN2rqsr51MOABCHLPhdLzqF21+IWzc=
+1u+XjG/2+GSQRv6EzCaWRQ==
+LjiZSy1jzT+4u6yWczdXWycXJvyQWy2NsM7SygFUMcc=
+KZTmaJLp+FU9X93j5Tpqtw==
+ez0xtxRyCvkdyLLtYyjyFgrLD9vrVQo1S+Bzl+9zmfol2ZQGXuUbP0B+ckMORcdx
+s8YW556mjbD8/gjXd8hB8sur4BiJoX8W+DakBxJxCJI=
+2XG/anotOi82nAcKhrfu7YeXNf7p3xw4Opjx/I2gwIgbPp00Adz8jMzUO6NBMGLS
+FwUnopy6rf2anaGO6BmyTA==
+m0TCLSmtTI0mPAYiua7QzQ==
+6c3cWGGlsEf4q4E+EjPFyg==
+1u+XjG/2+GSQRv6EzCaWRQ==
+QmZMELImt0jqBO02+zQM3JXeC7rVUiGj8bqQVjbcogU=
+WBqDByhCaFMEQ1XGrZvDjX3TtNujaOWKRhm3qaDkxldMeIBNIDkYKP6+wv54YYOh
+WBqDByhCaFMEQ1XGrZvDjZc3Qg3fFcLkNnciUPk13tU=
+4hdB7RJambPsQ0dtPl5R2UDlL12oIrfNFnKGYRT0aBk=

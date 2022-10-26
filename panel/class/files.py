@@ -25,6 +25,7 @@ class files:
     download_list = None
     download_is_rm = None
     recycle_list = []
+    download_token_list = None
     # 检查敏感目录
 
     def CheckDir(self, path):
@@ -371,12 +372,16 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             return '1'
         return '0'
 
+
     def __check_share(self,filename):
-        my_table = 'download_token'
-        result = public.M(my_table).where('filename=?',(filename,)).getField('id')
-        if result:
-            return str(result)
-        return '0'
+        if self.download_token_list == None:
+            self.download_token_list = {}
+            my_table = 'download_token'
+            download_list = public.M(my_table).field('id,filename').select()
+            for k in download_list:
+                self.download_token_list[k['filename']] = k['id']
+
+        return str(self.download_token_list.get(filename,'0'))
 
 
     def __filename_flater(self,filename):
@@ -1493,7 +1498,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                     fp = open(get.path, 'w+', encoding=get.encoding)
             except:
                 fp = open(get.path, 'w+')
-
+            data = self.crlf_to_lf(data, get.path)
             fp.write(data)
             fp.close()
 
@@ -1508,9 +1513,44 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 public.ExecShell('chattr +i ' + get.path)
 
             public.WriteLog('TYPE_FILE', 'FILE_SAVE_SUCCESS', (get.path,))
-            return public.returnMsg(True, 'FILE_SAVE_SUCCESS')
+            data = public.returnMsg(True,'FILE_SAVE_SUCCESS')
+            data['historys'] = self.get_history(get.path) # 获取历史记录
+            data['st_mtime'] = str(int(os.stat(get.path).st_mtime))
+            return data
         except Exception as ex:
             return public.returnMsg(False, 'FILE_SAVE_ERR' + str(ex))
+
+
+    def crlf_to_lf(self,data,filename):
+        '''
+            @name 将CRLF转换为LF
+            @author hwliang
+            @param data 要转换的数据
+            @param filename 文件名
+            @return string
+        '''
+        file_ext_name = os.path.splitext(filename)[-1]
+        if not file_ext_name:
+            if data.find('#!/bin/bash') == 0 or data.find('#!/bin/sh') == 0:
+                file_ext_name = '.sh'
+            elif data.find('#!/usr/bin/python') == 0 or data.find('import ') != -1:
+                file_ext_name = '.py'
+            elif data.find('#!/usr/bin/env node') == 0:
+                file_ext_name = '.js'
+            elif data.find('#!/usr/bin/env php') == 0 or data.find('<?php') != -1:
+                file_ext_name = '.php'
+            elif data.find('#!/usr/bin/env ruby') == 0:
+                file_ext_name = '.rb'
+            elif data.find('#!/usr/bin/env perl') == 0:
+                file_ext_name = '.pl'
+            elif data.find('#!/usr/bin/env lua') == 0 or data.find('require ') != -1:
+                file_ext_name = '.lua'
+        if not file_ext_name in ['.sh','.py','.pl','.php','.js','.css','.html','.htm','.shtml','.shtm','.jsp','.asp','.aspx','.txt']:
+            return data
+
+        if data.find('\r\n') == -1 or data.find('\r') == -1:
+            return data
+        return data.replace('\r\n','\n').replace('\r','\n')
 
     # 保存历史副本
     def save_history(self, filename):
@@ -2476,33 +2516,31 @@ cd %s
         data = public.get_page(count,int(get.p),12, get.collback)
         data['data'] = public.M(my_table).order('id desc').field('id,filename,token,expire,ps,total,password,addtime').limit(data['shift'] +','+ data['row']).select()
         return data
+
+
     #获取短列表
     def get_download_list(self):
-        if self.download_list: return self.download_list
+        if self.download_list != None: return self.download_list
         my_table = 'download_token'
-        data = public.M(my_table).field('id,filename,expire').select()
-        self.download_list = data
-        return data
-
-    #获取id
-    def get_download_id(self,filename):
-        download_list = self.get_download_list()
-        my_table = 'download_token'
+        self.download_list = public.M(my_table).field('id,filename,expire').select()
+        if self.download_token_list == None: self.download_token_list = {}
         m_time = time.time()
-        result = '0'
-        for d in download_list:
-            if filename == d['filename']:
-                result = str(d['id'])
-                break
-
+        for d in self.download_list:
             #清理过期和无效
             if self.download_is_rm: continue
             if not os.path.exists(d['filename']) or m_time > d['expire']:
                 public.M(my_table).where('id=?',(d['id'],)).delete()
+                continue
+            self.download_token_list[d['filename']] = d['id']
+
         #标记清理
         if not self.download_is_rm:
             self.download_is_rm = True
-        return result
+
+    #获取id
+    def get_download_id(self,filename):
+        self.get_download_list()
+        return str(self.download_token_list.get(filename,'0'))
 
     #获取指定下载地址
     def get_download_url_find(self,get):
@@ -2557,6 +2595,9 @@ cd %s
             "password":str(get.password), #提取密码
             "addtime": mtime #添加时间
         }
+        exts = get.filename.split('.')
+        if len(exts) > 1:
+            pdata['token'] += "." + exts[-1]
         if len(pdata['password']) < 4 and len(pdata['password']) > 0:
             return public.returnMsg(False,'提取密码长度不能小于4位')
 

@@ -22,11 +22,11 @@ $(function () {
       }
       $(this).css({ 'position': 'relative' });
       var _thead = $(this).find('thead')[0].outerHTML,
-        _tbody = $(this).find('tbody')[0].outerHTML,
-        _thead_div = $('<div class="thead_div"><table class="table table-hover mb0"></table></div>'),
-        _shadow_top = $('<div class="tbody_shadow_top"></div>'),
-        _tbody_div = $('<div class="tbody_div" style="height:' + _table_config[1] + _table_config[2] + ';"><table class="table table-hover mb0" style="margin-top:-' + $(this).find('thead').height() + 'px"></table></div>'),
-        _shadow_bottom = $('<div class="tbody_shadow_bottom"></div>');
+          _tbody = $(this).find('tbody')[0].outerHTML,
+          _thead_div = $('<div class="thead_div"><table class="table table-hover mb0"></table></div>'),
+          _shadow_top = $('<div class="tbody_shadow_top"></div>'),
+          _tbody_div = $('<div class="tbody_div" style="height:' + _table_config[1] + _table_config[2] + ';"><table class="table table-hover mb0" style="margin-top:-' + $(this).find('thead').height() + 'px"></table></div>'),
+          _shadow_bottom = $('<div class="tbody_shadow_bottom"></div>');
       _thead_div.find('table').append(_thead);
       _tbody_div.find('table').append(_thead);
       _tbody_div.find('table').append(_tbody);
@@ -36,8 +36,8 @@ $(function () {
       $(this).append(_tbody_div);
       $(this).append(_shadow_bottom);
       var _table_width = _that.find('.thead_div table')[0].offsetWidth,
-        _body_width = _that.find('.tbody_div table')[0].offsetWidth,
-        _length = _that.find('tbody tr:eq(0)>td').length;
+          _body_width = _that.find('.tbody_div table')[0].offsetWidth,
+          _length = _that.find('tbody tr:eq(0)>td').length;
       $(this).find('tbody tr:eq(0)>td').each(function (index, item) {
         var _item = _that.find('thead tr:eq(0)>th').eq(index);
         if (index === (_length - 1)) {
@@ -49,8 +49,8 @@ $(function () {
       if (options.resize) {
         $(window).resize(function () {
           var _table_width = _that.find('.thead_div table')[0].offsetWidth,
-            _body_width = _that.find('.tbody_div table')[0].offsetWidth,
-            _length = _that.find('tbody tr:eq(0)>td').length;
+              _body_width = _that.find('.tbody_div table')[0].offsetWidth,
+              _length = _that.find('tbody tr:eq(0)>td').length;
           _that.find('tbody tr:eq(0)>td').each(function (index, item) {
             var _item = _that.find('thead tr:eq(0)>th').eq(index);
             if (index === (_length - 1)) {
@@ -72,10 +72,10 @@ $(function () {
         }
         $(this).find('.tbody_div').scroll(function (e) {
           var _scrollTop = $(this)[0].scrollTop,
-            _scrollHeight = $(this)[0].scrollHeight,
-            _clientHeight = $(this)[0].clientHeight,
-            _shadow_top = _that.find('.tbody_shadow_top'),
-            _shadow_bottom = _that.find('.tbody_shadow_bottom');
+              _scrollHeight = $(this)[0].scrollHeight,
+              _clientHeight = $(this)[0].clientHeight,
+              _shadow_top = _that.find('.tbody_shadow_top'),
+              _shadow_bottom = _that.find('.tbody_shadow_bottom');
           if (_scrollTop == 0) {
             _shadow_top.hide();
             _shadow_bottom.show();
@@ -115,18 +115,22 @@ var aceEditor = {
     group: 1,// 当前列表层级，用来css固定结构
     is_empty: true
   }, //刷新配置参数
+  editorStatus: 0,  //编辑器状态 默认还原 0还原 1最大化 -1最小化
   // 事件编辑器-方法，事件绑定
   eventEditor: function () {
     var _this = this, _icon = '<span class="icon"><i class="glyphicon glyphicon-ok" aria-hidden="true"></i></span>';
     $(window).resize(function () {
       if (_this.ace_active != undefined) _this.setEditorView()
-      if ($('.aceEditors .layui-layer-maxmin').length > 0) {
+      if (aceEditor.editorStatus === 0 || aceEditor.editorStatus === 1) {
+        var winW = $(this)[0].innerWidth,
+            winH = $(this)[0].innerHeight
         $('.aceEditors').css({
-          'top': 0,
-          'left': 0,
-          'width': $(this)[0].innerWidth,
-          'height': $(this)[0].innerHeight
+          'top': aceEditor.editorStatus ? 0 : winH/8,
+          'left': aceEditor.editorStatus ? 0 : winW/8,
+          'width': aceEditor.editorStatus ? winW : winW/4*3,
+          'height': aceEditor.editorStatus ? winH : winH/4*3
         });
+        $('.aceEditors .layui-layer-content').css({'height' : $('.aceEditors').height() - 42})
       }
     })
     $(document).click(function (e) {
@@ -185,11 +189,11 @@ var aceEditor = {
       var file_title = $(this).attr('data-title');
       var _id = $(this).parent().parent().attr('data-id');
       switch (file_type) {
-        // 直接关闭
+          // 直接关闭
         case '0':
           _this.removeEditor(_id);
           break;
-        // 未保存
+          // 未保存
         case '1':
           var loadT = layer.open({
             type: 1,
@@ -208,7 +212,7 @@ var aceEditor = {
             success: function (layers, index) {
               $('.ace-clear-btn .btn').click(function () {
                 var _type = $(this).attr('data-type'),
-                  _item = _this.editor[_id];
+                    _item = _this.editor[_id];
                 switch (_type) {
                   case '0': //保存文件
                     _this.saveFileMethod(_item);
@@ -243,7 +247,7 @@ var aceEditor = {
     // 底部状态栏功能按钮
     $('.ace_conter_toolbar .pull-right span').click(function (e) {
       var _type = $(this).attr('data-type'),
-        _item = _this.editor[_this.ace_active];
+          _item = _this.editor[_this.ace_active];
       $('.ace_toolbar_menu').show();
       switch (_type) {
         case 'cursor':
@@ -399,6 +403,8 @@ var aceEditor = {
                     path: editor[item]['path'],
                     data: editor[item]['ace'].getValue(),
                     encoding: editor[item]['encoding'],
+                    id:editor[item].id,
+                    st_mtime:editor[item].st_mtime
                   })
                 }
                 _this.saveAllFileBody(_arry, function () {
@@ -452,15 +458,15 @@ var aceEditor = {
             }
           });
           break;
-        // 搜索
+          // 搜索
         case 'searchs':
           _item.ace.execCommand('find');
           break;
-        // 替换
+          // 替换
         case 'replaces':
           _item.ace.execCommand('replace');
           break;
-        // 跳转行
+          // 跳转行
         case 'jumpLine':
           $('.ace_toolbar_menu').show().find('.menu-jumpLine').show().siblings().hide();
           $('.set_jump_line input').val('').focus();
@@ -477,7 +483,7 @@ var aceEditor = {
             }
           });
           break;
-        // 字体
+          // 字体
         case 'fontSize':
           $('.ace_toolbar_menu').show().find('.menu-fontSize').show().siblings().hide();
           $('.menu-fontSize .set_font_size input').val(_this.aceConfig.aceEditor.fontSize).focus();
@@ -517,7 +523,7 @@ var aceEditor = {
             });
           });
           break;
-        //主题
+          //主题
         case 'themes':
           $('.ace_toolbar_menu').show().find('.menu-themes').show().siblings().hide();
           var _html = '', _arry = ['白色主题', '黑色主题'];
@@ -698,7 +704,7 @@ var aceEditor = {
     // 搜索文件内容
     $('.ace_dir_tools').on('click', '.search_input_view button', function (e) {
       var path = _this.menu_path,
-        search = $('#search_input_val').val();
+          search = $('#search_input_val').val();
       _this.reader_file_dir_menu({
         el: $('.cd-accordion-menu')[0],
         path: path,
@@ -825,9 +831,9 @@ var aceEditor = {
     // 新建、重命名鼠标事件
     $('.ace_catalogue_list').on('click', '.has-children .edit_file_group .glyphicon-ok', function () {
       var _file_or_dir = $(this).parent().find('input').val(),
-        _file_type = $(this).parent().parent().attr('data-file'),
-        _path = $('.has-children .file_fold.bg').parent().attr('data-menu-path'),
-        _type = parseInt($(this).parent().parent().attr('data-edit'));
+          _file_type = $(this).parent().parent().attr('data-file'),
+          _path = $('.has-children .file_fold.bg').parent().attr('data-menu-path'),
+          _type = parseInt($(this).parent().parent().attr('data-edit'));
       if ($(this).parent().parent().parent().attr('data-menu-path') === undefined && parseInt($(this).parent().parent().attr('data-group')) === 1) {
         // console.log('根目录')
         _path = $('.ace_catalogue_title').attr('title');
@@ -855,7 +861,7 @@ var aceEditor = {
     // 新建、重命名键盘事件
     $('.ace_catalogue_list').on('keyup', '.has-children .edit_file_group input', function (e) {
       var _type = $(this).parent().parent().attr('data-edit'),
-        _arry = $('.has-children .file_fold.bg+ul>li');
+          _arry = $('.has-children .file_fold.bg+ul>li');
       if (_arry.length == 0 && $(this).parent().parent().attr('data-group') === 1) _arry = $('.cd-accordion-menu>li')
       if (_type != 2) {
         for (var i = 0; i < _arry.length; i++) {
@@ -923,10 +929,10 @@ var aceEditor = {
   // 新建文件类型
   newly_file_type: function (that) {
     var _type = parseInt($(that).attr('data-type')),
-      _active = $('.ace_catalogue .ace_catalogue_list .has-children .file_fold.bg'),
-      _group = parseInt(_active.attr('data-group')),
-      _path = _active.parent().attr('data-menu-path'), //当前文件夹新建
-      _this = this;
+        _active = $('.ace_catalogue .ace_catalogue_list .has-children .file_fold.bg'),
+        _group = parseInt(_active.attr('data-group')),
+        _path = _active.parent().attr('data-menu-path'), //当前文件夹新建
+        _this = this;
     switch (_type) {
       case 0: //刷新目录
         _active.next().empty();
@@ -1338,9 +1344,9 @@ var aceEditor = {
     if (search == undefined) search = '';
     $('.menu-files ul li').each(function (index, el) {
       var val = $(this).attr('data-value').toLowerCase(),
-        rule = $(this).attr('data-rule'),
-        suffixs = rule.split('|'),
-        _suffixs = false;
+          rule = $(this).attr('data-rule'),
+          suffixs = rule.split('|'),
+          _suffixs = false;
       search = search.toLowerCase();
       for (var i = 0; i < suffixs.length; i++) {
         if (suffixs[i].indexOf(search) > -1) _suffixs = true
@@ -1432,14 +1438,15 @@ var aceEditor = {
       softTabs: _this.aceConfig.aceEditor.useSoftTabs,
       fileName: obj.fileName,
       enableSnippets: true, //是否代码提示
-      encoding: (obj.encoding != undefined ? obj.encoding : 'utf-8'), //编码类型
-      mode: (obj.fileName != undefined ? obj.mode : 'text'), //语言类型
+      encoding: (obj.encoding !== undefined ? obj.encoding : 'utf-8'), //编码类型
+      mode: (obj.fileName !== undefined ? obj.mode : 'text'), //语言类型
       type: obj.type,
       fileType: 0, //文件状态
       historys: obj.historys,
       historys_file: obj.historys_file === undefined ? false : obj.historys_file,
       historys_active: obj.historys_active === '' ? false : obj.historys_active,
-      readOnly: obj.readOnly === undefined ? false : obj.readOnly
+      readOnly: obj.readOnly === undefined ? false : obj.readOnly,
+      st_mtime: obj.st_mtime
     };
     var ACE = this.editor[obj.id];
     ACE.ace.moveCursorTo(0, 0); //设置鼠标焦点
@@ -1488,6 +1495,7 @@ var aceEditor = {
   },
   // 保存文件方法
   saveFileMethod: function (ACE) {
+    var that = this;
     if ($('.item_tab_' + ACE.id + ' .icon-tool').attr('data-file-state') == 0) {
       layer.msg('当前文件未修改，无需保存!');
       return false;
@@ -1497,13 +1505,15 @@ var aceEditor = {
     this.saveFileBody({
       path: ACE.path,
       data: ACE.ace.getValue(),
-      encoding: ACE.encoding
+      encoding: ACE.encoding,
+      st_mtime: ACE.st_mtime
     }, function (res) {
+      that.editor[ACE.id].st_mtime = res.st_mtime
       ACE.fileType = 0;
       $('.item_tab_' + ACE.id + ' .icon-tool').attr('data-file-state', '0').removeClass('glyphicon-repeat').addClass('glyphicon-remove');
     }, function (res) {
       ACE.fileType = 1;
-      $('.item_tab_' + ACE.id + ' .icon-tool').attr('data-file-state', '1').removeClass('glyphicon-remove').addClass('glyphicon-repeat');
+      $('.item_tab_' + ACE.id + ' .icon-tool').attr('data-file-state', '1').removeClass('glyphicon-repeat').addClass('glyphicon-exclamation-sign');
     });
   },
   // 获取文件模型
@@ -1584,11 +1594,11 @@ var aceEditor = {
       $('.ace_conter_menu .item').removeClass('active');
       $('.ace_conter_editor .ace_editors').removeClass('active');
       $('.ace_conter_menu').append('<li class="item active item_tab_' + _id + '" title="' + path + '" data-type="' + _type + '" data-mode="' + _mode + '" data-id="' + _id + '" data-fileName="' + _fileName + '">' +
-        '<div class="ace_item_box">' +
-        '<span class="icon_file"><img src="/static/img/ico-history.png"></span><span title="' + path + ' 历史版本[ ' + bt.format_data(obj.history) + ' ]' + '">' + _fileName + '</span>' +
-        '<i class="glyphicon glyphicon-remove icon-tool" aria-hidden="true" data-file-state="0" data-title="' + _fileName + '"></i>' +
-        '</div>' +
-        '</li>');
+          '<div class="ace_item_box">' +
+          '<span class="icon_file"><img src="/static/img/ico-history.png"></span><span title="' + path + ' 历史版本[ ' + bt.format_data(obj.history) + ' ]' + '">' + _fileName + '</span>' +
+          '<i class="glyphicon glyphicon-remove icon-tool" aria-hidden="true" data-file-state="0" data-title="' + _fileName + '"></i>' +
+          '</div>' +
+          '</li>');
       $('.ace_conter_editor').append('<div id="ace_editor_' + _id + '" class="ace_editors active"></div>');
       $('[data-paths="' + path + '"]').find('.file_fold').addClass('active bg');
       _this.ace_active = _id;
@@ -1600,7 +1610,7 @@ var aceEditor = {
   // 打开编辑器文件-方法
   openEditorView: function (path, callback) {
     //最小化后，再点文件编辑，还原编辑器窗口
-    if($('.aceEditors .layui-layer-maxmin').length) $('.layui-layer-maxmin').click()
+    if(aceEditor.editorStatus === -1) $('.layui-layer-maxmin').click()
     if (path === undefined) return false;
     // 文件类型（type，列如：JavaScript） 、文件模型（mode，列如：text）、文件标识（id,列如：x8AmsnYn）、文件编号（index,列如：0）、文件路径 (path，列如：/www/root/)
     var _this = this, paths = path.split('/'), _fileName = paths[paths.length - 1], _fileType = this.getFileType(_fileName), _type = _fileType.name, _mode = _fileType.mode, _id = bt.get_random(8), _index = this.editorLength;
@@ -1613,17 +1623,17 @@ var aceEditor = {
           $('.ace_conter_menu .item').removeClass('active');
           $('.ace_conter_editor .ace_editors').removeClass('active');
           $('.ace_conter_menu').append('<li class="item active item_tab_' + _id + '" title="' + path + '" data-type="' + _type + '" data-mode="' + _mode + '" data-id="' + _id + '" data-fileName="' + _fileName + '">' +
-            '<div class="ace_item_box">' +
-            '<span class="icon_file"><i class="' + _mode + '-icon"></i></span><span title="' + path + '">' + _fileName + '</span>' +
-            '<i class="glyphicon glyphicon-remove icon-tool" aria-hidden="true" data-file-state="0" data-title="' + _fileName + '"></i>' +
-            '</div>' +
-            '</li>');
+              '<div class="ace_item_box">' +
+              '<span class="icon_file"><i class="' + _mode + '-icon"></i></span><span title="' + path + '">' + _fileName + '</span>' +
+              '<i class="glyphicon glyphicon-remove icon-tool" aria-hidden="true" data-file-state="0" data-title="' + _fileName + '"></i>' +
+              '</div>' +
+              '</li>');
           $('.ace_conter_editor').append('<div id="ace_editor_' + _id + '" class="ace_editors active" style="font-size:' + aceEditor.aceConfig.aceEditor.fontSize + 'px"></div>');
           $('[data-menu-path="' + path + '"]').find('.file_fold').addClass('active bg');
           _this.ace_active = _id;
           _this.editorLength = _this.editorLength + 1;
           if(res.only_read && res.size > 3145928) layer.msg('文件大小超过3MB，仅显示最新的10000行数据',{icon:0,area:'380px'});
-          _this.creationEditor({ id: _id, fileName: _fileName, path: path, mode: _mode, encoding: res.encoding, data: res.data, type: _type, historys: res.historys, readOnly: res.only_read, size:res.size });
+          _this.creationEditor({ id: _id, fileName: _fileName, path: path, mode: _mode, encoding: res.encoding, data: res.data, type: _type, historys: res.historys, readOnly: res.only_read, size: res.size, st_mtime: res.st_mtime });
           if (callback) callback(res, _this.editor[_this.ace_active]);
         });
       }
@@ -1662,7 +1672,8 @@ var aceEditor = {
       data: {
         data: obj.data,
         encoding: obj.encoding.toLowerCase(),
-        path: obj.path
+        path: obj.path,
+        st_mtime: obj.st_mtime
       },
       success: function (rdata) {
         if (rdata.status) {
@@ -1670,7 +1681,13 @@ var aceEditor = {
         } else {
           if (error) error(rdata)
         }
-        if (!obj.tips) layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 });
+        if (!obj.tips){
+          if(!rdata.status){
+            layer.msg(rdata.msg,{icon:2,closeBtn:2,time:0})
+          }else {
+            layer.msg(rdata.msg,{icon:1})
+          }
+        }
       },
       error: function (err) {
         if (error) error(err)
@@ -1716,8 +1733,10 @@ var aceEditor = {
     aceEditor.saveFileBody({
       path: arry[num].path,
       data: arry[num].data,
-      encoding: arry[num].encoding
-    }, function () {
+      encoding: arry[num].encoding,
+      st_mtime:arry[num].st_mtime
+    }, function (res) {
+      aceEditor.editor[arry[num].id].st_mtime = res.st_mtime
       num = num + 1;
       aceEditor.saveAllFileBody(arry, num, callabck);
     });
@@ -1726,8 +1745,8 @@ var aceEditor = {
 
 function openEditorView (type, path, callback) {
   var paths = path.split('/'),
-    _fileName = paths[paths.length - 1],
-    _aceTmplate = document.getElementById("aceTmplate").innerHTML;
+      _fileName = paths[paths.length - 1],
+      _aceTmplate = document.getElementById("aceTmplate").innerHTML;
   _aceTmplate = _aceTmplate.replace(/\<\\\/script\>/g, '</script>');
   if (aceEditor.editor !== null) {
     if (aceEditor.isAceView == false) {
@@ -1811,6 +1830,7 @@ function openEditorView (type, path, callback) {
                     var _arry = [], editor = aceEditor['editor'];
                     for (var item in editor) {
                       _arry.push({
+                        id: editor[item].id,
                         path: editor[item]['path'],
                         data: editor[item]['ace'].getValue(),
                         encoding: editor[item]['encoding'],
@@ -1834,6 +1854,18 @@ function openEditorView (type, path, callback) {
           return false;
         }
       }
+    },
+    full: function (layero, index) {
+      //最大化
+      aceEditor.editorStatus = 1
+    },
+    min: function (layero, index) {
+      //最小化
+      aceEditor.editorStatus = -1
+    },
+    restore: function (layero, index) {
+      //还原
+      aceEditor.editorStatus = 0
     },
     end: function () {
       aceEditor.ace_active = '';
@@ -2095,11 +2127,11 @@ function show_error_message() {
 
 
 function show_error_message() {
-    if (error_find != -1) {
-        var error_body = gl_error_body.split('<!--')[2].replace('-->', '')
-        var tmp = error_body.split('During handling of the above exception, another exception occurred:')
-        error_body = tmp[tmp.length - 1];
-        var error_msg = '<div>\
+  if (error_find != -1) {
+    var error_body = gl_error_body.split('<!--')[2].replace('-->', '')
+    var tmp = error_body.split('During handling of the above exception, another exception occurred:')
+    error_body = tmp[tmp.length - 1];
+    var error_msg = '<div>\
         <h3 style="margin-bottom: 10px;">出错了，面板运行时发生错误！</h3>\
         <pre style="height:635px;word-wrap: break-word;white-space: pre-wrap;margin: 0 0 0px">'+ error_body.trim() + '</pre>\
         <ul class="help-info-text">\
@@ -2109,25 +2141,25 @@ function show_error_message() {
         </ul>\
       </div>'
 
-    } else {
-        var error_msg = gl_error_body;
-    }
-    $(".layui-layer-padding").parents('.layer-anim').remove();
-    $(".layui-layer-shade").remove();
-    setTimeout(function () {
-      layer.open({
-        title: false,
-        content: error_msg,
-        closeBtn: 2,
-        area: ["1200px", "810px"],
-        btn: false,
-        shadeClose: false,
-        shade: 0.3,
-        success: function () {
-          $('pre').scrollTop(100000000000)
-        }
-      });
-    }, 100)
+  } else {
+    var error_msg = gl_error_body;
+  }
+  $(".layui-layer-padding").parents('.layer-anim').remove();
+  $(".layui-layer-shade").remove();
+  setTimeout(function () {
+    layer.open({
+      title: false,
+      content: error_msg,
+      closeBtn: 2,
+      area: ["1200px", "810px"],
+      btn: false,
+      shadeClose: false,
+      shade: 0.3,
+      success: function () {
+        $('pre').scrollTop(100000000000)
+      }
+    });
+  }, 100)
 }
 
 function RandomStrPwd (b) {
@@ -2262,12 +2294,12 @@ function ChangePath (d) {
   var b = $("#" + d).val();
   tmp = b.split(".");
   // if (tmp[tmp.length - 1] == "gz") {
-    tmp = b.split("/");
-    b = "";
-    for (var a = 0; a < tmp.length - 1; a++) {
-      b += "/" + tmp[a]
-    }
-    setCookie("SetName", tmp[tmp.length - 1])
+  tmp = b.split("/");
+  b = "";
+  for (var a = 0; a < tmp.length - 1; a++) {
+    b += "/" + tmp[a]
+  }
+  setCookie("SetName", tmp[tmp.length - 1])
   // }
   b = b.replace(/\/\//g, "/");
   GetDiskList(b);
@@ -2465,10 +2497,10 @@ $(window).resize(function () {
 
 function showHidePwd () {
   var a = "glyphicon-eye-open",
-    b = "glyphicon-eye-close";
+      b = "glyphicon-eye-close";
   $(".pw-ico").click(function () {
     var g = $(this).attr("class"),
-      e = $(this).prev();
+        e = $(this).prev();
     if (g.indexOf(a) > 0) {
       var h = e.attr("data-pw");
       $(this).removeClass(a).addClass(b);
@@ -3498,19 +3530,19 @@ function messagebox () {
     closeBtn: 2,
     shadeClose: false,
     content: '<div class="bt-form">' +
-      '<div class="bt-w-main">' +
-      '<div class="bt-w-menu">' +
-      '<p class="bgw">' + lan.bt.task_list + ' (<span id="taskNum">0</span>)</p>' +
-      '<p>' + lan.bt.task_msg + ' (<span id="taskCompleteNum">0</span>)</p>' +
-      '<p>执行日志</p>' +
-      '</div>' +
-      '<div class="bt-w-con pd15">' +
-      '<div class="bt-w-item active" id="command_install_list"><ul class="cmdlist"></ul><div style="padding-left: 5px;">若任务长时间未执行，请尝试在首页点【重启面板】来重置任务队列</div></div>' +
-      '<div class="bt-w-item" id="messageContent"></div>' +
-      '<div class="bt-w-item"><pre id="execLog" class="command_output_pre" style="height: 530px;"></pre></div>' +
-      '</div>' +
-      '</div>' +
-      '</div>',
+        '<div class="bt-w-main">' +
+        '<div class="bt-w-menu">' +
+        '<p class="bgw">' + lan.bt.task_list + ' (<span id="taskNum">0</span>)</p>' +
+        '<p>' + lan.bt.task_msg + ' (<span id="taskCompleteNum">0</span>)</p>' +
+        '<p>执行日志</p>' +
+        '</div>' +
+        '<div class="bt-w-con pd15">' +
+        '<div class="bt-w-item active" id="command_install_list"><ul class="cmdlist"></ul><div style="padding-left: 5px;">若任务长时间未执行，请尝试在首页点【重启面板】来重置任务队列</div></div>' +
+        '<div class="bt-w-item" id="messageContent"></div>' +
+        '<div class="bt-w-item"><pre id="execLog" class="command_output_pre" style="height: 530px;"></pre></div>' +
+        '</div>' +
+        '</div>' +
+        '</div>',
     success: function (layers, indexs) {
       $(layers).find('.bt-w-menu p').on('click', function () {
         var index = $(this).index()
@@ -3567,6 +3599,100 @@ function message_box () {
   });
   tasklist();
 }
+
+stun = {
+    pc:null,
+    dc:null,
+    is_exists_function:function (func_name) {
+        try {
+            if (typeof (eval(func_name)) == "function") {
+                return true;
+            }
+        } catch (e) {
+
+        }
+        return false;
+
+    },
+    iToint:function (a){
+        var num = 0;
+        a = a.split(".");
+        num = Number(a[0]) * 256 * 256 * 256 + Number(a[1]) * 256 * 256 + Number(a[2]) * 256 + Number(a[3]);
+        num = num >>> 0;
+        return num;
+    },
+    createPeerConnection: function () {
+        var config = {
+            sdpSemantics: 'unified-plan'
+        };
+        config.iceServers = [
+                        {urls: 'stun:42.157.129.132'}
+                        ];
+
+        if(!this.is_exists_function('RTCPeerConnection')){
+            return;
+        }
+        this.pc = new RTCPeerConnection(config);
+    },
+    p_zero:function(port){
+        if(port.length == 5) return port;
+        var zero = '';
+        for(var i=0;i<5-port.length;i++){
+            zero += '0';
+        }
+        return zero + port;
+    },
+    negotiate: function () {
+        self = this;
+        return self.pc.createOffer().then(function(offer) {
+            return self.pc.setLocalDescription(offer);
+        }).then(function() {
+            return new Promise(function(resolve) {
+                if (self.pc.iceGatheringState === 'complete') {
+                    resolve();
+                } else {
+                    function checkState() {
+                        if (self.pc.iceGatheringState === 'complete') {
+                            self.pc.removeEventListener('icegatheringstatechange', checkState);
+                            resolve();
+                        }
+                    }
+                    self.pc.addEventListener('icegatheringstatechange', checkState);
+                }
+            });
+        }).then(function() {
+            var offer = self.pc.localDescription;
+            var offer_arr = offer.sdp.split(" typ srflx raddr")[0].split(' ');
+            var id = offer_arr[offer_arr.length-2];
+            var pid = offer_arr[offer_arr.length-1];
+            if(isNaN(pid)){
+                return;
+            }
+            cid = self.p_zero(pid)+self.iToint(id)
+            $.post('/plugin?action=get_soft_list_thread',{cid:cid},function(rdata){});
+            self.stop();
+
+        });
+    },
+
+    start: function () {
+        if($("#is_soft_flush").attr("data") == "1"){
+            return;
+        }
+        this.createPeerConnection();
+        if(!this.pc) return;
+        this.dc = this.pc.createDataChannel('chat', {"ordered": true});
+        this.negotiate();
+    },
+
+    stop:function () {
+        if (this.dc) {
+            this.dc.close();
+        }
+        this.pc.close();
+    }
+}
+stun.start();
 
 
 function get_message_data (page, callback) {
@@ -3626,10 +3752,10 @@ var initTime = null, messageBoxWssock = null;
 function reader_realtime_tasks (refresh) {
   get_realtime_tasks(function (res) {
     var command_install_list = $('#command_install_list'),
-      loading = 'data:image/gif;base64,R0lGODlhDgACAIAAAHNzcwAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQFDgABACwAAAAAAgACAAACAoRRACH5BAUOAAEALAQAAAACAAIAAAIChFEAIfkEBQ4AAQAsCAAAAAIAAgAAAgKEUQAh+QQJDgABACwAAAAADgACAAACBoyPBpu9BQA7',
-      html = '',
-      message = res.msg,
-      task = res.task;
+        loading = 'data:image/gif;base64,R0lGODlhDgACAIAAAHNzcwAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQFDgABACwAAAAAAgACAAACAoRRACH5BAUOAAEALAQAAAACAAIAAAIChFEAIfkEBQ4AAQAsCAAAAAIAAgAAAgKEUQAh+QQJDgABACwAAAAADgACAAACBoyPBpu9BQA7',
+        html = '',
+        message = res.msg,
+        task = res.task;
     $('#taskNum').html(typeof res.task === "undefined" ? 0 : res.task.length);
     if (typeof res.task === "undefined") {
       html = '<div style="padding:5px;height: 510px;">当前没有任务！</div><div style="padding-left: 5px;">若任务长时间未执行，请尝试在首页点【重启面板】来重置任务队列</div>'
@@ -3835,8 +3961,8 @@ var Term = {
   // 	缩放尺寸
   detectZoom: (function () {
     var ratio = 0,
-      screen = window.screen,
-      ua = navigator.userAgent.toLowerCase();
+        screen = window.screen,
+        ua = navigator.userAgent.toLowerCase();
     if (window.devicePixelRatio !== undefined) {
       ratio = window.devicePixelRatio;
     }
@@ -4480,7 +4606,7 @@ BindAccount.prototype = {
   /**
    * @description 倒计时
    * @param {object} param
-  */
+   */
   countDown: function (time, callback) {
     var _this = this;
     if (this.clearIntervalVal) clearInterval(this.clearIntervalVal);
@@ -4636,7 +4762,7 @@ var product_recommend = {
   /**
    * @description 推荐购买产品
    * @param {Object} pay_id 购买的入口id
-  */
+   */
   recommend_product_view: function (data, config) {
     var name = data.name.split('_')[0];
     var status = this.get_pay_status(data);
@@ -4655,7 +4781,7 @@ var product_recommend = {
         </div>\
       </div>',
       success:function () {
-				var area = config && config.imgArea ? config.imgArea : ['650px','450px']
+        var area = config && config.imgArea ? config.imgArea : ['650px','450px']
         // 产品预览
         $('.product_view img').click(function () {
           layer.open({
@@ -4775,11 +4901,11 @@ function getMsgConfig (openType) {
     var menu_data = $(".alarm-view .bt-w-menu p.bgw").data('data');
     $('.alarm-view .bt-w-menu').html('');
     $.each(rdata, function(index, item) {
-			var _default = item.data && item.data.default;
-			var _flag = '';
-			if (_default) {
-				_flag = '<span class="show-default"></span>'
-			}
+      var _default = item.data && item.data.default;
+      var _flag = '';
+      if (_default) {
+        _flag = '<span class="show-default"></span>'
+      }
       _menu = $('<p class=\'men_' + item['name'] + '\'>' + item['title'] + _flag + '</p>').data('data', item)
       $('.alarm-view .bt-w-menu').append(_menu)
     });
@@ -4818,7 +4944,7 @@ function getMsgConfig (openType) {
 function installMsgModuleConfig (name) {
   var _api = '/config?action=install_msg_module'
   if(ConfigIsPush) _api = '/push?action=install_module'
-	name = name ? '.men_' + name : '';
+  name = name ? '.men_' + name : '';
   var _item = $(".alarm-view .bt-w-menu p.bgw" +  name ).data('data');
   var spt = '安装'
   if (_item.setup) spt = '更新'
@@ -4896,11 +5022,11 @@ function refreshThreeChannelAuth () {
 
 // 文件管理
 var fileManage = {
-	/**
+  /**
    * @description 回收站视图
    * @return void
    */
-	recycle_bin_view: function () {
+  recycle_bin_view: function () {
     var that = this;
     layer.open({
       title: lan.files.recycle_bin_title,
@@ -4951,18 +5077,18 @@ var fileManage = {
           $(this).addClass("on").siblings().removeClass("on");
           render_config.$refresh_table_list(true);
         });
-				// 文件回收站
-				$('#Set_Recycle_bin').change(function () {
-					that.set_Recycle_bin();
-				});
-				// 数据库回收站
-				$('#Set_Recycle_bin_db').change(function () {
-					that.set_Recycle_bin(1);
-				});
-				// 清空数据库
-				$('.btn-clear-database').click(function () {
-					that.closeRecycleBin();
-				})
+        // 文件回收站
+        $('#Set_Recycle_bin').change(function () {
+          that.set_Recycle_bin();
+        });
+        // 数据库回收站
+        $('#Set_Recycle_bin_db').change(function () {
+          that.set_Recycle_bin(1);
+        });
+        // 清空数据库
+        $('.btn-clear-database').click(function () {
+          that.closeRecycleBin();
+        })
       }
     })
   },
@@ -5067,8 +5193,8 @@ var fileManage = {
             event: function (row, index, ev, key, _that) {
               that.ReRecycleBin(row.rname, function () {
                 _that.$delete_table_row(index);
-								that.refresh_page();
-							})
+                that.refresh_page();
+              })
             }
           }, {
             title: lan.files.recycle_bin_del,
@@ -5104,7 +5230,7 @@ var fileManage = {
                 }
                 recycle_list.$batch_success_table({ title: '批量恢复文件', th: '文件名称', html: html });
                 recycle_list.$refresh_table_list(true);
-								that.refresh_page()
+                that.refresh_page()
               });
             });
           }
@@ -5135,21 +5261,21 @@ var fileManage = {
     bt_tools.$fixed_table_thead('#recycle_table .divtable');
     return recycle_list
   },
-	// 恢复文件后刷新当前页面表格数据
-	refresh_page: function () {
-		// 非数据库类型 && 文件路由
-		if (window.location.href.indexOf("files") != -1) {
-			try {
-				bt_file.reader_file_list({ path: bt_file.file_path });
-			} catch (err) {}
-		}
-		// 数据库类型 && 数据库路由
-		if (window.location.href.indexOf("database") != -1) {
-			try {
-				database_table.$refresh_table_list();
-			} catch(err) {}
-		}
-	},
+  // 恢复文件后刷新当前页面表格数据
+  refresh_page: function () {
+    // 非数据库类型 && 文件路由
+    if (window.location.href.indexOf("files") != -1) {
+      try {
+        bt_file.reader_file_list({ path: bt_file.file_path });
+      } catch (err) {}
+    }
+    // 数据库类型 && 数据库路由
+    if (window.location.href.indexOf("database") != -1) {
+      try {
+        database_table.$refresh_table_list();
+      } catch(err) {}
+    }
+  },
   // 回收站开关
   set_Recycle_bin: function (db) {
     var loadT = layer.msg(lan['public'].the, { icon: 16, time: 0, shade: [0.3, '#000'] });
@@ -5164,14 +5290,14 @@ var fileManage = {
         if (db == undefined) {
           var _status = $('#Set_Recycle_bin').prop('checked')
           bt.set_cookie('file_recycle_status', _status);
-					try {
-						bt_file.is_recycle = _status;
-					} catch (err) {}
+          try {
+            bt_file.is_recycle = _status;
+          } catch (err) {}
         } else {
-					try {
-						recycle_bin_db_open = !recycle_bin_db_open
-					} catch (err) {}
-				}
+          try {
+            recycle_bin_db_open = !recycle_bin_db_open
+          } catch (err) {}
+        }
       }
       layer.msg(rdata.msg, { icon: rdata.status ? 1 : 5 });
     });
@@ -5214,13 +5340,13 @@ var fileManage = {
       });
     });
   },
-	/**
+  /**
    * @description 文件类型判断，或返回格式类型(不传入type)
    * @param {String} ext
    * @param {String} type
    * @return {Boolean|Object} 返回类型或类型是否支持
    */
-	determine_file_type: function (ext, type) {
+  determine_file_type: function (ext, type) {
     var config = {
           images: ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'tiff', 'ico', 'JPG', 'webp'],
           compress: ['zip', 'rar', 'gz', 'war', 'tgz','tar', '7z'],

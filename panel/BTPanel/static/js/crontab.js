@@ -357,7 +357,7 @@ var crontab = {
     switch (formData.sType) {
       case 'toShell':
         break;
-        case 'enterpriseBackup':
+      case 'enterpriseBackup':
         config[2].label = '备份周期'
         config[2].group[0].display = false
         config[2].group[1].display = false
@@ -378,7 +378,7 @@ var crontab = {
         config[3].group[5].display = false;
         config[3].display = true;
         config[6].display = true;
-        config[6].label = '压缩密码' 
+        config[6].label = '压缩密码'
         config[6].group.width = '250px'
         config[6].group.unit = '<span class="glyphicon glyphicon-repeat cursor mr5"></span><span style="margin-left:5px;color:red;">注意：请牢记压缩密码，以免因压缩密码导致无法恢复和下载数据</span>'
         config[6].group.placeholder = '请输入压缩密码，可为空'
@@ -455,26 +455,26 @@ var crontab = {
       case 'syncTime':
         config[1].group.value = '定期同步服务器时间'
         config[5].group.value = 'echo "|-正在尝试从0.pool.bt.cn同步时间..";\n' +
-          'ntpdate -u 0.pool.bt.cn\n' +
-          'if [ $? = 1 ];then\n' +
-          '\techo "|-正在尝试从1.pool.bt.cn同步时间..";\n' +
-          '\tntpdate -u 1.pool.bt.cn\n' +
-          'fi\n' +
-          'if [ $? = 1 ];then\n' +
-          '\techo "|-正在尝试从0.asia.pool.ntp.org同步时间..";\n' +
-          '\tntpdate -u 0.asia.pool.ntp.org\n' +
-          'fi\n' +
-          'if [ $? = 1 ];then\n' +
-          '\techo "|-正在尝试从www.bt.cn同步时间..";\n' +
-          '\tgetBtTime=$(curl -sS --connect-timeout 3 -m 60 http://www.bt.cn/api/index/get_time)\n' +
-          '\tif [ "${getBtTime}" ];then\t\n' +
-          '\t\tdate -s "$(date -d @$getBtTime +"%Y-%m-%d %H:%M:%S")"\n' +
-          '\tfi\n' +
-          'fi\n' +
-          'echo "|-正在尝试将当前系统时间写入硬件..";\n' +
-          'hwclock -w\n' +
-          'date\n' +
-          'echo "|-时间同步完成!";'
+            'ntpdate -u 0.pool.bt.cn\n' +
+            'if [ $? = 1 ];then\n' +
+            '\techo "|-正在尝试从1.pool.bt.cn同步时间..";\n' +
+            '\tntpdate -u 1.pool.bt.cn\n' +
+            'fi\n' +
+            'if [ $? = 1 ];then\n' +
+            '\techo "|-正在尝试从0.asia.pool.ntp.org同步时间..";\n' +
+            '\tntpdate -u 0.asia.pool.ntp.org\n' +
+            'fi\n' +
+            'if [ $? = 1 ];then\n' +
+            '\techo "|-正在尝试从www.bt.cn同步时间..";\n' +
+            '\tgetBtTime=$(curl -sS --connect-timeout 3 -m 60 http://www.bt.cn/api/index/get_time)\n' +
+            '\tif [ "${getBtTime}" ];then\t\n' +
+            '\t\tdate -s "$(date -d @$getBtTime +"%Y-%m-%d %H:%M:%S")"\n' +
+            '\tfi\n' +
+            'fi\n' +
+            'echo "|-正在尝试将当前系统时间写入硬件..";\n' +
+            'hwclock -w\n' +
+            'date\n' +
+            'echo "|-时间同步完成!";'
         break;
       case 'rememory':
         config[1].group.value = '释放内存'
@@ -581,7 +581,7 @@ var crontab = {
             form.hour = '';
             if(form.minute <= 0 && form.where1 <= 0) return bt.msg({ status: false, msg: '小时、分钟不能同时小于1！' })
             break;
-          // 天/日默认最小为1
+            // 天/日默认最小为1
         }
         switch (form.sType) {
           case 'syncTime':
@@ -660,7 +660,7 @@ var crontab = {
   /**
    * @description 获取所有数据库名
    */
-   getAllDatabases: function (callback){
+  getAllDatabases: function (callback){
     $.post('project/binlog/get_databases', function (res) {
       allDatabases = []
       if (res.length == 0) {
@@ -910,13 +910,13 @@ var crontab = {
               if(row.sType === 'enterpriseBackup'){
                 crontab.getAllDatabases(function (rdata) {
                   crontab.getAllTables(arry[0],function(res) {
-                    db_result = rdata.some(item=>{
+                    db_result = rdata.some(function(item){
                       if (item.name === arry[0]) {
                         return true
                       }
                     })
                     if(arry[1] !== ''){
-                      t_result = res.some(item=>{
+                      t_result = res.some(function(item){
                         if (item.value === arry[1]) {
                           return true
                         }
@@ -943,8 +943,8 @@ var crontab = {
                       data: { id: row.id }
                     }, function (rdata) {
                       var formConfig = arryCopy(crontab.crontabFormConfig),
-                        form = $.extend(true, {}, _that.crontabForm),
-                        cycle = {};
+                          form = $.extend(true, {}, _that.crontabForm),
+                          cycle = {};
                       for (var keys in form) {
                         if (form.hasOwnProperty.call(form, keys)) {
                           form[keys] = typeof rdata[keys] === "undefined" ? '' : rdata[keys]
@@ -976,7 +976,7 @@ var crontab = {
                           cycle = { where1: rdata.where1, where: '', hour: rdata.where_hour, minute: rdata.where_minute }
                           break;
                       }
-  
+
                       if (rdata.sType !== 'enterpriseBackup') {
                         formConfig[3].group[4].value = rdata.backupTo;
                         formConfig[3].group[6].display = (rdata.backupTo != "" && rdata.backupTo != 'localhost');
@@ -989,9 +989,9 @@ var crontab = {
                         formConfig[4].group[1].value = (rdata.sType == 'webshell' ? rdata.urladdress : (rdata.notice_channel === '' ? first : rdata.notice_channel))
                       }
                       $.extend(form, cycle, { id: rdata.id })
-  
-  
-  
+
+
+
                       switch (rdata.sType) {
                         case 'logs':
                         case 'path':
@@ -1010,7 +1010,7 @@ var crontab = {
                           }
                           if (!t_result) {
                             formConfig[3].group[3].placeholder = '表不存在'
-                            var none_db = formConfig[3].group[3].list.some(item=>{
+                            var none_db = formConfig[3].group[3].list.some(function(item){
                               if (item.value === '') {
                                 return true
                               }
@@ -1028,7 +1028,7 @@ var crontab = {
                           for (var i = 0; i < backT.length; i++) {
                             if (backT[i] != '') {
                               backupTolist.push(backT[i])
-                            }                          
+                            }
                           }
                           formConfig[3].group[4].value = backupTolist
                           break;
@@ -1045,9 +1045,9 @@ var crontab = {
                           form.name = form.name.replace(/\[(.*)]/, '[ ' + form.sName + ' ]');
                         }
                       }
-  
+
                       delete formConfig[0].group.unit
-  
+
                       bt_tools.form({
                         el: '#editCrontabForm',
                         'class': 'crontab_form',
@@ -1091,9 +1091,9 @@ var crontab = {
                               if (submitForm.hour < 0)  return
                               break;
                           }
-  
+
                           var hour = parseInt(submitForm.hour), minute = parseInt(submitForm.minute), where1 = parseInt(submitForm.where1)
-  
+
                           switch (submitForm.type) {
                             case 'hour':
                             case 'minute-n':
@@ -1124,7 +1124,7 @@ var crontab = {
                               return bt.msg({ status: false, msg: '保留最新不能小于1！'});
                             }
                           }
-                          
+
                           var url = '/crontab?action=modify_crond', params = submitForm
                           if (submitForm.sType == 'enterpriseBackup') {
                             var multipleValues = $('select[name=backupTo').val()
@@ -1150,7 +1150,7 @@ var crontab = {
                           }else{
                             if($('select[name=sName').length){
                               params.name.match(/\[(.*)]/)
-                              var sName_result = formConfig[3].group[0].list.some(item=>{
+                              var sName_result = formConfig[3].group[0].list.some(function(item){
                                 if (item.value === (RegExp.$1.trim() === '所有'?'ALL':RegExp.$1.trim())) {
                                   return true
                                 }

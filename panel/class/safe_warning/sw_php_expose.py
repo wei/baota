@@ -48,7 +48,7 @@ def check_run():
                     #查找expose_php
                     if re.search("\nexpose_php\\s*=\\s*(\\w+)",php_ini):
                         expose_php = re.search("\nexpose_php\\s*=\\s*(\\w+)",php_ini).groups()[0]
-                        if expose_php == "Off":
+                        if expose_php.lower() == "off":
                             pass
                         else:
                             resulit.append(dir)

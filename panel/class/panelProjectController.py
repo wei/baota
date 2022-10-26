@@ -36,6 +36,17 @@ class ProjectController:
             if not re.match(r"^\w+$",args['def_name']): return public.return_status_code(1000,'调用的方法名称中不能包含\w以外的字符')
         except:
             return public.get_error_object()
+        
+        #静态html调用
+        if 'stype' in args and args['stype'] == 'html':
+            from BTPanel import render_template_string
+            t_path_root = public.get_panel_path()+'/class/projectModel/templates/'
+            t_path = t_path_root + args['mod_name']+"_"+args['def_name'] + '.html'
+            if not os.path.exists(t_path):
+                return public.return_status_code(1000,'调用的模板不存在!'+t_path)
+            t_body = public.readFile(t_path)
+            return render_template_string(t_body, data={})
+
         # 参数处理
         module_name = args['mod_name'].strip()
         mod_name = "{}Model".format(args['mod_name'].strip())

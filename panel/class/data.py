@@ -231,14 +231,26 @@ class data:
                             if (data['data'][i]['filename'].find('/www/') != -1 or data['data'][i]['filename'].find(backup_path) != -1) and data['data'][i]['filename'][0] == '/' and data['data'][i]['filename'].find('|') == -1:
                                 data['data'][i]['size'] = 0
                                 data['data'][i]['ps'] = '文件不存在'
-                            if (data['data'][i]['filename'].find('/www/') != -1 or data['data'][i]['filename'].find(backup_path) != -1) and data['data'][i]['filename'][0] == '/' and data['data'][i]['filename'].find('|') != -1:
-                                data['data'][i]['filename']=data['data'][i]['filename'].split('|')[0]
+                    if data['data'][i]['ps'] in ['','无']:
+                        if data['data'][i]['name'][:3] == 'db_' or (data['data'][i]['name'][:4] == 'web_' and data['data'][i]['name'][-7:] == '.tar.gz'):
+                            data['data'][i]['ps'] = '自动备份'
+                        else:
+                            data['data'][i]['ps'] = '手动备份'
+
+                    #判断本地文件是否存在，以确定能否下载
+                    data['data'][i]['local']=data['data'][i]['filename'].split('|')[0]
+                    data['data'][i]['localexist']=0 if os.path.isfile(data['data'][i]['local']) else 1
 
             elif table == 'sites' or table == 'databases':
                 type = '0'
                 if table == 'databases': type = '1'
                 for i in range(len(data['data'])):
-                    data['data'][i]['backup_count'] = SQL.table('backup').where("pid=? AND type=?",(data['data'][i]['id'],type)).count()
+                    backup_count = 0
+                    try:
+                        backup_count = SQL.table('backup').where("pid=? AND type=?",(data['data'][i]['id'],type)).count()
+                    except:pass
+                    data['data'][i]['backup_count'] = backup_count
+
                     if table == 'databases': data['data'][i]['conn_config'] = json.loads(data['data'][i]['conn_config'])
                     data['data'][i]['quota'] = self.get_database_quota(data['data'][i]['name'])
                 if table == 'sites':

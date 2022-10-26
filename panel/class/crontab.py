@@ -177,8 +177,7 @@ class crontab:
 
     #同步到crond
     def sync_to_crond(self,cronInfo):
-        if 'status' in cronInfo:
-            if cronInfo['status'] == 0: return False
+        if not 'status' in cronInfo: return False
         if 'where_hour' in cronInfo:
             cronInfo['hour'] = cronInfo['where_hour']
             cronInfo['minute'] = cronInfo['where_minute']
@@ -187,6 +186,7 @@ class crontab:
         cronPath=public.GetConfigValue('setup_path')+'/cron'
         cronName=self.GetShell(cronInfo)
         if type(cronName) == dict: return cronName
+        if cronInfo['status'] == 0: return False
         cuonConfig += ' ' + cronPath+'/'+cronName+' >> '+ cronPath+'/'+cronName+'.log 2>&1'
         wRes = self.WriteShell(cuonConfig)
         if type(wRes) != bool: return False

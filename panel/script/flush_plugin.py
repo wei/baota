@@ -22,7 +22,7 @@ def flush_cache():
         plugin_deployment.plugin_deployment().GetCloudList(None)
 
         timeout = time.time() - start_time
-        if res['ip']:
+        if 'ip' in res and res['ip']:
             public.print_log("缓存更新成功,耗时: %.2f 秒" % timeout)
         else:
             if isinstance(res,dict) and not 'msg' in res: res['msg'] = '连接服务器失败!'
@@ -69,9 +69,31 @@ def flush_ssh_log():
     except:
         public.print_log("更新ssh日志失败: {}".format(public.get_error_info()))
 
+
+def flush_msg_json():
+    """
+    @name 更新消息json
+    """
+    try:
+        public.print_log("开始更新消息json...")
+        spath = '{}/data/msg.json'.format(public.get_panel_path())
+        public.downloadFile(public.get_url() + '/linux/panel/msg/msg.json',spath)
+        public.print_log("更新消息json成功")
+    except:
+        public.print_log("更新消息json失败: {}".format(public.get_error_info()))
+
 if __name__ == '__main__':
-    if public.is_process_exists_by_cmdline('/www/server/panel/script/flush_plugin.py'):
-        print("进程已存在,退出!")
-        sys.exit(0)
+    tip_date_tie = '/tmp/.fluah_time'
+    if os.path.exists(tip_date_tie):
+        last_time = int(public.readFile(tip_date_tie))
+        timeout = time.time() - last_time
+        if timeout < 600:
+            print("执行间隔过短，退出 - {}!".format(timeout))
+            sys.exit()
     flush_cache()
-    flush_ssh_log()
+    flush_msg_json()
+
+
+    flush_ssh_log()  #耗时较长，建议放到最后执行
+
+    public.writeFile(tip_date_tie,str(int(time.time())))

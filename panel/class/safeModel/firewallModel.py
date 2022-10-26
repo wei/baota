@@ -17,14 +17,6 @@ os.chdir("/www/server/panel")
 sys.path.append("class/")
 import public
 
-try:
-    import IPy
-except:
-    ipy_tips = '/tmp/bt_ipy.pl'
-    if not os.path.exists(ipy_tips):
-        os.system("nohup btpip install IPy &>/dev/null &")
-        public.WriteFile(ipy_tips,'True')
-
 class main(safeBase):
 
     __isFirewalld = False
@@ -43,6 +35,7 @@ class main(safeBase):
     _white_list_file = "/www/server/panel/plugin/firewall/whitelist.txt" # 证书验证IP
 
     _white_list = []
+    _firewall_create_tip = '{}/data/firewall_sqlite.pl'.format(public.get_panel_path())
 
     def __init__(self):
         if os.path.exists('/usr/sbin/firewalld'): self.__isFirewalld = True
@@ -54,12 +47,9 @@ class main(safeBase):
             ret = {"status": "close"}
             public.writeFile(self._trans_status, json.dumps(ret))
 
-        Sqlite()
-        if self.__isFirewalld:
-            self.__Obj = firewalld()
-            self.GetList()
-        else:
-            self.get_ufw_list()
+        if not os.path.exists(self._firewall_create_tip):
+            Sqlite()
+            public.writeFile(self._firewall_create_tip,'')
 
     def get_old_rule(self):
         """
@@ -165,6 +155,15 @@ class main(safeBase):
             elif get.status == "restart":
                 public.ExecShell(
                     '/usr/sbin/ufw disable && /usr/sbin/ufw ufw enable')
+            
+            # ufw防火墙启动时重载一次sysctl 
+            # 解决deian系统启动ufw后禁ping失效 by linxiao/2022-10-26
+            if get.status != "stop":
+                filename = '/etc/sysctl.conf'
+                ctl_content = public.readFile(filename)
+                if ctl_content and ctl_content.find("net.ipv4.icmp_echo") != -1:
+                    public.ExecShell("sysctl -p")
+
             return public.returnMsg(True, '防火墙已{}'.format(result[get.status]));
         if self.__isFirewalld:
             public.ExecShell('systemctl {} firewalld'.format(get.status))
@@ -184,7 +183,7 @@ class main(safeBase):
             public.ExecShell('/etc/init.d/iptables save')
             public.ExecShell('/etc/init.d/iptables restart')
 
- 
+
     #端口扫描
     def CheckPort(self,port):
         import socket
@@ -206,6 +205,11 @@ class main(safeBase):
 
         # 查询入栈规则
     def get_rules_list(self, args):
+        if self.__isFirewalld:
+            self.__Obj = firewalld()
+            self.GetList()
+        else:
+            self.get_ufw_list()
 
         p = 1
         limit = 15
@@ -223,7 +227,7 @@ class main(safeBase):
         data['data'] = sql.where(where,()).limit('{},{}'.format(data['shift'], data['row'])).order('addtime desc').select()
         res_data = data['data']
         for i in range(len(res_data)):
-            if not 'ports' in res_data[i]: 
+            if not 'ports' in res_data[i]:
                 res_data[i]['status'] = -1
                 continue
             d = res_data[i]
@@ -268,6 +272,40 @@ class main(safeBase):
                 if not re.search(rep1, port): return public.returnMsg(False,
                                                                       'PORT_CHECK_RANGE')
 
+    def parse_ip_interval(self, ip_str):
+        """解析区间IP
+
+        author: lx
+        date: 2022/10/25
+
+        Returns:
+            list : IP列表
+        """
+        ips = []
+        try:
+            rep2 = "^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(\/\d{1,2})?$"
+            searchor = re.compile(rep2)
+            if ip_str.find("-") != -1:
+                pre_ip, end_ip = ip_str.split("-") 
+                if searchor.search(pre_ip) and searchor.search(end_ip):
+                    ips.append(pre_ip)
+                    pinx = pre_ip.rfind(".") + 1
+                    einx = end_ip.rfind(".") + 1
+                    pre = pre_ip[0:pinx]
+                    end = end_ip[0:einx]
+                    if pre == end :
+                        start_num = int(pre_ip[pinx:])
+                        end_num = min(int(end_ip[einx:]), 255)
+                        for i in range(start_num + 1, end_num):
+                            new_ip = pre+str(i)
+                            if searchor.search(new_ip):
+                                ips.append(new_ip)
+                        end_ip = end+str(end_num)
+                    ips.append(end_ip)
+        except:
+            pass
+        return ips
+
     # 添加入栈规则
     def create_rules(self, get):
         '''
@@ -275,7 +313,8 @@ class main(safeBase):
         protocol == ['tcp','udp']
         port = 端口
         types == [accept、drop] # 放行和禁止
-        address  地址，允许放行的ip，如果全部就是：0.0.0.0/0
+        address  地址，允许放行的ip，如果全部就是：0.0.0.0/0;另外可以包含“,"或者"-"
+        表示区间IP
         brief   备注说明
         '''
         protocol = get.protocol
@@ -286,36 +325,51 @@ class main(safeBase):
         port_list = ports.split(',')
         result = self.check_port(port_list)  # 检测端口
         if result: return result
+        allow_ips = []
         if address:
+            sources = [sip.strip() for sip in address.split(",") if sip.strip()]
             rep2 = "^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(\/\d{1,2})?$"
-            if not re.search(rep2, get.source) and not public.is_ipv6(
-                    get.source):
-                return public.returnMsg(False, 'FIREWALL_IP_FORMAT');
-        query_result = public.M('firewall_new').where(
-            'ports=? and address=? and protocol=? and types=?',
-            (ports, address, protocol, types)).count()
-        if query_result > 0: return public.returnMsg(False,
-                                                     'FIREWALL_PORT_EXISTS')
-        if self.__isUfw:
-            for port in port_list:
-                if port.find('-') != -1:
-                    port = port.replace('-', ':')
-                self.add_ufw_rule(address, protocol, port, types)
-        else:
-            if self.__isFirewalld:
+            _ips = []
+            for source_ip in sources:
+                if source_ip.find("-") != -1:
+                    print("parse:", source_ip)
+                    _ips += self.parse_ip_interval(source_ip)
+                else:
+                    _ips.append(source_ip)
+
+            for source_ip in _ips:
+                if not re.search(rep2, source_ip) and not public.is_ipv6(source_ip):
+                    return public.returnMsg(False, 'FIREWALL_IP_FORMAT');
+                query_result = public.M('firewall_new').where\
+                    ('ports=? and address=? and protocol=? and types=?', 
+                    (ports, source_ip, protocol, types,)).count()
+                if query_result > 0: 
+                    continue
+                allow_ips.append(source_ip)
+        if not allow_ips:
+            allow_ips.append("")
+        for source_ip in allow_ips:
+            if self.__isUfw:
                 for port in port_list:
-                    if port.find(':') != -1:
-                        port = port.replace(':', '-')
-                    self.add_firewall_rule(address, protocol, port, types)
+                    if port.find('-') != -1:
+                        port = port.replace('-', ':')
+                    self.add_ufw_rule(source_ip, protocol, port, types)
             else:
-                for port in port_list:
-                    self.add_iptables_rule(address, protocol, port, types)
-        addtime = time.strftime('%Y-%m-%d %X', time.localtime())
-        for port in port_list:
-            result = public.M('firewall_new').add(
-                'ports,brief,protocol,address,types,addtime',
-                (port, brief, protocol, address, types, addtime))
-        self.FirewallReload()
+                if self.__isFirewalld:
+                    for port in port_list:
+                        if port.find(':') != -1:
+                            port = port.replace(':', '-')
+                        self.add_firewall_rule(source_ip, protocol, port, types)
+                else:
+                    for port in port_list:
+                        self.add_iptables_rule(source_ip, protocol, port, types)
+            addtime = time.strftime('%Y-%m-%d %X', time.localtime())
+            for port in port_list:
+                result = public.M('firewall_new').add(
+                    'ports,brief,protocol,address,types,addtime',
+                    (port, brief, protocol, source_ip, types, addtime))
+        if len(allow_ips) > 0:
+            self.FirewallReload()
         return public.returnMsg(True, 'ADD_SUCCESS')
 
     # 删除入栈规则
@@ -870,16 +924,21 @@ class main(safeBase):
                 if address.find('-') != -1:
                     self.handle_ufw_ip(address, types)
                 else:
-                    if _rule == "allow":
-                        if public.is_ipv6(address):
-                            public.ExecShell(
-                                'ufw ' + _rule + ' from ' + address + ' to any')
+                    is_debian = True if public.get_os_version().lower().find("debian") != -1 else False
+                    if not is_debian:
+                        if _rule == "allow":
+                            if public.is_ipv6(address):
+                                public.ExecShell(
+                                    'ufw ' + _rule + ' from ' + address + ' to any')
+                            else:
+                                public.ExecShell(
+                                    'ufw insert 1 ' + _rule + ' from ' + address + ' to any')
                         else:
                             public.ExecShell(
-                                'ufw insert 1 ' + _rule + ' from ' + address + ' to any')
+                                'ufw ' + _rule + ' from ' + address + ' to any')
                     else:
                         public.ExecShell(
-                            'ufw ' + _rule + ' from ' + address + ' to any')
+                            'iptables -I INPUT -s ' + address + ' -j ' + types.upper())
             else:
                 if self.__isFirewalld:
                     if address.find('-') != -1:
@@ -921,8 +980,11 @@ class main(safeBase):
                         'iptables -D INPUT -m set --match-set ' + address + ' src -j ' + types.upper())
                     public.ExecShell('ipset destroy ' + address)
                 else:
-                    public.ExecShell(
-                        'ufw delete ' + _rule + ' from ' + address + ' to any')
+                    is_debian = True if public.get_os_version().lower().find("debian") != -1 else False
+                    if not is_debian:
+                        public.ExecShell('ufw delete ' + _rule + ' from ' + address + ' to any')
+                    else:
+                        public.ExecShell("iptables -D INPUT -s "+address+ " -j "+types.upper())
             else:
                 if self.__isFirewalld:
                     if address.find('-') != -1:
@@ -964,8 +1026,12 @@ class main(safeBase):
                     'iptables -D INPUT -m set --match-set ' + address + ' src -j ' + types.upper())
                 public.ExecShell('ipset destroy ' + address)
             else:
-                public.ExecShell(
-                    'ufw delete ' + _rule + ' from ' + address + ' to any')
+                is_debian = True if public.get_os_version().lower().find("debian") != -1 else False
+                if not is_debian:
+                    public.ExecShell(
+                        'ufw delete ' + _rule + ' from ' + address + ' to any')
+                else:
+                    public.ExecShell("iptables -D INPUT -s "+address+ " -j "+types.upper())
         else:
             if self.__isFirewalld:
                 if address.find('-') != -1:
@@ -1015,22 +1081,32 @@ class main(safeBase):
                     'iptables -D INPUT -m set --match-set ' + _address + ' src -j ' + _type.upper())
                 public.ExecShell('ipset destroy ' + _address)
             else:
-                public.ExecShell(
-                    'ufw delete ' + rule1 + ' from ' + _address + ' to any')
+                is_debian = True if public.get_os_version().lower().find("debian") != -1 else False
+                if not is_debian:
+                    public.ExecShell(
+                        'ufw delete ' + rule1 + ' from ' + address + ' to any')
+                else:
+                    cmd = "iptables -D INPUT -s "+address+ " -j "+_type.upper()
+                    public.ExecShell(cmd)
+                # public.ExecShell('ufw delete ' + rule1 + ' from ' + _address + ' to any')
             rule2 = "allow" if types == "accept" else "deny"
             if address.find('-') != -1:
                 self.handle_ufw_ip(address, types)
             else:
-                if rule2 == "allow":
-                    if public.is_ipv6(address):
-                        public.ExecShell(
-                            'ufw ' + rule2 + ' from ' + address + ' to any')
+                is_debian = True if public.get_os_version().lower().find("debian") != -1 else False
+                if not is_debian:
+                    if rule2 == "allow":
+                        if public.is_ipv6(address):
+                            public.ExecShell(
+                                'ufw ' + rule2 + ' from ' + address + ' to any')
+                        else:
+                            public.ExecShell(
+                                'ufw insert 1 ' + rule2 + ' from ' + address + ' to any')
                     else:
                         public.ExecShell(
-                            'ufw insert 1 ' + rule2 + ' from ' + address + ' to any')
+                            'ufw ' + rule2 + ' from ' + address + ' to any')
                 else:
-                    public.ExecShell(
-                        'ufw ' + rule2 + ' from ' + address + ' to any')
+                    public.ExecShell('iptables -I INPUT -s ' + address + ' -j ' + types.upper())
         else:
             if self.__isFirewalld:
                 if _address.find('-') != -1:
@@ -1499,6 +1575,14 @@ class main(safeBase):
     def verify_ip(self, ip_entry):
         """检查规则IP是否和内网IP重叠"""
         try:
+            try:
+                import IPy
+            except:
+                ipy_tips = '/tmp/bt_ipy.pl'
+                if not os.path.exists(ipy_tips):
+                    os.system("nohup btpip install IPy &>/dev/null &")
+                    public.WriteFile(ipy_tips,'True')
+
             release_ips = [IPy.IP("127.0.0.1"),
                         IPy.IP("172.16.1.1"),
                         IPy.IP("10.0.0.1"),
@@ -2008,11 +2092,12 @@ class firewalld:
     # 初始化配置文件XML对象
     def __init__(self):
         if self.__TREE: return
+        if not os.path.exists(self.__CONF_FILE): return
         self.__TREE = ElementTree()
         self.__TREE.parse(self.__CONF_FILE)
         self.__ROOT = self.__TREE.getroot()
 
-   
+
 
     # 获取规则列表
     def GetAcceptPortList(self):

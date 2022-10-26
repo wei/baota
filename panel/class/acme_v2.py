@@ -307,7 +307,7 @@ class acme_v2:
         for domain in tmp_domains:
             for w in wildcard:
                 if re.match(w, domain):
-                    apply_domains.pop(domain)
+                    apply_domains.remove(domain)
 
         return apply_domains
 
@@ -407,9 +407,9 @@ class acme_v2:
             # 检查授权信息是否过期
             if time.time() < self._config['orders'][index]['auths'][0]['expires']:
                 return self._config['orders'][index]['auths']
-
-        site_run_path = self.get_site_run_path(self._config['orders'][index]['domains'])
-        if site_run_path: self._config['orders'][index]['auth_to'] = site_run_path
+        if self._config['orders'][index]['auth_type'] != 'dns':
+            site_run_path = self.get_site_run_path(self._config['orders'][index]['domains'])
+            if site_run_path: self._config['orders'][index]['auth_to'] = site_run_path
 
         #清理旧验证
         self.claer_auth_file(index)
@@ -708,6 +708,8 @@ class acme_v2:
         send_csr_response = self.acme_request(
             url=self._config['orders'][index]['finalize'], payload=payload)
         if send_csr_response.status_code not in [200, 201]:
+            if send_csr_response.status_code == 0:
+                raise ValueError("错误：提示Connection reset by peer,可能请求过程被意外拦截，如果只有此域名无法申请，则该域名可能存在异常!")
             raise ValueError(
                 "错误： 发送CSR: 响应状态{status_code} 响应值:{response}".format(
                     status_code=send_csr_response.status_code,

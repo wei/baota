@@ -10,10 +10,12 @@
 #------------------------------
 # 网站管理类
 #------------------------------
-from cgi import test
 import io,re,public,os,sys,shutil,json,hashlib,socket,time
-
-import OpenSSL
+try:
+    import OpenSSL
+except:
+    os.system("btpip install pyOpenSSL -I")
+    import OpenSSL
 import base64
 try:
     from BTPanel import session
@@ -144,7 +146,7 @@ class panelSite(panelRedirect):
     CustomLog "%s-access_log" combined
 
     #DENY FILES
-     <Files ~ (\.user.ini|\.htaccess|\.git|\.svn|\.project|LICENSE|README.md)$>
+     <Files ~ (\.user.ini|\.htaccess|\.git|\.env|\.svn|\.project|LICENSE|README.md)$>
        Order allow,deny
        Deny from all
     </Files>
@@ -198,7 +200,7 @@ class panelSite(panelRedirect):
     #REWRITE-END
 
     #禁止访问的文件或目录
-    location ~ ^/(\.user.ini|\.htaccess|\.git|\.svn|\.project|LICENSE|README.md)
+    location ~ ^/(\.user.ini|\.htaccess|\.git|\.env|\.svn|\.project|LICENSE|README.md)
     {{
         return 404;
     }}
@@ -1005,7 +1007,9 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
                 firewalls.firewalls().AddAcceptPort(get)
             if not multiple:
                 public.serviceReload()
-            public.check_domain_cloud(get.domain)
+            full_domain = get.domain
+            if not get.port in ['80','443']: full_domain += ':' + get.port
+            public.check_domain_cloud(full_domain)
             public.WriteLog('TYPE_SITE', 'DOMAIN_ADD_SUCCESS',(get.webname,get.domain))
             sql.table('domain').add('pid,name,port,addtime',(get.id,get.domain,get.port,public.getDate()))
 
@@ -1189,7 +1193,7 @@ listener Default%s{
     %s
 
     #DENY FILES
-     <Files ~ (\.user.ini|\.htaccess|\.git|\.svn|\.project|LICENSE|README.md)$>
+     <Files ~ (\.user.ini|\.htaccess|\.git|\.env|\.svn|\.project|LICENSE|README.md)$>
        Order allow,deny
        Deny from all
     </Files>
@@ -1838,7 +1842,7 @@ listener SSL443 {
     %s
 
     #DENY FILES
-     <Files ~ (\.user.ini|\.htaccess|\.git|\.svn|\.project|LICENSE|README.md)$>
+     <Files ~ (\.user.ini|\.htaccess|\.git|\.env|\.svn|\.project|LICENSE|README.md)$>
        Order allow,deny
        Deny from all
     </Files>
@@ -2179,6 +2183,10 @@ listener SSL443 {
             get.certPath = csrpath
             import panelSSL
             cert_data = panelSSL.panelSSL().GetCertName(get)
+            if not cert_data:
+                cert_data = {
+                    'certificate':0
+                }
 
         email = public.M('users').where('id=?',(1,)).getField('email')
         if email == '287962566@qq.com': email = ''
@@ -2755,7 +2763,7 @@ server
     include enable-php-%s.conf;
     include %s/panel/vhost/rewrite/%s.conf;
     #禁止访问的文件或目录
-    location ~ ^/(\.user.ini|\.htaccess|\.git|\.svn|\.project|LICENSE|README.md)
+    location ~ ^/(\.user.ini|\.htaccess|\.git|\.env|\.svn|\.project|LICENSE|README.md)
     {
         return 404;
     }
@@ -2824,7 +2832,7 @@ server
     %s
 
     #DENY FILES
-     <Files ~ (\.user.ini|\.htaccess|\.git|\.svn|\.project|LICENSE|README.md)$>
+     <Files ~ (\.user.ini|\.htaccess|\.git|\.env|\.svn|\.project|LICENSE|README.md)$>
        Order allow,deny
        Deny from all
     </Files>
@@ -3937,7 +3945,7 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
     if ( $uri ~* "\.(gif|png|jpg|css|js|woff|woff2)$" )
     {
         set $static_file%s 1;
-        expires 12h;
+        expires 1m;
         }
     if ( $static_file%s = 0 )
     {
@@ -4060,7 +4068,7 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
         ng_cache = """
     if ( $uri ~* "\.(gif|png|jpg|css|js|woff|woff2)$" )
     {
-    	expires 12h;
+    	expires 1m;
     }
     proxy_ignore_headers Set-Cookie Cache-Control expires;
     proxy_cache cache_one;
@@ -4071,7 +4079,7 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
     if ( $uri ~* "\.(gif|png|jpg|css|js|woff|woff2)$" )
     {
     	set $static_file%s 1;
-    	expires 12h;
+    	expires 1m;
         }
     if ( $static_file%s = 0 )
     {
@@ -4861,6 +4869,8 @@ location ^~ %s
     #设置默认站点
     def SetDefaultSite(self,get):
         import time
+        if public.GetWebServer() in ['openlitespeed']:
+            return public.returnMsg(False,'暂时不支持OpenLiteSpeed设置默认站点')
         default_site_save = 'data/defaultSite.pl'
         #清理旧的
         defaultSite = public.readFile(default_site_save)

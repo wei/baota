@@ -9,7 +9,6 @@
 # | 消息推送管理
 # | 对外方法 get_modules_list、install_module、uninstall_module、get_module_template、set_push_config、get_push_config、del_push_config
 # +-------------------------------------------------------------------
-from ast import mod
 import os, sys
 panelPath = "/www/server/panel"
 os.chdir(panelPath)
@@ -170,8 +169,11 @@ class panelPush:
         #获取发送给谁
         if not 'to_user' in result:
             result['to_user'] = {}
-            for s_module in result['module'].split(','):
-                result['to_user'][s_module] = 'default'
+            if 'module' in result:
+                for s_module in result['module'].split(','):
+                    result['to_user'][s_module] = 'default'
+            else:
+                return False
 
         info = {}
         for s_module in result['module'].split(','):
@@ -434,6 +436,19 @@ class panelPush:
             m_cycle.append('{}次，间隔{}秒'.format(data[skey]['count'],data[skey]['interval']))
             result[skey]['m_cycle'] = ''.join(m_cycle)
 
+            # 兼容旧版本未返回project项，导致前端无法编辑问题 by lx-20220920
+            if "project" not in result[skey] and "type" in result[skey]:
+                if result[skey]["type"]  == "services":
+                    services = ['nginx','apache',"pure-ftpd",'mysql','php-fpm','memcached','redis']
+                    _title = result[skey]['title']
+                    for s in services:
+                        if _title.find(s)!=-1:
+                            result[skey]["project"] = s
+                else:
+                    result[skey]["project"] = result[skey]["type"]
+            if "project" in result[skey]:
+                if result[skey]["project"] == "FTP服务端":
+                    result[skey]["project"] ="pure-ftpd"
         return result
 
 
@@ -510,7 +525,7 @@ class panelPush:
                                 if not msg_obj:continue
 
                                 #2022-09-02 cjxin 增加指定发送者
-                                rdata[m_module]['to_user'] = 'default'
+                                #rdata[m_module]['to_user'] = 'default'
                                 if 'to_user' in item and m_module in item['to_user']:
                                     rdata[m_module]['to_user'] = item['to_user'][m_module]
 

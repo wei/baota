@@ -775,36 +775,37 @@ var host_trem = {
               },
               yes: function (indexs, layero) {
                   var form = {};
-                  $('.bt-form input,.bt-form textarea').each(function (index, el) {
-                      var name = $(this).attr('name'), value = $(this).val();
-                      form[name] = value;
-                      switch (name) {
-                          case 'port':
-                              if (!bt.check_port(value)) {
-                                  bt.msg({ status: false, msg: '服务器端口格式错误！' });
-                                  return false;
-                              }
-                              break;
-                          case 'username':
-                              if (value == '') {
-                                  bt.msg({ status: false, msg: '服务器用户名不能为空!' });
-                                  return false;
-                              }
-                              break;
-                          case 'password':
-                              if (value == '' && $('.c_password_view').hasClass('show')) {
-                                  bt.msg({ status: false, msg: '服务器密码不能为空!' });
-                                  return false;
-                              }
-                              break;
-                          case 'pkey':
-                              if (value == '' && $('.c_pkey_view').hasClass('show')) {
-                                  bt.msg({ status: false, msg: '服务器秘钥不能为空!' });
-                                  return false;
-                              }
-                              break;
-                      }
-                  });
+									for (var i = 0; i <  $('.bt-form input,.bt-form textarea').length; i++) {
+										var el = $('.bt-form input,.bt-form textarea')[i];
+										var name = $(el).attr('name'), value = $(el).val();
+										form[name] = value;
+										switch (name) {
+												case 'port':
+														if (!bt.check_port(value)) {
+																bt.msg({ status: false, msg: '端口格式错误，可用范围：1-65535' });
+																return false;
+														}
+														break;
+												case 'username':
+														if (value == '') {
+																bt.msg({ status: false, msg: '服务器用户名不能为空!' });
+																return false;
+														}
+														break;
+												case 'password':
+														if (value == '' && $('.c_password_view').hasClass('show')) {
+																bt.msg({ status: false, msg: '服务器密码不能为空!' });
+																return false;
+														}
+														break;
+												case 'pkey':
+														if (value == '' && $('.c_pkey_view').hasClass('show')) {
+																bt.msg({ status: false, msg: '服务器秘钥不能为空!' });
+																return false;
+														}
+														break;
+										}
+									}
                   if (!obj.form.sort) {
                       delete form.sort;
                       that.create_host(form, function (res) {

@@ -50,3 +50,9 @@ for site in edateSites:
         SetStatus(get)
 oldEdate = mEdate
 public.writeFile('/www/server/panel/data/edate.pl',mEdate)
+
+#未参加用户体验改进计划的不提交统计信息
+if public.get_improvement():
+    import PluginLoader
+    PluginLoader.start_total()
+

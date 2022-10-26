@@ -57,17 +57,23 @@
                 : false;
       })()
       if(typeof ie !== "boolean" && ie !== 'edge') ie = parseInt(ie);
-      if(ie <= 10 && typeof ie !== "boolean"){
+      if(ie < 11 && typeof ie !== "boolean"){
         window.location.href = '/tips';
       }else if(ie){
-        title.setAttribute('class', 'content')
-        title.setAttribute('style','height: 50px;position: absolute;top: 0;left: 0;right: 0;line-height: 50px;z-index: 9999999;background: rgba(0,0,0,.5);text-align: center;color: #ff922e;font-size: 19px;font-weight: 600;')
-        title.innerHTML = '<span>当前浏览器可能存在视图不兼容的情况，推荐使用Chrome/FireFox/国产浏览器急速模式访问</span><span class="compatibility_tips" style="position: absolute;right: 15px;top: 10px;font-size: 14px;display: inline-block; height: 30px;line-height: 28px;padding: 0 12px;font-weight: 500;color: #ffffff; border-radius: 4px;cursor: pointer;border: 2px solid #ffffff;font-weight: 500;">关闭提示</span>'
+        var title = document.createElement('div');
+        title.setAttribute('class', 'content');
+        title.setAttribute('style','height: 50px;position: absolute;top: 0;left: 0;right: 0;line-height: 50px;z-index: 9999999;background: rgba(0,0,0,.5);text-align: center;color: #ff922e;font-size: 19px;font-weight: 600;');
+        title.innerHTML = '<span>当前浏览器可能存在视图不兼容的情况，推荐使用Chrome/FireFox/国产浏览器急速模式访问</span><span class="compatibility_tips" style="position: absolute;right: 15px;top: 10px;font-size: 14px;display: inline-block; height: 30px;line-height: 28px;padding: 0 12px;font-weight: 500;color: #ffffff; border-radius: 4px;cursor: pointer;border: 2px solid #ffffff;font-weight: 500;">关闭提示</span>';
         title.querySelector('.compatibility_tips').addEventListener('click',function(res){
           var parentNode = this.parentElement;
           parentNode.parentElement.removeChild(parentNode)
         })
-        document.querySelector('html').appendChild(title)
+        var style = document.createElement('style');
+        style.setAttribute('type','text/css');
+        style.innerHTML = '.sidebar-scroll .mypcip span{background-position: -20px;background-size: 65px;}.bind-user{background-position: -35px;}.bt-dashi{background-position: -30px;}.bt-dashi{background-position: -30px;}.ico-system{background-position: -15px;}.btltd{background-position: -80px;}';
+        var html = document.querySelector('html')
+        html.appendChild(title)
+        html.appendChild(style)
       }
       if (!window.location.origin) {
         window.location.origin = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port: '');
@@ -111,297 +117,302 @@
 </head>
 
 <body>
-  <div class="bt-warp bge6">
-    <a style="display:none;" id="panel_debug" data="{{g['debug']}}" data-pyversion="{{g['pyversion']}}"></a>
-    <a style="display:none;" id="request_token_head" token="{{session[g.get_csrf_html_token_key]}}"></a>
-    <div id="container" class="container-fluid">
-      <div class="sidebar-scroll">
-        <div class="sidebar-auto">
-          <div id="task" class="task cw" onclick="messagebox()">0</div>
-          <h3 class="mypcip"><span class="f14 cw">{{session['address']}}</span></h3>
-          <ul class="menu">
-            {% for menu in g['menus'] %}
-            {% if menu['href'] == g.uri %}
-            <li id="{{menu['id']}}" class="current"> <a class="{{menu['class']}}"
-                href="{{menu['href']}}">{{menu['title']}}</a></li>
-            {% else %}
-            <li id="{{menu['id']}}"> <a class="{{menu['class']}}" href="{{menu['href']}}">{{menu['title']}}</a></li>
-            {% endif %}
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
-      <button style="display: none;" id="bt_copys" class="bt_copy" data-clipboard-text=""></button>
-      <a style="display: none;" id="defaultPath">{{session['config']['sites_path']}}</a>
-      {% block content %}{% endblock %}
-      <div id="onlineCustomer" class="debugs hide"><span>在线<br>客服</span></div>
-      <div id="wechat-customer" class="wechat-customer hide" >
-        <div class="describe-title">企业版专属客服</div>
-        <div class="qrcode-wechat">
-          <div id="wechatCustomerQrcode"></div>
-          <div class="wechatEnterprise">
-            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAABXdJREFUaEPlmn9MlVUYxz8Plwv0QiAuRc1ARFf5g4nT2MyfIWXqXP6i5WyJzs2WpVuasVr+wbTaNJQxc9XU0nJCaWrONlxu/jYsjNYPQiw1zUiJ4r38kHs57cBgIlx473vvZcye7e7d7n3O93k+73Pec95zzhXuEpO7hIP/F0h1ffXwkNCQOSjGIQxDBb2ObqAcRZEHzxfRzujTXUXstCIu5RogHnlLoZ7tSijIvxeKQ9YaYngF8gpiNphTRWQXEBfkJC3Li8iLhsPI66hBhyDVDdVTQiSkEHBYjtJNjiKy0nAYm+8M1w6ksrIyJjwm/DsUCd2Um89hlFKPRzmj9I1utXYgZoO5WURe8lm9OxsI30Q6Isd4BalSVbFOj/Mm9PxhWZB5RqjxWQtMm4qYbvM5QXZ05821G0uQj41QY2GHILWe2i2NqvF5u+Ld3K48MjRySIcgLrfrMDDNTkLVtVD0i/4I5X9ApQmV1XBPGPS+F3pHweRkRXIiJPW3E6F9m8jQyNYe1aZr1bhrjinUBF/CnL8IR0uEoyVQZVprmTYKFkxSDL3fmr83L8NhOESkUf/uF8j2QmF7m0HQemLhTlgwGTLT7b/vBAQke7dQWGw9cW+es1Jh1Vx7MH6DrHxP+PaC/xAtCk+OgawM32H8Asn5XNh3KnAQLUoaRAP5YrZBvv8NXtgSnCVMv1jIXabQV6tmGyTvoJB/3GoY3/30w79suvUuZhtk4ivBqUYL8vhhsH5RkEH05PZUdnBB4vvABysUEWHWqmmrInq2zswJHkh8X7hcAVuXK4bFBxGk9HdYmht4kMx0SH3QevK3I9qqSH0DpL8WeJDCdYq/3L9ScOU94o0hzB24xFo5AFsgWn3JZqHsquU4XTrOGAtr5itWlyzg7M2vmvzXPJTDjP7PdNlWO9gGef9LYWdzvICY7lb6XWtF8RyKq5pn2eSYVPJG77ekbxvkyg1YnCPobmbXYiJh6iiYPlYxdABI3U9U1JSx6eo+jt/QqwhYN3IHE+7rejVhG0QH2bhX2H/GHsaUZFjyhEIPs9rk3yM4rq7Bk7gLFfEwJf+c5dC1TygzfyA3ZS9RodGdBvILRFcja4dwrsw3mEFx8NHLzZNdyJ8bEPMkYp5qhohObyN2+PoexD2Q6xWPEB0Bjw0OpVdE+4HGLxAdsaIKsj707cFveR4cpRORutKmxFXUODxJ+zq8I8sP1rH3x+Y+vD49gkWjne38/AbRiofPwZv51ofjVpDy2U2V0NbYbzWNcavaJXjx70bStrmo1zvA0AShYe60gIAcKoK3C6yDRBtQkKUwag/guLQUZYzBw+swKAWcbZPcePIWG0/UN+Wtu1X21HASY0OCA5J7QPj0hPXnJKEvDE+AV+ff9lJ4Zg/q6wJk9hvwQHKT2OnLHuburmF8goP5I5xNH28WkIqs2CoUX2wOkZIEs1IVelPhlhtcdWDWNV+1xfWC2KiO01G7VsLZfEiehqTM5J36mQyMFjJGegdoUQoIyIVrcKhImDRSMWqw9cq08yw9jsp7uvVrWbgJUjMsCQYExFIki05qw3S4dL7Ze8IiJGO9pZZeQUy3eUSQNEsqgXT6+RgqPwv6JCLzspuuVszrBp3L7doGZFoR6QE+nWyZ3nItI4R3e0CSXabQ6Sa2y+XqTzjXulTpAQ6dHivo/Fxu1xagZ+/Id3XQo0H0YU9YY9h5pZTFlXP3l8fS0ZtOq1bVTlaNqlApFdr9aXYe0fJhaIuM2WCmichOIECnGf7fEp+Pp1thlBknHtGz02L/0/BLoVCUrDWcNv4wcHvYqrqqpDBn2Gyl1KMiMkIpFa6XE36l1nnjwP6FI4iJBlza+oIi4KEDK3jXgPwH8FZOUYC1gSwAAAAASUVORK5CYII=" />
-          </div>
-        </div>
-        <div class="wechat-title">
-          <img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAAAAXNSR0IArs4c6QAAATlJREFUSEvtVrFOw0AMfed8AxJsZWGAgQHBXP4DCQa+Ioou7g18BRIg9T/KDGJggIGFbiDxDXGQowSBuGvrFISEmtF+7/nis312RVEMiWgIoMT375aIjpj5KeJrTMy8JSJjAPsRzEhErl1Zlhd1XZ8kRKZEdMjM0xlBBiIyATCIYZxzl857X6uTiHaY+TElZrUz87aIPCjvI0gIwVmF5uG7H1gFmZepxv85XTdqCCEcLMQ0gLz3jbbTOm/rPdkLBt0v0E77xysq2it9T2nhuTzPN4ho10KyYEXkXvvkBcC6hWjEvmqQMwCnANZa8p1RJAbfa41vAM7/0cUzczOiZ43zvunrtPVOntuO3+wrluJ12qspvFBm/+bR+u03nhPrkKZk2ZVINUZO964sy44Ta9FSK5GuQ1VVXb0DLf+sHQ9tLL0AAAAASUVORK5CYII=" />
-          <span class="scan-title">微信扫码</span>
-        </div>
-        <span class="layui-layer-setwin wechat-close"><a href="javascript:;" class="layui-layer-ico layui-layer-close layui-layer-close2"></a></span>
-      </div>
-      <div class="footer bgw">
-        <span style="margin-right: 8px;">{{session['brand']}}{{session['product']}} &copy;2014-{{g['yaer']}} 广东堡塔安全技术有限公司 (bt.cn)</span>
-        <a style="margin-right: 8px;color:#20a53a;" href="http://www.bt.cn/bbs" target="_blank">论坛求助</a>|
-        <a class="btlink" style="margin: 0 8px;" href="https://www.kancloud.cn/chudong/bt2017/424204" target="_blank">使用手册</a>|
-        <a class="btlink bt_wx_qrcode" style="margin: 0 8px;" href="javascript:;">微信公众号<div class="bt_wx_img"></div></a>|
-        <a class="btlink" style="margin: 0 8px;" href="https://www.bt.cn/auth" target="_blank">正版查询</a>
-        <span class="bt_qq_qun">|<a class="btlink" style="margin: 0 8px;" href="https://jq.qq.com/?_wv=1027&k=12Y6BkLq" target="_blank">售后QQ群：907340327</a></span>
+<div class="bt-warp bge6">
+  <a style="display:none;" id="panel_debug" data="{{g['debug']}}" data-pyversion="{{g['pyversion']}}"></a>
+  <a style="display:none;" id="request_token_head" token="{{session[g.get_csrf_html_token_key]}}"></a>
+  <a style="display:none;" id="is_soft_flush" data="{{session['is_flush_soft_list']}}"></a>
+  <div id="container" class="container-fluid">
+    <div class="sidebar-scroll">
+      <div class="sidebar-auto">
+        <div id="task" class="task cw" onclick="messagebox()">0</div>
+        <h3 class="mypcip"><span class="f14 cw">{{session['address']}}</span></h3>
+        <ul class="menu">
+          {% for menu in g['menus'] %}
+          {% if menu['href'] == g.uri %}
+          <li id="{{menu['id']}}" class="current"> <a class="{{menu['class']}}"
+                                                      href="{{menu['href']}}">{{menu['title']}}</a></li>
+          {% else %}
+          <li id="{{menu['id']}}"> <a class="{{menu['class']}}" href="{{menu['href']}}">{{menu['title']}}</a></li>
+          {% endif %}
+          {% endfor %}
+        </ul>
       </div>
     </div>
-    {% if g.cdn_url != '/static' %}
-    <script type="text/javascript">
-      function static_cdn_check(msg, url, line, col, error) {
-        if (msg.indexOf('$ is not defined') != -1) {
-          var s_url = '/static_cdn/set_state.json';
-          http_request = new XMLHttpRequest();
-          http_request.open('GET', s_url, true);
-          http_request.setRequestHeader("Content-type", "application/json");
-          http_request.send();
-          http_request.onreadystatechange = function (e) {
-            if (e.srcElement.readyState == 4 && e.srcElement.status == 200) {
-              if (e.srcElement.responseText.indexOf('true') != -1) {
-                alert("检测到【面板静态加速】节点故障，已自动关闭加速功能\n若需要继续使用【面板静态加速】功能，请在软件商店尝试手动重新开启\n\n点击确定刷新页面!")
-                window.location.reload();
-              }
+    <button style="display: none;" id="bt_copys" class="bt_copy" data-clipboard-text=""></button>
+    <a style="display: none;" id="defaultPath">{{session['config']['sites_path']}}</a>
+    {% block content %}{% endblock %}
+    <div id="onlineCustomer" class="debugs hide"><span>在线<br>客服</span></div>
+    <div id="wechat-customer" class="wechat-customer hide" >
+      <div class="describe-title">企业版专属客服</div>
+      <div class="qrcode-wechat">
+        <div id="wechatCustomerQrcode"></div>
+        <div class="wechatEnterprise">
+          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAABXdJREFUaEPlmn9MlVUYxz8Plwv0QiAuRc1ARFf5g4nT2MyfIWXqXP6i5WyJzs2WpVuasVr+wbTaNJQxc9XU0nJCaWrONlxu/jYsjNYPQiw1zUiJ4r38kHs57cBgIlx473vvZcye7e7d7n3O93k+73Pec95zzhXuEpO7hIP/F0h1ffXwkNCQOSjGIQxDBb2ObqAcRZEHzxfRzujTXUXstCIu5RogHnlLoZ7tSijIvxeKQ9YaYngF8gpiNphTRWQXEBfkJC3Li8iLhsPI66hBhyDVDdVTQiSkEHBYjtJNjiKy0nAYm+8M1w6ksrIyJjwm/DsUCd2Um89hlFKPRzmj9I1utXYgZoO5WURe8lm9OxsI30Q6Isd4BalSVbFOj/Mm9PxhWZB5RqjxWQtMm4qYbvM5QXZ05821G0uQj41QY2GHILWe2i2NqvF5u+Ld3K48MjRySIcgLrfrMDDNTkLVtVD0i/4I5X9ApQmV1XBPGPS+F3pHweRkRXIiJPW3E6F9m8jQyNYe1aZr1bhrjinUBF/CnL8IR0uEoyVQZVprmTYKFkxSDL3fmr83L8NhOESkUf/uF8j2QmF7m0HQemLhTlgwGTLT7b/vBAQke7dQWGw9cW+es1Jh1Vx7MH6DrHxP+PaC/xAtCk+OgawM32H8Asn5XNh3KnAQLUoaRAP5YrZBvv8NXtgSnCVMv1jIXabQV6tmGyTvoJB/3GoY3/30w79suvUuZhtk4ivBqUYL8vhhsH5RkEH05PZUdnBB4vvABysUEWHWqmmrInq2zswJHkh8X7hcAVuXK4bFBxGk9HdYmht4kMx0SH3QevK3I9qqSH0DpL8WeJDCdYq/3L9ScOU94o0hzB24xFo5AFsgWn3JZqHsquU4XTrOGAtr5itWlyzg7M2vmvzXPJTDjP7PdNlWO9gGef9LYWdzvICY7lb6XWtF8RyKq5pn2eSYVPJG77ekbxvkyg1YnCPobmbXYiJh6iiYPlYxdABI3U9U1JSx6eo+jt/QqwhYN3IHE+7rejVhG0QH2bhX2H/GHsaUZFjyhEIPs9rk3yM4rq7Bk7gLFfEwJf+c5dC1TygzfyA3ZS9RodGdBvILRFcja4dwrsw3mEFx8NHLzZNdyJ8bEPMkYp5qhohObyN2+PoexD2Q6xWPEB0Bjw0OpVdE+4HGLxAdsaIKsj707cFveR4cpRORutKmxFXUODxJ+zq8I8sP1rH3x+Y+vD49gkWjne38/AbRiofPwZv51ofjVpDy2U2V0NbYbzWNcavaJXjx70bStrmo1zvA0AShYe60gIAcKoK3C6yDRBtQkKUwag/guLQUZYzBw+swKAWcbZPcePIWG0/UN+Wtu1X21HASY0OCA5J7QPj0hPXnJKEvDE+AV+ff9lJ4Zg/q6wJk9hvwQHKT2OnLHuburmF8goP5I5xNH28WkIqs2CoUX2wOkZIEs1IVelPhlhtcdWDWNV+1xfWC2KiO01G7VsLZfEiehqTM5J36mQyMFjJGegdoUQoIyIVrcKhImDRSMWqw9cq08yw9jsp7uvVrWbgJUjMsCQYExFIki05qw3S4dL7Ze8IiJGO9pZZeQUy3eUSQNEsqgXT6+RgqPwv6JCLzspuuVszrBp3L7doGZFoR6QE+nWyZ3nItI4R3e0CSXabQ6Sa2y+XqTzjXulTpAQ6dHivo/Fxu1xagZ+/Id3XQo0H0YU9YY9h5pZTFlXP3l8fS0ZtOq1bVTlaNqlApFdr9aXYe0fJhaIuM2WCmichOIECnGf7fEp+Pp1thlBknHtGz02L/0/BLoVCUrDWcNv4wcHvYqrqqpDBn2Gyl1KMiMkIpFa6XE36l1nnjwP6FI4iJBlza+oIi4KEDK3jXgPwH8FZOUYC1gSwAAAAASUVORK5CYII=" />
+        </div>
+      </div>
+      <div class="wechat-title">
+        <img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAAAAXNSR0IArs4c6QAAATlJREFUSEvtVrFOw0AMfed8AxJsZWGAgQHBXP4DCQa+Ioou7g18BRIg9T/KDGJggIGFbiDxDXGQowSBuGvrFISEmtF+7/nis312RVEMiWgIoMT375aIjpj5KeJrTMy8JSJjAPsRzEhErl1Zlhd1XZ8kRKZEdMjM0xlBBiIyATCIYZxzl857X6uTiHaY+TElZrUz87aIPCjvI0gIwVmF5uG7H1gFmZepxv85XTdqCCEcLMQ0gLz3jbbTOm/rPdkLBt0v0E77xysq2it9T2nhuTzPN4ho10KyYEXkXvvkBcC6hWjEvmqQMwCnANZa8p1RJAbfa41vAM7/0cUzczOiZ43zvunrtPVOntuO3+wrluJ12qspvFBm/+bR+u03nhPrkKZk2ZVINUZO964sy44Ta9FSK5GuQ1VVXb0DLf+sHQ9tLL0AAAAASUVORK5CYII=" />
+        <span class="scan-title">微信扫码</span>
+      </div>
+      <span class="layui-layer-setwin wechat-close"><a href="javascript:;" class="layui-layer-ico layui-layer-close layui-layer-close2"></a></span>
+    </div>
+    <div class="footer bgw">
+      <span style="margin-right: 8px;">{{session['brand']}}{{session['product']}} &copy;2014-{{g['yaer']}} 广东堡塔安全技术有限公司 (bt.cn)</span>
+      <a style="margin-right: 8px;color:#20a53a;" href="http://www.bt.cn/bbs" target="_blank">论坛求助</a>|
+      <a class="btlink" style="margin: 0 8px;" href="https://www.kancloud.cn/chudong/bt2017/424204" target="_blank">使用手册</a>|
+      <a class="btlink bt_wx_qrcode" style="margin: 0 8px;" href="javascript:;">微信公众号<div class="bt_wx_img"></div></a>|
+      <a class="btlink" style="margin: 0 8px;" href="https://www.bt.cn/auth" target="_blank">正版查询</a>
+      <span class="bt_qq_qun">|<a class="btlink" style="margin: 0 8px;" href="https://jq.qq.com/?_wv=1027&k=12Y6BkLq" target="_blank">售后QQ群：907340327</a></span>
+    </div>
+  </div>
+  {% if g.cdn_url != '/static' %}
+  <script type="text/javascript">
+    function static_cdn_check(msg, url, line, col, error) {
+      if (msg.indexOf('$ is not defined') != -1) {
+        var s_url = '/static_cdn/set_state.json';
+        http_request = new XMLHttpRequest();
+        http_request.open('GET', s_url, true);
+        http_request.setRequestHeader("Content-type", "application/json");
+        http_request.send();
+        http_request.onreadystatechange = function (e) {
+          if (e.srcElement.readyState == 4 && e.srcElement.status == 200) {
+            if (e.srcElement.responseText.indexOf('true') != -1) {
+              alert("检测到【面板静态加速】节点故障，已自动关闭加速功能\n若需要继续使用【面板静态加速】功能，请在软件商店尝试手动重新开启\n\n点击确定刷新页面!")
+              window.location.reload();
             }
           }
         }
       }
-      window.onerror = static_cdn_check;
-    </script>
-    {% endif %}
-    <script type="text/javascript">
-      var recycle_bin_db_open = "{{g['recycle_bin_db_open']}}" === "1",
-        recycle_bin_open = "{{g['recycle_bin_open']}}" === "1",
-        update_code = "{{data['js_random']}}",
-        panel_version = "{{g['version']}}",
-        cdn_url = "{{g.cdn_url}}";
-    </script>
-    {% if request.path == '/btwaf/index' %}
-	  <script type="text/javascript" src="{{g.cdn_url}}/js/jquery-2.2.4.min.js"></script>
-	  <script type="text/javascript" src="{{g.cdn_url}}/layer/layer.js?version={{g['version']}}"></script>
-	  <script type="text/javascript" src="{{g.cdn_url}}/language/{{session['lan']}}/lan.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-	  <script type="text/javascript" src="{{g.cdn_url}}/js/clipboard.min.js" defer></script>
-	  <script type="text/javascript" src="{{g.cdn_url}}/laydate/laydate.js" defer></script>
-	  <script type="text/javascript" src="{{g.cdn_url}}/js/jquery.qrcode.min.js"></script>
-	  <script type="text/javascript" src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-	  <script type="text/javascript" src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-      <script type="text/javascript" src="{{g.cdn_url}}/js/tools.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-    {% endif %}
+    }
+    window.onerror = static_cdn_check;
+  </script>
+  {% endif %}
+  <script type="text/javascript">
+    var recycle_bin_db_open = "{{g['recycle_bin_db_open']}}" === "1",
+            recycle_bin_open = "{{g['recycle_bin_open']}}" === "1",
+            update_code = "{{data['js_random']}}",
+            panel_version = "{{g['version']}}",
+            cdn_url = "{{g.cdn_url}}";
+  </script>
+  {% if request.path == '/btwaf/index' %}
+  <script type="text/javascript" src="{{g.cdn_url}}/js/jquery-2.2.4.min.js"></script>
+  <script type="text/javascript" src="{{g.cdn_url}}/layer/layer.js?version={{g['version']}}"></script>
+  <script type="text/javascript" src="{{g.cdn_url}}/language/{{session['lan']}}/lan.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+  <script type="text/javascript" src="{{g.cdn_url}}/js/clipboard.min.js" defer></script>
+  <script type="text/javascript" src="{{g.cdn_url}}/laydate/laydate.js" defer></script>
+  <script type="text/javascript" src="{{g.cdn_url}}/js/jquery.qrcode.min.js"></script>
+  <script type="text/javascript" src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+  <script type="text/javascript" src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+  <script type="text/javascript" src="{{g.cdn_url}}/js/tools.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+  {% endif %}
 
-    {% block scripts %}
-    <script src="{{g.cdn_url}}/js/jquery-2.2.4.min.js"></script>
-    <script src="{{g.cdn_url}}/layer/layer.js?version={{g['version']}}"></script>
-    <script src="{{g.cdn_url}}/language/{{session['lan']}}/lan.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-    <script src="{{g.cdn_url}}/js/clipboard.min.js" defer></script>
-    <script src="{{g.cdn_url}}/laydate/laydate.js" defer></script>
-    <script type="text/javascript"  src="{{g.cdn_url}}/js/jquery.qrcode.min.js"></script>
+  {% block scripts %}
+  <script src="{{g.cdn_url}}/js/jquery-2.2.4.min.js"></script>
+  <script src="{{g.cdn_url}}/layer/layer.js?version={{g['version']}}"></script>
+  <script src="{{g.cdn_url}}/language/{{session['lan']}}/lan.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+  <script src="{{g.cdn_url}}/js/clipboard.min.js" defer></script>
+  <script src="{{g.cdn_url}}/laydate/laydate.js" defer></script>
+  <script type="text/javascript"  src="{{g.cdn_url}}/js/jquery.qrcode.min.js"></script>
 
-    <!-- 以下文件未来将被剔除 -->
-    <script src="{{g.cdn_url}}/js/bootstrap.min.js"></script>
-    <script src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-    <script src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-    <!-- End -->
-    <script type="text/javascript" src="{{g.cdn_url}}/js/tools.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-    <script type="text/javascript">
-      bt.set_cookie('order', 'id desc');
-      bt.set_cookie('serverType', "{{session['webserver']}}");
-      if (bt.get_cookie('pro_end') >= 0 || bt.get_cookie('ltd_end') > 0) $(".bt_qq_qun").show()
+  <!-- 以下文件未来将被剔除 -->
+  <script src="{{g.cdn_url}}/js/bootstrap.min.js"></script>
+  <script src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+  <script src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+  <!-- End -->
+  <script type="text/javascript" src="{{g.cdn_url}}/js/tools.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+  <script type="text/javascript">
+    bt.set_cookie('order', 'id desc');
+    bt.set_cookie('serverType', "{{session['webserver']}}");
+    if (bt.get_cookie('pro_end') >= 0 || bt.get_cookie('ltd_end') > 0) $(".bt_qq_qun").show()
 
-      $('#wechatCustomerQrcode').qrcode({
-        width: 80,
-        height: 80,
-        text: "https://work.weixin.qq.com/kfid/kfc0ffe8f5ec461e5b7"
-      });
+    $('#wechatCustomerQrcode').qrcode({
+      width: 80,
+      height: 80,
+      text: "https://work.weixin.qq.com/kfid/kfc0ffe8f5ec461e5b7"
+    });
 
-      $('#onlineCustomer').click(function (){
-        var customer = $("#wechat-customer");
-        var ltd_end = bt.get_cookie('ltd_end');
-        if (!(ltd_end > 0)){
-          if(!$('#pay_product_view').length > 0){
-            product_recommend.pay_product_sign('ltd',45,'ltd');
-            layer.msg('在线客服仅支持企业版用户使用', {icon: 5});
-          }
-          return false;
+    $('#onlineCustomer').click(function (){
+      var customer = $("#wechat-customer");
+      var ltd_end = bt.get_cookie('ltd_end');
+      if (!(ltd_end > 0)){
+        if(!$('#pay_product_view').length > 0){
+          product_recommend.pay_product_sign('ltd',45,'ltd');
+          layer.msg('在线客服仅支持企业版用户使用', {icon: 5});
+        }
+        return false;
+      }else{
+        if(customer.hasClass('hide')){
+          customer.removeClass('hide');
         }else{
-          if(customer.hasClass('hide')){
-            customer.removeClass('hide');
-          }else{
-            customer.addClass('hide');
-          }
+          customer.addClass('hide');
         }
-      })
-
-      $('#wechat-customer .wechat-close').on('click',function(){
-        $(this).parent().addClass('hide');
-      })
-
-      {% if data['show_workorder'] %}
-        $('.debugs').removeClass('hide');
-      {% endif %}
-
-      $("#setBox").click(function () {
-        if ($(this).prop("checked")) {
-          $("input[name=id]").prop("checked", true);
-        } else {
-          $("input[name=id]").prop("checked", false);
-        }
-      });
-      var is_files_html = false;
-      var task_open = 0;
-      var task_close = false;
-      if ($(".current").attr("id") === 'memuAfiles') {
-        is_files_html = true;
       }
+    })
 
-      function task_stat(my_init) {
-        if (!my_init) {
-          my_init = 0;
-          if (task_open) return;
-        }
-        if (task_close) return;
-        $.post('/task?action=get_task_lists', {
-          status: -3
-        }, function (task_list) {
-          if (task_list.length == 0) {
-            if (my_init && is_files_html) GetFiles(getCookie('Path'));
-            if (task_open) {
-              layer.close(task_open);
-              task_open = false;
-            }
-            return;
+    $('#wechat-customer .wechat-close').on('click',function(){
+      $(this).parent().addClass('hide');
+    })
+
+    {% if data['show_workorder'] %}
+    $('.debugs').removeClass('hide');
+    {% endif %}
+
+    $("#setBox").click(function () {
+      if ($(this).prop("checked")) {
+        $("input[name=id]").prop("checked", true);
+      } else {
+        $("input[name=id]").prop("checked", false);
+      }
+    });
+    var is_files_html = false;
+    var task_open = 0;
+    var task_close = false;
+    if ($(".current").attr("id") === 'memuAfiles') {
+      is_files_html = true;
+    }
+
+    function task_stat(my_init) {
+      if (!my_init) {
+        my_init = 0;
+        if (task_open) return;
+      }
+      if (task_close) return;
+      $.post('/task?action=get_task_lists', {
+        status: -3
+      }, function (task_list) {
+        if (task_list.length == 0) {
+          if (my_init && is_files_html) GetFiles(getCookie('Path'));
+          if (task_open) {
+            layer.close(task_open);
+            task_open = false;
           }
-          var msg_body = '';
-          var is_add = false;
-          for (var i = 0; i < task_list.length; i++) {
-            if (task_list[i]['status'] == -1) {
-              if (!task_open || !$(".message-list").attr("class")) {
-                show_task();
-              }
+          return;
+        }
+        var msg_body = '';
+        var is_add = false;
+        for (var i = 0; i < task_list.length; i++) {
+          if (task_list[i]['status'] == -1) {
+            if (!task_open || !$(".message-list").attr("class")) {
+              show_task();
+            }
 
-              if (task_list[i]['type'] == '1') {
-                msg_body +=
-                  '<div class="mw-con">\
-		                                <ul class="waiting-down-list">\
-			                                <li>\
-				                                <div class="down-filse-name"><span class="fname" style="width:80%;" title="正在下载: ' +
-                  task_list[i].shell + '">正在下载: ' + task_list[i].shell +
-                  '</span><span style="position: absolute;left: 84%;top: 25px;color: #999;">' + task_list[i].log
-                  .pre + '%</span><span class="btlink" onclick="remove_task(' + task_list[i].id + ')" style="position: absolute;top: 25px;right: 20px;">取消</span></div>\
+            if (task_list[i]['type'] == '1') {
+              msg_body +=
+                      '<div class="mw-con">\
+                                            <ul class="waiting-down-list">\
+                                                <li>\
+                                                    <div class="down-filse-name"><span class="fname" style="width:80%;" title="正在下载: ' +
+                      task_list[i].shell + '">正在下载: ' + task_list[i].shell +
+                      '</span><span style="position: absolute;left: 84%;top: 25px;color: #999;">' + task_list[i].log
+                              .pre + '%</span><span class="btlink" onclick="remove_task(' + task_list[i].id + ')" style="position: absolute;top: 25px;right: 20px;">取消</span></div>\
 				                                <div class="down-progress"><div class="done-progress" style="width:' + task_list[i]
-                  .log.pre + '%"></div></div>\
+                              .log.pre + '%"></div></div>\
 				                                <div class="down-info"><span class="total-size"> ' + task_list[i].log.used + '/' +
-                  ToSize(task_list[i].log.total) + '</span><span class="speed-size">' + (task_list[i].log.speed ==
-                    0 ? '正在连接..' : task_list[i].log.speed) + '/s</span><span style="margin-left: 20px;">预计还要: ' +
-                  task_list[i].log.time + '</span></div>\
+                      ToSize(task_list[i].log.total) + '</span><span class="speed-size">' + (task_list[i].log.speed ==
+                      0 ? '正在连接..' : task_list[i].log.speed) + '/s</span><span style="margin-left: 20px;">预计还要: ' +
+                      task_list[i].log.time + '</span></div>\
 			                                </li>\
 	                                        </ul>\
 	                                    </div>'
-              } else {
-                msg_body +=
-                  '<div class="mw-title"><span style="max-width: 88%;display: block;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;">' +
-                  task_list[i].name + ': ' + task_list[i].shell +
-                  '</span><span class="btlink" onclick="remove_task(' + task_list[i].id + ')"  style="position: absolute;top: 10px;right: 15px;">取消</span></div>\
+            } else {
+              msg_body +=
+                      '<div class="mw-title"><span style="max-width: 88%;display: block;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;">' +
+                      task_list[i].name + ': ' + task_list[i].shell +
+                      '</span><span class="btlink" onclick="remove_task(' + task_list[i].id + ')"  style="position: absolute;top: 10px;right: 15px;">取消</span></div>\
 	                                    <div class="mw-con codebg">\
 		                                    <code>' + task_list[i].log + '</code>\
 	                                    </div>'
 
-              }
-
-            } else {
-              if (!is_add) {
-                msg_body += '<div class="mw-title">等待执行任务</div><div class="mw-con"><ul class="waiting-list">';
-                is_add = true;
-              }
-              msg_body += '<li><span class="wt-list-name" style="width: 90%;">' + task_list[i].name + ': ' +
-                task_list[i].shell + '</span><span class="mw-cancel" onclick="remove_task(' + task_list[i].id +
-                ')">X</span></li>';
             }
-          }
-          if (task_open) {
-            if (is_add) {
-              msg_body += '</ul></div>';
+
+          } else {
+            if (!is_add) {
+              msg_body += '<div class="mw-title">等待执行任务</div><div class="mw-con"><ul class="waiting-list">';
+              is_add = true;
             }
-            $(".message-list").html(msg_body);
+            msg_body += '<li><span class="wt-list-name" style="width: 90%;">' + task_list[i].name + ': ' +
+                    task_list[i].shell + '</span><span class="mw-cancel" onclick="remove_task(' + task_list[i].id +
+                    ')">X</span></li>';
           }
+        }
+        if (task_open) {
+          if (is_add) {
+            msg_body += '</ul></div>';
+          }
+          $(".message-list").html(msg_body);
+        }
 
 
-          if (my_init > 3) {
-            if (is_files_html) GetFiles(getCookie('Path'));
-            my_init = 1;
-          }
-          my_init += 1
-          setTimeout(function () {
-            task_stat(my_init);
-          }, 1000);
+        if (my_init > 3) {
+          if (is_files_html) GetFiles(getCookie('Path'));
+          my_init = 1;
+        }
+        my_init += 1
+        setTimeout(function () {
+          task_stat(my_init);
+        }, 1000);
+      });
+    }
+
+    function show_task() {
+      task_open = layer.open({
+        type: 1,
+        title: "实时任务队列",
+        area: '500px',
+        closeBtn: 2,
+        shadeClose: false,
+        shade: false,
+        offset: 'auto',
+        content: '<div style="margin: 10px;" class="message-list"></div>',
+        cancel: function () {
+          task_close = true;
+        }
+      });
+    }
+
+    function remove_task(id) {
+      layer.confirm('是否取消当前执行的任务队列？', { title: '取消任务队列', icon: 0 }, function(indexs) {
+        layer.close(indexs);
+        var loadT = bt.load('正在取消任务...');
+        $.post('/task?action=remove_task', {
+          id: id
+        }, function (rdata) {
+          loadT.close();
+          layer.msg(rdata.msg);
         });
-      }
+      });
+    }
+    task_stat();
 
-      function show_task() {
-        task_open = layer.open({
-          type: 1,
-          title: "实时任务队列",
-          area: '500px',
-          closeBtn: 2,
-          shadeClose: false,
-          shade: false,
-          offset: 'auto',
-          content: '<div style="margin: 10px;" class="message-list"></div>',
-          cancel: function () {
-            task_close = true;
-          }
-        });
-      }
-
-      function remove_task(id) {
-        layer.confirm('是否取消当前执行的任务队列？', { title: '取消任务队列', icon: 0 }, function(indexs) {
-            layer.close(indexs);
-            var loadT = bt.load('正在取消任务...');
-            $.post('/task?action=remove_task', {
-                id: id
-            }, function (rdata) {
-                loadT.close();
-                layer.msg(rdata.msg);
-            });
-        });
-      }
-      task_stat();
-
-      // 获取支付状态
-      function getPaymentStatus(){
-        bt.send('get_pd', 'ajax/get_pd', {}, function (res) {
-          var tab = $('.pos-box .tab-list'),
-              proHTML = '',
-              _index = res[1] > 0 ? 1 : 2,
-              is_pay = res[1] >= 0 || res[2] > 0, //是否购买
-              advanced = res[1] == 0 || res[1] > 0 ? 'pro':'ltd';
-          if(is_pay){
-            proHTML = '<div class="product-buy" style="margin-right:0;font-size: 12px;">到期时间：<span style="vertical-align: initial">'+(res[1] === 0?'永久授权':((res[1] === -2 || res[2] === -2)?'已过期':bt.format_data(res[_index],'yyyy-MM-dd'))+ '&nbsp;&nbsp;<a class="btlink" href="javascript:;" onclick="product_recommend.pay_product_sign(\''+ advanced +'\',81,\''+ advanced +'\')">续费</a>')+'</span></div>'
-          }else {
-            proHTML = '<div class="product-buy" style="margin-right:0;"><button type="button" class="btn btn-success btn-xs" style="vertical-align: 1px;" onclick="product_recommend.pay_product_sign(\'ltd\',80,\'ltd\')">立即升级</button></div>'
-          }
+    // 获取支付状态
+    function getPaymentStatus(){
+      bt.send('get_pd', 'ajax/get_pd', {}, function (res) {
+        var tab = $('.pos-box .tab-list'),
+                proHTML = '',
+                _index = res[1] > 0 ? 1 : 2,
+                is_pay = res[1] >= 0 || res[2] > 0, //是否购买
+                advanced = res[1] == 0 || res[1] > 0 ? 'pro':'ltd';
+        if(is_pay){
+          proHTML = '<div class="product-buy" style="margin-right:0;font-size: 12px;">到期时间：<span style="vertical-align: initial">'+(res[1] === 0?'永久授权':((res[1] === -2 || res[2] === -2)?'已过期':bt.format_data(res[_index],'yyyy-MM-dd'))+ '&nbsp;&nbsp;<a class="btlink" href="javascript:;" onclick="product_recommend.pay_product_sign(\''+ advanced +'\',81,\''+ advanced +'\')">续费</a>')+'</span></div>'
+        }else {
+          proHTML = '<div class="product-buy" style="margin-right:0;"><button type="button" class="btn btn-success btn-xs" style="vertical-align: 1px;" onclick="product_recommend.pay_product_sign(\'ltd\',80,\'ltd\')">立即升级</button></div>'
+        }
+        if((tab.children().length*105 + 306.28) < tab.parent().width()){
           tab.parent().css({display:'flex','justify-content':'space-between'});
-          tab.after('<div style="line-height: 45px;padding-right: 20px;"><span class="'+(!is_pay?'btltd-gray':'bt'+advanced)+'" style="vertical-align: bottom;"></span><div style="display: inline-block;vertical-align: middle;" class="mr10">'+(!is_pay?'免费版&nbsp;&nbsp;':'')+' {{session["version"]}}</div> ' + proHTML +'</div>');
-        })
-      }
-      getPaymentStatus();
+          var _html = '<div class="authState" style="line-height: 45px;padding-right: 20px;"><span class="'+(!is_pay?'btltd-gray':'bt'+advanced)+'" style="vertical-align: bottom;"></span><div style="display: inline-block;font-size: 12px" class="mr10">'+(!is_pay?'免费版&nbsp;&nbsp;':'')+' {{session["version"]}}</div> ' + proHTML +'</div>'
+          if(tab.next().hasClass('authState')) tab.next().remove()
+          tab.after(_html);
+        }
+      })
+    }
+    getPaymentStatus();
 
-    </script>
-    {% endblock %}
-    {% for js_f in g['other_js'] %}
-    <script type="text/javascript" src="{{js_f}}"></script>
-    {% endfor %}
-  </div>
+  </script>
+  {% endblock %}
+  {% for js_f in g['other_js'] %}
+  <script type="text/javascript" src="{{js_f}}"></script>
+  {% endfor %}
+</div>
 </body>
 
 </html>

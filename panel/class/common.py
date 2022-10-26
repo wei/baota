@@ -27,12 +27,14 @@ class panelSetup:
             if ua.find('spider') != -1 or g.ua.find('bot') != -1:
                 return abort(403)
 
-        g.version = '7.9.4'
+        g.version = '7.9.5'
         g.title = public.GetConfigValue('title')
         g.uri = request.path
         g.debug = os.path.exists('data/debug.pl')
         g.pyversion = sys.version_info[0]
         session['version'] = g.version
+
+        if not public.get_improvement(): session['is_flush_soft_list'] = 1
 
         if request.method == 'GET':
             if not g.debug:
@@ -155,46 +157,47 @@ class panelAdmin(panelSetup):
             else:
                 if session['login'] == False:
                     session.clear()
-                    return redirect('/login')
+                    return redirect(public.get_admin_path())
 
                 if 'tmp_login_expire' in session:
                     s_file = 'data/session/{}'.format(session['tmp_login_id'])
                     if session['tmp_login_expire'] < time.time():
                         session.clear()
                         if os.path.exists(s_file): os.remove(s_file)
-                        return redirect('/login')
+                        return redirect(public.get_admin_path())
                     if not os.path.exists(s_file):
                         session.clear()
-                        return redirect('/login')
+                        return redirect(public.get_admin_path())
                 ua_md5 = public.md5(g.ua)
                 if ua_md5 != session.get('login_user_agent',ua_md5):
                     session.clear()
-                    return redirect('/login')
+                    return redirect(public.get_admin_path())
 
             if api_check:
                 now_time = time.time()
                 session_timeout = session.get('session_timeout',0)
                 if session_timeout < now_time and session_timeout != 0:
                     session.clear()
-                    return redirect('/login?dologin=True&go=0')
+                    return redirect(public.get_admin_path())
 
             login_token = session.get('login_token','')
             if login_token:
                 if login_token != public.get_login_token_auth():
                     session.clear()
-                    return redirect('/login?dologin=True&go=1')
+                    return redirect(public.get_admin_path())
 
             # if api_check:
             #     filename = 'data/sess_files/' + public.get_sess_key()
             #     if not os.path.exists(filename):
             #         session.clear()
-            #         return redirect('/login?dologin=True&go=2')
+            #         return redirect(public.get_admin_path())
 
             # 标记新的会话过期时间
             session['session_timeout'] = time.time() + public.get_session_timeout()
         except:
+            public.print_log(public.get_error_info())
             session.clear()
-            return redirect('/login')
+            return redirect('/login?id=2')
 
     # 获取sk
     def get_sk(self):

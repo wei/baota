@@ -331,6 +331,9 @@ class plugin_deployment:
         pinfo = self.set_temp_file(packageZip,path)
         if not pinfo: return public.returnMsg(False,'在安装包中找不到【宝塔自动部署配置文件】')
 
+        if 'source' in get and int(get.source) == 1:
+            public.set_module_logs('plugin_deployment','SetupPackage')
+
         #设置权限
         self.WriteLogs({'name':'设置权限','total':0,'used':0,'pre':0,'speed':0})
         public.ExecShell('chmod -R 755 ' + path)

@@ -14,11 +14,11 @@ var database_table = null,
 
 var database = {
   backuptoList: [{ title: '服务器磁盘', value: 'localhost' },
-  { title: '阿里云OSS', value: 'alioss' },
-  { title: '腾讯云COS', value: 'txcos' },
-  { title: '七牛云存储', value: 'qiniu' },
-  { title: '华为云存储', value: 'obs' },
-  { title: '百度云存储', value: 'bos' }],
+    { title: '阿里云OSS', value: 'alioss' },
+    { title: '腾讯云COS', value: 'txcos' },
+    { title: '七牛云存储', value: 'qiniu' },
+    { title: '华为云存储', value: 'obs' },
+    { title: '百度云存储', value: 'bos' }],
   database_table_view: function (search) {
     var param = {
       table: 'databases',
@@ -172,7 +172,9 @@ var database = {
             title: '删除',
             tips: '删除数据库',
             event: function (row) {
-              database.del_database(row.id, row.name,row, function (res) {
+              var list = [];
+              list.push(row)
+              database.del_database(list, row.name,row, function (res) {
                 if (res.status) database_table.$refresh_table_list(true);
                 layer.msg(res.msg, {
                   icon: res.status ? 1 : 2
@@ -241,8 +243,8 @@ var database = {
 
                   bt.soft.get_soft_find('phpmyadmin',function(rdata){
                     if(rdata.ext.auth){
-                        layer.msg('当前phpMyAdmin已开启密码访问，请使用【通过公共访问】');
-                        return;
+                      layer.msg('当前phpMyAdmin已开启密码访问，请使用【通过公共访问】');
+                      return;
                     }
                     bt.database.open_phpmyadmin('', 'root', bt.config.mysql_root)
                   })
@@ -373,7 +375,7 @@ var database = {
             for (var i = 0; i < config.check_list.length; i++) {
               ids.push(config.check_list[i].id);
             }
-            database.del_database(ids, function (param) {
+            database.del_database(config.check_list, function (param) {
               config.start_batch(param, function (list) {
                 layer.closeAll()
                 var html = '';
@@ -420,7 +422,9 @@ var database = {
 
           //事件
           $('.database_type_select_filter').change(function(){
-            database_table.$refresh_table_list(true);
+            database_table.$refresh_table_list(true,function(data){
+              if(parseInt($('#bt_database_table .page .Pcurrent').text()) !== 1) $('.Pstart').click()
+            });
           })
         }
       }
@@ -446,11 +450,20 @@ var database = {
         qiniu: '七牛云',
         txcos: '腾讯COS',
         upyun: '又拍云',
+				jdcloud: '京东云',
+				aws_s3: '亚马逊存储',
         'Google Cloud': '谷歌云',
         'Google Drive': '谷歌网盘',
         bos: '百度云',
         obs: '华为云'
       };
+			function getType (name) {
+        var type = 'localhost'; // 当前云存储类型
+        if (name.indexOf('|') != -1) {
+          type = name.match(/\|(.+)\|/, "$1")[1];
+        }
+        return type;
+      }
       var web_tab = bt_tools.tab({
         class: 'pd20',
         type: 0,
@@ -519,7 +532,12 @@ var database = {
                   group: [{
                     title: '恢复',
                     event: function (row, index, ev, key, that) {
-                      var _id = row.id
+											var type = getType(row.filename);
+                      if (type != 'alioss' && type != 'bos' && type != 'txcos' && type != 'obs' && type != 'localhost') {
+                          layer.msg('暂不支持存储对象【' + cloud_list[type] + '】恢复功能', { icon: 2, closeBtn: 1, time: 0, shadeClose: true });
+                          return;
+                      }
+                      var _id = row.id;
                       num1 = bt.get_random_num(3, 15),
                           num2 = bt.get_random_num(5, 9),
                           taskID = 0,
@@ -658,6 +676,9 @@ var database = {
                                   icon: 2
                                 })
                                 return false;
+															default:
+																layer.close(indexs);
+																break;
                             }
                           })
                         },
@@ -689,9 +710,13 @@ var database = {
                     }
                   },{
                     title: '下载',
-                    template: function (row, index, ev, key, that) {
-                      return '<a target="_blank" class="btlink" href="/download?filename=' + row.filename + '&amp;name=' + row.name + '">下载</a>'
-                    }
+                    event: function (row) {
+											if (row.filename.indexOf('|') !== -1 && row.localexist === 1) {
+												layer.msg('暂不支持云存储下载', { icon: 2 });
+											} else {
+												window.open('/download?filename=' + row.local + '&amp;name=' + row.name);
+											}
+										}
                   }, {
                     title: '删除',
                     event: function (row, index, ev, key, that) {
@@ -796,7 +821,7 @@ var database = {
                       arry = alltablesname
                     }else{
                       for (var i = 0; i < res.length; i++) {
-                          alltablesname.push(res[i])
+                        alltablesname.push(res[i])
                       }
                       $.each(alltablesname,function(index,item){
                         arry.push({ title: item.name+(item.cron_id == null || item.cron_id.length == 0 ? ' [无备份任务]':''), value: item.name })
@@ -1006,11 +1031,11 @@ var database = {
                                   if(multipleValues == null) return layer.msg('请最少选择一个备份类型')
                                   formData['upload_localhost'] = multipleValues.indexOf('localhost') > -1 ? 'localhost' : ''
                                   formData['upload_alioss'] = multipleValues.indexOf('alioss') > -1 ? 'alioss' : '',
-                                  formData['upload_txcos'] = multipleValues.indexOf('txcos') > -1 ? 'txcos' : '',
-                                  formData['upload_qiniu'] = multipleValues.indexOf('qiniu') > -1 ? 'qiniu' : '',
-                                  formData['upload_obs'] = multipleValues.indexOf('obs') > -1 ? 'obs' : '',
-                                  formData['upload_bos'] = multipleValues.indexOf('bos') > -1 ? 'bos' : '',
-                                  delete formData['zip_password']
+                                      formData['upload_txcos'] = multipleValues.indexOf('txcos') > -1 ? 'txcos' : '',
+                                      formData['upload_qiniu'] = multipleValues.indexOf('qiniu') > -1 ? 'qiniu' : '',
+                                      formData['upload_obs'] = multipleValues.indexOf('obs') > -1 ? 'obs' : '',
+                                      formData['upload_bos'] = multipleValues.indexOf('bos') > -1 ? 'bos' : '',
+                                      delete formData['zip_password']
                                   //编辑
                                   bt_tools.send({url:'project/binlog/modify_mysqlbinlog_backup_setting',data: formData}, function (res) {
                                     bt_tools.msg(res)
@@ -1319,11 +1344,11 @@ var database = {
                               if(multipleValues == null) return layer.msg('请最少选择一个备份类型')
                               formData['upload_localhost'] = multipleValues.indexOf('localhost') > -1 ? 'localhost' : ''
                               formData['upload_alioss'] = multipleValues.indexOf('alioss') > -1 ? 'alioss' : '',
-                              formData['upload_txcos'] = multipleValues.indexOf('txcos') > -1 ? 'txcos' : '',
-                              formData['upload_qiniu'] = multipleValues.indexOf('qiniu') > -1 ? 'qiniu' : '',
-                              formData['upload_obs'] = multipleValues.indexOf('obs') > -1 ? 'obs' : '',
-                              formData['upload_bos'] = multipleValues.indexOf('bos') > -1 ? 'bos' : '',
-                              formData['notice_channel'] = formData.notice == 0 ? '' : formData.notice_channel
+                                  formData['upload_txcos'] = multipleValues.indexOf('txcos') > -1 ? 'txcos' : '',
+                                  formData['upload_qiniu'] = multipleValues.indexOf('qiniu') > -1 ? 'qiniu' : '',
+                                  formData['upload_obs'] = multipleValues.indexOf('obs') > -1 ? 'obs' : '',
+                                  formData['upload_bos'] = multipleValues.indexOf('bos') > -1 ? 'bos' : '',
+                                  formData['notice_channel'] = formData.notice == 0 ? '' : formData.notice_channel
                               //添加
                               bt_tools.send({url:'project/binlog/add_mysqlbinlog_backup_setting', data: formData}, function (res) {
                                 bt_tools.msg(res)
@@ -1478,47 +1503,47 @@ var database = {
     }
   },
   /**
- * @description 日志
- * @param {object}
- */
-backupLogs: function (row, index, ev, key, that) {
-  var _that = this
-  _that.getCrontabLogs(row, function (rdata) {
-    layer.open({
-      type: 1,
-      title: lan.crontab.task_log_title,
-      area: ['700px', '490px'],
-      shadeClose: false,
-      closeBtn: 2,
-      content: '<div class="setchmod bt-form">\
+   * @description 日志
+   * @param {object}
+   */
+  backupLogs: function (row, index, ev, key, that) {
+    var _that = this
+    _that.getCrontabLogs(row, function (rdata) {
+      layer.open({
+        type: 1,
+        title: lan.crontab.task_log_title,
+        area: ['700px', '490px'],
+        shadeClose: false,
+        closeBtn: 2,
+        content: '<div class="setchmod bt-form">\
           <pre class="crontab-log" style="overflow: auto; border: 0 none; line-height:23px;padding: 15px; margin: 0;white-space: pre-wrap; height: 405px; background-color: rgb(51,51,51);color:#f1f1f1;border-radius:0;"></pre>\
             <div class="bt-form-submit-btn" style="margin-top: 0">\
             <button type="button" class="btn btn-danger btn-sm btn-title" id="clearLogs" style="margin-right:15px;">'+ lan['public']['empty'] + '</button>\
             <button type="button" class="btn btn-success btn-sm btn-title">'+ lan['public']['close'] + '</button>\
           </div>\
         </div>',
-      success: function (layers, index) {
-        var log_body = rdata.msg === '' ? '当前日志为空' : rdata.msg, setchmod = $(".setchmod pre"), crontab_log = $('.crontab-log')[0]
-        setchmod.text(log_body);
-        crontab_log.scrollTop = crontab_log.scrollHeight;
-        $('#clearLogs').on('click', function () {
-          _that.clearCrontabLogs(row, function () {
-            setchmod.text('')
+        success: function (layers, index) {
+          var log_body = rdata.msg === '' ? '当前日志为空' : rdata.msg, setchmod = $(".setchmod pre"), crontab_log = $('.crontab-log')[0]
+          setchmod.text(log_body);
+          crontab_log.scrollTop = crontab_log.scrollHeight;
+          $('#clearLogs').on('click', function () {
+            _that.clearCrontabLogs(row, function () {
+              setchmod.text('')
+            })
           })
-        })
-        $('.setchmod .bt-form-submit-btn .btn-success').click(function(){
-          layer.close(index)
-        })
-      }
+          $('.setchmod .bt-form-submit-btn .btn-success').click(function(){
+            layer.close(index)
+          })
+        }
+      })
     })
-  })
-},
+  },
   /**
- * @description 执行备份任务
- * @param {object} param 参数对象
- * @param {function} callback 回调函数
- */
-   startCrontabTask: function (param, callback) {
+   * @description 执行备份任务
+   * @param {object} param 参数对象
+   * @param {function} callback 回调函数
+   */
+  startCrontabTask: function (param, callback) {
     bt_tools.send({
       url: '/crontab?action=StartTask',
       data: param
@@ -1582,7 +1607,7 @@ backupLogs: function (row, index, ev, key, that) {
   // 备份导入》本地导入
   upload_files: function (name) {
     var path = bt.get_cookie('backup_path') + "/database/";
-    bt_upload_file.open(path, '.sql,.zip,.bak', lan.database.input_up_type, function () {
+    bt_upload_file.open(path, '.sql,.zip,.bak,.gz', lan.database.input_up_type, function () {
       database.input_database(name);
     });
   },
@@ -1669,22 +1694,22 @@ backupLogs: function (row, index, ev, key, that) {
             database_list.hide();
           }else{
             if (ev.target.className == 'select_down') {
-							if (database_list.css('display') == 'block') {
-								database_list.hide()
-							}else{
-								database_list.show()
-							}
-						}else{
-							database_list.show()
-						}
+              if (database_list.css('display') == 'block') {
+                database_list.hide()
+              }else{
+                database_list.show()
+              }
+            }else{
+              database_list.show()
+            }
           }
           ev.stopPropagation();
         });
         return false;
       })
       $('.select_conter .select_down').on('click',function () {
-				$('.select_conter input').focus()
-			})
+        $('.select_conter input').focus()
+      })
       $('.select_conter input').on('input', function (e) {
         var html = '',_that = $(this)
         for (var i = 0; i < arry1.length; i++) {
@@ -1786,7 +1811,7 @@ backupLogs: function (row, index, ev, key, that) {
                 })
               }
             }
-         },
+          },
           {
             title: '操作',
             type: 'group',
@@ -1930,11 +1955,11 @@ backupLogs: function (row, index, ev, key, that) {
                       if(multipleValues == null) return layer.msg('请最少选择一个备份类型')
                       formData['upload_localhost'] = multipleValues.indexOf('localhost') > -1 ? 'localhost' : ''
                       formData['upload_alioss'] = multipleValues.indexOf('alioss') > -1 ? 'alioss' : '',
-                      formData['upload_txcos'] = multipleValues.indexOf('txcos') > -1 ? 'txcos' : '',
-                      formData['upload_qiniu'] = multipleValues.indexOf('qiniu') > -1 ? 'qiniu' : '',
-                      formData['upload_obs'] = multipleValues.indexOf('obs') > -1 ? 'obs' : '',
-                      formData['upload_bos'] = multipleValues.indexOf('bos') > -1 ? 'bos' : '',
-                      delete formData['zip_password']
+                          formData['upload_txcos'] = multipleValues.indexOf('txcos') > -1 ? 'txcos' : '',
+                          formData['upload_qiniu'] = multipleValues.indexOf('qiniu') > -1 ? 'qiniu' : '',
+                          formData['upload_obs'] = multipleValues.indexOf('obs') > -1 ? 'obs' : '',
+                          formData['upload_bos'] = multipleValues.indexOf('bos') > -1 ? 'bos' : '',
+                          delete formData['zip_password']
                       //编辑
                       bt_tools.send({url:'project/binlog/modify_mysqlbinlog_backup_setting',data: formData}, function (res) {
                         bt_tools.msg(res)
@@ -2230,12 +2255,12 @@ backupLogs: function (row, index, ev, key, that) {
                   var multipleValues = $('select[name=upload_alioss]').val()
                   if(multipleValues == null) return layer.msg('请最少选择一个备份类型')
                   formData['upload_localhost'] = multipleValues.indexOf('localhost') > -1 ? 'localhost' : '',
-                  formData['upload_alioss'] = multipleValues.indexOf('alioss') > -1 ? 'alioss' : '',
-                  formData['upload_txcos'] = multipleValues.indexOf('txcos') > -1 ? 'txcos' : '',
-                  formData['upload_qiniu'] = multipleValues.indexOf('qiniu') > -1 ? 'qiniu' : '',
-                  formData['upload_obs'] = multipleValues.indexOf('obs') > -1 ? 'obs' : '',
-                  formData['upload_bos'] = multipleValues.indexOf('bos') > -1 ? 'bos' : '',
-                  formData['notice_channel'] = formData.notice == 0 ? '' : formData.notice_channel
+                      formData['upload_alioss'] = multipleValues.indexOf('alioss') > -1 ? 'alioss' : '',
+                      formData['upload_txcos'] = multipleValues.indexOf('txcos') > -1 ? 'txcos' : '',
+                      formData['upload_qiniu'] = multipleValues.indexOf('qiniu') > -1 ? 'qiniu' : '',
+                      formData['upload_obs'] = multipleValues.indexOf('obs') > -1 ? 'obs' : '',
+                      formData['upload_bos'] = multipleValues.indexOf('bos') > -1 ? 'bos' : '',
+                      formData['notice_channel'] = formData.notice == 0 ? '' : formData.notice_channel
                   //添加
                   bt_tools.send({url:'project/binlog/add_mysqlbinlog_backup_setting',data: formData}, function (res) {
                     bt_tools.msg(res)
@@ -2354,7 +2379,7 @@ backupLogs: function (row, index, ev, key, that) {
               <div class="divtable mtb15" style="max-height:274px; overflow:auto; border: 1px solid #ddd;">\
                 <table id="DataInputList" class="table table-hover" style="border: none;"></table>\
               </div>' +
-              bt.render_help([lan.database.input_ps1, lan.database.input_ps2, (bt.os != 'Linux' ? lan.database.input_ps3.replace(/\/www.*\/database/, path) : lan.database.input_ps3)]) +
+              bt.render_help($('.database-pos .tabs-item.active').data('type') === 'pgsql' ? ['仅支持sql',(bt.os != 'Linux' ? lan.database.input_ps3.replace(/\/www.*\/database/, path) : lan.database.input_ps3)] : [lan.database.input_ps1, lan.database.input_ps2, (bt.os != 'Linux' ? lan.database.input_ps3.replace(/\/www.*\/database/, path) : lan.database.input_ps3)]) +
               '</div>\
             '
         });
@@ -2602,149 +2627,224 @@ backupLogs: function (row, index, ev, key, that) {
   },
   // 删除
   del_database: function (wid, dbname,obj, callback) {
-    var type = $('.database-pos .tabs-item.active').data('type')
-    var rendom = bt.get_random_code(),
-        num1 = rendom['num1'],
-        num2 = rendom['num2'],
+    var is_db_type = false, del_data = []
+    if(typeof wid === 'object') {
+      del_data = wid
+      is_db_type = wid.some(function(item){
+        return item.db_type > 0
+      })
+      var ids = [];
+      for (var i = 0; i < wid.length; i++) {
+        ids.push(wid[i].id);
+      }
+      wid = ids
+    }
+    var type = $('.database-pos .tabs-item.active').data('type'),
         title = '',
-        tips = '是否确认【删除数据库】，'+ (type !== 'mysql'?'当前数据库暂不支持数据库回收站，删除后将无法恢复，请谨慎操作':'，删除后可能会影响业务使用！');
-    if(obj && obj.db_type > 0) tips = '远程数据库不支持数据库回收站，删除后将无法恢复，请谨慎操作';
-    title = typeof dbname === "function" ? '批量删除数据库' : '删除数据库 [ ' + dbname + ' ]';
-    layer.open({
-      type: 1,
-      title: title,
-      icon: 0,
-      skin: 'delete_site_layer',
-      area: "530px",
-      closeBtn: 2,
-      shadeClose: true,
-      content: "<div class=\'bt-form webDelete pd30\' id=\'site_delete_form\'>" +
-          "<i class=\'layui-layer-ico layui-layer-ico0\'></i>" +
-          "<div class=\'f13 check_title\' style=\'margin-bottom: 20px;\'>"+tips+"</div>" +
-          "<div style=\'color:red;margin:18px 0 18px 18px;font-size:14px;font-weight: bold;\'>注意：数据无价，请谨慎操作！！！" + (!recycle_bin_db_open ? '<br>风险操作：当前数据库回收站未开启，删除数据库将永久消失！' : '') + "</div>" +
-          "<div class=\'vcode\'>" + lan.bt.cal_msg + "<span class=\'text\'>" + num1 + " + " + num2 + "</span>=<input type=\'number\' id=\'vcodeResult\' value=\'\'></div>" +
-          "</div>",
-      btn: [lan.public.ok, lan.public.cancel],
-      yes: function (indexs) {
-        var vcodeResult = $('#vcodeResult'),
-            data = {
-              id: wid,
-              name: dbname
-            };
-        if (vcodeResult.val() === '') {
-          layer.tips('计算结果不能为空', vcodeResult, {
-            tips: [1, 'red'],
-            time: 3000
-          })
-          vcodeResult.focus()
-          return false;
-        } else if (parseInt(vcodeResult.val()) !== (num1 + num2)) {
-          layer.tips('计算结果不正确', vcodeResult, {
-            tips: [1, 'red'],
-            time: 3000
-          })
-          vcodeResult.focus()
-          return false;
-        }
-        if (typeof dbname === "function") {
-          delete data.id;
-          delete data.name;
-        }
-        layer.close(indexs)
-        var arrs = wid instanceof Array ? wid : [wid]
-        var ids = JSON.stringify(arrs),
-            countDown = 9;
-        if (arrs.length == 1) countDown = 4
-        title = typeof dbname === "function" ? '二次验证信息，批量删除数据库' : '二次验证信息，删除数据库 [ ' + dbname + ' ]';
-        var loadT = bt.load('正在检测数据库数据信息，请稍候...'),
-            param = {url:'database/'+bt.data.db_tab_name+'/check_del_data',data:{data:JSON.stringify({ids: ids})}}
-        if(bt.data.db_tab_name == 'mysql') param = {url:'database?action=check_del_data',data:{ids:ids}}
-        bt_tools.send(param,function(res){
-          loadT.close()
-          layer.open({
-            type: 1,
-            title: title,
-            closeBtn: 2,
-            skin: 'verify_site_layer_info active',
-            area: '740px',
-            content: '<div class="check_delete_site_main pd30">' +
-                '<i class="layui-layer-ico layui-layer-ico0"></i>' +
-                '<div class="check_layer_title">堡塔温馨提示您，请冷静几秒钟，确认以下要删除的数据。</div>' +
-                '<div class="check_layer_content">' +
-                '<div class="check_layer_item">' +
-                '<div class="check_layer_site"></div>' +
-                '<div class="check_layer_database"></div>' +
-                '</div>' +
-                '</div>' +
-                '<div class="check_layer_error ' + (recycle_bin_db_open ? 'hide' : '') + '"><span class="glyphicon glyphicon-info-sign"></span>风险事项：当前未开启数据库回收站功能，删除数据库后，数据库将永久消失！</div>' +
-                '<div class="check_layer_message">请仔细阅读以上要删除信息，防止数据库被误删，确认删除还有 <span style="color:red;font-weight: bold;">' + countDown + '</span> 秒可以操作。</div>' +
-                '</div>',
-            btn: ['确认删除(' + countDown + '秒后继续操作)', '取消删除'],
-            success: function (layers) {
-              var html = '',
-                  rdata = res.data;
-              var filterData = rdata.filter(function (el) {
-                return ids.indexOf(el.id) != -1
-              })
-              for (var i = 0; i < filterData.length; i++) {
-                var item = filterData[i],
-                    newTime = parseInt(new Date().getTime() / 1000),
-                    t_icon = '<span class="glyphicon glyphicon-info-sign" style="color: red;width:15px;height: 15px;;vertical-align: middle;"></span>';
-
-                database_html = (function (item) {
-                  var is_time_rule = (newTime - item.st_time) > (86400 * 30) && (item.total > 1024 * 10),
-                      is_database_rule = res.db_size <= item.total,
-                      database_time = bt.format_data(item.st_time, 'yyyy-MM-dd'),
-                      database_size = bt.format_size(item.total);
-
-                  var f_size = '<i ' + (is_database_rule ? 'class="warning"' : '') + ' style = "vertical-align: middle;" > ' + database_size + '</i> ' + (is_database_rule ? t_icon : '');
-                  var t_size = '注意：此数据库较大，可能为重要数据，请谨慎操作.\n数据库：' + database_size;
-                  if (item.total < 2048) t_size = '注意事项：当前数据库不为空，可能为重要数据，请谨慎操作.\n数据库：' + database_size;
-                  if (item.total === 0) t_size = '';
-                  return '<div class="check_layer_database">' +
-                      '<span title="数据库：' + item.name + '">数据库：' + item.name + '</span>' +
-                      '<span title="' + t_size + '">大小：' + f_size + '</span>' +
-                      '<span title="' + (is_time_rule && item.total != 0 ? '重要：此数据库创建时间较早，可能为重要数据，请谨慎操作.' : '') + '时间：' + database_time + '">创建时间：<i ' + (is_time_rule && item.total != 0 ? 'class="warning"' : '') + '>' + database_time + '</i></span>' +
-                      '</div>'
-                }(item))
-                if (database_html !== '') html += '<div class="check_layer_item">' + database_html + '</div>';
+        tips = '';
+    title = typeof dbname === "function" ? '批量删除数据库' : '删除数据库 - [ ' + dbname + ' ]';
+    tips = is_db_type || !recycle_bin_db_open || type !== 'mysql' ? '<span class="color-red">当前列表存在彻底删除后无法恢复的数据库</span>，请仔细查看列表，以防误删，是否继续操作？' : '当前列表数据库将迁移至数据库回收站，如需彻底删除请前往数据库回收站，是否继续操作？'
+    var arrs = wid instanceof Array ? wid : [wid]
+    var ids = JSON.stringify(arrs),
+        countDown = 9;
+    if (arrs.length == 1) countDown = 4
+    var loadT = bt.load('正在检测数据库数据信息，请稍候...'),
+        param = {url:'database/'+bt.data.db_tab_name+'/check_del_data',data:{data:JSON.stringify({ids: ids})}}
+    if(bt.data.db_tab_name == 'mysql') param = {url:'database?action=check_del_data',data:{ids:ids}}
+    bt_tools.send(param,function(res){
+      loadT.close()
+      layer.open({
+        type: 1,
+        title: title,
+        area: '740px',
+        skin: 'verify_site_layer_info active',
+        closeBtn: 2,
+        shadeClose: true,
+        content: '<div class="check_delete_site_main hint_confirm pd30">'+
+          "<div class='hint_title'>\
+            <i class=\'hint-confirm-icon\'></i>\
+            <div class=\'hint_con\'>"+tips+"</div>\
+          </div>"+
+          '<div id="check_layer_content" class="ptb15">' +
+          '</div>' +
+          '<div class="check_layer_message">'+
+          (is_db_type ? '<span class="color-red">注意：远程数据库暂不支持数据库回收站，选中的数据库将彻底删除</span><br>' : '')+
+          (!recycle_bin_db_open ? '<span class="color-red">风险操作：当前数据库回收站未开启，删除数据库将永久消失</span><br>' : '')
+          +'<span class="message_count">请仔细阅读以上要删除信息，防止数据库被误删，下一步还有 <span class="count_down" style="color:red;font-weight: bold;">' + countDown + '</span> 秒可以操作。</span></div>' +
+        '</div>',
+        btn: ['下一步(' + countDown + '秒后继续操作)', lan.public.cancel],
+        success: function (layers) {
+          setTimeout(function () { $(layers).css('top', ($(window).height() - $(layers).height()) / 2); }, 50)
+          var rdata = res.data,
+              newTime = parseInt(new Date().getTime() / 1000),
+              t_icon = ' <span class="glyphicon glyphicon-info-sign" style="color: red;width:15px;height: 15px;;vertical-align: middle;"></span>';
+          for (var j = 0; j < rdata.length; j++) {
+            for (var i = 0; i < del_data.length; i++) {
+              if(rdata[j].id == del_data[i].id) {
+                var is_time_rule = (newTime - rdata[j].st_time) > (86400 * 30) && (rdata[j].total > 1024 * 10),
+                  is_database_rule = res.db_size <= rdata[j].total,
+                  database_time = bt.format_data(rdata[j].st_time, 'yyyy-MM-dd'),
+                  database_size = bt.format_size(rdata[j].total);
+                var f_size = database_size
+                var t_size = '注意：此数据库较大，可能为重要数据，请谨慎操作.\n数据库：' + database_size;
+                if (rdata[j].total < 2048) t_size = '注意事项：当前数据库不为空，可能为重要数据，请谨慎操作.\n数据库：' + database_size;
+                if (rdata[j].total === 0) t_size = '';
+                rdata[j]['t_size'] = t_size
+                rdata[j]['f_size'] = f_size
+                rdata[j]['database_time'] = database_time
+                rdata[j]['is_time_rule'] = is_time_rule
+                rdata[j]['is_database_rule'] = is_database_rule
+                rdata[j]['db_type'] = del_data[i].db_type
+                rdata[j]['conn_config'] = del_data[i].conn_config
               }
-              if (html === '') html = '<div style="text-align: center;width: 100%;height: 100%;line-height: 300px;font-size: 15px;">无数据</div>'
-              $('.check_layer_content').html(html)
-              var interVal = setInterval(function () {
-                countDown--;
-                $(layers).find('.layui-layer-btn0').text('确认删除(' + countDown + '秒后继续操作)')
-                $(layers).find('.check_layer_message span').text(countDown)
-              }, 1000);
-              setTimeout(function () {
-                $(layers).find('.layui-layer-btn0').text('确认删除');
-                $(layers).find('.check_layer_message').html('<span style="color:red">注意：请仔细阅读以上要删除信息，防止数据库被误删</span>')
-                $(layers).removeClass('active');
-                clearInterval(interVal)
-              }, countDown * 1000)
-            },
-            yes: function (indes, layers) {
-              // console.log(1);
-              if ($(layers).hasClass('active')) {
-                layer.tips('请确认信息，稍候再尝试，还剩' + countDown + '秒', $(layers).find('.layui-layer-btn0'), {
-                  tips: [1, 'red'],
-                  time: 3000
-                })
-                return;
-              }
-              if (typeof dbname === "function") {
-                dbname(data)
-              } else {
-                bt.database.del_database(data, function (rdata) {
-                  layer.closeAll()
-                  if (callback) callback(rdata);
-                  bt.msg(rdata);
+            }          
+          }
+          var filterData = rdata.filter(function (el) {
+            return ids.indexOf(el.id) != -1
+          })
+          bt_tools.table({
+            el: '#check_layer_content',
+            data: filterData,
+            height: '300px',
+            column: [
+              { fid: 'name', title: '数据库名称' },
+              { title: '数据库大小',template: function (row) {
+                return '<span class="'+ (row.is_database_rule ? 'warning' : '') +'" style="width: 110px;" title="' + row.t_size + '">' + row.f_size + (row.is_database_rule ? t_icon : '') + '</span>'
+              }},
+              { title: '数据库位置',template: function (row) {
+                var type_column = '-'
+                switch(row.db_type){
+                  case 0:
+                    type_column = '本地数据库'
+                    break;
+                  case 1:
+                  case 2:
+                    type_column = '远程数据库'
+                    break;
+                }
+                return '<span style="width: 110px;" title="' + type_column + '">' + type_column + '</span>'
+              }},
+              { title: '创建时间',template: function (row) {
+                return '<span ' + (is_time_rule && row.total != 0 ? 'class="warning"' : '') +' title="' + (row.is_time_rule && row.total != 0 ? '重要：此数据库创建时间较早，可能为重要数据，请谨慎操作.' : '') + '时间：' + row.database_time + '">' + row.database_time + '</span>'
+              }},
+              { title: '删除结果',align: 'right',template: function (row,index,ev,_that) {
+                var _html = ''
+                switch(row.db_type){
+                  case 0:
+                    _html = type !== 'mysql' ? '彻底删除' : (!recycle_bin_db_open ? '彻底删除' :'移至回收站')
+                    break;
+                  case 1:
+                  case 2:
+                    _html = '彻底删除'
+                    break;
+                }
+                return '<span style="width: 110px;" class="'+ (_html === '彻底删除' ? 'warning' + (row.db_type > 0 ? ' remote_database' : '') : '') +'">' + _html + '</span>'
+              }}
+            ],
+            success: function () {
+              if($('.remote_database').length) {
+                $('.remote_database').each(function (index, el) {
+                  var id = $(el).parent().parent().parent().index()
+                  $('#check_layer_content tbody tr').eq(id).css('background-color','#ff00000a')
                 })
               }
             }
           })
-        })
-      }
+          var is_once = false
+          $('#check_layer_content .divtable').scroll(function () {
+            var top = $(this).scrollTop()
+            if(top == $('#check_layer_content table').height()-298){
+              is_once = true
+              $(layers).removeClass('on');
+            }
+          })
+          var interVal = setInterval(function () {
+            countDown--;
+            $(layers).find('.layui-layer-btn0').text('下一步(' + countDown + '秒后继续操作)')
+            $(layers).find('.check_layer_message .count_down').text(countDown)
+          }, 1000);
+          setTimeout(function () {
+            $(layers).find('.layui-layer-btn0').text('下一步');
+            $(layers).find('.check_layer_message .message_count').html('<span style="color:red">请仔细阅读以上要删除信息，防止数据库被误删</span>')
+            if($('#check_layer_content table').height() > 300){
+              if(is_once == false) $(layers).addClass('on');
+            }
+            $(layers).removeClass('active');
+            clearInterval(interVal)
+          }, countDown * 1000)
+        },
+        yes: function (indes, layers) {
+          if ($(layers).hasClass('on')) {
+            layer.tips('请确认信息，将列表滚动到底部', $(layers).find('.layui-layer-btn0'), {
+              tips: [1, 'red'],
+              time: 3000
+            })
+            return;
+          }
+          if ($(layers).hasClass('active')) {
+            layer.tips('请确认信息，稍候再尝试，还剩' + countDown + '秒', $(layers).find('.layui-layer-btn0'), {
+              tips: [1, 'red'],
+              time: 3000
+            })
+            return;
+          }
+          title = typeof dbname === "function" ? '二次验证信息，批量删除数据库' : '二次验证信息，删除数据库 - [ ' + dbname + ' ]';
+          if(type !== 'mysql'){
+            tips = '<span class="color-red">当前数据库暂不支持数据库回收站，删除后将无法恢复</span>，此操作不可逆，是否继续操作？';
+          }else{
+            tips = is_db_type ? '<span class="color-red">远程数据库不支持数据库回收站，删除后将无法恢复</span>，此操作不可逆，是否继续操作？' : recycle_bin_db_open ? '删除后如需彻底删除请前往数据库回收站，是否继续操作？' : '删除后可能会影响业务使用，此操作不可逆，是否继续操作？'
+          }
+          layer.open({
+            type: 1,
+            title: title,
+            icon: 0,
+            skin: 'delete_site_layer',
+            area: "530px",
+            closeBtn: 2,
+            shadeClose: true,
+            content: "<div class=\'bt-form webDelete hint_confirm pd30\' id=\'site_delete_form\'>" +
+                  "<div class='hint_title'>\
+                  <i class=\'hint-confirm-icon\'></i>\
+                  <div class=\'hint_con\'>"+tips+"</div>\
+                </div>"+
+                "<div style=\'color:red;margin:18px 0 18px 18px;font-size:14px;font-weight: bold;\'>注意：数据无价，请谨慎操作！！！" + (type === 'mysql' && !recycle_bin_db_open ? '<br>风险操作：当前数据库回收站未开启，删除数据库将永久消失！' : '') + "</div>\
+                  <div class='confirm-info-box'>\
+                    <div>请手动输入“<span class='color-red'>删除数据库</span>”，完成验证</div>\
+                    <input onpaste='return false;' id='prompt_input_box' type='text' value='' autocomplete='off' style='width: 440px;'>\
+                  </div>"+
+                "</div>",
+            btn: ['确认删除', '取消删除'],
+            yes: function (indexs) {
+              var data = {
+                    id: wid,
+                    name: dbname
+                  };
+              var result = bt.replace_all($("#prompt_input_box").val(), ' ', '')
+              if (result == '删除数据库') {
+                if (typeof dbname === "function") {
+                  delete data.id;
+                  delete data.name;
+                }
+                layer.close(indexs)
+                layer.close(indes)
+                if (typeof dbname === "function") {
+                  dbname(data)
+                } else {
+                  data.id = data.id[0]
+                  bt.database.del_database(data, function (rdata) {
+                    layer.closeAll()
+                    if (callback) callback(rdata);
+                    bt.msg(rdata);
+                  })
+                }
+              }else{
+                $("#prompt_input_box").focus()
+                return layer.msg('验证失败，请重新输入', {icon: 2});
+              }
+            }
+          })
+        }
+      })
     })
   },
 }
@@ -2855,7 +2955,9 @@ var sql_server ={
             title: '删除',
             tips: '删除数据库',
             event: function (row) {
-              database.del_database(row.id, row.name,row, function (res) {
+              var list = [];
+              list.push(row)
+              database.del_database(list, row.name,row, function (res) {
                 if (res.status) database_table.$refresh_table_list(true);
                 layer.msg(res.msg, {
                   icon: res.status ? 1 : 2
@@ -2983,7 +3085,7 @@ var sql_server ={
             for (var i = 0; i < that.check_list.length; i++) {
               ids.push(that.check_list[i].id);
             }
-            database.del_database(ids,function(param){
+            database.del_database(that.check_list,function(param){
               that.start_batch(param, function (list) {
                 layer.closeAll()
                 var html = '';
@@ -3030,7 +3132,9 @@ var sql_server ={
 
           //事件
           $('.sqlserver_type_select_filter').change(function(){
-            database_table.$refresh_table_list(true);
+            database_table.$refresh_table_list(true,function(data){
+              if(parseInt($('#bt_sqldatabase_table .page .Pcurrent').text()) !== 1) $('.Pstart').click()
+            });
           })
         }
       }
@@ -3156,7 +3260,9 @@ var mongodb = {
             title: '删除',
             tips: '删除数据库',
             event: function (row) {
-              database.del_database(row.id, row.name,row, function (res) {
+              var list = [];
+              list.push(row)
+              database.del_database(list, row.name,row, function (res) {
                 if (res.status) database_table.$refresh_table_list(true);
                 layer.msg(res.msg, {
                   icon: res.status ? 1 : 2
@@ -3333,7 +3439,7 @@ var mongodb = {
             for (var i = 0; i < that.check_list.length; i++) {
               ids.push(that.check_list[i].id);
             }
-            database.del_database(ids,function(param){
+            database.del_database(that.check_list,function(param){
               that.start_batch(param, function (list) {
                 layer.closeAll()
                 var html = '';
@@ -3380,7 +3486,9 @@ var mongodb = {
 
           //事件
           $('.mongodb_type_select_filter').change(function(){
-            database_table.$refresh_table_list(true);
+            database_table.$refresh_table_list(true,function(data){
+              if(parseInt($('#bt_mongodb_table .page .Pcurrent').text()) !== 1) $('.Pstart').click()
+            });
           })
         }
       }
@@ -3414,6 +3522,7 @@ var redis = {
       that.cloudInfo.sid = $(this).val();
       that.cloudInfo.title = $(this).find('option:selected').text();
       that.render_redis_content()
+      if(parseInt($('#bt_redis_view .page .Pcurrent').text()) !== 1) $('.Pstart').click()
     })
 
 
@@ -3483,7 +3592,7 @@ var redis = {
       autoHeight: true,
       load: true,
       default: "数据库列表为空", // 数据为空时的默认提示
-      pageName: 'database',
+      pageName: 'redis_' + id,
       beforeRequest:function(beforeData){
         var db_type_val = that.cloudInfo.sid,param = {}
         switch(db_type_val){
@@ -3501,14 +3610,14 @@ var redis = {
         return {data:JSON.stringify($.extend(param,{db_idx:id,limit:beforeData.limit}))}
       },
       column:[
-        // {type: 'checkbox',width: 20},
+        {type: 'checkbox',width: 20},
         {fid: 'name',title: '键',type:'text'},
         {fid: 'val',title: '值',type:'text',template:function(row){
             var _val = $('<div></div>').text(row.val)
-            return '<div class="flex" style="width:350px" title="'+_val.text().replace(/\"/g, '\&quot;')+'"><span class="size_ellipsis">'+_val.text()+'</span><span class="ico-copy cursor btcopy ml5" title="复制密码"></span></div>'
+            return '<div class="flex" style="width:350px" title="'+_val.text().replace(/\"/g, '\&quot;')+'"><span class="size_ellipsis">'+_val.text()+'</span><span class="ico-copy cursor btcopy ml5" title="复制值"></span></div>'
           },event:function(row,index,ev,key){
             if($(ev.target).hasClass('btcopy')){
-              bt.pub.copy_pass(row.val);
+              bt.pub.copy_pass(row.val.replaceAll("&quot;", "\""));
             }
           }},
         {fid:'type',title:'数据类型',type:'text'},
@@ -3528,7 +3637,7 @@ var redis = {
               return (rows.type == 'string' || rows.type == 'int')?false:true
             },
             event: function (row) {
-							row.db_idx = id;
+              row.db_idx = id;
               that.set_redis_library(row)
             }
           },{
@@ -3541,7 +3650,7 @@ var redis = {
                 bt_tools.send({url:'database/redis/del_redis_val',data:{data:JSON.stringify({db_idx:id,key:row.name,sid:that.cloudInfo.sid})}},function(rdata){
                   if(rdata.status){
                     that.render_redis_table(id);
-										that.change_tabs_num();
+                    that.change_tabs_num();
                   }
                   bt_tools.msg(rdata)
                   layer.close(index)
@@ -3557,6 +3666,31 @@ var redis = {
         placeholder: '请输入键名称',
         searchParam: 'search', //搜索请求字段，默认为 search
         value: '',// 当前内容,默认为空
+      }, {
+        type: 'batch',
+        positon: ['left', 'bottom'],
+        config: {
+          title: '删除',
+          url: 'database/redis/del_redis_val',
+          param: function (row) {
+            return { data:JSON.stringify({db_idx:id,key:row.name,sid:that.cloudInfo.sid}) }
+          },
+          load: true,
+          callback: function (that) {
+            bt.confirm({ title: '批量删除key值', msg: '是否批量删除选中的key值，是否继续？', icon: 0 }, function (index) {
+              layer.close(index);
+              that.start_batch({}, function (list) {
+                var html = '';
+                for (var i = 0; i < list.length; i++) {
+                  var item = list[i];
+                  html += '<tr><td><span class="text-overflow" title="' + item.name + '">' + item.name + '</span></td><td><div style="float:right;"><span style="color:' + (item.request.status ? '#20a53a' : 'red') + '">' + item.request.msg + '</span></div></td></tr>';
+                }
+                database_table.$batch_success_table({ title: '批量删除key值', th: '键', html: html });
+                database_table.$refresh_table_list(true);
+              });
+            });
+          }
+        }
       }, { //分页显示
         type: 'page',
         positon: ['right', 'bottom'], // 默认在右下角
@@ -3578,15 +3712,16 @@ var redis = {
       }
     });
   },
-	// 设置tabs的数量
-	change_tabs_num: function () {
-		var text = $('#redis_content_tab .tab-nav .on').text();
-		var num = text.match(/(?<=\()(.+?)(?=\))/g)[0];
-		if (!isNaN(num)) {
-			num--;
-			$('#redis_content_tab .tab-nav .on').text(text.replace(/\([0-9]\)/ig, '(' + num + ')'));
-		}
-	},
+  // 设置tabs的数量
+  change_tabs_num: function () {
+    var text = $('#redis_content_tab .tab-nav .on').text();
+    var num = text.match(/\((.*?)\)/g);
+    num = RegExp.$1;
+    if (!isNaN(num)) {
+      num--;
+      $('#redis_content_tab .tab-nav .on').text(text.replace(/\([0-9]\)/ig, '(' + num + ')'));
+    }
+  },
   // redis备份列表
   backup_redis_list:function(){
     var that = this,redisBackupTable = null;
@@ -3953,7 +4088,7 @@ var pgsql ={
       default: "数据库列表为空", // 数据为空时的默认提示
       pageName: 'database',
       beforeRequest:function(beforeData){
-        var db_type_val = $('.sqlserver_type_select_filter').val()
+        var db_type_val = $('.pgsql_type_select_filter').val()
         switch(db_type_val){
           case 'all':
             delete param['db_type']
@@ -4054,7 +4189,9 @@ var pgsql ={
             title: '删除',
             tips: '删除数据库',
             event: function (row) {
-              database.del_database(row.id, row.name,row, function (res) {
+              var list = [];
+              list.push(row)
+              database.del_database(list, row.name,row, function (res) {
                 if (res.status) database_table.$refresh_table_list(true);
                 layer.msg(res.msg, {
                   icon: res.status ? 1 : 2
@@ -4189,7 +4326,7 @@ var pgsql ={
             for (var i = 0; i < that.check_list.length; i++) {
               ids.push(that.check_list[i].id);
             }
-            database.del_database(ids,function(param){
+            database.del_database(that.check_list,function(param){
               that.start_batch(param, function (list) {
                 layer.closeAll()
                 var html = '';
@@ -4226,17 +4363,19 @@ var pgsql ={
       }],
       success:function(config){
         //搜索前面新增数据库位置下拉
-        if($('.sqlserver_type_select_filter').length == 0){
+        if($('.pgsql_type_select_filter').length == 0){
           var _option = '<option value="all">全部</option>'
           $.each(cloudDatabaseList,function(index,item){
             var _tips = item.ps != ''?item.ps:item.db_host
             _option +='<option value="'+item.id+'">'+_tips+'</option>'
           })
-          $('#bt_pgsql_table .bt_search').before('<select class="bt-input-text mr5 sqlserver_type_select_filter" style="width:110px" name="db_type_filter">'+_option+'</select>')
+          $('#bt_pgsql_table .bt_search').before('<select class="bt-input-text mr5 pgsql_type_select_filter" style="width:110px" name="db_type_filter">'+_option+'</select>')
 
           //事件
-          $('.sqlserver_type_select_filter').change(function(){
-            database_table.$refresh_table_list(true);
+          $('.pgsql_type_select_filter').change(function(){
+            database_table.$refresh_table_list(true,function(data){
+              if(parseInt($('#bt_pgsql_table .page .Pcurrent').text()) !== 1) $('.Pstart').click()
+            });
           })
         }
       }
@@ -4312,12 +4451,12 @@ var db_public_fn = {
               event:function(){that.render_db_cloud_server_view()}
             }]
           }],
-					success: function () {
-						var height = $(window).height();
-						var layerHeight = $layer.height();
-						var top = (height - layerHeight) / 2;
-						$layer.css('top', top);
-					}
+          success: function () {
+            var height = $(window).height();
+            var layerHeight = $layer.height();
+            var top = (height - layerHeight) / 2;
+            $layer.css('top', top);
+          }
         });
         that.render_cloud_server_table();
       }
@@ -4356,15 +4495,15 @@ var db_public_fn = {
         config['db_user'] = 'postgres'
       }
     }
-		var tips = [
-			'支持MySQL5.5、MariaDB10.1及以上版本',
-			'支持阿里云、腾讯云等云厂商的云数据库',
-			'注意1：请确保本服务器有访问数据库的权限',
-			'注意2：请确保填写的管理员帐号具备足够的权限',
-		]
-		if (bt.data.db_tab_name === 'mysql') {
-			tips.push('注意3：通过宝塔安装的数据库root默认不支持远程权限');
-		}
+    var tips = [
+      '支持MySQL5.5、MariaDB10.1及以上版本',
+      '支持阿里云、腾讯云等云厂商的云数据库',
+      '注意1：请确保本服务器有访问数据库的权限',
+      '注意2：请确保填写的管理员帐号具备足够的权限',
+    ]
+    if (bt.data.db_tab_name === 'mysql') {
+      tips.push('注意3：通过宝塔安装的数据库root默认不支持远程权限');
+    }
     bt_tools.open({
       title: (is_edit?'编辑':'添加')+bt.data.db_tab_name+'远程服务器',
       area:'450px',
@@ -4449,6 +4588,7 @@ var db_public_fn = {
         var interface = is_edit?'ModifyCloudServer':'AddCloudServer'
         if(form.db_host == '') return layer.msg('请输入服务器地址',{icon:2})
         if(form.db_port == '') return layer.msg('请输入数据库端口',{icon:2})
+        if(!bt.check_port(form.db_port)) return layer.msg('端口格式错误，可用范围：1-65535',{icon:2})
         if(form.db_user == '' && bt.data.db_tab_name != 'redis') return layer.msg('请输入管理员名称',{icon:2})
         if(form.db_password == '') return layer.msg('请输入管理员密码',{icon:2})
 
@@ -4496,87 +4636,87 @@ var db_public_fn = {
       db_public_fn.showDatabase();
     });
   },
-	// 显示当前数据库
-	showDatabase: function (showTips) {
-		var type = $('.database-pos .tabs-item.active').data('type');
-		bt.set_cookie('db_page_model', type);
-		bt.data.db_tab_name = type;
-		if (type == 'redis') {
-			$('.info-title-tips').hide();
-		} else {
-			$('.info-title-tips').show()
-		}
-		var loadT = layer.msg('正在获取远程服务器列表,请稍候...', {
-			icon: 16,
-			time: 0,
-			shade: [0.3, '#000']
-		});
+  // 显示当前数据库
+  showDatabase: function (showTips) {
+    var type = $('.database-pos .tabs-item.active').data('type');
+    bt.set_cookie('db_page_model', type);
+    bt.data.db_tab_name = type;
+    if (type == 'redis') {
+      $('.info-title-tips').hide();
+    } else {
+      $('.info-title-tips').show()
+    }
+    var loadT = layer.msg('正在获取远程服务器列表,请稍候...', {
+      icon: 16,
+      time: 0,
+      shade: [0.3, '#000']
+    });
 
-		var requestParam = {url:'database/'+bt.data.db_tab_name+'/GetCloudServer',data:{data:JSON.stringify({type:bt.data.db_tab_name})}}
-		if (bt.data.db_tab_name == 'mysql') requestParam = {url:'database?action=GetCloudServer',data:{type:bt.data.db_tab_name}}
-		bt_tools.send(requestParam,function(cloudData){
-			layer.close(loadT);
-			cloudDatabaseList = cloudData
-			//是否安装本地或远程服务器
-			if(cloudData.length <= 0){
-				var tips = '当前未安装本地服务器/远程服务器,<a class="btlink install_server">点击安装</a> | <a class="btlink" onclick="db_public_fn.get_cloud_server_list()">添加远程服务器</a>'
-				if(bt.data.db_tab_name == 'sqlserver')tips = '当前未配置远程服务器,<a class="btlink" onclick="db_public_fn.get_cloud_server_list()">添加远程服务器</a>'
-				$('.mask_layer').removeAttr('style');
-				$('.prompt_description').html(tips)
+    var requestParam = {url:'database/'+bt.data.db_tab_name+'/GetCloudServer',data:{data:JSON.stringify({type:bt.data.db_tab_name})}}
+    if (bt.data.db_tab_name == 'mysql') requestParam = {url:'database?action=GetCloudServer',data:{type:bt.data.db_tab_name}}
+    bt_tools.send(requestParam,function(cloudData){
+      layer.close(loadT);
+      cloudDatabaseList = cloudData
+      //是否安装本地或远程服务器
+      if(cloudData.length <= 0){
+        var tips = '当前未安装本地服务器/远程服务器,<a class="btlink install_server">点击安装</a> | <a class="btlink" onclick="db_public_fn.get_cloud_server_list()">添加远程服务器</a>'
+        if(bt.data.db_tab_name == 'sqlserver')tips = '当前未配置远程服务器,<a class="btlink" onclick="db_public_fn.get_cloud_server_list()">添加远程服务器</a>'
+        $('.mask_layer').removeAttr('style');
+        $('.prompt_description').html(tips)
 
-				// 安装pgsql
-				$('.install_server').click(function(){
-					var db_type = bt.data.db_tab_name
-					if(db_type == 'pgsql'){
-						bt.soft.get_soft_find('pgsql_manager',function(rdata){   //判断是否安装插件
-							for (var i = 0; i < rdata.versions.length; i++) {
-								if (rdata.versions[i].setup == true) {  //判断是否安装版本
-									bt.soft.set_lib_config('pgsql_manager','PostgreSQL管理器')
-									break;
-								}else{
-									bt.soft.install('pgsql_manager')
-									break;
-								}
-							}
-						})
-					}else{
-						bt.soft.install(db_type)
-					}
-				})
-			}else{
-				$('.mask_layer').hide()
-				if (showTips && type == 'mysql' && !isSetup) {
-					layer.msg('未安装本地数据库，已隐藏无法使用的功能!', { time: 2000 });
-				}
-			}
-			switch (type) {
-				case 'mysql':
-					database.database_table_view();
-					if (cloudData.length > 0 && !isSetup) {
-						$('#bt_database_table .tootls_group.tootls_top .pull-left button').eq(1).hide();
-						$('#bt_database_table .tootls_group.tootls_top .pull-left button').eq(2).hide();
-						$('#bt_database_table .tootls_group.tootls_top .pull-left button').eq(4).hide();
-						$('#bt_database_table .tootls_group.tootls_top .pull-left button').eq(7).hide();
-					}
-					break;
-				case 'sqlserver':
-					sql_server.database_table_view();
-					break;
-				case 'mongodb':
-					bt_tools.send({url:'database/'+bt.data.db_tab_name+'/get_root_pwd'},function(_status){
-						mongoDBAccessStatus = _status.authorization == 'enabled'?true:false
-						mongodb.database_table_view();
-					},'获取访问状态')
-					break;
-				case 'redis':
-					redis.database_table_view();
-					break;
-				case 'pgsql':
-					pgsql.database_table_view();
-					break;
-			}
-		})
-	}
+        // 安装pgsql
+        $('.install_server').click(function(){
+          var db_type = bt.data.db_tab_name
+          if(db_type == 'pgsql'){
+            bt.soft.get_soft_find('pgsql_manager',function(rdata){   //判断是否安装插件
+              for (var i = 0; i < rdata.versions.length; i++) {
+                if (rdata.versions[i].setup == true) {  //判断是否安装版本
+                  bt.soft.set_lib_config('pgsql_manager','PostgreSQL管理器')
+                  break;
+                }else{
+                  bt.soft.install('pgsql_manager')
+                  break;
+                }
+              }
+            })
+          }else{
+            bt.soft.install(db_type)
+          }
+        })
+      }else{
+        $('.mask_layer').hide()
+        if (showTips && type == 'mysql' && !isSetup) {
+          layer.msg('未安装本地数据库，已隐藏无法使用的功能!', { time: 2000 });
+        }
+      }
+      switch (type) {
+        case 'mysql':
+          database.database_table_view();
+          if (cloudData.length > 0 && !isSetup) {
+            $('#bt_database_table .tootls_group.tootls_top .pull-left button').eq(1).hide();
+            $('#bt_database_table .tootls_group.tootls_top .pull-left button').eq(2).hide();
+            $('#bt_database_table .tootls_group.tootls_top .pull-left button').eq(4).hide();
+            $('#bt_database_table .tootls_group.tootls_top .pull-left button').eq(7).hide();
+          }
+          break;
+        case 'sqlserver':
+          sql_server.database_table_view();
+          break;
+        case 'mongodb':
+          bt_tools.send({url:'database/'+bt.data.db_tab_name+'/get_root_pwd'},function(_status){
+            mongoDBAccessStatus = _status.authorization == 'enabled'?true:false
+            mongodb.database_table_view();
+          },'获取访问状态')
+          break;
+        case 'redis':
+          redis.database_table_view();
+          break;
+        case 'pgsql':
+          pgsql.database_table_view();
+          break;
+      }
+    })
+  }
 }
 
 $('.database-pos .tabs-item[data-type="' + (bt.get_cookie('db_page_model') || 'mysql') + '"]').trigger('click');

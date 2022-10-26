@@ -851,7 +851,7 @@ var bt_tools = {
             var className = 'page_select_' + this.random, number = _that.$get_page_number();
             template += '<select class="page_select_number ' + className + '">';
             $.each(config.numberList, function (index, item) {
-              template += '<option value="' + item + '" ' + ((number || config.number) === item ? 'selected' : '') + '>' + item + '条/页</option>';
+              template += '<option value="' + item + '" ' + ((number || config.number) == item ? 'selected' : '') + '>' + item + '条/页</option>';
             });
             template += '</select>';
             eventList[className] = { eventType: "change", type: 'page_select' };

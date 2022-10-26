@@ -23,7 +23,7 @@ _level = 2  # 风险级别： 1.提示(低)  2.警告(中)  3.危险(高)
 _date = '2022-08-10'  # 最后更新时间
 _ignore = os.path.exists("data/warning/ignore/sw_umask.pl")
 _tips = [
-    "【/etc/profile】 文件中所所设置的umask为002,不符合要求，建议设置为027",
+    "【/etc/profile】 文件中所设置的umask为002,不符合要求，建议设置为027",
     "操作如下：修改 umask 为027",
 ]
 _help = ''

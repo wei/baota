@@ -15,6 +15,7 @@ import sys
 import json
 import re
 import time
+import shlex
 
 os.chdir('/www/server/panel')
 if not 'class/' in sys.path:
@@ -251,6 +252,18 @@ class backup:
             self.echo_info('清理过期备份失败，错误：{} '.format(backups))
             return
         self.echo_info('保留最新的备份数：{} 份'.format(save))
+
+        # 跳过手动备份文件
+        new_backups = []
+        for i in range(len(backups)):
+            if data_type == 'database' and backups[i]['name'][:3] =='db_': # 数据库备份
+                new_backups.append(backups[i])
+            elif data_type == 'site' and backups[i]['name'][:4] == 'web_' and backups[i]['name'][-7:] == '.tar.gz': # 网站备份
+                new_backups.append(backups[i])
+            elif data_type == 'path' and backups[i]['name'][:5] == 'path_': # 目录备份
+                new_backups.append(backups[i])
+        backups = new_backups[:]
+
         num = len(backups) - int(save)
         if  num > 0:
             self.echo_info('-' * 88)
@@ -283,7 +296,7 @@ class backup:
                 tmp_dict = {}
                 if check_name=='web__':continue
                 if site_v.find(check_name)==-1:continue
-                filename =os.path.join(backup_path,site_v) 
+                filename =os.path.join(backup_path,site_v)
                 if os.path.isfile(filename):
                     tmp_dict['name']=filename
                     tmp_dict['time']=int(os.path.getmtime(filename))
@@ -296,10 +309,10 @@ class backup:
                     if os.path.isfile(del_file['name']):
                         os.remove(del_file['name'])
                         self.echo_info(u"已从磁盘清理过期备份文件：" + del_file['name'])
-            
-                
-                
-                
+
+
+
+
 
     #压缩目录
     def backup_path_to(self,spath,dfile,exclude = [],siteName = None):
@@ -623,12 +636,14 @@ class backup:
             if not is_cloud_db:
                 # 本地数据库 @author hwliang<2021-01-08>
                 password = public.M('config').where('id=?',(1,)).getField('mysql_root')
-                os.environ["MYSQL_PWD"] = str(password)
-                backup_cmd = mysqldump_bin + " -E -R --default-character-set="+ character +" --force --hex-blob --opt " + db_name + " -u root -p\"" + str(password) + "\" 2>"+self._err_log+"| gzip > " + dfile
+                password = shlex.quote(str(password))
+                os.environ["MYSQL_PWD"] = password
+                backup_cmd = mysqldump_bin + " -E -R --default-character-set="+ character +" --force --hex-blob --opt " + db_name + " -u root -p" + password + " 2>"+self._err_log+"| gzip > " + dfile
             else:
                 # 远程数据库 @author hwliang<2021-01-08>
-                os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
-                backup_cmd = mysqldump_bin + " -h " + conn_config['db_host'] + " -P " + str(conn_config['db_port']) + " -E -R --default-character-set="+ character +" --force --hex-blob --opt " + db_name + " -u " + str(conn_config['db_user']) + ' -p"'+str(conn_config['db_password'])+'" 2>'+self._err_log+"| gzip > " + dfile
+                password = shlex.quote(str(conn_config['db_password']))
+                os.environ["MYSQL_PWD"] = password
+                backup_cmd = mysqldump_bin + " -h " + conn_config['db_host'] + " -P " + str(conn_config['db_port']) + " -E -R --default-character-set="+ character +" --force --hex-blob --opt " + db_name + " -u " + str(conn_config['db_user']) + " -p"+password+" 2>"+self._err_log+"| gzip > " + dfile
             public.ExecShell(backup_cmd)
         except Exception as e:
             raise

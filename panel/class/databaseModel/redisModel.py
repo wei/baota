@@ -300,8 +300,8 @@ class main(databaseBase):
                 item['len'] = redis_obj.strlen(key)
             except:
                 item['len'] = len(item['val'])
-            item['val'] = public.xssencode(item['val'])
-            item['name'] = public.xssencode(item['name'])
+            item['val'] = public.xsssec(item['val'])
+            item['name'] = public.xsssec(item['name'])
             rdata['data'].append(item)
             idx += 1
         return rdata
@@ -325,9 +325,9 @@ class main(databaseBase):
         if not os.path.exists(backup_path): os.makedirs(backup_path)
 
         fileName = backup_path + str(self.sid) + '_db_' + time.strftime('%Y%m%d_%H%M%S',time.localtime()) +'.rdb'
-        os.rename(src_path,fileName)
+        shutil.copyfile(src_path,fileName)
         if not os.path.exists(fileName):
-            return public.returnMsg(False,'BACKUP_ERROR');
+            return public.returnMsg(False,'BACKUP_ERROR')
 
         return public.returnMsg(True, 'BACKUP_SUCCESS')
 

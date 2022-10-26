@@ -37,15 +37,15 @@ class main(safeBase):
                         if stype == 'error':
                             num1,num2 = 0,0
                             try:
-                                num1 = int(public.ExecShell("cat %s|grep 'Failed password for' |grep -v 'invalid' |wc -l" % (sfile))[0].strip())
+                                num1 = int(public.ExecShell("cat %s|grep -a 'Failed password for' |grep -v 'invalid' |wc -l" % (sfile))[0].strip())
                             except:pass
                             try:
-                                num2 += int(public.ExecShell("cat %s|grep 'Connection closed by authenticating user' |grep 'preauth' |wc -l" % (sfile))[0].strip())
+                                num2 += int(public.ExecShell("cat %s|grep -a 'Connection closed by authenticating user' |grep -a 'preauth' |wc -l" % (sfile))[0].strip())
                             except:pass
 
                             count = num1 + num2
                         else:
-                            count = int(public.ExecShell("cat %s|grep 'Accepted' |wc -l" % (sfile))[0].strip())
+                            count = int(public.ExecShell("cat %s|grep -a 'Accepted' |wc -l" % (sfile))[0].strip())
                     except: pass
                     data[stype][sfile] = count
 

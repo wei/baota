@@ -18,24 +18,24 @@ panel_init(){
         env_path=$panel_path/pyenv/bin/python3
         if [ -f $env_path ];then
                 pythonV=$panel_path/pyenv/bin/python3
-                chmod -R 700 $panel_path/pyenv/bin
+                chmod -R 700 $panel_path/pyenv/bin &> /dev/null
         else
                 pythonV=/usr/bin/python
         fi
         reg="^#\!$pythonV\$"
         is_sed=$(cat $panel_path/BT-Panel|head -n 1|grep -E $reg)
         if [ "${is_sed}" = "" ];then
-                sed -i "s@^#!.*@#!$pythonV@" $panel_path/BT-Panel
+                sed -i "s@^#!.*@#!$pythonV@" $panel_path/BT-Panel &> /dev/null
         fi
         is_python=$(cat $panel_path/BT-Task|grep import)
         if [ "${is_python}" != "" ];then
             is_sed=$(cat $panel_path/BT-Task|head -n 1|grep -E $reg)
             if [ "${is_sed}" = "" ];then
-                    sed -i "s@^#!.*@#!$pythonV@" $panel_path/BT-Task
+                    sed -i "s@^#!.*@#!$pythonV@" $panel_path/BT-Task &> /dev/null
             fi
         fi
-        chmod 700 $panel_path/BT-Panel
-        chmod 700 $panel_path/BT-Task
+        chmod 700 $panel_path/BT-Panel &> /dev/null
+        chmod 700 $panel_path/BT-Task &> /dev/null
         log_file=$panel_path/logs/error.log
         task_log_file=$panel_path/logs/task.log
         if [ -f $panel_path/data/ssl.pl ];then
@@ -66,10 +66,15 @@ panel_start()
         fi
         get_panel_pids
         if [ "$isStart" == '' ];then
-                rm -f $pidfile
+                rm -f $pidfile &> /dev/null
                 panel_port_check
                 echo -e "Starting Bt-Panel...\c"
-                nohup $panel_path/BT-Panel >> $log_file 2>&1 &
+                echo '\n' >> $log_file
+                if [ $? -ne 0 ];then
+                    $panel_path/BT-Panel > /dev/null 2>&1
+                else
+                    $panel_path/BT-Panel >> $log_file 2>&1
+                fi
                 isStart=""
                 n=0
                 while [[ "$isStart" == "" ]];
@@ -97,7 +102,12 @@ panel_start()
         get_task_pids
         if [ "$isStart" == '' ];then
                 echo -e "Starting Bt-Tasks... \c"
-                nohup $panel_path/BT-Task >> $task_log_file 2>&1 &
+                echo '\n' >> $task_log_file
+                if [ $? -ne 0 ];then
+                    $panel_path/BT-Task > /dev/null 2>&1
+                else
+                    $panel_path/BT-Task >> $task_log_file 2>&1
+                fi
                 sleep 0.2
                 get_task_pids
                 if [ "$isStart" == '' ];then
@@ -194,7 +204,7 @@ panel_stop()
         done
 
         if [ -f $pidfile ];then
-                rm -f $pidfile
+                rm -f $pidfile &> /dev/null
         fi
         echo -e "	\033[32mdone\033[0m"
 }

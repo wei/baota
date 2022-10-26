@@ -312,6 +312,7 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 		config = [
 			{
 				label: '项目执行文件',
+				formLabelWidth: '110px',
 				must: '*',
 				group: {
 					type: 'text',
@@ -349,6 +350,7 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 			},
 			{
 				label: '项目名称',
+				formLabelWidth: '110px',
 				must: '*',
 				group: {
 					type: 'text',
@@ -371,6 +373,7 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 			},
 			{
 				label: '项目端口',
+				formLabelWidth: '110px',
 				must: '*',
 				group: {
 					type: 'number',
@@ -388,6 +391,7 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 			},
 			{
 				label: '执行命令',
+				formLabelWidth: '110px',
 				must: '*',
 				group: {
 					type: 'text',
@@ -405,6 +409,7 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 			},
 			{
 				label: '运行用户',
+				formLabelWidth: '110px',
 				group: {
 					type: 'select',
 					name: 'run_user',
@@ -419,14 +424,16 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 			},
 			{
 				label: '开机启动',
+				formLabelWidth: '110px',
 				group: {
 					type: 'checkbox',
 					name: 'is_power_on',
-					title: '是否开启启动项目',
+					title: '是否开启启动项目'+(this.tips === 'Go' ? '（默认自带守护进程每120秒检测一次）':''),
 				},
 			},
 			{
 				label: '备注',
+				formLabelWidth: '110px',
 				group: {
 					type: 'text',
 					name: 'project_ps',
@@ -437,6 +444,7 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 			},
 			{
 				label: '绑定域名',
+				formLabelWidth: '110px',
 				group: {
 					type: 'textarea', //当前表单的类型 支持所有常规表单元素、和复合型的组合表单元素
 					name: 'domains', //当前表单的name
@@ -463,7 +471,7 @@ CreateWebsiteModel.prototype.getAddProjectConfig = function (data) {
 	if (data.type == 'edit') {
 		config.splice(7, 2);
 		config.push({
-			formLabelWidth: '100px',
+			formLabelWidth: '110px',
 			group: {
 				type: 'button',
 				name: 'submitForm',

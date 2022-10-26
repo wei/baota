@@ -12,13 +12,13 @@ from BTPanel import session,cache,json_header
 from flask import request,redirect,g
 
 class userlogin:
-
+    limit_expire_time = 0
     def request_post(self,post):
         if not hasattr(post, 'username') or not hasattr(post, 'password'):
             return public.returnJson(False,'LOGIN_USER_EMPTY'),json_header
 
         self.error_num(False)
-        if self.limit_address('?') < 1: return public.returnJson(False,'LOGIN_ERR_LIMIT'),json_header
+        if self.limit_address('?') < 1: return public.returnJson(False,'您多次登录失败,暂时禁止登录,请等待{}秒后重试!'.format(int(self.limit_expire_time - time.time()))),json_header
         post.username = post.username.strip()
 
         # 核验用户名密码格式
@@ -35,6 +35,8 @@ class userlogin:
         for u_info in user_list:
             if public.md5(u_info['username']) == post.username:
                 userInfo = u_info
+
+
         if 'code' in session:
             if session['code'] and not 'is_verify_password' in session:
                 if not hasattr(post, 'code'): return public.returnJson(False,'验证码不能为空!'),json_header
@@ -42,8 +44,17 @@ class userlogin:
                 if not public.checkCode(post.code):
                     public.WriteLog('TYPE_LOGIN','LOGIN_ERR_CODE',('****','****',public.GetClientIp()))
                     return public.returnJson(False,'CODE_ERR'),json_header
+
+
         try:
-            if not userInfo['salt']:
+
+            if not userInfo:
+                public.WriteLog('TYPE_LOGIN','LOGIN_ERR_PASS',('****','******',public.GetClientIp()))
+                num = self.limit_address('+')
+                if not num: return public.returnJson(False,'您多次登录失败,暂时禁止登录,请等待{}秒后重试!'.format(int(self.limit_expire_time - time.time()))),json_header
+                return public.returnJson(False,'LOGIN_USER_ERR',(str(num),)),json_header
+
+            if userInfo and not userInfo['salt']:
                 public.chdck_salt()
                 userInfo = sql.table('users').where('id=?',(userInfo['id'],)).field('id,username,password,salt').find()
 
@@ -51,6 +62,7 @@ class userlogin:
             if public.md5(userInfo['username']) != post.username or userInfo['password'] != password:
                 public.WriteLog('TYPE_LOGIN','LOGIN_ERR_PASS',('****','******',public.GetClientIp()))
                 num = self.limit_address('+')
+                if not num: return public.returnJson(False,'您多次登录失败,暂时禁止登录,请等待{}秒后重试!'.format(int(self.limit_expire_time - time.time()))),json_header
                 return public.returnJson(False,'LOGIN_USER_ERR',(str(num),)),json_header
             _key_file = "/www/server/panel/data/two_step_auth.txt"
 
@@ -100,6 +112,7 @@ class userlogin:
                 return public.returnJson(False,'USER_INODE_ERR'),json_header
             public.WriteLog('TYPE_LOGIN','LOGIN_ERR_PASS',('****','******',public.GetClientIp()))
             num = self.limit_address('+')
+            if not num: return public.returnJson(False,'您多次登录失败,暂时禁止登录,请等待{}秒后重试!'.format(int(self.limit_expire_time - time.time()))),json_header
             return public.returnJson(False,'LOGIN_USER_ERR',(str(num),)),json_header
 
     def request_tmp(self,get):
@@ -252,17 +265,18 @@ class userlogin:
 
     #IP限制
     def limit_address(self,type,v=""):
-        import time
         clientIp = public.GetClientIp()
         numKey = 'limitIpNum_' + v + clientIp
-        limit = 6
-        outTime = 600
+        limit = 5
+        outTime = 300
         try:
             #初始化
             num1 = cache.get(numKey)
             if not num1:
-                cache.set(numKey,1,outTime)
-                num1 = 1
+                cache.set(numKey,0,outTime)
+                num1 = 0
+
+            self.limit_expire_time = cache.get_expire_time(numKey)
 
             #计数
             if type == '+':
@@ -310,8 +324,11 @@ class userlogin:
             login_type = 'data/app_login.pl'
             if os.path.exists(login_type):
                 os.remove(login_type)
-            default_pl = "{}/default.pl".format(public.get_panel_path())
-            public.writeFile(default_pl,public.GetRandomString(12))
+            try:
+                default_pl = "{}/default.pl".format(public.get_panel_path())
+                public.writeFile(default_pl,"********")
+            except:
+                pass
             return public.returnJson(True,'LOGIN_SUCCESS'),json_header
         except Exception as ex:
             stringEx = str(ex)

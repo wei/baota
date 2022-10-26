@@ -211,7 +211,7 @@ var soft = {
           templet: function (item) {
             var price = '免费';
             if (item.price > 0) {
-              price = '<span style="color:#fc6d26">￥' + (item.price / 30).toFixed(2) + '/天</span>';
+              price = '<span style="color:#fc6d26">￥' + (item.price / (item.name === 'btiplibrary'?365:30)).toFixed(2) + '/天</span>';
             }
             return price;
           }
@@ -983,7 +983,7 @@ var soft = {
 					</div>\
 					<div class="line"><span class="tname">上传项目包</span>\
 						<input class="bt-input-text mr5" name="dep_zip" type="file" style="width:290px" placeholder="如：system,exec" >\
-						<span class="c9">请上传zip格式的项目包,里面必需包含auto_insatll.json配置文件</span>\
+						<span class="c9">请上传zip格式的项目包,里面必需包含auto_install.json配置文件</span>\
 					</div>\
 					<div class="bt-form-submit-btn">\
 						<button type="button" class="btn btn-danger btn-sm onekeycodeclose" onclick="layer.closeAll()">取消</button>\
@@ -1224,11 +1224,11 @@ var soft = {
       if (name == 'mysql') name = 'mysqld';
       var menuing = bt.open({
         type: 1,
-        area: "650px",
+        area: (name === 'mysqld' ? ['660px','632px'] : "660px"),
         title: name + lan.soft.admin,
         closeBtn: 2,
         shift: 0,
-        content: '<div class="bt-w-main" style="width:640px;"><div class="bt-w-menu bt-soft-menu"></div><div id="webEdit-con" class="bt-w-con pd15" style="height:555px;overflow:auto"><div class="soft-man-con bt-form"></div></div></div>'
+        content: '<div class="bt-w-main" style="width:100%;'+(name === 'mysqld' ? 'height: 590px;' : '')+'"><div class="bt-w-menu bt-soft-menu"></div><div id="webEdit-con" class="bt-w-con pd15" style="height:'+(name === 'mysqld' ? '100%' : '560px')+';overflow:auto"><div class="soft-man-con bt-form"></div></div></div>'
       });
       var menu = $('.bt-soft-menu').data("data", rdata);
       setTimeout(function () {
@@ -1333,25 +1333,25 @@ var soft = {
           $(this).addClass("bgw").siblings().removeClass("bgw");
         });
         $(".bt-w-menu p:eq(0)").trigger("click");
-            if(name.indexOf('php-') != -1 || name.indexOf('apache') != -1 ){
-                bt.soft.get_soft_find('apache', function (rdata) {
-                if (rdata.setup) {
-                    if (rdata.version.indexOf('2.2') >= 0) {
-                    if (name.indexOf('php-') != -1) {
-                        $(".apache24").hide();
-                        $(".bt_server").remove();
-                        $(".bt-w-menu p:eq(0)").trigger("click");
-                    }
-
-                    if (name.indexOf('apache') != -1) {
-                        $(".bt-soft-menu p:eq(3)").remove()
-                        $(".bt-soft-menu p:eq(3)").remove()
-                    }
-                    }
+        if(name.indexOf('php-') != -1 || name.indexOf('apache') != -1 ){
+          bt.soft.get_soft_find('apache', function (rdata) {
+            if (rdata.setup) {
+              if (rdata.version.indexOf('2.2') >= 0) {
+                if (name.indexOf('php-') != -1) {
+                  $(".apache24").hide();
+                  $(".bt_server").remove();
+                  $(".bt-w-menu p:eq(0)").trigger("click");
                 }
-                })
+
+                if (name.indexOf('apache') != -1) {
+                  $(".bt-soft-menu p:eq(3)").remove()
+                  $(".bt-soft-menu p:eq(3)").remove()
+                }
+              }
             }
-        }, 100)
+          })
+        }
+      }, 100)
     })
   },
   get_tab_contents: function (key, obj) //获取设置菜单操作
@@ -1881,6 +1881,9 @@ var soft = {
           for (var i = 0; i < form_datas.length; i++) {
             bt.render_form_line(form_datas[i], '', $('.tab-db-status'));
           }
+          
+          $('[name=bt_mysql_save]').css({'position': 'absolute','right': '20px','margin-top':'10px'})
+          $('[name=bt_mysql_restart]').css({'position': 'absolute','right': '75px'})
 
           $(".tab-db-status input[name*='size'],.tab-db-status input[name='max_connections'],.tab-db-status input[name='thread_stack']").change(function () {
 
@@ -2210,7 +2213,7 @@ var soft = {
                       return;
                     }
                     if (!bt.check_port(ldata.port)) {
-                      layer.msg('端口范围不正确!', {
+                      layer.msg('端口格式错误，可用范围：1-65535<br />请避免使用以下端口【22,80,443,8080,8443,8888】', {
                         icon: 2
                       });
                       return;
@@ -2341,6 +2344,10 @@ var soft = {
         get_phpmyadmin_ssl()
         $('.phpmyadmin_port').click(function () {
           var pmport = $("#pmport").val();
+          if (!bt.check_port(pmport)) {
+            layer.msg('端口格式错误，可用范围：1-65535，<br />请避免使用以下端口【22,80,443,8080,8443,8888】', {icon:2});
+            return;
+          }
           var loadT = bt.load(lan.public.the);
           bt.send('setPHPMyAdmin', 'ajax/setPHPMyAdmin', {
             port: pmport
@@ -2364,9 +2371,10 @@ var soft = {
         $('.ssl_port_button').click(function () {
           var sslPort = $('#sslport').val();
           if (!bt.check_port(sslPort)) {
-            layer.msg(lan.firewall.port_err, {
-              icon: 2
-            });
+            layer.msg('端口格式错误，可用范围：1-65535，<br />请避免使用以下端口【22,80,443,8080,8443,8888】', {icon:2});
+            // layer.msg(lan.firewall.port_err, {
+            //   icon: 2
+            // });
             return;
           }
           var loadTo = bt.load(lan.public.the);
@@ -3042,9 +3050,10 @@ var soft = {
               '</div>' +
               '</div>' +
               '<div class="line">' +
-              '<span class="tname">IP地址</span>' +
-              '<div class="info-r ">' +
-              '<input name="ip" class="bt-input-text mr5" type="text" style="width:160px" value="' + res.save_path + '">' +
+              '<span class="tname">连接地址</span>' +
+              '<div class="info-r " style="margin-left: 100px;">' +
+              '<input name="ip" class="bt-input-text mr10" type="text" style="width:160px" value="' + res.save_path + '">' +
+							'<div class="c9" style="display: inline-block;">支持域名和IP地址</div>' +
               '</div>' +
               '</div>' +
               '<div class="line">' +
@@ -3081,9 +3090,11 @@ var soft = {
                   layer.msg(res.msg, {
                     icon: res.status ? 1 : 2
                   });
-                  setTimeout(function () {
-                    $('.bt-soft-menu p:eq(9)').click();
-                  }, 2000);
+									if (res.status) {
+                    setTimeout(function () {
+                      $('.bt-soft-menu p.bgw').click();
+                    }, 2000);
+                  }
                 });
               })
             });
@@ -3119,9 +3130,11 @@ var soft = {
               layer.msg(res.msg, {
                 icon: res.status ? 1 : 2
               });
-              setTimeout(function () {
-                $('.bt-soft-menu p:eq(9)').click();
-              }, 2000);
+              if (res.status) {
+								setTimeout(function () {
+									$('.bt-soft-menu p.bgw').click();
+								}, 2000);
+							}
             })
           });
 

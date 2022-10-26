@@ -5037,6 +5037,8 @@ font-weight: bold
 }
 
 
+
+
 /* 绑定用户 */
 
 .bind-user {
@@ -5119,6 +5121,7 @@ font-weight: bold
   font-size: 12px;
   margin-right: 3px;
 }
+
 
 
 /*微信二维码*/
@@ -5465,7 +5468,6 @@ select[disabled] {
 }
 
 .tab-db-status .bt_mysql_restart {
-  margin-left: 355px;
   margin-top: 10px;
 }
 
@@ -6113,7 +6115,7 @@ select[disabled] {
   left: 0;
   right: 0;
   top: 0;
-  height: 35px;
+  height: 30px;
   background: #565656;
   transition: top 500ms;
 }
@@ -6286,8 +6288,8 @@ select[disabled] {
 
 .ace_header>span {
   float: left;
-  height: 35px;
-  line-height: 35px;
+  height: 30px;
+  line-height: 30px;
   padding: 0 15px;
   font-size: 13px;
   text-align: center;
@@ -6298,7 +6300,6 @@ select[disabled] {
 
 .ace_header>span i {
   margin-right: 5px;
-  vertical-align: text-top;
 }
 
 .ace_header>span:hover {
@@ -14877,6 +14878,7 @@ textarea {
 .libPay-menu.closePro .libPay-menu-type.lib_pro{
   display: none;
 }
+.libPay-menu.closePro .libPay-menu-type.lib_plugin,
 .libPay-menu.closePro .libPay-menu-type.lib_ltd,
 .libPay-menu.closePro .libPay-menu-type.lib_ops,
 .libPay-menu.closePro .libPay-menu-type.lib_ver{
@@ -15553,6 +15555,19 @@ textarea {
   cursor: no-drop;
 }
 
+.delete_site_layer .layui-layer-btn0 {
+  background-color: #e00000 !important;
+}
+
+.delete_site_layer .layui-layer-btn0:hover {
+  background-color: #ff0000 !important;
+}
+
+.verify_site_layer_info.on .layui-layer-btn0 {
+  background: #e000008c !important;
+  cursor: no-drop;
+}
+
 .check_delete_site_main {
   height: 100%;
   padding: 10px 15px;
@@ -15607,6 +15622,11 @@ textarea {
 }
 
 .check_layer_content span i.warning {
+  color: #EE3838;
+  font-weight: bold;
+}
+
+#check_layer_content .warning{
   color: #EE3838;
   font-weight: bold;
 }
@@ -16718,8 +16738,8 @@ select[name=dataAccess] {
 .recommend-top{
   height: 50px;
   line-height: 22px;
-  /*display: flex;*/
-  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .recommend-bottom{
@@ -17630,7 +17650,7 @@ select[name=dataAccess] {
   width: 430px;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: pre;
+  word-wrap: break-word;
 }
 .scan-error-item .scan-error-header span:nth-child(2){
   flex: 1;
@@ -17972,25 +17992,88 @@ select[name=dataAccess] {
 
 /* 表单行内 */
 .bt-form-new.inline {
-	display: flex;
-	flex-wrap: wrap;
+  display: flex;
+  flex-wrap: wrap;
 }
 .bt-form-new .form-item {
-	display: flex;
+  display: flex;
 }
 .bt-form-new.inline .form-item + .form-item {
-	margin-left: 15px;
+  margin-left: 15px;
 }
 .form-item .form-label {
-	line-height: 32px;
-	padding-right: 12px;
+  line-height: 32px;
+  padding-right: 12px;
 }
 .form-item .form-content {
-	display: flex;
-	align-items: center;
-	min-height: 32px;
+  display: flex;
+  align-items: center;
+  min-height: 32px;
 }
 .form-item .form-content .btswitch-btn {
-	margin-bottom: 0;
+  margin-bottom: 0;
 }
 /* end */
+/* new提示对话弹窗样式 */
+.color-org {
+  color: #fc6d26;
+}
+.hint_confirm .hint_title {
+  font-size: 16px;
+  color: #111;
+  display: flex;
+  align-items: center;
+}
+.hint_confirm .hint_title .hint-confirm-icon {
+  background: url(/static/img/hint-confirm-icon.svg) no-repeat;
+  min-width: 40px;
+  height: 40px;
+  align-self: baseline;
+}
+.hint_confirm .hint_title .hint_con {
+  margin-left: 15px;
+  line-height: 28px;
+}
+.hint_confirm .vcode {
+  background-color: #f0f0f0;
+  clear: both;
+  font-size: 14px;
+  height: 50px;
+  line-height: 50px;
+  padding: 0 55px;
+  margin-top: 20px;
+}
+.hint_confirm .vcode .text {
+  margin-right: 10px;
+  margin-left: 10px;
+}
+.hint_confirm .vcode #vcodeResult {
+  border: 1px solid #ccc;
+  padding-left: 5px;
+  outline: none;
+  width: 80px;
+  color: #444;
+  display: inline;
+  height: 30px;
+  line-height: 30px;
+  margin-left: 10px;
+}
+.hint_confirm .confirm-info-box {
+  background-color: #f0f0f0;
+  clear: both;
+  font-size: 14px;
+  height: 105px;
+  line-height: 26px;
+  padding: 20px 20px;
+  margin-top: 20px;
+}
+.hint_confirm .confirm-info-box #prompt_input_box {
+  height: 30px;
+  line-height: 30px;
+  margin-top: 5px;
+  width: 330px;
+  color: #444;
+  outline: none;
+  border: 1px solid #ccc;
+}
+/* new提示对话弹窗样式 end */

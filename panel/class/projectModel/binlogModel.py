@@ -214,7 +214,11 @@ class main(projectBase):
 
         download_url = ''
         for cloud in cloud_list:
-            download_url=cloud.download_file(local_file_name.replace('/www/backup','bt_backup'))
+            download_url=''
+            try:
+                download_url=cloud.download_file(local_file_name.replace('/www/backup','bt_backup'))
+            except:
+                pass
             if download_url:self.download_big_file(local_file_name, download_url, size)
             if os.path.isfile(local_file_name):
                 print('已从远程存储器下载{}'.format(local_file_name))
@@ -2561,10 +2565,42 @@ class main(projectBase):
 
 
 # ==========================云存储相关方法==========================
-def set_config(self, get):
-    """
-    @name 设置云存储参数
-    """
+    def get_config(self, name):
+            """
+            @name 取云存储配置信息
+            """
+            bak_name = name+'As.conf'
+            bak_path = os.path.join(public.get_datadir(),bak_name)
+            decrypt_file = os.path.join(public.get_panel_path(),'data/a_pass.pl')
+            path_name = name+'/config.conf'
+            path = os.path.join(public.get_plugin_path(),path_name)
+            setup_path=os.path.join(public.get_plugin_path(),name)
+            status_file = os.path.join(setup_path,'aes_status')
+            is_aes=False
+            if os.path.isfile(status_file):
+                is_aes=True
+            config_file=''
+            if os.path.isfile(path):
+                config_file=path
+            elif os.path.isfile(bak_path):
+                config_file=bak_path
+            if not config_file:return ['', '', '', '', '/'] #public.returnMsg(False,'配置文件不存在或插件未安装')
+            conf =public.readFile(config_file)
+            if is_aes:
+                try:
+                    decyrpt_key=public.readFile(decrypt_file)
+                    conf = public.aes_decrypt(conf,decyrpt_key)
+                except:conf={}
+            else:
+                conf = json.loads(conf)
+            binlog_path = self._config_path + '/'+bak_name
+            if not os.path.isfile(binlog_path) and not conf: return ['', '', '', '', '/']
+            if not conf and os.path.isfile(binlog_path):
+                conf = public.readFile(binlog_path)
+            if not conf: return ['', '', '', '', '/']
+            result = conf.split('|')
+            if len(result) < 5: result.append('/')
+            return result
 
 #阿里云OSS
 class alioss_main:
@@ -2598,31 +2634,7 @@ class alioss_main:
             @auther hezhihong<2022-04-25>
             @return 以|为连接的密钥信息
         """
-        path = main()._config_path + '/alioss.conf'
-        #从阿里云存储插件配置取配置密钥信息
-        if not os.path.isfile(path):
-            file_name = ''
-            if os.path.isfile(main()._plugin_path+'alioss/config.conf'):
-                file_name = main()._plugin_path+'alioss/config.conf'
-            elif os.path.isfile(main()._setup_path+'data/aliossAS.conf'):
-                file_name=main()._setup_path+'data/aliossAS.conf'
-            oss_info=None
-            if os.path.isfile(file_name):
-                try:
-                    oss_info = json.loads(public.readFile(main()._setup_path+'data/aliossAS.conf'))
-                except:
-                    pass
-                if 'access_key' not in oss_info or 'secret_key' not in oss_info or 'bucket_name' not in oss_info or 'bucket_domain' not in oss_info:oss_info=None
-                if oss_info:
-                    add_str = oss_info['access_key']+'|'+oss_info['secret_key']+'|'+oss_info['bucket_name']+'|'+oss_info['bucket_domain']+'|'+oss_info['backup_path']
-                    public.writeFile(path, add_str)
-        if not os.path.isfile(path): return ['', '', '', '', '/']
-        conf = public.readFile(path)
-        # print(conf)
-        if not conf: return ['', '', '', '', '/']
-        result = conf.split('|')
-        if len(result) < 5: result.append('/')
-        return result
+        return main().get_config('alioss')
         
     
 
@@ -2830,31 +2842,7 @@ class txcos_main:
         """
         @name 设置腾讯云COS密码信息
         """
-        path = main()._config_path + '/txcos.conf'
-        #从腾讯云COS插件配置取配置密钥信息
-        if not os.path.isfile(path):
-            file_name = ''
-            if os.path.isfile(main()._plugin_path+'txcos/config.conf'):
-                file_name=main()._plugin_path+'txcos/config.conf'
-            elif os.path.isfile(main()._setup_path+'data/txcosAS.conf'):
-                file_name=main()._setup_path+'data/txcosAS.conf'
-            file_name =file_name.replace('//', '/')
-            oss_info=None
-            if os.path.isfile(file_name):
-                try:
-                    oss_info = json.loads(public.readFile(file_name))
-                except:
-                    pass
-                if 'access_key' not in oss_info or 'secret_key' not in oss_info or 'bucket_name' not in oss_info or 'bucket_domain' not in oss_info:oss_info=None
-                if oss_info:
-                    add_str = oss_info['secret_id']+'|'+oss_info['secret_key']+'|'+oss_info['region']+'|'+oss_info['bucket_name']+'|'+oss_info['backup_path']
-                    public.writeFile(path, add_str)
-        if not os.path.isfile(path): return ['', '', '', '', '/']
-        conf = public.readFile(path)
-        if not conf: return ['', '', '', '', '/']
-        result = conf.split('|')
-        if len(result) < 5: result.append('/')
-        return result
+        return main().get_config('txcos')
         
         
 
@@ -3049,29 +3037,7 @@ class ftp_main:
         self.__path = self.get_config(None)[3]
 
     def get_config(self, get=None):
-        path = main()._config_path + '/ftp.conf'
-        #从FTP存储空间插件配置取配置密钥信息
-        if not os.path.isfile(path):
-            file_name = ''
-            if os.path.isfile(main()._plugin_path+'ftp/config.conf'):
-                file_name=main()._plugin_path+'ftp/config.conf'
-            elif os.path.isfile(main()._setup_path+'data/ftpAS.conf'):
-                file_name=main()._setup_path+'data/ftpAS.conf'
-            file_name =file_name.replace('//', '/')
-            oss_info=None
-            if os.path.isfile(file_name):
-                try:
-                    oss_info = json.loads(public.readFile(file_name))
-                except:
-                    pass
-                if 'ftp_host' not in oss_info or 'ftp_user' not in oss_info or 'ftp_pass' not in oss_info or 'backup_path' not in oss_info:oss_info=None
-                if oss_info:
-                    add_str = oss_info['ftp_host']+'|'+oss_info['ftp_user']+'|'+oss_info['ftp_pass']+'|'+oss_info['backup_path']
-                    public.writeFile(path, add_str)
-        if not os.path.exists(path): return ['', '', '', '/']
-        conf = public.readFile(path)
-        if not conf: return ['', '', '', '/']
-        return conf.split('|')
+        return main().get_config('ftp')
         
 
     def set_config(self, get):
@@ -3289,9 +3255,9 @@ class qiniu_main:
         # 获取秘钥
         keys = self.get_config()
 
-        self.__bucket_name = keys[2]
-        if keys[3].find(keys[2]) != -1: keys[3] = keys[3].replace(keys[2] + '.', '')
-        self.__bucket_domain = keys[3]
+        self.__bucket_name = keys[3]
+        if keys[2].find(keys[3]) != -1: keys[2] = keys[2].replace(keys[3] + '.', '')
+        self.__bucket_domain = keys[2]
         self.__bucket_path = main().get_path(keys[4] + '/bt_backup/')
         if self.__bucket_path[:1] == '/': self.__bucket_path = self.__bucket_path[1:]
 
@@ -3303,31 +3269,7 @@ class qiniu_main:
             # print(self.__error_msg, str(ex))
 
     def get_config(self, get=None):
-        path = main()._config_path + '/qiniu.conf'
-        #从七牛云存储插件配置取配置密钥信息
-        if not os.path.isfile(path):
-            file_name = ''
-            if os.path.isfile(main()._plugin_path+'qiniu/config.conf'):
-                file_name = main()._plugin_path+'qiniu/config.conf'
-            elif os.path.isfile(main()._setup_path+'data/qiniuAS.conf'):
-                file_name = main()._setup_path+'data/qiniuAS.conf'
-            file_name =file_name.replace('//', '/')
-            oss_info=None
-            if os.path.isfile(file_name):
-                try:
-                    oss_info = json.loads(public.readFile(file_name))
-                except:
-                    pass
-                if 'access_key_id' not in oss_info or 'access_key_secret' not in oss_info or 'bucket_name' not in oss_info or 'bucket_domain' not in oss_info:oss_info=None
-                if oss_info:
-                    add_str = oss_info['access_key_id']+'|'+oss_info['access_key_secret']+'|'+oss_info['bucket_name']+'|'+oss_info['bucket_domain']+'|'+oss_info['backup_path']
-                    public.writeFile(path, add_str)
-        if not os.path.isfile(path): return ['', '', '', '', '/']
-        conf = public.readFile(path)
-        if not conf: return ['', '', '', '', '/']
-        result = conf.split('|')
-        if len(result) < 5: result.append('/')
-        return result
+        return main().get_config('qiniu')
         
         
 
@@ -3570,8 +3512,8 @@ class obs_main:
         keys = self.get_config()
         self.__secret_id = keys[0]
         self.__secret_key = keys[1]
-        self.__region = keys[2]
-        self.__Bucket = keys[3]
+        self.__region = keys[3]
+        self.__Bucket = keys[2]
         self.__bucket_path = main().get_path(keys[4])
         try:
             # from obs import ObsClient
@@ -3589,35 +3531,7 @@ class obs_main:
         """
         @name 获取华为云密钥信息
         """
-        path = main()._config_path + '/obs.conf'
-        # print(path)
-        #从华为云OBS插件配置取配置密钥信息
-        if not os.path.isfile(path):
-            file_name = ''
-            # print((main()._plugin_path)
-            if os.path.isfile(main()._plugin_path+'obs/config.conf'):
-                file_name=main()._plugin_path+'obs/config.conf'
-            elif os.path.isfile(main()._setup_path+'data/obsAS.conf'):
-                file_name = main()._setup_path+'data/obsAS.conf'
-            file_name =file_name.replace('//', '/')
-            obs_info=None
-            if os.path.isfile(file_name):
-                try:
-                    obs_info = json.loads(public.readFile(file_name))
-                except:
-                    pass
-                if 'access_key' not in obs_info or 'secret_key' not in obs_info or 'bucket_name' not in obs_info or 'bucket_domain' not in obs_info:obs_info=None
-                if obs_info:
-                    add_str = obs_info['access_key']+'|'+obs_info['secret_key']+'|'+obs_info['bucket_name']+'|'+obs_info['bucket_domain']+'|'+obs_info['backup_path']
-                    public.writeFile(path, add_str)
-        if not os.path.isfile(path): return ['', '', '', '', '/']
-        conf = public.readFile(path)
-        if not conf: return ['', '', '', '', '/']
-        result = conf.split('|')
-        if len(result) < 5: result.append('/')
-        # print('result:')
-        # print(result)
-        return result
+        return main().get_config('obs')
 
     # 检测华为云存储是否可用
     def check_config(self):
@@ -3861,8 +3775,8 @@ class bos_main:
         keys = self.get_config()
         self.__secret_id = keys[0]
         self.__secret_key = keys[1]
-        self.__region = keys[2]
-        self.__Bucket = keys[3]
+        self.__region = keys[3]
+        self.__Bucket = keys[2]
         # self.__bucket_path = keys[4]
         self.__bucket_path = main().get_path(keys[4])
         try:
@@ -3874,36 +3788,11 @@ class bos_main:
             pass
             # print(self.__error_msg, str(ex))
 
-
     def get_config(self, get=None):
         """
         @name 设置百度云存储设置密钥信息
         """
-        path = main()._config_path + '/bos.conf'
-        #从百度云存储插件配置取配置密钥信息
-        if not os.path.isfile(path):
-            file_name = ''
-            if os.path.isfile(main()._plugin_path+'bos/config.conf'):
-                file_name = main()._plugin_path+'bos/config.conf'
-            elif os.path.isfile(main()._setup_path+'data/bosAS.conf'):
-                file_name=main()._setup_path+'data/bosAS.conf'
-            file_name =file_name.replace('//', '/')
-            oss_info=None
-            if os.path.isfile(file_name):
-                try:
-                    oss_info = json.loads(public.readFile(file_name))
-                except:
-                    pass
-                if 'access_key' not in oss_info or 'secret_key' not in oss_info or 'bucket_name' not in oss_info or 'bucket_domain' not in oss_info:oss_info=None
-                if oss_info:
-                    add_str = oss_info['access_key']+'|'+oss_info['secret_key']+'|'+oss_info['bucket_name']+'|'+oss_info['bucket_domain']+'|'+oss_info['backup_path']
-                    public.writeFile(path, add_str)
-        if not os.path.isfile(path): return ['', '', '', '', '/']
-        conf = public.readFile(path)
-        if not conf: return ['', '', '', '', '/']
-        result = conf.split('|')
-        if len(result) < 5: result.append('/')
-        return result
+        return main().get_config('bos')
         
         
 

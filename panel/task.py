@@ -24,7 +24,6 @@ import public
 import db
 import threading
 import panelTask
-import PluginLoader
 task_obj = panelTask.bt_task()
 task_obj.not_web = True
 global pre, timeoutCount, logPath, isTask, oldEdate, isCheck
@@ -503,6 +502,7 @@ def checkPHPVersion(version):
 
 # 502错误检查线程
 def check502Task():
+    import PluginLoader
     try:
         while True:
             public.auto_backup_panel()
@@ -688,7 +688,6 @@ def check_panel_msg():
     while True:
         os.system('nohup {} /www/server/panel/script/check_msg.py > /dev/null 2>&1 &'.format(python_bin))
         time.sleep(3600)
-        PluginLoader.daemon_task()
 
 # 面板推送消息
 def push_msg():
@@ -850,6 +849,101 @@ class process_task:
 
         self.__sql.close()
 
+
+
+def JavaProDaemons():
+    '''
+        @name Java 项目守护进程
+        @author lkq@bt.cn
+        @time 2022-07-19
+        @param None
+    '''
+    if public.M('sites').where('project_type=?',('Java')).count()>=1:
+        project_info=public.M('sites').where('project_type=?',('Java')).select()
+        for i in project_info:
+            try:
+                import json
+                i['project_config'] = json.loads(i['project_config'])
+                #判断项目是否设置了守护进程
+                if  i['project_config']['java_type']!='springboot':continue
+                if 'auth' in i['project_config'] and i['project_config']['auth']==1 or i['project_config']['auth']=='1':
+                    print("Java",i['name'])
+                    from projectModel import javaModel
+                    java = javaModel.main()
+                    if java.get_project_run_state(project_name=i['name']):
+                        continue
+                    else:
+                        #如果项目是在后台停止的，那么就不再启动
+                        if  os.path.exists("/var/tmp/springboot/vhost/pids/{}.pid".format(i['name'])):
+                            get=public.dict_obj()
+                            get.project_name=i['name']
+                            java.start_project(get)
+                            public.WriteLog('守护进程','Java项目[{}]已经被守护进程启动'.format(i['name']))
+            except:
+                continue
+
+def GoDaemons():
+    '''
+        @name Go 项目守护进程
+        @author lkq@bt.cn
+        @time 2022-07-19
+        @param None
+    '''
+    if public.M('sites').where('project_type=?',('Go')).count()>=1:
+        project_info=public.M('sites').where('project_type=?',('Go')).select()
+        for i in project_info:
+            try:
+                import json
+                i['project_config'] = json.loads(i['project_config'])
+                if 'is_power_on' in i['project_config'] and i['project_config']['is_power_on']==1 or i['project_config']['is_power_on']=='1':
+                    from projectModel import goModel
+                    java = goModel.main()
+                    if java.get_project_run_state(project_name=i['name']):
+                        continue
+                    else:
+                        #如果项目是在后台停止的，那么就不再启动
+                        if os.path.exists("/var/tmp/gopids/{}.pid".format(i['name'])):
+                            get=public.dict_obj()
+                            get.project_name=i['name']
+                            java.start_project(get)
+                            public.WriteLog('守护进程','Go项目[{}]已经被守护进程启动'.format(i['name']))
+            except:
+                continue
+
+def ProLog():
+    path_list=["/www/server/go_project/vhost/logs","/var/tmp/springboot/vhost/logs/"]
+    try:
+        for i2 in path_list:
+            if os.path.exists(i2):
+                for dir in os.listdir(i2):
+                    dir = os.path.join(i2, dir)
+                    # 判断当前目录是否为文件夹
+                    if os.path.isfile(dir):
+                        if dir.endswith(".log"):
+                            #文件大于500M的时候则清空文件
+                            if os.stat(dir).st_size >200000000:
+                                public.ExecShell("echo ''>{}".format(dir))
+    except:
+        pass
+
+def ProDadmons():
+    '''
+        @name 项目守护进程
+        @author
+    '''
+    n = 30
+    while 1:
+        n += 1
+        if n >= 30:
+            n = 1
+            ProLog()
+        time.sleep(120)
+        try:
+            JavaProDaemons()
+        except:
+            pass
+        GoDaemons()
+
 def run_thread():
     global thread_dict,task_obj
     tkeys = thread_dict.keys()
@@ -864,7 +958,8 @@ def run_thread():
         "update_software_list": update_software_list,
         "send_mail_time": send_mail_time,
         "check_panel_msg": check_panel_msg,
-        "push_msg": push_msg
+        "push_msg": push_msg,
+        "ProDadmons":ProDadmons,
     }
 
     for skey in thread_list.keys():
@@ -872,7 +967,6 @@ def run_thread():
             thread_dict[skey] = threading.Thread(target=thread_list[skey])
             thread_dict[skey].setDaemon(True)
             thread_dict[skey].start()
-
 
 def main():
     main_pid = 'logs/task.pid'
@@ -893,11 +987,13 @@ def main():
     sys.stderr.flush()
     task_log_file = 'logs/task.log'
 
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s]: %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S', filename=task_log_file, filemode='a+')
+    try:
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s]: %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S', filename=task_log_file, filemode='a+')
+    except Exception as ex:
+        print(ex)
     logging.info('服务已启动')
     time.sleep(5)
-
     run_thread()
     startTask()
 

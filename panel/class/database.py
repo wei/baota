@@ -308,6 +308,7 @@ class database(datatool.datatools):
         #添加MYSQL
         self.sid = get.get('sid/d',0)
         mysql_obj = public.get_mysql_obj_by_sid(self.sid)
+        if not mysql_obj: return public.returnMsg(False,'连接指定数据库失败')
 
         #从MySQL验证是否存在
         if self.database_exists_for_mysql(mysql_obj,data_name):  return public.returnMsg(False,'指定数据库已在MySQL中存在，请换个名称!')
@@ -352,6 +353,7 @@ class database(datatool.datatools):
     #创建用户
     def __CreateUsers(self,dbname,username,password,address):
         mysql_obj = public.get_mysql_obj_by_sid(self.sid)
+        if not mysql_obj: return public.returnMsg(False,'连接指定数据库失败')
         mysql_obj.execute("CREATE USER `%s`@`localhost` IDENTIFIED BY '%s'" % (username,password))
         result = mysql_obj.execute("grant all privileges on `%s`.* to `%s`@`localhost`" % (dbname,username))
         if str(result).find('1044') != -1:
@@ -671,6 +673,7 @@ SetLink
             self.sid = get.get('sid/d',0)
             #修改MYSQL
             mysql_obj = public.get_mysql_obj_by_sid(self.sid)
+            if not mysql_obj: return public.returnMsg(False,'连接指定数据库失败')
             result = mysql_obj.query("show databases")
             isError=self.IsSqlError(result)
             is_modify = True
@@ -731,6 +734,7 @@ SetLink
         self.sid = db_find['sid']
         if self.sid and username == 'root': return public.returnMsg(False,'不能修改远程数据库的root密码')
         mysql_obj = public.get_mysql_obj_by_sid(self.sid)
+        if not mysql_obj: return public.returnMsg(False,'连接指定数据库失败')
         m_version = public.readFile(public.GetConfigValue('setup_path') + '/mysql/version.pl')
         if self.sid:
             m_version = mysql_obj.query('select version();')[0][0]
@@ -773,7 +777,7 @@ SetLink
     #备份
     def ToBackup(self,get):
         #try:
-
+        import shlex
         id = get['id']
         db_find = public.M('databases').where("id=?",(id,)).find()
         name = db_find['name']
@@ -791,8 +795,10 @@ SetLink
             if not self.mypass(True, root):return public.returnMsg(False, '数据库配置文件获取失败,请检查MySQL配置文件是否存在')
             try:
                 password = public.M('config').where('id=?',(1,)).getField('mysql_root')
-                os.environ["MYSQL_PWD"] = str(password)
-                public.ExecShell(mysqldump_bin + " -R -E --triggers=false --default-character-set="+ public.get_database_character(name) +" --force --opt \"" + name + "\"  -u root -p\""+str(password)+"\" | gzip > " + backupName)
+                if not password: return public.returnMsg(False,'数据库密码不能为空')
+                password = shlex.quote(str(password))
+                os.environ["MYSQL_PWD"] = password
+                public.ExecShell(mysqldump_bin + " -R -E --triggers=false --default-character-set="+ public.get_database_character(name) +" --force --opt \"" + name + "\"  -u root -p"+password+" | gzip > " + backupName)
             except Exception as e:
                 raise
             finally:
@@ -804,8 +810,9 @@ SetLink
                 conn_config = json.loads(db_find['conn_config'])
                 res = self.CheckCloudDatabase(conn_config)
                 if isinstance(res,dict): return res
-                os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
-                public.ExecShell(mysqldump_bin + " -h "+ conn_config['db_host'] +" -P "+ str(int(conn_config['db_port'])) +" -R -E --triggers=false --default-character-set=" + public.get_database_character(name) + " --force --opt \"" + str(db_find['name']) + "\"  -u "+ str(conn_config['db_user']) +" -p\""+str(conn_config['db_password'])+"\" | gzip > " + backupName)
+                password = shlex.quote(str(conn_config['db_password']))
+                os.environ["MYSQL_PWD"] = password
+                public.ExecShell(mysqldump_bin + " -h "+ conn_config['db_host'] +" -P "+ str(int(conn_config['db_port'])) +" -R -E --triggers=false --default-character-set=" + public.get_database_character(name) + " --force --opt \"" + str(db_find['name']) + "\"  -u "+ str(conn_config['db_user']) +" -p"+password+" | gzip > " + backupName)
             except Exception as e:
                 raise
             finally:
@@ -815,8 +822,9 @@ SetLink
                 conn_config = public.M('database_servers').where('id=?',db_find['sid']).find()
                 res = self.CheckCloudDatabase(conn_config)
                 if isinstance(res,dict): return res
-                os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
-                public.ExecShell(mysqldump_bin + " -h "+ conn_config['db_host'] +" -P "+ str(int(conn_config['db_port'])) +" -R -E --triggers=false --default-character-set=" + public.get_database_character(name) + " --force --opt \"" + str(db_find['name']) + "\"  -u "+ str(conn_config['db_user']) +" -p\""+str(conn_config['db_password'])+"\" | gzip > " + backupName)
+                password = shlex.quote(str(conn_config['db_password']))
+                os.environ["MYSQL_PWD"] = password
+                public.ExecShell(mysqldump_bin + " -h "+ conn_config['db_host'] +" -P "+ str(int(conn_config['db_port'])) +" -R -E --triggers=false --default-character-set=" + public.get_database_character(name) + " --force --opt \"" + str(db_find['name']) + "\"  -u "+ str(conn_config['db_user']) +" -p"+password+" | gzip > " + backupName)
             except Exception as e:
                 raise
             finally:
@@ -857,7 +865,7 @@ SetLink
     #导入
     def InputSql(self,get):
         #try:
-
+        import shlex
         name = get['name']
         file = get['file']
         root = public.M('config').where('id=?',(1,)).getField('mysql_root')
@@ -868,6 +876,7 @@ SetLink
             return public.returnMsg(False, 'DATABASE_INPUT_ERR_FORMAT')
         db_find = public.M('databases').where('name=?',name).find()
         mysql_obj = public.get_mysql_obj_by_sid(db_find['sid'])
+        if not mysql_obj: return public.returnMsg(False,'连接指定数据库失败')
         result =mysql_obj.execute("show databases")
         isError=self.IsSqlError(result)
         if isError: return isError
@@ -904,16 +913,19 @@ SetLink
             try:
                 if db_find['db_type'] in ['0',0]:
                     password = public.M('config').where('id=?',(1,)).getField('mysql_root')
-                    os.environ["MYSQL_PWD"] = str(password)
-                    public.ExecShell(mysql_bin + " -uroot -p" + str(password) + " --force \"" + name + "\" < " +'"'+ input_path +'"')
+                    password = shlex.quote(str(password))
+                    os.environ["MYSQL_PWD"] = password
+                    public.ExecShell(mysql_bin + " -uroot -p" + password + " --force \"" + name + "\" < " +'"'+ input_path +'"')
                 elif db_find['db_type'] in ['1',1]:
                     conn_config = json.loads(db_find['conn_config'])
-                    os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
-                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p\"" + str(conn_config['db_password']) + "\" --force \"" + name + "\" < " +'"'+ input_path +'"')
+                    password = shlex.quote(str(conn_config['db_password']))
+                    os.environ["MYSQL_PWD"] = password
+                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p" + password + " --force \"" + name + "\" < " +'"'+ input_path +'"')
                 elif db_find['db_type'] in ['2',2]:
                     conn_config = public.M('database_servers').where('id=?',db_find['sid']).find()
-                    os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
-                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p\"" + str(conn_config['db_password']) + "\" --force \"" + name + "\" < " +'"'+ input_path +'"')
+                    password = shlex.quote(str(conn_config['db_password']))
+                    os.environ["MYSQL_PWD"] = password
+                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p" + password + " --force \"" + name + "\" < " +'"'+ input_path +'"')
             except Exception as e:
                 raise
             finally:
@@ -927,16 +939,19 @@ SetLink
             try:
                 if db_find['db_type'] in ['0',0]:
                     password = public.M('config').where('id=?',(1,)).getField('mysql_root')
-                    os.environ["MYSQL_PWD"] = str(password)
-                    public.ExecShell(mysql_bin + " -uroot -p" + root + " --force \"" + name + "\" < " +'"'+ file +'"')
+                    password = shlex.quote(str(password))
+                    os.environ["MYSQL_PWD"] = password
+                    public.ExecShell(mysql_bin + " -uroot -p" + password + " --force \"" + name + "\" < " +'"'+ file +'"')
                 elif db_find['db_type'] in ['1',1]:
                     conn_config = json.loads(db_find['conn_config'])
-                    os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
-                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p\"" + str(conn_config['db_password']) + "\" --force \"" + name + "\" < " +'"'+ file +'"')
+                    password = shlex.quote(str(conn_config['db_password']))
+                    os.environ["MYSQL_PWD"] = password
+                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p" + password + " --force \"" + name + "\" < " +'"'+ file +'"')
                 elif db_find['db_type'] in ['2',2]:
                     conn_config = public.M('database_servers').where('id=?',db_find['sid']).find()
-                    os.environ["MYSQL_PWD"] = str(conn_config['db_password'])
-                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p\"" + str(conn_config['db_password']) + "\" --force \"" + name + "\" < " +'"'+ file +'"')
+                    password = shlex.quote(str(conn_config['db_password']))
+                    os.environ["MYSQL_PWD"] = password
+                    public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p" + password + " --force \"" + name + "\" < " +'"'+ file +'"')
             except Exception as e:
                 raise
             finally:
@@ -1008,6 +1023,7 @@ SetLink
             public.M('databases').where("id=?",(find['id'],)).save('password,username',(find['password'],find['username']))
         self.sid = find['sid']
         mysql_obj = public.get_mysql_obj_by_sid(find['sid'])
+        if not mysql_obj: return public.returnMsg(False,'连接指定数据库失败')
         result = mysql_obj.execute("create database `" + find['name'] + "`")
         if "using password:" in str(result): return -1
         if "Connection refused" in str(result): return -1
@@ -1026,6 +1042,7 @@ SetLink
         db_type = 0
         if self.sid: db_type = 2
         mysql_obj = public.get_mysql_obj_by_sid(self.sid)
+        if not mysql_obj: return public.returnMsg(False,'连接指定数据库失败')
         data = mysql_obj.query("show databases")
         isError = self.IsSqlError(data)
         if isError != None: return isError

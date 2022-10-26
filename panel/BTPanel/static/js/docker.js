@@ -1837,9 +1837,11 @@ var docker = {
                         _val_two = $(_Arrinput[1]).val(),
                         THbody = $(this).siblings('.divtable').find('tbody'),
                         _td = '';
-                    
-                    if(_val_one == '')return layer.msg('请输入'+$(_Arrinput[0]).attr('placeholder'),{icon:2})
-                    if(_val_two == '')return layer.msg('请输入'+$(_Arrinput[1]).attr('placeholder'),{icon:2})
+                    var isPort = $(this).parent().hasClass('dk_port_setting');
+                    if(_val_one == '')return layer.msg('请输入'+$(_Arrinput[0]).attr('placeholder'),{icon:2});
+										if (isPort && !bt.check_port(_val_one)) return layer.msg('容器端口格式错误，可用范围：1-65535, <br />请避免使用以下端口【22,80,443,8080,8443,8888】', { icon: 2 });
+                    if(_val_two == '')return layer.msg('请输入'+$(_Arrinput[1]).attr('placeholder'),{icon:2});
+										if (isPort && !bt.check_port(_val_two)) return layer.msg('服务器端口格式错误，可用范围：1-65535, <br />请避免使用以下端口【22,80,443,8080,8443,8888】', { icon: 2 });
                     switch($(this).data('type')){
                         case 'port':
                             _td = '<tr>'
@@ -2249,8 +2251,10 @@ var docker = {
                        }else{
                            that.initTabConfig('model')  //刷新列表
                        }
-                   } 
-                   bt_tools.msg(res)
+                   }
+									 var entry = { "'": "&apos;", '"': '&quot;', '<': '&lt;', '>': '&gt;' };
+									 res.msg = res.msg.replace(/(['")-><&\\\/\.])/g, function ($0) { return entry[$0] || $0; });
+                   bt_tools.msg(res);
                 })
                 }else{
                     var check_len = loca_compose.checkbox_list.length,

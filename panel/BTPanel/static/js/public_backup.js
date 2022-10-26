@@ -3749,9 +3749,10 @@ bt.firewall = {
       if (port.indexOf('-') != -1) ports = port.split('-');
       for (var i = 0; i < ports.length; i++) {
         if (!bt.check_port(ports[i])) {
-          layer.msg(lan.firewall.port_err, {
-            icon: 5
-          });
+					layer.msg('可用端口范围：1-65535', { icon: 2 });
+          // layer.msg(lan.firewall.port_err, {
+          //   icon: 5
+          // });
           return;
         }
       }
@@ -4233,10 +4234,10 @@ bt.soft = {
       type: 1,
       title: false,
       skin: 'libPay-view',
-      area: ['1000px', '740px'],
+      area: ['1000px', '760px'],
       shadeClose: false,
       content: '<div class="libPay-content-box" ' + (config.totalNum ? 'data-index="'+config.totalNum+'"' : '') + '>\
-                <div class="libPay-menu ' + (config.plugin ? 'is_plugin' : 'is_ops') + ' '+(typeof config.closePro != 'undefined' && config.closePro?'closePro':'')+'">\
+                <div class="libPay-menu ' + (config.plugin ? 'is_plugin' : 'is_ops') + ' '+((typeof config.closePro != 'undefined' && config.closePro) || config['type'] === 12 ?'closePro':'')+'">\
                     ' + (config.plugin ? '<div class="libPay-menu-type lib_plugin"><p>' + config.name + '</p><p>' + config.name + '</p></div>' : '') + '\
                     <div class="libPay-menu-type lib_pro" >\
                         <p><span class="glyphicon glyphicon-vip"></span><span style="margin-left:8px">' + bt.os + '专业版</span></p>\
@@ -4548,23 +4549,20 @@ bt.soft = {
 
         function render_num(nums) {
           for (var i = 0; i < nums.length; i++) {
-            if (btype != 'ops' || (btype === 'ops' && i===0)){
-              var count = nums[i].count
-              var discount = nums[i].discount
-              var _btn = $('<button data-nums="' + count + '" class="btn_nums">'+count+'台'+(discount < 1 ?'<em>'+ discount*10 +'折</em>' : '')+'</button>')
-              _btn.data('data', count).click(function () {
-                var num = $(this).data('data')
-                if(num === 1) $('.more_msg').hide()
-                if(num > 1){
-                  $('.more_msg').show()
-                  $('.more_msg').remove()
-                  $('.libPay-line-item.proN').append('<div class="more_msg">购买多台授权会默认减1台用于本机授权，剩余的授权台数以抵扣券的方式发放到当前账号，购买后请切换至抵扣券查看</div>')
-                }
-                $(this).addClass('active').siblings().removeClass('active');
-                that.create_pay_code($('.pay-cycle-btns.active').index());
-              });
-              _nums.append(_btn)
-            }
+            var count = nums[i].count
+            var discount = nums[i].discount
+            var _btn = $('<button data-nums="' + count + '" class="btn_nums">'+count+'台'+(discount < 1 ?'<em>'+ discount*10 +'折</em>' : '')+'</button>')
+            _btn.data('data', count).click(function () {
+              var num = $(this).data('data')
+              if(num === 1) $('.more_msg').hide()
+              if(num > 1){
+                $('.more_msg').remove()
+                $('.libPay-line-item.proN').append('<div class="more_msg">购买多台授权会默认减1台用于本机授权，剩余的授权台数以抵扣券的方式发放到当前账号，购买后请切换至抵扣券查看</div>')
+              }
+              $(this).addClass('active').siblings().removeClass('active');
+              that.create_pay_code($('.pay-cycle-btns.active').index());
+            });
+            _nums.append(_btn)
           }
         }
       })
@@ -4625,6 +4623,7 @@ bt.soft = {
                 layer.closeAll();
                 bt.set_cookie('force', 1);
                 if (soft) soft.flush_cache();
+                getPaymentStatus();
                 bt.msg(rdata);
               });
             })
@@ -4747,16 +4746,15 @@ bt.soft = {
     $('.libPaycode-pro-cylce').text('低至' + day_price + "元 / 天").prepend('<span class="org_price">原价：'+ org_price +'元</span>')
     if (cash_fee >= 6000 && idx === 0) {
       $('.libPay-content-box .pay-type-btn').eq(0).click(function () {
-        layer.tips(
-          '支付金额已超过微信单笔支付额度,请使用支付宝支付',
-          $('.pay-type-btn:eq(0)'),
-          { tips: [3, 'red'], skin:'wechat_pay_tips' },
-        )
-        $('.layui-layer-tips').css({ left: $('.pay-type-btn:eq(0)').offset().left, top: $('.pay-type-btn:eq(0)').offset().top-45 })
-        return false
+        layer.tips('支付金额已超过微信单笔支付额度,请使用支付宝支付', $('.pay-type-btn:eq(0)'), {
+					tips: [1, 'red'],
+					skin:'wechat_pay_tips'
+				});
+        $('.layui-layer-tips').css({ left: $('.pay-type-btn:eq(0)').offset().left, top: $('.pay-type-btn:eq(0)').offset().top-45 });
+        return false;
       })
       $('.libPay-content-box .pay-type-btn').eq(1).click();
-      return
+      return;
     }
     if (idx != 2) {
       $('.libPaycode-foo-txt').css('padding-top','0')
@@ -4842,7 +4840,7 @@ bt.soft = {
         setTimeout(function () {
           bt.set_cookie('force', 1);
           if (soft) soft.flush_cache();
-          // location.reload(true);
+          if (config.pid != 100000068) location.reload(true);
         }, 2000); // 需要重服务端重新获取软件列表，并刷新软件管理浏览器页面
         if (config.pid === 100000068) {
             layer.open({
@@ -4873,9 +4871,6 @@ bt.soft = {
           icon: 1,
           shade: [0.3, "#000"]
         });
-        setTimeout(function () {
-          location.reload(true);
-        },2000)
       }
     }
     clearInterval(bt.soft.pub.wxpayTimeId);
@@ -8133,6 +8128,10 @@ bt.data = {
           css: 'btn-success',
           callback: function (rdata, load, callback) {
             var loading = bt.load();
+						if (!bt.check_port(rdata.port)) {
+							layer.msg('端口格式错误，可用范围：1-65535, <br />请避免使用以下端口【22,80,443,8080,8443,8888】', { icon: 2 })
+							return
+						}
             bt.send('setPort', 'ftp/setPort', rdata, function (rRet) {
               loading.close();
               if (rRet.status) load.close();

@@ -157,7 +157,7 @@ class panelSSL:
         result = self.request('apply_cert_order')
         return result
 
-    def check_ssl_caa(self,domains,clist = ['sectigo.com','digicert.com']):
+    def check_ssl_caa(self,domains,clist = ['sectigo.com','digicert.com','comodoca.com']):
         '''
             @name 检查CAA记录是否正确
             @param domains 域名列表
@@ -174,7 +174,9 @@ class panelSSL:
 
                     slist = []
                     for val in ret:
-                        if val['value'] in clist: continue
+                        if val['value'] in clist:
+                            return False
+
                         slist.append(val)
 
                     if len(slist) > 0:
@@ -184,6 +186,7 @@ class panelSSL:
                 result['status'] = False
                 result['msg'] = 'error:域名的DNS解析中存在CAA记录，请删除后重新申请'
                 result['data'] = json.dumps(data)
+                result['caa_list'] = data
                 return result
         except : pass
         return False

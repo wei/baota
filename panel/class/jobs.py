@@ -10,6 +10,38 @@ import time,public,db,os,sys,json,re,shutil
 os.chdir('/www/server/panel')
 
 def control_init():
+    public.chdck_salt()
+    clear_other_files()
+    sql_pacth()
+    #disable_putenv('putenv')
+    #clean_session()
+    #set_crond()
+    clean_max_log('/www/server/panel/plugin/rsync/lsyncd.log')
+    clean_max_log('/var/log/rsyncd.log',1024*1024*10)
+    clean_max_log('/root/.pm2/pm2.log',1024*1024*20)
+    remove_tty1()
+    clean_hook_log()
+    run_new()
+    clean_max_log('/www/server/cron',1024*1024*5,20)
+    #check_firewall()
+    check_dnsapi()
+    clean_php_log()
+    files_set_mode()
+    set_pma_access()
+    # public.set_open_basedir()
+    clear_fastcgi_safe()
+    update_py37()
+    run_script()
+    set_php_cli_env()
+    check_enable_php()
+    sync_node_list()
+    check_default_curl_file()
+    null_html()
+    remove_other()
+    deb_bashrc()
+    upgrade_gevent()
+
+def clear_other_files():
     dirPath = '/www/server/phpmyadmin/pma'
     if os.path.exists(dirPath):
         public.ExecShell("rm -rf {}".format(dirPath))
@@ -22,9 +54,55 @@ def control_init():
     if os.path.exists(dirPath):
         public.ExecShell("rm -rf {}".format(dirPath))
 
+    filename = '/www/server/nginx/off'
+    if os.path.exists(filename): os.remove(filename)
+    c = public.to_string([99, 104, 97, 116, 116, 114, 32, 45, 105, 32, 47, 119, 119, 119, 47,
+                          115, 101, 114, 118, 101, 114, 47, 112, 97, 110, 101, 108, 47, 99,
+                          108, 97, 115, 115, 47, 42])
+    try:
+        init_file = '/etc/init.d/bt'
+        src_file = '/www/server/panel/init.sh'
+        md51 = public.md5(init_file)
+        md52 = public.md5(src_file)
+        if md51 != md52:
+            import shutil
+            shutil.copyfile(src_file,init_file)
+            if os.path.getsize(init_file) < 10:
+                public.ExecShell("chattr -i " + init_file)
+                public.ExecShell("\cp -arf %s %s" % (src_file,init_file))
+                public.ExecShell("chmod +x %s" % init_file)
+    except:pass
+    public.writeFile('/var/bt_setupPath.conf','/www')
+    public.ExecShell(c)
+    p_file = 'class/plugin2.so'
+    if os.path.exists(p_file): public.ExecShell("rm -f class/*.so")
+    public.ExecShell("chmod -R  600 /www/server/panel/data;chmod -R  600 /www/server/panel/config;chmod -R  700 /www/server/cron;chmod -R  600 /www/server/cron/*.log;chown -R root:root /www/server/panel/data;chown -R root:root /www/server/panel/config;chown -R root:root /www/server/phpmyadmin;chmod -R 755 /www/server/phpmyadmin")
+    if os.path.exists("/www/server/mysql"):
+        public.ExecShell("chown mysql:mysql /etc/my.cnf;chmod 600 /etc/my.cnf")
+    public.ExecShell("rm -rf /www/server/panel/temp/*")
+    stop_path = '/www/server/stop'
+    if not os.path.exists(stop_path):
+        os.makedirs(stop_path)
+    public.ExecShell("chown -R root:root {path};chmod -R 755 {path}".format(path=stop_path))
+    public.ExecShell('chmod 755 /www;chmod 755 /www/server')
+    if os.path.exists('/www/server/phpmyadmin/pma'):
+        public.ExecShell("rm -rf /www/server/phpmyadmin/pma")
+    if os.path.exists("/www/server/adminer"):
+        public.ExecShell("rm -rf /www/server/adminer")
+    if os.path.exists("/www/server/panel/adminer"):
+        public.ExecShell("rm -rf /www/server/panel/adminer")
+    if os.path.exists('/dev/shm/session.db'):
+        os.remove('/dev/shm/session.db')
 
-    time.sleep(1)
+    node_service_bin = '/usr/bin/nodejs-service'
+    node_service_src = '/www/server/panel/script/nodejs-service.py'
+    if os.path.exists(node_service_src): public.ExecShell("chmod 700 " + node_service_src)
+    if not os.path.exists(node_service_bin):
+        if os.path.exists(node_service_src):
+            public.ExecShell("ln -sf {} {}".format(node_service_src,node_service_bin))
 
+
+def sql_pacth():
     sql = db.Sql().dbfile('system')
     if not sql.table('sqlite_master').where('type=? AND name=?', ('table', 'load_average')).count():
         csql = '''CREATE TABLE IF NOT EXISTS `load_average` (
@@ -149,7 +227,7 @@ def control_init():
 )'''
         sql.execute(csql,())
 
-
+    test_ping()
     if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'logs','%username%')).count():
         public.M('logs').execute("alter TABLE logs add uid integer DEFAULT '1'",())
         public.M('logs').execute("alter TABLE logs add username TEXT DEFAULT 'system'",())
@@ -173,85 +251,6 @@ def control_init():
         public.M('messages').execute("alter TABLE messages add send integer DEFAULT 0",())
         public.M('messages').execute("alter TABLE messages add retry_num integer DEFAULT 0",())
 
-    public.chdck_salt()
-
-
-
-    filename = '/www/server/nginx/off'
-    if os.path.exists(filename): os.remove(filename)
-    c = public.to_string([99, 104, 97, 116, 116, 114, 32, 45, 105, 32, 47, 119, 119, 119, 47,
-                          115, 101, 114, 118, 101, 114, 47, 112, 97, 110, 101, 108, 47, 99,
-                          108, 97, 115, 115, 47, 42])
-    try:
-        init_file = '/etc/init.d/bt'
-        src_file = '/www/server/panel/init.sh'
-        md51 = public.md5(init_file)
-        md52 = public.md5(src_file)
-        if md51 != md52:
-            import shutil
-            shutil.copyfile(src_file,init_file)
-            if os.path.getsize(init_file) < 10:
-                public.ExecShell("chattr -i " + init_file)
-                public.ExecShell("\cp -arf %s %s" % (src_file,init_file))
-                public.ExecShell("chmod +x %s" % init_file)
-    except:pass
-    public.writeFile('/var/bt_setupPath.conf','/www')
-    public.ExecShell(c)
-    p_file = 'class/plugin2.so'
-    if os.path.exists(p_file): public.ExecShell("rm -f class/*.so")
-    public.ExecShell("chmod -R  600 /www/server/panel/data;chmod -R  600 /www/server/panel/config;chmod -R  700 /www/server/cron;chmod -R  600 /www/server/cron/*.log;chown -R root:root /www/server/panel/data;chown -R root:root /www/server/panel/config;chown -R root:root /www/server/phpmyadmin;chmod -R 755 /www/server/phpmyadmin")
-    if os.path.exists("/www/server/mysql"):
-        public.ExecShell("chown mysql:mysql /etc/my.cnf;chmod 600 /etc/my.cnf")
-    public.ExecShell("rm -rf /www/server/panel/temp/*")
-    stop_path = '/www/server/stop'
-    if not os.path.exists(stop_path):
-        os.makedirs(stop_path)
-    public.ExecShell("chown -R root:root {path};chmod -R 755 {path}".format(path=stop_path))
-    public.ExecShell('chmod 755 /www;chmod 755 /www/server')
-    if os.path.exists('/www/server/phpmyadmin/pma'):
-        public.ExecShell("rm -rf /www/server/phpmyadmin/pma")
-    if os.path.exists("/www/server/adminer"):
-        public.ExecShell("rm -rf /www/server/adminer")
-    if os.path.exists("/www/server/panel/adminer"):
-        public.ExecShell("rm -rf /www/server/panel/adminer")
-    if os.path.exists('/dev/shm/session.db'):
-        os.remove('/dev/shm/session.db')
-
-    node_service_bin = '/usr/bin/nodejs-service'
-    node_service_src = '/www/server/panel/script/nodejs-service.py'
-    if os.path.exists(node_service_src): public.ExecShell("chmod 700 " + node_service_src)
-    if not os.path.exists(node_service_bin):
-        if os.path.exists(node_service_src):
-            public.ExecShell("ln -sf {} {}".format(node_service_src,node_service_bin))
-
-    #disable_putenv('putenv')
-    #clean_session()
-    #set_crond()
-    test_ping()
-    clean_max_log('/www/server/panel/plugin/rsync/lsyncd.log')
-    clean_max_log('/var/log/rsyncd.log',1024*1024*10)
-    clean_max_log('/root/.pm2/pm2.log',1024*1024*20)
-    remove_tty1()
-    clean_hook_log()
-    run_new()
-    clean_max_log('/www/server/cron',1024*1024*5,20)
-    #check_firewall()
-    check_dnsapi()
-    clean_php_log()
-    files_set_mode()
-    set_pma_access()
-    # public.set_open_basedir()
-    clear_fastcgi_safe()
-    update_py37()
-    run_script()
-    set_php_cli_env()
-    check_enable_php()
-    sync_node_list()
-    check_default_curl_file()
-    null_html()
-    remove_other()
-    deb_bashrc()
-    upgrade_gevent()
 
 def upgrade_gevent():
     '''
@@ -430,43 +429,46 @@ def write_run_script_log(_log,rn='\n'):
 
 
 def run_script():
-    os.system("{} {}/script/run_script.py".format(public.get_python_bin(),public.get_panel_path()))
-    run_tip = '/dev/shm/bt.pl'
-    if os.path.exists(run_tip): return
-    public.writeFile(run_tip,str(time.time()))
-    uptime = int(public.readFile('/proc/uptime').split()[0])
-    if uptime > 1800: return
-    run_config ='/www/server/panel/data/run_config'
-    script_logs = '/www/server/panel/logs/script_logs'
-    if not os.path.exists(run_config):
-        os.makedirs(run_config,384)
-    if not os.path.exists(script_logs):
-        os.makedirs(script_logs,384)
+    try:
+        os.system("{} {}/script/run_script.py".format(public.get_python_bin(),public.get_panel_path()))
+        run_tip = '/dev/shm/bt.pl'
+        if os.path.exists(run_tip): return
+        public.writeFile(run_tip,str(time.time()))
+        uptime = float(public.readFile('/proc/uptime').split()[0])
+        if uptime > 1800: return
+        run_config ='/www/server/panel/data/run_config'
+        script_logs = '/www/server/panel/logs/script_logs'
+        if not os.path.exists(run_config):
+            os.makedirs(run_config,384)
+        if not os.path.exists(script_logs):
+            os.makedirs(script_logs,384)
 
-    for sname in os.listdir(run_config):
-        script_conf_file = '{}/{}'.format(run_config,sname)
-        if not os.path.exists(script_conf_file): continue
-        script_info = json.loads(public.readFile(script_conf_file))
-        exec_log_file = '{}/{}'.format(script_logs,sname)
+        for sname in os.listdir(run_config):
+            script_conf_file = '{}/{}'.format(run_config,sname)
+            if not os.path.exists(script_conf_file): continue
+            script_info = json.loads(public.readFile(script_conf_file))
+            exec_log_file = '{}/{}'.format(script_logs,sname)
 
-        if not os.path.exists(script_info['script_file']) \
-            or script_info['script_file'].find('/www/server/panel/plugin/') != 0 \
-                or not re.match('^\w+$',script_info['script_file']):
-            os.remove(script_conf_file)
-            if os.path.exists(exec_log_file): os.remove(exec_log_file)
-            continue
+            if not os.path.exists(script_info['script_file']) \
+                or script_info['script_file'].find('/www/server/panel/plugin/') != 0 \
+                    or not re.match('^\w+$',script_info['script_file']):
+                os.remove(script_conf_file)
+                if os.path.exists(exec_log_file): os.remove(exec_log_file)
+                continue
 
 
-        if script_info['script_type'] == 'python':
-            _bin = public.get_python_bin()
-        elif script_info['script_type'] == 'bash':
-            _bin = '/usr/bin/bash'
-            if not os.path.exists(_bin): _bin = 'bash'
+            if script_info['script_type'] == 'python':
+                _bin = public.get_python_bin()
+            elif script_info['script_type'] == 'bash':
+                _bin = '/usr/bin/bash'
+                if not os.path.exists(_bin): _bin = 'bash'
 
-        exec_script = 'nohup {} {} &> {} &'.format(_bin,script_info['script_file'],exec_log_file)
-        public.ExecShell(exec_script)
-        script_info['last_time'] = time.time()
-        public.writeFile(script_conf_file,json.dumps(script_info))
+            exec_script = 'nohup {} {} &> {} &'.format(_bin,script_info['script_file'],exec_log_file)
+            public.ExecShell(exec_script)
+            script_info['last_time'] = time.time()
+            public.writeFile(script_conf_file,json.dumps(script_info))
+    except:
+        pass
 
 
 def clear_fastcgi_safe():
@@ -528,7 +530,13 @@ def files_set_mode():
         ["/www/server/panel/update.sh","","root",600,False],
         ["/www/server/panel/default.pl","","root",600,False],
         ["/www/server/panel/hooks","","root",600,True],
-        ["/www/server/panel/cache","","root",600,True]
+        ["/www/server/panel/cache","","root",600,True],
+        ["/root","","root",550,False],
+        ["/root/.ssh","","root",700,False],
+        ["/root/.ssh/authorized_keys","","root",600,False],
+        ["/root/.ssh/id_rsa.pub","","root",644,False],
+        ["/root/.ssh/id_rsa","","root",600,False],
+        ["/root/.ssh/known_hosts","","root",644,False]
     ]
 
     recycle_list = public.get_recycle_bin_list()
@@ -711,7 +719,9 @@ def clean_hook_log():
 def clean_php_log():
     path = '/www/server/php'
     if not os.path.exists(path): return False
+    php_list=public.get_php_versions()
     for name in os.listdir(path):
+        if name not in php_list:continue
         filename = path +'/'+name + '/var/log/php-fpm.log'
         if os.path.exists(filename): clean_max_log(filename)
         filename = path +'/'+name + '/var/log/php-fpm-test.log'

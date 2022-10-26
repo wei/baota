@@ -787,14 +787,32 @@ class config:
 
     #同步时间
     def syncDate(self,get):
+        """
+        @name 同步时间
+        @author hezhihong
+        """
+        #取国际标准0时时间戳
         time_str = public.HttpGet(public.GetConfigValue('home') + '/api/index/get_time')
         try:
-            new_time = int(time_str)
+            new_time = int(time_str)-28800
         except:
             return public.returnMsg(False,'连接时间服务器失败!')
         if not new_time: public.returnMsg(False,'连接时间服务器失败!')
-        time_arr = time.localtime(new_time)
-        date_str = time.strftime("%Y-%m-%d %H:%M:%S", time_arr)
+        #取所在时区偏差秒数
+        add_time='+0000'
+        try:
+            add_time=public.ExecShell('date +"%Y-%m-%d %H:%M:%S %Z %z"')[0].replace('\n','').strip().split()[-1]
+            print(add_time)
+        except:pass
+        add_1=False
+        if add_time[0]=='+':
+            add_1=True
+        add_v=int(add_time[1:-2])*3600+int(add_time[-2:])*60
+        if add_1:
+            new_time+=add_v
+        else:new_time-=add_v
+        #设置所在时区时间
+        date_str = public.format_date(times=new_time)
         public.ExecShell('date -s "%s"' % date_str)
         public.WriteLog("TYPE_PANEL", "DATE_SUCCESS")
         return public.returnMsg(True,"DATE_SUCCESS")
@@ -1165,9 +1183,9 @@ class config:
         else:
             save_handler = "files"
 
-        reppath = r'\nsession.save_path\s*=\s*"tcp\:\/\/([\d\.]+):(\d+).*\r?\n'
+        reppath = r'\nsession.save_path\s*=\s*"tcp\:\/\/([\w\.]+):(\d+).*\r?\n'
         passrep = r'\nsession.save_path\s*=\s*"tcp://[\w\.\?\:]+=(.*)"\r?\n'
-        memcached = r'\nsession.save_path\s*=\s*"([\d\.]+):(\d+)"'
+        memcached = r'\nsession.save_path\s*=\s*"([\w\.]+):(\d+)"'
         save_path = re.search(reppath, phpini)
         if not save_path:
             save_path = re.search(memcached, phpini)
@@ -1189,13 +1207,15 @@ class config:
     def SetSessionConf(self, get):
         import glob
         g = get.save_handler
-        ip = get.ip
+        ip = get.ip.strip()
         port = get.port
         passwd = get.passwd
         if g != "files":
             iprep = r"(2(5[0-5]{1}|[0-4]\d{1})|[0-1]?\d{1,2})\.(2(5[0-5]{1}|[0-4]\d{1})|[0-1]?\d{1,2})\.(2(5[0-5]{1}|[0-4]\d{1})|[0-1]?\d{1,2})\.(2(5[0-5]{1}|[0-4]\d{1})|[0-1]?\d{1,2})"
-            if not re.search(iprep, ip):
-                return public.returnMsg(False, '请输入正确的IP地址')
+            rep_domain = "^(?=^.{3,255}$)[a-zA-Z0-9\_\-][a-zA-Z0-9\_\-]{0,62}(\.[a-zA-Z0-9\_\-][a-zA-Z0-9\_\-]{0,62})+$"
+            if not re.search(iprep, ip) and not re.search(rep_domain, ip):
+                if ip != "localhost":
+                    return public.returnMsg(False, '请输入正确的【域名或IP】地址！')
             try:
                 port = int(port)
                 if port >= 65535 or port < 1:
@@ -1207,7 +1227,8 @@ class config:
                 return public.returnMsg(False, '请不要输入以下特殊字符 " ~ ` / = "')
         filename = '/www/server/php/' + get.version + '/etc/php.ini'
         filename_ols = None
-        if os.path.exists("/usr/local/lsws"):
+        ols_exist = os.path.exists("/usr/local/lsws/bin/lswsctrl")
+        if ols_exist:
             filename_ols = '/usr/local/lsws/lsphp{}/etc/php/{}.{}/litespeed/php.ini'.format(get.version, get.version[0],
                                                                                         get.version[1])
             if os.path.exists('/etc/redhat-release'):
@@ -1228,45 +1249,86 @@ class config:
             rep = r'session.save_handler\s*=\s*(.+)\r?\n'
             val = r'session.save_handler = ' + g + '\n'
             phpini = re.sub(rep, val, phpini)
-            if g == "memcached":
-                if not re.search("memcached.so", phpini) and "memcached.so" not in ols_so_list:
-                    return public.returnMsg(False, '请先安装%s扩展' % g)
-                rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
-                val = r'\nsession.save_path = "%s:%s" \n' % (ip,port)
-                if re.search(rep, phpini):
-                    phpini = re.sub(rep, val, phpini)
-                else:
-                    phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
-            if g == "memcache":
-                if not re.search("memcache.so", phpini) and "memcache.so" not in ols_so_list:
-                    return public.returnMsg(False, '请先安装%s扩展' % g)
-                rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
-                val = r'\nsession.save_path = "tcp://%s:%s"\n' % (ip, port)
-                if re.search(rep, phpini):
-                    phpini = re.sub(rep, val, phpini)
-                else:
-                    phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
-            if g == "redis":
-                if not re.search("redis.so", phpini) and "redis.so" not in ols_so_list:
-                    return public.returnMsg(False, '请先安装%s扩展' % g)
-                if passwd:
-                    passwd = "?auth=" + passwd
-                else:
-                    passwd = ""
-                rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
-                val = r'\nsession.save_path = "tcp://%s:%s%s"\n' % (ip, port, passwd)
-                res = re.search(rep, phpini)
-                if res:
-                    phpini = re.sub(rep, val, phpini)
-                else:
-                    phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
-            if g == "files":
-                rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
-                val = r'\nsession.save_path = "/tmp"\n'
-                if re.search(rep, phpini):
-                    phpini = re.sub(rep, val, phpini)
-                else:
-                    phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
+            if not ols_exist:
+                if g == "memcached":
+                    if not re.search("memcached.so", phpini):
+                        return public.returnMsg(False, '请先安装%s扩展' % g)
+                    rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
+                    val = r'\nsession.save_path = "%s:%s" \n' % (ip,port)
+                    if re.search(rep, phpini):
+                        phpini = re.sub(rep, val, phpini)
+                    else:
+                        phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
+                if g == "memcache":
+                    if not re.search("memcache.so", phpini):
+                        return public.returnMsg(False, '请先安装%s扩展' % g)
+                    rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
+                    val = r'\nsession.save_path = "tcp://%s:%s"\n' % (ip, port)
+                    if re.search(rep, phpini):
+                        phpini = re.sub(rep, val, phpini)
+                    else:
+                        phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
+                if g == "redis":
+                    if not re.search("redis.so", phpini):
+                        return public.returnMsg(False, '请先安装%s扩展' % g)
+                    if passwd:
+                        passwd = "?auth=" + passwd
+                    else:
+                        passwd = ""
+                    rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
+                    val = r'\nsession.save_path = "tcp://%s:%s%s"\n' % (ip, port, passwd)
+                    res = re.search(rep, phpini)
+                    if res:
+                        phpini = re.sub(rep, val, phpini)
+                    else:
+                        phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
+                if g == "files":
+                    rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
+                    val = r'\nsession.save_path = "/tmp"\n'
+                    if re.search(rep, phpini):
+                        phpini = re.sub(rep, val, phpini)
+                    else:
+                        phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
+            else:
+                if g == "memcached":
+                    if "memcached.so" not in ols_so_list:
+                        return public.returnMsg(False, '请先安装%s扩展' % g)
+                    rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
+                    val = r'\nsession.save_path = "%s:%s" \n' % (ip,port)
+                    if re.search(rep, phpini):
+                        phpini = re.sub(rep, val, phpini)
+                    else:
+                        phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
+                if g == "memcache":
+                    if "memcache.so" not in ols_so_list:
+                        return public.returnMsg(False, '请先安装%s扩展' % g)
+                    rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
+                    val = r'\nsession.save_path = "tcp://%s:%s"\n' % (ip, port)
+                    if re.search(rep, phpini):
+                        phpini = re.sub(rep, val, phpini)
+                    else:
+                        phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
+                if g == "redis":
+                    if "redis.so" not in ols_so_list:
+                        return public.returnMsg(False, '请先安装%s扩展' % g)
+                    if passwd:
+                        passwd = "?auth=" + passwd
+                    else:
+                        passwd = ""
+                    rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
+                    val = r'\nsession.save_path = "tcp://%s:%s%s"\n' % (ip, port, passwd)
+                    res = re.search(rep, phpini)
+                    if res:
+                        phpini = re.sub(rep, val, phpini)
+                    else:
+                        phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
+                if g == "files":
+                    rep = r'\nsession.save_path\s*=\s*(.+)\r?\n'
+                    val = r'\nsession.save_path = "/tmp"\n'
+                    if re.search(rep, phpini):
+                        phpini = re.sub(rep, val, phpini)
+                    else:
+                        phpini = re.sub('\n;session.save_path = "/tmp"', '\n;session.save_path = "/tmp"' + val, phpini)
             public.writeFile(f, phpini)
         public.ExecShell('/etc/init.d/php-fpm-' + get.version + ' reload')
         public.serviceReload()
@@ -1375,6 +1437,7 @@ class config:
         data['distribution'] = public.get_linux_distribution()
         data['request_iptype'] = self.get_request_iptype()
         data['request_type'] = self.get_request_type()
+        data['improvement'] = public.get_improvement()
         return data
 
 
@@ -1950,13 +2013,18 @@ class config:
     #查看告警
     def get_login_send(self, get):
         send_type = ""
-        if os.path.exists("/www/server/panel/data/login_send_type.pl"):
-            send_type = public.readFile("/www/server/panel/data/login_send_type.pl")
+        login_send_type_conf = "/www/server/panel/data/panel_login_send.pl"
+        if os.path.exists(login_send_type_conf):
+            send_type = public.ReadFile(login_send_type_conf).strip()
         else:
-            if os.path.exists('/www/server/panel/data/login_send_mail.pl'):
-                send_type = "mail"
-            if os.path.exists('/www/server/panel/data/login_send_dingding.pl'):
-                send_type = "dingding"
+
+            if os.path.exists("/www/server/panel/data/login_send_type.pl"):
+                send_type = public.readFile("/www/server/panel/data/login_send_type.pl")
+            else:
+                if os.path.exists('/www/server/panel/data/login_send_mail.pl'):
+                    send_type = "mail"
+                if os.path.exists('/www/server/panel/data/login_send_dingding.pl'):
+                    send_type = "dingding"
         return public.returnMsg(True, send_type)
 
     # def get_login_send(self,get):
@@ -1983,6 +2051,9 @@ class config:
         msg_configs = self.get_msg_configs(get)
         if set_type not in msg_configs.keys():
             return public.returnMsg(False,'不支持该发送类型')
+        _conf = msg_configs[set_type]
+        if "data" not in _conf or not _conf["data"]:
+            return public.returnMsg(False, "该通道未配置, 请重新选择。")
 
         from panelMessage import panelMessage
         pm = panelMessage()
@@ -2355,8 +2426,10 @@ class config:
                 break
         if not node_info: return
         public.ExecShell("sed -i '/api.bt.cn/d' /etc/hosts")
+        public.ExecShell("sed -i '/www.bt.cn/d' /etc/hosts")
         if not node_info['node_ip']: return
         public.ExecShell("echo '{} api.bt.cn' >> /etc/hosts".format(node_info['node_ip']))
+        public.ExecShell("echo '{} www.bt.cn' >> /etc/hosts".format(node_info['node_ip']))
 
 
     def set_click_logs(self,get):
@@ -2387,11 +2460,10 @@ class config:
         获取消息通道配置列表
         """
         cpath = 'data/msg.json'
-        try:
-            if 'force' in get or not os.path.exists(cpath) or public.get_path_size(cpath)==0:
-                if not 'download_url' in session: session['download_url'] = public.get_url()
-                public.downloadFile('{}/linux/panel/msg/msg.json'.format(session['download_url']),cpath)
-        except : pass
+        example = 'config/examples/msg.example.json'
+        if not os.path.exists(cpath) and os.path.exists(example):
+            import shutil
+            shutil.copy(example, cpath)
         try:
             # 配置文件异常处理
             json.loads(public.readFile(cpath))
@@ -2629,3 +2701,29 @@ class config:
                     pass
                 data[key] = x
         return data
+
+
+    def set_improvement(self,get):
+        '''
+            @name 设置用户体验改进计划开关
+            @author hwliang
+            @return dict
+        '''
+
+        tip_file = '{}/data/improvement.pl'.format(public.get_panel_path())
+        if  not 'status' in get: return public.returnMsg(False,'必需要有status参数!')
+
+        status = 1 if int(get.status) else 0
+        if status:
+            public.WriteFile(tip_file,'1')
+        else:
+            if os.path.exists(tip_file):
+                os.remove(tip_file)
+        tip_file_set = '{}/data/is_set_improvement.pl'.format(public.get_panel_path())
+        public.WriteFile(tip_file_set,'')
+        status_msg = ['关闭','开启']
+        msg = '已[{}]用户体验改进计划'.format(status_msg[status])
+
+        public.WriteLog('面板设置',msg)
+        return public.returnMsg(True,msg)
+

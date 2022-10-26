@@ -186,16 +186,16 @@ class firewalls:
         notudps = ['80','443','8888','888','39000:40000','21','22']
         if self.__isUfw:
             public.ExecShell('ufw allow ' + port + '/tcp')
-            if not port in notudps: public.ExecShell('ufw allow ' + port + '/udp')
+            # if not port in notudps: public.ExecShell('ufw allow ' + port + '/udp')
         else:
             if self.__isFirewalld:
                 #self.__Obj.AddAcceptPort(port)
                 port = port.replace(':','-')
                 public.ExecShell('firewall-cmd --permanent --zone=public --add-port='+port+'/tcp')
-                if not port in notudps: public.ExecShell('firewall-cmd --permanent --zone=public --add-port='+port+'/udp')
+                # if not port in notudps: public.ExecShell('firewall-cmd --permanent --zone=public --add-port='+port+'/udp')
             else:
                 public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport '+port+' -j ACCEPT')
-                if not port in notudps: public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m udp --dport '+port+' -j ACCEPT')
+                # if not port in notudps: public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m udp --dport '+port+' -j ACCEPT')
         public.WriteLog("TYPE_FIREWALL", 'FIREWALL_ACCEPT_PORT',(port,))
         addtime = time.strftime('%Y-%m-%d %X',time.localtime())
         if not is_exists: public.M('firewall').add('port,ps,addtime',(port,ps,addtime))
@@ -213,15 +213,15 @@ class firewalls:
             return False
         if self.__isUfw:
             public.ExecShell('ufw allow ' + port + '/tcp')
-            public.ExecShell('ufw allow ' + port + '/udp')
+            # public.ExecShell('ufw allow ' + port + '/udp')
         else:
             if self.__isFirewalld:
                 port = port.replace(':','-')
                 public.ExecShell('firewall-cmd --permanent --zone=public --add-port='+port+'/tcp')
-                public.ExecShell('firewall-cmd --permanent --zone=public --add-port='+port+'/udp')
+                # public.ExecShell('firewall-cmd --permanent --zone=public --add-port='+port+'/udp')
             else:
                 public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport '+port+' -j ACCEPT')
-                public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m udp --dport '+port+' -j ACCEPT')
+                # public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m udp --dport '+port+' -j ACCEPT')
         return True
 
     #删除放行端口
@@ -273,7 +273,10 @@ class firewalls:
         public.ExecShell('service ssh ' + act)
         public.ExecShell("systemctl "+act+" sshd")
         public.ExecShell("systemctl "+act+" ssh")
-
+        if act in ['start'] and not public.get_sshd_status():
+            msg = 'SSHD服务启动失败'
+            public.WriteLog("TYPE_FIREWALL", msg)
+            return public.returnMsg(False,msg)
         public.WriteLog("TYPE_FIREWALL", msg)
         return public.returnMsg(True,'SUCCESS')
 
@@ -282,6 +285,7 @@ class firewalls:
 
     #设置ping
     def SetPing(self,get):
+
         if get.status == '1':
             get.status = '0'
         else:
@@ -295,9 +299,11 @@ class firewalls:
             conf += "\nnet.ipv4.icmp_echo_ignore_all="+get.status
 
 
-        public.writeFile(filename,conf)
-        public.ExecShell('sysctl -p')
-        return public.returnMsg(True,'SUCCESS')
+        if public.writeFile(filename,conf):
+            public.ExecShell('sysctl -p')
+            return public.returnMsg(True,'SUCCESS')
+        else:
+            return public.returnMsg(False,'<a style="color:red;">错误：设置失败，sysctl.conf不可写!</a><br>1、如果安装了[宝塔系统加固]，请先关闭<br>2、如果安装了云锁，请关闭[系统加固]功能<br>3、如果安装了安全狗，请关闭[系统防护]功能<br>4、如果使用了其它安全软件，请先卸载<br>')
 
 
 

@@ -52,7 +52,11 @@ class Sql():
         return self
 
     def dbfile(self,name):
-        self.__DB_FILE = 'data/' + name + '.db'
+        #设置数据库文件
+        if name[0] == '/':
+            self.__DB_FILE = name
+        else:
+            self.__DB_FILE = 'data/' + name + '.db'
         return self
 
     def table(self,table):

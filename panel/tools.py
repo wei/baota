@@ -571,7 +571,15 @@ def bt_cli(u_input = 0):
         if input_port in [80,443,21,20,22]:
             print("|-错误，请不要使用常用端口作为面板端口")
             return
-        old_port = int(public.readFile('data/port.pl'))
+        try:
+            port_str = public.readFile('data/port.pl')
+            if port_str:
+                old_port = int(port_str)
+            else:
+                old_port = 0
+        except:
+            old_port = 0
+
         if old_port == input_port:
             print("|-错误，与面板当前端口一致，无需修改")
             return

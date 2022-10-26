@@ -14,11 +14,20 @@ from datetime import datetime
 
 
 class ssh_security:
+    __type_list = ['ed25519','ecdsa','rsa', 'dsa']
+    __key_type_file = '{}/data/ssh_key_type.pl'.format(public.get_panel_path())
+    __key_files = ['/root/.ssh/id_ed25519','/root/.ssh/id_ecdsa','/root/.ssh/id_rsa','/root/.ssh/id_rsa_bt']
+    __type_files = {
+        "ed25519": "/root/.ssh/id_ed25519",
+        "ecdsa": "/root/.ssh/id_ecdsa",
+        "rsa": "/root/.ssh/id_rsa",
+        "dsa": "/root/.ssh/id_dsa"
+    }
     __SSH_CONFIG='/etc/ssh/sshd_config'
     __ip_data = None
     __ClIENT_IP='/www/server/panel/data/host_login_ip.json'
     __REPAIR={"1":{"id":1,"type":"file","harm":"高","repaired":"1","level":"3","name":"确保SSH MaxAuthTries 设置为3-6之间","file":"/etc/ssh/sshd_config","Suggestions":"加固建议   在/etc/ssh/sshd_config 中取消MaxAuthTries注释符号#, 设置最大密码尝试失败次数3-6 建议为4","repair":"MaxAuthTries 4","rule":[{"re":"\nMaxAuthTries\\s*(\\d+)","check":{"type":"number","max":7,"min":3}}],"repair_loophole":[{"re":"\n?#?MaxAuthTries\\s*(\\d+)","check":"\nMaxAuthTries 4"}]},"2":{"id":2,"repaired":"1","type":"file","harm":"高","level":"3","name":"SSHD 强制使用V2安全协议","file":"/etc/ssh/sshd_config","Suggestions":"加固建议   在/etc/ssh/sshd_config 文件按如相下设置参数","repair":"Protocol 2","rule":[{"re":"\nProtocol\\s*(\\d+)","check":{"type":"number","max":3,"min":1}}],"repair_loophole":[{"re":"\n?#?Protocol\\s*(\\d+)","check":"\nProtocol 2"}]},"3":{"id":3,"repaired":"1","type":"file","harm":"高","level":"3","name":"设置SSH空闲超时退出时间","file":"/etc/ssh/sshd_config","Suggestions":"加固建议   在/etc/ssh/sshd_config 将ClientAliveInterval设置为300到900，即5-15分钟，将ClientAliveCountMax设置为0-3","repair":"ClientAliveInterval 600  ClientAliveCountMax 2","rule":[{"re":"\nClientAliveInterval\\s*(\\d+)","check":{"type":"number","max":900,"min":300}}],"repair_loophole":[{"re":"\n?#?ClientAliveInterval\\s*(\\d+)","check":"\nClientAliveInterval 600"}]},"4":{"id":4,"repaired":"1","type":"file","harm":"高","level":"3","name":"确保SSH LogLevel 设置为INFO","file":"/etc/ssh/sshd_config","Suggestions":"加固建议   在/etc/ssh/sshd_config 文件以按如下方式设置参数（取消注释）","repair":"LogLevel INFO","rule":[{"re":"\nLogLevel\\s*(\\w+)","check":{"type":"string","value":["INFO"]}}],"repair_loophole":[{"re":"\n?#?LogLevel\\s*(\\w+)","check":"\nLogLevel INFO"}]},"5":{"id":5,"repaired":"1","type":"file","harm":"高","level":"3","name":"禁止SSH空密码用户登陆","file":"/etc/ssh/sshd_config","Suggestions":"加固建议  在/etc/ssh/sshd_config 将PermitEmptyPasswords配置为no","repair":"PermitEmptyPasswords no","rule":[{"re":"\nPermitEmptyPasswords\\s*(\\w+)","check":{"type":"string","value":["no"]}}],"repair_loophole":[{"re":"\n?#?PermitEmptyPasswords\\s*(\\w+)","check":"\nPermitEmptyPasswords no"}]},"6":{"id":6,"repaired":"1","type":"file","name":"SSH使用默认端口22","harm":"高","level":"3","file":"/etc/ssh/sshd_config","Suggestions":"加固建议   在/etc/ssh/sshd_config 将Port 设置为6000到65535随意一个, 例如","repair":"Port 60151","rule":[{"re":"Port\\s*(\\d+)","check":{"type":"number","max":65535,"min":22}}],"repair_loophole":[{"re":"\n?#?Port\\s*(\\d+)","check":"\nPort 65531"}]}}
-
+    __root_login_types = {'yes':'yes - 可密码和密钥登录','no':'no - 禁止登录','without-password':'without-password - 只能密钥登录','forced-commands-only':'forced-commands-only - 只能执行命令'}
     def __init__(self):
         if not os.path.exists(self.__ClIENT_IP):
             public.WriteFile(self.__ClIENT_IP,json.dumps([]))
@@ -28,6 +37,20 @@ class ssh_security:
             self.__ip_data = json.loads(public.ReadFile(self.__ClIENT_IP))
         except:
             self.__ip_data=[]
+
+    def get_ssh_key_type(self):
+        '''
+        获取ssh密钥类型
+        @author hwliang
+        :return:
+        '''
+        default_type = 'rsa'
+        if not os.path.exists(self.__key_type_file):
+            return default_type
+        new_type = public.ReadFile(self.__key_type_file)
+        if new_type in self.__type_list:
+            return new_type
+        return default_type
 
 
     def return_python(self):
@@ -80,7 +103,6 @@ class ssh_security:
                     ret = public.ReadFile(base_json['file'])
                     for i in base_json['rule']:
                         valuse = re.findall(i['re'], ret)
-                        print(valuse)
                         if i['check']['type'] == 'number':
                             if not valuse: return False
                             if not valuse[0]: return False
@@ -93,7 +115,6 @@ class ssh_security:
                             if not valuse: return False
                             if not valuse[0]: return False
                             valuse = valuse[0]
-                            print(valuse)
                             if valuse in i['check']['value']:
                                 return True
                             else:
@@ -130,6 +151,8 @@ class ssh_security:
             if not login_type:
                 login_type = "mail"
         object = public.init_msg(login_type.strip())
+        if not object:
+            return False
         if login_type=="mail":
             data={}
             data['title'] = title
@@ -308,12 +331,14 @@ class ssh_security:
         '''
         ssh_password = '\n#?PasswordAuthentication\s\w+'
         file = public.readFile(self.__SSH_CONFIG)
+        if not file: return public.returnMsg(False,'错误：sshd_config配置文件不存在，无法继续!')
         if len(re.findall(ssh_password, file)) == 0:
             file_result = file + '\nPasswordAuthentication yes'
         else:
             file_result = re.sub(ssh_password, '\nPasswordAuthentication yes', file)
         self.wirte(self.__SSH_CONFIG, file_result)
         self.restart_ssh()
+        public.WriteLog('SSH管理', '开启密码登陆')
         return public.returnMsg(True, '开启成功')
 
     def set_sshkey(self, get):
@@ -321,22 +346,24 @@ class ssh_security:
         设置ssh 的key
         参数 ssh=rsa&type=yes
         '''
-        type_list = ['rsa', 'dsa']
+
         ssh_type = ['yes', 'no']
         ssh = get.ssh
         if not ssh in ssh_type: return public.returnMsg(False, 'ssh选项失败')
-        type = get.type
-        if not type in type_list: return public.returnMsg(False, '加密方式错误')
-        file = ['/root/.ssh/id_rsa.pub', '/root/.ssh/id_rsa', '/root/.ssh/authorized_keys']
+        s_type = get.type
+        if not s_type in self.__type_list: return public.returnMsg(False, '加密方式错误')
+        authorized_keys = '/root/.ssh/authorized_keys'
+        file = ['/root/.ssh/id_{}.pub'.format(s_type), '/root/.ssh/id_{}'.format(s_type)]
         for i in file:
             if os.path.exists(i):
                 os.remove(i)
-        os.system("ssh-keygen -t %s -P '' -f ~/.ssh/id_rsa |echo y" % type)
+        os.system("ssh-keygen -t {s_type} -P '' -f /root/.ssh/id_{s_type} |echo y".format(s_type = s_type))
         if os.path.exists(file[0]):
-            public.ExecShell('cat %s >%s && chmod 600 %s' % (file[0], file[-1], file[-1]))
+            public.ExecShell('cat %s >> %s && chmod 600 %s' % (file[0], authorized_keys, authorized_keys))
             rec = '\n#?RSAAuthentication\s\w+'
             rec2 = '\n#?PubkeyAuthentication\s\w+'
             file = public.readFile(self.__SSH_CONFIG)
+            if not file: return public.returnMsg(False,'错误：sshd_config配置文件不存在，无法继续!')
             if len(re.findall(rec, file)) == 0: file = file + '\nRSAAuthentication yes'
             if len(re.findall(rec2, file)) == 0: file = file + '\nPubkeyAuthentication yes'
             file_ssh = re.sub(rec, '\nRSAAuthentication yes', file)
@@ -348,9 +375,12 @@ class ssh_security:
                 else:
                     file_result = re.sub(ssh_password, '\nPasswordAuthentication no', file_result)
             self.wirte(self.__SSH_CONFIG, file_result)
+            public.writeFile(self.__key_type_file, s_type)
             self.restart_ssh()
+            public.WriteLog('SSH管理', '设置SSH密钥认证，并成功生成密钥')
             return public.returnMsg(True, '开启成功')
         else:
+            public.WriteLog('SSH管理', '设置SSH密钥认证失败')
             return public.returnMsg(False, '开启失败')
 
         # 取SSH信息
@@ -383,6 +413,7 @@ class ssh_security:
     def clear_login_send(self,get):
         login_send_type_conf = "/www/server/panel/data/ssh_send_type.pl"
         os.remove(login_send_type_conf)
+        self.stop_jian(get)
         return public.returnMsg(True, '取消登录告警成功！')
 
     #设置告警
@@ -413,7 +444,7 @@ class ssh_security:
         return public.returnMsg(True, send_type)
 
     def GetSshInfo(self):
-        port = public.get_ssh_port()
+        # port = public.get_ssh_port()
 
         pid_file = '/run/sshd.pid'
         if os.path.exists(pid_file):
@@ -448,27 +479,20 @@ class ssh_security:
         无需参数传递
         '''
         is_ssh_status=self.GetSshInfo()
+        rec = '\n\s*#?\s*RSAAuthentication\s+\w+'
+        rec2 = '\n\s*#?\s*PubkeyAuthentication\s+\w+'
+        file = public.readFile(self.__SSH_CONFIG)
+        if not file: return public.returnMsg(False,'错误：sshd_config配置文件不存在，无法继续!')
+        file_ssh = re.sub(rec, '\nRSAAuthentication no', file)
+        file_result = re.sub(rec2, '\nPubkeyAuthentication no', file_ssh)
+        self.wirte(self.__SSH_CONFIG, file_result)
+
         if is_ssh_status:
-            file = ['/root/.ssh/id_rsa.pub', '/root/.ssh/id_rsa', '/root/.ssh/authorized_keys']
-            rec = '\n#?RSAAuthentication\s\w+'
-            rec2 = '\n#?PubkeyAuthentication\s\w+'
-            file = public.readFile(self.__SSH_CONFIG)
-            file_ssh = re.sub(rec, '\nRSAAuthentication no', file)
-            file_result = re.sub(rec2, '\nPubkeyAuthentication no', file_ssh)
-            self.wirte(self.__SSH_CONFIG, file_result)
             self.set_password(get)
             self.restart_ssh()
-            return public.returnMsg(True, '关闭成功')
-        else:
-            file = ['/root/.ssh/id_rsa.pub', '/root/.ssh/id_rsa', '/root/.ssh/authorized_keys']
-            rec = '\n#?RSAAuthentication\s\w+'
-            rec2 = '\n#?PubkeyAuthentication\s\w+'
-            file = public.readFile(self.__SSH_CONFIG)
-            file_ssh = re.sub(rec, '\nRSAAuthentication no', file)
-            file_result = re.sub(rec2, '\nPubkeyAuthentication no', file_ssh)
-            self.wirte(self.__SSH_CONFIG, file_result)
-            #self.set_password(get)
-            return public.returnMsg(True, '关闭成功')
+        public.WriteLog('SSH管理','关闭SSH密钥登录')
+        return public.returnMsg(True, '关闭成功')
+
 
 
     def get_config(self, get):
@@ -478,45 +502,53 @@ class ssh_security:
         '''
         result = {}
         file = public.readFile(self.__SSH_CONFIG)
-        rec = '\n#?RSAAuthentication\s\w+'
-        pubkey = '\n#?PubkeyAuthentication\s\w+'
-        ssh_password = '\nPasswordAuthentication\s\w+'
-        #是否运行root登录
-        root_is_login='\n#?PermitRootLogin\s\w+'
+        if not file: return public.returnMsg(False,'错误：sshd_config配置文件不存在，无法继续!')
 
-        ret = re.findall(ssh_password, file)
-        if not ret:
-            result['password'] = 'no'
-        else:
-            if ret[-1].split()[-1] == 'yes':
-                result['password'] = 'yes'
-            else:
-                result['password'] = 'no'
-        pubkey = re.findall(pubkey, file)
-        if not pubkey:
-            result['pubkey'] = 'no'
-        else:
-            if pubkey[-1].split()[-1] == 'no':
-                result['pubkey'] = 'no'
-            else:
-                result['pubkey'] = 'yes'
-        rsa_auth = re.findall(rec, file)
-        if not rsa_auth:
-            result['rsa_auth'] = 'no'
-        else:
-            if rsa_auth[-1].split()[-1] == 'no':
-                result['rsa_auth'] = 'no'
-            else:
-                result['rsa_auth'] = 'yes'
+        # ========   以下在2022-10-12重构  ==========
+        # author : hwliang
+        # 是否开启RSA公钥认证
+        # 默认开启(最新版openssh已经不支持RSA公钥认证)
+        # yes = 开启
+        # no = 关闭
+        result['rsa_auth'] = 'yes'
+        rec = r'^\s*RSAAuthentication\s*(yes|no)'
+        rsa_find = re.findall(rec, file, re.M|re.I)
+        if rsa_find and rsa_find[0].lower() == 'no': result['rsa_auth'] = 'no'
 
-        is_root=re.findall(root_is_login, file)
-        if not is_root:
+        # 获取是否开启公钥认证
+        # 默认关闭
+        # yes = 开启
+        # no = 关闭
+        result['pubkey'] = 'no'
+        if self.get_key(get)['msg']: # 先检查是否存在可用的公钥
+            pubkey = r'^\s*PubkeyAuthentication\s*(yes|no)'
+            pubkey_find = re.findall(pubkey, file, re.M|re.I)
+            if pubkey_find and pubkey_find[0].lower() == 'yes': result['pubkey'] = 'yes'
+
+
+        # 是否开启密码登录
+        # 默认开启
+        # yes = 开启
+        # no = 关闭
+        result['password'] = 'yes'
+        ssh_password = r'^\s*PasswordAuthentication\s*([\w\-]+)'
+        ssh_password_find = re.findall(ssh_password, file, re.M|re.I)
+        if ssh_password_find and ssh_password_find[0].lower() == 'no': result['password'] = 'no'
+
+        #是否允许root登录
+        # 默认允许
+        # yes = 允许
+        # no = 不允许
+        # without-password = 允许，但不允许使用密码登录
+        # forced-commands-only = 允许，但只允许执行命令，不能使用终端
+        result['root_is_login'] = 'yes'
+        result['root_login_type'] = 'yes'
+        root_is_login=r'^\s*PermitRootLogin\s*([\w\-]+)'
+        root_is_login_find = re.findall(root_is_login, file, re.M|re.I)
+        if root_is_login_find and root_is_login_find[0].lower() != 'yes':
             result['root_is_login'] = 'no'
-        else:
-            if is_root[-1].split()[-1] == 'no':
-                result['root_is_login'] = 'no'
-            else:
-                result['root_is_login'] = 'yes'
+            result['root_login_type'] = root_is_login_find[0].lower()
+        result['root_login_types'] = self.__root_login_types
         return result
 
 
@@ -525,22 +557,30 @@ class ssh_security:
         开启密码登陆
         get: 无需传递参数
         '''
-        ssh_password = '\nPermitRootLogin\s\w+'
+        p_type = 'yes'
+        if 'p_type' in get: p_type = get.p_type
+        if p_type not in self.__root_login_types.keys():
+            return public.returnMsg(False, '错误：参数传递错误!')
+        ssh_password = r'^\s*#?\s*PermitRootLogin\s*([\w\-]+)'
         file = public.readFile(self.__SSH_CONFIG)
-        if len(re.findall(ssh_password, file)) == 0:
-            file_result = file + '\nPermitRootLogin yes'
+        src_line = re.search(ssh_password, file,re.M)
+        new_line = 'PermitRootLogin {}'.format(p_type)
+        if not src_line:
+            file_result = file + '\n{}'.format(new_line)
         else:
-            file_result = re.sub(ssh_password, '\nPermitRootLogin yes', file)
+            file_result = file.replace(src_line.group(),new_line)
         self.wirte(self.__SSH_CONFIG, file_result)
         self.restart_ssh()
-        return public.returnMsg(True, '开启成功')
+        msg = '设置root登录方式为: {}'.format(self.__root_login_types[p_type])
+        public.WriteLog('SSH管理',msg)
+        return public.returnMsg(True, msg)
 
     def stop_root(self, get):
         '''
         开启密码登陆
         get: 无需传递参数
         '''
-        ssh_password = '\nPermitRootLogin\s\w+'
+        ssh_password = '\n\s*PermitRootLogin\s+\w+'
         file = public.readFile(self.__SSH_CONFIG)
         if len(re.findall(ssh_password, file)) == 0:
             file_result = file + '\nPermitRootLogin no'
@@ -548,6 +588,7 @@ class ssh_security:
             file_result = re.sub(ssh_password, '\nPermitRootLogin no', file)
         self.wirte(self.__SSH_CONFIG, file_result)
         self.restart_ssh()
+        public.WriteLog('SSH管理','设置root登录方式为:禁止')
         return public.returnMsg(True, '关闭成功')
 
     def stop_password(self, get):
@@ -560,16 +601,45 @@ class ssh_security:
         file_result = re.sub(ssh_password, '\nPasswordAuthentication no', file)
         self.wirte(self.__SSH_CONFIG, file_result)
         self.restart_ssh()
+        public.WriteLog('SSH管理','关闭密码访问')
         return public.returnMsg(True, '关闭成功')
 
     def get_key(self, get):
         '''
         获取key 无参数传递
         '''
-        file = '/root/.ssh/id_rsa'
-        if not os.path.exists(file): return public.returnMsg(True, '')
-        ret = public.readFile(file)
-        return public.returnMsg(True, ret)
+        key_type = self.get_ssh_key_type()
+        if key_type in self.__type_files.keys():
+            key_file = self.__type_files[key_type]
+            key = public.readFile(key_file)
+            return public.returnMsg(True,key)
+
+        # for file in self.__key_files:
+        #     if not os.path.exists(file): continue
+        #     ret = public.readFile(file)
+        #     return public.returnMsg(True, ret)
+        return public.returnMsg(True, '')
+
+    def download_key(self, get):
+        '''
+            @name 下载密钥
+        '''
+        download_file = ''
+        key_type = self.get_ssh_key_type()
+        if key_type in self.__type_files.keys():
+            if os.path.exists(self.__type_files[key_type]):
+                download_file = self.__type_files[key_type]
+
+        else:
+            for file in self.__key_files:
+                if not os.path.exists(file): continue
+                download_file = file
+                break
+
+        if not download_file: return public.returnMsg(False, '错误：未找到密钥文件!')
+        from flask import send_file
+        filename = "{}_{}".format(public.GetHost(),os.path.basename(download_file))
+        return send_file(download_file,download_name=filename)
 
     def wirte(self, file, ret):
         result = public.writeFile(file, ret)

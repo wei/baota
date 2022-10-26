@@ -109,12 +109,12 @@ class ssh_terminal:
                     p_file = BytesIO(self._pkey)
                 else:
                     p_file = StringIO(self._pkey)
-
                 try:
                     if self._key_passwd:
                         pkey = paramiko.RSAKey.from_private_key(p_file,password=self._key_passwd)
                     else:
                         pkey = paramiko.RSAKey.from_private_key(p_file)
+                    self.debug("尝试使用RSA私钥认证")
                 except Exception as ex:
                     try:
                         p_file.seek(0) # 重置游标
@@ -122,6 +122,7 @@ class ssh_terminal:
                             pkey = paramiko.Ed25519Key.from_private_key(p_file,password=self._key_passwd)
                         else:
                             pkey = paramiko.Ed25519Key.from_private_key(p_file)
+                        self.debug("尝试使用Ed25519私钥认证")
                     except:
                         try:
                             p_file.seek(0)
@@ -129,6 +130,7 @@ class ssh_terminal:
                                 pkey = paramiko.ECDSAKey.from_private_key(p_file,password=self._key_passwd)
                             else:
                                 pkey = paramiko.ECDSAKey.from_private_key(p_file)
+                            self.debug("尝试使用ECDSA私钥认证")
                         except:
                             p_file.seek(0)
                             if self._key_passwd:
@@ -317,10 +319,15 @@ class ssh_terminal:
                         self._pass = ssh_info['password']
                     self._old_conf = True
                     return
-
+                ssh_key_type_file = '{}/data/ssh_key_type.pl'.format(public.get_panel_path())
+                ssh_key_type = ''
+                if os.path.exists(ssh_key_type_file):
+                    ssh_key_type_new = public.readFile(ssh_key_type_file)
+                    if ssh_key_type_new: ssh_key_type = ssh_key_type_new.strip()
                 login_user = self.get_login_user()
                 if self._user == 'root' and login_user == 'root':
-                    id_rsa_file = ['/root/.ssh/id_rsa','/root/.ssh/id_rsa_bt']
+                    id_rsa_file = ['/root/.ssh/id_ed25519','/root/.ssh/id_ecdsa','/root/.ssh/id_rsa','/root/.ssh/id_rsa_bt']
+                    if ssh_key_type: id_rsa_file.insert(0,'/root/.ssh/id_{}'.format(ssh_key_type))
                     for ifile in id_rsa_file:
                         if os.path.exists(ifile):
                             self._pkey = public.readFile(ifile)
@@ -330,12 +337,14 @@ class ssh_terminal:
                             return
 
 
+
                 if not self._pass or not self._pkey or not self._user:
                     home_path = '/home/' + login_user
                     if login_user == 'root':
                         home_path = '/root'
                     self._user = login_user
-                    id_rsa_file = [home_path + '/.ssh/id_rsa',home_path + '/.ssh/id_rsa_bt']
+                    id_rsa_file = [home_path + '/.ssh/id_ed25519',home_path + '/.ssh/id_ecdsa',home_path + '/.ssh/id_rsa',home_path + '/.ssh/id_rsa_bt']
+                    if ssh_key_type: id_rsa_file.insert(0,home_path + '/.ssh/id_{}'.format(ssh_key_type))
                     for ifile in id_rsa_file:
                         if os.path.exists(ifile):
                             self._pkey = public.readFile(ifile)
@@ -343,19 +352,6 @@ class ssh_terminal:
 
                     self._pass = 'none'
                     return
-                    # _ssh_ks = home_path + '/.ssh'
-                    # if not  os.path.exists(_ssh_ks):
-                    #     os.makedirs(_ssh_ks,384)
-                    # os.system("ssh-keygen -t rsa -P '' -f {}/.ssh/id_rsa |echo y".format(home_path))
-                    # pub_file = home_path + '/.ssh/id_rsa.pub'
-                    # az_file = home_path + '/.ssh/authorized_keys'
-                    # rsa_file = home_path + '/.ssh/id_rsa'
-                    # public.ExecShell('cat {} >> {} && chmod 600 {} {}'.format(pub_file, az_file, az_file,rsa_file))
-                    # os.remove(pub_file)
-                    # public.ExecShell("chown -R {}:{} {}".format(self._user,self._user,_ssh_ks))
-                    # public.ExecShell("chmod -R 600 {}".format(_ssh_ks))
-                    # self._pkey = public.readFile(rsa_file)
-
 
             except:
                 return
@@ -798,6 +794,14 @@ class ssh_host_admin(ssh_terminal):
     _pass_str = None
 
     def __init__(self):
+        self.__create_aes_pass()
+
+    def __create_aes_pass(self):
+        '''
+            @name 创建AES密码
+            @author
+            @return string
+        '''
         if not os.path.exists(self._save_path):
             os.makedirs(self._save_path,384)
         if not os.path.exists(self._pass_file):
@@ -805,6 +809,10 @@ class ssh_host_admin(ssh_terminal):
             public.set_mode(self._pass_file,600)
         if not self._pass_str:
             self._pass_str = public.readFile(self._pass_file)
+            if not self._pass_str:
+                self._pass_str = public.GetRandomString(16)
+                public.writeFile(self._pass_file,self._pass_str)
+                public.set_mode(self._pass_file,600)
 
     def get_host_list(self,args = None):
         '''
@@ -818,12 +826,17 @@ class ssh_host_admin(ssh_terminal):
         for name in os.listdir(self._save_path):
             info_file = self._save_path + name +'/info.json'
             if not os.path.exists(info_file): continue
-            info_tmp = self.get_ssh_info(name)
-            host_info = {}
-            host_info['host'] = name
-            host_info['port'] = info_tmp['port']
-            host_info['ps'] = info_tmp['ps']
-            host_info['sort'] = int(info_tmp['sort'])
+            try:
+                info_tmp = self.get_ssh_info(name)
+                host_info = {}
+                host_info['host'] = name
+                host_info['port'] = info_tmp['port']
+                host_info['ps'] = info_tmp['ps']
+                host_info['sort'] = int(info_tmp['sort'])
+            except:
+                if os.path.exists(info_file):
+                    os.remove(info_file)
+                continue
 
             host_list.append(host_info)
 
@@ -985,7 +998,15 @@ class ssh_host_admin(ssh_terminal):
         '''
         info_file = self._save_path + host + '/info.json'
         if not os.path.exists(info_file): return False
-        r_data = public.aes_decrypt(public.readFile(info_file),self._pass_str)
+        try:
+            r_data = public.aes_decrypt(public.readFile(info_file),self._pass_str)
+        except ValueError as ex:
+            if str(ex).find('Incorrect AES key length') != -1:
+                if os.path.exists(self._pass_file):
+                    os.remove(self._pass_file)
+                self.__create_aes_pass()
+                r_data = public.aes_decrypt(public.readFile(info_file),self._pass_str)
+
         return json.loads(r_data)
 
     def save_ssh_info(self,host,host_info):
@@ -1117,7 +1138,7 @@ class ssh_host_admin(ssh_terminal):
         if args: title = args.title.strip()
         command = self.get_command_list()
         for cmd in command:
-            if cmd['title'] == title:
+            if cmd['title'] == title or cmd['title'] == args.title:
                 return cmd
         return public.returnMsg(False,'指定命令不存在')
 
@@ -1132,13 +1153,13 @@ class ssh_host_admin(ssh_terminal):
             }
             @return dict
         '''
-        args.title = args.title.strip()
+        title = args.title.strip()
         command = self.get_command_list(sys_cmd=True)
         if not self.command_exists(command,args.title):
             return public.returnMsg(False,'指定命令不存在')
         for i in range(len(command)):
-            if command[i]['title'] == args.title:
-                command[i]['title'] = args.new_title
+            if command[i]['title'] == args.title or command[i]['title'] == title:
+                command[i]['title'] = args.new_title.strip()
                 command[i]['shell'] = args.shell.strip()
                 break
         self.save_command(command)
