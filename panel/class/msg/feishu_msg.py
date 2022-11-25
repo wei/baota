@@ -11,13 +11,16 @@
 import os, sys, public, json, requests
 from turtle import title
 import sys, os
-panelPath = "/www/server/panel"
+panelPath = '/www/server/panel'
 os.chdir(panelPath)
 sys.path.insert(0,panelPath + "/class/")
+import public, json, requests
 from requests.packages import urllib3
 # 关闭警告
-urllib3.disable_warnings()
 
+urllib3.disable_warnings()
+import socket
+import requests.packages.urllib3.util.connection as urllib3_cn
 class feishu_msg:
 
     conf_path = 'data/feishu.json'
@@ -67,6 +70,14 @@ class feishu_msg:
         data = {}
         if self.__feishu_info :
             data = self.__feishu_info
+
+            if not 'list' in data: data['list'] = {}
+
+            title = '默认'
+            if 'title' in data: title = data['title']
+
+            data['list']['default'] = {'title':title,'data':data['feishu_url']}
+
             data['default'] = self.__get_default_channel()
 
         return data
@@ -86,11 +97,21 @@ class feishu_msg:
             if get.atall.lower() == "false":
                 isAtAll = False
 
-        self.__feishu_info  = {"feishu_url": get.url.strip(), "isAtAll": isAtAll, "user":1}
+        title = '默认'
+        if hasattr(get, 'title'):
+            title = get.title
+            if len(title) > 7:
+                return public.returnMsg(False, '备注名称不能超过7个字符')
 
-        if self.send_msg('宝塔告警测试'):
+        self.__feishu_info  = {"feishu_url": get.url.strip(), "isAtAll": isAtAll, "user":1,"title":title}
+        ret = self.send_msg('宝塔告警测试')
+        if ret['status']:
             if 'default' in get and get['default']:
                 public.writeFile(self.__default_pl, self.__module_name)
+
+            if ret['success'] <= 0:
+                return public.returnMsg(False, '添加失败,请查看URL是否正确')
+
             public.writeFile(self.conf_path, json.dumps(self.__feishu_info))
             return public.returnMsg(True, '设置成功')
         else:
@@ -105,17 +126,18 @@ class feishu_msg:
             import re
             title = '宝塔告警通知'
             if msg.find("####") >= 0:
+                try:
+                    title = re.search(r"####(.+)", msg).groups()[0]
+                except:pass
+
                 msg = msg.replace("####",">").replace("\n\n","\n").strip()
                 s_list = msg.split('\n')
 
                 if len(s_list) > 3:
-                    title = s_list[0].replace(" ","")
+                    s_title = s_list[0].replace(" ","")
                     s_list = s_list[3:]
-                    s_list.insert(0,title)
+                    s_list.insert(0,s_title)
                     msg = '\n'.join(s_list)
-                try:
-                    title = re.search(r"####(.+)", msg).groups()[0]
-                except:pass
 
             reg = '<font.+>(.+)</font>'
             tmp = re.search(reg,msg)
@@ -125,7 +147,7 @@ class feishu_msg:
         except:pass
         return msg,title
 
-    def send_msg(self,msg):
+    def send_msg(self,msg,to_user = 'default'):
         """
         飞书发送信息
         @msg 消息正文
@@ -136,6 +158,7 @@ class feishu_msg:
         msg,title = self.get_send_msg(msg)
         if self.__feishu_info["isAtAll"]:
             msg += "<at userid='all'>所有人</at>"
+
         data = {
             "msg_type": "text",
             "content": {
@@ -143,19 +166,46 @@ class feishu_msg:
             }
         }
         headers = {'Content-Type': 'application/json'}
-        try:
-            x = requests.post(url = self.__feishu_info['feishu_url'], data=json.dumps(data), headers=headers,verify=False,timeout=10)
-            res = x.json()
-            if "StatusCode" in res and res["StatusCode"] == 0:
+        res = {}
 
-                try:
-                    public.write_push_log(self.__module_name,title,{})
-                except:pass
-                return public.returnMsg(True,'飞书消息发送成功。')
-            else:
-                return public.returnMsg(False,'飞书消息发送失败。')
-        except:
-            return public.returnMsg(False,'飞书消息发送失败。 --> {}'.format(public.get_error_info()))
+        error,success = 0,0
+        conf = self.get_config(None)['list']
+
+        for to_key in to_user.split(','):
+            if not to_key in conf: continue
+            try:
+
+                allowed_gai_family_lib=urllib3_cn.allowed_gai_family
+                def allowed_gai_family():
+                    family = socket.AF_INET
+                    return family
+                urllib3_cn.allowed_gai_family = allowed_gai_family
+                rdata = requests.post(url = conf[to_key]['data'], data = json.dumps(data),verify=False, headers=headers,timeout=10).json()
+                urllib3_cn.allowed_gai_family=allowed_gai_family_lib
+
+                # x = requests.post(url = conf[to_key]['data'], data=json.dumps(data), headers=headers,verify=False,timeout=10)
+                # rdata = x.json()
+
+                if "StatusCode" in rdata and rdata["StatusCode"] == 0:
+                    success += 1
+                    res[conf[to_key]['title']] = 1
+                else:
+                    error += 1
+                    res[conf[to_key]['title']] = 0
+            except:
+                public.print_log(public.get_error_info())
+                error += 1
+                res[conf[to_key]['title']] = 0
+
+        try:
+            public.write_push_log(self.__module_name,title,res)
+        except:pass
+
+        ret = public.returnMsg(True,'发送完成,发送成功{},发送失败{}.'.format(success,error))
+        ret['success'] = success
+        ret['error'] = error
+
+        return ret
 
     def push_data(self,data):
         return self.send_msg(data['msg'])

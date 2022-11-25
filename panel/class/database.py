@@ -383,8 +383,8 @@ class database(datatool.datatools):
         if "2002," in mysqlMsg or '2003,' in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_CONNECT')
         if "using password:" in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_PASS')
         if "Connection refused" in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_CONNECT')
-        if "1133" in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_NOT_EXISTS')
-        if "3679" in mysqlMsg: return public.returnMsg(False,'从数据库删除失败，数据目录不存在!')
+        if "1133," in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_NOT_EXISTS')
+        if "3679," in mysqlMsg: return public.returnMsg(False,'从数据库删除失败，数据目录不存在!')
         if "libmysqlclient" in mysqlMsg:
             self.rep_lnk()
             public.ExecShell("pip uninstall mysql-python -y")
@@ -848,18 +848,22 @@ SetLink
         try:
             id = get.id
             where = "id=?"
-            filename = public.M('backup').where(where,(id,)).getField('filename')
+            backup_info = public.M('backup').where(where,(id,)).find()
+            filename = backup_info['filename']
             if os.path.exists(filename): os.remove(filename)
-            name=''
+            db_name = ''
             if filename == 'qiniu':
-                name = public.M('backup').where(where,(id,)).getField('name')
+                name = backup_info['name']
                 public.ExecShell(public.get_python_bin() + " "+public.GetConfigValue('setup_path') + '/panel/script/backup_qiniu.py delete_file ' + name)
-
             public.M('backup').where(where,(id,)).delete()
-            public.WriteLog("TYPE_DATABASE", 'DATABASE_BACKUP_DEL_SUCCESS',(name,filename))
+
+            # 取实际
+            pid = backup_info['pid']
+            db_name = public.M('databases').where('id=?',(pid,)).getField('name')
+            public.WriteLog("TYPE_DATABASE", 'DATABASE_BACKUP_DEL_SUCCESS',(db_name,filename))
             return public.returnMsg(True, 'DEL_SUCCESS')
         except Exception as ex:
-            public.WriteLog("TYPE_DATABASE", 'DATABASE_BACKUP_DEL_ERR',(name,filename,str(ex)))
+            public.WriteLog("TYPE_DATABASE", 'DATABASE_BACKUP_DEL_ERR',(db_name,filename,str(ex)))
             return public.returnMsg(False,'DEL_ERROR')
 
     #导入
@@ -986,7 +990,14 @@ SetLink
                 result = self.ToDataBase(find)
                 if result == 1: n +=1
 
-        return public.returnMsg(True,'DATABASE_SYNC_SUCCESS',(str(n),))
+        # 当只同步1个数据库时，不返回成功数量
+        if n == 1:
+            return public.returnMsg(True, '同步成功')
+        elif n == 0:
+            # 失败
+            return public.returnMsg(False, '同步失败')
+        else:
+            return public.returnMsg(True,'DATABASE_SYNC_SUCCESS',(str(n),))
 
     #配置
     def mypass(self,act,password = None):

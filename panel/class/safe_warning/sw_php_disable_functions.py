@@ -24,7 +24,7 @@ _version = 1.0                              # 版本
 _ps = "PHP未禁用危险函数"          # 描述
 _level = 3                                  # 风险级别： 1.提示(低)  2.警告(中)  3.危险(高)
 _date = '2022-8-10'                        # 最后更新时间
-_ignore = os.path.exists("data/warning/ignore/sw_php_php_disable_funcation.pl")
+_ignore = os.path.exists("data/warning/ignore/sw_php_disable_functions.pl")
 _tips = [
     "在【php.ini】文件中设置【disable_functions】未配置system,exec,passthru,shell_exec,popen,proc_open等危险函数",
     "提示：【php.ini】未配置system,exec,passthru,shell_exec,popen,proc_open等危险函数"

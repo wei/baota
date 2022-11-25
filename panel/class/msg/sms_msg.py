@@ -61,7 +61,7 @@ class sms_msg:
     def get_config(self,get):
         result = {}
         data = {}
-        skey = 'sms_count'
+        skey = 'sms_count_{}'.format(public.get_user_info()['username'])
         try:
             from BTPanel import cache
             result = cache.get(skey)
@@ -154,7 +154,17 @@ class sms_msg:
             u_key = '{}****{}'.format(uinfo['username'][0:3],uinfo['username'][-3:])
 
             res[u_key] = 0
-            if result['status']: res[u_key] = 1
+            if result['status']:
+                res[u_key] = 1
+
+                skey = 'sms_count_{}'.format(public.get_user_info()['username'])
+                try:
+                    from BTPanel import cache
+                except:
+                    cache = None
+                if not result:
+                    result = self.request('get_user_sms')
+                    if cache: cache.set(skey,result,3600)
 
             public.write_push_log(self.__module_name,title,res)
         except:pass
@@ -200,7 +210,7 @@ class sms_msg:
         except Exception as e:
             # print("短信发送异常:")
             # print(e)
-            return public.returnMsg(False,public.get_error_info())
+            return public.returnMsg(False,result)
 
     def uninstall(self):
         if os.path.exists(self.conf_path):

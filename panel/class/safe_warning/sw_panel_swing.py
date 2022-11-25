@@ -31,14 +31,11 @@ def check_run():
         @author lkq@bt.cn
     '''
     send_type = ""
-    if os.path.exists("/www/server/panel/data/login_send_type.pl"):
-        return True, '无风险'
-    else:
-        if os.path.exists('/www/server/panel/data/login_send_mail.pl'):
+    tip_files = ['panel_login_send.pl','login_send_type.pl','login_send_mail.pl','login_send_dingding.pl']
+    for fname in tip_files:
+        filename = 'data/' + fname
+        if os.path.exists(filename):
             return True, '无风险'
-        if os.path.exists('/www/server/panel/data/login_send_dingding.pl'):
-            return True, '无风险'
-
     return False, '请在【设置】-【面板登录告警】中开启'
 
 

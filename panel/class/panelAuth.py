@@ -236,6 +236,33 @@ class panelAuth:
     def check_plugin_end(self):
         pass
 
+
+    def rest_unbind_count(self,get):
+        """
+        @name 获取当前订单可解绑次数
+        """
+        params = {}
+        data = self.send_cloud_v2('v2/authorization_v1/rest_unbind_count', params)
+        return data
+
+    def unbind_authorization(self,get):
+        """
+        @name 解绑专业版/企业版
+        """
+        params = {}
+        data = self.send_cloud_v2('v2/authorization_v1/unbind_authorization', params)
+        return data
+
+    def get_pay_unbind_count(self,get):
+        """
+        @name 购买解绑次数
+        """
+        params = {}
+        params['product_id'] = int(get.pid)
+        data = self.send_cloud_v2('v2/order/unbind_count/create', params)
+        return data
+
+
     def get_re_order_status_plugin(self,get):
         params = {}
         params['pid'] = getattr(get,'pid',0)
@@ -384,6 +411,26 @@ class panelAuth:
                 params['uid'] = userInfo['uid']
                 params['serverid'] = userInfo['serverid']
             params['os'] = 'Linux'
+            result = public.httpPost(cloudURL + module,params)
+
+            result = json.loads(result)
+            if not result: return None
+            return result
+        except: return None
+
+
+    def send_cloud_v2(self,module,params):
+        try:
+            cloudURL = 'http://www.bt.cn/api/'
+            userInfo = self.create_serverid(None);
+            if 'status' in userInfo:
+                params['uid'] = 0
+                params['serverid'] = ''
+            else:
+                params['uid'] = userInfo['uid']
+                params['serverid'] = userInfo['serverid']
+                params['access_key'] = userInfo['access_key']
+            params['os'] = 'Windows'
             result = public.httpPost(cloudURL + module,params)
 
             result = json.loads(result)

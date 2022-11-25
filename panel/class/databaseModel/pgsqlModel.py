@@ -396,7 +396,7 @@ class main(databaseBase,panelPgsql):
         exts = ['sql']
         ext = tmp[len(tmp) -1]
         if ext not in exts:
-            return public.returnMsg(False, 'DATABASE_INPUT_ERR_FORMAT')
+            return public.returnMsg(False, '文件格式不正确,请上传sql文件.')
 
         sql_dump = '{}/bin/psql'.format(self.__soft_path)
         if not os.path.exists(sql_dump):
@@ -440,7 +440,10 @@ class main(databaseBase,panelPgsql):
                 find = sql.where("id=?",(value,)).field('id,name,username,password,sid,db_type,accept,type').find()
                 result = self.ToDataBase(find)
                 if result == 1: n +=1
-        print(n)
+        if n == 1:
+            return public.returnMsg(True, '同步成功')
+        elif n == 0:
+            return public.returnMsg(False,'同步失败')
         return public.returnMsg(True,'DATABASE_SYNC_SUCCESS',(str(n),))
 
     def ToDataBase(self,find):

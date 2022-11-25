@@ -454,27 +454,41 @@ var crontab = {
         break;
       case 'syncTime':
         config[1].group.value = '定期同步服务器时间'
-        config[5].group.value = 'echo "|-正在尝试从0.pool.bt.cn同步时间..";\n' +
-            'ntpdate -u 0.pool.bt.cn\n' +
-            'if [ $? = 1 ];then\n' +
-            '\techo "|-正在尝试从1.pool.bt.cn同步时间..";\n' +
-            '\tntpdate -u 1.pool.bt.cn\n' +
-            'fi\n' +
-            'if [ $? = 1 ];then\n' +
-            '\techo "|-正在尝试从0.asia.pool.ntp.org同步时间..";\n' +
-            '\tntpdate -u 0.asia.pool.ntp.org\n' +
-            'fi\n' +
-            'if [ $? = 1 ];then\n' +
-            '\techo "|-正在尝试从www.bt.cn同步时间..";\n' +
-            '\tgetBtTime=$(curl -sS --connect-timeout 3 -m 60 http://www.bt.cn/api/index/get_time)\n' +
-            '\tif [ "${getBtTime}" ];then\t\n' +
-            '\t\tdate -s "$(date -d @$getBtTime +"%Y-%m-%d %H:%M:%S")"\n' +
-            '\tfi\n' +
-            'fi\n' +
-            'echo "|-正在尝试将当前系统时间写入硬件..";\n' +
-            'hwclock -w\n' +
-            'date\n' +
-            'echo "|-时间同步完成!";'
+        config[5].group.value = 'echo "|-检查ntpdate命令是否就绪.."\n'
+        +'is_ntpdate=$(which ntpdate)\n'
+        +'if [ "$is_ntpdate" = "" ];then\n'
+        +'   if [ -f /usr/bin/apt ];then\n'
+        +'       apt install ntpdate -y\n'
+        +'   else\n'
+        +'       is_dnf=$(which dnf)\n'
+        +'       if [ "$is_dnf" = "" ];then\n'
+        +'                yum install ntpdate -y\n'
+        +'       fi\n'
+        +'   fi\n'
+        +'fi\n'
+        +'is_ntpdate=$(which ntpdate)\n'
+        +'is_http=0\n'
+        +'if [ "$is_ntpdate" != "" ];then\n'
+        +'    echo "|-正在尝试从1.pool.bt.cn同步时间..";\n'
+        +'    ntpdate -u 1.pool.bt.cn\n'
+        +'    if [ $? = 1 ];then\n'
+        +'       echo "|-正在尝试从0.asia.pool.ntp.org同步时间..";\n'
+        +'       ntpdate -u 0.asia.pool.ntp.org\n'
+        +'   fi\n'
+        +'else\n'
+        +'    is_http=1\n'
+        +'fi\n'
+        +'if [ $? = 1 ] || [ $is_http = 1 ];then\n'
+        +'    echo "|-正在尝试从www.bt.cn同步时间..";\n'
+        +'    getBtTime=$(curl -sS --connect-timeout 3 -m 60 http://www.bt.cn/api/index/get_time)\n'
+        +'    if [ "${getBtTime}" ];then\n'
+        +'        echo "|-设置时间: "$(date -s "$(date -d @$getBtTime +"%Y-%m-%d %H:%M:%S")")\n'
+        +'    fi\n'
+        +'fi\n'
+        +'echo "|-正在尝试将当前系统时间写入硬件..";\n'
+        +'hwclock -w\n'
+        +'echo "|-当前时间为：$(date)"\n'
+        +'echo "|-时间同步完成!";\n'
         break;
       case 'rememory':
         config[1].group.value = '释放内存'

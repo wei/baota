@@ -29,12 +29,15 @@ class userlogin:
 
         public.chdck_salt()
         sql = db.Sql()
-        user_list = sql.table('users').field('id,username,password,salt').select()
-
         userInfo = None
-        for u_info in user_list:
-            if public.md5(u_info['username']) == post.username:
-                userInfo = u_info
+        user_plugin_file = '{}/users_main.py'.format(public.get_plugin_path('users'))
+        if os.path.exists(user_plugin_file):
+            user_list = sql.table('users').field('id,username,password,salt').select()
+            for u_info in user_list:
+                if public.md5(u_info['username']) == post.username:
+                    userInfo = u_info
+        else:
+            userInfo = sql.table('users').where('id=?',1).field('id,username,password,salt').find()
 
 
         if 'code' in session:
@@ -67,6 +70,7 @@ class userlogin:
             _key_file = "/www/server/panel/data/two_step_auth.txt"
 
             # 密码过期检测
+            if sys.path[0] != 'class/': sys.path.insert(0,'class/')
             if not public.password_expire_check():
                 session['password_expire'] = True
 

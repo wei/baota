@@ -29,6 +29,44 @@ def FtpReload():
     runPath = '/www/server/pure-ftpd/bin'
     public.ExecShell(runPath + '/pure-pw mkdb /www/server/pure-ftpd/etc/pureftpd.pdb')
 
+
+def flush_ssh_log():
+    """
+    @name 更新ssh日志
+    """
+    try:
+        import PluginLoader
+        c_time = 0
+        c_file ='{}/data/ssh/time.day'.format(public.get_panel_path())
+        try:
+            c_time = int(public.readFile(c_file))
+        except:pass
+
+        public.print_log("开始更新SSH登录日志...")
+        if c_time:
+            public.print_log("上次更新时间:{}".format(public.format_date(times = c_time)))
+
+        if time.time() - c_time > 86400:
+            #登录成功日志
+            args = public.dict_obj()
+            args.model_index = 'safe'
+            args.count = 100
+            args.p = 1000000
+            res = PluginLoader.module_run("syslog","get_ssh_success",args)
+
+            #登录所有登录日志
+            res = PluginLoader.module_run("syslog","get_ssh_list",args)
+
+            #登录失败日志
+            res = PluginLoader.module_run("syslog","get_ssh_error",args)
+
+            public.print_log("更新ssh日志成功")
+            public.writeFile(c_file,str(int(time.time())))
+        else:
+            public.print_log("未超过一天,不更新ssh日志")
+    except:
+        public.print_log("更新ssh日志失败: {}".format(public.get_error_info()))
+
 oldEdate = public.readFile('data/edate.pl')
 if not oldEdate: oldEdate = '0000-00-00'
 mEdate = time.strftime('%Y-%m-%d',time.localtime())
@@ -50,6 +88,10 @@ for site in edateSites:
         SetStatus(get)
 oldEdate = mEdate
 public.writeFile('/www/server/panel/data/edate.pl',mEdate)
+
+# 更新ssh日志
+flush_ssh_log()
+
 
 #未参加用户体验改进计划的不提交统计信息
 if public.get_improvement():

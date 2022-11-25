@@ -4623,7 +4623,7 @@ font-weight: bold
 }
 
 #pay_product_view {
-  padding: 25px 45px 30px 45px;
+  padding: 0 28px 0 27px;
   height: 100%;
 }
 
@@ -4761,7 +4761,6 @@ font-weight: bold
 .pay-btn-group {
   position: relative;
   display: inline-block;
-  vertical-align: middle;
 }
 
 .pay-btn-group>.pay-cycle-btn {
@@ -4788,6 +4787,7 @@ font-weight: bold
   box-sizing: border-box;
   margin-left: -1px;
   transition: border-color .1s ease-in, color .1s ease-in;
+  cursor:pointer;
 }
 
 .pay-cycle-btn span {
@@ -4816,26 +4816,26 @@ font-weight: bold
   border-bottom-right-radius: 4px;
 }
 
-.pay-btn-group .active,
-.li-c-item .active {
-  background: url("../images/svg/lower-select.svg") no-repeat right bottom;
-  background-size: 22px;
-}
+/*.pay-btn-group .active,*/
+/*.li-c-item .active {*/
+/*  background: url("../images/svg/lower-select.svg") no-repeat right bottom;*/
+/*  background-size: 22px;*/
+/*}*/
 
-.pay-btn-group .pay-cycle-btn:hover {
-  border: 1px solid #20a53a;
-  color: #20a53a;
-  z-index: 2;
-  cursor: pointer;
-}
+/*.pay-btn-group .pay-cycle-btn:hover {*/
+/*  border: 1px solid #20a53a;*/
+/*  color: #20a53a;*/
+/*  z-index: 2;*/
+/*  cursor: pointer;*/
+/*}*/
 
-.pay-btn-group .active,
-.pay-btn-group .active:hover {
-  border: 2px solid #20a53a;
-  color: #20a53a;
-  z-index: 2;
-  cursor: pointer;
-}
+/*.pay-btn-group .active,*/
+/*.pay-btn-group .active:hover {*/
+/*  border: 2px solid #20a53a;*/
+/*  color: #20a53a;*/
+/*  z-index: 2;*/
+/*  cursor: pointer;*/
+/*}*/
 
 .pay-btn-group .active span {
   line-height: 22px;
@@ -5569,7 +5569,7 @@ select[disabled] {
 
 .set_nginx_config,
 .set_Apache_config {
-  padding: 10px 10px 10px 0;
+  padding: 10px 10px 0 0;
 }
 
 .set_nginx_config .line,
@@ -14470,9 +14470,11 @@ span.unit {
   margin-left: -12.5px;
   margin-top: -12.5px;
 }
-.contact_consult canvas{
+.contact_consult img,
+.contact_consult_qcode img,
+#wx_qcode img{
   border: 1px solid #20a53a;
-  padding:5px;
+  width: 140px;
 }
 /* 人工服务支付成功界面 end*/
 
@@ -14827,6 +14829,372 @@ textarea {
 
 
 /* New 支付界面 */
+.libPay-content-box{
+  font-size:0;
+}
+.libPay-product-introduce,
+.libPay-product-content{
+  font-size:12px;
+}
+.libPay-content-box .libPay-product-introduce,
+.libPay-content-box .libPay-product-content{
+  display:inline-block;
+}
+.libPay-menu .libPay-menu-type.lib_pro{
+  width:220px;
+}
+.libPay-menu.is_plugin .libPay-menu-type.lib_pro{
+  width:208px;
+}
+.libPay-content-box .libPay-product-content{margin-left:210px}
+#libPay-qcode-box .pay-type-btn:last-child .pay-type-label{
+  border-bottom: none;
+}
+.libPay-content-box .libPay-footer-tips{
+  position: absolute;
+  right: 25px;
+  bottom: 15px;
+  font-size: 14px;
+  color: #AAAFB8;
+  cursor: pointer;
+}
+.libPay-content-box .libPay-footer-tips i{
+  background-image: url('/static/images/libPay-footer-icon.png');
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  background-size: 100%;
+  vertical-align: -3px;
+  margin-right: 3px;
+}
+.libPay-content-box .libPay-footer-tips span:nth-child(2) i{
+  background-position: 0 32px;
+}
+.libPay-content-box .libPay-footer-tips span:nth-child(3) i{
+  background-position: 0 16px;
+}
+.libPay-content-box .libPay-product-introduce{
+  width:210px;
+  height: 100%;
+  vertical-align: top;
+  padding: 45px 5px 45px 23px;
+  position: absolute;
+  display: inline-block;
+  background-color: #FFF5E1;
+}
+.libPay-content-box.pro .libPay-product-introduce:before{
+  content:'';
+  background-image: url('/static/images/libPay-pro-bg-logo.png');
+  width:144px;
+  height:110px;
+  position: absolute;
+  bottom: 30px;
+}
+.libPay-content-box.ltd .libPay-product-introduce:before,
+.libPay-content-box.ops .libPay-product-introduce:before{
+  content:'';
+  background-image: url('/static/images/libPay-ltd-bg-logo.png');
+  width:137px;
+  height:134px;
+  position: absolute;
+  bottom: 5px;
+  left: 10px;
+  z-index:0;
+}
+.pro-left-introduce .pro-left-title div{
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+.pro-left-introduce.plugin .pro-left-title div,
+.pro-left-introduce.ver .pro-left-title div{
+  font-size: 23px;
+  width: 165px;
+}
+.pro-left-introduce .pro-left-title div span,
+.pro-left-footer-recom span{
+  background-image: linear-gradient(to right,#E8A833,#B48A52);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+.pro-left-introduce.ltd .pro-left-title div span,
+.pro-left-introduce.ops .pro-left-title div span{
+  background-image: linear-gradient(to right,#E8A833,#EBC874,#AE7222);
+}
+.pro-left-introduce .pro-left-title>span{
+  color: #888888;
+  width:156px;
+  height:34px;
+  display: inherit;
+}
+.pro-left-introduce .pro-left-list{
+  margin-top: 38px;
+  font-size: 15px;
+  color: #666;
+}
+.pro-left-introduce .pro-left-list .pro-left-list-title{
+  margin-bottom: 15px;
+}
+.pro-left-introduce .pro-left-list .pro-left-list-content{
+  font-size: 14px;
+  position: absolute;
+  z-index: 1;
+}
+.pro-left-introduce .pro-left-list .pro-left-list-content .pro-introduce {
+  padding: 10px 0;
+}
+.pro-left-introduce .pro-left-list .pro-left-list-content .pro-introduce span.glyphicon.glyphicon-ok {
+  color: #FEAA04;
+  margin-right: 8px;
+}
+.pro-left-introduce .pro-price-herf a{
+  font-size: 16px;
+  text-align: center;
+  border: 2px solid #FFB95A;
+  border-radius: 5px;
+  padding: 6px 30px;
+  position: absolute;
+  bottom: 50px;
+  cursor: pointer;
+  background: linear-gradient(to bottom,#E8AA36,#E9C571,#AF7323);
+  -webkit-background-clip: text;
+  color: transparent;
+  z-index:1;
+}
+.pro-left-footer-recom {
+  position: absolute;
+  bottom: 30px;
+  border: #d8ae69 1px solid;
+  background: #fff9ef;
+  border-radius: 5px;
+  margin-right: 20px;
+  padding: 40px 12px;
+  font-size: 14px;
+  line-height: 25px;
+  font-weight: bold;
+}
+.pro-left-footer-recom:before{
+  content:'购买推荐';
+  background:url(../images/libPay-left-footer-plugin-explain.png);
+  width: 93px;
+  height: 23px;
+  position:absolute;
+  right: -1px;
+  top: -8px;
+  background-size: 100%;
+  color: #fff;
+  font-size: 15px;
+  text-align: right;
+  padding: 0px 10px;
+  font-weight: initial;
+}
+.pro-left-introduce.ver .pro-left-list-content a,
+.pro-left-introduce.plugin .pro-left-list-content a{
+  text-decoration: underline;
+  color: #FF8F00 !important;
+}
+
+/* 专业版 */
+.libPay-menu .libPay-menu-type.lib_pro.active>p span{
+  color:#FF8F00
+}
+.libPay-content-box.plugin .libPay-line-item.proP li.pay-cycle-btns.active:before,
+.libPay-content-box.plugin .libPay-line-item.proN .btn_nums.active:before,
+.libPay-content-box.pro .libPay-line-item.proP li.pay-cycle-btns.active:before,
+.libPay-content-box.pro .libPay-line-item.proN .btn_nums.active:before{
+  background: url(../images/svg/lower-select-pro.svg) no-repeat right bottom;
+}
+.libPay-content-box.plugin .libPaycode-foo-txt a.btlink,
+.libPay-content-box.pro .libPaycode-foo-txt a.btlink{
+  color:#FF8F00
+}
+
+/* 企业版及运维版 */
+.libPay-content-box.ltd .libPay-product-introduce,
+.libPay-content-box.ops .libPay-product-introduce{
+  background-color:rgba(47, 52, 55, 0.95)
+}
+.libPay-menu .libPay-menu-type.lib_ops.active p span:last-child,
+.libPay-menu .libPay-menu-type.lib_ltd.active>p span{
+  background-image: linear-gradient(to bottom,#E8A833,#B48A52);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+.libPay-content-box.ltd .pro-left-introduce .pro-left-title>span,
+.libPay-content-box.ops .pro-left-introduce .pro-left-title>span{
+  color:#cfcfcf
+}
+.libPay-content-box.ltd .pro-left-introduce .pro-left-list-title,
+.libPay-content-box.ops .pro-left-introduce .pro-left-list-title{
+  background: linear-gradient(to bottom,#E8AA36,#E9C571,#AF7323);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+.libPay-content-box.ltd .pro-left-introduce .pro-introduce span:last-child,
+.libPay-content-box.ops .pro-left-introduce .pro-introduce span:last-child{
+  color:#c7c7c7
+}
+.libPay-content-box.ops .pro-introduce{padding:8px 0!important}
+
+.libPay-content-box.ltd .libPay-line-item.proP li.pay-cycle-btns.active:before,
+.libPay-content-box.ltd .libPay-line-item.proN .btn_nums.active:before,
+.libPay-content-box.ops .libPay-line-item.proP li.pay-cycle-btns.active:before,
+.libPay-content-box.ops .libPay-line-item.proN .btn_nums.active:before{
+  background: url(../images/svg/lower-select-ltd.svg) no-repeat right bottom;
+}
+.libPay-content-box.ltd .libPay-line-item.proP li.pay-cycle-btns.active:after,
+.libPay-content-box.ltd .libPay-line-item.proN .btn_nums.active:after,
+.libPay-content-box.ops .libPay-line-item.proP li.pay-cycle-btns.active:after,
+.libPay-content-box.ops .libPay-line-item.proN .btn_nums.active:after{
+  content: '';
+  background: url(../images/libPay-ltd-bg-logo.png) no-repeat left bottom;
+  width: 110px;
+  height: 92px;
+  position: absolute;
+  left: -26px;
+  bottom: -14px;
+  background-size: 100%;
+}
+.libPay-content-box.ltd .libPay-line-item.proN .btn_nums.active:after,
+.libPay-content-box.ops .libPay-line-item.proN .btn_nums.active:after{
+  width: 37px;
+  height: 38px;
+  left: -7px;
+  bottom: -2px;
+}
+
+.libPay-content-box.ltd .libPay-line-item.proP li.pay-cycle-btns.active,
+.libPay-content-box.ltd .libPay-line-item.proN .btn_nums.active,
+.libPay-content-box.ops .libPay-line-item.proP li.pay-cycle-btns.active,
+.libPay-content-box.ops .libPay-line-item.proN .btn_nums.active{
+  border: 2px solid #ECB665;
+  background: rgba(47, 52, 55, 0.95);
+}
+
+.libPay-content-box.ltd .libPay-line-item.proN .btn_nums.active span,
+.libPay-content-box.ops .libPay-line-item.proN .btn_nums.active span{
+  font-weight: bold;
+}
+
+.libPay-content-box.ltd .libPay-line-item.proP .libPrice,
+.libPay-content-box.ops .libPay-line-item.proP .libPrice{
+  color:#D38200;
+}
+.libPay-content-box.ltd .libPay-line-item.proN .btn_nums.active span,
+.libPay-content-box.ops .libPay-line-item.proN .btn_nums.active span,
+.libPay-content-box.ltd .libPay-line-item.proP .pay-cycle-btns.active .libPrice,
+.libPay-content-box.ops .libPay-line-item.proP .pay-cycle-btns.active .libPrice{
+  background: linear-gradient(to bottom,#E8AA36,#EAC672);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.libPay-content-box.ltd .libPay-qcode-right .libPaycode-foo-txt .libPayTotal,
+.libPay-content-box.ops .libPay-qcode-right .libPaycode-foo-txt .libPayTotal,
+.libPay-content-box.ltd .libPay-qcode-right .libPaycode-foo-txt .libPayTotal span,
+.libPay-content-box.ops .libPay-qcode-right .libPaycode-foo-txt .libPayTotal span{
+  background: linear-gradient(to right,#E4A93C,#AF7323);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+.libPay-content-box.ltd .libPay-line-item.proP .pay-cycle-btns.active .pay-foo-price,
+.libPay-content-box.ops .libPay-line-item.proP .pay-cycle-btns.active .pay-foo-price{
+  color:#FFCE7D
+}
+
+.libPay-content-box.ltd #libPay-qcode-box .pay-type-btn.active .pay-radio-ati,
+.libPay-content-box.ops #libPay-qcode-box .pay-type-btn.active .pay-radio-ati{
+  border: 1px solid #A88B56;
+}
+.libPay-content-box.ltd .libPay-qcode-left .pay-type-btn.active .pay-radio-tit,
+.libPay-content-box.ops .libPay-qcode-left .pay-type-btn.active .pay-radio-tit,
+.libPay-content-box.ltd .libPaycode-foo-txt a.btlink,
+.libPay-content-box.ops .libPaycode-foo-txt a.btlink{
+  color:#A88B56
+}
+.libPay-content-box.ltd .pay-type-btn.active .pay-radio-ati:after,
+.libPay-content-box.ops .pay-type-btn.active .pay-radio-ati:after{
+  background-color: #A88B56;
+}
+.libPay-content-box .safe-report .glyphicon{
+  color: #FEAA04;
+  margin-right: 8px;
+}
+.libPay-content-box .safe-report a{
+  text-decoration: underline;
+  color: #dbdbdb;
+}
+.libPay-content-box .safe-report a:hover{
+  color:#fff;
+}
+.ops_msg{
+  margin-left: 5px;
+  background-image:url('/static/images/ops_advantage.png');
+  width: 550px;
+  height: 112px;
+  background-size: 100%;
+}
+
+/* 抵扣券 */
+#pay_product_view .pay-btn-group .pay-cycle-btn:nth-child(6n+1){
+  margin-left: 0;
+}
+.pro-left-introduce.ver .pro-left-list{
+  line-height: 22px;
+}
+.pro-left-introduce.ver .pro-left-list li{
+  margin: 0 7px 14px 16px;
+  list-style: disc;
+}
+.pro-left-introduce.ver .pro-price-herf a{
+  color:#20a53a;
+  border-color:#20a53a
+}
+/* 加载 */
+.libPay-loading.custom-loading .custom-loading__icon{
+  height: 5rem;
+  width: 5rem;
+}
+.libPay-loading.custom-loading .custom-loading__icon::before{
+  width: 2.5rem;
+  height: 2.5rem;
+}
+.libPay-loading.custom-loading .custom-loading__icon::after{
+  width: 5rem;
+  height: 5rem;
+}
+/* 解绑授权 */
+.libPay-line-item.unbind_auth{
+  border: 2px solid #eee;
+  border-radius: 4px;
+  margin-top: 30px;
+  width: 722px;
+}
+.libPay-line-item.unbind_auth .unbindAuth{
+  padding: 15px;
+}
+.libPay-line-item.unbind_auth .unbindAuth .icon{
+  padding:0px;
+  text-align: left;
+  margin-bottom:10px;
+}
+.libPay-line-item.unbind_auth .unbindAuth .icon span.glyphicon{
+  display:none;
+}
+.libPay-line-item.unbind_auth .unbindAuth .tips{
+  margin-bottom: 0;
+  line-height:25px;
+}
+.libPay-line-item.unbind_auth .unbindAuth .box{
+  display: inline-block;
+  margin-top: 15px;
+}
+.libPay-line-item.unbind_auth .unbindAuth .box a{
+  padding:6px 10px;
+  font-size:15px;
+}
+/* 解绑授权 end*/
+/* 支付界面优化结束 */
+
 .pay_status {
   display: flex;
   align-items: center;
@@ -14870,7 +15238,7 @@ textarea {
 .libPay-menu .libPay-menu-type {
   height: 75px;
   display: inline-block;
-  width: 435px;
+  padding:0 12px;
   text-align: center;
   font-size: 12px;
   position: relative;
@@ -14878,28 +15246,31 @@ textarea {
 .libPay-menu.closePro .libPay-menu-type.lib_pro{
   display: none;
 }
-.libPay-menu.closePro .libPay-menu-type.lib_plugin,
-.libPay-menu.closePro .libPay-menu-type.lib_ltd,
-.libPay-menu.closePro .libPay-menu-type.lib_ops,
-.libPay-menu.closePro .libPay-menu-type.lib_ver{
-  width: 333px;
+.libPay-menu.closePro.is_plugin .libPay-menu-type.lib_plugin,
+.libPay-menu.closePro.is_plugin .libPay-menu-type.lib_ltd,
+.libPay-menu.closePro.is_plugin .libPay-menu-type.lib_ver{
+  width: 263px;
+
 }
-.libPay-menu.is_plugin .libPay-menu-type {
-  width: 290px;
+.libPay-menu.is_ops.closePro .libPay-menu-type.lib_ltd,
+.libPay-menu.is_ops.closePro .libPay-menu-type.lib_ops,
+.libPay-menu.is_ops.closePro .libPay-menu-type.lib_ver{
+  width: 263px;
 }
 
-.libPay-menu.is_ops .libPay-menu-type {
-  width: 290px;
+
+.libPay-menu.is_plugin .libPay-menu-type.lib_plugin {
+  width: 240px;
 }
 
 .libPay-menu .libPay-menu-type:last-child {
-  width: 129px;
+  width: 90px;
 }
 
 .libPay-menu-type p:first-child {
   font-size: 16px;
   font-weight: bold;
-  padding-top: 20px;
+  padding-top: 17px;
 }
 
 .libPay-menu-type p:last-child {
@@ -14931,11 +15302,11 @@ textarea {
   border: none;
 }
 
-.libPay-menu .libPay-menu-type.lib_pro .glyphicon {
+.libPay-content-box .libPay-menu-type.lib_pro .glyphicon {
   color: #ffa904;
 }
 
-.libPay-menu .libPay-menu-type.lib_ltd .glyphicon {
+.libPay-content-box .libPay-menu-type.lib_ltd .glyphicon {
   color: #9b7e48;
 }
 
@@ -14974,8 +15345,8 @@ textarea {
 }
 
 .libPay-line-item.proTname{
-  font-size: 14px;
-  margin: 15px 0;
+  font-size: 18px;
+  margin: 30px 0 15px 0;
 }
 
 .enter_qrcode {
@@ -15032,8 +15403,8 @@ textarea {
 }
 
 .libPay-content-box .libPay-layer-item .voucher-tit {
-  font-size: 14px;
-  margin-bottom: 10px;
+  font-size: 18px;
+  margin: 30px 0 15px 0;
 }
 
 .libPay-line-item.prokf {
@@ -15086,7 +15457,7 @@ textarea {
 
 #libPay-qcode-box {
   margin-bottom: 20px;
-  border: 1px solid #eee;
+  border: 2px solid #eee;
   border-radius: 4px;
   font-size: 0;
   position: relative;
@@ -15115,8 +15486,6 @@ textarea {
 #pay_product_view .libVoucher-loading {
   display: block;
   padding-top: 100px;
-  top: 125px;
-  height: 350px;
   z-index: 99999
 }
 
@@ -15136,7 +15505,7 @@ textarea {
   color: #e6a23c;
   padding: 8px 10px;
   border-radius: 2px;
-  margin-bottom:05px
+  margin-bottom:15px
 }
 .payment_results_error_tips {
   display: block !important;
@@ -15180,15 +15549,19 @@ textarea {
   z-index: 12;
   position: relative;
 }
+.libPay-qcode-left .pay-type-btn.active .pay-radio-tit{
+  color:#FF8F00
+}
+
 
 #libPay-qcode-box .pay-radio-type {
-  width: 150px;
+  width: 155px;
 }
 
 #libPay-qcode-box .pay-type-label {
-  height: 45px;
-  line-height: 45px;
-  padding-left: 15px;
+  height: 60px;
+  line-height: 60px;
+  padding-left: 20px;
   display: block;
   margin: 0;
   border-bottom: 1px solid #eee;
@@ -15197,52 +15570,74 @@ textarea {
 
 #libPay-qcode-box .pay-radio-ati {
   background-color: #fff;
-  border: 1px solid #2bc849;
+  border: 1px solid #999;
   border-radius: 100%;
   display: inline-block;
-  height: 14px;
+  height: 18px;
   margin-right: 8px;
-  margin-top: -1px;
+  margin-top: -2px;
   vertical-align: middle;
-  width: 14px;
+  width: 18px;
   line-height: 1
 }
 
 .pay-type-btn.active .pay-radio-ati:after {
-  background-color: #2bc849;
+  background-color: #FF8F00;
   border-radius: 100%;
   content: "";
   display: inline-block;
-  height: 8px;
+  height: 12px;
   margin: 2px;
-  width: 8px
+  width: 12px
+}
+#libPay-qcode-box .pay-type-btn.active .pay-radio-ati{
+  border: 1px solid #FF8F00;
 }
 
 #libPay-qcode-box .pay-radio-tit {
   font-weight: 500;
+  font-size: 13px;
 }
 
 .libPay-line-item .pay-pro-cycle {
   white-space: pre;
+  display: flex;
+  align-items: center;
 }
 
-.libPay-line-item.proP li.pay-cycle-btns.active {
+.libPay-line-item.proP li.pay-cycle-btns.active,
+.libPay-line-item.proN .btn_nums.active {
   color: #333;
-  border: #20a53a 2px solid;
+  border: #B87100 2px solid;
+  background:#FFF9F1;
+}
+.libPay-line-item.proP li.pay-cycle-btns.active:before,
+.libPay-line-item.proN .btn_nums.active:before{
+  content: "";
+  width: 38px;
+  height: 38px;
+  position: absolute;
+  right: 0;
+  bottom: 0;
   background: url("../images/svg/lower-select.svg") no-repeat right bottom;
+  background-size: 38px;
+}
+.libPay-line-item.proN .btn_nums.active:before{
+  width: 22px;
+  height: 22px;
   background-size: 22px;
 }
 
 .libPay-line-item.proP li.pay-cycle-btns {
   display: inline-block;
-  width: 220px;
-  margin-right: 10px;
+  width: 165px;
+  margin-right: 20px;
   text-align: center;
   border-radius: 4px;
   /* padding: 15px 20px; */
-  padding: 10px 20px;
+  padding: 15px 20px;
   font-style: normal;
-  border: 1px solid #eee;
+  border: 2px solid #eee;
   position: relative;
   cursor: pointer;
 }
@@ -15256,16 +15651,20 @@ textarea {
   border-bottom: 1px dashed #ccc;
 }
 
+.libPay-line-item.proP .pay-head-price span{
+  font-size:14px;
+  color: #999;
+}
+
 .libPay-line-item.proP .pay-foo-price {
-  color: #333;
+  color: #999;
   margin-top: 10px;
 }
 
 .libPay-line-item.proP .libPrice {
   display: inline-block;
-  color: #ff7300;
-  font-size: 14px;
-  font-weight: bold;
+  color: #FF9600;
+  font-size: 20px;
 }
 
 .libPay-line-item.proP .libPrice i {
@@ -15276,58 +15675,48 @@ textarea {
 
 .libPay-line-item.proP .pay-head-price p {
   text-decoration: line-through;
-  color: #aaa;
+  color: #BDB8B8;
 }
 
 .libPay-line-item.proP .pay-cycle-btns em {
   position: absolute;
-  left: -5px;
+  left: -7px;
   top: -15px;
-  background: #ff7300;
-  border-radius: 2px;
-  font-size: 15px;
-  color: #fff;
-  transform: scale(.9, .8);
+  background-image: linear-gradient(to bottom,#F8D68C,#EBB261);
+  border-radius: 5px;
+  color: #7E4C0D;
+  transform: scale(.9, .9);
   font-style: normal;
   padding: 5px;
 }
 
-.libPay-line-item.proP .pay-cycle-btns.active em {
-  left: -6px;
+.libPay-line-item.proP .pay-cycle-btns.active .libPrice {
+  color:#FF4D00;
 }
 
 .libPay-line-item.proN .btn_nums{
   width: 91px;
-  height: 40px;
+  height: 45px;
+  font-size:14px;
   border-radius: 5px;
-  border: 1px solid #ddd;
+  border: 2px solid #ddd;
   line-height: 35px;
   background: white;
   margin-right: 10px;
   position: relative;
 }
 
-.libPay-line-item.proN .btn_nums.active{
-  border: #20a53a 2px solid;
-  background: url("../images/svg/lower-select.svg") no-repeat right bottom;
-  background-size: 22px;
-}
-
-.libPay-line-item.proN .btn_nums.active em{
-  right: -5px;
-}
-
 .libPay-line-item.proN .btn_nums em{
   position: absolute;
   top: -10px;
-  right: -4px;
+  right: -6px;
   width: 45px;
   height: 19px;
   border-radius: 3px 10px 3px 10px;
-  background: #ff7300;
-  color: #fff;
+  background-image: linear-gradient(to bottom,#F8D68C,#EBB261);
+  color: #7E4C0D;
   font-style: normal;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 19px;
   transform: scale(0.8, 0.8);
 }
@@ -15340,7 +15729,7 @@ textarea {
 .libPay-qcode-right {
   border-left: 1px solid #eee;
   margin-left: -1px;
-  padding: 15px 0 15px 25px;
+  padding: 20px 0 15px 25px;
   position: relative;
 }
 
@@ -15351,16 +15740,8 @@ textarea {
   border-radius: 4px;
 }
 
-.libPay-qcode-right .libPaycode-foo-txt {
-  margin-top: 0;
-}
-
-.libPay-qcode-right .libPaycode-foo-txt p {
-  font-size: 14px;
-}
-
 .libPay-qcode-right .libPaycode-foo-txt span {
-  font-size: 24px;
+  font-size: 30px;
   font-style: normal;
   font-weight: bold;
   display: inline-block;
@@ -15369,7 +15750,7 @@ textarea {
 }
 .libPay-qcode-right .libPaycode-foo-txt .libPayCycle i{
   font-style: normal;
-  margin-left: 5px;
+  margin-right: 7px;
 }
 .libPay-qcode-right .libPaycode-foo-txt .userinfo{
   margin-bottom: 5px;
@@ -15428,30 +15809,32 @@ textarea {
   padding: 1px 21px;
   margin-right: 8px;
   margin-bottom: 5px;
-  line-height: 40px;
+  /*line-height: 40px;*/
   cursor: pointer;
 }
 
-.libVoucher-type .pay-cycle-btn.active {
-  border: #20a53a 2px solid;
+.libVoucher-type .pay-cycle-btn.active,
+.libVoucher-list .pay-cycle-btn.active{
   padding: 0 20px;
+  border: #B87100 2px solid;
+  background: #FFF9F1;
+  position: relative;
+}
+.libVoucher-type .pay-cycle-btn.active:before,
+.libVoucher-list .pay-cycle-btn.active:before{
+  content: "";
+  width: 22px;
+  height: 22px;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  background: url(../images/svg/lower-select-pro.svg) no-repeat right bottom;
 }
 
 .libPay-layer-item .libVoucher-list {
   max-height: 197px;
-  min-height: 197px;
+  width:655px;
   overflow: auto;
-}
-
-.ops_msg{
-  margin-left: 50px;
-  line-height: 30px;
-  display: inline-block;
-  font-size: 16px;
-  font-weight: 500;
-}
-.ops_msg img{
-  margin-right: 5px;
 }
 
 
@@ -17992,28 +18375,163 @@ select[name=dataAccess] {
 
 /* 表单行内 */
 .bt-form-new.inline {
-  display: flex;
-  flex-wrap: wrap;
+	display: flex;
+	flex-wrap: wrap;
 }
 .bt-form-new .form-item {
-  display: flex;
+	display: flex;
+}
+.bt-form-new .form-item + .form-item {
+	margin-top: 15px;
 }
 .bt-form-new.inline .form-item + .form-item {
-  margin-left: 15px;
+	margin-top: 0;
+	margin-left: 15px;
 }
 .form-item .form-label {
-  line-height: 32px;
-  padding-right: 12px;
+	width: 100px;
+	line-height: 32px;
+	padding-right: 20px;
+	text-align: right;
+}
+.bt-form-new.inline .form-label  {
+	width: auto;
+	text-align: left;
 }
 .form-item .form-content {
+	display: flex;
+	align-items: center;
+	min-height: 32px;
+}
+.form-item .form-content .btswitch-btn {
+	margin-bottom: 0;
+}
+/* end */
+
+
+/*解绑界面*/
+.unbindView{
+  display: none;
+}
+
+.unbindAuth{
+  border-radius: 2px;
+  /*background: #fdf6ec;*/
+  margin: 20px 0;
+  /*border: 1px solid #edededcc;*/
+  border-radius: 2px;
+  padding: 20px;
+}
+
+.unbindAuth .icon{
+  text-align: center;
+  line-height: 32px;
+  padding: 0 10px 15px 10px;
+}
+.unbindAuth .icon .glyphicon{
+  color: #f0ad4e;
+  font-size: 28px;
+  margin-right: 15px;
+}
+.unbindAuth .icon span{
+  vertical-align: middle;
+  font-size: 22px;
+}
+
+.unbindAuth .tips{
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 30px;
+}
+
+.unbindAuth .agreement{
+  margin: 25px 0 8px 0;
+}
+.unbindAuth .agreement input{
+  width: 12px;
+  height: 12px;
+}
+
+.unbindAuth .btn{
+  width: 100%;
+  text-align: center;
+  padding: 10px;
+}
+
+.unbundling_mask{
+  display: none;
+  position: absolute;
+  top: 75px;
+  width: 100%;
+  height: 100%;
+  bottom: 0;
+  background: #a3a3a37a;
+  z-index: 99999;
+}
+
+/* 微信公众号配置界面样式 */
+/* 微信公众号 */
+.BTwxAccountView .wx_account_box .bt-form {
+  padding-top: 15px;
+}
+.BTwxAccountView .wx_account_box .form-item {
+  display: flex;
+}
+.BTwxAccountView .wx_account_box .form-item + .form-item {
+  margin-top: 15px;
+}
+.BTwxAccountView .wx_account_box .form-label,
+.BTwxAccountView .wx_account_box .form-content {
   display: flex;
   align-items: center;
   min-height: 32px;
 }
-.form-item .form-content .btswitch-btn {
-  margin-bottom: 0;
+.BTwxAccountView .wx_account_box .form-label {
+  justify-content: flex-end;
+  width: 140px;
+  padding-right: 20px;
+  line-height: 1.4;
 }
-/* end */
+.BTwxAccountView .wx_account_box .form-content {
+  flex: 1;
+}
+.BTwxAccountView .wx_account_box .userinfo {
+  display: flex;
+  align-items: center;
+}
+.BTwxAccountView .wx_account_box .userinfo img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+.BTwxAccountView .wx_account_box .form-item .btn + .btn {
+  margin-left: 12px;
+}
+.BTwxAccountView .bind_wechat_box .qrcode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+  border: 1px solid #ddd;
+}
+.BTwxAccountView .bind_wechat_box .qrcode img {
+  width: 148px;
+  height: 148px;
+}
+.BTwxAccountView .nobind_account {
+  display: flex;
+  align-items: center;
+}
+.BTwxAccountView .btn-send-test,
+.BTwxAccountView .btn-bind-wechat,
+.BTwxAccountView .btn-bind-account {
+  margin-left: 12px;
+}
+/* 微信公众号配置界面样式 end */
 /* new提示对话弹窗样式 */
 .color-org {
   color: #fc6d26;
@@ -18025,7 +18543,7 @@ select[name=dataAccess] {
   align-items: center;
 }
 .hint_confirm .hint_title .hint-confirm-icon {
-  background: url(/static/img/hint-confirm-icon.svg) no-repeat;
+  background: url(../img/hint-confirm-icon.svg) no-repeat;
   min-width: 40px;
   height: 40px;
   align-self: baseline;
@@ -18077,3 +18595,132 @@ select[name=dataAccess] {
   border: 1px solid #ccc;
 }
 /* new提示对话弹窗样式 end */
+
+/* new 加载样式 */
+.custom-loading .custom-loading__icon {
+  height: 8rem;
+  width: 8rem;
+  position: relative;
+  margin: 0 auto;
+}
+.custom-loading .custom-loading__icon::before {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 25%;
+  top: 25%;
+  width: 4rem;
+  height: 4rem;
+  opacity: 0.8;
+  background-image: url(/static/images/svg/logo-green.svg);
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+.custom-loading .custom-loading__icon:after {
+  content: "";
+  display: block;
+  width: 8rem;
+  height: 8rem;
+  background-image: url(/static/images/svg/loading.svg);
+  opacity: 0.8;
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+/* new 加载样式 end*/
+/* 微信客服 */
+.wechat-customer {
+  background-color: #fff;
+  width: 100px;
+  height: 140px;
+  border: #eee 1px solid;
+  border-radius: 4px;
+  text-align: center;
+  position: fixed;
+  right: 45px;
+  bottom: 145px;
+  font-size: 12px;
+  box-sizing: initial;
+  padding: 5px;
+  z-index: 999999999;
+  box-shadow: 0 0 20px #6666663d;
+}
+
+#wechatCustomerQrcode {
+  width: 100%;
+  padding: 5px 0
+}
+
+#wechatCustomerQrcode canvas, #wechatCustomerQrcode img {
+  border-radius: 2px;
+  display: inline-block !important;
+  width: 80px;
+}
+
+.qrcode-wechat {
+  width: 100px;
+  height: 90px;
+  margin: 0 auto;
+  position: relative
+}
+
+.wechatEnterprise {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-left: -12.5px;
+  margin-top: -12.5px
+}
+
+.wechatEnterprise img {
+  width: 25px
+}
+
+.wechat-customer .wechat-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #666;
+  padding-bottom: 5px
+}
+
+.wechat-customer .icon {
+  height: 16px;
+  vertical-align: middle;
+  margin-right: 5px
+}
+
+.wechat-customer .scan-title {
+  vertical-align: middle;
+  font-size: 14px;
+  color: #7e7e7e
+}
+
+.wechat-customer .describe-title {
+  font-weight: 700;
+  color: #10952aad;
+  font-size: 14px;
+  padding-top: 5px
+}
+
+/*微信客服 END*/
+
+/*第三方按钮样式*/
+.otherDialogBox .pay-btn-group .active,
+.otherDialogBox .pay-btn-group .active:hover {
+  border: 2px solid #20a53a;
+  color: #20a53a;
+  z-index: 2;
+  cursor: pointer;
+}
+.otherDialogBox .pay-btn-group .pay-cycle-btn:hover {
+  border: 1px solid #20a53a;
+  color: #20a53a;
+  z-index: 2;
+  cursor: pointer;
+}
+.otherDialogBox .pay-btn-group .active, .li-c-item .active {
+  background: url(../images/svg/lower-select.svg) no-repeat right bottom;
+  background-size: 22px;
+}
+/*第三方按钮样式 end*/

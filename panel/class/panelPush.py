@@ -9,7 +9,9 @@
 # | 消息推送管理
 # | 对外方法 get_modules_list、install_module、uninstall_module、get_module_template、set_push_config、get_push_config、del_push_config
 # +-------------------------------------------------------------------
+
 import os, sys
+
 panelPath = "/www/server/panel"
 os.chdir(panelPath)
 sys.path.insert(0,panelPath + "/class/")
@@ -141,6 +143,8 @@ class panelPush:
             return public.returnMsg(False, '指定模块{}不存在 get_module_config 方法.'.format(module))
         return push_module.get_module_config(get)
 
+
+
     """
     @获取模块配置项
     @优先调用模块内的get_push_config
@@ -156,13 +160,18 @@ class panelPush:
         push_module = getattr(p_list[module], module)()
         if not hasattr(push_module,'get_push_config'):
             push_list = self._get_conf()
+
+            res_data = public.returnMsg(False, '未找到指定配置.')
+            res_data['code'] = 100
+            if not module in push_list:
+                return res_data
+            if not id in push_list[module]:
+                return res_data
+
             result = push_list[module][id]
         else:
             result = push_module.get_push_config(get)
-
-
         return self.get_push_user(result)
-
 
     def get_push_user(self,result):
 
@@ -178,7 +187,7 @@ class panelPush:
         info = {}
         for s_module in result['module'].split(','):
             msg_obj = public.init_msg(s_module)
-            if not msg_obj: return False
+            if not msg_obj: continue
 
             info[s_module] = {}
             data = msg_obj.get_config(None)
@@ -204,13 +213,23 @@ class panelPush:
             return public.returnMsg(False, '指定模块{}未安装.'.format(module))
 
         pdata = json.loads(get.data)
+        if not 'module' in pdata or not pdata['module']:
+            return public.returnMsg(False, '未设置指定告警方式，请重新选择.')
+
         pdata = self.__get_args(pdata,'cycle',1)
         pdata = self.__get_args(pdata,'count',1)
         pdata = self.__get_args(pdata,'interval',600)
         pdata = self.__get_args(pdata,'key','')
+
+        nData = {}
+        for skey in ['key','type','cycle','count','interval','module','title','project','status','index']:
+            if skey in pdata:
+                nData[skey] = pdata[skey]
+
+        public.set_module_logs('set_push_config',nData['type'])
         class_obj = getattr(p_list[module], module)()
         if hasattr(class_obj,'set_push_config'):
-            get['data'] = json.dumps(pdata)
+            get['data'] = json.dumps(nData)
             result = class_obj.set_push_config(get)
             if 'status' in result: return result
 
@@ -218,7 +237,8 @@ class panelPush:
         else:
             data = self._get_conf()
             if not module in data:data[module] = {}
-            data[module][id] = pdata
+            data[module][id] = nData
+
 
         public.writeFile(self.__conf_path,json.dumps(data))
         return public.returnMsg(True, '保存成功.')
@@ -286,8 +306,10 @@ class panelPush:
     """
     def _get_conf(self):
         data = {}
-        if os.path.exists(self.__conf_path):
-            data = json.loads(public.readFile(self.__conf_path))
+        try:
+            if os.path.exists(self.__conf_path):
+                data = json.loads(public.readFile(self.__conf_path))
+        except:pass
         return data
 
     """
@@ -436,7 +458,7 @@ class panelPush:
             m_cycle.append('{}次，间隔{}秒'.format(data[skey]['count'],data[skey]['interval']))
             result[skey]['m_cycle'] = ''.join(m_cycle)
 
-            # 兼容旧版本未返回project项，导致前端无法编辑问题 by lx-20220920
+            # 兼容旧版本没有返回project项，导致前端无法编辑问题
             if "project" not in result[skey] and "type" in result[skey]:
                 if result[skey]["type"]  == "services":
                     services = ['nginx','apache',"pure-ftpd",'mysql','php-fpm','memcached','redis']
@@ -489,6 +511,7 @@ class panelPush:
         interval = 5
         try:
             if True:
+
                 # 推送文件
                 self.push_messages_from_file()
 
@@ -504,22 +527,31 @@ class panelPush:
                 p = public.get_modules('class/push')
                 for skey in data:
                     if len(data[skey]) <= 0: continue
-                    if skey in ['panelLogin_push']: continue #面板登录主动触发
+                    if skey in ['panelLogin_push','panel_login']: continue #面板登录主动触发
 
                     total = None
                     obj = getattr(p[skey], skey)()
 
                     for x in data[skey]:
                         try:
+
                             item = data[skey][x]
                             if not item['status']: continue
+                            if not item['module']: continue
                             if not 'index' in item: item['index'] = 0
+
+                            if time.time() - item['index'] < item['interval']:
+                                print('{} 未达到间隔时间，跳过.'.format(item['title']))
+                                continue
 
                             if not total: total = obj.get_total()
                             rdata = obj.get_push_data(item,total)
+                            if not rdata:
+                                continue
 
                             for m_module in item['module'].split(','):
-                                if not m_module in rdata: continue
+                                if not m_module in rdata:
+                                    continue
 
                                 msg_obj = public.init_msg(m_module)
                                 if not msg_obj:continue
@@ -530,9 +562,9 @@ class panelPush:
                                     rdata[m_module]['to_user'] = item['to_user'][m_module]
 
                                 ret = msg_obj.push_data(rdata[m_module])
-                                if ret['status']:
-                                    is_write = True
-                                    data[skey][x]['index'] = rdata['index']
+                                #if ret['status']:
+                                is_write = True
+                                data[skey][x]['index'] = rdata['index']
                                     #print(ret)
                         except :
                             print(public.get_error_info())
@@ -544,6 +576,89 @@ class panelPush:
             print(public.get_error_info())
 
         # self.start()
+
+
+    def __get_login_panel_info(self):
+        """
+        @name 获取面板登录列表
+        @auther cjxin
+        @date 2022-09-29
+        """
+        import config
+        c_obj = config.config()
+        send_type = c_obj.get_login_send(None)['msg']
+        if not send_type:
+            return False
+        return {"type":"panel_login","module":send_type,"interval":600,"status":True,"title":"面板登录告警","cycle":1,"count":1,"key":"","module_type":'site_push'}
+
+
+    def __get_ssh_login_info(self):
+        """
+        @name 获取SSH登录列表
+        @auther cjxin
+        @date 2022-09-29
+        """
+        import ssh_security
+        c_obj = ssh_security.ssh_security()
+        send_type = c_obj.get_login_send(None)['msg']
+        if not send_type or send_type in ['error']:
+            return False
+
+        return {"type":"ssh_login","module":send_type,"interval":600,"status":True,"title":"SSH登录告警","cycle":1,"count":1,"key":"","module_type":'site_push'}
+
+
+
+    def get_push_list(self,get):
+        """
+        @获取所有推送列表
+        """
+        conf = self._get_conf()
+        for key in conf.keys():
+            for x in conf[key]:
+                data = conf[key][x]
+                data['module_type'] = key
+
+                conf[key][x] = self.get_push_user(data)
+
+        if not 'site_push' in conf: conf['site_push'] = {}
+
+        data = conf['site_push']
+        for skey in ['panel_login','ssh_login']:
+            info = None
+            if skey in data:
+                del data[skey]
+            if skey in ['panel_login']:
+                info = self.__get_login_panel_info()
+            elif skey in ['ssh_login']:
+                info = self.__get_ssh_login_info()
+
+            if info:
+                data[skey] = info
+        conf['site_push'] = data
+        return conf
+
+    def get_push_logs(self,get):
+        """
+        @name 获取推送日志
+        """
+
+        p = 1
+        limit = 15
+        if 'p' in get: p = get.p
+        if 'limit' in get: limit = get.limit
+
+        where = "type = '告警通知'"
+        sql = public.M('logs')
+
+        if hasattr(get, 'search'):
+            where = " and logs like '%{search}%' ".format(search=get.search)
+
+        count = sql.where(where,()).count()
+        data = public.get_page(count,int(p),int(limit))
+        data['data'] = sql.where(where,()).limit('{},{}'.format(data['shift'], data['row'])).order('addtime desc').select()
+
+        return data
+
 
 if __name__ == '__main__':
     panelPush().start()

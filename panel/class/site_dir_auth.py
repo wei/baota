@@ -82,8 +82,12 @@ class SiteDirAuth:
         site_name = site_info["site_name"]
         if self._check_site_authorization(site_name):
             return public.returnMsg(False, '已经设置站点密码保护，请取消后再设置 站点配置 --> 站点目录 --> 密码访问')
-        if self._check_dir_auth(site_name, name, site_dir):
-            return public.returnMsg(False, '目录已经保护')
+        #检测目录是否已经设置过  hezhihong
+        result=self._check_dir_auth(site_name, name, site_dir)
+        if '1' in result:
+            return public.returnMsg(False, '目录已经保护！')
+        elif '2' in result:
+            return public.returnMsg(False, '此名称已存在！')
         auth = "{user}:{passwd}".format(user=username, passwd=passwd)
         auth_file = '{setup_path}/pass/{site_name}'.format(setup_path=self.setup_path, site_name=site_name)
         if not os.path.exists(auth_file):
@@ -109,13 +113,19 @@ class SiteDirAuth:
 
     # 检查配置是否存在
     def _check_dir_auth(self, site_name, name, site_dir):
+        """
+        @name 检查配置是否存在
+        @auth hezhihong
+        """
         conf = self._read_conf()
+        result =[]
         if not conf:
             return False
         if site_name in conf:
             for i in conf[site_name]:
-                if name in i.values() or site_dir == i["site_dir"]:
-                    return True
+                if site_dir == i["site_dir"]:result.append('1')
+                if name in i.values():result.append('2')
+        return result
 
     # 获取当前站点php版本
     def get_site_php_version(self, siteName):
@@ -359,7 +369,7 @@ class SiteDirAuth:
             if re.search('\s', name):
                 return public.returnMsg(False, '名称不能存在空格')
             if re.search('[\/\"\'\!@#$%^&*()+={}\[\]\:\;\?><,./]+', name):
-                return public.returnMsg(False, '名称格式为 [ aaa_bbb ]')
+                return public.returnMsg(False, '名称格式错误，请参考格式：aaa_bbb')
             values['name'] = name
 
         return public.returnMsg(True, values)

@@ -67,7 +67,6 @@ panel_start()
         get_panel_pids
         if [ "$isStart" == '' ];then
                 rm -f $pidfile &> /dev/null
-                panel_port_check
                 echo -e "Starting Bt-Panel...\c"
                 echo '\n' >> $log_file
                 if [ $? -ne 0 ];then
@@ -88,6 +87,7 @@ panel_start()
                         fi
                 done
                 if [ "$isStart" == '' ];then
+                        panel_port_check
                         echo -e "\033[31mfailed\033[0m"
                         echo '------------------------------------------------------'
                         tail -n 20 $log_file
@@ -126,7 +126,7 @@ panel_start()
 
 panel_port_check()
 {
-	is_process=$(lsof -n -P -i:$port|grep LISTEN|grep -v grep|awk '{print $1}'|sort|uniq|xargs)
+	is_process=$(lsof -n -P -i:$port -sTCP:LISTEN|grep LISTEN|grep -v grep|awk '{print $1}'|sort|uniq|xargs)
 	for pn in ${is_process[@]}
         do
           if [ "$pn" = "nginx" ];then
@@ -243,7 +243,6 @@ panel_reload()
                 kill -9 $p
         done
 		rm -f $pidfile
-		panel_port_check
 		echo -e "Reload Bt-Panel.\c";
                 nohup $panel_path/BT-Panel >> $log_file 2>&1 &
 		isStart=""
@@ -259,6 +258,7 @@ panel_reload()
 			fi
 		done
         if [ "$isStart" == '' ];then
+                panel_port_check
                 echo -e "\033[31mfailed\033[0m"
                 echo '------------------------------------------------------'
                 tail -n 20 $log_file

@@ -120,7 +120,7 @@ var aceEditor = {
   eventEditor: function () {
     var _this = this, _icon = '<span class="icon"><i class="glyphicon glyphicon-ok" aria-hidden="true"></i></span>';
     $(window).resize(function () {
-      if (_this.ace_active != undefined) _this.setEditorView()
+      if (_this.ace_active !== undefined) _this.setEditorView()
       if (aceEditor.editorStatus === 0 || aceEditor.editorStatus === 1) {
         var winW = $(this)[0].innerWidth,
             winH = $(this)[0].innerHeight
@@ -1650,7 +1650,7 @@ var aceEditor = {
     $.post("/files?action=GetFileBody", "path=" + encodeURIComponent(obj.path), function (res) {
       layer.close(loadT);
       if (!res.status) {
-        if (_this.editorLength == 0) layer.closeAll();
+        if (_this.editorLength === 0) layer.closeAll();
         layer.msg(res.msg, { icon: 2 });
 
         return false;
@@ -5264,13 +5264,13 @@ var fileManage = {
   // 恢复文件后刷新当前页面表格数据
   refresh_page: function () {
     // 非数据库类型 && 文件路由
-    if (window.location.href.indexOf("files") != -1) {
+    if (window.location.href.indexOf("files") !== -1) {
       try {
         bt_file.reader_file_list({ path: bt_file.file_path });
       } catch (err) {}
     }
     // 数据库类型 && 数据库路由
-    if (window.location.href.indexOf("database") != -1) {
+    if (window.location.href.indexOf("database") !== -1) {
       try {
         database_table.$refresh_table_list();
       } catch(err) {}
@@ -5388,3 +5388,413 @@ var fileManage = {
     return returnVal;
   },
 }
+
+/*重构版：消息通道调整为告警模块*/
+
+/**
+ * @description 安装告警模块视图跳转
+ */
+function openAlertModuleInstallView(type) {
+  bt_tools.send({ url: '/config?action=get_msg_configs', data: {} }, function (_configData) {
+    switch (type) {
+      case 'mail':
+        renderMailConfigView(_configData[type]);
+        break;
+      case 'dingding':
+      case 'feishu':
+      case 'weixin':
+        renderAlertUrlTypeChannelView(_configData[type]);
+        break;
+      case 'wx_account':
+      case 'sms':
+        alertOtherTypeInstall(_configData[type]);
+        break;
+    }
+  })
+}
+/**
+ * @description 渲染邮箱配置视图
+ */
+function renderMailConfigView(data) {
+  layer.open({
+    type:1,
+    title: '发送者配置',
+    area: ['470px', '400px'],
+    btn: ['保存', '取消'],
+    skin: 'alert-send-view',
+    content: '<div class="bt-form pd15">\
+                  <div class="line">\
+                          <span class="tname">发送人邮箱</span>\
+                          <div class="info-r">\
+                                  <input name="sender_mail_value" class="bt-input-text mr5" type="text" style="width: 300px">\
+                          </div>\
+                  </div>\
+                  <div class="line">\
+                          <span class="tname">SMTP密码</span>\
+                          <div class="info-r">\
+                                  <input name="sender_mail_password" class="bt-input-text mr5" type="password" style="width: 300px">\
+                          </div>\
+                  </div>\
+                  <div class="line">\
+                          <span class="tname">SMTP服务器</span>\
+                          <div class="info-r">\
+                                  <input name="sender_mail_server" class="bt-input-text mr5" type="text" style="width: 300px">\
+                          </div>\
+                  </div>\
+                  <div class="line">\
+                          <span class="tname">端口</span>\
+                          <div class="info-r">\
+                                  <input name="sender_mail_port" class="bt-input-text mr5" type="text" style="width: 300px">\
+                          </div>\
+                  </div>\
+                  <ul class="help-info-text c7">\
+                          <li>推荐使用465端口，协议为SSL/TLS</li>\
+                          <li>25端口为SMTP协议，587端口为STARTTLS协议</li>\
+                          <li><a href="https://www.bt.cn/bbs/thread-71298-1-1.html" target="_blank" class="btlink">配置教程</a></li>\
+                  </ul>\
+          </div>',
+    success: function() {
+      if (!$.isEmptyObject(data) && !$.isEmptyObject(data.data.send)) {
+        var send = data.data.send,
+            mail_ = send.qq_mail || '',
+            stmp_pwd_ = send.qq_stmp_pwd || '',
+            hosts_ = send.hosts || '',
+            port_ = send.port || '';
+
+        $('input[name=sender_mail_value]').val(mail_)
+        $('input[name=sender_mail_password]').val(stmp_pwd_)
+        $('input[name=sender_mail_server]').val(hosts_)
+        $('input[name=sender_mail_port]').val(port_)
+      } else {
+        $('input[name=sender_mail_port]').val('465')
+      }
+    },
+    yes: function(indexs) {
+      var _email = $('input[name=sender_mail_value]').val(),
+          _passW = $('input[name=sender_mail_password]').val(),
+          _server = $('input[name=sender_mail_server]').val(),
+          _port = $('input[name=sender_mail_port]').val();
+
+      if (_email == '') return layer.msg('邮箱地址不能为空！', { icon: 2 });
+      if (_passW == '') return layer.msg('STMP密码不能为空！', { icon: 2 });
+      if (_server == '') return layer.msg('STMP服务器地址不能为空！', { icon: 2 });
+      if (_port == '') return layer.msg('请输入有效的端口号', { icon: 2 });
+
+      if (!data.setup) {
+        bt_tools.send({ url: '/config?action=install_msg_module&name=' + data.name, data: {} }, function (res) {
+          if (res.status) {
+            bt_tools.send({url:'/config?action=set_msg_config&name=mail',data:{send: 1,
+                qq_mail: _email,
+                qq_stmp_pwd: _passW,
+                hosts: _server,
+                port: _port
+              }
+            }, function (configM) {
+              if (configM.status) {
+                layer.close(indexs)
+                layer.msg(configM.msg, {
+                  icon: configM.status ? 1 : 2
+                })
+                if($('.alert-view-box').length >= 0) $('.alert-view-box .tab-nav-border span:eq(1)').click()
+              }
+            },'设置邮箱配置')
+          } else {
+            layer.msg(res.msg,{icon:2})
+          }
+        },'创建' + data.title + '模块')
+      } else {
+        bt_tools.send({
+          url: '/config?action=set_msg_config&name=mail', data: {
+            send: 1,
+            qq_mail: _email,
+            qq_stmp_pwd: _passW,
+            hosts: _server,
+            port: _port
+          }
+        }, function (configM) {
+          if (configM.status) {
+            layer.close(indexs)
+            layer.msg(configM.msg, {
+              icon: configM.status ? 1 : 2
+            })
+          }
+        },'设置邮箱配置')
+      }
+    }
+  })
+}
+/**
+ * @description 渲染url通道方式视图
+ */
+function renderAlertUrlTypeChannelView(data) {
+  var isEmpty = $.isEmptyObject(data.data)
+  layer.open({
+    type:1,
+    title: data['title']+'机器人配置',
+    area: ['520px', '345px'],
+    btn: ['保存', '取消'],
+    skin: 'alert-send-view',
+    content: '<div class="pd15 bt-form">\
+              <div class="line"><span class="tname">名称</span><div class="info-r"><input type="text" name="chatName" value="'+(isEmpty?'':data.data.list.default.title)+'" class="bt-input-text mr10 " style="width:350px;" placeholder="机器人名称或备注"></div></div>\
+              <div class="line">\
+              <span class="tname">URL</span><div class="info-r">\
+                  <textarea name="channel_url_value" class="bt-input-text mr5" type="text" placeholder="请输入'+(data.title)+'机器人url" style="width: 350px; height:120px; line-height:20px"></textarea>\
+              </div>\
+              <ul class="help-info-text c7">\
+                      <li><a class="btlink" href="'+(data.help)+'" target="_blank">如何创建'+(data.title)+'机器人</a></li>\
+              </ul>\
+              </div></div>',
+    success: function() {
+      if (!$.isEmptyObject(data.data)) {
+        var url = data['data'][data.name+'_url'] || '';
+        $('textarea[name=channel_url_value]').val(url);
+      }
+    },
+    yes: function(indexs) {
+      var _index = $('.alert-view-box span.on').index();
+      var _url = $('textarea[name=channel_url_value]').val(),
+          _name = $('input[name=chatName]').val();
+      if (_name == '') return layer.msg('请输入机器人名称或备注', { icon: 2 })
+      if (_url == '') return layer.msg('请输入' + data.title + '机器人url', { icon: 2 })
+      if (!data.setup) {
+        bt_tools.send({ url: '/config?action=install_msg_module&name=' + data.name, data: {} }, function (res) {
+          if (res.status) {
+            setTimeout(function () {
+              bt_tools.send({
+                url: '/config?action=set_msg_config&name=' + data.name, data: {
+                  url: _url,
+                  title: _name,
+                  atall: 'True'
+                }
+              }, function (rdata) {
+                layer.close(indexs)
+                layer.msg(rdata.msg, {
+                  icon: rdata.status ? 1 : 2
+                })
+                if ($('.alert-view-box').length >= 0) {
+                  $('.alert-view-box .tab-nav-border span:eq('+_index+')').click()
+                }
+              },'设置' + data.title + '配置')
+            }, 100);
+          } else {
+            layer.msg(res.msg,{icon:2})
+          }
+        },'创建' + data.title + '模块')
+      } else {
+        bt_tools.send({
+          url: '/config?action=set_msg_config&name=' + data.name, data: {
+            url: _url,
+            title: _name,
+            atall: 'True'
+          }
+        }, function (rdata) {
+          layer.close(indexs)
+          layer.msg(rdata.msg, {
+            icon: rdata.status ? 1 : 2
+          })
+          if ($('.alert-view-box').length >= 0) {
+            $('.alert-view-box .tab-nav-border span:eq('+_index+')').click()
+          }
+        },'设置' + data.title + '配置')
+      }
+    }
+  })
+}
+/**
+ * @description 微信公众号、短信模块安装
+ */
+function alertOtherTypeInstall(data) {
+  if (!data.setup) {
+    bt_tools.send({ url: '/config?action=install_msg_module&name=' + data.name, data: {} }, function (res) {
+      layer.msg(res.msg, {
+        icon: res.status ? 1 : 2
+      })
+      if (!res.status) return false;
+      if (data.name === 'wx_account') {
+        var _data = data.data;
+        if (!_data.is_subscribe || !_data.is_bound) renderAccountAlertView()
+      }
+      if ($('.alert-view-box').length >= 0) {
+        var _index = $('.alert-view-box span.on').index();
+        $('.alert-view-box .tab-nav-border span:eq('+_index+')').click()
+      }
+    },'创建' + data.title + '模块')
+  } else if(data.name === 'wx_account'){
+    renderAccountAlertView();
+  }
+}
+/**
+ * @description 微信公众号
+ */
+function renderAccountAlertView() {
+  layer.open({
+    type:1,
+    title: '微信公众号',
+    area: ['420px', '280px'],
+    skin: 'BTwxAccountView',
+    content:'<div class="wx_account_box pd15"><div class="bt-form">\
+          <div class="form-item">\
+              <div class="form-label">绑定微信公众号</div>\
+              <div class="form-content">\
+                  <div class="bind_account hide">\
+                      <span style="color: #20a53a;">已绑定</span>\
+                  </div>\
+                  <div class="nobind_account">\
+                      <span class="red">未绑定</span>\
+                      <button class="btn btn-xs btn-success btn-bind-account">立即绑定</button>\
+                  </div>\
+              </div>\
+          </div>\
+          <div class="form-item">\
+              <div class="form-label">绑定微信账号</div>\
+              <div class="form-content">\
+                  <div class="bind_wechat hide">\
+                      <div class="userinfo"></div>\
+                  </div>\
+                  <div class="nobind_wechat">\
+                      <span class="red">未绑定</span>\
+                  </div>\
+                  <button class="btn btn-xs btn-success btn-bind-wechat">立即绑定</button>\
+              </div>\
+          </div>\
+          <div class="form-item hide">\
+              <div class="form-label">今日剩余发送次数</div>\
+              <div class="form-content">\
+                  <span class="account_remaining">0</span>\
+                  <button class="btn btn-xs btn-success btn-send-test">发送测试消息</button>\
+              </div>\
+          </div>\
+      </div>\
+      <ul class="help-info-text c7">\
+          <li>没有绑定微信公众号无法接收面板告警消息</li>\
+          <li>当前为体验版,限制每个宝塔账号发送频率100条/天</li>\
+      </ul>\
+      </div>',
+    success: function() {
+      getWxAccountConfig();
+      // 发送测试信息
+      $('.btn-send-test').click(function () {
+        bt_tools.send({ url: '/config?action=get_msg_fun', data: { module_name: 'wx_account', fun_name: 'push_data', msg: '发送测试信息' } }, function (res) {
+          if (res.status) {
+            var num = $('.account_remaining').text();
+            if (!isNaN(num)) {
+              num -= 1;
+              $('.account_remaining').text(num);
+            }
+          }
+        },'测试信息')
+      });
+      wxAccountBind();
+    }
+  })
+}
+/**
+ * @description 获取微信公众号配置
+ */
+ function getWxAccountConfig() {
+  bt_tools.send({ url: '/config?action=get_msg_fun', data: {module_name:'wx_account',fun_name:'get_web_info'} }, function (res) {
+    if (res.status === false) {
+      return layer.msg(res.msg.res,{icon:2})
+    }
+    var data = res && res.msg && res.msg.res ? res.msg.res : {};
+    // 绑定微信账号
+    if (data.is_bound === 1) {
+      $('.userinfo').html('<img src="' + data.head_img + '" /><div>' + data.nickname + '</div>');
+      $('.btn-bind-wechat').text('更换微信账号');
+      $('.bind_wechat').removeClass('hide');
+      $('.nobind_wechat').addClass('hide');
+    } else {
+      $('.btn-bind-wechat').text('立即绑定');
+      $('.bind_wechat').addClass('hide');
+      $('.nobind_wechat').removeClass('hide');
+    }
+    // 判断是否绑定公众号
+    if (data.is_subscribe === 1) {
+      $('.bind_account').removeClass('hide');
+      $('.nobind_account').addClass('hide');
+    } else {
+      $('.bind_account').addClass('hide');
+      $('.nobind_account').removeClass('hide');
+    }
+    // 判断是否存在发送消息
+    if (data.remaining === undefined) {
+      $('.account_remaining').parents('.form-item').addClass('hide');
+    } else {
+      $('.account_remaining').parents('.form-item').removeClass('hide');
+      $('.account_remaining').text(data.remaining);
+    }
+  }, {load:'获取绑定信息',verify:false})
+}
+
+function wxAccountBind() {
+  // 绑定微信公众号
+  $('.btn-bind-account').click(function () {
+    var that = this
+    layer.open({
+      type: 1,
+      area: '280px',
+      title: '绑定微信公众号',
+      content:
+          '<div class="bind_wechat_box pd20">\
+              <div class="text-center">微信扫码</div>\
+              <div class="mt10">\
+                  <div class="qrcode" style="text-align: center;">\
+                      <img src="https://www.bt.cn/Public/img/bt_wx.jpg" style="width: 180px;"/>\
+                  </div>\
+              </div>\
+          </div>',
+      cancel: function () {
+        if ($(that).hasClass('bterror')) {
+          $('.alert-view-box span.on').click()
+        } else {
+          getWxAccountConfig()
+        }
+      }
+    });
+  })
+  // 更换绑定账号
+  $('.btn-bind-wechat').click(function () {
+    var that = this;
+    layer.open({
+      type:1,
+      area: '280px',
+      title: '绑定微信账号',
+      content: '<div class="bind_wechat_box pd20">\
+                      <div class="text-center">微信扫码</div>\
+                      <div class="mt10">\
+                          <div class="qrcode" id="wechat-qrcode" style="text-align: center;"></div>\
+                      </div>\
+                  </div>',
+      success: function(layers, indexs){
+        bt_tools.send({ url: '/config?action=get_msg_fun', data: { module_name: 'wx_account', fun_name: 'get_auth_url' } }, function (res) {
+          if (res.status === false) {
+            layer.close(indexs)
+            return layer.msg(res.msg.res,{icon:2})
+          }
+          jQuery.ajax({
+            url: "/static/js/jquery.qrcode.min.js",
+            dataType: "script",
+            cache: true
+          }).done(function() {
+            $('#wechat-qrcode').qrcode({
+              render: 'canvas',
+              width: 180,
+              height: 180,
+              text: res.msg.res,
+              correctLevel: 1
+            });
+          });
+        },{load:'生成二维码信息',verify:false})
+      },
+      cancel: function() {
+        if ($(that).hasClass('bterror')) {
+          $('.alert-view-box span.on').click()
+        } else {
+          getWxAccountConfig()
+        }
+      }
+    });
+  });
+}
+/*重构版结束*/
+

@@ -20,7 +20,7 @@ _level = 1  # 风险级别： 1.提示(低)  2.警告(中)  3.危险(高)
 _date = '2022-8-10'  # 最后更新时间
 _ignore = os.path.exists("data/warning/ignore/sw_panel_control.pl")
 _tips = [
-    "在【设置】-【监控】中开启"
+    "在【监控】-【系统监控】中开启"
 ]
 _help = ''
 
@@ -30,10 +30,11 @@ def check_run():
         @time 2022-08-12
         @author lkq@bt.cn
     '''
+    global _tips
     send_type = ""
     if os.path.exists("/www/server/panel/data/control.conf"):
         return True, '无风险'
-    return False, '请在【设置】-【监控】中开启'
+    return False, _tips[0]
 
 
 

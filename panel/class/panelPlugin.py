@@ -371,7 +371,7 @@ class panelPlugin:
 
         # 清理临时文件
         if os.path.exists(filename): shutil.rmtree(filename)
-        if p_info:
+        if p_info and os.path.exists(plugin_path_panel):
             # 复制图标
             icon_sfile = plugin_path_panel + '/icon.png'
             icon_dfile = self.__panel_path + '/BTPanel/static/img/soft_ico/ico-{}.png'.format(input_plugin_name)
@@ -390,8 +390,9 @@ class panelPlugin:
 
         # 安装失败清理安装文件？
         if os.path.exists(plugin_path_panel): shutil.rmtree(plugin_path_panel)
+        err_msg = public.GetNumLines(log_file,30)
         if os.path.exists(log_file): os.remove(log_file)
-        return public.returnMsg(False,'{}失败!'.format(opts[input_install_opt]))
+        return public.returnMsg(False,'{}失败: <pre>{}</pre>'.format(opts[input_install_opt],err_msg))
 
 
     def __unpackup_plugin(self,tmp_file):

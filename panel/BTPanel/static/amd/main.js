@@ -48,7 +48,7 @@ require.config({
   }
 })
 
-var requestList = ['jquery', 'layer', 'language','public','public_backup']
+var requestList = ['jquery', 'layer', 'language','public','public_backup','jquery.qrcode']
 var detectBrowser = function (){
   var userAgent = navigator.userAgent,
       isLessIE11 = userAgent.indexOf('compatible') > -1 && userAgent.indexOf('MSIE') > -1,

@@ -945,8 +945,6 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
         get.domain = ','.join(domains)
         return self.AddDomain(get)
 
-
-
     #添加域名
     def AddDomain(self,get,multiple = None):
         #检查配置文件
@@ -963,14 +961,20 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
             domain = domain.strip().split(':')
             get.domain = self.ToPunycode(domain[0]).lower()
             get.port = '80'
+            # 判断通配符域名格式
+            if get.domain.find('*') != -1 and get.domain.find('*.') == -1:
+                return public.returnMsg(False,'SITE_ADD_DOMAIN_ERR_FORMAT')
 
+            # 判断域名格式
             reg = "^([\w\-\*]{1,100}\.){1,24}([\w\-]{1,24}|[\w\-]{1,24}\.[\w\-]{1,24})$"
             if not re.match(reg, get.domain): return public.returnMsg(False,'SITE_ADD_DOMAIN_ERR_FORMAT')
 
+            # 获取自定义端口
             if len(domain) == 2:
                 get.port = domain[1]
             if get.port == "": get.port = "80"
 
+            # 判断端口是否合法
             if not public.checkPort(get.port): return public.returnMsg(False,'SITE_ADD_DOMAIN_ERR_POER')
             #检查域名是否存在
             sql = public.M('domain')
@@ -980,6 +984,8 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
                 if siteName:
                     return public.returnMsg(False,'指定域名[{}]已被网站[{}]绑定过了'.format(get.domain,siteName))
                 sql.where('pid=?',(opid,)).delete()
+
+            # 检查是否被子目录绑定
             opid = public.M('binding').where('domain=?',(get.domain,)).getField('pid')
             if opid:
                 siteName = public.M('sites').where('id=?',(opid,)).getField('name')
@@ -1005,6 +1011,8 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
                 import firewalls
                 get.ps = get.domain
                 firewalls.firewalls().AddAcceptPort(get)
+
+            # 重载webserver服务
             if not multiple:
                 public.serviceReload()
             full_domain = get.domain
@@ -3113,7 +3121,28 @@ server
         public.serviceReload()
         public.M("sites").where("id=?",(id,)).setField('path',Path)
         public.WriteLog('TYPE_SITE', 'SITE_PATH_SUCCESS',(Name,))
+        self.CheckRunPathExists(id)
         return public.returnMsg(True,  "SET_SUCCESS")
+
+    def CheckRunPathExists(self,site_id):
+        '''
+            @name 检查站点运行目录是否存在
+            @author hwliang
+            @param site_id int 站点ID
+            @return bool
+        '''
+
+        site_info = public.M('sites').where('id=?',(site_id,)).field('name,path').find()
+        if not site_info: return False
+        args = public.dict_obj()
+        args.id = site_id
+        run_path = self.GetRunPath(args)
+        site_run_path = site_info['path'] + '/' + run_path
+        if os.path.exists(site_run_path): return True
+        args.runPath = '/'
+        self.SetSiteRunPath(args)
+        public.WriteLog('TYPE_SITE','因修改网站[{}]根目录，检测到原指定的运行目录[.{}]不存在，已自动将运行目录切换为[./]'.format(site_info['name'],run_path))
+        return False
 
     #取当前可用PHP版本
     def GetPHPVersion(self,get):
@@ -3578,8 +3607,9 @@ server
     # 基本设置检查
     def __CheckStart(self,get,action=""):
         isError = public.checkWebConfig()
-        if (isError != True):
-            return public.returnMsg(False, '配置文件出错请先排查配置')
+        if isinstance(isError,str):
+            if isError.find('/proxy/') == -1: # 如果是反向代理配置文件本身的错误，跳过
+                return public.returnMsg(False, '配置文件出错请先排查配置')
         if action == "create":
             if sys.version_info.major < 3:
                 if len(get.proxyname) < 3 or len(get.proxyname) > 40:
@@ -3924,7 +3954,7 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
                             ng_cache = """
     if ( $uri ~* "\.(gif|png|jpg|css|js|woff|woff2)$" )
     {
-        expires 12h;
+        expires 1m;
     }
     proxy_ignore_headers Set-Cookie Cache-Control expires;
     proxy_cache cache_one;
@@ -3932,11 +3962,11 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
     proxy_cache_valid 200 304 301 302 %sm;""" % (get.cachetime)
                             if self.check_annotate(ng_conf):
                                 cache_rep = '\n\s*#Set\s*Nginx\s*Cache(.|\n)*no-cache;\s*\n*\s*\}'
-                                ng_conf = re.sub(cache_rep, '\n\t#Set Nginx Cache\n' + ng_cache, ng_conf)
+                                ng_conf = re.sub(cache_rep, '\n\t\t#Set Nginx Cache\n' + ng_cache, ng_conf)
                             else:
                                 # cache_rep = '#proxy_set_header\s+Connection\s+"upgrade";'
                                 cache_rep = r"proxy_set_header\s+REMOTE-HOST\s+\$remote_addr;"
-                                ng_conf = re.sub(cache_rep, r"\n\tproxy_set_header\s+REMOTE-HOST\s+\$remote_addr;\n\t#Set Nginx Cache" + ng_cache,
+                                ng_conf = re.sub(cache_rep, r"\n\t\tproxy_set_header\s+REMOTE-HOST\s+\$remote_addr;\n\t\t#Set Nginx Cache" + ng_cache,
                                                  ng_conf)
                     else:
                         no_cache = """
@@ -3946,13 +3976,15 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
     {
         set $static_file%s 1;
         expires 1m;
-        }
+    }
     if ( $static_file%s = 0 )
     {
-    add_header Cache-Control no-cache;
-    }""" % (random_string, random_string, random_string)
+        add_header Cache-Control no-cache;
+    }
+}
+#PROXY-END/""" % (random_string, random_string, random_string)
                         if self.check_annotate(ng_conf):
-                            rep = r'\n\s*#Set\s*Nginx\s*Cache(.|\n)*\d+m;'
+                            rep = r'\n\s*#Set\s*Nginx\s*Cache(.|\n)*'
                             # ng_conf = re.sub(rep,
                             #                  "\n\t#Set Nginx Cache\n\tproxy_ignore_headers Set-Cookie Cache-Control expires;\n\tadd_header Cache-Control no-cache;",
                             #                  ng_conf)
@@ -3966,7 +3998,7 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
 
                     sub_rep = "sub_filter"
                     subfilter = json.loads(get.subfilter)
-                    if str(conf[i]["subfilter"]) != str(subfilter):
+                    if str(conf[i]["subfilter"]) != str(subfilter) or ng_conf.find('sub_filter_once') == -1:
                         if re.search(sub_rep, ng_conf):
                             sub_rep = "\s+proxy_set_header\s+Accept-Encoding(.|\n)+off;"
                             ng_conf = re.sub(sub_rep,"",ng_conf)
@@ -3984,7 +4016,7 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
                                     s["sub1"] = s["sub1"].replace('"', '\\"')
                                 if '"' in s["sub2"]:
                                     s["sub2"] = s["sub2"].replace('"', '\\"')
-                                ng_subdata += '\n\tsub_filter "%s" "%s";' % (s["sub1"], s["sub2"])
+                                ng_subdata += '\n\t\tsub_filter "%s" "%s";' % (s["sub1"], s["sub2"])
                         if ng_subdata:
                             ng_sub_filter = ng_sub_filter % (ng_subdata)
                         else:
@@ -4099,6 +4131,7 @@ location ^~ %s
     proxy_set_header REMOTE-HOST $remote_addr;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
+    proxy_http_version 1.1;
     # proxy_hide_header Upgrade;
 
     add_header X-Cache $upstream_cache_status;
@@ -4321,14 +4354,18 @@ location ^~ %s
     def DelBackup(self,get):
         id = get.id
         where = "id=?"
-        filename = public.M('backup').where(where,(id,)).getField('filename')
+        backup_info = public.M('backup').where(where,(id,)).find()
+        filename = backup_info['filename']
         if os.path.exists(filename): os.remove(filename)
         name = ''
         if filename == 'qiniu':
-            name = public.M('backup').where(where,(id,)).getField('name')
+            name = backup_info['name']
             public.ExecShell(public.get_python_bin() + " "+self.setupPath + '/panel/script/backup_qiniu.py delete_file ' + name)
 
-        public.WriteLog('TYPE_SITE', 'SITE_BACKUP_DEL_SUCCESS',(name,filename))
+        pid = backup_info['pid']
+        site_name = public.M('sites').where('id=?',(pid,)).getField('name')
+
+        public.WriteLog('TYPE_SITE', 'SITE_BACKUP_DEL_SUCCESS',(site_name,filename))
         public.M('backup').where(where,(id,)).delete()
         return public.returnMsg(True, 'DEL_SUCCESS')
 

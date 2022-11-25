@@ -4389,6 +4389,13 @@ var bt_file = {
    */
   cover_single_file: function (path, file) {
     var that = this;
+    var filename = file.filename
+    var index = filename.lastIndexOf('.')
+    if (index == -1) {
+      filename += ' - 副本';
+    } else {
+      filename = filename.substring(0, index) + ' - 副本' + filename.substring(index, filename.length);
+    }
     layer.open({
       type: 1,
       title: '重复文件提示',
@@ -4403,11 +4410,11 @@ var bt_file = {
 					<div class="rows-value">\
 						<div class="replace_content_view">\
 							<div class="checkbox_config c$over">\
-								<i class="file_find_radio active"></i>\
+								<i class="file_find_radio"></i>\
 								<span class="laberText" style="font-size: 12px;">覆盖文件</span>\
 							</div>\
 							<div class="checkbox_config rename">\
-								<i class="file_find_radio"></i>\
+								<i class="file_find_radio active"></i>\
 								<span class="laberText" style="font-size: 12px;">重命名文件</span>\
 							</div>\
 						</div>\
@@ -4416,7 +4423,7 @@ var bt_file = {
 				<div class="rows input">\
 					<div class="rows-label">文件名: </div>\
 					<div class="rows-value">\
-						<input type="text" class="bt-input-text" disabled="disabled" name="filename" placeholder="文件名" value="' + file.filename + '" style="width: 220px;" />\
+						<input type="text" class="bt-input-text" name="filename" placeholder="文件名" value="' + filename + '" style="width: 220px;" />\
 					</div>\
 				</div>\
 				<div class="rows">\
@@ -4436,13 +4443,6 @@ var bt_file = {
           var $input = $('.cover_single_file input[name="filename"]');
           if ($(this).hasClass('rename')) {
             $input.removeAttr('disabled')
-            var filename = file.filename
-            var index = filename.lastIndexOf('.')
-            if (index == -1) {
-              filename += ' - 副本';
-            } else {
-              filename = filename.substring(0, index) + ' - 副本' + filename.substring(index, filename.length);
-            }
             $input.val(filename);
             $input.focus();
           } else {

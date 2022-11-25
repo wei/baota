@@ -48,8 +48,12 @@ class http:
 
                 try:
                     # IPV6？
-                    urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
-                    result = requests.get(url,timeout=timeout,headers=get_headers(headers),verify=verify)
+                    if self._ip_type != 'ipv6':
+                        urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
+                        result = requests.get(url,timeout=timeout,headers=get_headers(headers),verify=verify)
+                    else:
+                        urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
+                        result = requests.get(url,timeout=timeout,headers=get_headers(headers),verify=verify)
                 except:
                     # 使用CURL
                     result = self._get_curl(url,timeout,headers,verify)
@@ -58,8 +62,28 @@ class http:
 
         elif type == 'curl':
             result = self._get_curl(url,timeout,headers,verify)
+            if result.status_code == 0:
+                if self._ip_type == 'ipv4':
+                    self._ip_type = 'ipv6'
+                elif self._ip_type == 'ipv6':
+                    self._ip_type = 'ipv4'
+                else:
+                    return result
+                result = self._get_curl(url,timeout,headers,verify)
+                if result.status_code != 0:
+                    self.save_ip_type()
         elif type == 'php':
             result = self._get_php(url,timeout,headers,verify)
+            if result.status_code == 0:
+                if self._ip_type == 'ipv4':
+                    self._ip_type = 'ipv6'
+                elif self._ip_type == 'ipv6':
+                    self._ip_type = 'ipv4'
+                else:
+                    return result
+                result = self._get_php(url,timeout,headers,verify)
+                if result.status_code != 0:
+                    self.save_ip_type()
         elif type == 'src':
             if sys.version_info[0] == 2:
                 result = self._get_py2(url,timeout,headers,verify)
@@ -79,10 +103,15 @@ class http:
 
                 result = requests.post(url,data,timeout=timeout,headers=headers,verify=verify)
             except:
+                public.print_log(public.get_error_info())
                 try:
                     # IPV6？
-                    urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
-                    result = requests.post(url,data,timeout=timeout,headers=headers,verify=verify)
+                    if self._ip_type != 'ipv6':
+                        urllib3_conn.allowed_gai_family = lambda: socket.AF_INET6
+                        result = requests.post(url,data,timeout=timeout,headers=headers,verify=verify)
+                    else:
+                        urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
+                        result = requests.post(url,data,timeout=timeout,headers=headers,verify=verify)
                 except:
                     # 使用CURL
                     result = self._post_curl(url,data,timeout,headers,verify)
@@ -90,14 +119,46 @@ class http:
 
         elif type == 'curl':
             result = self._post_curl(url,data,timeout,headers,verify)
+            if result.status_code == 0:
+                if self._ip_type == 'ipv4':
+                    self._ip_type = 'ipv6'
+                elif self._ip_type == 'ipv6':
+                    self._ip_type = 'ipv4'
+                else:
+                    return result
+                result = self._post_curl(url,data,timeout,headers,verify)
+
+                # 保存有效的请求IP类型
+                if result.status_code != 0:
+                    self.save_ip_type()
         elif type == 'php':
             result = self._post_php(url,data,timeout,headers,verify)
+            if result.status_code == 0:
+                if self._ip_type == 'ipv4':
+                    self._ip_type = 'ipv6'
+                elif self._ip_type == 'ipv6':
+                    self._ip_type = 'ipv4'
+                else:
+                    return result
+                result = self._post_php(url,data,timeout,headers,verify)
+                if result.status_code != 0:
+                    self.save_ip_type()
         elif type == 'src':
             if sys.version_info[0] == 2:
                 result = self._post_py2(url,data,timeout,headers,verify)
             else:
                 result = self._post_py3(url,data,timeout,headers,verify)
         return result
+
+
+    def save_ip_type(self):
+        v_file = '{}/data/v4.pl'.format(public.get_panel_path())
+        v_body = 'auto'
+        if self._ip_type == 'ipv4':
+            v_body = '-4'
+        elif self._ip_type == 'ipv6':
+            v_body = '-6'
+        public.writeFile(v_file,v_body)
 
 
     def download_file(self,url,filename,data = None,timeout = 1800,speed_file='/dev/shm/download_speed.pl'):
@@ -367,7 +428,13 @@ exit($header."\r\n\r\n".json_encode($body));
             if os.path.exists(cb): curl_bin = cb
         if self._ip_type != 'auto':
             v4_file = '{}/data/v4.pl'.format(public.get_panel_path())
-            curl_bin += ' {}'.format(public.readFile(v4_file).strip())
+            v4_body = public.readFile(v4_file).strip()
+            if not self._ip_type in v4_body:
+                if self._ip_type == 'ipv4':
+                    v4_body = '-4'
+                else:
+                    v4_body = '-6'
+            curl_bin += ' {}'.format(v4_body)
         return curl_bin
 
     #格式化CURL响应头

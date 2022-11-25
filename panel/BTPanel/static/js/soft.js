@@ -1881,7 +1881,7 @@ var soft = {
           for (var i = 0; i < form_datas.length; i++) {
             bt.render_form_line(form_datas[i], '', $('.tab-db-status'));
           }
-          
+
           $('[name=bt_mysql_save]').css({'position': 'absolute','right': '20px','margin-top':'10px'})
           $('[name=bt_mysql_restart]').css({'position': 'absolute','right': '75px'})
 
@@ -2866,7 +2866,15 @@ var soft = {
                   value: 'tcp'
                 }
               ],
-              ps: '* 推荐Unix套接字'
+              ps: '* 推荐Unix套接字',
+              callback: function (iKey) {
+                var bind_obj = $("input[name='bind_port']");
+                if (iKey.val() == 'unix') {
+                    bind_obj.val('/tmp/php-cgi-' + version + '.sock');
+                } else {
+                    bind_obj.val('127.0.0.1:10' + version + "1");
+                }
+              }
             },
             {
               title: '连接信息',

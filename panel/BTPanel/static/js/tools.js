@@ -8,8 +8,12 @@ var bt_tools = {
    */
   table: function (config) {
     var that = this, table = $(config.el), tableData = table.data('table')
-    if(tableData && table.find('table').length > 0){
-      tableData.$refresh_table_list()
+    if(tableData && table.find('table').length > 0) {
+			if (config.url !== undefined) {
+				tableData.$refresh_table_list(true);
+			} else if (config.data !== undefined) {
+				tableData.$reader_content(config.data);
+			} 
       return tableData
     }
     function ReaderTable (config) {
@@ -149,7 +153,7 @@ var bt_tools = {
             }
           }
           if (data.length > 0) tbody += '</tr>'
-          if (data.length == 0) tbody += '<tr><td colspan="' + column.length + '" style="text-align:center;">' + (this.config['default'] || '数据为空') + '</td></tr>';
+          if (data.length == 0) tbody += '<tr class="no-tr"><td colspan="' + column.length + '" style="text-align:center;">' + (this.config['default'] || '数据为空') + '</td></tr>';
           i++;
         } while (i < data.length);
         if (!this.init) this.$style_bind(this.style_list);

@@ -174,6 +174,7 @@ class DNSPodDns(BaseDns):
         try:
             domain_name,_,subd = extract_zone(domain_name)
             self.remove_record(domain_name,subd,'TXT')
+            self.remove_record(domain_name,'_acme-challenge','CNAME')
         except:
             pass
 
@@ -353,6 +354,7 @@ class AliyunDns(object):
 
     def create_dns_record(self, domain_name, domain_dns_value):
         root, _, acme_txt = extract_zone(domain_name)
+        self.delete_dns_record(domain_name, domain_dns_value)
         if self._type == 1:
             acme_txt = acme_txt.replace('_acme-challenge.','')
             self.add_record(root,'CNAME',acme_txt,domain_dns_value)
@@ -361,7 +363,6 @@ class AliyunDns(object):
                 self.add_record(root,'CAA','@',caa_value)
             except: pass
             self.add_record(root,'TXT',acme_txt,domain_dns_value)
-
 
     def add_record(self,domain,s_type,host,value):
         randomint = random.randint(11111111111111, 99999999999999)
@@ -438,6 +439,7 @@ class AliyunDns(object):
         root, _, acme_txt = extract_zone(domain_name)
         self.remove_record(root,acme_txt,'TXT')
         self.remove_record(root,'@','CAA')
+        self.remove_record(root,'_acme-challenge','CNAME')
 
 class CloudxnsDns(object):
     def __init__(self, key, secret, ):

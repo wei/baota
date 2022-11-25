@@ -219,13 +219,13 @@
                 success:function(layers,indexs,forms){
                     forms.element.find('[data-name="project"] ul li:eq('+editIndex+')').click()
                 },
-                yes:function(formData,index){                    
-                    
+                yes:function(formData,index){
+
                     var _configD = {},eData = $.extend(true,{status:true,type:_this.push_type},formData);
                     // 默认添加的参数
                     _configD['name'] = _this.module_name;
                     _configD['id'] = res ? param['id'] : new Date().getTime();
-                    eData['title'] = $('.projectBox .bt_select_content').html();
+                    eData['title'] = $('.panel_push_form .projectBox .bt_select_content').html();
 
                     //删除推送类型
                     $.each(_this.msg_list,function(index,item){
@@ -234,7 +234,7 @@
 
                     //拼接选中推送方式
                     var isCheck = []
-                    $('.module-check').not('.check_disabled').each(function(){
+                    $('.panel_push_form .module-check').not('.check_disabled').each(function(){
                         if($(this).find('input').prop('checked')){
                             isCheck.push($(this).find('input').prop('name'))
                         }
@@ -278,18 +278,20 @@
                         isCheckType = formData['module'].split(',')
                     }
                     $.each(item.push,function(indexP,ic){
-                        _checklist.push({
-                            type: 'checkbox',
-                            name:that.msg_list[ic].name,
-                            class:'module-check '+(!that.msg_list[ic].setup?'check_disabled':'')+'',
-                            style:{'margin-right': '10px'},
-                            disabled:!that.msg_list[ic].setup,
-                            value:$.inArray(that.msg_list[ic].name,isCheckType) >= 0 ?1:0,
-                            title:that.msg_list[ic].title+(!that.msg_list[ic].setup?'<span style="color:red;cursor: pointer;" onclick="panel_push.alarm_jump(\''+that.msg_list[ic].title+'\')">[点击安装]</span>':''),
-                            event:function(formData,element,thatE){
-                                thatE.config.form[4].group[indexP].value = !formData[that.msg_list[ic].name]?0:1;
-                            }
-                        })
+                        if(typeof that.msg_list[ic] != 'undefined') {
+                            _checklist.push({
+                                type: 'checkbox',
+                                name:that.msg_list[ic].name,
+                                class:'module-check '+(!that.msg_list[ic].setup?'check_disabled':'')+'',
+                                style:{'margin-right': '10px'},
+                                disabled:!that.msg_list[ic].setup,
+                                value:$.inArray(that.msg_list[ic].name,isCheckType) >= 0 ?1:0,
+                                title:that.msg_list[ic].title+(!that.msg_list[ic].setup?'<span style="color:red;cursor: pointer;" onclick="panel_push.alarm_jump(\''+that.msg_list[ic].title+'\')">[点击安装]</span>':''),
+                                event:function(formData,element,thatE){
+                                    thatE.config.form[4].group[indexP].value = !formData[that.msg_list[ic].name]?0:1;
+                                }
+                            })
+                        }
                     })
                     _config[0].group.value = formData.project;
                     _config[1].display = false;

@@ -262,7 +262,8 @@ class backup:
                 new_backups.append(backups[i])
             elif data_type == 'path' and backups[i]['name'][:5] == 'path_': # 目录备份
                 new_backups.append(backups[i])
-        backups = new_backups[:]
+        if new_backups:
+            backups = new_backups[:]
 
         num = len(backups) - int(save)
         if  num > 0:

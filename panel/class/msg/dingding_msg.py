@@ -14,9 +14,13 @@ import sys, os
 panelPath = "/www/server/panel"
 os.chdir(panelPath)
 sys.path.insert(0,panelPath + "/class/")
+import public, json, requests
 from requests.packages import urllib3
 # 关闭警告
+
 urllib3.disable_warnings()
+import socket
+import requests.packages.urllib3.util.connection as urllib3_cn
 
 class dingding_msg:
 
@@ -56,7 +60,10 @@ class dingding_msg:
 
             if not 'list' in data: data['list'] = {}
 
-            data['list']['default'] = {'title':'默认','data':data['dingding_url']}
+            title = '默认'
+            if 'title' in data: title = data['title']
+
+            data['list']['default'] = {'title':title,'data':data['dingding_url']}
             data['default'] = self.__get_default_channel()
 
         return data
@@ -81,7 +88,13 @@ class dingding_msg:
         if 'atall' in get and get.atall == 'True':
             atall = True
 
-        self.__dingding_info  = {"dingding_url": get.url.strip(),"isAtAll": atall, "user":user}
+        title = '默认'
+        if hasattr(get, 'title'):
+            title = get.title
+            if len(title) > 7:
+                return public.returnMsg(False, '备注名称不能超过7个字符')
+
+        self.__dingding_info  = {"dingding_url": get.url.strip(),"isAtAll": atall, "user":user,"title":title}
 
         try:
             info = public.get_push_info('消息通道配置提醒',['>配置状态：<font color=#20a53a>成功</font>\n\n'])
@@ -92,6 +105,9 @@ class dingding_msg:
         if ret['status']:
             if 'default' in get and get['default']:
                 public.writeFile(self.__default_pl, self.__module_name)
+
+            if ret['success'] <= 0:
+                return public.returnMsg(False, '添加失败,请查看URL是否正确')
 
             public.writeFile(self.conf_path, json.dumps(self.__dingding_info))
             return public.returnMsg(True, '钉钉消息通道设置成功')
@@ -109,7 +125,9 @@ class dingding_msg:
                 try:
                     title = re.search(r"####(.+)", msg).groups()[0]
                 except:pass
-
+            else:
+                info = public.get_push_info('告警方式配置提醒',['>发送内容：' + msg])
+                msg = info['msg']
         except:pass
         return msg,title
 
@@ -143,27 +161,40 @@ class dingding_msg:
         }
 
         headers = {'Content-Type': 'application/json'}
-        try:
-            error,success = 0,0
-            conf = self.get_config(None)['list']
 
-            res = {}
-            for to_key in to_user.split(','):
-                if not to_key in conf: continue
+        error,success = 0,0
+        conf = self.get_config(None)['list']
 
-                x = requests.post(url = conf[to_key]['data'], data=json.dumps(data), headers=headers,verify=False,timeout=10)
+        res = {}
+        for to_key in to_user.split(','):
+            if not to_key in conf: continue
+            try:
+                allowed_gai_family_lib = urllib3_cn.allowed_gai_family
+                def allowed_gai_family():
+                    family = socket.AF_INET
+                    return family
+                urllib3_cn.allowed_gai_family = allowed_gai_family
+                x = requests.post(url = conf[to_key]['data'], data = json.dumps(data),verify=False, headers=headers,timeout=10)
+                urllib3_cn.allowed_gai_family=allowed_gai_family_lib
+
                 if x.json()["errcode"] == 0:
                     success += 1
                     res[conf[to_key]['title']] = 1
                 else:
                     error += 1
                     res[conf[to_key]['title']] = 0
-                try:
-                    public.write_push_log(self.__module_name,title,res)
-                except:pass
-            return public.returnMsg(True,'发送完成,发送成功{},发送失败{}.'.format(success,error))
-        except:
-            return public.returnMsg(False,'钉钉消息发送失败。 --> {}'.format(public.get_error_info()))
+            except:
+                error += 1
+                res[conf[to_key]['title']] = 0
+        try:
+            public.write_push_log(self.__module_name,title,res)
+        except:pass
+
+        ret = public.returnMsg(True,'发送完成,发送成功{},发送失败{}.'.format(success,error))
+        ret['success'] = success
+        ret['error'] = error
+
+        return ret
 
 
     def push_data(self,data):

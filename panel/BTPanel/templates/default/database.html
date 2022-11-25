@@ -168,6 +168,7 @@
 {% endblock %}
 {% block scripts %}
 {{ super() }}
+<script type="text/javascript" src="{{g.cdn_url}}/editor/ace.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 <script type="text/javascript" src="{{g.cdn_url}}/js/bt_upload.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 <script type="text/javascript" src="{{g.cdn_url}}/js/database.js?date={{g['version']}}&repair={{data['js_random']}}"></script>
 <script type="text/javascript">

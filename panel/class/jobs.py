@@ -45,7 +45,9 @@ def clear_other_files():
     dirPath = '/www/server/phpmyadmin/pma'
     if os.path.exists(dirPath):
         public.ExecShell("rm -rf {}".format(dirPath))
-
+    dirPath = '/www/server/nginx/waf'
+    if os.path.exists(dirPath):
+        public.ExecShell("rm -rf {}".format(dirPath))
     dirPath = '/www/server/adminer'
     if os.path.exists(dirPath):
         public.ExecShell("rm -rf {}".format(dirPath))
@@ -358,9 +360,9 @@ def set_php_cli_env():
     env_php_bin = '/usr/bin/php'
     if os.path.exists(env_php_bin):
         if os.path.islink(env_php_bin):
-            env_bin_version = os.readlink(env_php_bin).split('/')[-3]
-            php_cli_ini = "{}/{}/etc/php-cli.ini".format(php_path,env_bin_version)
-            bashrc_body += "alias php='php -c {}'\n".format(php_cli_ini)
+            php_cli_ini = "/etc/php-cli.ini"
+            if os.path.exists(php_cli_ini):
+                bashrc_body += "alias php='php -c {}'\n".format(php_cli_ini)
 
 
     # 设置所有已安装的PHP版本环境变量和别名

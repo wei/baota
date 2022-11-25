@@ -1564,15 +1564,18 @@ class config:
         php_pecl_src = "/www/server/php/%s/bin/pecl" % get.php_version
         php_pear = '/usr/bin/pear'
         php_pear_src = "/www/server/php/%s/bin/pear" % get.php_version
+        php_cli_ini = '/etc/php-cli.ini'
+        php_cli_ini_src = "/www/server/php/%s/etc/php-cli.ini" % get.php_version
         if not os.path.exists(php_bin_src): return public.returnMsg(False,'指定PHP版本未安装!')
         is_chattr = public.ExecShell('lsattr /usr|grep /usr/bin')[0].find('-i-')
         if is_chattr != -1: public.ExecShell('chattr -i /usr/bin')
-        public.ExecShell("rm -f " + php_bin + ' '+ php_ize + ' ' + php_fpm + ' ' + php_pecl + ' ' + php_pear)
+        public.ExecShell("rm -f " + php_bin + ' '+ php_ize + ' ' + php_fpm + ' ' + php_pecl + ' ' + php_pear + ' ' + php_cli_ini)
         public.ExecShell("ln -sf %s %s" % (php_bin_src,php_bin))
         public.ExecShell("ln -sf %s %s" % (php_ize_src,php_ize))
         public.ExecShell("ln -sf %s %s" % (php_fpm_src,php_fpm))
         public.ExecShell("ln -sf %s %s" % (php_pecl_src,php_pecl))
         public.ExecShell("ln -sf %s %s" % (php_pear_src,php_pear))
+        public.ExecShell("ln -sf %s %s" % (php_cli_ini_src,php_cli_ini))
         import jobs
         jobs.set_php_cli_env()
         if is_chattr != -1:  public.ExecShell('chattr +i /usr/bin')
@@ -2043,9 +2046,8 @@ class config:
     #         return public.returnMsg(True, result)
     #     return public.returnMsg(False, result)
 
-    #设置告警
     def set_login_send(self,get):
-        login_send_type_conf = "/www/server/panel/data/login_send_type.pl"
+        panel_login_send_type_conf = "/www/server/panel/data/panel_login_send.pl"
 
         set_type=get.type.strip()
         msg_configs = self.get_msg_configs(get)
@@ -2061,7 +2063,7 @@ class config:
         if not obj:
             return public.returnMsg(False, "消息通道未安装。")
 
-        public.writeFile(login_send_type_conf, set_type)
+        public.writeFile(panel_login_send_type_conf, set_type)
         return public.returnMsg(True, '设置成功')
 
         # if type=='mail':
@@ -2090,6 +2092,10 @@ class config:
                 os.remove("/www/server/panel/data/login_send_dingding.pl")
 
         login_send_type_conf = "/www/server/panel/data/login_send_type.pl"
+        if os.path.exists(login_send_type_conf):
+            os.remove(login_send_type_conf)
+
+        login_send_type_conf = "/www/server/panel/data/panel_login_send.pl"
         if os.path.exists(login_send_type_conf):
             os.remove(login_send_type_conf)
         return public.returnMsg(True, '取消登录告警成功！')

@@ -793,6 +793,7 @@ var index = {
                   <div class="update_tips">'+ (is_beta?'正式版':'测试版') + '最新版本为：&nbsp;' + (is_beta?data.version:beta.version) + '&nbsp;&nbsp;&nbsp;更新时间:&nbsp;&nbsp;' + (is_beta?data.uptime:beta.uptime) + '&nbsp;&nbsp;&nbsp;\
                   '+ (!is_beta ? '<span>如需更新测试版请点击<a href="javascript:;" onclick="index.beta_msg()" class="btlink btn_update_testPanel">查看详情</a></span>' : '<span>如需切换回正式版请点击<a href="javascript:;" onclick="index.to_not_beta()" class="btlink btn_update_testPanel">切换到正式版</a></span>') + '\
                   '+ (is_beta ? data.btb : '') + '\
+                  <span>有更新时提醒我: <span class="bt_switch" style="display:inline-block"><input class="btswitch btswitch-ios" id="updateTips" type="checkbox"><label class="btswitch-btn" for="updateTips"></label></span><a class="btlink setupdateconfig" style="margin-left: 15px;" href="javascript:;">提醒方式</a></span></span>\
                   </div>\
               </div>\
               <div class="bt-form-btn '+ (!rdata.status?'hide':'') +'">\
@@ -814,6 +815,7 @@ var index = {
             .bt-form-btn .btn:nth-child(1):hover {background: #d4d4d4}\
             .bt-form-btn .btn {display: inline-block;line-height: 38px;height: 40px;border-radius: 20px;width: 140px;padding:0;margin-right: 30px;font-size:13.5px;}\
             .bt-form-btn .btn:nth-child(2) {margin-right: 0;}\
+            .setchmod.bt-form .btswitch-btn {margin-bottom: 0;height: 1.9rem;width: 3.2rem;position: relative;top: 4.5px;}\
         </style>',
         success:function (layers,indexs) {
           $('.ignore-renew').on('click',function () {
@@ -822,6 +824,175 @@ var index = {
               if(rdata.status) layer.close(indexs);
             })
           })
+          var updateModule = '',_updateStatus = false
+          // 更新提醒开关状态
+          cacheModule(function (rdata1) {
+            updateModule = rdata1.module   //已选择的告警方式
+            $('#updateTips').attr('checked',rdata1.status)
+          })
+          // 设置告警通知
+          $('#updateTips').on('click', function () {
+            var _that = $(this);
+            var isExpiration = $(this).is(':checked');
+            var time = new Date().getTime();
+            if (isExpiration) {
+              alarmMode(_that)
+            } else {
+              var data = JSON.stringify({
+                status: isExpiration,
+                type: "panel_update",
+                title: "面板更新提醒",
+                module: updateModule,
+                interval: 600
+              })
+              bt.site.set_push_config({
+                name: 'site_push',
+                id: 'panel_update',
+                data: data,
+              }, function (rdata) {
+                bt.msg(rdata)
+              })
+            }
+          });
+          // 告警方式
+          $('.setupdateconfig').on('click',function (){
+            alarmMode()
+          });
+          /**
+           * 更新提醒
+           * @param $check 更新提醒开关
+           */
+          function alarmMode ($check) {
+            cacheModule(function (rdata1) {
+              var time = new Date().getTime();
+              var isExpiration = rdata1.status;
+              if ($check) isExpiration = $check.is(':checked');
+              layer.open({
+                type: 1,
+                title: '面板更新提醒',
+                area: '470px',
+                closeBtn: 2,
+                content: '\
+                    <div class="pd15">\
+                      <div class="bt-form plr15">\
+                        <div class="line">\
+                          <span class="tname">更新提醒</span>\
+                          <div class="info-r line-switch">\
+                            <input type="checkbox" id="dueAlarm" class="btswitch btswitch-ios" name="due_alarm" ' + (isExpiration ? 'checked="checked"' : '') + ' />\
+                            <label class="btswitch-btn" for="dueAlarm"></label>\
+                          </div>\
+                        </div>\
+                        <div class="line">\
+                          <span class="tname">告警方式</span>\
+                          <div class="info-r installPush"></div>\
+                        </div>\
+                        <ul class="help-info-text c7">\
+                         <li>点击安装后状态未更新，尝试点击【<a class="btlink handRefresh">手动刷新</a>】</li>\
+                        </ul>\
+                      </div>\
+                    </div>',
+                btn: ['保存配置', '取消'],
+                success: function ($layer) {
+                  renderConfigHTML()
+                  // 手动刷新
+                  $('.handRefresh').click(function(){
+                    renderConfigHTML()
+                  })
+
+                  // 获取配置
+                  function renderConfigHTML(){
+                    bt.site.get_msg_configs(function (rdata) {
+                      var html = '', unInstall = ''
+                      for (var key in rdata) {
+                        var item = rdata[key],_html = '',accountConfigStatus = false;
+                        if(key == 'sms') continue;
+                        if(key === 'wx_account'){
+                          if(!$.isEmptyObject(item.data) && item.data.res.is_subscribe && item.data.res.is_bound){
+                            accountConfigStatus = true   //安装微信公众号模块且绑定
+                          }
+                        }
+
+                        _html = '<div class="inlineBlock module-check ' + ((!item.setup || $.isEmptyObject(item.data)) ? 'check_disabled' : ((key == 'wx_account' && !accountConfigStatus)?'check_disabled':'')) + '">' +
+                            '<div class="cursor-pointer form-checkbox-label mr10">' +
+                            '<i class="form-checkbox cust—checkbox cursor-pointer mr5 '+ (rdata1.module.indexOf(item.name) > -1?((!item.setup || $.isEmptyObject(item.data)) ?'':((key == 'wx_account' && !accountConfigStatus)?'':'active')):'') +'" data-type="'+ item.name +'"></i>' +
+                            '<input type="checkbox" class="form—checkbox-input hide mr10" name="' + item.name + '" '+ ((item.setup || !$.isEmptyObject(item.data))?((key == 'wx_account' && !accountConfigStatus)?'':'checked'):'') +'/>' +
+                            '<span class="vertical_middle" title="' + item.ps + '">' + item.title + ((!item.setup || $.isEmptyObject(item.data)) ? '[<a target="_blank" class="bterror installNotice" data-type="'+ item.name +'">点击安装</a>]' : ((key == 'wx_account' && !accountConfigStatus)?'[<a target="_blank" class="bterror installNotice" data-type="'+ item.name +'">未配置</a>]':'')) + '</span>' +
+                            '</div>' +
+                            '</div>';
+                        if(!item.setup){
+                          unInstall += _html;
+                        }else{
+                          html += _html;
+                        }
+                      }
+                      $('.installPush').html(html + unInstall)
+                    });
+                  }
+                  // 安装消息通道
+                  $('.installPush').on('click', '.form-checkbox-label', function () {
+                    var that = $(this).find('i')
+                    if (!that.parent().parent().hasClass('check_disabled')){
+                      if (that.hasClass('active')) {
+                        that.removeClass('active')
+                        that.next().prop('checked', false)
+                      } else {
+                        that.addClass('active')
+                        that.next().prop('checked', true)
+                      }
+                    }
+                  });
+
+                  $('.installPush').on('click','.installNotice',function(){
+                    var type = $(this).data('type')
+                    openAlertModuleInstallView(type)
+                  })
+                },
+                yes: function (index) {
+                  var status = $('input[name="due_alarm"]').is(':checked');
+                  var arry = [];
+                  $('.installPush .active').each(function(item){
+                    var item = $(this).attr('data-type')
+                    arry.push(item)
+                  })
+                  if(!arry.length) return layer.msg('请选择至少一种告警通知方式',{icon:2})
+
+                  // 参数
+                  var data = {
+                    status: status,
+                    type: "panel_update",
+                    title: "面板更新提醒",
+                    module: arry.join(','),
+                  }
+
+                  // 请求设置本站点告警配置
+                  bt.site.set_push_config({
+                    name: 'site_push',
+                    id: 'panel_update',
+                    data: JSON.stringify(data),
+                  }, function (rdata) {
+                    bt.msg(rdata)
+                    if(rdata.status){
+                      $('#updateTips').prop('checked',data.status)
+                      layer.close(index)
+                    }
+                  })
+                },
+                cancel: function() {
+                  $check && $check.prop('checked', !isExpiration)
+                },
+                btn2: function(){
+                  $check && $check.prop('checked', !isExpiration)
+                }
+              });
+            })
+          }
+          function cacheModule(callback){
+            $.post('/push?action=get_push_config', { id:'panel_update',name:'site_push' }, function (rdata1) {
+              if(typeof rdata1.code == 'undefined' && typeof rdata1.msg != 'undefined')return layer.msg(rdata1.msg,{icon:2})
+              if(typeof rdata1.code != 'undefined' && rdata1.code == 100) rdata1 = {module:'',status:false}
+              if(callback) callback(rdata1);
+            });
+          }
         },
         cancel:function (){
           if(rdata.status) bt.send('ignore_version', 'ajax/ignore_version', { version: versionData.version })
@@ -1218,26 +1389,7 @@ var index = {
           }
         });
         $('.warning_repair_scan').click(function () {
-          layer.open({
-            type: 1,
-            area: ['300px', '260px'],
-            title: false,
-            closeBtn: 2,
-            shift: 0,
-            content: '<div class="service_consult">\
-                        <div class="service_consult_title">使用微信扫描二维码，联系客服，付费修复</div>\
-                        <div class="contact_consult" style="margin-bottom: 5px;"><div id="contact_consult_qcode"></div><i class="wechatEnterprise"></i></div>\
-                        <div>【人工客服】</div>\
-                      </div>',
-            success:function(){
-              $('#contact_consult_qcode').qrcode({
-                render: "canvas",
-                width: 140,
-                height: 140,
-                text:'https://work.weixin.qq.com/kfid/kfc72fcbde93e26a6f3'
-              });
-            }
-          })
+          bt.onlineService()
         })
         $('.warning_scan_body').on('click', '.operate_tools a', function () {
           var index = $(this).index(), data = $(this).data();
@@ -1370,7 +1522,7 @@ var index = {
         if(is_pay){
           pay_html = '<div class="product-buy '+ (advanced || item.name) +'-type">到期时间：<span>'+ (end_time === 0?'永久授权':(end_time === -2?'已过期':bt.format_data(end_time,'yyyy-MM-dd')) + '&nbsp;&nbsp;<a class="btlink" href="javascript:;" onclick="product_recommend.pay_product_sign(\''+ advanced +'\','+ item.pay +',\''+ advanced +'\')">续费</a>') +'</span></div>'
         }else{
-          pay_html = '<div class="product-buy"><button type="button" class="btn btn-xs btn-success" onclick="product_recommend.pay_product_sign(\''+ (advanced || item.name) +'\','+ item.pay +',\'ltd\')">立即开通</button></div>'
+          pay_html = '<div class="product-buy"><button type="button" class="btn btn-xs btn-success" onclick="product_recommend.pay_product_sign(\''+ (advanced || item.name) +'\','+ item.pay +',\'ltd\')">立即升级</button></div>'
         }
         html = '<div class="conter-box bgw">\
           <div class="recommend-top radius4 pd15 '+ (is_pay?( advanced +'-bg'):'') +'">'+ (!is_pay?pay_html:'') +'<div class="product-ico '+ (advanced || item.name) +''+ (!is_pay?'-pay':'') +'-ico"></div>' + (is_pay?pay_html:'') +'\

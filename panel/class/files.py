@@ -2595,7 +2595,7 @@ cd %s
             "password":str(get.password), #提取密码
             "addtime": mtime #添加时间
         }
-        exts = get.filename.split('.')
+        exts = os.path.basename(get.filename).split('.')
         if len(exts) > 1:
             pdata['token'] += "." + exts[-1]
         if len(pdata['password']) < 4 and len(pdata['password']) > 0:

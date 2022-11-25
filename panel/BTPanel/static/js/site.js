@@ -26,12 +26,12 @@ $('#cutMode .tabs-item').on('click', function () {
       break;
     case 'java':
       $('.site_class_type').remove()
-      if (initTab.indexOf(2) > -1) {
-        javaModle.get_project_list()
+      if (initTab.length > 0) {
+				javaModle.get_project_list();
       } else {
-        dynamic.require(['vue.min.js', 'polyfill.min.js', 'vue-components.js', 'java-model.js'], function () {
-          initTab.push(index)
-        })
+        dynamic.require(['polyfill.min.js', 'vue.min.js', 'vue-components.js', 'java-model.js'], function () {
+					initTab.push(index);
+        });
       }
       break;
 
@@ -3626,6 +3626,8 @@ var site = {
         that.span_time = site.get_simplify_time(res.time)
         $('.pull-left button').eq(5).html('<span>漏洞扫描</span><span class="btn_num" style="background:'+ (that.scan_num > 0 ? 'red' : '#f0ad4e') +'">'+ that.scan_num +'</span>');
         if (callback) callback(res);
+      }else{
+        that.scan_list = res
       }
     })
 
@@ -3759,15 +3761,15 @@ var site = {
       area: ['750px', '700px'],
       skin: 'warning_scan_view',
       content: '<div class="warning_scan_view" style="height:100%;">' +
-          '<div class="warning_scan_head">' +
-          (!that.is_pay ? '<div class="scanNone">\
-            <img src="'+( that.scan_num > 0 ? '/static/img/scanning-danger.svg' : '/static/img/scanning-success.svg')+'" style="height: 75px;width: 75px;">\
-            <div class="warning_scan_ps1">\
-              <div style="font-size: 20px;color:'+( that.scan_num <= 0 ? 'red':'#20a53a') +';">\
-                '+ (that.scan_num > 0 ? ' 漏洞数为'+that.scan_num+'个,请尽快修复漏洞' : ' 未扫描到漏洞，请持续保持哦') +' <i style="font-style:normal;font-size:16px;"> 扫描时间：'+ bt.format_data(Date.now() / 1000,'yyyy/MM/dd')+'</i></div>\
-              <div class="warning_scan_time">\
-                未开通，此功能为企业版专享功能\
-              </div>\
+      '<div class="warning_scan_head">' +
+      (!that.is_pay || that.scan_list['status'] === false ? '<div class="scanNone">\
+      <img src="'+( that.scan_num > 0 ? '/static/img/scanning-danger.svg' : '/static/img/scanning-success.svg')+'" style="height: 75px;width: 75px;">\
+      <div class="warning_scan_ps1">\
+        <div style="font-size: 20px;color:'+ (that.scan_list['status'] === false ? '#333' :( that.scan_num > 0 ? 'red':'#20a53a')) +';">\
+          '+ (that.scan_list['status'] === false ? '此功能为企业版专享功能' : (that.scan_num > 0 ? ' 漏洞数为'+that.scan_num+'个,请尽快修复漏洞' : ' 未扫描到漏洞，请持续保持哦') +' <i style="font-style:normal;font-size:16px;"> 扫描时间：'+ bt.format_data(Date.now() / 1000,'yyyy/MM/dd')) +'</i></div>\
+        <div class="warning_scan_time">'+
+        (that.scan_list['status'] === false ? '如需使用该功能请立即查看' : '未开通，此功能为企业版专享功能') +
+          '</div>\
             </div>\
             <button style="top: 65px;right: 50px;border-radius: 5px;" onclick=\"product_recommend.pay_product_sign(\'ltd\',50,\'ltd\')\"">立即查看</button>'+
               '</div>' : '<div class="scanNone scanning1">\
@@ -3789,9 +3791,9 @@ var site = {
           '<ul class="c7 help_info_text">'+
           '<li>如需支持其他cms程序，请发帖反馈：<a class="btlink" target="_blank" href="https://www.bt.cn/bbs/thread-89149-1-1.html">https://www.bt.cn/bbs/thread-89149-1-1.html</a></li>'+
           '</ul>'+
-          '</div>',
+        '</div>',
       success: function (layero) {
-        if(site.scan_list.info.length > 0) setTimeout(function(){$('.warn_again_scan').click()},50)
+        if(site.scan_list.info && site.scan_list.info.length > 0) setTimeout(function(){$('.warn_again_scan').click()},50)
 
         $(layero).find('.service_buy2').click(function(){
           layer.open({
@@ -6242,7 +6244,7 @@ var site = {
           $('#webedit-con').append(_html);
           bt.render_clicks(_form_data.clicks);
           if (sdata.phpversion != 'other') {
-            $('#webedit-con').append('<div class="user_pw_tit" style="margin-top: 2px;padding-top: 11px;border-top: #ccc 1px dashed;"><span class="tit">session隔离</span><span class="btswitch-p" style="display: inline-flex;"><input class="btswitch btswitch-ios" id="session_switch" type="checkbox"><label class="btswitch-btn session-btn" for="session_switch" ></label></span></div><div class="user_pw" style="margin-top: 10px; display: block;"></div>' +
+            $('#webedit-con').append('<div class="user_pw_tit" style="margin-top: 2px;padding-top: 11px;border-top: #ccc 1px dashed;"><span class="tit">session隔离</span><span class="btswitch-p" style="display: inline-block;vertical-align: middle;"><input class="btswitch btswitch-ios" id="session_switch" type="checkbox"><label class="btswitch-btn session-btn" for="session_switch" ></label></span></div><div class="user_pw" style="margin-top: 10px; display: block;"></div>' +
                 bt.render_help(['开启后将会把session文件存放到独立文件夹，不与其他站点公用存储位置', '若您在PHP配置中将session保存到memcache/redis等缓存器时，请不要开启此选项']));
           }
           if (sdata.phpversion != 'other') {
@@ -7186,7 +7188,7 @@ var site = {
       });
     },
     set_proxy: function (web) {
-      $('#webedit-con').html('<div id="proxy_list"></div>');
+      $('#webedit-con').html('<div id="proxy_list" class="bt_table"></div>');
       String.prototype.myReplace = function (f, e) { //吧f替换成e
         var reg = new RegExp(f, "g"); //创建正则RegExp对象
         return this.replace(reg, e);
@@ -7202,7 +7204,11 @@ var site = {
           { type: 'checkbox', width: 20 },
           { fid: 'proxyname', title: '名称', type: 'text' },
           { fid: 'proxydir', title: '代理目录', type: 'text' },
-          { fid: 'proxysite', title: '目标url', type: 'link', href: true },
+          { fid: 'proxysite', title: '目标url', type: 'link', href: true,
+            template: function (row) {
+              return '<span style="width: 160px;" class="fixed"><a class="btlink" href="'+ row.proxysite +'" target="_blank" title="'+ row.proxysite +'">'+ row.proxysite +'</a></span>'
+            }
+          },
           bt.get_cookie('serverType') == 'nginx' ? {
             fid: 'cache',
             title: '缓存',
@@ -7218,7 +7224,6 @@ var site = {
               row['cache'] = !row['cache'] ? 1 : 0;
               row['subfilter'] = JSON.stringify(row['subfilter']);
               bt.site.modify_proxy(row, function (rdata) {
-                row['subfilter'] = JSON.parse(row['subfilter']);
                 if (rdata.status) site.reload()
                 bt.msg(rdata);
               });
@@ -7237,9 +7242,8 @@ var site = {
             type: 'status',
             event: function (row, index, ev, key, that) {
               row['type'] = !row['type'] ? 1 : 0;
-              row['subfilter'] = JSON.stringify(row['subfilter']);
+              row['subfilter'] = JSON.stringify(row['subfilter']).replaceAll(/[\\]/g,'').replace("\"[",'[').replace("]\"",']');
               bt.site.modify_proxy(row, function (rdata) {
-                row['subfilter'] = JSON.parse(row['subfilter']);
                 if (rdata.status) site.reload()
                 bt.msg(rdata);
               });
@@ -7354,7 +7358,7 @@ var site = {
             url: '/site?action=ModifyProxy',
             param: function (row) {
               row.type = 1;
-              row['subfilter'] = JSON.stringify(row['subfilter']);
+              row['subfilter'] = JSON.stringify(row['subfilter']).replaceAll(/[\\]/g,'').replace("\"[",'[').replace("]\"",']');
               return row
             },
             callback: function (that) { // 手动执行,data参数包含所有选中的站点
@@ -7381,7 +7385,7 @@ var site = {
             url: '/site?action=ModifyProxy',
             param: function (row) {
               row.type = 0;
-              row['subfilter'] = JSON.stringify(row['subfilter']);
+              row['subfilter'] = JSON.stringify(row['subfilter']).replaceAll(/[\\]/g,'').replace("\"[",'[').replace("]\"",']');
               return row
             },
             callback: function (that) { // 手动执行,data参数包含所有选中的站点
@@ -9113,7 +9117,7 @@ var site = {
                 '</div>' +
                 '<div class="state_info_flex">' +
                 '<div class="state_item"><span>认证域名：</span><span class="ellipsis_text" title="' + certificate.dns.join('、') + '">' + certificate.dns.join('、') + '</span></div>' +
-                '<div class="state_item"><span>到期时间：</span><span class="' + (expirationTime >= 30 ? 'btlink' : 'bterror') + '">' + (expirationTime >= 0 ? ('剩余' + expirationTime.toFixed(0) + '天到期') : '证书已过期') + '</span></div>' +
+                '<div class="state_item"><span>到期时间：</span><span class="' + (expirationTime >= 30 ? 'btlink' : 'bterror') + '">' + (expirationTime >= 0 ? (rdata.cert_data.notAfter+'，剩余' + expirationTime.toFixed(0) + '天到期') : '证书已过期') + '</span></div>' +
                 '</div>' +
                 '<div class="state_info_flex">' +
                 '<div class="state_item"><span>强制HTTPS：</span><span class="bt_switch"><input class="btswitch btswitch-ios" id="https" type="checkbox" ' + (rdata.httpTohttps ? 'checked' : '') + '><label class="btswitch-btn" for="https"></label></span></div>' +
@@ -9385,7 +9389,7 @@ var site = {
                   project: web.name,
                   cycle: parseInt(pushAlarm.cycle),
                   title: "网站SSL到期提醒",
-                  module: "",
+                  module: pushAlarm.module,
                   interval: 600
                 })
                 var id = pushAlarm.id?pushAlarm.id:time
@@ -9496,7 +9500,7 @@ var site = {
           }
         },
         {
-          title: "商用证书<i class='ssl_recom_icon'></i>",
+          title: "商用SSL证书<i class='ssl_recom_icon'></i>",
           callback: function (robj) {
             robj = $('#webedit-con .tab-con')
             bt.pub.get_user_info(function (udata) {
@@ -9682,34 +9686,8 @@ var site = {
                                   <li>商用证书相对于普通证书，具有更高的安全性、赔付保障和支持通配符和多域名等方式。<a class="btlink" target="_blank" href="https://www.racent.com/sectigo-ssl">点击查看</a></li>\
                               </ul>');
                 $('.service_buy_before').click(function(){
-                  onChangeServiceMethod('1');
+                  bt.onlineService()
                 })
-                // 人工服务   带有参数为售前客服
-                function onChangeServiceMethod(_key){
-                  layer.open({
-                    type: 1,
-                    area: ['300px', (_key?'315px':'290px')],
-                    title: false,
-                    closeBtn: 2,
-                    shift: 0,
-                    content: '<div class="service_consult">\
-                      <div class="service_consult_title">请打开微信"扫一扫"</div>\
-                      <div class="contact_consult" style="margin-bottom: 5px;"><div id="contact_consult_qcode"></div><i class="wechatEnterprise"></i></div>\
-                      <div>【'+(_key?'售前':'人工')+'客服】</div>\
-                      <ul class="help-info-text c7" style="margin-left:30px;text-align: left;">\
-                          '+(_key?'<li><a class="btlink" href="https://www.bt.cn/bbs/thread-86119-1-1.html" target="_blank">SSL常见问题</a></li><li>工作时间：9:15 - 18:00</li>':'<li>工作时间：9:15 - 23:00</li>')+'\
-                      </ul>\
-                  </div>',
-                    success:function(){
-                      $('#contact_consult_qcode').qrcode({
-                        render: "canvas",
-                        width: 140,
-                        height: 140,
-                        text: _key?'https://work.weixin.qq.com/kfid/kfc72fcbde93e26a6f3':'https://work.weixin.qq.com/kfid/kfc9151a04b864d993f'
-                      });
-                    }
-                  })
-                }
                 bt.fixed_table('ssl_order_list');
                 /**
                  * @description 证书购买人工服务
@@ -11193,12 +11171,12 @@ var site = {
           }
         },
         {
-          title: '宝塔SSL',
+          title: '宝塔证书(试用)',
           callback: function (robj) {
             robj = $('#webedit-con .tab-con')
             bt.pub.get_user_info(function (udata) {
               if (udata.status) {
-                robj.append("<button name=\"btsslApply\" class=\"btn btn-success btn-sm mr5 btsslApply\">申请证书</button><div id='ssl_order_list' class=\"divtable mtb15 table-fixed-box\" style=\"max-height:340px;overflow-y: auto;\"><table id='bt_order_list' class='table table-hover'><thead><tr><th>域名</th><th>到期时间</th><th>状态</th><th>操作</th></tr></thead><tbody><tr><td colspan='4' style='text-align:center'><img style='height: 18px;margin-right:10px' src='/static/images/loading-2.gif'>正在获取订单,请稍候...</td></tr></tbody></table></div>");
+                robj.append("<div class=\"alert alert-danger\" style=\"margin-bottom: 10px;\">* 建议用于测试、个人试用等场景，org、jp等特殊域名存在无法申请的情况</div><button name=\"btsslApply\" class=\"btn btn-success btn-sm mr5 btsslApply\">申请证书</button><div id='ssl_order_list' class=\"divtable mtb15 table-fixed-box\" style=\"max-height:340px;overflow-y: auto;\"><table id='bt_order_list' class='table table-hover'><thead><tr><th>域名</th><th>到期时间</th><th>状态</th><th>操作</th></tr></thead><tbody><tr><td colspan='4' style='text-align:center'><img style='height: 18px;margin-right:10px' src='/static/images/loading-2.gif'>正在获取订单,请稍候...</td></tr></tbody></table></div>");
                 bt.site.get_domains(web.id, function (ddata) {
                   $('.btsslApply').click(function () {
                     apply_bt_certificate()
@@ -11615,7 +11593,7 @@ var site = {
           title: "证书夹",
           callback: function (robj) {
             robj = $('#webedit-con .tab-con')
-            robj.html("<div class='divtable' style='height:580px;overflow: auto;'><table id='cer_list_table' class='table table-hover'></table></div>");
+            robj.html("<div class='divtable' style='height:555px;overflow: auto;'><table id='cer_list_table' class='table table-hover'></table></div>");
             bt.site.get_cer_list(function (rdata) {
               bt.render({
                 table: '#cer_list_table',

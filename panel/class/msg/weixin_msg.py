@@ -17,10 +17,13 @@ import sys, os,time
 panelPath = "/www/server/panel"
 os.chdir(panelPath)
 sys.path.insert(0,panelPath + "/class/")
+import public, json, requests
 from requests.packages import urllib3
 # 关闭警告
-urllib3.disable_warnings()
 
+urllib3.disable_warnings()
+import socket
+import requests.packages.urllib3.util.connection as urllib3_cn
 class weixin_msg:
 
     __module_name = None
@@ -69,7 +72,10 @@ class weixin_msg:
 
             if not 'list' in data: data['list'] = {}
 
-            data['list']['default'] = {'title':'默认','data':data['weixin_url']}
+            title = '默认'
+            if 'title' in data: title = data['title']
+
+            data['list']['default'] = {'title':title,'data':data['weixin_url']}
             data['default'] = self.__get_default_channel()
         return data
 
@@ -114,6 +120,7 @@ class weixin_msg:
         #兼容旧配置只有一条url的情况
         if key == 'default':
             self.__weixin_info['weixin_url'] = get.url.strip()
+            self.__weixin_info['title'] = title
 
         #统一格式化输出，包含主机名，ip，推送时间
         try:
@@ -123,9 +130,14 @@ class weixin_msg:
             ret = self.send_msg('宝塔告警测试')
 
         if ret['status']:
+
             #默认消息通道
             if 'default' in get and get['default']:
                 public.writeFile(self.__default_pl, self.__module_name)
+
+            if ret['success'] <= 0:
+                return public.returnMsg(False, '添加失败,请查看URL是否正确')
+
             public.writeFile(self.conf_path, json.dumps(self.__weixin_info))
             return public.returnMsg(True, '设置成功')
         else:
@@ -160,6 +172,9 @@ class weixin_msg:
         if not self.__weixin_info :
             return public.returnMsg(False,'未正确配置微信信息。')
 
+        if 'state' in self.__weixin_info and self.__weixin_info['state'] == 0:
+            return public.returnMsg(False,'微信消息通道已关闭,请开启后重试。')
+
         if msg.find('####') == -1:
             try:
                 msg = public.get_push_info('消息通道配置提醒',['>发送内容：{}\n\n'.format(msg)])['msg']
@@ -173,29 +188,43 @@ class weixin_msg:
             }
         }
         headers = {'Content-Type': 'application/json'}
-        try:
-            error,success = 0,0
-            conf = self.get_config(None)['list']
 
-            res = {}
-            for to_key in to_user.split(','):
-                if not to_key in conf: continue
+        error,success = 0,0
+        conf = self.get_config(None)['list']
 
-                x = requests.post(url = conf[to_key]['data'], data=json.dumps(data), headers=headers,verify=False,timeout=10)
+        res = {}
+        for to_key in to_user.split(','):
+            if not to_key in conf: continue
+            try:
+                #x = requests.post(url = conf[to_key]['data'], data=json.dumps(data), headers=headers,verify=False,timeout=10)
+
+                allowed_gai_family_lib=urllib3_cn.allowed_gai_family
+                def allowed_gai_family():
+                    family = socket.AF_INET
+                    return family
+                urllib3_cn.allowed_gai_family = allowed_gai_family
+                x = requests.post(url = conf[to_key]['data'], data = json.dumps(data),verify=False, headers=headers,timeout=10)
+                urllib3_cn.allowed_gai_family=allowed_gai_family_lib
+
                 if x.json()["errcode"] == 0:
                     success += 1
                     res[conf[to_key]['title']] = 1
                 else:
                     error += 1
                     res[conf[to_key]['title']] = 0
+            except:
+                error += 1
+                res[conf[to_key]['title']] = 0
+        try:
+            public.write_push_log(self.__module_name,title,res)
+        except:pass
 
-            try:
-                public.write_push_log(self.__module_name,title,res)
-            except:pass
-            return public.returnMsg(True,'发送完成,发送成功{},发送失败{}.'.format(success,error))
-        except:
-            print(public.get_error_info())
-            return public.returnMsg(False,'微信消息发送失败。 --> {}'.format(public.get_error_info()))
+        ret = public.returnMsg(True,'发送完成,发送成功{},发送失败{}.'.format(success,error))
+        ret['success'] = success
+        ret['error'] = error
+
+        return ret
+
 
     def push_data(self,data):
         """

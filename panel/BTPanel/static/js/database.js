@@ -360,7 +360,25 @@ var database = {
               html: html
             });
           }
-        }, {
+        },{
+          title:'备份数据库',
+          url: bt.data.db_tab_name == 'mysql' ? 'database?action=ToBackup' : '/database/'+bt.data.db_tab_name+'/ToBackup',
+          load: true,
+					param: function (row) {
+						return bt.data.db_tab_name == 'mysql' ? { id: row.id } : {data:JSON.stringify({id: row.id})}
+					},
+					callback: function (that) { // 手动执行,data参数包含所有选中的站点
+						that.start_batch({},function(list){
+							var html = '';
+							for(var i=0;i<list.length;i++){
+								var item = list[i];
+								html += '<tr><td>'+ item.name +'</td><td><div style="float:right;"><span style="color:'+ (item.request.status?'#20a53a':'red') +'">'+ item.request.msg +'</span></div></td></tr>';
+							}
+							database_table.$batch_success_table({title:'批量备份数据库',th:'数据库名',html:html});
+							database_table.$refresh_table_list(true);
+						});
+					}
+        },{
           title: "删除数据库",
           url: '/database?action=DeleteDatabase',
           load: true,
@@ -1607,7 +1625,8 @@ var database = {
   // 备份导入》本地导入
   upload_files: function (name) {
     var path = bt.get_cookie('backup_path') + "/database/";
-    bt_upload_file.open(path, '.sql,.zip,.bak,.gz', lan.database.input_up_type, function () {
+    var is_pgsql = $('.database-pos .tabs-item.active').data('type') === 'pgsql'
+    bt_upload_file.open(path, is_pgsql ? '.sql' : '.sql,.zip,.bak,.gz', is_pgsql ? '请上传sql' : lan.database.input_up_type, function () {
       database.input_database(name);
     });
   },
@@ -2390,7 +2409,9 @@ var database = {
           table: '#DataInputList',
           columns: [{
             field: 'name',
-            title: lan.files.file_name
+            title: lan.files.file_name,
+            width: 240,
+            fixed: true
           },
             {
               field: 'etime',
@@ -3425,6 +3446,24 @@ var mongodb = {
             });
           }
         },{
+          title:'备份数据库',
+          url: bt.data.db_tab_name == 'mysql' ? 'database?action=ToBackup' : '/database/'+bt.data.db_tab_name+'/ToBackup',
+          load: true,
+					param: function (row) {
+						return bt.data.db_tab_name == 'mysql' ? { id: row.id } : {data:JSON.stringify({id: row.id})}
+					},
+					callback: function (that) { // 手动执行,data参数包含所有选中的站点
+						that.start_batch({},function(list){
+							var html = '';
+							for(var i=0;i<list.length;i++){
+								var item = list[i];
+								html += '<tr><td>'+ item.name +'</td><td><div style="float:right;"><span style="color:'+ (item.request.status?'#20a53a':'red') +'">'+ item.request.msg +'</span></div></td></tr>';
+							}
+							database_table.$batch_success_table({title:'批量备份数据库',th:'数据库名',html:html});
+							database_table.$refresh_table_list(true);
+						});
+					}
+        },{
           title: "删除数据库",
           url: '/database/'+bt.data.db_tab_name+'/DeleteDatabase',
           load: true,
@@ -4311,6 +4350,24 @@ var pgsql ={
               html: html
             });
           }
+        },{
+          title:'备份数据库',
+          url: bt.data.db_tab_name == 'mysql' ? 'database?action=ToBackup' : '/database/'+bt.data.db_tab_name+'/ToBackup',
+          load: true,
+					param: function (row) {
+						return bt.data.db_tab_name == 'mysql' ? { id: row.id } : {data:JSON.stringify({id: row.id})}
+					},
+					callback: function (that) { // 手动执行,data参数包含所有选中的站点
+						that.start_batch({},function(list){
+							var html = '';
+							for(var i=0;i<list.length;i++){
+								var item = list[i];
+								html += '<tr><td>'+ item.name +'</td><td><div style="float:right;"><span style="color:'+ (item.request.status?'#20a53a':'red') +'">'+ item.request.msg +'</span></div></td></tr>';
+							}
+							database_table.$batch_success_table({title:'批量备份数据库',th:'数据库名',html:html});
+							database_table.$refresh_table_list(true);
+						});
+					}
         },{
           title: "删除数据库",
           url: '/database/'+bt.data.db_tab_name+'/DeleteDatabase',

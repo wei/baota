@@ -2,7 +2,7 @@
   {
     "name": "panel_push",
     "title": "面板基础提醒",
-    "version": "1.0",
+    "version": "1.2",
     "date": "2021-07-05",
     "help": "",
     "ps": "用于推送面板相关信息",

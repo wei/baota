@@ -10,7 +10,7 @@
 # +-------------------------------------------------------------------
 
 import os, sys
-import time
+import time,base64
 
 panelPath = "/www/server/panel"
 os.chdir(panelPath)
@@ -45,6 +45,7 @@ class wx_account_msg:
         data['version'] = '1.0'
         data['date'] = '2022-08-15'
         data['author'] = '宝塔'
+        data['title'] = '微信公众号'
         data['help'] = 'http://www.bt.cn'
         return data
 
@@ -78,15 +79,27 @@ class wx_account_msg:
             #60S内不重复加载
             start_time=int(time.time())
             if os.path.exists("data/wx_account_msg.lock"):
-                lock_time=int(public.ReadFile("data/wx_account_msg.lock"))
+                lock_time= 0
+                try:
+                    lock_time = int(public.ReadFile("data/wx_account_msg.lock"))
+                except:pass
                 #大于60S重新加载
-                if start_time-lock_time>60:
+                if start_time - lock_time > 60:
                     public.run_thread(self.get_web_info2)
                     public.WriteFile("data/wx_account_msg.lock",str(start_time))
             else:
                 public.WriteFile("data/wx_account_msg.lock",str(start_time))
                 public.run_thread(self.get_web_info2)
             data=json.loads(public.ReadFile(self.conf_path))
+
+
+            if not 'list' in data: data['list'] = {}
+
+            title = '默认'
+            if 'res' in data and 'nickname' in data['res']: title = data['res']['nickname']
+
+            data['list']['default'] = {'title':title,'data':''}
+
             data['default'] = self.__get_default_channel()
             return data
         else:
@@ -111,13 +124,9 @@ class wx_account_msg:
             "serverid":self.user_info["serverid"]
         }
         try:
-            allowed_gai_family_lib=urllib3_cn.allowed_gai_family
-            def allowed_gai_family():
-                family = socket.AF_INET
-                return family
-            urllib3_cn.allowed_gai_family = allowed_gai_family
-            datas=requests.post(url=url, data=data,verify=False,timeout=10).json()
-            urllib3_cn.allowed_gai_family=allowed_gai_family_lib
+
+            datas = json.loads(public.httpPost(url,data))
+
             if datas["success"]:
                 public.WriteFile(self.conf_path,json.dumps(datas))
                 return public.returnMsg(True, datas)
@@ -137,13 +146,7 @@ class wx_account_msg:
             "serverid":self.user_info["serverid"]
         }
         try:
-            allowed_gai_family_lib=urllib3_cn.allowed_gai_family
-            def allowed_gai_family():
-                family = socket.AF_INET
-                return family
-            urllib3_cn.allowed_gai_family = allowed_gai_family
-            datas=requests.post(url=url, data=data,verify=False,timeout=5).json()
-            urllib3_cn.allowed_gai_family=allowed_gai_family_lib
+            datas = json.loads(public.httpPost(url,data))
             if datas["success"]:
                 public.WriteFile(self.conf_path,json.dumps(datas))
                 return public.returnMsg(True, datas)
@@ -163,13 +166,7 @@ class wx_account_msg:
             "serverid":self.user_info["serverid"]
         }
         try:
-            allowed_gai_family_lib=urllib3_cn.allowed_gai_family
-            def allowed_gai_family():
-                family = socket.AF_INET
-                return family
-            urllib3_cn.allowed_gai_family = allowed_gai_family
-            datas=requests.post(url=url, data=data,verify=False,timeout=5).json()
-            urllib3_cn.allowed_gai_family=allowed_gai_family_lib
+            datas = json.loads(public.httpPost(url,data))
             if datas["success"]:
                 return public.returnMsg(True, datas)
             else:
@@ -184,23 +181,33 @@ class wx_account_msg:
         """
         try:
             import re
+            title = '宝塔告警通知'
             if msg.find("####") >= 0:
+                try:
+                    title = re.search(r"####(.+)", msg).groups()[0]
+                except:pass
+
                 msg = msg.replace("####",">").replace("\n\n","\n").strip()
                 s_list = msg.split('\n')
 
                 if len(s_list) > 3:
-                    title = s_list[0].replace(" ","")
+                    s_title = s_list[0].replace(" ","")
                     s_list = s_list[3:]
-                    s_list.insert(0,title)
+                    s_list.insert(0,s_title)
                     msg = '\n'.join(s_list)
 
-            reg = '<font.+>(.+)</font>'
-            tmp = re.search(reg,msg)
-            if tmp:
-                tmp = tmp.groups()[0]
-                msg = re.sub(reg,tmp,msg)
+
+            s_list = []
+            for msg_info in msg.split('\n'):
+                reg = '<font.+>(.+)</font>'
+                tmp = re.search(reg,msg_info)
+                if tmp:
+                    tmp = tmp.groups()[0]
+                    msg_info = re.sub(reg,tmp,msg_info)
+                s_list.append(msg_info)
+            msg = '\n'.join(s_list)
         except:pass
-        return msg
+        return msg,title
 
     def send_msg(self,msg):
         """
@@ -211,8 +218,8 @@ class wx_account_msg:
         if self.user_info is None:
             return public.returnMsg(False,'未获取到用户信息')
 
-        msg = self.get_send_msg(msg)
-        url="https://www.bt.cn/api/v2/user/wx_web/send_template_msg"
+        msg,title = self.get_send_msg(msg)
+        url="https://www.bt.cn/api/v2/user/wx_web/send_template_msg_v2"
         datassss = {
             "first": {
                 "value": "堡塔主机告警",
@@ -224,7 +231,7 @@ class wx_account_msg:
                 "value": "堡塔主机告警",
             },
             "keyword3": {
-                "value": msg,
+                "value":  msg ,
             },
             "remark": {
                 "value": "如有疑问，请联系宝塔客服",
@@ -233,22 +240,28 @@ class wx_account_msg:
         data = {
             "uid": self.user_info["uid"],
             "access_key": self.user_info["access_key"],
-            "data": datassss
+            "data":  base64.b64encode(json.dumps(datassss).encode('utf-8')).decode('utf-8')
         }
-        headers = {'Content-Type': 'application/json'}
+
         try:
-            allowed_gai_family_lib=urllib3_cn.allowed_gai_family
-            def allowed_gai_family():
-                family = socket.AF_INET
-                return family
-            urllib3_cn.allowed_gai_family = allowed_gai_family
-            x = requests.post(url=url, json=data, headers=headers,verify=False).json()
-            urllib3_cn.allowed_gai_family=allowed_gai_family_lib
+            res = {}
+
+            x = json.loads(public.httpPost(url,data))
+            public.print_log(json.dumps(x))
+            conf = self.get_config(None)['list']
+            result = public.returnMsg(False, '发送失败')
+            res[conf['default']['title']] = 0
             if x['success']:
-                return public.returnMsg(True,'发送成功')
-            else:
-                return public.returnMsg(False, '发送失败')
+                res[conf['default']['title']] = 1
+                result = public.returnMsg(True,'发送成功')
+
+            try:
+                public.write_push_log(self.__module_name,title,res)
+            except:pass
+
+            return result
         except:
+            print(public.get_error_info())
             return public.returnMsg(False,'微信消息发送失败。 --> {}'.format(public.get_error_info()))
 
     def push_data(self,data):

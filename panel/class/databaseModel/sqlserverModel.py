@@ -299,6 +299,11 @@ class main(databaseBase):
                 result = self.ToDataBase(find)
                 if result == 1: n +=1
 
+        if n == 1:
+            return public.returnMsg(True, '同步成功')
+        elif n == 0:
+            return public.returnMsg(False,'同步失败')
+
         return public.returnMsg(True,'DATABASE_SYNC_SUCCESS',(str(n),))
 
     #添加到服务器

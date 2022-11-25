@@ -190,7 +190,7 @@ echo "[*] shut down"
             with open(path, 'r') as f:
                 for i in f:
                     count += 1
-                    data = data + i
+                    data =data.replace('<', '&lt;').replace('>', '&gt;') + i.replace('<', '&lt;').replace('>', '&gt;')
                     if count >= 300: break
             return data
         else:

@@ -236,6 +236,9 @@ class main(safeBase):
                 d['status'] = -1
             else:
                 d['status'] = self.CheckPort(int(_port))
+        for i in res_data:
+            if 'brief' in i:
+                i['brief'] = public.xsssec(i['brief'])
         return res_data
 
 
@@ -367,7 +370,7 @@ class main(safeBase):
             for port in port_list:
                 result = public.M('firewall_new').add(
                     'ports,brief,protocol,address,types,addtime',
-                    (port, brief, protocol, source_ip, types, addtime))
+                    (port, public.xsssec(brief), protocol, source_ip, types, addtime))
         if len(allow_ips) > 0:
             self.FirewallReload()
         return public.returnMsg(True, 'ADD_SUCCESS')
@@ -962,7 +965,7 @@ class main(safeBase):
                             'iptables -I INPUT -s ' + address + ' -j ' + types.upper())
             addtime = time.strftime('%Y-%m-%d %X', time.localtime())
             public.M('firewall_ip').add('address,types,brief,addtime',
-                                        (address, types, brief, addtime))
+                                        (address, types, public.xsssec(brief), addtime))
         self.FirewallReload()
         return public.returnMsg(True, 'ADD_SUCCESS')
 
@@ -1031,6 +1034,8 @@ class main(safeBase):
                     public.ExecShell(
                         'ufw delete ' + _rule + ' from ' + address + ' to any')
                 else:
+                    public.ExecShell(
+                        'ufw delete ' + _rule + ' from ' + address + ' to any')
                     public.ExecShell("iptables -D INPUT -s "+address+ " -j "+types.upper())
         else:
             if self.__isFirewalld:
@@ -1628,7 +1633,7 @@ class main(safeBase):
             return {"status": "error", "msg": e}
 
     def handle_ufw_country(self, brief, ip_list, types, port_list):
-        tmp_path = '/www/server/panel/plugin/firewall/tmp.sh'
+        tmp_path = '/tmp/firewall_tmp.sh'
         tmp_file = open(tmp_path, 'w')
         _string = "#!/bin/bash\n"
         for ip in ip_list:
@@ -1637,7 +1642,7 @@ class main(safeBase):
         tmp_file.write(_string)
         tmp_file.close()
         public.ExecShell(
-            'ipset create ' + brief + ' hash:net; /bin/bash /www/server/panel/plugin/firewall/tmp.sh')
+            'ipset create ' + brief + ' hash:net; /bin/bash /tmp/firewall_tmp.sh')
         if port_list:
             for port in port_list:
                 public.ExecShell(
@@ -1722,6 +1727,10 @@ class main(safeBase):
         brief = get.brief
         ports = get.ports
         country = get.country
+        reload = True
+        if "not_reload" in get:
+            reload = get.not_reload.lower() == "true"
+
         public.M('firewall_country').where("id=?", (id,)).delete()
         if self.__isUfw:
             if not ports:
@@ -1755,42 +1764,32 @@ class main(safeBase):
                 if not public.M('firewall_country').where("country=?", (
                 country,)).count() > 0:
                     public.ExecShell('ipset destroy ' + brief)
-        self.FirewallReload()
+        if reload:
+            self.FirewallReload()
         return public.returnMsg(True, 'DEL_SUCCESS')
 
     # 编辑区域规则
     def modify_country(self, get):
+        # 2022/11/24 修复编辑地区端口规则问题 lx
         id = get.id
-        types = get.types
-        brief = get.brief
-        country = get.country
+        # types = get.types
+        # brief = get.brief
+        # country = get.country
         data = public.M('firewall_country').where('id=?', (id,)).field(
-            'id,country,types,brief,addtime').find()
-        _types = data.get("types", "")
-        _brief = data.get("brief", "")
-        _country = data.get("country", "")
-        if self.__isUfw:
-            public.ExecShell(
-                'iptables -D INPUT -m set --match-set ' + _brief + ' src -j ' + _types.upper())
-            public.ExecShell(
-                'iptables -I INPUT -m set --match-set ' + brief + ' src -j ' + types.upper())
-        else:
-            if self.__isFirewalld:
-                public.ExecShell(
-                    'firewall-cmd --permanent --zone=public --remove-rich-rule=\'rule source ipset="' + _brief + '" ' + _types + '\'')
-                public.ExecShell(
-                    'firewall-cmd --permanent --zone=public --add-rich-rule=\'rule source ipset="' + brief + '" ' + types + '\'')
-            else:
-                public.ExecShell(
-                    'iptables -D INPUT -m set --match-set ' + _brief + ' src -j ' + _types.upper())
-                public.ExecShell(
-                    'iptables -I INPUT -m set --match-set ' + brief + ' src -j ' + types.upper())
-        addtime = time.strftime('%Y-%m-%d %X', time.localtime())
-        public.M('firewall_country').where('id=?', id).update(
-            {'country': country, 'types': types, 'brief': brief,
-             'addtime': addtime})
-        self.FirewallReload()
-        return public.returnMsg(True, '操作成功')
+            'id,country,types,brief,ports,addtime').find()
+        ori_get = public.dict_obj()
+        ori_get.id = id
+        ori_get.types = data.get("types", "")
+        ori_get.brief = data.get("brief", "")
+        ori_get.country = data.get("country", "")
+        ori_get.ports = data.get("ports", "")
+        ori_get.not_reload = "true"
+        rm_res = self.remove_country(ori_get)
+        if rm_res["status"]: 
+            create_res = self.create_country(get)
+            if create_res["status"]:
+                return public.returnMsg(True, "操作成功")
+        return public.returnMsg(False, "操作失败")
 
     # 获取服务端列表：centos
     def GetList(self):

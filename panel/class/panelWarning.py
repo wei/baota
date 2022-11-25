@@ -67,7 +67,8 @@ class panelWarning:
             except:
                 continue
 
-
+            ignore_file = self.__ignore + '/' + m_name + '.pl'
+            m_info['ignore'] = os.path.exists(ignore_file)
             if m_info['ignore']:
                 data['ignore'].append(m_info)
             else:

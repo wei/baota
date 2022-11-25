@@ -989,7 +989,9 @@ def auth(pdata=None):
             'get_voucher', 'flush_pay_status', 'create_serverid', 'check_serverid',
             'get_plugin_list', 'check_plugin', 'get_buy_code', 'check_pay_status','get_wx_order_status',
             'get_renew_code', 'check_renew_code', 'get_business_plugin',
-            'get_ad_list', 'check_plugin_end', 'get_plugin_price','set_user_adviser')
+            'get_ad_list', 'check_plugin_end', 'get_plugin_price','set_user_adviser',
+            'rest_unbind_count','unbind_authorization','get_pay_unbind_count'
+            )
     result = publicObject(toObject, defs, None, pdata)
     return result
 
@@ -1345,7 +1347,10 @@ def down(token=None, fname=None):
             if (len(fname) > 256): return abort(404)
         if fname: fname = fname.strip('/')
         if not token: return abort(404)
-        if len(token) != 12: return abort(404)
+        if len(token) >48: return abort(404)
+        char_list = ['\\', '/', ':', '*', '?', '"', '<', '>', '|',';','&','`']
+        for char in char_list:
+            if char in token: return abort(404)
         if not request.args.get('play') in ['true', None, '']:
             return abort(404)
         args = get_input()
@@ -1353,7 +1358,7 @@ def down(token=None, fname=None):
         for n in args.__dict__.keys():
             if not n in v_list:
                 return public.returnJson(False, '不能存在多余参数'), json_header
-        if not re.match(r"^\w+$", token): return abort(404)
+        if not re.match(r"^[\w\.]+$", token): return abort(404)
         find = public.M('download_token').where('token=?', (token,)).find()
 
         if not find: return abort(404)
@@ -1367,8 +1372,6 @@ def down(token=None, fname=None):
                 if re.match(r"^\d+$", args.file_password):
                     args.file_password = str(int(args.file_password))
                     args.file_password += ".0"
-
-
                 if args.file_password != str(find['password']):
                     return public.ReturnJson(False, '密码错误-2!'), json_header
                 session[token] = 1
@@ -2472,6 +2475,6 @@ def push(pdata = None):
     if comReturn: return comReturn
     import panelPush
     toObject = panelPush.panelPush()
-    defs = ('set_push_status','get_push_msg_list','get_modules_list','install_module','uninstall_module','get_module_template','set_push_config','get_push_config','del_push_config','get_module_logs','get_module_config')
+    defs = ('set_push_status','get_push_msg_list','get_modules_list','install_module','uninstall_module','get_module_template','set_push_config','get_push_config','del_push_config','get_module_logs','get_module_config','get_push_list','get_push_logs')
     result = publicObject(toObject,defs,None,pdata)
     return result

@@ -33,7 +33,7 @@ class panel_push:
         """
         data = {}
         data['ps'] = ''
-        data['version'] = '1.1'
+        data['version'] = '1.2'
         data['date'] = '2022-09-20'
         data['author'] = '宝塔'
         data['help'] = 'http://www.bt.cn/bbs'
@@ -124,7 +124,7 @@ class panel_push:
                 pid = public.readFile(pidf)
                 status = self.checkProcess(pid)
             return status
-        return False
+        return True
 
     def get_server_status(self, server_name):
         status = self.check_run(server_name)

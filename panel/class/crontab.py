@@ -57,10 +57,35 @@ class crontab:
 
             log_file = '/www/server/cron/{}.log'.format(tmp['echo'])
             if os.path.exists(log_file):
-                tmp['addtime'] = public.format_date(times=int(os.path.getmtime(log_file)))
+                tmp['addtime'] = self.get_last_exec_time(log_file)
             data.append(tmp)
         return data
 
+    def get_last_exec_time(self,log_file):
+        '''
+            @name 获取上次执行时间
+            @author hwliang
+            @param log_file<string> 日志文件路径
+            @return format_date
+        '''
+        exec_date = ''
+        try:
+            log_body = public.GetNumLines(log_file,20)
+            if log_body:
+                log_arr = log_body.split('\n')
+                date_list = []
+                for i in log_arr:
+                    if i.find('★') != -1 and i.find('[') != -1 and i.find(']') != -1:
+                        date_list.append(i)
+                if date_list:
+                    exec_date = date_list[-1].split(']')[0].split('[')[1]
+        except:
+            pass
+
+        finally:
+            if not exec_date:
+                exec_date = public.format_date(times=int(os.path.getmtime(log_file)))
+        return exec_date
 
     #清理日志
     def __clean_log(self):
@@ -292,6 +317,9 @@ class crontab:
             data['data'] = public.M(get['type']).where("type=?","MySQL").field('name,ps').select()
         else:
             data['data'] = public.M(get['type']).field('name,ps').select()
+        for i in data['data']:
+            if 'ps' in i:
+                i['ps'] = public.xsssec(i['ps'])
         data['orderOpt'] = []
         import json
         tmp = public.readFile('data/libList.conf')

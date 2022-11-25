@@ -399,7 +399,8 @@ def GetConfigValue(key):
     '''
     config = GetConfig()
     if not key in config.keys():
-        if key == 'download': return 'https://download.bt.cn'
+        if key == 'home': return en_hexb("6148523063484d364c79393364336375596e51755932343d")
+        if key == 'download': return en_hexb("6148523063484d364c79396b62336475624739685a4335696443356a62673d3d")
         return None
     return config[key]
 
@@ -824,19 +825,23 @@ def GetNumLines(path,num,p=1):
 
 #验证证书
 def CheckCert(certPath = 'ssl/certificate.pem'):
-    openssl = '/usr/local/openssl/bin/openssl'
-    if not os.path.exists(openssl): openssl = 'openssl'
-    certPem = readFile(certPath)
-    s = "\n-----BEGIN CERTIFICATE-----"
-    tmp = certPem.strip().split(s)
-    for tmp1 in tmp:
-        if tmp1.find('-----BEGIN CERTIFICATE-----') == -1:  tmp1 = s + tmp1
-        writeFile(certPath,tmp1)
-        result = ExecShell(openssl + " x509 -in "+certPath+" -noout -subject")
-        if result[1].find('-bash:') != -1: return True
-        if len(result[1]) > 2: return False
-        if result[0].find('error:') != -1: return False
-    return True
+    try:
+        return get_cert_data(certPath)
+    except:
+        openssl = '/usr/local/openssl/bin/openssl'
+        if not os.path.exists(openssl): openssl = 'openssl'
+        certPem = readFile(certPath)
+        s = "\n-----BEGIN CERTIFICATE-----"
+        tmp = certPem.strip().split(s)
+        res = True
+        for tmp1 in tmp:
+            if tmp1.find('-----BEGIN CERTIFICATE-----') == -1:  tmp1 = s + tmp1
+            writeFile(certPath,tmp1)
+            result = ExecShell(openssl + " x509 -in "+certPath+" -noout -subject")
+            if result[1].find('-bash:') != -1: res = True
+            if len(result[1]) > 2: res = False
+            if result[0].find('error:') != -1: res = False
+        return res
 
 
 # 获取面板地址
@@ -1561,7 +1566,7 @@ def get_process_pid(pname,exe = None,cmdline = None):
                     return pid
                 else:
                     if exe:
-                        if p.exe() != exe:
+                        if p.exe() == exe:
                             if not cmdline:
                                 return pid
                             return 0
@@ -1847,7 +1852,8 @@ def set_mode(filename,mode):
     mode = int(str(mode),8)
     try:
         os.chmod(filename,mode)
-    except: return False
+    except:
+        return False
     return True
 
 def create_linux_user(user,group):
@@ -2434,7 +2440,7 @@ def get_php_version_conf(conf):
         rep = r"php-cgi-([0-9]{2,3})\.sock"
         tmp = re.findall(rep,conf)
         if not tmp:
-            rep = r'127.0.0.1:10(\d{2,2})1'
+            rep = r'\d+\.\d+\.\d+\.\d+:10(\d{2,2})1'
             tmp = re.findall(rep,conf)
             if not tmp:
                 return '00'
@@ -2490,8 +2496,10 @@ def sub_php_address(conf_file,rep,tsub,php_version):
     conf = readFile(conf_file)
     if not conf: return False
     #if conf.find('#PHP') == -1 and conf.find('pathinfo.conf') == -1: return False
-    phpv = get_php_version_conf(conf)
-    if phpv != php_version: return False
+    if conf_file.split('-')[-1].find(php_version+".") != 0:
+        phpv = get_php_version_conf(conf)
+        if phpv != php_version: return False
+
     tmp = re.search(rep,conf)
     if not tmp: return False
     if tmp.group() == tsub: return False
@@ -2519,8 +2527,8 @@ def sync_php_address(php_version):
     '''
     if not os.path.exists('{}/php/{}/bin/php'.format(get_setup_path(),php_version)): # 指定PHP版本是否安装
         return False
-    ngx_rep = r"(unix:/tmp/php-cgi.*\.sock|127.0.0.1:\d+)"
-    apa_rep = r"(unix:/tmp/php-cgi.*\.sock\|fcgi://localhost|fcgi://127.0.0.1:\d+)"
+    ngx_rep = r"(unix:/tmp/php-cgi.*\.sock|\d+\.\d+\.\d+\.\d+:\d+)"
+    apa_rep = r"(unix:/tmp/php-cgi.*\.sock\|fcgi://localhost|fcgi://\d+\.\d+\.\d+\.\d+:\d+)"
     ngx_proxy = get_php_proxy(php_version,'nginx')
     apa_proxy = get_php_proxy(php_version,'apache')
     is_write = False
@@ -3585,6 +3593,52 @@ def check_ip_white(path,ip):
     else:
         return False
 
+
+def check_login_area(login_ip,login_type = 'panel'):
+    """
+    @name 检测登录地区
+    @login_type 登录类型 panel:宝塔面板登录, ssh:ssh登录
+    """
+
+    login_ip_area = ''
+    ip_info = get_ips_area([login_ip])
+
+    if 'status' in ip_info:
+        login_ip_area = '企业版专享'
+    else :
+        ip_info = ip_info[login_ip]
+        if not 'city' in ip_info:
+            login_ip_area = ip_info['info']
+
+    data = {}
+    status = False
+    sfile =  '{}/data/{}_login_area.pl'.format(get_panel_path(),login_type)
+    s_conf = '{}/data/{}_login_area.json'.format(get_panel_path(),login_type)
+    if os.path.exists(sfile):
+        status = True
+
+    data = {}
+    try:
+        data = json.loads(readFile(s_conf))
+    except:pass
+
+    if not login_ip_area and 'city' in ip_info:
+        city = ip_info['city']
+        login_ip_area = ip_info['info']
+
+        if not city in data:
+            data[city] = 0
+
+        if data[city] < 3:
+            login_ip_area += '（<font color=red>异地</font>）'
+        data[city] += 1
+
+        writeFile(s_conf,json.dumps(data))
+
+    data['login_ip_area'] = login_ip_area
+    return status,data
+
+
 #登陆告警
 def login_send_body(is_type,username,login_ip,port):
     send_type = ""
@@ -3601,33 +3655,40 @@ def login_send_body(is_type,username,login_ip,port):
                 send_type = "mail"
             if os.path.exists('/www/server/panel/data/login_send_dingding.pl'):
                 send_type = "dingding"
-    if not send_type:return False
+
+    #增加异地登录告警
+    login_aera_status,login_aera = check_login_area(login_ip = login_ip,login_type = 'panel')
+    if not send_type and not login_aera_status:
+        return False
+
+    print_log(send_type)
     object = init_msg(send_type.strip())
     if not object:return
+
     send_login_white = '{}/data/send_login_white.json'.format(panel_path)
-    if check_ip_white(send_login_white, login_ip): return False
-    if send_type == "mail":
-        data = {}
-        data['title'] = "堡塔登录提醒"
-        data['msg'] = "堡塔登录提醒：您的服务器"+get_ip()+"通过"+is_type+"登录成功，账号："+username+"，登录IP："+login_ip+":"+port+"，登录时间："+time.strftime('%Y-%m-%d %X',time.localtime())
-        object.push_data(data)
-    elif send_type == "wx_account":
-        body="堡塔登录提醒\n > 服务器　："+get_ip()+"\n > 登录方式："+is_type+"\n > 登录账号："+username+"\n > 登录ＩＰ："+login_ip+":"+port+"\n > 登录时间："+time.strftime('%Y-%m-%d %X',time.localtime())+'\n > 登录状态: 成功'
-        object.send_msg(body)
-    elif send_type == 'sms':
+    if check_ip_white(send_login_white, login_ip):
+        return False
+
+    if send_type == 'sms':
         data={}
         data['ip'] = get_server_ip()
         data['local_ip'] = get_network_ip()
-         #不加内网IP，否则短信模板参数长度超过限制
+        #不加内网IP，否则短信模板参数长度超过限制
         ip="{}(外)".format(data['ip'])
         sm_args = {'name': '[' + ip+ ']', 'time': time.strftime('%Y-%m-%d %X',time.localtime()), 'type': '[' + is_type + ']',
                    'user': username}
         rdata = object.send_msg('login_panel', check_sms_argv(sm_args))
     else:
-        msg = "> 登录方式：" + is_type + "\n\n > 登录账号：" + username + "\n\n > 登录IP：" + login_ip + ":" + port + "\n\n > 登录时间：" + time.strftime(
-            '%Y-%m-%d %X', time.localtime()) + '\n\n > 登录状态: 成功'
-        msg = get_push_info("面板登录告警", [msg])['msg']
-        object.send_msg(msg)
+        plist = [
+                ">登录方式：" + is_type,
+                ">登录账号：" + username ,
+                ">登录IP：" + login_ip + ":" + port ,
+                ">归属地：" + login_aera['login_ip_area'],
+                ">登录状态：<font color=#20a53a>成功</font>"
+            ]
+
+        info = get_push_info("面板登录告警", plist)
+        object.push_data(info)
 
 
 
@@ -4717,6 +4778,9 @@ def set_module_logs(mod_name, fun_name, count=1):
         except:
             pass
 
+    if type(data) != dict:
+        data = {}
+
     key = datetime.datetime.now().strftime("%Y-%m-%d")
     if not key in data: data[key] = {}
 
@@ -5156,7 +5220,7 @@ def write_push_log(module,msg,res):
     for key in res:
         status = '<span style="color:#20a53a;">成功</span>'
         if res[key] == 0: status = '<span style="color:red;">失败</span>'
-        user += '[ {}:{} ] '.format(key,status)
+        user += '【 {}：{} 】 '.format(key,status)
 
     if not user: user = '[ 默认 ] '
     try:
@@ -5164,8 +5228,8 @@ def write_push_log(module,msg,res):
         if msg_obj: module = msg_obj.get_version_info(None)['title']
     except:pass
 
-    log = '[{}]  发送给{},  发送内容：[{}]'.format(module,user,xsssec(msg))
-    WriteLog('消息推送',log)
+    log = '标题：【{}】，通知方式：【{}】，收件人：{}'.format(xsssec(msg),module,user)
+    WriteLog('告警通知',log)
     return True
 
 def push_msg(module,data):
@@ -5284,7 +5348,6 @@ def get_sys_install_bin():
     return ''
 
 
-
 def get_firewall_status():
     '''
         @name 获取系统防火墙状态
@@ -5292,7 +5355,7 @@ def get_firewall_status():
         @return int 0.关闭 1.开启 -1.未安装
     '''
     import psutil
-    firewall_files = {'/usr/sbin/firewalld':"pid",'/usr/bin/firewalld':"pid",'/usr/sbin/ufw':"ufw status verbose|grep 'Status: active'",'/sbin/ufw':"/sbin/ufw status |grep 'Status: active'",'/usr/sbin/iptables':"service iptables status|grep 'Chain INPUT'"}
+    firewall_files = {'/usr/sbin/firewalld':"pid",'/usr/bin/firewalld':"pid",'/usr/sbin/ufw':"ufw status verbose|grep -E '(Status: active|激活)'",'/sbin/ufw':"/sbin/ufw status |grep -E '(Status: active|激活)'",'/usr/sbin/iptables':"service iptables status|grep 'Chain INPUT'"}
     for f in firewall_files.keys():
         if not os.path.exists(f): continue
         _cmd = firewall_files[f]
@@ -5588,6 +5651,170 @@ def is_mongodb_process_exists():
     _exe = ['server/mongodb/bin/mongod']
     return is_process_exists_by_exe(_exe)
 
+def check_auth_ip():
+    """
+    @name 检测api和www的服务器ip是否一致
+    @auther cjxin 2022-09-13
+    @return bool
+    """
+    import http_requests
+    result = {'www':'','api':''}
+    res = http_requests.post('https://www.bt.cn/api/getIpAddress', data={}, timeout=5, headers={})
+    if res.status_code == 200:
+        result['www'] = res.text
+
+    res1 = http_requests.post('https://api.bt.cn/api/getIpAddress', data={}, timeout=5, headers={})
+    if res1.status_code == 200:
+        result['api'] = res1.text
+
+    return result
+
+def set_func(key,count = 0):
+    """
+    设置指定key的操作时间
+    @key 面板访问函数
+    """
+    path = 'data/func.json'
+    data = {}
+    try:
+        data = json.loads(readFile(path))
+    except:
+        pass
+    if not key in data:
+        data[key] = {}
+        data[key]['time'] = 0
+        data[key]['count'] = 0
+    data[key]['time'] = int(time.time())
+
+    if count > 0:
+        data[key]['count'] = count
+    else:
+        data[key]['count'] += 1
+    writeFile(path, json.dumps(data))
+
+
+def get_func(key):
+    """
+    获取指定功能的操作时间
+    @key 面板函数
+    """
+    path = 'data/func.json'
+    ret = {}
+    ret['count'] = 0
+    ret['time'] = 0
+    if not os.path.exists(path): return ret
+    data = {}
+    try:
+        data = json.loads(readFile(path))
+    except:
+        pass
+    if not key in data: return ret
+    return data[key]
+
+
+def set_cache_func(key,info):
+    """
+    设置指定key的操作时间
+    @key 缓存的key函数
+    """
+    data = {}
+    path = '{}/data/cache_func.json'.format(get_panel_path())
+
+    try:
+        data = json.loads(readFile(path))
+    except:
+        pass
+    if not key in data: data[key] = {}
+
+    data[key]['time'] = int(time.time())
+    data[key]['data'] = info
+
+    writeFile(path, json.dumps(data))
+
+
+def get_cache_func(key):
+    """
+    获取指定功能的操作时间
+    @key 缓存的key函数
+    """
+
+    ret = {}
+    data = {}
+    ret['data'] = ''
+    ret['time'] = 0
+    path = '{}/data/cache_func.json'.format(get_panel_path())
+    if not os.path.exists(path):
+        return ret
+    try:
+        data = json.loads(readFile(path))
+    except:
+        pass
+    if not key in data: return ret
+    return data[key]
+
+
+
+def set_split_logs(path,status = 1,info = None):
+    """
+    @name 添加日志切割
+    @path 日志路径，
+    @data dict
+    {
+        'type':'day/size'
+        'limit': 180,保留份数
+        'size': 日志超过多少进行切割,type=size时生效
+        'callback': 回调命令,部分日志切割后需要重启服务
+    }
+    """
+
+    data = {}
+    sfile = '{}/data/cutting_log.json'.format(get_panel_path())
+    if os.path.exists(sfile):
+        try:
+            data = json.loads(readFile(sfile))
+        except:pass
+
+    if path in data:
+        del data[path]
+
+    if status:
+        if not info:
+            return False
+        if not 'type' in info or not 'limit' in info:
+            return False
+        data[path] = info
+    writeFile(sfile,json.dumps(data))
+
+    #计划任务切割
+    echo = md5(md5('set_split_logs'))
+    find = M('crontab').where('echo=?',(echo,)).find()
+
+    try:
+        import crontab
+        args_obj = dict_obj()
+
+        if not find:
+            cronPath = GetConfigValue('setup_path') + '/cron/' + echo
+            shell = '{} -u /www/server/panel/script/logSplit.py'.format(sys.executable)
+            writeFile(cronPath,shell)
+
+            args_obj.id = M('crontab').add('name,type,where1,where_hour,where_minute,echo,addtime,status,save,backupTo,sType,sName,sBody,urladdress',("[删除]切割日志文件",'minute-n','10','0','0',echo,time.strftime('%Y-%m-%d %X',time.localtime()),0,'','localhost','toShell','',shell,''))
+            crontab.crontab().set_cron_status(args_obj)
+        else:
+            cron_path = get_cron_path()
+            if os.path.exists(cron_path):
+                cron_s = readFile(cron_path)
+                if cron_s.find(echo) == -1:
+                    M('crontab').where('echo=?',(echo,)).setField('status',0)
+                    args_obj.id = find['id']
+                    crontab.crontab().set_cron_status(args_obj)
+        return True
+    except:
+        pass
+
+    return False
+
+
 
 def get_admin_path():
     '''
@@ -5606,6 +5833,7 @@ def get_admin_path():
     return admin_path
 
 
+
 def get_improvement():
     '''
         @name 获取用户体验改进计划状态
@@ -5617,5 +5845,6 @@ def get_improvement():
     if not os.path.exists(tip_file_set):
         return True
     return os.path.exists(tip_file)
+
 
 

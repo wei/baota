@@ -93,7 +93,7 @@ class mail_msg:
         """
 
         if not self.__mail_config:
-            self.__mail_config = {'send':{},'receive':{}}
+            self.__mail_config = {'send':{},'receive':[]}
 
         if hasattr(get, 'send'):
             if not hasattr(get, 'qq_mail') or not hasattr(get, 'qq_stmp_pwd') or not hasattr(get, 'hosts') or not hasattr(get, 'port'):  return public.returnMsg(False, '请填写完整信息')
@@ -104,19 +104,39 @@ class mail_msg:
                 "port": get.port
             }
             self.__mail_config['send'] = mail_config
-            public.writeFile(self.__mail_send_conf, json.dumps(mail_config))
+
         else:
-            if not hasattr(get, 'mails'):  return public.returnMsg(False, '至少填写一个接收者邮箱.')
-            arrs = get.mails.strip().split('\n')
-            if len(arrs) == 0 : return public.returnMsg(False, '至少填写一个接收者邮箱.')
+            mails = ''
+            if hasattr(get, 'mails'):
+                mails = get.mails.strip()
+
+            arrs = []
+            for mail in mails.split('\n'):
+                if not mail.strip(): continue
+                arrs.append(mail.strip())
+
             self.__mail_config['receive'] = arrs
-            public.writeFile(self.__mail_receive_conf,json.dumps(arrs))
 
-        self.send_msg("宝塔测试邮件")
-        return public.returnMsg(True, '邮箱配置成功.')
+        #首次配置同步接收者配置
+        receive_list = self.__mail_config['receive']
+        mail_address = self.__mail_config['send']['qq_mail']
+        if not mail_address in receive_list and len(receive_list) == 0:
+            if not 'receive' in self.__mail_config:
+                self.__mail_config['receive'] = []
+            self.__mail_config['receive'].append(mail_address)
 
-    def send_test_msg(self):
-        pass
+        ret = self.send_msg("宝塔测试邮件")
+        if ret['status']:
+
+            if ret['success'] <= 0:
+                return public.returnMsg(False, '发送失败，请检查发送者配置或者接收者信息是否正确.')
+
+            public.writeFile(self.__mail_send_conf, json.dumps(self.__mail_config['send']))
+            public.writeFile(self.__mail_receive_conf,json.dumps(self.__mail_config['receive']))
+
+            return public.returnMsg(True, '设置成功')
+        else:
+            return ret
 
 
     def get_send_msg(self,msg):
@@ -124,12 +144,13 @@ class mail_msg:
         @name 处理md格式
         """
         try:
-            title = '宝塔告警通知'
+            title = None
             if msg.find("####") >= 0:
-                msg = msg.replace("\n\n","<br>").strip()
                 try:
-                    title = re.search(r"####(.+)", msg).groups()[0]
+                    title = re.search(r"####(.+)\n", msg).groups()[0]
                 except:pass
+                msg = msg.replace("\n\n","<br>").strip()
+
         except:pass
         return msg,title
 
@@ -140,7 +161,8 @@ class mail_msg:
         @title 消息标题
         @to_email 发送给谁，默认发送所有人
         """
-        if not self.__mail_config : return public.returnMsg(False,'未正确配置邮箱信息。')
+        if not self.__mail_config :
+            return public.returnMsg(False,'未正确配置邮箱信息。')
 
         if not 'port' in self.__mail_config['send']: self.__mail_config['send']['port'] = 465
 
@@ -151,13 +173,14 @@ class mail_msg:
         else:
             receive_list = self.__mail_config['receive']
 
-        ret_msg = ''
-        sucess = 0
-        error = 0
-
-        msg,title = self.get_send_msg(msg)
         res = {}
+        ret_msg = {}
+        error ,sucess,total = 0,0,0
+        msg,n_title = self.get_send_msg(msg)
+        if n_title: title = n_title
+
         for email in receive_list:
+            if not email: continue
 
             try:
                 data = MIMEText(msg, 'html', 'utf-8')
@@ -176,11 +199,21 @@ class mail_msg:
             except :
                 error += 1
                 res[email] = 0
-                ret_msg += "{} ->> {}\r\n".format(email,public.get_error_info())
+                ret_msg[email] = public.get_error_info()
+            total += 1
 
-        public.write_push_log(self.__module_name,title,res)
-        if ret_msg: ret_msg = '，错误详情 ->> ' + ret_msg
-        return public.returnMsg(True,'发送完成，共发送【{}】条，成功【{}】，失败【{}】{}。'.format(len(receive_list),sucess,error,ret_msg))
+        try:
+            if res:
+                public.write_push_log(self.__module_name,title,res)
+            else:
+                public.WriteLog('告警通知','[邮箱] 未配置发送者，请先配置.')
+        except:pass
+
+        result = public.returnMsg(True,'发送完成，共发送【{}】条，成功【{}】，失败【{}】。'.format(total,sucess,error))
+        result['list'] = ret_msg
+        result['success'] = sucess
+        result['error'] = error
+        return result
 
     def push_data(self,data):
         to_email = data.get("to_email", None)

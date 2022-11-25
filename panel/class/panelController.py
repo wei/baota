@@ -40,6 +40,9 @@ class Controller:
         module_name = args['mod_name'].strip()
         mod_name = "{}Model".format(args['mod_name'].strip())
         def_name = args['def_name'].strip()
+        model_index = None
+        if 'model_index' in args: model_index = args['model_index']
+
         if not hasattr(args,'data'): args.data = {}
         if args.data:
             if isinstance(args.data,str):
@@ -57,6 +60,9 @@ class Controller:
 
         if not isinstance(pdata,public.dict_obj):
             return public.return_error("传递的参数不是通用的内部对象")
+
+        # 告诉加载器，要加载什么模块
+        if model_index: pdata.model_index = model_index
 
         # 前置HOOK
         hook_index = '{}_{}_LAST'.format(mod_name.upper(),def_name.upper())
