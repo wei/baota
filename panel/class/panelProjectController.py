@@ -36,7 +36,7 @@ class ProjectController:
             if not re.match(r"^\w+$",args['def_name']): return public.return_status_code(1000,'调用的方法名称中不能包含\w以外的字符')
         except:
             return public.get_error_object()
-        
+
         #静态html调用
         if 'stype' in args and args['stype'] == 'html':
             from BTPanel import render_template_string

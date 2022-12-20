@@ -789,7 +789,7 @@ var bt = {
     var btnObj = {
       title: config.title ? config.title : false,
       time: config.time ? config.time : 0,
-      shadeClose: config.shadeClose ? config.shadeClose : true,
+      shadeClose: config.shadeClose !== undefined ? config.shadeClose : true,
       closeBtn: config.closeBtn ? config.closeBtn : 2,
       scrollbar: true,
       shade: 0.3,
@@ -6727,10 +6727,10 @@ bt.database = {
     });
 
   },
-  del_backup: function (id, dataId, dataName) {
+  del_backup: function (id, dataId, dataName, addtime) {
     bt.confirm({
-      msg: lan.database.backup_del_confirm,
-      title: lan.database.backup_del_title
+      msg: '删除选中备份文件后，<span class="color-red">该备份文件将永久消失</span>，是否继续操作？',
+      title: '删除备份文件['+ addtime +']'
     }, function () {
       var loadT = bt.load(),
           param = {url:'database/'+bt.data.db_tab_name+'/DelBackup',data:{data:JSON.stringify({ id: id })}};
@@ -8848,4 +8848,25 @@ var dynamic = {
     }
     this.fileFunList[fileName] = callback
   }
+}
+
+// 过滤编码
+bt.htmlEncode = {
+  /**
+   * @description 正则转换特殊字符
+   * @param {string} layid 字符内容
+   */
+  htmlEncodeByRegExp:function (str) {
+    if (typeof str == 'undefined' || str.length == 0) return "";
+    return str.replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/ /g, "&nbsp;")
+        .replace(/\'/g, "&#39;")
+        .replace(/\"/g, "&quot;")
+        .replace(/\(/g, "&#40;")
+        .replace(/\)/g, "&#41;")
+        .replace(/`/g, "&#96;")
+        .replace(/=/g, "＝");
+  },
 }

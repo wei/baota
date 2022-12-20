@@ -280,6 +280,7 @@ install_used()
                 username=$($pythonV $panel_path/tools.py panel $password)
                 echo "$password" > $panel_path/default.pl
                 rm -f $panel_path/aliyun.pl
+                chattr +i $panel_path/default.pl
         fi
 
         if [ -f $panel_path/php_mysql_auto.pl ];then

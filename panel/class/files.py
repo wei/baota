@@ -417,8 +417,6 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if not os.path.isdir(get.path):
             return public.returnMsg(False, '这不是一个目录!')
 
-
-        import pwd
         dirnames = []
         filenames = []
 
@@ -465,94 +463,37 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         data['STORE'] = self.get_files_store(None)
         data['FILE_RECYCLE'] = os.path.exists('data/recycle_bin.pl')
 
-
-
-
-        if not hasattr(get, 'reverse'):
-            for filename in os.listdir(get.path):
-                filename = self.xssencode(filename)
-
-                if search:
-                    if filename.lower().find(search) == -1:
-                        continue
-
-                i += 1
-                if n >= page.ROW:
-                    break
-                if i < page.SHIFT:
+        if not hasattr(get, 'reverse'): get.reverse = 'False'
+        if not hasattr(get, 'sort'): get.sort = 'name'
+        reverse = bool(get.reverse)
+        if get.reverse == 'False':
+            reverse = False
+        for file_info in self.__list_dir(get.path, get.sort, reverse):
+            filename = os.path.join(get.path, file_info[0])
+            if search:
+                if file_info[0].lower().find(search) == -1:
                     continue
+            i += 1
+            if n >= page.ROW:
+                break
+            if i < page.SHIFT:
+                continue
+            if not os.path.exists(filename): continue
+            file_info = self.__format_stat(filename, get.path)
+            if not file_info: continue
+            favorite = self.__check_favorite(filename, data['STORE'])
+            r_file = self.__filename_flater(file_info['name']) + ';' + str(file_info['size']) + ';' + str(file_info['mtime']) + ';' + str(
+                file_info['accept']) + ';' + file_info['user'] + ';' + file_info['link']+';'\
+                        + self.get_download_id(filename) + ';' + self.is_composer_json(filename)+';'\
+                        + favorite+';'+self.__check_share(filename)
+            if os.path.isdir(filename):
+                dirnames.append(r_file)
+            else:
+                filenames.append(r_file)
+            n += 1
 
-                try:
-
-                    if sys.version_info[0] == 2:
-                        filename = filename.encode('utf-8')
-                    else:
-                        filename.encode('utf-8')
-                    filePath = get.path+'/'+filename
-                    link = ''
-                    if os.path.islink(filePath):
-                        filePath = os.readlink(filePath)
-                        link = ' -> ' + filePath
-                        if not os.path.exists(filePath):
-                            filePath = get.path + '/' + filePath
-                        if not os.path.exists(filePath):
-                            continue
-                    stat = os.stat(filePath)
-                    accept = str(oct(stat.st_mode)[-3:])
-                    mtime = str(int(stat.st_mtime))
-                    user = ''
-                    try:
-                        user = pwd.getpwuid(stat.st_uid).pw_name
-                    except:
-                        user = str(stat.st_uid)
-                    size = str(stat.st_size)
-                    # 判断文件是否已经被收藏
-                    favorite = self.__check_favorite(filePath,data['STORE'])
-
-                    if os.path.isdir(filePath):
-                        dirnames.append(self.__filename_flater(filename)+';'+size+';' + mtime+';'+accept+';'+user+';'+link + ';' +
-                                        self.get_download_id(filePath)+';'+ self.is_composer_json(filePath)+';'
-                                        +favorite+';'+self.__check_share(filePath))
-                    else:
-                        filenames.append(self.__filename_flater(filename)+';'+size+';'+mtime+';'+accept+';'+user+';'+link+';'
-                                         +self.get_download_id(filePath)+';' + self.is_composer_json(filePath)+';'
-                                         +favorite+';'+self.__check_share(filePath))
-                    n += 1
-                except:
-                    continue
-
-            data['DIR'] = sorted(dirnames)
-            data['FILES'] = sorted(filenames)
-        else:
-            reverse = bool(get.reverse)
-            if get.reverse == 'False':
-                reverse = False
-            for file_info in self.__list_dir(get.path, get.sort, reverse):
-                filename = os.path.join(get.path, file_info[0])
-                if search:
-                    if file_info[0].lower().find(search) == -1:
-                        continue
-                i += 1
-                if n >= page.ROW:
-                    break
-                if i < page.SHIFT:
-                    continue
-                if not os.path.exists(filename): continue
-                file_info = self.__format_stat(filename, get.path)
-                if not file_info: continue
-                favorite = self.__check_favorite(filename, data['STORE'])
-                r_file = self.__filename_flater(file_info['name']) + ';' + str(file_info['size']) + ';' + str(file_info['mtime']) + ';' + str(
-                    file_info['accept']) + ';' + file_info['user'] + ';' + file_info['link']+';'\
-                         + self.get_download_id(filename) + ';' + self.is_composer_json(filename)+';'\
-                         + favorite+';'+self.__check_share(filename)
-                if os.path.isdir(filename):
-                    dirnames.append(r_file)
-                else:
-                    filenames.append(r_file)
-                n += 1
-
-            data['DIR'] = dirnames
-            data['FILES'] = filenames
+        data['DIR'] = dirnames
+        data['FILES'] = filenames
         data['PATH'] = str(get.path)
 
         #2022-07-29,增加置顶排序
@@ -989,10 +930,12 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 if self.Mv_Recycle_bin(get):
                     self.site_path_safe(get)
                     self.remove_file_ps(get)
+                    public.add_security_logs("删除文件", " 删除文件:" + get.path)
                     return public.returnMsg(True, 'FILE_MOVE_RECYCLE_BIN')
             os.remove(get.path)
             self.site_path_safe(get)
             public.WriteLog('TYPE_FILE', 'FILE_DEL_SUCCESS', (get.path,))
+            public.add_security_logs("删除文件", " 删除文件:" + get.path)
             self.remove_file_ps(get)
             return public.returnMsg(True, 'FILE_DEL_SUCCESS')
         except:
@@ -1026,7 +969,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
     def Re_Recycle_bin(self, get):
         if sys.version_info[0] == 2:
             get.path = get.path.encode('utf-8')
-
+        get.path = public.html_decode(get.path).replace(';','')
         dFile = get.path.replace('_bt_', '/').split('_t_')[0]
 
         # 检查所在回收站目录
@@ -1066,7 +1009,6 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         for rPath in recycle_bin_list:
             if not os.path.exists(rPath): continue
             for file in os.listdir(rPath):
-                file = self.xssencode(file)
                 try:
                     tmp = {}
                     fname = os.path.join(rPath , file)
@@ -1076,6 +1018,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                         fname.encode('utf-8')
                     tmp1 = file.split('_bt_')
                     tmp2 = tmp1[len(tmp1)-1].split('_t_')
+                    file = self.xssencode(file)
                     tmp['rname'] = file
                     tmp['dname'] = file.replace('_bt_', '/').split('_t_')[0]
                     if tmp['dname'].find('@') != -1:
@@ -1108,12 +1051,15 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         if sys.version_info[0] == 2:
             get.path = get.path.encode('utf-8')
 
+        get.path = public.html_decode(get.path).replace(';','')
+
         dFile = get.path.split('_t_')[0]
         # 检查所在回收站目录
         recycle_bin_list  = public.get_recycle_bin_list()
         _ok = False
         for r_path in recycle_bin_list:
             for r_file in os.listdir(r_path):
+                public.print_log(r_file)
                 if get.path == r_file:
                     _ok = True
                     rPath = r_path
@@ -1123,7 +1069,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
 
 
         tfile = get.path.replace('_bt_', '/').split('_t_')[0]
-        if not _ok: return public.returnMsg(False, 'FILE_DEL_RECYCLE_BIN_ERR', (tfile,))
+        if not _ok: return public.returnMsg(False, '从回收站删除文件失败: {}'.format(tfile))
 
         if dFile.find('BTDB_') != -1:
             import database
@@ -1545,6 +1491,10 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 file_ext_name = '.pl'
             elif data.find('#!/usr/bin/env lua') == 0 or data.find('require ') != -1:
                 file_ext_name = '.lua'
+            elif filename.find('/script/') != -1:
+                file_ext_name = '.sh'
+            elif filename.find('.')  == -1:
+                file_ext_name = '.sh'
         if not file_ext_name in ['.sh','.py','.pl','.php','.js','.css','.html','.htm','.shtml','.shtm','.jsp','.asp','.aspx','.txt']:
             return data
 
@@ -2497,7 +2447,7 @@ cd %s
         '''
         try:
             userInfo = json.loads(public.ReadFile('/www/server/panel/data/userInfo.json'))
-            cloudUrl = 'http://www.bt.cn/api/bt_waf/reportTrojanError'
+            cloudUrl = 'https://www.bt.cn/api/bt_waf/reportTrojanError'
             pdata = {'name':get.filename,'inputfile': public.ReadFile(get.filename), "md5": public.Md5(get.filename),"access_key": userInfo['access_key'], "uid": userInfo['uid']}
             ret = public.httpPost(cloudUrl, pdata)
             return public.returnMsg(True, "提交误报完成")

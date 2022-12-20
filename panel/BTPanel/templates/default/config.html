@@ -67,7 +67,7 @@
 							</div>
 						</div>
 					</div>
-
+                    <div class="public_key" style="display: block;" data="{{data['public_key']}}"></div>
 					<div class="line" title="面板SSL">
 						<div class="line-title">面板SSL</div>
 						<div class="line-form">
@@ -219,7 +219,7 @@
 							<div class="line-row-tips">
 								(Google
 								Authenticator，谷歌身份认证)为面板提供动态口令的登录的验证，<a
-									href="https://www.bt.cn/bbs/forum.php?mod=viewthread&tid=37437"
+									href="https://www.bt.cn/bbs/forum.php?mod=viewthread&tid=105839"
 									class="btlink"
 									target="_blank"
 							>了解详情</a
@@ -1690,9 +1690,10 @@
 			src="{{g.cdn_url}}/js/jquery.qrcode.min.js"
 	></script>
 	<script src="{{g.cdn_url}}/language/{{session['lan']}}/lan.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-	<script src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+	<script src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}&patch=1"></script>
 	<script src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 	<script src="{{g.cdn_url}}/js/tools.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+    <script src="{{g.cdn_url}}/js/jsencrypt.min.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 	<script
 			type="text/javascript"
 			src="{{g.cdn_url}}/amd/require.min.js"

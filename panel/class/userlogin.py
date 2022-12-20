@@ -20,12 +20,22 @@ class userlogin:
         self.error_num(False)
         if self.limit_address('?') < 1: return public.returnJson(False,'您多次登录失败,暂时禁止登录,请等待{}秒后重试!'.format(int(self.limit_expire_time - time.time()))),json_header
         post.username = post.username.strip()
-
+        format_error = '参数格式错误'
         # 核验用户名密码格式
-        if len(post.username) != 32: return public.returnMsg(False,'USER_INODE_ERR'),json_header
-        if len(post.password) != 32: return public.returnMsg(False,'USER_INODE_ERR'),json_header
-        if not re.match(r"^\w+$",post.username): return public.returnMsg(False,'USER_INODE_ERR'),json_header
-        if not re.match(r"^\w+$",post.password): return public.returnMsg(False,'USER_INODE_ERR'),json_header
+        post.username = public.rsa_decrypt(post.username)
+        if len(post.username) != 32:
+            return public.returnMsg(False,format_error),json_header
+
+        post.password = public.rsa_decrypt(post.password)
+        if len(post.password) != 32:
+            return public.returnMsg(False,format_error),json_header
+
+        if not re.match(r"^\w+$",post.username): return public.returnMsg(False,format_error),json_header
+        if not re.match(r"^\w+$",post.password): return public.returnMsg(False,format_error),json_header
+        last_login_token = session.get('last_login_token',None)
+        if not last_login_token:
+            public.WriteLog('TYPE_LOGIN','LOGIN_ERR_CODE',('****','****',public.GetClientIp()))
+            return public.returnJson(False,"验证失败，请刷新页面重新登录!"),json_header
 
         public.chdck_salt()
         sql = db.Sql()
@@ -34,7 +44,7 @@ class userlogin:
         if os.path.exists(user_plugin_file):
             user_list = sql.table('users').field('id,username,password,salt').select()
             for u_info in user_list:
-                if public.md5(u_info['username']) == post.username:
+                if public.md5(public.md5(u_info['username'] + last_login_token)) == post.username:
                     userInfo = u_info
         else:
             userInfo = sql.table('users').where('id=?',1).field('id,username,password,salt').find()
@@ -47,22 +57,20 @@ class userlogin:
                 if not public.checkCode(post.code):
                     public.WriteLog('TYPE_LOGIN','LOGIN_ERR_CODE',('****','****',public.GetClientIp()))
                     return public.returnJson(False,'CODE_ERR'),json_header
-
-
         try:
-
             if not userInfo:
                 public.WriteLog('TYPE_LOGIN','LOGIN_ERR_PASS',('****','******',public.GetClientIp()))
                 num = self.limit_address('+')
                 if not num: return public.returnJson(False,'您多次登录失败,暂时禁止登录,请等待{}秒后重试!'.format(int(self.limit_expire_time - time.time()))),json_header
-                return public.returnJson(False,'LOGIN_USER_ERR',(str(num),)),json_header
+                return public.returnJson(False,'用户名或密码错误，<span style="color:red;">请刷新页面重试</span>，您还可以重试[{}]次'.format(num)),json_header
 
             if userInfo and not userInfo['salt']:
                 public.chdck_salt()
                 userInfo = sql.table('users').where('id=?',(userInfo['id'],)).field('id,username,password,salt').find()
 
             password = public.md5(post.password.strip() + userInfo['salt'])
-            if public.md5(userInfo['username']) != post.username or userInfo['password'] != password:
+            s_username = public.md5(public.md5(userInfo['username'] + last_login_token))
+            if s_username != post.username or userInfo['password'] != password:
                 public.WriteLog('TYPE_LOGIN','LOGIN_ERR_PASS',('****','******',public.GetClientIp()))
                 num = self.limit_address('+')
                 if not num: return public.returnJson(False,'您多次登录失败,暂时禁止登录,请等待{}秒后重试!'.format(int(self.limit_expire_time - time.time()))),json_header
@@ -137,7 +145,8 @@ class userlogin:
             session['username'] = userInfo['username']
             session['tmp_login'] = True
             session['uid'] = userInfo['id']
-            public.WriteLog('TYPE_LOGIN','LOGIN_SUCCESS',(userInfo['username'],public.GetClientIp()+ ":" + str(request.environ.get('REMOTE_PORT'))))
+            ids=public.WriteLog('TYPE_LOGIN','LOGIN_SUCCESS',(userInfo['username'],public.GetClientIp()+ ":" + str(request.environ.get('REMOTE_PORT'))))
+            public.cache_set(public.GetClientIp() + ":" + str(request.environ.get('REMOTE_PORT')), ids)
             self.limit_address('-')
             cache.delete('panelNum')
             cache.delete('dologin')
@@ -191,7 +200,8 @@ class userlogin:
                 os.makedirs(sess_path,384)
             public.writeFile(sess_path + '/' + str(data['id']),'')
             login_addr = public.GetClientIp()+ ":" + str(request.environ.get('REMOTE_PORT'))
-            public.WriteLog('TYPE_LOGIN','LOGIN_SUCCESS',(userInfo['username'],login_addr))
+            ids=public.WriteLog('TYPE_LOGIN','LOGIN_SUCCESS',(userInfo['username'],login_addr))
+            public.cache_set(public.GetClientIp()+ ":" + str(request.environ.get('REMOTE_PORT')),ids)
             public.M('temp_login').where('id=?',(data['id'],)).update({"login_time":s_time,'state':1,'login_addr':login_addr})
             self.limit_address('-')
             cache.delete('panelNum')
@@ -200,9 +210,10 @@ class userlogin:
             self.set_request_token()
             self.login_token()
             self.set_cdn_host(get)
-            public.login_send_body("临时授权",userInfo['username'],public.GetClientIp(),str(request.environ.get('REMOTE_PORT')))
+            public.run_thread(public.login_send_body("临时授权",userInfo['username'],public.GetClientIp(),str(request.environ.get('REMOTE_PORT'))))
             return redirect('/')
         except:
+            public.print_log(public.get_error_info(),'ERROR')
             return '登录失败，登录过程发生错误'
 
 
@@ -244,6 +255,7 @@ class userlogin:
         html_token_key = public.get_csrf_html_token_key()
         session[html_token_key] = public.GetRandomString(48)
         session[html_token_key.replace("https_","")] = public.GetRandomString(48)
+        session['client_hash'] = public.get_client_hash()
 
 
     def set_cdn_host(self,get):
@@ -318,11 +330,13 @@ class userlogin:
             session['username'] = userInfo['username']
             session['uid'] = userInfo['id']
             session['login_user_agent'] = public.md5(request.headers.get('User-Agent',''))
-            public.WriteLog('TYPE_LOGIN','LOGIN_SUCCESS',(userInfo['username'],public.GetClientIp()+ ":" + str(request.environ.get('REMOTE_PORT'))))
+            ids=public.WriteLog('TYPE_LOGIN','LOGIN_SUCCESS',(userInfo['username'],public.GetClientIp()+ ":" + str(request.environ.get('REMOTE_PORT'))))
+            public.cache_set(public.GetClientIp()+ ":" + str(request.environ.get('REMOTE_PORT')),ids)
             self.limit_address('-')
             cache.delete('panelNum')
             cache.delete('dologin')
             session['session_timeout'] = time.time() + public.get_session_timeout()
+            if 'last_login_token' in session: del(session['last_login_token'])
             self.set_request_token()
             self.login_token()
             login_type = 'data/app_login.pl'

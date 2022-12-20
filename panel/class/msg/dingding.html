@@ -53,9 +53,9 @@
         all_info: {},
         init: function () {
             var that = this;
-            this.all_info = $('.alarm-view .bt-w-menu p.bgw').data('data'); //设置全局数据           
+            this.all_info = $('.alarm-view .bt-w-menu p.bgw').data('data'); //设置全局数据
             this.get_dingding_data();
-            
+
              // 设置默认
             $('#default_setting').change(function () {
                 var _default = $(this).prop('checked');
@@ -72,7 +72,7 @@
                     if (res.status) that.refresh_data();
                 });
             });
-            
+
             var showTips = ''
             $('.total_tips').hover(function(){
                 showTips = setTimeout(function(){
@@ -94,11 +94,11 @@
         get_dingding_data: function () {
             var that = this;
             var data = this.all_info.data;
-           
+
             if (data) {
                 var url = data.dingding_url || '';
                 var _default = data.hasOwnProperty('default') ? data.default : false
-                
+
                 $('textarea[name=channel_dingding_value]').val(url);
                 $('#default_setting').prop('checked', _default);
             }

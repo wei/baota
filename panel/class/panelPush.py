@@ -220,9 +220,10 @@ class panelPush:
         pdata = self.__get_args(pdata,'count',1)
         pdata = self.__get_args(pdata,'interval',600)
         pdata = self.__get_args(pdata,'key','')
+        pdata = self.__get_args(pdata,'push_count',0)
 
         nData = {}
-        for skey in ['key','type','cycle','count','interval','module','title','project','status','index']:
+        for skey in ['key','type','cycle','count','interval','module','title','project','status','index','push_count']:
             if skey in pdata:
                 nData[skey] = pdata[skey]
 
@@ -493,7 +494,7 @@ class panelPush:
                 data = json.loads(public.readFile(spath))
 
                 msg_obj = pm.init_msg_module(data['module'])
-                if not msg_obj:continue;
+                if not msg_obj:continue
 
                 ret = msg_obj.push_data(data)
                 if ret['status']: pass
@@ -509,9 +510,12 @@ class panelPush:
 
         total = 0
         interval = 5
+
+        tips = '{}/data/push/tips'.format(public.get_panel_path())
+        if not os.path.exists(tips): os.makedirs(tips)
+
         try:
             if True:
-
                 # 推送文件
                 self.push_messages_from_file()
 
@@ -536,6 +540,7 @@ class panelPush:
                         try:
 
                             item = data[skey][x]
+                            item['id'] = x
                             if not item['status']: continue
                             if not item['module']: continue
                             if not 'index' in item: item['index'] = 0
@@ -544,11 +549,25 @@ class panelPush:
                                 print('{} 未达到间隔时间，跳过.'.format(item['title']))
                                 continue
 
+                            #验证推送次数
+                            push_record = {}
+                            tips_path = '{}/{}'.format(tips,x)
+                            if 'push_count' in item and item['push_count'] > 0:
+                                item['tips_list'] = []
+                                try:
+                                    push_record = json.loads(public.readFile(tips_path))
+                                except:pass
+                                for k in push_record:
+                                    if push_record[k] < item['push_count']:
+                                        continue
+                                    item['tips_list'].append(k)
+
+                            #获取推送数据
                             if not total: total = obj.get_total()
                             rdata = obj.get_push_data(item,total)
                             if not rdata:
                                 continue
-
+                            push_status = False
                             for m_module in item['module'].split(','):
                                 if not m_module in rdata:
                                     continue
@@ -556,26 +575,30 @@ class panelPush:
                                 msg_obj = public.init_msg(m_module)
                                 if not msg_obj:continue
 
-                                #2022-09-02 cjxin 增加指定发送者
-                                #rdata[m_module]['to_user'] = 'default'
                                 if 'to_user' in item and m_module in item['to_user']:
                                     rdata[m_module]['to_user'] = item['to_user'][m_module]
 
                                 ret = msg_obj.push_data(rdata[m_module])
-                                #if ret['status']:
-                                is_write = True
                                 data[skey][x]['index'] = rdata['index']
-                                    #print(ret)
+                                is_write = True
+                                push_status = True
+
+                            #获取是否推送成功.
+                            if push_status:
+                                if 'push_keys' in rdata:
+                                    for k in rdata['push_keys']:
+                                        if not k in push_record: push_record[k] = 0
+                                        push_record[k] += 1
+                                    public.writeFile(tips_path,json.dumps(push_record))
                         except :
                             print(public.get_error_info())
 
-                if is_write: public.writeFile(path,json.dumps(data))
-                # time.sleep(interval)
+                if is_write:
+                    public.writeFile(path,json.dumps(data))
+                #time.sleep(interval)
         except :
 
             print(public.get_error_info())
-
-        # self.start()
 
 
     def __get_login_panel_info(self):

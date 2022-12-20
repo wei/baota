@@ -193,7 +193,7 @@ def request_check():
         ip_check = public.check_ip_panel()
         if ip_check: return ip_check
 
-    if request.path.find('/static/') != -1 or request.path == '/code':
+    if request.path.startswith('/static/') or request.path == '/code':
         if not 'login' in session and not 'admin_auth' in session and not 'down' in session:
             return abort(401)
     domain_check = public.check_domain_panel()
@@ -217,10 +217,8 @@ def request_check():
 @app.teardown_request
 def request_end(reques=None):
     if request.method not in ['GET','POST']:return
-    not_acts = ['GetTaskSpeed', 'GetNetWork', 'check_pay_status', 'get_re_order_status', 'get_order_stat']
-    key = request.args.get('action')
-    if not key in not_acts and request.full_path.find('/static/') == -1:
-        public.write_request_log()
+    if not request.path.startswith('/static/'):
+        public.write_request_log(reques)
         if 'api_request' in g:
             if g.api_request:
                 session.clear()
@@ -292,7 +290,7 @@ REQUEST_FORM: {request_form}
     remote_addr = public.GetClientIp(),
     method = request.method,
     full_path = public.xsssec(request.full_path),
-    request_form = _form,
+    request_form = public.xsssec(str(_form)),
     user_agent = public.xsssec(request.headers.get('User-Agent')),
     panel_version = public.version(),
     os_version = public.get_os_version()
@@ -359,6 +357,7 @@ def bind():
     if public.is_bind(): return redirect('/',302)
     data = {}
     g.title = '请先绑定宝塔帐号'
+    data['public_key'] = public.get_rsa_public_key().replace("\n","")
     return render_template('bind.html', data=data)
 
 @app.route('/error', methods=method_get)
@@ -821,6 +820,7 @@ def config(pdata=None):
         data['is_local'] = ''
         if public.is_local(): data['is_local'] = 'checked'
         is_bind()
+        data['public_key'] = public.get_rsa_public_key().replace("\n","")
         return render_template('config.html', data=data)
 
     import config
@@ -1177,6 +1177,7 @@ def login():
             return public.error_not_login(None)
         v_list = ['username', 'password', 'code', 'vcode', 'cdn_url']
         for v in v_list:
+            if v in ['username', 'password']: continue
             pv = request.form.get(v, '').strip()
             if v == 'cdn_url':
                 if len(pv) > 32: return public.returnMsg(False, '错误的参数长度!'), json_header
@@ -1202,7 +1203,8 @@ def login():
     if hasattr(get, 'tmp_token'):
         result = userlogin.userlogin().request_tmp(get)
         return is_login(result)
-
+    # 过滤爬虫
+    if public.is_spider(): return abort(404)
     if hasattr(get, 'dologin'):
         login_path = '/login'
         if not 'login' in session: return redirect(login_path)
@@ -1267,6 +1269,11 @@ def login():
                 data['hosts'] = json.dumps(data['hosts'])
         data['app_login'] = os.path.exists('data/app_login.pl')
         public.cache_set(public.Md5(uuid.UUID(int=uuid.getnode()).hex[-12:]+public.GetClientIp()),'check',360)
+        last_key = 'last_login_token'
+        rsa_key = 'public_key'
+        session[last_key] = public.GetRandomString(32)
+        data[last_key] = session[last_key]
+        data[rsa_key] = public.get_rsa_public_key().replace("\n","")
         return render_template('login.html',data=data)
 
 
@@ -1455,12 +1462,13 @@ def safeModel(mod_name, def_name):
 # 通用模型路由
 @app.route('/<index>/<mod_name>/<def_name>', methods=method_all)
 def allModule(index,mod_name,def_name):
+    comReturn = comm.local()
+    if comReturn: return comReturn
     p_path = public.get_plugin_path() + '/' + index
     if os.path.exists(p_path):
         return panel_other(index,mod_name,def_name)
 
-    comReturn = comm.local()
-    if comReturn: return comReturn
+
     from panelController import Controller
     controller_obj = Controller()
     defs = ('model',)
@@ -1670,6 +1678,7 @@ def panel_hook():
 @app.route('/install', methods=method_all)
 def install():
     # 初始化面板接口
+    if public.is_spider(): return abort(404)
     if not os.path.exists('install.pl'): return redirect('/login')
     if public.M('config').where("id=?", ('1',)).getField('status') == 1:
         if os.path.exists('install.pl'): os.remove('install.pl')

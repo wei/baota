@@ -421,7 +421,7 @@ class panelAuth:
 
     def send_cloud_v2(self,module,params):
         try:
-            cloudURL = 'http://www.bt.cn/api/'
+            cloudURL = 'https://www.bt.cn/api/'
             userInfo = self.create_serverid(None);
             if 'status' in userInfo:
                 params['uid'] = 0

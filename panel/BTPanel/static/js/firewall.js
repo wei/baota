@@ -173,7 +173,7 @@ var firewall = {
           },
           { // 搜索内容
             type: 'search',
-            placeholder: '请输入端口或备注',
+            placeholder: '请输入端口',
             searchParam: 'query', //搜索请求字段，默认为 search
           },
           // { // 批量操作
@@ -577,7 +577,7 @@ var firewall = {
           },
           { // 搜索内容
             type: 'search',
-            placeholder: '请输入端口号',
+            placeholder: '请输入源端口',
             searchParam: 'query', //搜索请求字段，默认为 search
           },
           // { // 批量操作
@@ -1488,6 +1488,7 @@ var firewall = {
      * @description 设置SSH密钥视图
      */
     setSshKeyView:function(){
+      var _this = this
       bt_tools.send({
         url:'/ssh_security?action=get_key'
       },function (rdata){
@@ -1502,6 +1503,7 @@ var firewall = {
             <div class="btn-sshkey-group">\
               <button type="button" class="btn btn-success btn-sm mr5 btn-copy-sshkey">复制</button>\
               <button type="button" class="btn btn-success btn-sm btn-download-sshkey">下载</button>\
+              <button type="button" class="btn btn-default btn-sm btn-rebuild-sshkey">重新生成</button>\
             </div>\
           </div>',
           success:function (layers,indexs){
@@ -1511,6 +1513,22 @@ var firewall = {
             $('.btn-download-sshkey').on('click',function(){
               window.open('/ssh_security?action=download_key')
             })
+            $('.btn-rebuild-sshkey').on('click',function(){
+              bt_tools.send({
+                url:'/ssh_security?action=set_sshkey',
+                data:{ ssh:'yes', type:'ed25519' }
+              },function (res){
+                bt_tools.send({
+                  url:'/ssh_security?action=get_key'
+                },function (rdata){
+                  if(!rdata.msg) return layer.msg('请重新开启SSH密钥登录再查看密钥！');
+                  $('#ssh_text_key').val(rdata.msg)
+                  if(res.status) bt_tools.msg({msg:'重新生成密钥成功！',status:true})
+                  _this.getSeniorSshInfo()
+                })
+              },'重新生成密钥')
+            })
+
           }
         })
       },'获取SSH登录密钥')
@@ -2120,7 +2138,7 @@ var firewall = {
                           cust_checkbox.click()
                         })
                       }
-                      var dir_value = dir.val().split(/[(\r\n\s)\r\n\s]+/).filter(s => $.trim(s).length > 0)
+                      var dir_value = dir.val().split(/[(\r\n\s)\r\n\s]+/).filter(function (s) { return $.trim(s).length > 0})
                       for (var i = 0; i < res.length; i++) {
                         if(dir_value.indexOf(res[i]) > -1) {
                           $('#all_site tbody tr:eq('+ i +') .cust—checkbox').click()
@@ -2142,7 +2160,7 @@ var firewall = {
                 break;
               case 0:
                 bt.select_path('dir','dir','multi',function (rdata) {
-                  var arr = dir.val() != '' ? dir.val().split(/[(\r\n\s)\r\n\s]+/).filter(s => $.trim(s).length > 0) : []
+                  var arr = dir.val() != '' ? dir.val().split(/[(\r\n\s)\r\n\s]+/).filter(function (s) { return $.trim(s).length > 0}) : []
                   arr.push(rdata)
                   dir.val(arr.join("\n"))
                 });
@@ -2154,7 +2172,7 @@ var firewall = {
           var dir = $('[name=dir]'), param = {}
           if(dir.val() === '') return layer.msg('目录不能为空!',{icon:2});
           param = {
-            dirs: dir.val().split(/[(\r\n\s)\r\n\s]+/).filter(s => $.trim(s).length > 0)
+            dirs: dir.val().split(/[(\r\n\s)\r\n\s]+/).filter(function (s) { return $.trim(s).length > 0})
           }
           bt_tools.send({
             url: '/project/safe_detect/add_monitor_dir',
@@ -2566,7 +2584,7 @@ var firewall = {
         //某值出现次数
         function getArrNum(arr) {
           var obj = {}
-          arr.forEach(element => {
+          arr.forEach(function (element) {
             if (obj[element.status]) {
               obj[element.status]++
             } else {

@@ -10,57 +10,75 @@
 #------------------------------
 # Docker模型
 #------------------------------
-import projectModel .bt_docker .dk_public as dp #line:13
-import time #line:14
-class main :#line:16
-    def get_status (O0OOO000OOOOOOOO0 ,OOO0O0OO0O00000OO ):#line:18
-        ""#line:24
-        O0OO00000OOO00O0O =dict ()#line:25
-        O0OO00000OOO00O0O ['container_count']=O0OOO000OOOOOOOO0 .__OO0OOO0O0OOOOO000 (OOO0O0OO0O00000OO )#line:27
-        O0OO00000OOO00O0O ['image_info']=dp .sql ("image_infos").where ("time>=? and time<=?",(OOO0O0OO0O00000OO .start_time ,OOO0O0OO0O00000OO .stop_time )).select ()#line:29
-        O0OO00000OOO00O0O ['host']=len (dp .sql ('hosts').select ())#line:31
-        O0OO00000OOO00O0O ['container_top']={"cpu":O0OOO000OOOOOOOO0 .__OOOOO00O0OOO0OO0O (),"mem":O0OOO000OOOOOOOO0 .__O0O0OO000OO0OO00O ()}#line:33
-        return O0OO00000OOO00O0O #line:34
-    def __OO0OOO0O0OOOOO000 (O0O00O00OO00O0O00 ,OO00OOO00OO00O00O ):#line:36
-        OO00OOO0OO000O000 =dp .sql ('container_count').where ("time>=? and time<=?",(OO00OOO00OO00O00O .start_time ,OO00OOO00OO00O00O .stop_time )).select ()#line:37
-        if not OO00OOO0OO000O000 :#line:38
-            return 0 #line:39
-        return OO00OOO0OO000O000 [-1 ]#line:40
-    def __O0O0OO000OO0OO00O (OO00O0O00000OOO0O ):#line:42
-        O0OO00OO00000OO00 =int (time .time ())#line:43
-        O00O0O0000OOO00OO =O0OO00OO00000OO00 -3600 #line:44
-        O000OOOO0000000OO =dp .sql ("mem_stats").where ("time>=? and time<=?",(O00O0O0000OOO00OO ,O0OO00OO00000OO00 )).select ()#line:45
-        O00O0OO00O0OOO000 =list ()#line:46
-        OOO000OO0O0O0OOO0 =dict ()#line:47
-        for O0O0O0O00OOOO00O0 in O000OOOO0000000OO :#line:49
-            O00O0OO00O0OOO000 .append (O0O0O0O00OOOO00O0 ['container_id'])#line:50
-        O00O0OO00O0OOO000 =set (O00O0OO00O0OOO000 )#line:52
-        for O0O00OO0000OOO0O0 in O00O0OO00O0OOO000 :#line:53
-            O0O000000000O0O0O =0 #line:54
-            O00OOOO0OOO000O0O =0 #line:55
-            for O0O0O0O00OOOO00O0 in O000OOOO0000000OO :#line:56
-                if O0O0O0O00OOOO00O0 ['container_id']==O0O00OO0000OOO0O0 :#line:57
-                    O0O000000000O0O0O +=1 #line:58
-                    O00OOOO0OOO000O0O +=float (O0O0O0O00OOOO00O0 ['usage'])#line:59
-            if O0O000000000O0O0O !=0 :#line:60
-                OOO000OO0O0O0OOO0 [O0O00OO0000OOO0O0 ]=O00OOOO0OOO000O0O /O0O000000000O0O0O #line:61
-        return OOO000OO0O0O0OOO0 #line:62
-    def __OOOOO00O0OOO0OO0O (OO0O0O0000O00OO0O ):#line:64
-        O0OO0O0OO00O00000 =int (time .time ())#line:65
-        O0OO00O0O00O0O0O0 =O0OO0O0OO00O00000 -3600 #line:66
-        OOO0O0O00OOO0O00O =dp .sql ("cpu_stats").where ("time>=? and time<=?",(O0OO00O0O00O0O0O0 ,O0OO0O0OO00O00000 )).select ()#line:67
-        O0OO0OO0O00OO0O00 =list ()#line:68
-        O0OOOO00O00O0O00O =dict ()#line:69
-        for OO0O0000OO0O00000 in OOO0O0O00OOO0O00O :#line:71
-            O0OO0OO0O00OO0O00 .append (OO0O0000OO0O00000 ['container_id'])#line:72
-        O0OO0OO0O00OO0O00 =set (O0OO0OO0O00OO0O00 )#line:74
-        for O0O0OO00OOOOOO0OO in O0OO0OO0O00OO0O00 :#line:75
-            OOOOO00O000OOO0O0 =0 #line:76
-            OOO00O00O0OO00OOO =0 #line:77
-            for OO0O0000OO0O00000 in OOO0O0O00OOO0O00O :#line:78
-                if OO0O0000OO0O00000 ['container_id']==O0O0OO00OOOOOO0OO :#line:79
-                    OOOOO00O000OOO0O0 +=1 #line:80
-                    OOO00O00O0OO00OOO +=float (0 if OO0O0000OO0O00000 ['cpu_usage']=='0.0'else OO0O0000OO0O00000 ['cpu_usage'])#line:81
-            if OOOOO00O000OOO0O0 !=0 :#line:82
-                O0OOOO00O00O0O00O [O0O0OO00OOOOOO0OO ]=OOO00O00O0OO00OOO /OOOOO00O000OOO0O0 #line:83
-        return O0OOOO00O00O0O00O
+import projectModel.bt_docker.dk_public as dp
+import time
+
+class main:
+
+    def get_status(self,args):
+        """
+        start_time
+        stop_time
+        :param args:
+        :return:
+        """
+        data = dict()
+        # 容器总数
+        data['container_count'] = self.__get_container_count(args)
+        # 镜像信息，镜像总数，占用空间大小
+        data['image_info'] = dp.sql("image_infos").where("time>=? and time<=?",(args.start_time,args.stop_time)).select()
+        # 主机信息
+        data['host'] = len(dp.sql('hosts').select())
+        # 1小时内容器占用资源前三平均值
+        data['container_top'] = {"cpu":self.__get_cpu_avg(),"mem":self.__get_mem_avg()}
+        return data
+
+    def __get_container_count(self,args):
+        count = dp.sql('container_count').where("time>=? and time<=?", (args.start_time, args.stop_time)).select()
+        if not count:
+            return 0
+        return count[-1]
+
+    def __get_mem_avg(self):
+        now = int(time.time())
+        start_time = now - 3600
+        data = dp.sql("mem_stats").where("time>=? and time<=?",(start_time,now)).select()
+        containers = list()
+        info = dict()
+        # 获取容器ID
+        for d in data:
+            containers.append(d['container_id'])
+        # 获取每个容器1小时内的cpu使用率总和
+        containers = set(containers)
+        for c in containers:
+            num = 0
+            usage = 0
+            for d in data:
+                if d['container_id'] == c:
+                    num += 1
+                    usage += float(d['usage'])
+            if num != 0:
+                info[c] = usage / num
+        return info
+
+    def __get_cpu_avg(self):
+        now = int(time.time())
+        start_time = now - 3600
+        data = dp.sql("cpu_stats").where("time>=? and time<=?",(start_time,now)).select()
+        containers = list()
+        info = dict()
+        # 获取容器ID
+        for d in data:
+            containers.append(d['container_id'])
+        # 获取每个容器1小时内的cpu使用率总和
+        containers = set(containers)
+        for c in containers:
+            num = 0
+            cpu_usage = 0
+            for d in data:
+                if d['container_id'] == c:
+                    num += 1
+                    cpu_usage += float(0 if d['cpu_usage'] == '0.0' else d['cpu_usage'])
+            if num != 0:
+                info[c] = cpu_usage / num
+        return info

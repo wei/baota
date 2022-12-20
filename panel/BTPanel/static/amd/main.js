@@ -29,7 +29,8 @@ require.config({
     "clipboard": "../js/clipboard.min", // 复制
     "polyfill":"../vue/polyfill.min",
     "public":"../js/public",
-    "public_backup":"../js/public_backup"
+    "public_backup":"../js/public_backup",
+    "tools":"../js/tools"
   },
   shim: {
     "public":{
@@ -48,7 +49,7 @@ require.config({
   }
 })
 
-var requestList = ['jquery', 'layer', 'language','public','public_backup','jquery.qrcode']
+var requestList = ['jquery', 'layer', 'language','public','public_backup']
 var detectBrowser = function (){
   var userAgent = navigator.userAgent,
       isLessIE11 = userAgent.indexOf('compatible') > -1 && userAgent.indexOf('MSIE') > -1,
@@ -66,10 +67,12 @@ var detectBrowser = function (){
 detectBrowser()
 requestList.push('utils')
 require(requestList, function () {
-  if(location.pathname.indexOf('/config') > -1){
-    require(['config'], function (param1) {
-      var Config = param1['Config']
-      new Config()
-    })
+  switch (location.pathname) {
+    case "/config":
+      require(['config'], function (param1) {
+        var Config = param1['Config']
+        new Config()
+      })
+      break
   }
 })

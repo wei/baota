@@ -225,6 +225,7 @@ class panelApi:
             data['token'] = public.md5(token)
             data['token_crypt'] = public.en_crypt(data['token'],token).decode('utf-8')
             public.WriteLog('API配置','重新生成API-Token')
+            public.add_security_logs('API配置','重新生成API-Token')
         elif get.t_type == '2':
             data['open'] = not data['open']
             stats = {True:'开启',False:'关闭'}
@@ -233,10 +234,12 @@ class panelApi:
                 data['token'] = public.md5(token)
                 data['token_crypt'] = public.en_crypt(data['token'],token).decode('utf-8')
             public.WriteLog('API配置','%sAPI接口' % stats[data['open']])
+            public.add_security_logs('API配置', ' %sAPI接口' % stats[data['open']])
             token = stats[data['open']] + '成功!'
         elif get.t_type == '3':
             data['limit_addr'] = get.limit_addr.split('\n')
             public.WriteLog('API配置','变更IP限制为[%s]' % get.limit_addr)
+            public.add_security_logs('API配置',' 变更IP限制为[%s]' % get.limit_addr)
             token ='保存成功!'
         self.save_api_config(data)
         return public.returnMsg(True,token)

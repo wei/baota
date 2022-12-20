@@ -1046,8 +1046,8 @@ class panelSSL:
         """
         rtmp = ""
         data = {}
-        data['username'] = get.username
-        data['password'] = public.md5(get.password);
+        data['username'] = public.rsa_decrypt(get.username)
+        data['password'] = public.md5(public.rsa_decrypt(get.password))
         data['serverid'] = panelAuth().get_serverid()
 
         if 'code' in get: data['code'] = get.code

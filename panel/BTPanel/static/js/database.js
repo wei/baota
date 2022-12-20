@@ -738,7 +738,7 @@ var database = {
                   }, {
                     title: '删除',
                     event: function (row, index, ev, key, that) {
-                      that.del_site_backup({ name: row.name, id: row.id }, function (rdata) {
+                      that.del_site_backup(row, function (rdata) {
                         bt_tools.msg(rdata);
                         if (rdata.status) {
                           that.$refresh_table_list();
@@ -756,7 +756,7 @@ var database = {
                  * @param {function} callback
                  */
                 del_site_backup: function (config, callback) {
-                  bt.confirm({ title: '删除数据库备份', msg: '删除数据库备份[' + config.name + '],是否继续？' }, function () {
+                  bt.confirm({ title: '删除数据库备份[' + config.addtime + ']', msg: '删除选中数据库备份文件后，<span class="color-red">该数据库备份文件将永久消失</span>，是否继续操作？' }, function () {
                     bt_tools.send('database/DelBackup', { id: config.id }, function (rdata) {
                       if (callback) callback(rdata)
                     }, true)
@@ -791,7 +791,7 @@ var database = {
                   paramId: 'id',
                   load: true,
                   callback: function (that) {
-                    bt.confirm({ title: '批量删除数据库备份', msg: '是否批量删除选中的数据库备份，是否继续？', icon: 0 }, function (index) {
+                    bt.confirm({ title: '批量删除数据库备份', msg: '批量删除选中的数据库备份，<span class="color-red">备份文件将永久消失</span>，是否继续操作？', icon: 0 }, function (index) {
                       layer.close(index);
                       that.start_batch({}, function (list) {
                         var html = '';
@@ -1398,6 +1398,7 @@ var database = {
                     form: [
                       {
                         label: ' ',
+                        formLabelWidth: '0px',
                         group: {
                           type: 'select',
                           name: 'typeName',
@@ -1434,7 +1435,7 @@ var database = {
                     $('#bt_incbackup_table').html('')
                     table(backupType.val())
                   })
-                  $('#bt_incbackup_table .tootls_group.tootls_top .pull-left').append('<div class="inlineBlock ml5"><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>【使用提醒】此功能为企业版专享功能，当前所有用户可免费使用。</div>')
+                  $('#bt_incbackup_table .tootls_group.tootls_top .pull-left').append('<div class="inlineBlock ml5"><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>【使用提醒】此功能为企业版专享功能，目前处于公测阶段，将于2023年1月16日后转为收费功能。</div>')
                   $('#bt_incbackup_table').append("<ul class='help-info-text c7'>\
                     <li>备份大小：备份大小包含完全备份数据大小和增量备份数据大小</li>\
                     <li>备份会保留一个星期的备份数据，当备份时，检测到完全备份为一个星期前，会重新完全备份</li>\
@@ -1501,7 +1502,7 @@ var database = {
                 field: 'opt', title: '操作', align: 'right', templet: function (item) {
                   var _opt = '<a class="btlink" herf="javascrpit:;" onclick="bt.database.input_sql(\'' + item.filename + '\',\'' + dataname + '\')">恢复</a> | ';
                   _opt += '<a class="btlink" href="/download?filename=' + item.filename + '&amp;name=' + item.name + '" target="_blank">下载</a> | ';
-                  _opt += '<a class="btlink" herf="javascrpit:;" onclick="bt.database.del_backup(\'' + item.id + '\',\'' + id + '\',\'' + dataname + '\')">删除</a>'
+                  _opt += '<a class="btlink" herf="javascrpit:;" onclick="bt.database.del_backup(\'' + item.id + '\',\'' + id + '\',\'' + dataname + '\',\'' + item.addtime + '\')">删除</a>'
                   return _opt;
                 }
               },
@@ -2308,7 +2309,7 @@ var database = {
             //分页数量默认 : 20条
           }]
       })
-      $('#dbbackup_list .tootls_group.tootls_top .pull-left').append('<div class="inlineBlock ml5"><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>【使用提醒】此功能为企业版专享功能，当前所有用户可免费使用。</div>')
+      $('#dbbackup_list .tootls_group.tootls_top .pull-left').append('<div class="inlineBlock ml5"><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>【使用提醒】此功能为企业版专享功能，目前处于公测阶段，将于2023年1月16日后转为收费功能。</div>')
       $('#dbbackup_list').append("<ul class='help-info-text c7'>\
           <li>备份大小：备份大小包含完全备份数据大小和增量备份数据大小</li>\
           <li>备份会保留一个星期的备份数据，当备份时，检测到完全备份为一个星期前，会重新完全备份</li>\
@@ -2763,6 +2764,19 @@ var database = {
               }}
             ],
             success: function () {
+              $('#check_layer_content').find('.glyphicon-info-sign').click(function (e) {
+                var msg = $(this).parent().prop('title')
+                msg = msg.replace('数据库：','<br>数据库：')
+                layer.tips(msg, $(this).parent(), { tips: [1, 'red'], time: 3000 })
+                $(document).click(function (ev) {
+                  layer.closeAll('tips');
+                  $(this).unbind('click');
+                  ev.stopPropagation();
+                  ev.preventDefault();
+                });
+                e.stopPropagation();
+                e.preventDefault();
+              });
               if($('.remote_database').length) {
                 $('.remote_database').each(function (index, el) {
                   var id = $(el).parent().parent().parent().index()
@@ -2774,7 +2788,7 @@ var database = {
           var is_once = false
           $('#check_layer_content .divtable').scroll(function () {
             var top = $(this).scrollTop()
-            if(top == $('#check_layer_content table').height()-298){
+            if(top + 302 >= $(this)[0].scrollHeight){
               is_once = true
               $(layers).removeClass('on');
             }

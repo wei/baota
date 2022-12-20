@@ -364,13 +364,14 @@ class config:
 
 
     def setPassword(self,get):
-        get.password1 = public.url_decode(get.password1)
-        get.password2 = public.url_decode(get.password2)
+        get.password1 = public.url_decode(public.rsa_decrypt(get.password1))
+        get.password2 = public.url_decode(public.rsa_decrypt(get.password2))
         if get.password1 != get.password2: return public.returnMsg(False,'USER_PASSWORD_CHECK')
         if len(get.password1) < 5: return public.returnMsg(False,'USER_PASSWORD_LEN')
         if not self.check_password_safe(get.password1): return public.returnMsg(False,'密码复杂度验证失败，要求：长度大于8位，数字、大写字母、小写字母、特殊字符最少3项组合')
         public.M('users').where("username=?",(session['username'],)).setField('password',public.password_salt(public.md5(get.password1.strip()),username=session['username']))
         public.WriteLog('TYPE_PANEL','USER_PASSWORD_SUCCESS',(session['username'],))
+        public.add_security_logs("修改密码", "密码修改成功！["+session['username']+"]")
         self.reload_session()
 
         # 密码过期时间
@@ -382,8 +383,8 @@ class config:
         return public.returnMsg(True,'USER_PASSWORD_SUCCESS')
 
     def setUsername(self,get):
-        get.username1 = public.url_decode(get.username1)
-        get.username2 = public.url_decode(get.username2)
+        get.username1 = public.url_decode(public.rsa_decrypt(get.username1))
+        get.username2 = public.url_decode(public.rsa_decrypt(get.username2))
         if get.username1 != get.username2: return public.returnMsg(False,'USER_USERNAME_CHECK')
         if len(get.username1) < 3: return public.returnMsg(False,'USER_USERNAME_LEN')
         public.M('users').where("username=?",(session['username'],)).setField('username',get.username1.strip())
@@ -543,7 +544,7 @@ class config:
 
 
     def set_admin_path(self,get):
-        get.admin_path = get.admin_path.strip()
+        get.admin_path = public.rsa_decrypt(get.admin_path.strip()).strip()
         if len(get.admin_path) < 6: return public.returnMsg(False,'安全入口地址长度不能小于6位!')
         if get.admin_path in admin_path_checks: return public.returnMsg(False,'该入口已被面板占用,请使用其它入口!')
         if not public.path_safe_check(get.admin_path) or get.admin_path[-1] == '.':  return public.returnMsg(False,'入口地址格式不正确,示例: /my_panel')
@@ -1622,6 +1623,7 @@ class config:
         public.writeFile(path,json.dumps(ba_conf))
         os.chmod(path,384)
         public.WriteLog('面板设置','设置BasicAuth状态为: %s' % is_open)
+        public.add_security_logs('面板设置','设置BasicAuth状态为: %s' % is_open)
         public.writeFile('data/reload.pl','True')
         return public.returnMsg(True,"设置成功!")
 
@@ -1640,6 +1642,7 @@ class config:
         filename = 'logs/error.log'
         public.writeFile(filename,'')
         public.WriteLog('面板配置','清空面板运行日志')
+        public.add_security_logs('运行日志', ' 清空面板运行日志')
         return public.returnMsg(True,'已清空!')
 
     # 获取lets证书
@@ -2630,7 +2633,6 @@ class config:
         sfile = '{}/class/msg/{}_msg.py'.format(public.get_panel_path(),module_name)
         if os.path.exists(sfile): os.remove(sfile)
 
-        public.print_log(sfile)
         default_channel_pl = "{}/data/default_msg_channel.pl".format(public.get_panel_path())
         default_channel = public.readFile(default_channel_pl)
         if default_channel and default_channel == module_name:

@@ -7,6 +7,7 @@
           <div class="info-title-tips">
             <p><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>宝塔面板许多功能都依赖于官网，绑定仅限于为您提供更好的面板服务体验，不涉及您服务器任何敏感信息，请放心使用。</p>
         </div>
+          <div class="public_key" style="display: block;" data="{{data['public_key']}}"></div>
           <p style="font-size: 18px;margin-top: 38px;">绑定宝塔帐号</p>
           <div class="libLogin pd20">
             <div class="bt-form text-center">
@@ -32,6 +33,7 @@
 {% endblock %}
 {% block scripts %}
 {{ super() }}
+<script src="{{g.cdn_url}}/js/jsencrypt.min.js?version={{g['version']}}"></script>
 <script type="text/javascript">
   new BindAccount().init();
 

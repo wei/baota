@@ -5567,6 +5567,14 @@ select[disabled] {
   overflow: auto;
 }
 
+.bootstrap-select.show-tick .dropdown-menu li span.check-mark::before {
+	display: none;
+}
+
+.bootstrap-select.show-tick .dropdown-menu .selected span.check-mark::before {
+	display: block;
+}
+
 .set_nginx_config,
 .set_Apache_config {
   padding: 10px 10px 0 0;
@@ -15617,10 +15625,11 @@ textarea {
   width: 38px;
   height: 38px;
   position: absolute;
-  right: 0;
-  bottom: 0;
+  right: -2px;
+  bottom: -2px;
   background: url("../images/svg/lower-select.svg") no-repeat right bottom;
   background-size: 38px;
+  border-radius: inherit;
 }
 .libPay-line-item.proN .btn_nums.active:before{
   width: 22px;
@@ -15695,15 +15704,16 @@ textarea {
 }
 
 .libPay-line-item.proN .btn_nums{
-  width: 91px;
-  height: 45px;
+  width: 90px;
+  height: 46px;
   font-size:14px;
   border-radius: 5px;
   border: 2px solid #ddd;
-  line-height: 35px;
+  line-height: 36px;
   background: white;
   margin-right: 10px;
   position: relative;
+  z-index:1;
 }
 
 .libPay-line-item.proN .btn_nums em{
@@ -15826,9 +15836,10 @@ textarea {
   width: 22px;
   height: 22px;
   position: absolute;
-  right: 0;
-  bottom: 0;
+  right: -2px;
+  bottom: -2px;
   background: url(../images/svg/lower-select-pro.svg) no-repeat right bottom;
+  border-radius: inherit;
 }
 
 .libPay-layer-item .libVoucher-list {
@@ -18593,6 +18604,7 @@ select[name=dataAccess] {
   color: #444;
   outline: none;
   border: 1px solid #ccc;
+  padding: 0 5px;
 }
 /* new提示对话弹窗样式 end */
 
@@ -18724,3 +18736,13 @@ select[name=dataAccess] {
   background-size: 22px;
 }
 /*第三方按钮样式 end*/
+.batch_tabel .table tbody tr td:nth-child(1) {
+  word-wrap: break-word;
+  max-width: 135px;
+  overflow: hidden;
+}
+.batch_tabel .table tbody tr td:nth-child(2) {
+  word-wrap: break-word;
+  max-width: 104px;
+  overflow: hidden;
+}

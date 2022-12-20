@@ -126,7 +126,7 @@ class webshell_check:
     # 获取规则
     def get_rule(self):
         return  self.__rule
-        
+
 
     def get_dir(self, path):
         return_data = []

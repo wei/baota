@@ -516,4 +516,4 @@ class panelDaily :#line:30
         for OOOOO00OOO0O00OOO in OOO0O0OO000OO00OO :#line:799
             OOOOO00OOO0O00OOO ["evaluate"]=O00O00O000OOO0O0O .evaluate (OOOOO00OOO0O00OOO ["evaluate"])#line:800
             O0O0OOO0O00O0O00O .append (OOOOO00OOO0O00OOO )#line:801
-        return O0O0OOO0O00O0O00O 
+        return O0O0OOO0O00O0O00O

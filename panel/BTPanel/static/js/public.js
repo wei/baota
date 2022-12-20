@@ -2037,33 +2037,9 @@ function ajaxSetup () {
             success: function () {
               $('pre').scrollTop(100000000000)
 
-              $('.error_kefu_consult').click(function(){wechatKefuConsult()})
-              // 人工服务   带有参数为售前客服
-              function wechatKefuConsult(){
-                layer.open({
-                  type: 1,
-                  area: ['300px', '290px'],
-                  title: false,
-                  closeBtn: 2,
-                  shift: 0,
-                  content: '<div class="service_consult">\
-                        <div class="service_consult_title">请打开微信"扫一扫"</div>\
-                        <div class="contact_consult" style="margin-bottom: 5px;"><div id="contact_consult_qcode"></div><i class="wechatEnterprise"></i></div>\
-                        <div>【微信客服】</div>\
-                        <ul class="c7" style="margin-top:22px;text-align: center;">\
-                            <li>工作时间：9:15 - 18:00</li>\
-                        </ul>\
-                    </div>',
-                  success:function(){
-                    $('#contact_consult_qcode').qrcode({
-                      render: "canvas",
-                      width: 140,
-                      height: 140,
-                      text:'https://work.weixin.qq.com/kfid/kfcc6f97f50f727a020'
-                    });
-                  }
-                })
-              }
+              $('.error_kefu_consult').click(function(){
+                bt.onlineService()
+              })
             }
           });
         }, 100)
@@ -2921,7 +2897,12 @@ function setPassword (a) {
       });
       return
     }
-    $.post("/config?action=setPassword", "password1=" + encodeURIComponent(p1) + "&password2=" + encodeURIComponent(p2), function (b) {
+    var pdata = {
+        password1: rsa.encrypt_public(p1),
+        password2: rsa.encrypt_public(p2)
+    }
+
+    $.post("/config?action=setPassword",pdata, function (b) {
       if (b.status) {
         layer.closeAll();
         layer.msg(b.msg, {
@@ -2982,8 +2963,12 @@ function setUserName (a) {
       });
       return;
     }
+    var pdata = {
+        username1: rsa.encrypt_public(p1),
+        username2: rsa.encrypt_public(p2)
+    }
 
-    $.post("/config?action=setUsername", "username1=" + encodeURIComponent(p1) + "&username2=" + encodeURIComponent(p2), function (b) {
+    $.post("/config?action=setUsername", pdata, function (b) {
       if (b.status) {
         layer.closeAll();
         layer.msg(b.msg, {
@@ -3800,19 +3785,27 @@ function reader_realtime_tasks (refresh) {
         pre.scrollTop(pre[0].scrollHeight)
       }
       if (task[0].status === '-1' && refresh) {
-        messageBoxWssock = bt_tools.command_line_output({
-          el: '#command_install_list .command_output_pre',
-          area: ['100%', '200px'],
-          shell: 'tail -n 100 -f /tmp/panelExec.log',
-          message: function (res) {
-            clearTimeout(initTime)
-            if (res.indexOf('|-Successify --- 命令已执行! ---') > -1) {
-              reader_realtime_tasks(true)
-              reader_message_list()
-              initTime = setTimeout(function () {
-                messageBoxWssock.close_connect()
-              },1000 * 30)
-            }
+        get_realtime_tasks(function (rdata) {
+          $('#taskNum').html(typeof rdata.task === "undefined" ? 0 : rdata.task.length);
+          if (typeof rdata.task === "undefined") {
+            html = '<div style="padding:5px;height: 510px;">当前没有任务！</div><div style="padding-left: 5px;">若任务长时间未执行，请尝试在首页点【重启面板】来重置任务队列</div>'
+            command_install_list.html(html)
+          }else{
+            messageBoxWssock = bt_tools.command_line_output({
+              el: '#command_install_list .command_output_pre',
+              area: ['100%', '200px'],
+              shell: 'tail -n 100 -f /tmp/panelExec.log',
+              message: function (res) {
+                clearTimeout(initTime)
+                if (res.indexOf('|-Successify --- 命令已执行! ---') > -1) {
+                  reader_realtime_tasks(true)
+                  reader_message_list()
+                  initTime = setTimeout(function () {
+                    messageBoxWssock.close_connect()
+                  },1000 * 30)
+                }
+              }
+            })
           }
         })
       }
@@ -4587,6 +4580,8 @@ BindAccount.prototype = {
   getAuthToken: function (param) {
     var _this = this;
     var loadT = bt.load('正在绑定堡塔账号，请稍候...');
+    param.username = rsa.encrypt_public(param.username);
+    param.password = rsa.encrypt_public(param.password);
     bt.send('GetAuthToken', 'ssl/GetAuthToken', param, function (rdata) {
       loadT.close();
       if (rdata.status) {
@@ -5242,8 +5237,7 @@ var fileManage = {
             return { path: row.rname };
           },
           callback: function (that) {
-            bt.confirm({ title: '批量删除文件', msg: '是否批量删除选中的文件，文件将彻底删除，不可恢复，是否继续？', icon: 0 }, function (index) {
-              layer.close(index);
+            bt.input_confirm({ title: '批量删除文件',value: '删除文件',msg: '批量删除选中的文件后，<span class="color-org">文件将彻底删除，不可恢复</span>，是否继续操作？'}, function () {
               that.start_batch({}, function (list) {
                 var html = '';
                 for (var i = 0; i < list.length; i++) {
@@ -5798,3 +5792,30 @@ function wxAccountBind() {
 }
 /*重构版结束*/
 
+var rsa = {
+    publicKey: null,
+    /**
+     * @name 使用公钥加密
+     * @param {string} text
+     * @returns string
+     */
+    encrypt_public:function(text){
+        this.publicKey = document.querySelector(".public_key").attributes.data.value;
+        if(this.publicKey.length < 10) return text;
+        var encrypt = new JSEncrypt();
+        encrypt.setPublicKey(this.publicKey);
+        return encrypt.encrypt(text);
+    },
+    /**
+     * @name 使用公钥解密
+     * @param {string} text
+     * @returns string
+     */
+    decrypt_public:function(text){
+        this.publicKey = document.querySelector(".public_key").attributes.data.value;
+        if(this.publicKey.length < 10) return null;
+        var decrypt = new JSEncrypt();
+        decrypt.setPublicKey(this.publicKey);
+        return decrypt.decryptp(text);
+    }
+}

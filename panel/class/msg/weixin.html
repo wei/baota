@@ -16,7 +16,7 @@
         </div>
         <div class="line">
             <ul class="help-info-text c7">
-                <li>默认通知全体，不可更改</li>            
+                <li>默认通知全体，不可更改</li>
             </ul>
         </div>
     </div>
@@ -27,7 +27,7 @@
     var weixin = {
         all_info: {},
         init: function () {
-            this.all_info = $('.alarm-view .bt-w-menu p.bgw').data('data'); //设置全局数据           
+            this.all_info = $('.alarm-view .bt-w-menu p.bgw').data('data'); //设置全局数据
             this.get_weixin_data();
         },
         /**
@@ -35,7 +35,7 @@
         */
         get_weixin_data: function () {
             var that = this;
-           
+
             if (weixin.all_info['data']) {
                 $('textarea[name=channel_weixin_value]').val(weixin.all_info['data']['weixin_url']);
             }

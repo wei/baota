@@ -243,6 +243,7 @@ class crontab:
         1,get['save'],get['backupTo'],get['sType'],get['sName'],get['sBody'],
         get['urladdress'], get["save_local"], get['notice'], get['notice_channel'])
         addData=public.M('crontab').add(columns,values)
+        public.add_security_logs('计划任务',' 添加计划任务['+get['name']+']成功'+str(values))
         if type(addData) == str:
             return public.returnMsg(False, addData)
         if addData>0:
@@ -369,6 +370,7 @@ class crontab:
 
             public.M('crontab').where("id=?",(id,)).delete()
             public.WriteLog('TYPE_CRON', 'CRONTAB_DEL',(find['name'],))
+            public.add_security_logs("删除计划任务", " 删除计划任务:" + find['name'])
             return public.returnMsg(True, 'DEL_SUCCESS')
         except:
             return public.returnMsg(False, 'DEL_ERROR')

@@ -84,10 +84,11 @@ class SiteDirAuth:
             return public.returnMsg(False, '已经设置站点密码保护，请取消后再设置 站点配置 --> 站点目录 --> 密码访问')
         #检测目录是否已经设置过  hezhihong
         result=self._check_dir_auth(site_name, name, site_dir)
-        if '1' in result:
-            return public.returnMsg(False, '目录已经保护！')
-        elif '2' in result:
-            return public.returnMsg(False, '此名称已存在！')
+        if isinstance(result,list) and result:
+            if '1' in result:
+                return public.returnMsg(False, '目录已经保护！')
+            elif '2' in result:
+                return public.returnMsg(False, '此名称已存在！')
         auth = "{user}:{passwd}".format(user=username, passwd=passwd)
         auth_file = '{setup_path}/pass/{site_name}'.format(setup_path=self.setup_path, site_name=site_name)
         if not os.path.exists(auth_file):

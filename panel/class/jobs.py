@@ -48,6 +48,8 @@ def clear_other_files():
     dirPath = '/www/server/nginx/waf'
     if os.path.exists(dirPath):
         public.ExecShell("rm -rf {}".format(dirPath))
+        public.ExecShell("/etc/init.d/nginx reload")
+        public.ExecShell("/etc/init.d/nginx start")
     dirPath = '/www/server/adminer'
     if os.path.exists(dirPath):
         public.ExecShell("rm -rf {}".format(dirPath))
@@ -228,6 +230,17 @@ def sql_pacth():
 `addtime` INTEGER
 )'''
         sql.execute(csql,())
+
+
+    if not sql.table('sqlite_master').where('type=? AND name=?', ('table', 'security')).count():
+        csql = '''CREATE TABLE IF NOT EXISTS `security` (
+    `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+    `type` TEXT,
+    `log` TEXT,
+    `addtime` INTEGER DEFAULT 0
+    )'''
+        sql.execute(csql, ())
+
 
     test_ping()
     if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'logs','%username%')).count():

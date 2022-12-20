@@ -720,6 +720,14 @@ class ajax:
         if 'tmp_login_id' in session:
             return public.returnMsg(False,'没有权限!')
 
+        # 备份近100条日志
+        new_bak = public.M('logs').limit('100').select()
+        if len(new_bak) > 3:
+            bak_file = '{}/data/logs.bak'.format(public.get_panel_path())
+            public.writeFile(bak_file,json.dumps(new_bak))
+
+        # 清空日志
+        public.add_security_logs("清空日志", '清空所有日志条数为:{}'.format(public.M('logs').count()))
         public.M('logs').where('id>?',(0,)).delete()
         public.WriteLog('TYPE_CONFIG','LOG_CLOSE')
         return public.returnMsg(True,'LOG_CLOSE')

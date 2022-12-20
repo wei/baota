@@ -813,7 +813,9 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
             if get.path == '1':
                 import files
                 get.path = self.__get_site_format_path(public.M('sites').where("id=?",(id,)).getField('path'))
-                if self.__check_site_path(get.path): files.files().DeleteDir(get)
+                if self.__check_site_path(get.path):
+                    if public.M('sites').where("path=?", (get.path,)).count() < 2:
+                        files.files().DeleteDir(get)
                 get.path =  '1'
 
         #重载配置
@@ -944,6 +946,8 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
 
         get.domain = ','.join(domains)
         return self.AddDomain(get)
+
+
 
     #添加域名
     def AddDomain(self,get,multiple = None):
@@ -1705,8 +1709,13 @@ listener SSL443 {
 
     # 添加SSL配置
     def SetSSLConf(self, get):
+        """
+        @name 兼容批量设置
+        @auther hezhihong
+        """
         siteName = get.siteName
         if not 'first_domain' in get: get.first_domain = siteName
+        if 'isBatch' in get and siteName !=get.first_domain:get.first_domain=siteName
 
         # Nginx配置
         file = self.setupPath + '/panel/vhost/nginx/' + siteName + '.conf'
@@ -1741,8 +1750,11 @@ listener SSL443 {
     error_page 497  https://$host$request_uri;
 """ % (get.first_domain, get.first_domain,self.get_tls13())
                 if (conf.find('ssl_certificate') != -1):
-                    public.serviceReload()
-                    return public.returnMsg(True, 'SITE_SSL_OPEN_SUCCESS')
+                    if 'isBatch' not in get:
+                        public.serviceReload()
+                        return public.returnMsg(True, 'SITE_SSL_OPEN_SUCCESS')
+                    else:
+                        return True
 
                 conf = conf.replace('#error_page 404/404.html;', sslStr)
                 conf = re.sub(r"\s+\#SSL\-END","\n\t\t#SSL-END",conf)
@@ -1821,7 +1833,11 @@ listener SSL443 {
                     # rep = r"php-cgi-([0-9]{2,3})\.sock"
                     # version = re.search(rep, conf).groups()[0]
                     version = public.get_php_version_conf(conf)
-                    if len(version) < 2: return public.returnMsg(False, 'PHP_GET_ERR')
+                    if len(version) < 2:
+                        if 'isBatch' not in get:
+                            return public.returnMsg(False, 'PHP_GET_ERR')
+                        else:
+                            return False
                     phpConfig = '''
     #PHP
     <FilesMatch \\.php$>
@@ -1898,20 +1914,24 @@ listener SSL443 {
             if os.path.exists(self.nginx_conf_bak): shutil.copyfile(self.nginx_conf_bak, ng_file)
             if os.path.exists(self.apache_conf_bak): shutil.copyfile(self.apache_conf_bak, file)
             public.ExecShell("rm -f /tmp/backup_*.conf")
-            return public.returnMsg(False, '证书错误: <br><a style="color:red;">' + isError.replace("\n", '<br>') + '</a>')
+            if 'isBatch' not in get:
+                return public.returnMsg(False, '证书错误: <br><a style="color:red;">' + isError.replace("\n", '<br>') + '</a>')
+            else:
+                return False
 
         sql = public.M('firewall')
         import firewalls
         get.port = '443'
         get.ps = 'HTTPS'
-        firewalls.firewalls().AddAcceptPort(get)
-        public.serviceReload()
+        if 'isBatch' not in get:firewalls.firewalls().AddAcceptPort(get)
+        if 'isBatch' not in get:public.serviceReload()
         self.save_cert(get)
         public.WriteLog('TYPE_SITE', 'SITE_SSL_OPEN_SUCCESS', (siteName,))
         result = public.returnMsg(True, 'SITE_SSL_OPEN_SUCCESS')
         result['csr'] = public.readFile('/www/server/panel/vhost/cert/' + get.siteName + '/fullchain.pem')
         result['key'] = public.readFile( '/www/server/panel/vhost/cert/' + get.siteName + '/privkey.pem')
-        return result
+        if 'isBatch' not in get:return result
+        else:return True
 
     def save_cert(self, get):
         # try:
@@ -2723,13 +2743,15 @@ listener SSL443 {
         id = get.id
         tmp = get.domain.split(':')
         domain = tmp[0].lower()
+        # 中文域名转码
+        domain = public.en_punycode(domain)
         port = '80'
         version = ''
         if len(tmp) > 1: port = tmp[1]
         if not hasattr(get,'dirName'): public.returnMsg(False, 'DIR_EMPTY')
         dirName = get.dirName
 
-        reg = "^([\w\-\*]{1,100}\.){1,4}(\w{1,10}|\w{1,10}\.\w{1,10})$"
+        reg = "^([\w\-\*]{1,100}\.){1,4}([\w\-]{1,100}|[\w\-]{1,100}\.[\w\-]{1,100})$"
         if not re.match(reg, domain): return public.returnMsg(False,'SITE_ADD_ERR_DOMAIN')
 
         siteInfo = public.M('sites').where("id=?",(id,)).field('id,path,name').find()
@@ -3522,8 +3544,9 @@ server
             except:
                 del_failed[proxyname] = '删除时错误，请再试一次'
                 pass
-        return {'status': True, 'msg': '删除反向代理 [ {} ] 成功'.format(','.join(del_failed)), 'error': del_failed,
+        return {'status': True, 'msg': '删除反向代理 [ {} ] 成功'.format(','.join(del_successfully)), 'error': del_failed,
                 'success': del_successfully}
+
 
     # 删除反向代理
     def RemoveProxy(self, get, multiple=None):
@@ -3927,7 +3950,7 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
                     if get.proxysite[-1] == '/' or get.proxysite.count('/') > 2 or '?' in get.proxysite:
                         php_pass_proxy = re.search('(https?\:\/\/[\w\.]+)', get.proxysite).group(0)
                     # ng_conf = re.sub("location\s+%s" % conf[i]["proxydir"],"location "+get.proxydir,ng_conf)
-                    ng_conf = re.sub("location\s+[\^\~]*\s?%s" % conf[i]["proxydir"], "location ^~ " + get.proxydir,ng_conf)
+                    ng_conf = re.sub("location\s+[\^\~]*\s?%s" % conf[i]["proxydir"], "location " + get.proxydir,ng_conf)
                     ng_conf = re.sub("proxy_pass\s+%s" % conf[i]["proxysite"],"proxy_pass "+get.proxysite,ng_conf)
                     ng_conf = re.sub("location\s+\~\*\s+\\\.\(php.*\n\{\s*proxy_pass\s+%s.*" % (php_pass_proxy),
                                      "location ~* \.(php|jsp|cgi|asp|aspx)$\n{\n\tproxy_pass %s;" % php_pass_proxy,ng_conf)
@@ -4122,7 +4145,7 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
         ng_proxy = '''
 #PROXY-START%s
 
-location ^~ %s
+location %s
 {
     proxy_pass %s;
     proxy_set_header Host %s;

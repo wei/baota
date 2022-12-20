@@ -112,6 +112,7 @@ class Compress(object):
             (response.content_length is not None and
              response.content_length < app.config['COMPRESS_MIN_SIZE']) or
             'Content-Encoding' in response.headers):
+            g.response = response
             return response
 
         response.direct_passthrough = False
@@ -133,7 +134,7 @@ class Compress(object):
                 response.headers['Vary'] = '{}, Accept-Encoding'.format(vary)
         else:
             response.headers['Vary'] = 'Accept-Encoding'
-
+        g.response = response
         return response
 
     def compress(self, app, response):

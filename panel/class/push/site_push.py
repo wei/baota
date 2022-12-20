@@ -92,6 +92,17 @@ class site_push:
         return result
 
 
+    def clear_push_count(self,id):
+        """
+        @清除推送次数
+        """
+        try:
+            #编辑后清理推送次数标记
+            tip_file = '{}/data/push/tips/{}'.format(public.get_panel_path(),id)
+            if os.path.exists(tip_file):
+                os.remove(tip_file)
+        except:pass
+
 
     def set_push_config(self,get):
         """
@@ -103,6 +114,8 @@ class site_push:
 
         data = self.__push._get_conf()
         if not module in data:data[module] = {}
+
+        self.clear_push_count(id)
 
         is_create = True
         if pdata['type'] in ['ssl']:
@@ -168,6 +181,7 @@ class site_push:
         """
         id = get.id
         module = get.name
+        self.clear_push_count(id)
 
         data = self.__push.get_push_list(get)
         info = data[module][id]
@@ -177,7 +191,7 @@ class site_push:
             args = public.dict_obj()
             args.type = info['module'].strip()
             res = c_obj.clear_login_send(args)
-            public.print_log(json.dumps(res))
+            # public.print_log(json.dumps(res))
             if not res['status']: return res
         elif id in ['ssh_login']:
 
@@ -234,6 +248,198 @@ class site_push:
     def get_total(self):
         return True
 
+    def get_ssl_push_data(self,data):
+        """
+        @name 获取SSL推送数据
+        @param data
+            type = ssl
+            project = 项目名称
+            siteName = 站点名称
+        """
+
+        if time.time() < data['index'] + 86400:
+            return public.returnMsg(False,"SSL一天推送一次，跳过.")
+
+        push_keys = []
+        ssl_list = []
+        sql = public.M('sites')
+        if data['project'] == 'all':
+            #过滤单独设置提醒的网站
+            n_list = []
+            try:
+                push_list = self.__push._get_conf()['site_push']
+                for skey in push_list:
+                    p_name = push_list[skey]['project']
+                    if p_name != 'all': n_list.append(p_name)
+            except : pass
+
+            #所有正常网站
+            web_list =  sql.where('status=1',()).select()
+            for web in web_list:
+                project_type = ''
+                if web['name'] in n_list: continue
+                if web['name'] in data['tips_list']: continue
+
+                if not web['project_type'] in ['PHP']:
+                    project_type = web['project_type'].lower() + '_'
+
+                nlist = []
+                info = self.__check_endtime(web['name'],data['cycle'],project_type)
+                if type(info) != list:
+                    nlist.append(info)
+                else:
+                    nlist = info
+
+                for info in nlist:
+                    if not info: continue
+                    info['siteName'] = web['name']
+                    push_keys.append(web['name'])
+                    ssl_list.append(info)
+        else:
+            project_type = ''
+            find = sql.where('name=? and status=1',(data['project'],)).find()
+            if not find: return public.returnMsg(False,"没有可用的站点.")
+
+            if not find['project_type'] in ['PHP']:
+                project_type = find['project_type'].lower() + '_'
+
+            nlist = []
+            info = self.__check_endtime(find['name'],data['cycle'],project_type)
+            if type(info) != list:
+                nlist.append(info)
+            else:
+                nlist = info
+
+            for info in nlist:
+                if not info: continue
+                info['siteName'] = find['name']
+                ssl_list.append(info)
+
+        return self.__get_ssl_result(data,ssl_list,push_keys)
+
+    def get_panel_update_data(self,data):
+        """
+        @name 获取面板更新推送
+        @param push_keys array 推送次数缓存key
+        """
+        stime = time.time()
+        result = {'index': stime ,'push_keys':[data['id']]}
+
+        #面板更新提醒
+        if stime < data['index'] + 86400:
+            return public.returnMsg(False,"一天推送一次，跳过.")
+
+        s_url = '{}/api/panel/updateLinux'
+        if public.get_os('windows'): s_url = '{}/api/wpanel/updateWindows'
+        s_url = s_url.format('https://www.bt.cn')
+
+        try:
+            res = json.loads(public.httpPost(s_url,{}))
+            if not res: return public.returnMsg(False,"获取更新信息失败.")
+        except:pass
+
+        n_ver = res['version']
+        if res['is_beta']:
+            n_ver = res['beta']['version']
+
+        old_ver = public.get_cache_func(data['type'])['data']
+        if not old_ver:
+            public.set_cache_func(data['type'],n_ver)
+        else:
+            if old_ver == n_ver:
+                #处理推送次数逻辑
+                if data['id'] in data['tips_list']:
+                    print('已超过通知次数，跳过.')
+                    return result
+            else:
+                #清除缓存
+                data['tips_list'] = []
+                try:
+                    tips_path = '{}/data/push/tips/{}'.format(public.get_panel_path(),data['id'])
+                    os.remove(tips_path)
+                    print('已发现新版本，重新计数通知次数.')
+                except:pass
+                public.set_cache_func(data['type'],n_ver)
+
+        if public.version() != n_ver:
+            for m_module in data['module'].split(','):
+                if m_module == 'sms': continue
+
+                s_list = [">通知类型：面板版本更新",">当前版本：{} ".format(public.version()),">最新版本：{}".format(n_ver)]
+                sdata = public.get_push_info('面板更新提醒',s_list)
+                result[m_module] = sdata
+
+        return result
+
+    def get_panel_saft_push(self,data,result):
+        s_list = []
+        #面板登录用户安全
+        t_add,t_del,total = self.get_records_calc('login_user_safe',public.M('users'))
+        if t_add > 0 or t_del > 0:
+            s_list.append(">登录用户变更：<font color=#ff0000>总 {} 个，新增 {} 个 ，删除 {} 个</font>.".format(total,t_add,t_del))
+
+        #面板日志发生删除
+        t_add,t_del,total = self.get_records_calc('panel_logs_safe',public.M('logs'),1)
+        if t_del > 0:
+            s_list.append(">面板日志发生删除，删除条数：<font color=#ff0000>{} 条</font>".format(t_del))
+
+        debug_str = '关闭'
+        debug_status = 'False'
+        #面板开启开发者模式告警
+        if os.path.exists('{}/data/debug.pl'.format(public.get_panel_path())):
+            debug_status = 'True'
+            debug_str = '开启'
+
+        skey = 'panel_debug_safe'
+        tmp = public.get_cache_func(skey)['data']
+        if not tmp:
+            public.set_cache_func(skey,debug_status)
+        else:
+            if str(debug_status) != tmp:
+                s_list.append(">面板开发者模式发生变更，当前状态：{}".format(debug_str))
+                public.set_cache_func(skey,debug_status)
+
+        # #面板开启api告警
+        # api_str = 'False'
+        # s_path = '{}/config/api.json'.format(public.get_panel_path())
+        # if os.path.exists(s_path):
+        #     api_str = public.readFile(s_path).strip()
+        #     if not api_str: api_str = 'False'
+
+        # api_str = public.md5(api_str)
+        # skey = 'panel_api_safe'
+        # tmp = public.get_cache_func(skey)['data']
+        # if not tmp:
+        #     public.set_cache_func(skey,api_str)
+        # else:
+        #     if api_str != tmp:
+        #         s_list.append(">面板API配置发生改变，请及时确认是否本人操作.")
+        #         public.set_cache_func(skey,api_str)
+
+
+        #面板用户名和密码发生变更
+        find = public.M('users').where('id=?',(1,)).find()
+
+        if find:
+            skey = 'panel_user_change_safe'
+            user_str = public.md5(find['username']) + '|' + public.md5(find['password'])
+            tmp = public.get_cache_func(skey)['data']
+            if not tmp:
+                public.set_cache_func(skey,user_str)
+            else:
+                if user_str != tmp:
+                    s_list.append(">面板登录帐号或密码发生变更")
+                    public.set_cache_func(skey,user_str)
+
+
+        if len(s_list) > 0:
+            sdata = public.get_push_info('宝塔面板安全告警',s_list)
+            for m_module in data['module'].split(','):
+                if m_module == 'sms': continue
+                result[m_module] = sdata
+
+        return result
+
     def get_push_data(self,data,total):
         """
         @检测推送数据
@@ -245,54 +451,26 @@ class site_push:
             keys:检测键值
         """
         stime = time.time()
-        result = {'index': stime}
+        if not 'tips_list' in data: data['tips_list'] = []
+        if not 'project' in data: data['project'] = ''
+
+        #优先处理面板更新
+        if data['type'] in ['panel_update']:
+            return self.get_panel_update_data(data)
+
+        result = {'index': stime ,'push_keys':[data['id']]}
+        if data['project']:
+            result['push_keys'] = [data['project']]
+
+        #检测推送次数,超过次数不再推送
+        if data['project'] in data['tips_list'] or  data['id'] in data['tips_list']:
+            return result
 
         if data['type'] in ['ssl']:
-            if time.time() < data['index'] + 86400:
-                return public.returnMsg(False,"SSL一天推送一次，跳过.")
+            return self.get_ssl_push_data(data)
 
-            ssl_list = []
-
-            sql = public.M('sites')
-            if data['project'] == 'all':
-
-                #过滤单独设置提醒的网站
-                n_list = []
-                try:
-                    push_list = self.__push._get_conf()['site_push']
-                    for skey in push_list:
-                        p_name = push_list[skey]['project']
-                        if p_name != 'all': n_list.append(p_name)
-                except : pass
-
-                #所有正常网站
-                web_list =  sql.where('status=1',()).select()
-                for web in web_list:
-                    project_type = ''
-                    if web in n_list: continue
-
-                    if not web['project_type'] in ['PHP']:
-                        project_type = web['project_type'].lower() + '_'
-
-                    info = self.__check_endtime(web['name'],data['cycle'],project_type)
-                    if info:
-                        info['siteName'] = web['name']
-                        ssl_list.append(info)
-            else:
-                project_type = ''
-                find = sql.where('name=? and status=1',(data['project'],)).find()
-                if not find: return public.returnMsg(False,"没有可用的站点.")
-
-                if not find['project_type'] in ['PHP']:
-                    project_type = find['project_type'].lower() + '_'
-
-                info = self.__check_endtime(find['name'],data['cycle'],project_type)
-                if info:
-                    info['siteName'] = find['name']
-                    ssl_list.append(info)
-
-            return self.__get_ssl_result(data,ssl_list)
         elif data['type'] in ['site_endtime']:
+            result['push_keys'] = []
 
             if stime < data['index'] + 86400:
                 return public.returnMsg(False,"一天推送一次，跳过.")
@@ -306,6 +484,9 @@ class site_push:
 
                     s_list = ['>即将到期：<font color=#ff0000>{} 个站点</font>'.format(len(web_list))]
                     for x in web_list:
+                        if x['name'] in data['tips_list']: continue
+                        result['push_keys'].append(x['name'])
+
                         s_list.append(">网站：{}  到期：{}".format(x['name'],x['edate']))
 
                     sdata = public.get_push_info('宝塔面板网站到期提醒',s_list)
@@ -355,75 +536,7 @@ class site_push:
                     return result
 
         elif data['type'] in ['panel_safe_push']:
-            #面板安全告警
-
-            s_list = []
-            #面板登录用户安全
-            t_add,t_del,total = self.get_records_calc('login_user_safe',public.M('users'))
-            if t_add > 0 or t_del > 0:
-                s_list.append(">登录用户变更：<font color=#ff0000>总 {} 个，新增 {} 个 ，删除 {} 个</font>.".format(total,t_add,t_del))
-
-            #面板日志发生删除
-            t_add,t_del,total = self.get_records_calc('panel_logs_safe',public.M('logs'),1)
-            if t_del > 0:
-                s_list.append(">面板日志发生删除，删除条数：<font color=#ff0000>{} 条</font>".format(t_del))
-
-            debug_str = '关闭'
-            debug_status = 'False'
-            #面板开启开发者模式告警
-            if os.path.exists('{}/data/debug.pl'.format(public.get_panel_path())):
-                debug_status = 'True'
-                debug_str = '开启'
-
-            skey = 'panel_debug_safe'
-            tmp = public.get_cache_func(skey)['data']
-            if not tmp:
-                public.set_cache_func(skey,debug_status)
-            else:
-                if str(debug_status) != tmp:
-                    s_list.append(">面板开发者模式发生变更，当前状态：{}".format(debug_str))
-                    public.set_cache_func(skey,debug_status)
-
-            #面板开启api告警
-            api_str = 'False'
-            s_path = '{}/config/api.json'.format(public.get_panel_path())
-            if os.path.exists(s_path):
-                api_str = public.readFile(s_path).strip()
-                if not api_str: api_str = 'False'
-
-            api_str = public.md5(api_str)
-            skey = 'panel_api_safe'
-            tmp = public.get_cache_func(skey)['data']
-            if not tmp:
-                public.set_cache_func(skey,api_str)
-            else:
-                if api_str != tmp:
-                    s_list.append(">面板API配置发生改变，请及时确认是否本人操作.")
-                    public.set_cache_func(skey,api_str)
-
-
-            #面板用户名和密码发生变更
-            find = public.M('users').where('id=?',(1,)).find()
-
-            if find:
-                skey = 'panel_user_change_safe'
-                user_str = public.md5(find['username']) + '|' + public.md5(find['password'])
-                tmp = public.get_cache_func(skey)['data']
-                if not tmp:
-                    public.set_cache_func(skey,user_str)
-                else:
-                    if user_str != tmp:
-                        s_list.append(">面板登录帐号或密码发生变更")
-                        public.set_cache_func(skey,user_str)
-
-
-            if len(s_list) > 0:
-                sdata = public.get_push_info('宝塔面板安全告警',s_list)
-                for m_module in data['module'].split(','):
-                    if m_module == 'sms': continue
-                    result[m_module] = sdata
-
-                return result
+            return self.get_panel_safe_push(data,result)
 
         elif data['type'] in ['panel_oneav_push']:
             #微步在线木马扫描提醒
@@ -460,33 +573,6 @@ class site_push:
                 result[m_module] = sdata
             return result
 
-        elif data['type'] in ['panel_update']:
-
-            #面板更新提醒
-            if stime < data['index'] + 86400:
-                return public.returnMsg(False,"一天推送一次，跳过.")
-
-            s_url = '{}/api/panel/updateLinux'
-            if public.get_os('windows'): s_url = '{}/api/wpanel/updateWindows'
-            s_url = s_url.format('https://www.bt.cn')
-
-            try:
-                res = json.loads(public.httpPost(s_url,{}))
-                if not res: return public.returnMsg(False,"获取更新信息失败.")
-            except:pass
-
-            n_ver = res['version']
-            if res['is_beta']:
-                n_ver = res['beta']['version']
-
-            if public.version() != n_ver:
-                for m_module in data['module'].split(','):
-                    if m_module == 'sms': continue
-
-                    s_list = [">通知类型：面板版本更新",">当前版本：{} ".format(public.version()),">最新版本：{}".format(n_ver)]
-                    sdata = public.get_push_info('面板更新提醒',s_list)
-                    result[m_module] = sdata
-                return result
         elif data['type'] in ['ssh_login_error']:
 
             #登录失败次数
@@ -587,7 +673,7 @@ class site_push:
 
         return False
 
-    def __get_ssl_result(self,data,clist):
+    def __get_ssl_result(self,data,clist,push_keys = []):
         """
         @ssl到期返回
         @data dict 推送数据
@@ -597,7 +683,7 @@ class site_push:
         if len(clist) == 0:
             return public.returnMsg(False,"未找到到期证书，跳过.")
 
-        result = {'index':time.time() }
+        result = {'index':time.time(),'push_keys':push_keys }
         for m_module in data['module'].split(','):
             if m_module in self.__push_model:
 

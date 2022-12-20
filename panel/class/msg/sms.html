@@ -10,7 +10,7 @@
             <li><span style="color:red">重要：开启短信登录【必须开启安全入口】，否则存在【安全风险】</span></li>
             <li>当前短信仅支持面板消息推送</li>
             <li>如需面板部分功能需要增加短信推送，请联系客服</li>
-            <li>如需购买短信条数，请联系微信客服<a class="btlink" onclick="wechatKefuConsult()">微信客服</a></li>
+            <li>如需购买短信条数，请联系微信客服<a class="btlink" onclick="bt.onlineService()">微信客服</a></li>
         </ul>
     </div>
 </div>
@@ -51,7 +51,7 @@
                     _ev.prop('checked',!_ev.prop('checked'))
                 })
             })
-        },     
+        },
         set_config_data: function () {
             var that = this
             $.post('/config?action=set_msg_config&name=sms', {login:$('#panel_login').prop('checked')?1:0}, function (rdata) {

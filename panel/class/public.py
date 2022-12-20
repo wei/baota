@@ -275,7 +275,10 @@ def GetJson(data):
     from json import dumps
     if data == bytes: data = data.decode('utf-8')
     try:
-        return dumps(data,ensure_ascii=False)
+        try:
+            return dumps(data)
+        except:
+            return dumps(data,ensure_ascii=False)
     except:
         return dumps(returnMsg(False,"错误的响应: %s" % str(data)))
 
@@ -381,8 +384,9 @@ def WriteLog(type,logMsg,args=(),not_web = False):
         mDate = time.strftime('%Y-%m-%d %X',time.localtime())
         data = (uid,username,type,logMsg + tmp_msg,mDate)
         result = sql.table('logs').add('uid,username,type,log,addtime',data)
+        return result
     except:
-        pass
+        return None
 
 def GetLanguage():
     '''
@@ -570,7 +574,7 @@ def GetLocalIp():
         filename = 'data/iplist.txt'
         ipaddress = readFile(filename)
         if not ipaddress:
-            url = 'http://pv.sohu.com/cityjson?ie=utf-8'
+            url = GetConfigValue('home') + '/Api/getIpAddress'
             m_str = HttpGet(url)
             ipaddress = re.search(r"^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}$",m_str).group(0)
             WriteFile(filename,ipaddress)
@@ -1010,7 +1014,7 @@ REQUEST_FORM: {request_form}
     remote_addr = GetClientIp(),
     method = request.method,
     full_path = url_encode(xsssec(request.full_path)),
-    request_form = request.form.to_dict(),
+    request_form = xsssec(str(request.form.to_dict())),
     user_agent = xsssec(request.headers.get('User-Agent')),
     panel_version = version(),
     os_version = get_os_version()
@@ -1633,6 +1637,10 @@ def xssencode(text):
 def xsssec(text):
     return text.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
 
+#xss 防御
+def xsssec2(text):
+    return text.replace('<', '&lt;').replace('>', '&gt;')
+
 #xss version
 def xss_version(text):
     try:
@@ -1657,14 +1665,58 @@ def xssencode2(text):
         return text2
     except:
         return text.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
+
+def html_decode(text):
+    '''
+        @name HTML解码
+        @author hwliang
+        @param text 要解码的HTML
+        @return string 返回解码后的HTML
+    '''
+    try:
+        from cgi import html
+        text2=html.unescape(text)
+        return text2
+    except:
+        return text
+
+def html_encode(text):
+    '''
+        @name HTML编码
+        @author hwliang
+        @param text 要编码的HTML
+        @return string 返回编码后的HTML
+    '''
+    try:
+        from cgi import html
+        text2=html.escape(text)
+        return text2
+    except:
+        return text
 # 取缓存
 def cache_get(key):
     from BTPanel import cache
     return cache.get(key)
 
+def add_security_logs(type,log,is_ip=True):
+    try:
+        if is_ip:
+            from flask import request
+            log=GetClientIp() + ":" + str(request.environ.get('REMOTE_PORT')) +  log
+        M('security').add('type,log,addtime', (type,log,time.strftime('%Y-%m-%d %X',time.localtime())))
+    except:
+       pass
+
 # 设置缓存
 def cache_set(key,value,timeout = None):
     from BTPanel import cache
+    if value=='check':
+        admin_path="/www/server/panel/data/admin_path.pl"
+        path=ReadFile(admin_path)
+        if path and len(path)>3:
+            if not cache.get(GetClientIp()+'admin_path_info'):
+                add_security_logs("安全入口正确", "访问安全入口成功")
+                cache.set(GetClientIp() + 'admin_path_info', 1, 60)
     return cache.set(key,value,timeout)
 
 # 删除缓存
@@ -1808,9 +1860,6 @@ def write_request_log(reques = None):
     try:
         from BTPanel import request,g,session
         if session.get('debug') == 1: return
-        if request.path in ['/service_status','/favicon.ico','/task','/system','/ajax','/control','/data','/ssl']:
-            return False
-
         log_path = '{}/logs/request'.format(get_panel_path())
         log_file = getDate(format='%Y-%m-%d') + '.json'
         if not os.path.exists(log_path): os.makedirs(log_path)
@@ -1822,17 +1871,26 @@ def write_request_log(reques = None):
         log_data.append(request.full_path)
         log_data.append(request.headers.get('User-Agent'))
         if request.method == 'POST':
-            args = str(request.form.to_dict())
-            if len(args) < 2048 and args.find('pass') == -1 and args.find('user') == -1:
-                log_data.append(args)
-            else:
-                log_data.append('{}')
+            args = request.form.to_dict()
+            for k in args.keys():
+                if k.find('pass') != -1 or k.find('user') != -1:
+                    args[k] = '******'
+                if len(args[k]) > 4096:
+                    args[k] = args[k][0:1024] + " -- >4096"
+            log_data.append(str(args))
         else:
             log_data.append('{}')
         log_data.append(int((time.time() - g.request_time) * 1000))
-        WriteFile(log_path + '/' + log_file,json.dumps(log_data) + "\n",'a+')
+        log_data.append(g.response.status_code)
+        log_data.append(g.response.content_length)
+        log_data.append(g.response.headers.get('Content-Type'))
+        log_data.append(request.headers.get('Host'))
+        log_data.append(str(reques))
+        log_msg = json.dumps(log_data) + "\n"
+        WriteFile(log_path + '/' + log_file,log_msg,'a+')
         rep_sys_path()
-    except: pass
+    except:
+        pass
 
 #重载模块
 def mod_reload(mode):
@@ -3078,6 +3136,7 @@ def get_user_info():
             import panelAuth
             userTmp = panelAuth.panelAuth().create_serverid(None)
         userInfo['uid'] = userTmp['uid']
+        userInfo['address']=userTmp['address']
         userInfo['access_key'] = userTmp['access_key']
         userInfo['username'] = userTmp['username']
         userInfo['serverid'] = userTmp['serverid']
@@ -3638,6 +3697,59 @@ def check_login_area(login_ip,login_type = 'panel'):
     data['login_ip_area'] = login_ip_area
     return status,data
 
+def get_free_ips_area(ips):
+    '''
+    @name 免费IP库 获取ip地址所在地
+    @author cjxin
+    @param ips<list>
+    @return list
+    '''
+    import PluginLoader
+    args = dict_obj()
+    args.model_index = 'safe'
+    args.ips = ips
+    res = PluginLoader.module_run("freeip","get_ip_area",args)
+    return res
+
+#使用免费IP库获取IP地区
+def free_login_area(login_ip,login_type = 'panel'):
+    """
+    @name 使用免费IP库获取IP地区
+    @login_type 登录类型 panel:宝塔面板登录, ssh:ssh登录
+    """
+        #判断是否开启免费IP库
+    if os.path.exists('{}/data/{}_login_area.pl'.format(get_panel_path(),'btpanel')):
+        return False,{}
+    login_ip_area = ''
+    ip_info = get_free_ips_area([login_ip])
+    if not login_ip in ip_info:
+        return False,{}
+    ip_info = ip_info[login_ip]
+    if not 'city' in ip_info:
+        login_ip_area = ip_info['info']
+    status = True
+    s_conf = '{}/data/{}_login_area.json'.format(get_panel_path(),login_type)
+    data = {}
+    try:
+        data = json.loads(readFile(s_conf))
+    except:
+        pass
+    if not login_ip_area and 'city' in ip_info:
+        city = ip_info['city']
+        login_ip_area = ip_info['info']
+        if len(city)>=1 and not city in data:
+            data[city] = 0
+        if data[city] < 3:
+            if city=='内网地址':
+                login_ip_area += '（<font color=red>内网</font>）'
+            else:
+                login_ip_area += '（<font color=red>异地</font>）'
+        data[city] += 1
+        writeFile(s_conf,json.dumps(data))
+    data['login_ip_area'] = login_ip_area
+    return status,data
+
+
 
 #登陆告警
 def login_send_body(is_type,username,login_ip,port):
@@ -3657,11 +3769,23 @@ def login_send_body(is_type,username,login_ip,port):
                 send_type = "dingding"
 
     #增加异地登录告警
-    login_aera_status,login_aera = check_login_area(login_ip = login_ip,login_type = 'panel')
-    if not send_type and not login_aera_status:
+    server_ip_area = login_ip+":"+port
+    login_aera_status,login_aera = free_login_area(login_ip=server_ip_area,login_type = 'panel')
+    if login_aera_status:
+        login_ip_area = ">归属地：" + login_aera['login_ip_area']
+        #如果存在归属地则修改日志内容
+        time.sleep(0.2)
+        if cache_get(server_ip_area):
+            id=cache_get(server_ip_area)
+            logs=M("logs").where("id=?",id).getField("log")
+            data=M("logs").where("id=?",id).setField("log",logs+login_ip_area)
+    else:
+        login_ip_area = ''
+    add_security_logs('登录成功',server_ip_area + login_ip_area, False)
+
+    if not send_type:
         return False
 
-    print_log(send_type)
     object = init_msg(send_type.strip())
     if not object:return
 
@@ -3679,14 +3803,21 @@ def login_send_body(is_type,username,login_ip,port):
                    'user': username}
         rdata = object.send_msg('login_panel', check_sms_argv(sm_args))
     else:
-        plist = [
+        if login_ip_area:
+            plist = [
+                    ">登录方式：" + is_type,
+                    ">登录账号：" + username ,
+                    ">登录IP：" + login_ip + ":" + port ,
+                    login_ip_area,
+                    ">登录状态：<font color=#20a53a>成功</font>"
+                ]
+        else:
+            plist = [
                 ">登录方式：" + is_type,
-                ">登录账号：" + username ,
-                ">登录IP：" + login_ip + ":" + port ,
-                ">归属地：" + login_aera['login_ip_area'],
+                ">登录账号：" + username,
+                ">登录IP：" + login_ip + ":" + port,
                 ">登录状态：<font color=#20a53a>成功</font>"
             ]
-
         info = get_push_info("面板登录告警", plist)
         object.push_data(info)
 
@@ -5847,4 +5978,212 @@ def get_improvement():
     return os.path.exists(tip_file)
 
 
+def is_spider():
+    '''
+        @name 判断是否为爬虫
+        @return bool
+    '''
+    from BTPanel import request
+    import panelDefense
+    p = panelDefense.bot_safe()
+    return not p.spider(request.headers.get('User-Agent'),request.remote_addr)
 
+
+# def get_rsa_public_key_file():
+#     '''
+#         @name 获取RSA公钥文件路径
+#         @author hwliang
+#         @return str
+#     '''
+#     return '{}/data/rsa_public_key.pem'.format(get_panel_path())
+
+# def get_rsa_private_key_file():
+#     '''
+#         @name 获取RSA私钥文件路径
+#         @author hwliang
+#         @return str
+#     '''
+#     return '{}/data/rsa_private_key.pem'.format(get_panel_path())
+
+
+def get_rsa_public_key():
+    '''
+        @name 获取RSA公钥内容
+        @author hwliang
+        @return str
+    '''
+    from BTPanel import session
+    pub_key = 'rsa_public_key'
+    public_key = session.get(pub_key)
+    if not public_key:
+        create_rsa_key()
+        public_key = session.get(pub_key)
+    return public_key
+
+    # path = get_rsa_public_key_file()
+    # if not os.path.exists(path): create_rsa_key()
+    # if not os.path.exists(path): return ''
+    # return readFile(path)
+
+
+def get_rsa_private_key():
+    '''
+        @name 获取RSA私钥内容
+        @author hwliang
+        @return str
+    '''
+    from BTPanel import session
+    prv_key = 'rsa_private_key'
+    private_key = session.get(prv_key)
+    if not private_key:
+        create_rsa_key()
+        private_key = session.get(prv_key)
+    return private_key
+
+
+def create_rsa_key():
+    '''
+        @name 创建RSA密钥
+        @author hwliang
+        @return bool
+    '''
+    try:
+        # private_key_file = get_rsa_private_key_file()
+        # public_key_file = get_rsa_public_key_file()
+        # if os.path.exists(private_key_file) and os.path.exists(public_key_file): return True
+        from BTPanel import session
+        pub_key = 'rsa_public_key'
+        prv_key = 'rsa_private_key'
+        if pub_key in session and prv_key in session:
+            return True
+        from Crypto.PublicKey import RSA
+        key = RSA.generate(1024)
+        private_key = key.exportKey("PEM")
+        public_key = key.publickey().exportKey("PEM")
+        session[pub_key] = public_key.decode('utf-8')
+        session[prv_key] = private_key.decode('utf-8')
+
+        # writeFile(private_key_file,private_key,'wb+')
+        # writeFile(public_key_file,public_key,'wb+')
+        return True
+    except:
+        print_log(get_error_info())
+        return False
+
+
+
+def rsa_encrypt(data):
+    '''
+        @name RSA加密数据
+        @param data str 要加密的数据
+        @return str
+    '''
+    # 分片长度 1024 / 8 - 11 = 117
+    split_length = 117
+    try:
+        from Crypto.PublicKey import RSA
+        from Crypto.Cipher import PKCS1_v1_5 as Cipher_pkcs
+
+        # 初始化RSA加密对象
+        public_key = get_rsa_public_key()
+        cipher_public = Cipher_pkcs.new(RSA.importKey(public_key))
+
+        # 分片加密
+        data = data.encode('utf-8')
+        encrypted_arr = []
+        for i in range(0,len(data),split_length):
+            d = data[i:i+split_length]
+            encrypted_data = cipher_public.encrypt(d)
+            encrypted_base64 = base64.b64encode(encrypted_data).decode()
+            encrypted_arr.append(encrypted_base64)
+
+        # 用换行符拼接
+        return "\n".join(encrypted_arr)
+    except:
+        print_log(get_error_info())
+        return ''
+
+def rsa_decrypt(data):
+    '''
+        @name RSA解密数据
+        @param data str 要解密的数据
+        @return str
+    '''
+    try:
+        from Crypto.PublicKey import RSA
+        from Crypto.Cipher import PKCS1_v1_5 as Cipher_pkcs
+
+        # 初始化RSA解密对象
+        private_key = get_rsa_private_key()
+        cipher_private = Cipher_pkcs.new(RSA.importKey(private_key))
+
+        # 分片解密
+        decrypted_str = b""
+        for d in data.split("\n"):
+            res = base64.b64decode(d)
+            decrypted_data = cipher_private.decrypt(res, None)
+            decrypted_str += decrypted_data
+        return decrypted_str.decode('utf-8')
+    except:
+        print_log(get_error_info())
+        return ''
+
+
+def rsa_encrypt_for_private_key(data):
+    '''
+        @name RSA私钥加密数据
+        @author hwliang
+        @param data str 要加密的数据
+        @return str
+    '''
+    # 分片长度 1024 / 8 - 11 = 117
+    split_length = 117
+    try:
+        from Crypto.PublicKey import RSA
+        from Crypto.Cipher import PKCS1_v1_5 as Cipher_pkcs
+
+        # 初始化RSA加密对象
+        private_key = get_rsa_private_key()
+        cipher_private = Cipher_pkcs.new(RSA.importKey(private_key))
+
+        # 分片加密
+        data = data.encode('utf-8')
+        encrypted_arr = []
+        for i in range(0,len(data),split_length):
+            d = data[i:i+split_length]
+            encrypted_data = cipher_private.encrypt(d)
+            encrypted_base64 = base64.b64encode(encrypted_data).decode()
+            encrypted_arr.append(encrypted_base64)
+
+        # 用换行符拼接
+        return "\n".join(encrypted_arr)
+    except:
+        print_log(get_error_info())
+        return ''
+
+def get_client_hash():
+    '''
+        @name 获取客户端HASH
+        @author hwliang
+        @return str
+    '''
+    from flask import request
+    client_hash = md5(request.headers.get('User-Agent') +'_'+ request.remote_addr)
+    return client_hash
+
+def check_client_hash():
+    '''
+        @name 验证客户端HASH
+        @author hwliang
+        @return bool
+    '''
+    from BTPanel import session
+    skey = 'client_hash'
+    client_hash = get_client_hash()
+    if not skey in session:
+        session[skey] = client_hash
+        return True
+
+    if session[skey] != client_hash:
+        return False
+    return True

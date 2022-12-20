@@ -8,7 +8,7 @@ import public,re
 
 class databaseBase:
 
-    
+
 
     def get_base_list(self,args,sql_type = 'mysql'):
         """
@@ -18,53 +18,53 @@ class databaseBase:
 
         search = ''
         if 'search' in args: search = args['search']
-        
+
         SQL = public.M('databases');
 
         where = "lower(type) = lower('{}')".format(sql_type)
-        if search: 
+        if search:
             where += "AND (name like '%{search}%' or ps like '%{search}%')".format(search = search)
 
-        if 'db_type' in args:  
+        if 'db_type' in args:
             where += " AND db_type='{}'".format(args['db_type'])
 
-        if 'sid' in args:  
+        if 'sid' in args:
             where += " AND sid='{}'".format(args['sid'])
 
         order = "id desc"
         if hasattr(args,'order'): order = args.order
- 
+
         info = {}
-        rdata = {}                
+        rdata = {}
 
         info['p'] = 1
         info['row'] = 20
         result = '1,2,3,4,5,8'
-        info['count'] = SQL.where(where,()).count();        
+        info['count'] = SQL.where(where,()).count();
 
         if hasattr(args,'limit'): info['row'] = int(args.limit)
-        if hasattr(args,'result'): result = args.result;        
+        if hasattr(args,'result'): result = args.result;
         if hasattr(args,'p'): info['p']  = int(args['p'])
 
         import page
         #实例化分页类
         page = page.Page();
-                
+
         info['uri']   = args
         info['return_js'] = ''
         if hasattr(args,'tojs'): info['return_js']   = args.tojs
-        
+
         rdata['where'] = where;
-        
+
         #获取分页数据
         rdata['page'] = page.GetPage(info,result)
         #取出数据
         rdata['data'] = SQL.where(where,()).order(order).field('id,sid,pid,name,username,password,accept,ps,addtime,type,db_type,conn_config').limit(str(page.SHIFT)+','+str(page.ROW)).select()
 
-        for sdata in rdata['data']:            
-            
+        for sdata in rdata['data']:
+
             sdata['backup_count'] = public.M('backup').where("pid=? AND type=1",(sdata['id'])).count()
- 
+
             sdata['conn_config'] = json.loads(sdata['conn_config'])
         return rdata;
 
@@ -79,26 +79,26 @@ class databaseBase:
 
         return project_obj
 
-    
+
     def get_average_num(self,slist):
         """
         @批量删除获取平均值
         """
-        count = len(slist)      
-        limit_size = 1 * 1024 * 1024        
+        count = len(slist)
+        limit_size = 1 * 1024 * 1024
         if count <= 0: return limit_size
 
-        if len(slist) > 1:            
+        if len(slist) > 1:
             slist = sorted(slist)
             limit_size =int((slist[0] + slist[-1])/2 * 0.85)
-        return limit_size 
+        return limit_size
 
     def get_database_size(self,ids,is_pid = False):
         """
         获取数据库大小
         """
         result = {}
-        p = self.get_databaseModel()     
+        p = self.get_databaseModel()
         for id in ids:
             if not is_pid:
                 x = public.M('databases').where('id=?',id).field('id,sid,pid,name,type,ps,addtime').find()
@@ -106,22 +106,22 @@ class databaseBase:
                 x = public.M('databases').where('pid=?',id).field('id,sid,pid,name,type,ps,addtime').find()
             if not x: continue
             x['backup_count'] = public.M('backup').where("pid=? AND type=?",(x['id'],'1')).count()
-            if x['type'] == 'MySQL':                
+            if x['type'] == 'MySQL':
                 x['total'] = int(public.get_database_size_by_id(id))
-            else:               
+            else:
                 try:
-                  
-                    get = public.dict_obj() 
+
+                    get = public.dict_obj()
                     get['data'] = {'db_id': x['id'] }
                     get['mod_name'] = x['type'].lower()
                     get['def_name'] = 'get_database_size_by_id'
 
                     x['total'] = p.model(get)
                 except :
-                    x['total'] = 0                 
+                    x['total'] = 0
             result[x['name']] = x
         return result
-    
+
     def check_base_del_data(self,get):
         """
         @删除数据库前置检测
@@ -129,13 +129,13 @@ class databaseBase:
         ids = json.loads(get.ids)
         slist = {};result = [];db_list_size = []
         db_data = self.get_database_size(ids)
-       
+
         for key in db_data:
             data = db_data[key]
             if not data['id'] in ids: continue
-            
-            db_addtime = public.to_date(times = data['addtime'])     
-            data['score'] = int(time.time() - db_addtime) + data['total']                
+
+            db_addtime = public.to_date(times = data['addtime'])
+            data['score'] = int(time.time() - db_addtime) + data['total']
             data['st_time'] = db_addtime
 
             if data['total'] > 0 : db_list_size.append(data['total'])
@@ -146,10 +146,10 @@ class databaseBase:
         return slist
 
     def get_test(self,args):
-       
-         
-        p = self.get_databaseModel()       
-        get = public.dict_obj() 
+
+
+        p = self.get_databaseModel()
+        get = public.dict_obj()
         get['data'] = {'db_id': 18 }
         get['mod_name'] = args['type'].lower()
         get['def_name'] = 'get_database_size_by_id'
@@ -164,34 +164,34 @@ class databaseBase:
                 data_pwd:数据库密码
         """
         data_name = get['name'].strip().lower()
-        if self.check_recyclebin(data_name): 
+        if self.check_recyclebin(data_name):
             return public.returnMsg(False,'数据库['+data_name+']已在回收站，请从回收站恢复!');
 
-        if len(data_name) > 16: 
+        if len(data_name) > 16:
             return public.returnMsg(False, 'DATABASE_NAME_LEN')
 
         if not hasattr(get,'db_user'): get.db_user = data_name;
         username = get.db_user.strip();
         checks = ['root','mysql','test','sys','panel_logs']
-        if username in checks or len(username) < 1: 
+        if username in checks or len(username) < 1:
             return public.returnMsg(False,'数据库用户名不合法!');
-        if data_name in checks or len(data_name) < 1: 
+        if data_name in checks or len(data_name) < 1:
             return public.returnMsg(False,'数据库名称不合法!');
 
         reg = "^\w+$"
-        if not re.match(reg, data_name): 
+        if not re.match(reg, data_name):
             return public.returnMsg(False,'DATABASE_NAME_ERR_T')
 
         data_pwd = get['password']
         if len(data_pwd) < 1:
             data_pwd = public.md5(str(time.time()))[0:8]
-            
-        if public.M('databases').where("name=? or username=?",(data_name,username)).count(): 
-            return public.returnMsg(False,'DATABASE_NAME_EXISTS')    
-        
+
+        if public.M('databases').where("name=? or username=?",(data_name,username)).count():
+            return public.returnMsg(False,'DATABASE_NAME_EXISTS')
+
         res = {
            'data_name':data_name,
-           'username':username,       
+           'username':username,
            'data_pwd':data_pwd,
            'status':True
         }
@@ -208,11 +208,11 @@ class databaseBase:
         where = "id=?"
         filename = public.M('backup').where(where,(id,)).getField('filename')
         if os.path.exists(filename): os.remove(filename)
-            
+
         if filename == 'qiniu':
             name = public.M('backup').where(where,(id,)).getField('name');
-                
-            public.ExecShell(public.get_run_python("[PYTHON] "+public.GetConfigValue('setup_path') + '/panel/script/backup_qiniu.py delete_file ' + name))            
+
+            public.ExecShell(public.get_run_python("[PYTHON] "+public.GetConfigValue('setup_path') + '/panel/script/backup_qiniu.py delete_file ' + name))
         public.M('backup').where(where,(id,)).delete()
         public.WriteLog("TYPE_DATABASE", 'DATABASE_BACKUP_DEL_SUCCESS',(name,filename))
         return public.returnMsg(True, 'DEL_SUCCESS');
@@ -240,8 +240,8 @@ class databaseBase:
         @get param
         @args 参数列表
         """
-        for key in nlist:            
-            if not key in get:  
+        for key in nlist:
+            if not key in get:
                 return public.returnMsg(False,'参数传递错误，缺少参数{}!'.format(key))
         return public.returnMsg(True,'通过!')
 
@@ -249,13 +249,13 @@ class databaseBase:
         '''
         @检查远程数据库是否存在
         @conn_config param
-        '''        
-        p = self.get_databaseModel()        
+        '''
+        p = self.get_databaseModel()
 
-        get = public.dict_obj() 
+        get = public.dict_obj()
         get['data'] = args
         get['mod_name'] = args['type']
-        get['def_name'] = 'check_cloud_database_status'      
+        get['def_name'] = 'check_cloud_database_status'
         return p.model(get)
 
     def AddBaseCloudServer(self,get):
@@ -273,14 +273,14 @@ class databaseBase:
 
         arrs = ['db_host','db_port','db_user','db_password','db_ps','type']
         if get.type == 'redis': arrs = ['db_host','db_port','db_password','db_ps','type']
-            
+
         cRet = self.check_cloud_args(get,arrs)
         if not cRet['status']: return cRet
-            
+
         get['db_name'] = None
         res = self.check_cloud_database(get)
         if isinstance(res,dict): return res
- 
+
         if public.M('database_servers').where('db_host=? AND db_port=?',(get['db_host'],get['db_port'])).count():
             return public.returnMsg(False,'指定服务器已存在: [{}:{}]'.format(get['db_host'],get['db_port']))
         get['db_port'] = int(get['db_port'])
@@ -311,7 +311,7 @@ class databaseBase:
         if 'type' in get:where = "db_type = '{}'".format(get['type'])
 
         data = public.M('database_servers').where(where,()).select()
-        
+
         if not isinstance(data,list): data = []
 
         if get['type'] == 'mysql':
@@ -320,13 +320,13 @@ class databaseBase:
                 data.insert(0,{'id':0,'db_host':'127.0.0.1','db_port':3306,'db_user':'root','db_password':'','ps':'本地服务器','addtime':0,'db_type':'mysql'})
         elif get['type'] == 'sqlserver':
             pass
-        elif get['type'] == 'mongodb':            
+        elif get['type'] == 'mongodb':
             if os.path.exists('/www/server/mongodb/bin'):
                 data.insert(0,{'id':0,'db_host':'127.0.0.1','db_port':27017,'db_user':'root','db_password':'','ps':'本地服务器','addtime':0,'db_type':'mongodb'})
-        elif get['type'] == 'redis':            
+        elif get['type'] == 'redis':
             if os.path.exists('/www/server/redis'):
                 data.insert(0,{'id':0,'db_host':'127.0.0.1','db_port':6379,'db_user':'root','db_password':'','ps':'本地服务器','addtime':0,'db_type':'redis'})
-        elif get['type'] == 'pgsql':            
+        elif get['type'] == 'pgsql':
             if os.path.exists('/www/server/pgsql'):
                 data.insert(0,{'id':0,'db_host':'127.0.0.1','db_port':5432,'db_user':'postgres','db_password':'','ps':'本地服务器','addtime':0,'db_type':'pgsql'})
         return data
@@ -350,7 +350,7 @@ class databaseBase:
             return public.returnMsg(True,'删除成功!')
         return public.returnMsg(False,'删除失败： {}'.format(result))
 
-    
+
     def ModifyBaseCloudServer(self,get):
         '''
             @name 修改远程服务器
@@ -363,9 +363,9 @@ class databaseBase:
             @param db_ps<string> 数据库备注
             @return dict
         '''
-     
+
         arrs = ['db_host','db_port','db_user','db_password','db_ps','type']
-        if get.type == 'redis': arrs = ['db_host','db_port','db_password','db_ps','type']            
+        if get.type == 'redis': arrs = ['db_host','db_port','db_password','db_ps','type']
 
         cRet = self.check_cloud_args(get,arrs)
         if not cRet['status']: return cRet
@@ -379,13 +379,13 @@ class databaseBase:
             _modify = True
             if public.M('database_servers').where('db_host=? AND db_port=?',(get['db_host'],get['db_port'])).count():
                 return public.returnMsg(False,'指定服务器已存在: [{}:{}]'.format(get['db_host'],get['db_port']))
-        
+
         if db_find['db_user'] != get['db_user'] or db_find['db_password'] != get['db_password']:
             _modify = True
         _modify = True
         if _modify:
-           
-            res = self.check_cloud_database(get)         
+
+            res = self.check_cloud_database(get)
             if isinstance(res,dict): return res
 
         pdata = {
@@ -405,7 +405,7 @@ class databaseBase:
 
 
     #检测数据库执行错误
-    def IsSqlError(self,mysqlMsg):      
+    def IsSqlError(self,mysqlMsg):
         if mysqlMsg:
             mysqlMsg = str(mysqlMsg)
             if "MySQLdb" in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_MYSQLDB')
@@ -418,13 +418,13 @@ class databaseBase:
             if "Connection refused" in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_CONNECT')
             if "1133" in mysqlMsg: return public.returnMsg(False,'DATABASE_ERR_NOT_EXISTS')
             if "2005_login_error" == mysqlMsg: return public.returnMsg(False,'连接超时,请手动开启TCP/IP功能(开始菜单->SQL 2005->配置工具->2005网络配置->TCP/IP->启用)')
-            if 'already exists' in mysqlMsg: return public.returnMsg(False,'指定数据库已存在，请勿重复添加.')                
+            if 'already exists' in mysqlMsg: return public.returnMsg(False,'指定数据库已存在，请勿重复添加.')
             if 'Cannot open backup device' in mysqlMsg:  return public.returnMsg(False,'操作失败，远程数据库不支持该操作.')
-            
+
             if '1142' in mysqlMsg: return public.returnMsg(False,'权限不足，请使用root用户.')
-                
+
             if "DB-Lib error message 20018" in mysqlMsg: return public.returnMsg(False,'创建失败，SQL Server需要GUI支持，请通过远程桌面连接连接上SQL Server管理工具，依次找到安全性 -> 登录名 -> NT AUTHORITY\SYSTEM -> 属性 -> 服务器角色 -> 勾选列表中的sysadmin后重启SQL Server服务，重新操作添加数据库。<a style="color:red" href="https://www.bt.cn/bbs/thread-50555-1-1.html">帮助</a>')
-            
+
         return None
 
 

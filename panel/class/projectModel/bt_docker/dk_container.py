@@ -10,286 +10,463 @@
 #------------------------------
 # Docker模型
 #------------------------------
-import public #line:13
-import docker .errors #line:14
-import projectModel .bt_docker .dk_public as dp #line:15
-class main :#line:16
-    def __init__ (O00OOOOO00OO0O000 ):#line:18
-        O00OOOOO00OO0O000 .alter_table ()#line:19
-    def alter_table (O00OOOOOO0O0O0000 ):#line:21
-        if not dp .sql ('sqlite_master').where ('type=? AND name=? AND sql LIKE ?',('table','container','%sid%')).count ():#line:23
-            dp .sql ('container').execute ("alter TABLE container add container_name VARCHAR DEFAULT ''",())#line:24
-    def docker_client (O0O000OOO00O00O00 ,OOO0O0O0000O0O0OO ):#line:26
-        return dp .docker_client (OOO0O0O0000O0O0OO )#line:27
-    def run (O00OOOOOOOO0OOO00 ,OO0OO000OO00O0OO0 ):#line:30
-        ""#line:43
-        if not hasattr (OO0OO000OO00O0OO0 ,'ports'):#line:44
-            OO0OO000OO00O0OO0 .ports =False #line:45
-        if not hasattr (OO0OO000OO00O0OO0 ,'volumes'):#line:46
-            OO0OO000OO00O0OO0 .volumes =False #line:47
-        if OO0OO000OO00O0OO0 .ports :#line:49
-            for O00O0000OO0O0O0O0 in OO0OO000OO00O0OO0 .ports :#line:50
-                if dp .check_socket (OO0OO000OO00O0OO0 .ports [O00O0000OO0O0O0O0 ]):#line:51
-                    return public .returnMsg (False ,"服务端端口【{}】已经被使用,请更换其他端口！".format (OO0OO000OO00O0OO0 .ports [O00O0000OO0O0O0O0 ]))#line:52
-        if not OO0OO000OO00O0OO0 .image :#line:53
-            return public .returnMsg (False ,"没有选择镜像，请先到镜像标签拉取你需要的镜像！")#line:54
-        if OO0OO000OO00O0OO0 .restart_policy ['Name']=="always":#line:55
-            OO0OO000OO00O0OO0 .restart_policy ={"Name":"always"}#line:56
-        OO0OO000OO00O0OO0 .cpu_quota =float (OO0OO000OO00O0OO0 .cpuset_cpus )*100000 #line:59
-        try :#line:60
-            if not OO0OO000OO00O0OO0 .name :#line:61
-                OO0OO000OO00O0OO0 .name ="{}-{}".format (OO0OO000OO00O0OO0 .image ,public .GetRandomString (8 ))#line:62
-            if int (OO0OO000OO00O0OO0 .cpu_quota )/100000 >dp .get_cpu_count ():#line:63
-                return public .returnMsg (False ,"CPU配额已超过可用的核心数！")#line:64
-            O00O0O0O00000000O =dp .byte_conversion (OO0OO000OO00O0OO0 .mem_limit )#line:65
-            if O00O0O0O00000000O >dp .get_mem_info ():#line:66
-                return public .returnMsg (False ,"内存配额已超过可用数！")#line:67
-            O0OO00O000O00O0O0 =O00OOOOOOOO0OOO00 .docker_client (OO0OO000OO00O0OO0 .url ).containers .run (name =OO0OO000OO00O0OO0 .name ,image =OO0OO000OO00O0OO0 .image ,detach =True ,publish_all_ports =True if OO0OO000OO00O0OO0 .publish_all_ports =="1"else False ,ports =OO0OO000OO00O0OO0 .ports if OO0OO000OO00O0OO0 .ports else None ,command =OO0OO000OO00O0OO0 .command ,auto_remove =True if str (OO0OO000OO00O0OO0 .auto_remove )=="1"else False ,environment =dp .set_kv (OO0OO000OO00O0OO0 .environment ),volumes =OO0OO000OO00O0OO0 .volumes ,cpu_quota =int (OO0OO000OO00O0OO0 .cpu_quota ),mem_limit =OO0OO000OO00O0OO0 .mem_limit ,restart_policy =OO0OO000OO00O0OO0 .restart_policy ,labels =dp .set_kv (OO0OO000OO00O0OO0 .labels ))#line:84
-            if O0OO00O000O00O0O0 :#line:85
-                OOO0OOO0O000O00O0 ={"cpu_limit":str (OO0OO000OO00O0OO0 .cpu_quota ),"container_name":OO0OO000OO00O0OO0 .name }#line:89
-                dp .sql ('container').insert (OOO0OOO0O000O00O0 )#line:90
-                public .set_module_logs ('docker','run_container',1 )#line:91
-                dp .write_log ("创建容器【{}】成功！".format (OO0OO000OO00O0OO0 .name ))#line:92
-                return public .returnMsg (True ,"容器创建成功！")#line:93
-            return public .returnMsg (False ,'创建失败!')#line:94
-        except docker .errors .APIError as O00O0O0O0OO0OO000 :#line:95
-            if "container to be able to reuse that name."in str (O00O0O0O0OO0OO000 ):#line:96
-                return public .returnMsg (False ,"该容器名已经存在！")#line:97
-            if "Invalid container name"in str (O00O0O0O0OO0OO000 ):#line:98
-                return public .returnMsg (False ,"容器名不合法, 请不要使用中文容器名！")#line:99
-            if "bind: address already in use"in str (O00O0O0O0OO0OO000 ):#line:100
-                OOOO0OOO000OOOO00 =""#line:101
-                for O00O0000OO0O0O0O0 in OO0OO000OO00O0OO0 .ports :#line:102
-                    if ":{}:".format (OO0OO000OO00O0OO0 .ports [O00O0000OO0O0O0O0 ])in str (O00O0O0O0OO0OO000 ):#line:103
-                        OOOO0OOO000OOOO00 =OO0OO000OO00O0OO0 .ports [O00O0000OO0O0O0O0 ]#line:104
-                OO0OO000OO00O0OO0 .id =OO0OO000OO00O0OO0 .name #line:105
-                O00OOOOOOOO0OOO00 .del_container (OO0OO000OO00O0OO0 )#line:106
-                return public .returnMsg (False ,"服务端端口{}正在使用中！请更换其他端口".format (OOOO0OOO000OOOO00 ))#line:107
-            return public .returnMsg (False ,'创建失败! {}'.format (public .get_error_info ()))#line:108
-    def commit (OOO0OO0OOOO000O00 ,OO0000OOO0OO0O00O ):#line:111
-        ""#line:123
-        if not hasattr (OO0000OOO0OO0O00O ,'conf')or not OO0000OOO0OO0O00O .conf :#line:124
-            OO0000OOO0OO0O00O .conf =None #line:125
-        if OO0000OOO0OO0O00O .repository =="docker.io":#line:126
-            OO0000OOO0OO0O00O .repository =""#line:127
-        OO00O0O00O0O0OOO0 =OOO0OO0OOOO000O00 .docker_client (OO0000OOO0OO0O00O .url ).containers .get (OO0000OOO0OO0O00O .id )#line:128
-        OO00O0O00O0O0OOO0 .commit (repository =OO0000OOO0OO0O00O .repository if OO0000OOO0OO0O00O .repository else None ,tag =OO0000OOO0OO0O00O .tag if OO0000OOO0OO0O00O .tag else None ,message =OO0000OOO0OO0O00O .message if OO0000OOO0OO0O00O .message else None ,author =OO0000OOO0OO0O00O .author if OO0000OOO0OO0O00O .author else None ,conf =OO0000OOO0OO0O00O .conf )#line:136
-        if hasattr (OO0000OOO0OO0O00O ,"path")and OO0000OOO0OO0O00O .path :#line:137
-            OO0000OOO0OO0O00O .id ="{}:{}".format (OO0000OOO0OO0O00O .name ,OO0000OOO0OO0O00O .tag )#line:138
-            import projectModel .bt_docker .dk_image as dk #line:139
-            return dk .main ().save (OO0000OOO0OO0O00O )#line:140
-        dp .write_log ("将容器【{}】提交为镜像【{}】成功！".format (OO00O0O00O0O0OOO0 .attrs ['Name'],OO0000OOO0OO0O00O .tag ))#line:141
-        return public .returnMsg (True ,"提交成功！")#line:142
-    def docker_shell (OO0O0O000O0O00OO0 ,O000OOO0OO00O0OOO ):#line:145
-        ""#line:150
-        try :#line:151
-            OO0O0O000O0O00OO0 .docker_client (O000OOO0OO00O0OOO .url ).containers .get (O000OOO0OO00O0OOO .container_id )#line:152
-            OO00OO0OOO0OOOO0O ='docker container exec -it {} /bin/bash'.format (O000OOO0OO00O0OOO .container_id )#line:153
-            return public .returnMsg (True ,OO00OO0OOO0OOOO0O )#line:154
-        except docker .errors .APIError as OOOO000OOO00OOO00 :#line:155
-            return public .returnMsg (False ,'获取容器失败')#line:156
-    def export (O00OO0000OO0O0O0O ,O00OO0O0OO0OOO0O0 ):#line:159
-        ""#line:165
-        from os import path as ospath #line:166
-        from os import makedirs as makedirs #line:167
-        try :#line:168
-            if "tar"in O00OO0O0OO0OOO0O0 .name :#line:169
-                O00O0OOO0O00OO00O ='{}/{}'.format (O00OO0O0OO0OOO0O0 .path ,O00OO0O0OO0OOO0O0 .name )#line:170
-            else :#line:171
-                O00O0OOO0O00OO00O ='{}/{}.tar'.format (O00OO0O0OO0OOO0O0 .path ,O00OO0O0OO0OOO0O0 .name )#line:172
-            if not ospath .exists (O00OO0O0OO0OOO0O0 .path ):#line:173
-                makedirs (O00OO0O0OO0OOO0O0 .path )#line:174
-            public .writeFile (O00O0OOO0O00OO00O ,'')#line:175
-            O0OO000OOO00O000O =open (O00O0OOO0O00OO00O ,'wb')#line:176
-            OO0O00OO000O0OO0O =O00OO0000OO0O0O0O .docker_client (O00OO0O0OO0OOO0O0 .url ).containers .get (O00OO0O0OO0OOO0O0 .id )#line:177
-            OOOO00O000O000000 =OO0O00OO000O0OO0O .export ()#line:178
-            for O0O000OO0O0OO0OO0 in OOOO00O000O000000 :#line:179
-                O0OO000OOO00O000O .write (O0O000OO0O0OO0OO0 )#line:180
-            O0OO000OOO00O000O .close ()#line:181
-            return public .returnMsg (True ,"成功导出到: {}".format (O00O0OOO0O00OO00O ))#line:182
-        except :#line:183
-            return public .returnMsg (False ,'操作失败: '+str (public .get_error_info ()))#line:184
-    def del_container (OOO00O000000OOOO0 ,OO0O0OO0O00OO0OO0 ):#line:187
-        ""#line:190
-        import projectModel .bt_docker .dk_public as dp #line:191
-        OOOO000OOO000OO0O =OOO00O000000OOOO0 .docker_client (OO0O0OO0O00OO0OO0 .url ).containers .get (OO0O0OO0O00OO0OO0 .id )#line:192
-        OOOO000OOO000OO0O .remove (force =True )#line:193
-        dp .sql ("cpu_stats").where ("container_id=?",(OO0O0OO0O00OO0OO0 .id ,)).delete ()#line:194
-        dp .sql ("io_stats").where ("container_id=?",(OO0O0OO0O00OO0OO0 .id ,)).delete ()#line:195
-        dp .sql ("mem_stats").where ("container_id=?",(OO0O0OO0O00OO0OO0 .id ,)).delete ()#line:196
-        dp .sql ("net_stats").where ("container_id=?",(OO0O0OO0O00OO0OO0 .id ,)).delete ()#line:197
-        dp .sql ("container").where ("container_nam=?",(OOOO000OOO000OO0O .attrs ['Name'])).delete ()#line:198
-        dp .write_log ("删除容器【{}】成功！".format (OOOO000OOO000OO0O .attrs ['Name']))#line:199
-        return public .returnMsg (True ,"删除成功！")#line:200
-    def set_container_status (OO00O00OOO0000000 ,O00O0OOOO0O000OO0 ):#line:203
-        import time #line:204
-        OO0OOO00OOO00OOOO =OO00O00OOO0000000 .docker_client (O00O0OOOO0O000OO0 .url ).containers .get (O00O0OOOO0O000OO0 .id )#line:205
-        if O00O0OOOO0O000OO0 .act =="start":#line:206
-            OO0OOO00OOO00OOOO .start ()#line:207
-        elif O00O0OOOO0O000OO0 .act =="stop":#line:208
-            OO0OOO00OOO00OOOO .stop ()#line:209
-        elif O00O0OOOO0O000OO0 .act =="pause":#line:210
-            OO0OOO00OOO00OOOO .pause ()#line:211
-        elif O00O0OOOO0O000OO0 .act =="unpause":#line:212
-            OO0OOO00OOO00OOOO .unpause ()#line:213
-        elif O00O0OOOO0O000OO0 .act =="reload":#line:214
-            OO0OOO00OOO00OOOO .reload ()#line:215
-        else :#line:216
-            OO0OOO00OOO00OOOO .restart ()#line:217
-        time .sleep (1 )#line:218
-        OO00O00O00OOOO0O0 =OO00O00OOO0000000 .docker_client (O00O0OOOO0O000OO0 .url ).containers .get (O00O0OOOO0O000OO0 .id )#line:219
-        return {"name":OO0OOO00OOO00OOOO .attrs ['Name'].replace ('/',''),"status":OO00O00O00OOOO0O0 .attrs ['State']['Status']}#line:220
-    def stop (O0000OOO00O0O000O ,OO000O0OOO0OOO0OO ):#line:224
-        ""#line:230
-        try :#line:231
-            OO000O0OOO0OOO0OO .act ="stop"#line:232
-            OOOOO00O0OO0O0OO0 =O0000OOO00O0O000O .set_container_status (OO000O0OOO0OOO0OO )#line:233
-            if OOOOO00O0OO0O0OO0 ['status']!="exited":#line:234
-                return public .returnMsg (False ,"停止失败！")#line:235
-            dp .write_log ("停止容器【{}】成功！".format (OOOOO00O0OO0O0OO0 ['name']))#line:236
-            return public .returnMsg (True ,"停止成功！")#line:237
-        except docker .errors .APIError as OO0OO0OOOOO0O0000 :#line:238
-            if "is already paused"in str (OO0OO0OOOOO0O0000 ):#line:239
-                return public .returnMsg (False ,"容器已经暂停！")#line:240
-            if "No such container"in str (OO0OO0OOOOO0O0000 ):#line:241
-                return public .returnMsg (True ,"容器已经停止并删除,因为容器勾选了停止后自动删除选项！")#line:242
-            return public .returnMsg (False ,"停止失败！{}".format (OO0OO0OOOOO0O0000 ))#line:243
-    def start (O000O000000OOO0OO ,O0000O0OOOO0000OO ):#line:245
-        ""#line:251
-        try :#line:252
-            O0000O0OOOO0000OO .act ="start"#line:253
-            O0OOOOOO0O0OO0O00 =O000O000000OOO0OO .set_container_status (O0000O0OOOO0000OO )#line:254
-            if O0OOOOOO0O0OO0O00 ['status']!="running":#line:255
-                return public .returnMsg (False ,"启动失败!")#line:256
-            dp .write_log ("启动容器【{}】成功！".format (O0OOOOOO0O0OO0O00 ['name']))#line:257
-            return public .returnMsg (True ,"启动成功！")#line:258
-        except docker .errors .APIError as OOOOOOO00O0OOOO00 :#line:259
-            if "cannot start a paused container, try unpause instead"in str (OOOOOOO00O0OOOO00 ):#line:260
-                return O000O000000OOO0OO .unpause (O0000O0OOOO0000OO )#line:261
-    def pause (OO000OO00000OO0O0 ,OOOO00OO00OOO00OO ):#line:263
-        ""#line:270
-        try :#line:271
-            OOOO00OO00OOO00OO .act ="pause"#line:272
-            OO00OOO000O0O0O00 =OO000OO00000OO0O0 .set_container_status (OOOO00OO00OOO00OO )#line:273
-            if OO00OOO000O0O0O00 ['status']!="paused":#line:274
-                return public .returnMsg (False ,"容器暂停失败！")#line:275
-            dp .write_log ("暂停容器【{}】成功！".format (OO00OOO000O0O0O00 ['name']))#line:276
-            return public .returnMsg (True ,"容器暂停成功！")#line:277
-        except docker .errors .APIError as OO0O00000OO0O0O0O :#line:278
-            if "is already paused"in str (OO0O00000OO0O0O0O ):#line:279
-                return public .returnMsg (False ,"容器已经暂停！")#line:280
-            if "is not running"in str (OO0O00000OO0O0O0O ):#line:281
-                return public .returnMsg (False ,"容器没有启动，无法暂停！")#line:282
-            if "is not paused"in str (OO0O00000OO0O0O0O ):#line:283
-                return public .returnMsg (False ,"容器未没有暂停！")#line:284
-            return str (OO0O00000OO0O0O0O )#line:285
-    def unpause (O0OO00O00OO000OOO ,O0O000000O000000O ):#line:287
-        ""#line:294
-        try :#line:295
-            O0O000000O000000O .act ="unpause"#line:296
-            OOOOOO00OO0OO0000 =O0OO00O00OO000OOO .set_container_status (O0O000000O000000O )#line:297
-            if OOOOOO00OO0OO0000 ['status']!="running":#line:298
-                return public .returnMsg (False ,"启动失败！")#line:299
-            dp .write_log ("取消暂停容器【{}】成功！".format (OOOOOO00OO0OO0000 ['name']))#line:300
-            return public .returnMsg (True ,"容器取消暂停成功！")#line:301
-        except docker .errors .APIError as OOOOOO0OO0OOO00OO :#line:302
-            if "is already paused"in str (OOOOOO0OO0OOO00OO ):#line:303
-                return public .returnMsg (False ,"容器已经暂停！")#line:304
-            if "is not running"in str (OOOOOO0OO0OOO00OO ):#line:305
-                return public .returnMsg (False ,"容器没有启动，无法暂停！")#line:306
-            if "is not paused"in str (OOOOOO0OO0OOO00OO ):#line:307
-                return public .returnMsg (False ,"容器未没有暂停！")#line:308
-            return str (OOOOOO0OO0OOO00OO )#line:309
-    def reload (O00O0OO0O00O0O00O ,OOO000O00OO00O000 ):#line:311
-        ""#line:318
-        OOO000O00OO00O000 .act ="reload"#line:319
-        OOOO00O0OO0O000OO =O00O0OO0O00O0O00O .set_container_status (OOO000O00OO00O000 )#line:320
-        if OOOO00O0OO0O000OO ['status']!="running":#line:321
-            return public .returnMsg (False ,"启动失败！")#line:322
-        dp .write_log ("重载容器【{}】成功！".format (OOOO00O0OO0O000OO ['name']))#line:323
-        return public .returnMsg (True ,"容器重载成功！")#line:324
-    def restart (O00OO0OOOOOOO0000 ,OO0OOO0O00O0OO0OO ):#line:326
-        ""#line:333
-        OO0OOO0O00O0OO0OO .act ="restart"#line:334
-        O0O000OO000O00O0O =O00OO0OOOOOOO0000 .set_container_status (OO0OOO0O00O0OO0OO )#line:335
-        if O0O000OO000O00O0O ['status']!="running":#line:336
-            return public .returnMsg (False ,"启动失败！")#line:337
-        dp .write_log ("重启容器【{}】成功！".format (O0O000OO000O00O0O ['name']))#line:338
-        return public .returnMsg (True ,"容器重启成功！")#line:339
-    def get_container_ip (O0OO0OOOO0000OO00 ,OOOOO00O0OOO00OO0 ):#line:341
-        O0OOOO00000O000O0 =list ()#line:342
-        for O0OOOOOO0O000OO0O in OOOOO00O0OOO00OO0 :#line:343
-            O0OOOO00000O000O0 .append (OOOOO00O0OOO00OO0 [O0OOOOOO0O000OO0O ]['IPAddress'])#line:344
-        return O0OOOO00000O000O0 #line:345
-    def get_container_path (OO0OOO00000O000OO ,OOOO0000O00OO0OOO ):#line:347
-        import os #line:348
-        if not "GraphDriver"in OOOO0000O00OO0OOO :#line:349
-            return False #line:350
-        if "Data"not in OOOO0000O00OO0OOO ["GraphDriver"]:#line:351
-            return False #line:352
-        if "MergedDir"not in OOOO0000O00OO0OOO ["GraphDriver"]["Data"]:#line:353
-            return False #line:354
-        OOO0OO0OO0OOO0OOO =OOOO0000O00OO0OOO ["GraphDriver"]["Data"]["MergedDir"]#line:355
-        if not os .path .exists (OOO0OO0OO0OOO0OOO ):#line:356
-            return ""#line:357
-        return OOO0OO0OO0OOO0OOO #line:358
-    def get_other_data_for_container_list (O00O0OO00000O0OOO ,OOO00OO00O00OO0O0 ):#line:361
-        import projectModel .bt_docker .dk_image as di #line:362
-        import projectModel .bt_docker .dk_volume as dv #line:363
-        import projectModel .bt_docker .dk_compose as dc #line:364
-        import projectModel .bt_docker .dk_setup as ds #line:365
-        O00OOO0O0OO0O0O0O =di .main ().image_list (OOO00OO00O00OO0O0 )#line:367
-        if O00OOO0O0OO0O0O0O ['status']:#line:368
-            O00OOO0O0OO0O0O0O =O00OOO0O0OO0O0O0O ['msg']['images_list']#line:369
-        else :#line:370
-            O00OOO0O0OO0O0O0O =list ()#line:371
-        O0O0000000O0O00OO =dv .main ().get_volume_list (OOO00OO00O00OO0O0 )#line:373
-        if O0O0000000O0O00OO ['status']:#line:374
-            O0O0000000O0O00OO =O0O0000000O0O00OO ['msg']['volume']#line:375
-        else :#line:376
-            O0O0000000O0O00OO =list ()#line:377
-        OO0O00000O0O00O0O =dc .main ().template_list (OOO00OO00O00OO0O0 )#line:379
-        if OO0O00000O0O00O0O ['status']:#line:380
-            OO0O00000O0O00O0O =OO0O00000O0O00O0O ['msg']['template']#line:381
-        else :#line:382
-            OO0O00000O0O00O0O =list ()#line:383
-        OOOOO0O000O000O00 =dp .get_cpu_count ()#line:384
-        OO0O00O00OO0O00OO =dp .get_mem_info ()#line:385
-        OO00000OO0OO00OOO =ds .main ()#line:386
-        return {"images":O00OOO0O0OO0O0O0O ,"volumes":O0O0000000O0O00OO ,"template":OO0O00000O0O00O0O ,"online_cpus":OOOOO0O000O000O00 ,"mem_total":OO0O00O00OO0O00OO ,"installed":OO00000OO0OO00OOO .check_docker_program (),"service_status":OO00000OO0OO00OOO .get_service_status ()}#line:395
-    def get_list (OOOOO0O0OO0OO0OOO ,O0O00O0O00O00O0OO ):#line:398
-        ""#line:402
-        import projectModel .bt_docker .dk_setup as ds #line:404
-        OOO0O000OO000O0OO =OOOOO0O0OO0OO0OOO .get_other_data_for_container_list (O0O00O0O00O00O0OO )#line:405
-        if not ds .main ().check_docker_program ():#line:406
-            OOO0O000OO000O0OO ['container_list']=list ()#line:407
-            return public .returnMsg (True ,OOO0O000OO000O0OO )#line:408
-        OO0O000OO0O000OOO =OOOOO0O0OO0OO0OOO .docker_client (O0O00O0O00O00O0OO .url )#line:409
-        if not OO0O000OO0O000OOO :#line:410
-            return public .returnMsg (True ,OOO0O000OO000O0OO )#line:412
-        O0O0OOOOOOOO00OOO =OO0O000OO0O000OOO .containers #line:413
-        O00O0OO0O0OO0O000 =OOOOO0O0OO0OO0OOO .get_container_attr (O0O0OOOOOOOO00OOO )#line:414
-        OOO00OO0OO0OO0OO0 =list ()#line:416
-        for OO0O0OOOOO00OO0O0 in O00O0OO0O0OO0O000 :#line:417
-            OOO0OOOO0OO000OOO =dp .sql ("cpu_stats").where ("container_id=?",(OO0O0OOOOO00OO0O0 ["Id"],)).select ()#line:418
-            if OOO0OOOO0OO000OOO and isinstance (OOO0OOOO0OO000OOO ,list ):#line:419
-                OOO0OOOO0OO000OOO =OOO0OOOO0OO000OOO [-1 ]['cpu_usage']#line:420
-            else :#line:421
-                OOO0OOOO0OO000OOO ="0.0"#line:422
-            OOOO0OO0000O000O0 ={"id":OO0O0OOOOO00OO0O0 ["Id"],"name":OO0O0OOOOO00OO0O0 ['Name'].replace ("/",""),"status":OO0O0OOOOO00OO0O0 ["State"]["Status"],"image":OO0O0OOOOO00OO0O0 ["Config"]["Image"],"time":OO0O0OOOOO00OO0O0 ["Created"],"merged":OOOOO0O0OO0OO0OOO .get_container_path (OO0O0OOOOO00OO0O0 ),"ip":OOOOO0O0OO0OO0OOO .get_container_ip (OO0O0OOOOO00OO0O0 ["NetworkSettings"]['Networks']),"ports":OO0O0OOOOO00OO0O0 ["NetworkSettings"]["Ports"],"detail":OO0O0OOOOO00OO0O0 ,"cpu_usage":OOO0OOOO0OO000OOO if OO0O0OOOOO00OO0O0 ["State"]["Status"]=="running"else ""}#line:434
-            OOO00OO0OO0OO0OO0 .append (OOOO0OO0000O000O0 )#line:435
-        OOO0O000OO000O0OO ['container_list']=OOO00OO0OO0OO0OO0 #line:436
-        return public .returnMsg (True ,OOO0O000OO000O0OO )#line:437
-    def get_container_attr (OOO0O0000OO0OOOOO ,O0O0OO0OOO00O000O ):#line:440
-        O0O00O0OO00OOOOO0 =O0O0OO0OOO00O000O .list (all =True )#line:441
-        return [OO0O0OO000OOOOOOO .attrs for OO0O0OO000OOOOOOO in O0O00O0OO00OOOOO0 ]#line:442
-    def get_logs (O0OO00OO0OO0O0OO0 ,OOO0O0O0000O0O00O ):#line:445
-        ""#line:451
-        try :#line:452
-            OO0OO0O0O00000O0O =O0OO00OO0OO0O0OO0 .docker_client (OOO0O0O0000O0O00O .url ).containers .get (OOO0O0O0000O0O00O .id )#line:453
-            O00OO0OO00OOO0O0O =OO0OO0O0O00000O0O .logs ().decode ()#line:454
-            return public .returnMsg (True ,O00OO0OO00OOO0O0O )#line:455
-        except docker .errors .APIError as O0OO00O00O000OO00 :#line:456
-            if "configured logging driver does not support reading"in str (O0OO00O00O000OO00 ):#line:457
-                return public .returnMsg (False ,"该容器没有日志文件！")#line:458
+import public
+import docker.errors
+import projectModel.bt_docker.dk_public as dp
+class main:
+
+    def __init__(self):
+        self.alter_table()
+
+    def alter_table(self):
+        if not dp.sql('sqlite_master').where('type=? AND name=? AND sql LIKE ?',
+                                               ('table', 'container', '%sid%')).count():
+            dp.sql('container').execute("alter TABLE container add container_name VARCHAR DEFAULT ''", ())
+
+    def docker_client(self,url):
+        return dp.docker_client(url)
+
+    # 添加容器
+    def run(self,args):
+        """
+        :param name:容器名
+        :param image: 镜像
+        :param publish_all_ports 暴露所有端口 1/0
+        :param ports  暴露某些端口 {'1111/tcp': ('127.0.0.1', 1111)}
+        :param command 命令
+        :param entrypoint  配置容器启动后执行的命令
+        :param environment 环境变量 xxx=xxx 一行一条
+        :param auto_remove 当容器进程退出时，在守护进程端启用自动移除容器。 0/1
+
+        :param args:
+        :return:
+        """
+        if not hasattr(args,'ports'):
+            args.ports = False
+        if not hasattr(args,'volumes'):
+            args.volumes = False
+        #检测端口是否已经在使用
+        if args.ports:
+            for i in args.ports:
+                if dp.check_socket(args.ports[i]):
+                    return public.returnMsg(False,"服务器端口[{}]已被占用，请更换为其他端口！".format(args.ports[i]))
+        if not args.image:
+            return public.returnMsg(False, "如果没有选择镜像，请到镜像标签拉取您需要的镜像！")
+        if args.restart_policy['Name'] == "always":
+            args.restart_policy = {"Name":"always"}
+        # return args.restart_policy
+        # if
+        args.cpu_quota = float(args.cpuset_cpus) * 100000
+        # if not args.volumes:
+        #     args.volumes = {"/sys/fs/cgroup":{"bind":"/sys/fs/cgroup","mode":"rw"}}
+        # else:
+        #     if not "/sys/fs/cgroup" in args.volumes:
+        #         args.volumes['/sys/fs/cgroup'] = {"bind":"/sys/fs/cgroup","mode":"rw"}
+        try:
+            if not args.name:
+                args.name = "{}-{}".format(args.image,public.GetRandomString(8))
+            if int(args.cpu_quota) / 100000 > dp.get_cpu_count():
+                return public.returnMsg(False,"CPU 配额已超过可用内核数！")
+            mem_limit_byte = dp.byte_conversion(args.mem_limit)
+            if mem_limit_byte > dp.get_mem_info():
+                return public.returnMsg(False, "内存配额已超过可用数量！")
+            res = self.docker_client(args.url).containers.run(
+                name=args.name,
+                image=args.image,
+                detach=True,
+                publish_all_ports=True if args.publish_all_ports == "1" else False,
+                ports=args.ports if args.ports else None,
+                command=args.command,
+                auto_remove=True if str(args.auto_remove) == "1" else False,
+                environment=dp.set_kv(args.environment), #"HOME=/value\nHOME11=value1"
+                volumes=args.volumes, #一个字典对象 {'服务器路径/home/user1/': {'bind': '容器路径/mnt/vol2', 'mode': 'rw'},'/var/www': {'bind': '/mnt/vol1', 'mode': 'ro'}}
+                # cpuset_cpus=args.cpuset_cpus ,#指定容器使用的cpu个数
+                cpu_quota=int(args.cpu_quota),
+                mem_limit=args.mem_limit, #b,k,m,g
+                restart_policy=args.restart_policy,
+                labels=dp.set_kv(args.labels), #"key=value\nkey1=value1"
+                tty=True,
+                stdin_open=True,
+                privileged=True
+            )
+            if res:
+                pdata = {
+                    "cpu_limit": str(args.cpu_quota),
+                    "container_name": args.name
+                }
+                dp.sql('container').insert(pdata)
+                public.set_module_logs('docker', 'run_container', 1)
+                dp.write_log("创建容器 [{}] 成功！".format(args.name))
+                return public.returnMsg(True,"容器创建成功！")
+            return public.returnMsg(False, '创建失败！')
+        except docker.errors.APIError as e:
+            if "container to be able to reuse that name." in str(e):
+                return public.returnMsg(False, "容器名称已存在！")
+            if "Invalid container name" in str(e):
+                return public.returnMsg(False, "容器名称不合法，请勿使用中文容器名称！")
+            if "bind: address already in use" in str(e):
+                port = ""
+                for i in args.ports:
+                    if ":{}:".format(args.ports[i]) in str(e):
+                        port = args.ports[i]
+                args.id = args.name
+                self.del_container(args)
+                return public.returnMsg(False, "服务器端口 {} 正在使用中！ 请更改其他端口".format(port))
+            return public.returnMsg(False, '创建失败! {}'.format(public.get_error_info()))
+
+    # 保存为镜像
+    def commit(self,args):
+        """
+        :param repository       推送到的仓库
+        :param tag              镜像标签 jose:v1
+        :param message          提交的信息
+        :param author           镜像作者
+        :param changes
+        :param conf dict
+        :param path 导出路径
+        :param name 导出文件名
+        :param args:
+        :return:
+        """
+        if not hasattr(args,'conf') or not args.conf:
+            args.conf = None
+        if args.repository == "docker.io":
+            args.repository = ""
+        container = self.docker_client(args.url).containers.get(args.id)
+        container.commit(
+            repository=args.repository if args.repository else None,
+            tag=args.tag if args.tag else None,
+            message=args.message if args.message else None,
+            author=args.author if args.author else None,
+            # changes=args.changes if args.changes else None,
+            conf=args.conf
+        )
+        if hasattr(args,"path") and args.path:
+            args.id = "{}:{}".format(args.name,args.tag)
+            import projectModel.bt_docker.dk_image as dk
+            return dk.main().save(args)
+        dp.write_log("提交容器 [{}] 作为图像 [{}] 成功！".format(container.attrs['Name'],args.tag))
+        return public.returnMsg(True,"提交成功！")
+
+    # 容器执行命令
+    def docker_shell(self, args):
+        """
+        :param container_id
+        :param args:
+        :return:
+        """
+        try:
+            self.docker_client(args.url).containers.get(args.container_id)
+            cmd = 'docker container exec -it {} /bin/bash'.format(args.container_id)
+            return public.returnMsg(True, cmd)
+        except docker.errors.APIError as ex:
+            return public.returnMsg(False, '获取容器失败')
+
+    # 导出容器为tar 没有导入方法，目前弃用
+    def export(self,args):
+        """
+        :param path 保存路径
+        :param name 包名
+        :param args:
+        :return:
+        """
+        from os import path as ospath
+        from os import makedirs as makedirs
+        try:
+            if "tar" in args.name:
+                file_name = '{}/{}'.format(args.path,args.name)
+            else:
+                file_name = '{}/{}.tar'.format(args.path, args.name)
+            if not ospath.exists(args.path):
+                makedirs(args.path)
+            public.writeFile(file_name,'')
+            f = open(file_name, 'wb')
+            container = self.docker_client(args.url).containers.get(args.id)
+            data = container.export()
+            for i in data:
+                f.write(i)
+            f.close()
+            return public.returnMsg(True, "成功导出到：{}".format(file_name))
+        except:
+            return public.returnMsg(False, '操作失败：' + str(public.get_error_info()))
+
+    # 删除容器
+    def del_container(self,args):
+        """
+        :return:
+        """
+        import projectModel.bt_docker.dk_public as dp
+        container = self.docker_client(args.url).containers.get(args.id)
+        container.remove(force=True)
+        dp.sql("cpu_stats").where("container_id=?", (args.id,)).delete()
+        dp.sql("io_stats").where("container_id=?", (args.id,)).delete()
+        dp.sql("mem_stats").where("container_id=?", (args.id,)).delete()
+        dp.sql("net_stats").where("container_id=?", (args.id,)).delete()
+        dp.sql("container").where("container_nam=?", (container.attrs['Name'])).delete()
+        dp.write_log("删除容器 [{}] 成功！".format(container.attrs['Name']))
+        return public.returnMsg(True,"成功删除!")
+
+    # 设置容器状态
+    def set_container_status(self,args):
+        import time
+        container = self.docker_client(args.url).containers.get(args.id)
+        if args.act == "start":
+            container.start()
+        elif args.act == "stop":
+            container.stop()
+        elif args.act == "pause":
+            container.pause()
+        elif args.act == "unpause":
+            container.unpause()
+        elif args.act == "reload":
+            container.reload()
+        else:
+            container.restart()
+        time.sleep(1)
+        tmp = self.docker_client(args.url).containers.get(args.id)
+        return {"name":container.attrs['Name'].replace('/',''),"status":tmp.attrs['State']['Status']} #返回设置后的状态
+
+
+    # 停止容器
+    def stop(self,args):
+        """
+        :param url
+        :param id
+        :param args:
+        :return:
+        """
+        try:
+            args.act = "stop"
+            data = self.set_container_status(args)
+            if data['status'] != "exited":
+                return public.returnMsg(False, "停止失败!")
+            dp.write_log("停止容器 [{}] 成功!".format(data['name']))
+            return public.returnMsg(True, "停止成功!")
+        except docker.errors.APIError as e:
+            if "is already paused" in str(e):
+                return public.returnMsg(False,"容器已暂停!")
+            if "No such container" in str(e):
+                return public.returnMsg(True, "容器已停止并删除，因为容器有停止后自动删除的选项!")
+            return public.returnMsg(False,"停止失败!{}".format(e))
+
+    def start(self,args):
+        """
+        :param url
+        :param id
+        :param args:
+        :return:
+        """
+        try:
+            args.act = "start"
+            data = self.set_container_status(args)
+            if data['status'] != "running":
+                return public.returnMsg(False, "启动失败!")
+            dp.write_log("启动容器 [{}] 成功!".format(data['name']))
+            return public.returnMsg(True, "启动成功!")
+        except docker.errors.APIError as e:
+            if "cannot start a paused container, try unpause instead" in str(e):
+                return self.unpause(args)
+
+    def pause(self,args):
+        """
+        Pauses all processes within this container.
+        :param url
+        :param id
+        :param args:
+        :return:
+        """
+        try:
+            args.act = "pause"
+            data = self.set_container_status(args)
+            if data['status'] != "paused":
+                return public.returnMsg(False, "容器暂停失败!")
+            dp.write_log("暂停容器 [{}] 成功!".format(data['name']))
+            return public.returnMsg(True, "容器暂停成功!")
+        except docker.errors.APIError as e:
+            if "is already paused" in str(e):
+                return public.returnMsg(False,"容器已被挂起！")
+            if "is not running" in str(e):
+                return public.returnMsg(False, "容器未启动，无法暂停!")
+            if "is not paused" in str(e):
+                return public.returnMsg(False, "容器没有被暂停!")
+            return str(e)
+
+    def unpause(self,args):
+        """
+        unPauses all processes within this container.
+        :param url
+        :param id
+        :param args:
+        :return:
+        """
+        try:
+            args.act = "unpause"
+            data = self.set_container_status(args)
+            if data['status'] != "running":
+                return public.returnMsg(False, "启动失败!")
+            dp.write_log("取消暂停容器 [{}] 成功!".format(data['name']))
+            return public.returnMsg(True, "容器取消暂停成功")
+        except docker.errors.APIError as e:
+            if "is already paused" in str(e):
+                return public.returnMsg(False,"容器已暂停!")
+            if "is not running" in str(e):
+                return public.returnMsg(False, "容器未启动，无法暂停!")
+            if "is not paused" in str(e):
+                return public.returnMsg(False, "容器没有被暂停!")
+            return str(e)
+
+    def reload(self,args):
+        """
+        Load this object from the server again and update attrs with the new data.
+        :param url
+        :param id
+        :param args:
+        :return:
+        """
+        args.act = "reload"
+        data = self.set_container_status(args)
+        if data['status'] != "running":
+            return public.returnMsg(False, "启动失败!")
+        dp.write_log("重新加载容器 [{}] 成功!".format(data['name']))
+        return public.returnMsg(True, "重载容器成功!")
+
+    def restart(self,args):
+        """
+        Restart this container. Similar to the docker restart command.
+        :param url
+        :param id
+        :param args:
+        :return:
+        """
+        args.act = "restart"
+        data = self.set_container_status(args)
+        if data['status'] != "running":
+            return public.returnMsg(False, "启动失败!")
+        dp.write_log("重启容器 [{}] 成功!".format(data['name']))
+        return public.returnMsg(True, "容器重启成功!")
+
+    def get_container_ip(self,container_networks):
+        data = list()
+        for network in container_networks:
+            data.append(container_networks[network]['IPAddress'])
+        return data
+
+    def get_container_path(self,detail):
+        import os
+        if not "GraphDriver" in detail:
+            return False
+        if "Data" not in detail["GraphDriver"]:
+            return False
+        if "MergedDir" not in detail["GraphDriver"]["Data"]:
+            return False
+        path = detail["GraphDriver"]["Data"]["MergedDir"]
+        if not os.path.exists(path):
+            return ""
+        return path
+
+    # 获取容器列表所需的外部数据
+    def get_other_data_for_container_list(self,args):
+        import projectModel.bt_docker.dk_image as di
+        import projectModel.bt_docker.dk_volume as dv
+        import projectModel.bt_docker.dk_compose as dc
+        import projectModel.bt_docker.dk_setup as ds
+        # 获取镜像列表
+        images = di.main().image_list(args)
+        if images['status']:
+            images = images['msg']['images_list']
+        else:
+            images = list()
+        # 获取卷列表
+        volumes = dv.main().get_volume_list(args)
+        if volumes['status']:
+            volumes = volumes['msg']['volume']
+        else:
+            volumes = list()
+        # 获取模板列表
+        template = dc.main().template_list(args)
+        if template['status']:
+            template = template['msg']['template']
+        else:
+            template = list()
+        online_cpus = dp.get_cpu_count()
+        mem_total = dp.get_mem_info()
+        docker_setup = ds.main()
+        return {
+            "images":images,
+            "volumes":volumes,
+            "template":template,
+            "online_cpus":online_cpus,
+            "mem_total":mem_total,
+            "installed":docker_setup.check_docker_program(),
+            "service_status":docker_setup.get_service_status()
+        }
+
+    # 获取容器列表
+    def get_list(self,args):
+        """
+        :param url
+        :return:
+        """
+        # 判断docker是否安装
+        import projectModel.bt_docker.dk_setup as ds
+        data = self.get_other_data_for_container_list(args)
+        if not ds.main().check_docker_program():
+            data['container_list'] = list()
+            return public.returnMsg(True,data)
+        client = self.docker_client(args.url)
+        if not client:
+
+            return public.returnMsg(True,data)
+        containers = client.containers
+        attr_list = self.get_container_attr(containers)
+        # data = self.get_other_data_for_container_list(args)
+        container_detail = list()
+        for attr in attr_list:
+            cpu_usage = dp.sql("cpu_stats").where("container_id=?",(attr["Id"],)).select()
+            if cpu_usage and isinstance(cpu_usage,list):
+                cpu_usage = cpu_usage[-1]['cpu_usage']
+            else:
+                cpu_usage = "0.0"
+            tmp = {
+                "id": attr["Id"],
+                "name": attr['Name'].replace("/",""),
+                "status": attr["State"]["Status"],
+                "image": attr["Config"]["Image"],
+                "time": attr["Created"],
+                "merged": self.get_container_path(attr),
+                "ip": self.get_container_ip(attr["NetworkSettings"]['Networks']),
+                "ports": attr["NetworkSettings"]["Ports"],
+                "detail": attr,
+                "cpu_usage":cpu_usage if attr["State"]["Status"] == "running" else ""
+            }
+            container_detail.append(tmp)
+        data['container_list'] = container_detail
+        return public.returnMsg(True,data)
+
+    # 获取容器的attr
+    def get_container_attr(self,containers):
+        c_list = containers.list(all=True)
+        return [container_info.attrs for container_info in c_list]
+
+    # 获取容器日志
+    def get_logs(self,args):
+        """
+        :param url
+        :param id
+        :param args:
+        :return:
+        """
+        try:
+            container = self.docker_client(args.url).containers.get(args.id)
+            res = container.logs().decode()
+            return public.returnMsg(True,res)
+        except docker.errors.APIError as e:
+            if "configured logging driver does not support reading" in str(e):
+                return public.returnMsg(False,"容器没有日志文件！")
+
+
+
+    # 登录容器
+
+
     # 获取容器配置文件

@@ -44,20 +44,20 @@ class panelMssql:
             import pymssql
         except :
             os.system("btpip install pymssql==2.1.4")
-            import pymssql        
-               
-        
-        if not self.__DB_CLOUD:            
+            import pymssql
+
+
+        if not self.__DB_CLOUD:
             sa_path = 'data/sa.pl'
-            if os.path.exists(sa_path): self.__DB_PASS = public.readFile(sa_path)       
+            if os.path.exists(sa_path): self.__DB_PASS = public.readFile(sa_path)
             self.__DB_PORT = self.get_port()
 
         try:
-   
-            if self.__DB_CLOUD:                
-                self.__DB_CONN = pymssql.connect(server = self.__DB_HOST, port= str(self.__DB_PORT),user=self.__DB_USER,password=self.__DB_PASS,database = None,login_timeout = 30,timeout = 0,autocommit = True)        
+
+            if self.__DB_CLOUD:
+                self.__DB_CONN = pymssql.connect(server = self.__DB_HOST, port= str(self.__DB_PORT),user=self.__DB_USER,password=self.__DB_PASS,database = None,login_timeout = 30,timeout = 0,autocommit = True)
             else:
-                self.__DB_CONN = pymssql.connect(server = self.__DB_HOST, port= str(self.__DB_PORT),login_timeout = 30,timeout = 0,autocommit = True)      
+                self.__DB_CONN = pymssql.connect(server = self.__DB_HOST, port= str(self.__DB_PORT),login_timeout = 30,timeout = 0,autocommit = True)
             self.__DB_CUR = self.__DB_CONN.cursor()  #将数据库连接信息，赋值给cur。
             self.__DB_CUR = self.__DB_CONN.cursor()  #将数据库连接信息，赋值给cur。
             if self.__DB_CUR:
@@ -67,7 +67,7 @@ class panelMssql:
                 return False
         except Exception as ex:
             self.__DB_ERR = public.get_error_info()
-       
+
         return False
 
     def execute(self,sql):
@@ -76,32 +76,32 @@ class panelMssql:
         if not self.__Conn(): return self.__DB_ERR
         try:
             result = self.__DB_CUR.execute(sql)
-          
+
             self.__Close()
-            return result;    
+            return result;
         except Exception as ex:
             self.__DB_ERR = public.get_error_info()
             return self.__DB_ERR
-    
+
     def query(self,sql):
         #执行SQL语句返回数据集
         if not self.__Conn(): return self.__DB_ERR
         try:
             self.__DB_CUR.execute(sql)
             result = self.__DB_CUR.fetchall()
-            
+
             #print(result)
             #将元组转换成列表
             data = list(map(list,result))
             self.__Close()
             return data
-        except Exception as ex:          
+        except Exception as ex:
             self.__DB_ERR = public.get_error_info()
             #public.WriteLog('SQL Server查询异常', self.__DB_ERR);
             return str(ex)
-        
-     
-    #关闭连接        
+
+
+    #关闭连接
     def __Close(self):
         self.__DB_CUR.close()
         self.__DB_CONN.close()

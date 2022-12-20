@@ -64,7 +64,7 @@ def do_one(dest_addr, timeout):
           )
             raise socket.error(msg)
         raise # raise the original error
-    
+
     my_ID = os.getpid() & 0xFFFF
     send_one_ping(my_socket, dest_addr, my_ID)
     delay = receive_one_ping(my_socket, my_ID, timeout)
@@ -76,7 +76,7 @@ def get_ping(timeout = 0.5):
         delay = do_one(dest_addr, timeout)
     except socket.gaierror, e:
         return -2
-    
+
     if delay == None:
         return -1
     else:

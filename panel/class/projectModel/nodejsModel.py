@@ -124,6 +124,12 @@ class main(projectBase):
         if not os.path.exists(self._nodejs_path): return nodejs_list
         for v in os.listdir(self._nodejs_path):
             if v[0] != 'v' or v.find('.') == -1: continue
+            node_path = os.path.join(self._nodejs_path,v)
+            node_bin = '{}/bin/node'.format(node_path)
+            if not os.path.exists(node_bin):
+                if os.path.exists(node_path + '/bin'):
+                    public.ExecShell('rm -rf {}'.format(node_path))
+                continue
             nodejs_list.append(v)
         return nodejs_list
 
@@ -1377,30 +1383,6 @@ cd {}
     def xsssec(self,text):
         return text.replace('<', '&lt;').replace('>', '&gt;')
 
-    def last_lines(self,filename, lines=1):
-        block_size = 3145928
-        block = ''
-        nl_count = 0
-        start = 0
-        fsock = open(filename, 'rU')
-        try:
-            fsock.seek(0, 2)
-            curpos = fsock.tell()
-            while (curpos > 0):
-                curpos -= (block_size + len(block))
-                if curpos < 0: curpos = 0
-                fsock.seek(curpos)
-                try:
-                    block = fsock.read()
-                except:
-                    continue
-                nl_count = block.count('\n')
-                if nl_count >= lines: break
-            for n in range(nl_count - lines + 1):
-                start = block.find('\n', start) + 1
-        finally:
-            fsock.close()
-        return block[start:]
 
     def get_project_log(self,get):
         '''
@@ -1413,9 +1395,7 @@ cd {}
         '''
         log_file = "{}/{}.log".format(self._node_logs_path,get.project_name)
         if not os.path.exists(log_file): return public.return_error('日志文件不存在')
-        if os.path.getsize(log_file)>3145928:
-            return public.returnMsg(True,self.xsssec(self.last_lines(log_file, 3000)))
-        return self.xsssec(public.GetNumLines(log_file,3000))
+        return self.xsssec(public.GetNumLines(log_file,200))
 
 
     def get_project_load_info(self,get = None,project_name = None):

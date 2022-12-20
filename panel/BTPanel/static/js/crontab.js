@@ -388,7 +388,7 @@ var crontab = {
         config[4].display = true;
         config[7].display = true;
         config[7].group.list = ''
-        config[7].group.unit = '<span class="alertMsg"><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>【使用提醒】此功能为企业版专享功能，当前所有用户可免费使用。当前数据库暂不支持SQLServer、MongoDB、Redis、PgSQL备份</span>'
+        config[7].group.unit = '<span class="alertMsg"><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>【使用提醒】此功能为企业版专享功能，目前处于公测阶段，将于2023年1月16日后转为收费功能。当前数据库暂不支持SQLServer、MongoDB、Redis、PgSQL备份</span>'
         if (Add) {
           config[2].group[0].value = 'hour-n'
           config[2].group[3].value = '3'
@@ -912,8 +912,14 @@ var crontab = {
           group: [{
             title: '执行',
             event: function (row, index, ev, key, that) {
-              _that.startCrontabTask(row, function () {
+              _that.startCrontabTask(row, function (res) {
                 that.$refresh_table_list(true);
+                if(res.status) {
+                  setTimeout(function () {
+                    layer.closeAll()
+                    $('#crontabTabel .table tbody tr:eq('+ index +')').find('[title="日志"]').click()
+                  }, 1000)
+                }
               })
             }
           }, {
@@ -1190,6 +1196,7 @@ var crontab = {
           }, {
             title: '日志',
             event: function (row, index, ev, key, that) {
+              var log_interval = null
               _that.getCrontabLogs(row, function (rdata) {
                 layer.open({
                   type: 1,
@@ -1201,18 +1208,40 @@ var crontab = {
 											<pre class="crontab-log" style="overflow: auto; border: 0 none; line-height:23px;padding: 15px; margin: 0;white-space: pre-wrap; height: 405px; background-color: rgb(51,51,51);color:#f1f1f1;border-radius:0;"></pre>\
 												<div class="bt-form-submit-btn" style="margin-top: 0">\
 												<button type="button" class="btn btn-danger btn-sm btn-title" id="clearLogs" style="margin-right:15px;">'+ lan['public']['empty'] + '</button>\
-												<button type="button" class="btn btn-success btn-sm btn-title" onclick="layer.closeAll()">'+ lan['public']['close'] + '</button>\
+												<button type="button" class="btn btn-success btn-sm btn-title" id="closeLogs">'+ lan['public']['close'] + '</button>\
 											</div>\
 										</div>',
                   success: function () {
-                    var log_body = rdata.msg === '' ? '当前日志为空' : rdata.msg, setchmod = $(".setchmod pre"), crontab_log = $('.crontab-log')[0]
-                    setchmod.text(log_body);
-                    crontab_log.scrollTop = crontab_log.scrollHeight;
+                    log_interval = setInterval(function () {
+                      bt_tools.send({
+                        url: '/crontab?action=GetLogs',
+                        data: { id: row.id }
+                      }, function (res) {
+                        if (res.status) {
+                          render_content(res)
+                        }
+                      })
+                    }, 1000)
+                    render_content(rdata)
+                    function render_content(data) {
+                      var log_body = data.msg === '' ? '当前日志为空' : data.msg,setchmod = $(".setchmod pre"),crontab_log = $('.crontab-log')[0]
+                      setchmod.text(log_body);
+                      crontab_log.scrollTop = crontab_log.scrollTop !== crontab_log.scrollHeight && crontab_log.scrollTop !== 0 ? crontab_log.scrollTop : crontab_log.scrollHeight;
+                    }
                     $('#clearLogs').on('click', function () {
+                      clearInterval(log_interval)
                       _that.clearCrontabLogs(row, function () {
-                        setchmod.text('')
+                        $(".setchmod pre").text('')
                       })
                     })
+                    $('#closeLogs').on('click', function () {
+                      clearInterval(log_interval)
+                      layer.closeAll()
+                    })
+                  },
+                  cancel: function(indexs){
+                    clearInterval(log_interval)
+                    layer.close(indexs)
                   }
                 })
               })

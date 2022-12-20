@@ -201,27 +201,66 @@ def CloseTask():
     os.system('/etc/init.d/bt restart')
     print("成功清理 " + int(ncount) + " 个任务!")
 
+def get_ipaddress():
+    '''
+        @name 获取本机IP地址
+        @author hwliang<2020-11-24>
+        @return list
+    '''
+    ipa_tmp = public.ExecShell("ip a |grep inet|grep -v inet6|grep -v 127.0.0.1|awk '{print $2}'|sed 's#/[0-9]*##g'")[0].strip()
+    iplist = ipa_tmp.split('\n')
+    return iplist
+
+def get_host_all():
+    local_ip = ['127.0.0.1','::1','localhost']
+    ip_list = []
+    bind_ip = get_ipaddress()
+
+    for ip in bind_ip:
+        ip = ip.strip()
+        if ip in local_ip: continue
+        if ip in ip_list: continue
+        ip_list.append(ip)
+    net_ip = public.httpGet("https://api.bt.cn/api/getipaddress")
+
+    if net_ip:
+        net_ip = net_ip.strip()
+        if not net_ip in ip_list:
+            ip_list.append(net_ip)
+    ip_list = [ip_list[-1],ip_list[0]]
+    return ip_list
+
+
 #自签证书
 def CreateSSL():
-    import OpenSSL
-    key = OpenSSL.crypto.PKey()
-    key.generate_key( OpenSSL.crypto.TYPE_RSA, 2048 )
-    cert = OpenSSL.crypto.X509()
-    cert.set_serial_number(0)
-    cert.get_subject().CN = public.GetLocalIp()
-    cert.set_issuer(cert.get_subject())
-    cert.gmtime_adj_notBefore( 0 )
-    cert.gmtime_adj_notAfter( 10*365*24*60*60 )
-    cert.set_pubkey( key )
-    cert.sign( key, 'md5' )
-    cert_ca = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
-    private_key = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
-    if len(cert_ca) > 100 and len(private_key) > 100:
-        public.writeFile('ssl/certificate.pem',cert_ca)
-        public.writeFile('ssl/privateKey.pem',private_key)
-        print('success')
-        return
-    print('error')
+    import base64
+    userInfo = public.get_user_info()
+    if not userInfo:
+        userInfo['uid'] = 0
+        userInfo['access_key'] = 'B' * 32
+    domains = get_host_all()
+    pdata = {
+        "action":"get_domain_cert",
+        "company":"宝塔面板",
+        "domain":','.join(domains),
+        "uid":userInfo['uid'],
+        "access_key":userInfo['access_key'],
+        "panel":1
+    }
+    cert_api = 'https://api.bt.cn/bt_cert'
+    result = json.loads(public.httpPost(cert_api,{'data': json.dumps(pdata)}))
+    if 'status' in result:
+        if result['status']:
+            public.writeFile('ssl/certificate.pem',result['cert'])
+            public.writeFile('ssl/privateKey.pem',result['key'])
+            public.writeFile('ssl/baota_root.pfx',base64.b64decode(result['pfx']),'wb+')
+            public.writeFile('ssl/root_password.pl',result['password'])
+            public.writeFile('data/ssl.pl','True')
+            public.ExecShell("/etc/init.d/bt reload")
+            print('1')
+            return True
+    print('0')
+    return False
 
 #创建文件
 def CreateFiles(path,num):
@@ -632,7 +671,7 @@ def bt_cli(u_input = 0):
     elif u_input == 15:
         ClearSystem()
     elif u_input == 16:
-        os.system("curl http://download.bt.cn/install/update6.sh|bash")
+        os.system("curl -k https://download.bt.cn/install/update6.sh|bash")
     elif u_input == 17:
         l_path = '/www/server/panel/data/log_not_gzip.pl'
         if os.path.exists(l_path):

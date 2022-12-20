@@ -1012,7 +1012,7 @@ echo $! > {pid_file}'''.format(
         # else:
         #     get.domains=[]
         #     get.bind_extranet=0
-        
+
         domains = []
         if get.bind_extranet == 1:
             domains = get.domains

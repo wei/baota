@@ -637,7 +637,7 @@ var bt_file = {
         if (data['filename'] == 'Recycle_bin') return fileManage.recycle_bin_view();
         that.reader_file_list({ path: that.file_path + '/' + data['filename'], is_operating: true });
       } else {
-        layer.msg(data.open_type == 'compress' ? '双击解压文件' : '双击文件编辑');
+        layer.msg(data.open_type == 'compress' ? '双击解压文件' : data.open_type == 'ont_text' ? '该文件类型不支持编辑' :'双击文件编辑');
       }
       e.stopPropagation();
       e.preventDefault();
@@ -2304,7 +2304,7 @@ var bt_file = {
                 _openTitle = '播放';
                 break;
               default:
-                if (fileManage.determine_file_type(item.ext) == 'compress') {
+                if (fileManage.determine_file_type(item.ext) == 'compress' || fileManage.determine_file_type(item.ext) === 'ont_text') {
                   _openTitle = '';
                 } else {
                   _openTitle = '编辑';
@@ -2338,7 +2338,7 @@ var bt_file = {
           '<div class="file_td file_mtime"><span>' + bt.format_data(item.mtime) + '</span></div>' +
           '<div class="file_td file_ps"><span class="file_ps_title" title="' + item.ps + '">' + (item.is_os_ps ? ('<span>' + item.ps +'</span>') : '<input type="text" class="set_file_ps" data-value="' + item.ps + '" value="' + item.ps + '" />') + '</span></div>' +
           '<div class="file_td file_operation"><div class="set_operation_group">' +
-          '<a href="javascript:;" class="btlink" data-type="open">' + is_editor_tips + '</a>&nbsp;|&nbsp;' +
+          '<a href="javascript:;" class="btlink" data-type="open">' + is_editor_tips + '</a>'+ (is_editor_tips !== '' ? '&nbsp;|&nbsp;':'') +
           '<a href="javascript:;" class="btlink" data-type="copy">复制</a>&nbsp;|&nbsp;' +
           '<a href="javascript:;" class="btlink" data-type="shear">剪切</a>&nbsp;|&nbsp;' +
           '<a href="javascript:;" class="btlink" data-type="rename">重命名</a>&nbsp;|&nbsp;' +
@@ -4265,7 +4265,7 @@ var bt_file = {
       area: ["890px", "402px"],
       shadeClose: false,
       skin: 'movie_pay',
-      content: '<div id="btvideo"><video type="" src="' + imgUrl + '&play=true" data-filename="' + data.path + '" controls="controls" autoplay="autoplay" width="640" height="360">您的浏览器不支持 video 标签。</video></div><div class="video-list"></div>',
+      content: '<div id="btvideo"><video type="" src="' + imgUrl + '&play=true" data-filename="' + data.path + '" controls="controls" controlslist="nodownload" autoplay="autoplay" width="640" height="360">您的浏览器不支持 video 标签。</video></div><div class="video-list"></div>',
       success: function () {
         $.post('/files?action=get_videos', { path: path }, function (rdata) {
           var video_list = '<table class="table table-hover" style="margin-bottom:0;"><thead style="display: none;"><tr><th style="word-break: break-all;word-wrap:break-word;width:165px;">文件名</th><th style="width:65px" style="text-align:right;">大小</th></tr></thead>',

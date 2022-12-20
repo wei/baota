@@ -72,9 +72,7 @@ var bt_tools = {
        */
       $refresh_table_list: function (load, callback) {
         var _that = this, loadT;
-        if (load) loadT = bt_tools.load('获取列表数据');
-        this.$http(function (data) {
-          if (loadT) loadT.close();
+        this.$http(load,function (data) {
           if (callback) callback(data);
           _that.$reader_content(data.data, typeof data.total != "undefined" ? parseInt(data.total) : data.page);
         });
@@ -763,16 +761,18 @@ var bt_tools = {
                     case 'object':
                       var config = active.confirm;
                       bt.open({
+                        type: 1,
                         title: config.title || '批量操作',
                         area: config.area || '350px',
                         btn: config.btn || ['确认', '取消'],
-                        content: config.content,
+                        content: '<div class="pd20">' + config.content + '</div>',
                         success: function (layero, index) {
                           config.success(layero, index, active);
                         },
                         yes: function (index, layero) {
                           config.yes(index, layero, function (param, callback) {
                             active.param = $.extend(active.param, param);
+                            layer.close(index);
                             request(active, check_list);
                           });
                         }
@@ -1067,11 +1067,16 @@ var bt_tools = {
                 }
                 break;
               case 'search_btn':
-                var _search = $(_that.config.el + ' .search_input'), val = $(_that.config.el + ' .search_input').val();
+                var _search = $(_that.config.el + ' .search_input'),
+                    val = $(_that.config.el + ' .search_input').val(),
+                    _filterBox = $('<div></div>').text(val),
+                    _filterText = _filterBox.html();
+
+                val = _filterText //过滤xss
                 val = val.replace(/(^\s*)|(\s*$)/g, "");
                 _search.val(val);
                 _that.config.search.value = val;
-								if (_that.config.page) _that.config.page.page = 1;
+                if (_that.config.page) _that.config.page.page = 1;
                 _search.append('<div class="bt_search_tips"><span>' + val + '</span><i class="bt_search_close"></i></div>');
                 _that.$refresh_table_list(true);
                 break;
@@ -1178,7 +1183,7 @@ var bt_tools = {
        * @param {object} param 参数和请求路径
        * @return void
        */
-      $http: function (success) {
+      $http: function (load,success) {
         var page_number = this.$get_page_number(),
             that = this,
             param = {},
@@ -1214,7 +1219,7 @@ var bt_tools = {
         }
         bt_tools.send({
           url: config.url,
-          data: config.param
+          data: config.param,
         }, function (res) {
           if (typeof config.dataFilter != "undefined") {
             var data = config.dataFilter(res, that);
@@ -1230,7 +1235,7 @@ var bt_tools = {
               page: res.page
             })
           }
-        },{verify: typeof config.dataVerify === "undefined"?true:!!config.dataVerify});
+        },{load:(load?'获取列表数据':false),verify: typeof config.dataVerify === "undefined"?true:!!config.dataVerify});
       }
     }
     var example = new ReaderTable(config);
@@ -1408,6 +1413,10 @@ var bt_tools = {
         var that = this;
         if (this.el) {
           $(this.el).html(this.$reader_content())
+          $(this.el).find('input[type="text"],textarea').each(function () {
+            var name = $(this).attr('name');
+            $(this).val(that.data[name]);
+          });
           if ($('#editCrontabForm .bt_multiple_select_updown').length > 0) {
             var height = $('#editCrontabForm .bt_multiple_select_updown').parent().height()
             $('#editCrontabForm .line:eq(3) .tname').css({'height':height+'px','line-height':height+'px'})
@@ -1493,6 +1502,8 @@ var bt_tools = {
         }
         html += '<div class="' + (item.dispaly || 'inlineBlock') + ' ' + _that.$verify(item.hide, 'hide', true) + ' ' + (item['class'] || '') + '">';
         var _value = typeof that.data[item.name] !== "undefined" && that.data[item.name] !== '' ? that.data[item.name] : (item.value || '')
+        if(typeof that.data == 'undefined') that.data = {}
+        if(typeof item.value != 'undefined' && typeof that.data[item.name] == "undefined") that.data[item.name] = item.value
         switch (item.type) {
           case 'text': // 文本选择
           case 'checkbox': // 复选框
@@ -1511,7 +1522,7 @@ var bt_tools = {
                 }
                 break;
               default:
-                html += '<input type="' + item.type + '"' + attribute + ' ' + (item.icon ? 'id="' + _event + '"' : '') + ' class="bt-input-' + (item.type !== 'select_path' && item.type !== 'number' && item.type !== 'password' ? item.type : 'text') + ' mr10 ' + (item.label ? 'vertical_middle' : '') + _that.$verify(item['class']) + '"' + _that.$verify(style, 'style') + ' value="' + _value + '"/>';
+                html += '<input type="' + item.type + '"' + attribute + ' ' + (item.icon ? 'id="' + _event + '"' : '') + ' class="bt-input-' + (item.type !== 'select_path' && item.type !== 'number' && item.type !== 'password' ? item.type : 'text') + ' mr10 ' + (item.label ? 'vertical_middle' : '') + _that.$verify(item['class']) + '"' + _that.$verify(style, 'style') + ' value="' + (item.type == 'text'?'':_value) + '"/>';
                 break;
             }
             if (item.btn && !item.disabled) {
@@ -1542,7 +1553,7 @@ var bt_tools = {
             }
             break;
           case 'textarea':
-            html += '<textarea class="bt-input-text"' + _that.$verify(style, 'style') + attribute + ' >' + _value + '</textarea>';
+            html += '<textarea class="bt-input-text"' + _that.$verify(style, 'style') + attribute + ' ></textarea>';
             $.each(['blur', 'focus', 'input'], function (index, items) {
               if (item.tips) {
                 var added = null, event = {}
@@ -1648,7 +1659,6 @@ var bt_tools = {
         if (!this.event_list[eventName]) {
           // console.log(eventName)
           if (!this.event_list.hasOwnProperty(eventName)) {
-            // console.log('1')
             this.event_list[eventName] = config
           }
         }
@@ -1697,6 +1707,10 @@ var bt_tools = {
         var formFind = this.element.find('[data-name=' + name + ']')
         if (this.element.find('[data-name=' + name + ']').length === 0) formFind = this.element.find('[name=' + name + ']')
         formFind.parent().replaceWith(this.$reader_form_find(config))
+        if(config.type == 'text' || config.tyep == 'textarea'){
+          if (this.element.find('[data-name=' + name + ']').length === 0) formFind = this.element.find('[name=' + name + ']')
+          formFind.val(config.value)
+        }
       },
       /**
        * @description 渲染下拉，内容方法
@@ -2273,6 +2287,10 @@ var bt_tools = {
       form = bt_tools.form(param);
       _config.success = function (layero, indexs) {
         form.$event_bind();
+        $(layero).find('input[type="text"],textarea').each(function () {
+          var name = $(this).attr('name');
+          $(this).val(form.data[name]);
+        });
         if (typeof config.success != "undefined") config.success(layero, indexs,form);
       }
       _config.yes = function (indexs, layero) {
@@ -2573,7 +2591,7 @@ var bt_tools = {
         });
         this.socket.addEventListener('close', function (ev) {
           if (!that.forceExit) {
-            console.log(ev.code,that.retry)
+            // console.log(ev.code,that.retry)
             if (ev.code !== 1000 && that.retry <= 10) {
               that.socket = that.create_websocket_connect(that.config.route, that.config.shell)
               that.retry++;

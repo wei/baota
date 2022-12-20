@@ -18,7 +18,7 @@ import public
 
 class sms_msg:
 
-    _APIURL = 'http://www.bt.cn/api/wmsg';
+    _APIURL = 'https://www.bt.cn/api/wmsg';
     __UPATH = panelPath + '/data/userInfo.json';
     conf_path = panelPath + '/data/sms_main.json'
 

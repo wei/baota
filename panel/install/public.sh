@@ -10,7 +10,12 @@ export LANG=en_US.UTF-8
 export LANGUAGE=en_US:en
 
 get_node_url(){
-	nodes=(http://dg2.bt.cn http://dg1.bt.cn http://node.aapanel.com http://180.101.160.68:5880 http://123.129.198.197 http://158.247.208.19 http://103.224.251.67:5880 http://113.107.111.78 http://128.1.164.196 http://36.133.1.8:5880);
+	nodes=(https://dg2.bt.cn https://dg1.bt.cn https://download.bt.cn https://hk1-node.bt.cn https://na1-node.bt.cn https://jp1-node.bt.cn);
+
+	if [ "$1" ];then
+		nodes=($(echo ${nodes[*]}|sed "s#${1}##"))
+	fi
+
 	tmp_file1=/dev/shm/net_test1.pl
 	tmp_file2=/dev/shm/net_test2.pl
 	[ -f "${tmp_file1}" ] && rm -f ${tmp_file1}
@@ -19,7 +24,7 @@ get_node_url(){
 	touch $tmp_file2
 	for node in ${nodes[@]};
 	do
-		NODE_CHECK=$(curl --connect-timeout 3 -m 3 2>/dev/null -w "%{http_code} %{time_total}" ${node}/net_test|xargs)
+		NODE_CHECK=$(curl -k --connect-timeout 3 -m 3 2>/dev/null -w "%{http_code} %{time_total}" ${node}/net_test|xargs)
 		RES=$(echo ${NODE_CHECK}|awk '{print $1}')
 		NODE_STATUS=$(echo ${NODE_CHECK}|awk '{print $2}')
 		TIME_TOTAL=$(echo ${NODE_CHECK}|awk '{print $3 * 1000 - 500 }'|cut -d '.' -f 1)
@@ -47,7 +52,7 @@ get_node_url(){
 	if [ -z "$NODE_URL" ];then
 		NODE_URL=$(cat $tmp_file2|sort -g -t " " -k 1|head -n 1|awk '{print $2}')
 		if [ -z "$NODE_URL" ];then
-			NODE_URL='http://download.bt.cn';
+			NODE_URL='https://download.bt.cn';
 		fi
 	fi
 	rm -f $tmp_file1
@@ -103,22 +108,9 @@ send_check(){
 	chmod +x /etc/init.d/bt
 	p_path2=/www/server/panel/class/common.py
 	p_version=$(cat $p_path2|grep "version = "|awk '{print $3}'|tr -cd [0-9.])
-	curl -sS --connect-timeout 3 -m 60 http://www.bt.cn/api/panel/notpro?version=$p_version
+	curl -k -sS --connect-timeout 3 -m 60 https://www.bt.cn/api/panel/notpro?version=$p_version
 	NODE_URL=""
 	exit 0;
-}
-init_check(){
-	CRACK_URL=(oss.yuewux.com);
-	for url in ${CRACK_URL[@]};
-	do
-		CRACK_INIT=$(cat /etc/init.d/bt |grep ${url})
-		if [ "${CRACK_INIT}" ];then
-			rm -rf /www/server/panel/class/*
-			chattr +i /www/server/panel/class
-			chattr -R +i /www/server/panel
-			chattr +i /www
-		fi
-	done
 }
 GetSysInfo(){
 	if [ "${PM}" = "yum" ]; then
@@ -149,9 +141,9 @@ if [ -d "/www/server/phpmyadmin/pma" ];then
 	rm -rf /www/server/phpmyadmin/pma
 	EN_CHECK=$(cat /www/server/panel/config/config.json |grep English)
 	if [ "${EN_CHECK}" ];then
-		curl http://download.bt.cn/install/update6_en.sh|bash
+		curl -k https://download.bt.cn/install/update6_en.sh|bash
 	else
-		curl http://download.bt.cn/install/update6.sh|bash
+		curl -k https://download.bt.cn/install/update6.sh|bash
 	fi
 	echo > /www/server/panel/data/restart.pl
 fi
@@ -166,4 +158,5 @@ if [ ! $NODE_URL ];then
 	get_node_url
 	bt_check
 fi
+
 

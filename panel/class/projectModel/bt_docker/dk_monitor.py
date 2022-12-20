@@ -10,83 +10,123 @@
 #------------------------------
 # Docker模型
 #------------------------------
-import sys #line:13
-import threading #line:14
-sys .path .insert (0 ,"/www/server/panel/class/")#line:15
-sys .path .insert (1 ,"/www/server/panel/")#line:16
-import projectModel .bt_docker .dk_public as dp #line:17
-import projectModel .bt_docker .dk_container as dc #line:18
-import projectModel .bt_docker .dk_status as ds #line:19
-import projectModel .bt_docker .dk_image as di #line:20
-import public #line:21
-import time #line:23
-class main :#line:24
-    __O000O00000OO00OOO =None #line:26
-    __OOO0O00OO0OOO000O =86400 #line:27
-    def __init__ (O0O000OO00OOO0000 ,OO00O00OOOOOOOO0O ):#line:29
-        if not OO00O00OOOOOOOO0O :#line:30
-            O0O000OO00OOO0000 .__O000O00000OO00OOO =30 #line:31
-        else :#line:32
-            O0O000OO00OOO0000 .__O000O00000OO00OOO =OO00O00OOOOOOOO0O #line:33
-    def docker_client (OO0OO0OO000OO0OO0 ,O00000OO0O0000000 ):#line:35
-        return dp .docker_client (O00000OO0O0000000 )#line:36
-    def get_all_host_stats (OO0O0OO00O0O0O00O ,OOO0OOOO0O0OOOO00 ):#line:38
-        ""#line:43
-        O00O00OOO000OOO0O =dp .sql ('hosts').select ()#line:44
-        for O000O0OO00OO00O00 in O00O00OOO000OOO0O :#line:45
-            OO000O00O0OOO0OOO =threading .Thread (target =OOO0OOOO0O0OOOO00 ,args =(O000O0OO00OO00O00 ,))#line:46
-            OO000O00O0OOO0OOO .setDaemon (True )#line:47
-            OO000O00O0OOO0OOO .start ()#line:48
-    def container_status_for_all_hosts (O0O0OOO00OOOO0000 ,OO0O00O0OOOOOO0O0 ):#line:51
-        ""#line:56
-        OO000OO0OOOO00O0O =public .to_dict_obj ({})#line:58
-        OO000OO0OOOO00O0O .url =OO0O00O0OOOOOO0O0 ['url']#line:59
-        O0000O0000000OO00 =dc .main ().get_list (OO000OO0OOOO00O0O )['msg']#line:60
-        for OOO00O0OOO0OO0000 in O0000O0000000OO00 ['container_list']:#line:61
-            OO000OO0OOOO00O0O .id =OOO00O0OOO0OO0000 ['id']#line:62
-            OO000OO0OOOO00O0O .write =1 #line:63
-            OO000OO0OOOO00O0O .save_date =O0O0OOO00OOOO0000 .__O000O00000OO00OOO #line:64
-            ds .main ().stats (OO000OO0OOOO00O0O )#line:65
-    def container_count (O0OO00O0OO0O0OO00 ):#line:69
-        O0OO00OO0000OOO00 =dp .sql ('hosts').select ()#line:71
-        O00O00OO0O0000OOO =0 #line:72
-        for OOOOOO0OOOO000O0O in O0OO00OO0000OOO00 :#line:73
-            O0OO0O0O0O0OO0O00 =public .to_dict_obj ({})#line:74
-            O0OO0O0O0O0OO0O00 .url =OOOOOO0OOOO000O0O ['url']#line:75
-            O0O0O00O0OOOOOO0O =dc .main ().get_list (O0OO0O0O0O0OO0O00 )['msg']#line:76
-            O00O00OO0O0000OOO +=len (O0O0O00O0OOOOOO0O )#line:77
-        O00OO0OOO00O00OO0 ={"time":int (time .time ()),"container_count":O00O00OO0O0000OOO }#line:81
-        OOO0000O000OOO0OO =time .time ()-(O0OO00O0OO0O0OO00 .__O000O00000OO00OOO *O0OO00O0OO0O0OO00 .__OOO0O00OO0OOO000O )#line:82
-        dp .sql ("container_count").where ("time<?",(OOO0000O000OOO0OO ,)).delete ()#line:83
-        dp .sql ("container_count").insert (O00OO0OOO00O00OO0 )#line:84
-    def image_for_all_host (O00O0000O000OOO0O ):#line:87
-        OO000O0O00OO0OOOO =dp .sql ('hosts').select ()#line:89
-        OO00O0OO0OOOOOOOO =0 #line:90
-        O00O0000O00O0O00O =0 #line:91
-        for O0OO0O0O00OOOO0O0 in OO000O0O00OO0OOOO :#line:92
-            OO00OOO0OOOO0O0O0 =public .to_dict_obj ({})#line:93
-            OO00OOO0OOOO0O0O0 .url =O0OO0O0O00OOOO0O0 ['url']#line:94
-            OOO00OOOOOOOOO0O0 =di .main ().image_for_host (OO00OOO0OOOO0O0O0 )#line:95
-            if not OOO00OOOOOOOOO0O0 ['status']:#line:96
-                continue #line:97
-            print (OOO00OOOOOOOOO0O0 )#line:98
-            OO00O0OO0OOOOOOOO +=OOO00OOOOOOOOO0O0 ['msg']['num']#line:99
-            O00O0000O00O0O00O +=OOO00OOOOOOOOO0O0 ['msg']['size']#line:100
-        O0O0000OO00O0O0OO ={"time":int (time .time ()),"num":OO00O0OO0OOOOOOOO ,"size":int (O00O0000O00O0O00O )}#line:105
-        OOO0000000O00O0O0 =time .time ()-(O00O0000O000OOO0O .__O000O00000OO00OOO *O00O0000O000OOO0O .__OOO0O00OO0OOO000O )#line:106
-        dp .sql ("image_infos").where ("time<?",(OOO0000000O00O0O0 ,)).delete ()#line:107
-        dp .sql ("image_infos").insert (O0O0000OO00O0O0OO )#line:108
-def monitor ():#line:111
-    while True :#line:114
-        O000OOOO0000O0OOO =dp .docker_conf ()['SAVE']#line:115
-        OOOOOO0000O0OO00O =main (O000OOOO0000O0OOO )#line:116
-        OOOOOO0000O0OO00O .get_all_host_stats (OOOOOO0000O0OO00O .container_status_for_all_hosts )#line:117
-        OOO0O0OOO00O0O000 =threading .Thread (target =OOOOOO0000O0OO00O .container_count )#line:119
-        OOO0O0OOO00O0O000 .setDaemon (True )#line:120
-        OOO0O0OOO00O0O000 .start ()#line:121
-        OOO0O0OOO00O0O000 =threading .Thread (target =OOOOOO0000O0OO00O .image_for_all_host )#line:123
-        OOO0O0OOO00O0O000 .setDaemon (True )#line:124
-        OOO0O0OOO00O0O000 .start ()#line:125
-        time .sleep (60 )#line:126
-if __name__ =="__main__":#line:131
-    monitor ()
+import sys
+import threading
+sys.path.insert(0, "/www/server/panel/class/")
+sys.path.insert(1, "/www/server/panel/")
+import projectModel.bt_docker.dk_public as dp
+import projectModel.bt_docker.dk_container as dc
+import projectModel.bt_docker.dk_status as ds
+import projectModel.bt_docker.dk_image as di
+import public
+
+import time
+class main:
+
+    __save_date = None
+    __day_sec = 86400
+
+    def __init__(self,save_date):
+        if not save_date:
+            self.__save_date = 30
+        else:
+            self.__save_date = save_date
+
+    def docker_client(self,url):
+        return dp.docker_client(url)
+
+    def get_all_host_stats(self,fun):
+        """
+        获取所有主机信息并获取该主机下的容器状态
+        :param fun: 需要调用的方法，用于获取并记录容器状态
+        :return:
+        """
+        hosts = dp.sql('hosts').select()
+        for i in hosts:
+            t = threading.Thread(target=fun,args=(i,))
+            t.setDaemon(True)
+            t.start()
+
+    # 获取所有docker容器的状态信息
+    def container_status_for_all_hosts(self,host_info):
+        """
+        获取所有服务器的容器数量
+        :param host_info: 服务器的配置信息，用于获取并记录容器状态
+        :return:
+        """
+        # while True:
+        args = public.to_dict_obj({})
+        args.url = host_info['url']
+        container_list = dc.main().get_list(args)['msg']
+        for c in container_list['container_list']:
+            args.id = c['id']
+            args.write = 1
+            args.save_date = self.__save_date
+            ds.main().stats(args)
+            # time.sleep(60)
+
+    # 获取所有服务器的容器数量
+    def container_count(self):
+        # while True:
+        hosts = dp.sql('hosts').select()
+        n = 0
+        for i in hosts:
+            args = public.to_dict_obj({})
+            args.url = i['url']
+            container_list = dc.main().get_list(args)['msg']
+            n += len(container_list)
+        pdata = {
+            "time":int(time.time()),
+            "container_count": n
+        }
+        expired = time.time() - (self.__save_date * self.__day_sec)
+        dp.sql("container_count").where("time<?",(expired,)).delete()
+        dp.sql("container_count").insert(pdata)
+            # time.sleep(60)
+
+    def image_for_all_host(self):
+        # while True:
+        hosts = dp.sql('hosts').select()
+        num = 0
+        size = 0
+        for i in hosts:
+            args = public.to_dict_obj({})
+            args.url = i['url']
+            res = di.main().image_for_host(args)
+            if not res['status']:
+                continue
+            print(res)
+            num += res['msg']['num']
+            size += res['msg']['size']
+        pdata = {
+            "time":int(time.time()),
+            "num": num,
+            "size": int(size)
+        }
+        expired = time.time() - (self.__save_date * self.__day_sec)
+        dp.sql("image_infos").where("time<?",(expired,)).delete()
+        dp.sql("image_infos").insert(pdata)
+            # time.sleep(60)
+
+def monitor():
+
+    # 获取所有容器信息
+    while True:
+        save_date = dp.docker_conf()['SAVE']
+        m = main(save_date)
+        m.get_all_host_stats(m.container_status_for_all_hosts)
+        # 开始获取容器总数
+        t = threading.Thread(target=m.container_count)
+        t.setDaemon(True)
+        t.start()
+        # 获取镜像详情
+        t = threading.Thread(target=m.image_for_all_host)
+        t.setDaemon(True)
+        t.start()
+        time.sleep(60)
+    # condition=threading.Condition()
+    # condition.acquire()
+    # condition.wait()
+
+if __name__ == "__main__":
+    monitor()

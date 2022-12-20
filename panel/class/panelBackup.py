@@ -87,12 +87,14 @@ class backup:
 
     #构造排除
     def get_exclude(self,exclude = []):
+        self._exclude = ""
         if not exclude:
             tmp_exclude = os.getenv('BT_EXCLUDE')
             if tmp_exclude:
                 exclude = tmp_exclude.split(',')
         if not exclude: return ""
         for ex in exclude:
+            if ex[-1] == '/': ex = ex[:-1]
             self._exclude += " --exclude=\"" + ex + "\""
         self._exclude += " "
         return self._exclude
@@ -330,6 +332,8 @@ class backup:
             os.makedirs(dpath,384)
 
         self.get_exclude(exclude)
+        if self._exclude:
+            self._exclude = self._exclude.replace(spath + '/','')
         exclude_config = self._exclude
         exclude_list = self.get_exclude_list(exclude)
         p_size = public.get_path_size(spath, exclude=exclude_list)
@@ -359,7 +363,8 @@ class backup:
         self.echo_info("开始压缩文件：{}".format(public.format_date(times=stime)))
         if os.path.exists(dfile):
             os.remove(dfile)
-        public.ExecShell("cd " + os.path.dirname(spath) + " && tar zcvf '" + dfile + "' " + self._exclude + " '" + dirname + "' 2>{err_log} 1> /dev/null".format(err_log = self._err_log))
+        _cmd = "cd " + os.path.dirname(spath) + " && tar zcvf '" + dfile + "' " + self._exclude + " '" + dirname + "' 2>{err_log} 1> /dev/null".format(err_log = self._err_log)
+        public.ExecShell(_cmd)
         tar_size = os.path.getsize(dfile)
         if tar_size < 1:
             self.echo_error("数据压缩失败")

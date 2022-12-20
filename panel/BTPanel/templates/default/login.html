@@ -482,6 +482,8 @@
 			<div class="login-images"><img src="/static/images/bt_logo_new.png"></div>
 			<div class="login{% if session['code'] %} code{% endif %}">
 					<div class="account">
+                            <div class="last_token" style="display: block;" data="{{data['last_login_token']}}"></div>
+                            <div class="public_key" style="display: block;" data="{{data['public_key']}}"></div>
 							<form class="login_form" onsubmit="return false;">
 									<div class="form_title">{{g.title}}</div>
 									<div class="form_item">
@@ -622,8 +624,9 @@
                 selectHost.btVersion = 'static';
             }
             var urls = [
-                hostUrl + '/' + selectHost.btVersion + '/js/md5.js',
-                hostUrl + '/' + selectHost.btVersion + '/js/qrcode.min.js'
+                hostUrl + '/' + selectHost.btVersion + '/js/md5.js?t=20221221',
+                hostUrl + '/' + selectHost.btVersion + '/js/jsencrypt.min.js?t=20221221',
+                hostUrl + '/' + selectHost.btVersion + '/js/qrcode.min.js?t=20221221'
             ];
             load_js(urls, run);
         }, 200);
@@ -662,6 +665,14 @@
                 })(i);
             }
         }
+        function rsa_encrypt(text){
+            var publicKey = document.querySelector(".public_key").attributes.data.value
+            if(publicKey.length < 10) return text;
+            var encrypt = new JSEncrypt();
+            encrypt.setPublicKey(publicKey);
+            return encrypt.encrypt(text);
+        }
+
         /**
          * 加载完js后运行
          */
@@ -753,9 +764,10 @@
                     codeInput.focus();
                     return;
                 }
+                var last_token = document.querySelector(".last_token").attributes.data.value;
                 var data = {
-                    username: md5(username),
-                    password: md5(md5(password) + '' + '_bt.cn'),
+                    username: rsa_encrypt(md5(md5(username + last_token))),
+                    password: rsa_encrypt(md5(md5(password) + '' + '_bt.cn')),
                     code: code
                 };
                 if (staticCdnSelect) {

@@ -27,7 +27,7 @@ class panelSetup:
             if ua.find('spider') != -1 or g.ua.find('bot') != -1:
                 return abort(403)
 
-        g.version = '7.9.6'
+        g.version = '7.9.7'
         g.title = public.GetConfigValue('title')
         g.uri = request.path
         g.debug = os.path.exists('data/debug.pl')
@@ -168,8 +168,7 @@ class panelAdmin(panelSetup):
                     if not os.path.exists(s_file):
                         session.clear()
                         return redirect(public.get_admin_path())
-                ua_md5 = public.md5(g.ua)
-                if ua_md5 != session.get('login_user_agent',ua_md5):
+                if not public.check_client_hash():
                     session.clear()
                     return redirect(public.get_admin_path())
 

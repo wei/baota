@@ -1898,7 +1898,7 @@ var site = {
                 var item = list[i];
                 html += '<tr><td><span>' + item.name + '</span></td><td><div style="float:right;"><span style="color:' + (item.request.status ? '#20a53a' : 'red') + '">' + item.request.msg + '</span></div></td></tr>';
               }
-              site_table.$batch_success_table({ title: '批量备份', th: '站点名称', html: html });
+              site_table.$batch_success_table({ title: '批量备份站点', th: '站点名称', html: html });
               site_table.$refresh_table_list(true);
             });
           }
@@ -1954,8 +1954,27 @@ var site = {
           refresh: true,
           confirm: {
             title: '批量设置PHP版本',
-            area: '420px',
-            content: '<div class="line"><span class="tname">PHP版本</span><div class="info-r"><select class="bt-input-text mr5 versions" name="versions" style="width:150px"></select></span></div><ul class="help-info-text c7" style="font-size:11px"><li>请根据您的程序需求选择版本</li><li>若非必要,请尽量不要使用PHP5.2,这会降低您的服务器安全性；</li><li>PHP7不支持mysql扩展，默认安装mysqli以及mysql-pdo。</li></ul></div>',
+            area: '450px',
+            content: '<div class="line">\
+                <span class="tname">PHP版本</span>\
+                <div class="info-r">\
+                  <select class="bt-input-text mr5 versions" name="versions" style="width:280px"></select>\
+                </div>\
+              </div>\
+              <div class="line">\
+                <span class="tname">连接配置</span>\
+                <div class="info-r">\
+                  <input class="bt-input-text other-version" style="margin-right: 10px;width:280px;color: #000;" type="text" placeholder="如：1.1.1.1:9001或unix:/tmp/php.sock" />\
+                </div>\
+              </div>\
+              <ul class="help-info-text c7" style="font-size:11px">\
+                <li>请根据您的程序需求选择版本</li>\
+                <li>若非必要,请尽量不要使用PHP5.2,这会降低您的服务器安全性；</li>\
+                <li>PHP7不支持mysql扩展，默认安装mysqli以及mysql-pdo。</li>\
+                <li>【自定义】可自定义PHP连接信息，选择此项需填写可用的PHP连接配置</li>\
+                <li>【自定义】当前仅支持nginx，可配合[宝塔负载均衡 - 重构版]插件的TCP负载功能实现PHP负载集群</li>\
+                <li>【PHP连接配置】支持TCP或Unix配置，示例：192.168.1.25:9001 或 unix:/tmp/php8.sock</li>\
+              </ul>',
             success: function (res, list, that) {
               bt.site.get_all_phpversion(function (res) {
                 var html = '';
@@ -1963,10 +1982,55 @@ var site = {
                   html += '<option value="' + item.version + '">' + item.name + '</option>';
                 });
                 $('[name="versions"]').html(html);
+                if(html){
+                  var phpversion = res[0].version
+                  if (phpversion != 'other') {
+                    $('.other-version').parent().parent().addClass('hide');
+                    $('.help-info-text li:eq(3),.help-info-text li:eq(4),.help-info-text li:eq(5)').hide()
+                  }
+                  if (phpversion.substring(1,0) != '7') {
+                    $('.help-info-text li:eq(2)').hide()
+                  }
+                  if (phpversion != '52') {
+                    $('.help-info-text li:eq(1)').hide()
+                  }
+                }
               });
+              $('[name="versions"]').change(function () {
+                var phpversion = $(this).val();
+                if (phpversion == 'other') {
+                  $('.other-version').parent().parent().removeClass('hide');
+                  $('.help-info-text li:eq(3),.help-info-text li:eq(4),.help-info-text li:eq(5)').show()
+                } else {
+                  $('.other-version').parent().parent().addClass('hide');
+                  $('.help-info-text li:eq(3),.help-info-text li:eq(4),.help-info-text li:eq(5)').hide()
+                }
+                if (phpversion.substring(1,0) != '7') {
+                  $('.help-info-text li:eq(2)').hide()
+                }else{
+                  $('.help-info-text li:eq(2)').show()
+                }
+                if (phpversion != '52') {
+                  $('.help-info-text li:eq(1)').hide()
+                }else{
+                  $('.help-info-text li:eq(1)').show()
+                }
+              })
             },
             yes: function (index, layers, request) {
-              request({ version: $('[name="versions"]').val() });
+              var params = {
+                version: $('[name="versions"]').val()
+              }
+              if(params.version === 'other') {
+                params['other'] = $('.other-version').val();
+              }
+              if(params.version === 'other' && !params['other']) {
+                layer.msg('自定义PHP版本时，PHP连接配置不能为空', { icon: 2 });
+                $('.other-version').focus();
+                return false
+              }else {
+                request(params);
+              }
             }
           }
         }, {
@@ -2458,7 +2522,7 @@ var site = {
               }, {
                 title: '删除',
                 event: function (row, index, ev, key, that) {
-                  that.del_site_backup({ name: row.name, id: row.id }, function (rdata) {
+                  that.del_site_backup(row, function (rdata) {
                     bt_tools.msg(rdata);
                     if (rdata.status) {
                       thatC.$modify_row_data({ backup_count: thatC.event_rows_model.rows.backup_count - 1 });
@@ -2476,7 +2540,7 @@ var site = {
              * @param {function} callback
              */
             del_site_backup: function (config, callback) {
-              bt.confirm({ title: '删除站点备份', msg: '删除站点备份[' + config.name + '],是否继续？' }, function () {
+              bt.confirm({ title: '删除站点备份[' + config.addtime + ']', msg: '删除选中站点备份文件后，<span class="color-red">该站点备份文件将永久消失</span>，是否继续操作？' }, function () {
                 bt_tools.send('site/DelBackup', { id: config.id }, function (rdata) {
                   if (callback) callback(rdata);
                 }, true);
@@ -2512,7 +2576,7 @@ var site = {
               paramId: 'id',
               load: true,
               callback: function (that) {
-                bt.confirm({ title: '批量删除站点备份', msg: '是否批量删除选中的站点备份，是否继续？', icon: 0 }, function (index) {
+                bt.confirm({ title: '批量删除站点备份', msg: '批量删除选中的站点备份，<span class="color-red">备份文件将永久消失</span>，是否继续操作？', icon: 0 }, function (index) {
                   layer.close(index);
                   that.start_batch({}, function (list) {
                     var html = '';
@@ -3967,21 +4031,11 @@ var site = {
           <div class="repair-scheme-content">\
             <span>使用微信扫描二维码，联系客服，付费修复</span>\
             <div class="qrcode">\
-              <div id="wechatQrcode"></div>\
-              <img src="/static/img/wechat.png" style="position: absolute;left: 38.5px; top:38.5px;width:25px;" alt="企业微信">\
+              <div id="wechatQrcode"><img src="/static/images/customer-qrcode.png" alt="qrcode" style="width:90px;height:90px;" /></div>\
             </div>\
           </div>\
         </div>\
-      </div>',
-      success:function(layero){
-        $('#wechatQrcode').qrcode({
-          render: "canvas",
-          width: 90,
-          height: 90,
-          foreground:'#222',
-          text: 'https://work.weixin.qq.com/kfid/kfc72fcbde93e26a6f3'
-        })
-      }
+      </div>'
     })
   },
   /**
@@ -6906,49 +6960,6 @@ var site = {
           buttonValue: '批量操作',
           disabledSelectValue: '请选择需要批量操作的计划任务!',
           selectList: [{
-            title: "删除",
-            url: '/site?action=del_redirect_multiple',
-            // param: { site_id: web.id },
-            // paramId: 'redirectname',
-            // paramName: 'redirectnames',
-            // theadName: '重定向名称',
-            // confirmVerify: false, // 是否提示验证方式
-            // refresh: true,
-            param: function (row) {
-              return {
-                site_id: web.id,
-                redirectnames: row.redirectname
-              }
-            },
-            callback: function (that) {
-              bt.confirm({
-                title: "批量删除",
-                msg: "批量删除，该操作可能会存在风险，是否继续？"
-              }, function (index) {
-                layer.close(index);
-                var param = {};
-                that.start_batch(param, function (list) {
-                  var html = '';
-                  for (var i = 0; i < list.length; i++) {
-                    var item = list[i];
-                    var name = '';
-                    if (item.domainorpath == 'path') {
-                      name = item.redirectpath;
-                    } else {
-                      name = item.redirectdomain ? item.redirectdomain.join('、') : '空';
-                    }
-                    html += '<tr><td>' + name + '</td><td><div class="text-right"><span style="color:' + (item.request.status ? '#20a53a' : 'red') + '">' + (item.request.status ? '删除成功' : '删除失败') + '</span></div></td></tr>';
-                  }
-                  site.edit.redirect_table.$batch_success_table({
-                    title: '批量删除操作完成！',
-                    th: '重定向名称',
-                    html: html
-                  });
-                  site.edit.redirect_table.$refresh_table_list(true);
-                });
-              });
-            }
-          }, {
             title: "开启服务",
             url: '/site?action=ModifyRedirect',
             param: function (row) {
@@ -7015,6 +7026,49 @@ var site = {
                   site.edit.redirect_table.$refresh_table_list(true);
                 });
               })
+            }
+          },{
+            title: "删除",
+            url: '/site?action=del_redirect_multiple',
+            // param: { site_id: web.id },
+            // paramId: 'redirectname',
+            // paramName: 'redirectnames',
+            // theadName: '重定向名称',
+            // confirmVerify: false, // 是否提示验证方式
+            // refresh: true,
+            param: function (row) {
+              return {
+                site_id: web.id,
+                redirectnames: row.redirectname
+              }
+            },
+            callback: function (that) {
+              bt.confirm({
+                title: "批量删除",
+                msg: "批量删除，该操作可能会存在风险，是否继续？"
+              }, function (index) {
+                layer.close(index);
+                var param = {};
+                that.start_batch(param, function (list) {
+                  var html = '';
+                  for (var i = 0; i < list.length; i++) {
+                    var item = list[i];
+                    var name = '';
+                    if (item.domainorpath == 'path') {
+                      name = item.redirectpath;
+                    } else {
+                      name = item.redirectdomain ? item.redirectdomain.join('、') : '空';
+                    }
+                    html += '<tr><td>' + name + '</td><td><div class="text-right"><span style="color:' + (item.request.status ? '#20a53a' : 'red') + '">' + (item.request.status ? '删除成功' : '删除失败') + '</span></div></td></tr>';
+                  }
+                  site.edit.redirect_table.$batch_success_table({
+                    title: '批量删除操作完成！',
+                    th: '重定向名称',
+                    html: html
+                  });
+                  site.edit.redirect_table.$refresh_table_list(true);
+                });
+              });
             }
           }
           ],
@@ -11171,7 +11225,7 @@ var site = {
           }
         },
         {
-          title: '宝塔证书(试用)',
+          title: '测试证书',
           callback: function (robj) {
             robj = $('#webedit-con .tab-con')
             bt.pub.get_user_info(function (udata) {
@@ -11188,7 +11242,7 @@ var site = {
                     '有效期1年，不支持续签，到期后需要重新申请',
                     '建议使用二级域名为www的域名申请证书,此时系统会默认赠送顶级域名为可选名称',
                     '在未指定SSL默认站点时,未开启SSL的站点使用HTTPS会直接访问到已开启SSL的站点',
-                    '宝塔SSL申请注意事项及教程 <a href="https://www.bt.cn/bbs/thread-33113-1-1.html" target="_blank" class="btlink"> 使用帮助</a>'
+                    '测试SSL申请注意事项及教程 <a href="https://www.bt.cn/bbs/thread-33113-1-1.html" target="_blank" class="btlink"> 使用帮助</a>'
                   ]
                   robj.append(bt.render_help(helps));
                   var loading = bt.load();

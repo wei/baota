@@ -143,26 +143,30 @@ class ssh_security:
 
     ################## SSH 登陆报警设置 ####################################
     def send_mail_data(self,title,body,type=None):
-        login_send_type_conf = "/www/server/panel/data/ssh_send_type.pl"
-        if not os.path.exists(login_send_type_conf):
-                login_type = "mail"
-        else:
-            login_type = public.readFile(login_send_type_conf).strip()
-            if not login_type:
-                login_type = "mail"
-        object = public.init_msg(login_type.strip())
-        if not object:
-            return False
-        if login_type=="mail":
-            data={}
-            data['title'] = title
-            data['msg'] = body
-            object.push_data(data)
-        elif login_type=="wx_account":
-            object.send_msg(body)
-        else:
-            msg = public.get_push_info("SSH登录告警",['>发送内容：' + body])
-            object.push_data(msg)
+        try:
+            login_send_type_conf = "/www/server/panel/data/ssh_send_type.pl"
+            if not os.path.exists(login_send_type_conf):
+                    login_type = "mail"
+            else:
+                login_type = public.readFile(login_send_type_conf).strip()
+                if not login_type:
+                    login_type = "mail"
+            object = public.init_msg(login_type.strip())
+            if not object:
+                return False
+            if login_type=="mail":
+                data={}
+                data['title'] = title
+                data['msg'] = body
+                object.push_data(data)
+            elif login_type=="wx_account":
+                object.send_msg(body)
+            else:
+
+                msg = public.get_push_info("SSH登录告警",['>发送内容：' + body])
+                object.push_data(msg)
+        except:
+            pass
 
     #检测非UID为0的账户
     def check_user(self):
@@ -178,7 +182,6 @@ class ssh_security:
         if ret:
             data=''.join(ret)
             public.run_thread(self.send_mail_data,args=(public.GetLocalIp()+'服务器存在后门用户',public.GetLocalIp()+'服务器存在后门用户'+data+'检查/etc/passwd文件',))
-            # self.send_mail_data(public.GetLocalIp()+'服务器存在后门用户',public.GetLocalIp()+'服务器存在后门用户'+data+'检查/etc/passwd文件')
             return True
         else:
             return False
@@ -273,7 +276,6 @@ class ssh_security:
                 return False
             else:
                 if public.M('logs').where('type=? addtime', ('SSH安全', mDate,)).count(): return False
-                # self.send_mail_data(self.get_server_ip()+'服务器异常登陆',public.GetLocalIp()+'服务器存在异常登陆登陆IP为'+ip[0]+'登陆用户为root')
                 public.run_thread(self.send_mail_data,args=(self.get_server_ip()+'服务器异常登陆',public.GetLocalIp()+'服务器存在异常登陆登陆IP为'+ip[0]+'登陆用户为root',))
                 public.WriteLog('SSH安全',public.GetLocalIp()+'服务器存在异常登陆登陆IP为'+ip[0]+'登陆用户为root')
                 return True
@@ -298,7 +300,10 @@ class ssh_security:
         self.repair_bashrc()
         data=public.ReadFile(self.return_profile())
         if not re.search(self.return_python()+' /www/server/panel/class/ssh_security.py',data):
-            public.WriteFile(self.return_profile(),data.strip()+'\n'+self.return_python()+ ' /www/server/panel/class/ssh_security.py login\n')
+            cmd='''shell="%s /www/server/panel/class/ssh_security.py login"
+nohup  `${shell}` &>/dev/null &
+disown $!'''%(self.return_python())
+            public.WriteFile(self.return_profile(), data.strip() + '\n' + cmd)
             return public.returnMsg(True, '开启成功')
         return public.returnMsg(False, '开启失败')
 
@@ -306,7 +311,16 @@ class ssh_security:
     def stop_jian(self,get):
         data = public.ReadFile(self.return_profile())
         if re.search(self.return_python()+' /www/server/panel/class/ssh_security.py', data):
-            public.WriteFile(self.return_profile(),data.replace(self.return_python()+' /www/server/panel/class/ssh_security.py login',''))
+            cmd='''shell="%s /www/server/panel/class/ssh_security.py login"'''%(self.return_python())
+            data=data.replace(cmd, '')
+            cmd='''nohup  `${shell}` &>/dev/null &'''
+            data=data.replace(cmd, '')
+            cmd='''disown $!'''
+            data=data.replace(cmd, '')
+            public.WriteFile(self.return_profile(),data)
+            #检查是否还存在遗留
+            if re.search(self.return_python()+' /www/server/panel/class/ssh_security.py', data):
+                public.WriteFile(self.return_profile(),data.replace(self.return_python()+' /www/server/panel/class/ssh_security.py login',''))
             #遗留的错误信息
             datassss = public.ReadFile(self.return_profile())
             if re.search(self.return_python(),datassss):
@@ -391,10 +405,64 @@ class ssh_security:
         @auther: cjxin
         @date: 2022-08-16
         """
+        config=[
+		{
+        "name":"wx_account",
+        "title":"微信公众号",
+        "version":"1.0",
+        "date":"2022-08-19",
+        "help":"https://www.bt.cn",
+        "ps":"宝塔微信公众号通知，用于接收面板消息推送"
+    },
+    {
+        "name":"mail",
+        "title":"邮箱",
+        "version":"1.1",
+        "date":"2022-08-10",
+        "help":"https://www.bt.cn/bbs/thread-66183-1-1.html",
+        "ps":"宝塔邮箱消息通道，用于接收面板消息推送"
+    },
+    {
+        "name":"dingding",
+        "title":"钉钉",
+        "version":"1.2",
+        "date":"2022-08-10",
+        "help":"https://www.bt.cn/bbs/thread-44497-1-1.html",
+        "ps":"宝塔钉钉消息通道，用于接收面板消息推送"
+    },
+    
+	{
+        "name":"weixin",
+        "title":"企业微信",
+        "version":"1.2",
+        "date":"2022-08-10",
+        "help":"https://www.bt.cn/bbs/thread-52540-1-1.html",
+        "ps":"宝塔企业微信消息通道，用于接收面板消息推送"
+    },
+	{
+        "name":"feishu",
+        "title":"飞书",
+        "version":"1.2",
+        "date":"2022-08-10",
+        "help":"https://www.bt.cn/bbs/",
+        "ps":"宝塔飞书消息通道，用于接收面板消息推送"
+    },
+	{
+        "name":"sms",
+        "title":"短信通知",
+        "version":"1.1",
+        "date":"2022-08-02",
+        "help":"https://www.bt.cn",
+        "ps":"宝塔短信通知，用于接收面板消息推送"
+    }]
         cpath = 'data/msg.json'
         data = {}
         if os.path.exists(cpath):
-            msgs = json.loads(public.readFile(cpath))
+            try:
+                msgs = json.loads(public.readFile(cpath))
+            except:
+                msgs=config
+                public.WriteFile(cpath,json.dumps(msgs))
             for x in msgs:
                 x['setup'] = False
                 x['info'] = False
@@ -613,11 +681,6 @@ class ssh_security:
             key_file = self.__type_files[key_type]
             key = public.readFile(key_file)
             return public.returnMsg(True,key)
-
-        # for file in self.__key_files:
-        #     if not os.path.exists(file): continue
-        #     ret = public.readFile(file)
-        #     return public.returnMsg(True, ret)
         return public.returnMsg(True, '')
 
     def download_key(self, get):
@@ -680,7 +743,6 @@ class ssh_security:
         开启SSH双因子认证
         '''
         #检查是否设置了钉钉
-        #if not self.check_dingding(get): return public.returnMsg(False, '钉钉未设置')
         import ssh_authentication
         ssh_class=ssh_authentication.ssh_authentication()
         return  ssh_class.start_ssh_authentication_two_factors()
@@ -691,7 +753,6 @@ class ssh_security:
         关闭SSH双因子认证
         '''
         #检查是否设置了钉钉
-        #if not self.check_dingding(get): return public.returnMsg(False, '钉钉未设置')
         import ssh_authentication
         ssh_class=ssh_authentication.ssh_authentication()
         return ssh_class.close_ssh_authentication_two_factors()
@@ -702,7 +763,6 @@ class ssh_security:
         获取SSH双因子认证状态
         '''
         #检查是否设置了钉钉
-        #if not self.check_dingding(get): return public.returnMsg(False, '钉钉未设置')
         import ssh_authentication
         ssh_class=ssh_authentication.ssh_authentication()
         return ssh_class.check_ssh_authentication_two_factors()

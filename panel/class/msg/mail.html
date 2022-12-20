@@ -106,7 +106,7 @@
             $('.sender_submit').click(function () {
                 that.sender_submit();
             })
-            
+
             // 设置默认
             $('#default_setting').change(function () {
                 var _default = $(this).prop('checked');
@@ -123,7 +123,7 @@
                     if (res.status) that.refresh_data();
                 });
             });
-            
+
             var showTips = ''
             $('.total_tips').hover(function(){
                 showTips = setTimeout(function(){
@@ -159,7 +159,7 @@
                 _tips.val() == '' ? $('.reci_tips.placeholder').show() : $('.reci_tips.placeholder').hide()
             });
         },
-        
+
         init_default: function () {
             var data = this.all_mail_info.data;
             if (!$.isEmptyObject(data)) {
@@ -173,10 +173,10 @@
         get_sender_data: function () {
             var that = this;
             var data = this.all_mail_info.data;
-            
+
             if (!$.isEmptyObject(data) && !$.isEmptyObject(data.send)) {
                 var send = data.send;
-                
+
                 var mail_ = send.qq_mail || '',
                     stmp_pwd_ = send.qq_stmp_pwd || '',
                     hosts_ = send.hosts || '',
@@ -212,7 +212,7 @@
                 _passW = $('input[name=sender_mail_password]').val(),
                 _server = $('input[name=sender_mail_server]').val(),
                 _port = $('input[name=sender_mail_port]').val();
-            
+
             if (_email == '') return layer.msg('邮箱地址不能为空！', { icon: 2 });
             if (_passW == '') return layer.msg('STMP密码不能为空！', { icon: 2 });
             if (_server == '') return layer.msg('STMP服务器地址不能为空！', { icon: 2 });
@@ -246,7 +246,7 @@
                         that.all_mail_info = item;
                     }
                 });
-            })           
+            })
         }
     }
 </script>

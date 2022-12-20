@@ -679,14 +679,28 @@ var docker = {
                                             $('.dk_status_select_list').remove()
                                         })
                                         if($('#project_compose_table .tootls_group.tootls_top').length == 0){
-                                            $('#project_compose_table').prepend('<div class="tootls_group tootls_top"><div class="pull-left"><span>Compose操作：<span><select class="bt-input-text ml5" style="width:130px" name="set_project_status"><option value="start">启动Compose</option><option value="stop">停止Compose</option><option value="pause">暂停Compose</option><option value="unpause">取消暂停</option><option value="restart">重启Compose</option></select></div>')
+																						var $select = $('<div class="tootls_group tootls_top">\
+																							<div class="pull-left">\
+																								<span>Compose操作：<span>\
+																								<select class="bt-input-text ml5" style="width:130px" name="set_project_status" placeholder="请选择">\
+																									<option style="display: none">请选择状态</option>\
+																									<option value="start">启动Compose</option>\
+																									<option value="stop">停止Compose</option>\
+																									<option value="pause">暂停Compose</option>\
+																									<option value="unpause">取消暂停</option>\
+																									<option value="restart">重启Compose</option>\
+																								</select>\
+																							</div>\
+																						</div>');
+																						$select.prependTo($('#project_compose_table'));
 
-                                            $('[name=set_project_status]').change(function(){
-                                                that.ajax_task_method($(this).val(),{data:{project_id:dk_cont.id},tips:$('[name=set_project_status]').find('option:selected').text()},function(res){
-                                                    if(res.status) project_compose_table.$refresh_table_list(true)
-                                                    bt_tools.msg(res)
-                                                })
-                                            })
+                                            $select.find('[name=set_project_status]').change(function(){
+																							var val = $(this).val();
+																							that.ajax_task_method(val,{data:{project_id:dk_cont.id},tips:$('[name=set_project_status]').find('option:selected').text()},function(res){
+																								if (res.status) project_compose_table.$refresh_table_list(true)
+																								bt_tools.msg(res)
+																							})
+                                            });
                                         }
                                     }
                                 })
@@ -1594,7 +1608,7 @@ var docker = {
                 <div class="line">\
                     <span class="tname">加速URL：</span>\
                     <div class="info-r">\
-                        <input class="bt-input-text" readonly disabled value="'+info.registry_mirrors+'" style="width:310px" placeholder="未设置加速URL">\
+                        <input class="bt-input-text" readonly disabled value="'+bt.htmlEncode.htmlEncodeByRegExp(info.registry_mirrors[0])+'" style="width:310px" placeholder="未设置加速URL">\
                         <button class="btn btn-success btn-sm editSpeed">修改</button>\
                     </div>\
                 </div>\
@@ -1642,7 +1656,7 @@ var docker = {
                             group:{
                                 type:'text',
                                 name:'registry_mirrors_address',
-                                value:info.registry_mirrors,
+                                value:bt.htmlEncode.htmlEncodeByRegExp(info.registry_mirrors[0]),
                                 width:'360px',
                                 placeholder:'请输入加速URL'
                             }

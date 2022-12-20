@@ -247,7 +247,6 @@ class wx_account_msg:
             res = {}
 
             x = json.loads(public.httpPost(url,data))
-            public.print_log(json.dumps(x))
             conf = self.get_config(None)['list']
             result = public.returnMsg(False, '发送失败')
             res[conf['default']['title']] = 0

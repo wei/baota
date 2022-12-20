@@ -593,7 +593,7 @@ def daemon_panel():
 
 
 def update_panel():
-    os.system("curl http://download.bt.cn/install/update6.sh|bash &")
+    os.system("curl -k https://download.bt.cn/install/update6.sh|bash &")
 
 
 def service_panel(action='reload'):

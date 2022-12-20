@@ -140,6 +140,9 @@ class dingding_msg:
         if not self.__dingding_info :
             return public.returnMsg(False,'未正确配置钉钉信息。')
 
+        if isinstance(self.__dingding_info['user'],int):
+            return public.returnMsg(False,'钉钉配置错误，请重新配置钉钉机器人。')
+
         at_info = ''
         for user in self.__dingding_info['user']:
             if re.match("^[0-9]{11,11}$",str(user)): at_info += '@'+user+' '

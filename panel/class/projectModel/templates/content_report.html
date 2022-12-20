@@ -40,6 +40,7 @@
 	</style>
 </head>
 <body>
+	<a style="display:none;" id="request_token_head" token="{{session[g.get_csrf_html_token_key]}}"></a>
 	<div style="width: 840px; margin: 0 auto;">
 		<div class="content">
 			<p style="text-align: center; padding-top: 112pt">
@@ -403,6 +404,8 @@
 		</div>
 	</div>
 	<script src="{{g.cdn_url}}/js/jquery-2.2.4.min.js"></script>
+	<script type="text/javascript" src="{{g.cdn_url}}/layer/layer.js?version={{g['version']}}"></script>
+	<script src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 	<script src="{{g.cdn_url}}/js/tools.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 	<script>
 		$(function() {
@@ -416,7 +419,7 @@
 					'min-height': $(window).height() + 'px'
 				});
 			}
-			
+
 
 			function getDpi() {
     		for (var i = 56; i < 2000; i++) {
@@ -427,7 +430,7 @@
 			}
 
 			resize();
-			
+
 
 			if (id) {
 				bt_tools.send({
@@ -439,7 +442,7 @@
 					renderUpdate(res.risk_update);
 				})
 			}
-			
+
 			function renderInfo (res) {
 				var info = res.info;
 				setStatus(res.score);
