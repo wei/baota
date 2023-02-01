@@ -2743,6 +2743,8 @@ class main(projectBase):
                  project_info['debug'] = True
             if project_info['load_info']:
                 for pid in project_info['load_info'].keys():
+                    if not 'connections' in project_info['load_info'][pid]:
+                        project_info['load_info'][pid]['connections'] = []
                     for conn in project_info['load_info'][pid]['connections']:
                         if not conn['status'] == 'LISTEN': continue
                         if not conn['local_port'] in project_info['listen']:

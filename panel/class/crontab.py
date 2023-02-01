@@ -61,6 +61,7 @@ class crontab:
             data.append(tmp)
         return data
 
+
     def get_last_exec_time(self,log_file):
         '''
             @name 获取上次执行时间
@@ -86,6 +87,7 @@ class crontab:
             if not exec_date:
                 exec_date = public.format_date(times=int(os.path.getmtime(log_file)))
         return exec_date
+
 
     #清理日志
     def __clean_log(self):
@@ -152,7 +154,8 @@ class crontab:
             self.remove_for_crond(cronInfo['echo'])
         else:
             cronInfo['status'] = 1
-            self.sync_to_crond(cronInfo)
+            if not self.sync_to_crond(cronInfo):
+                return public.returnMsg(False,'写入计划任务失败,请检查磁盘是否可写或是否开启了系统加固!')
 
         public.M('crontab').where('id=?',(id,)).setField('status',status)
         public.WriteLog('计划任务','修改计划任务['+cronInfo['name']+']状态为['+status_msg[status]+']')
@@ -187,9 +190,12 @@ class crontab:
                       get['minute'],get['save'],get['backupTo'],get['sBody'],
                       get['urladdress'],get['save_local'],get["notice"],
                       get["notice_channel"])
+
+        if not self.sync_to_crond(cronInfo):
+            return public.returnMsg(False,'写入计划任务失败,请检查磁盘是否可写或是否开启了系统加固!')
         public.M('crontab').where('id=?',(id,)).save(columns,values)
         self.remove_for_crond(cronInfo['echo'])
-        self.sync_to_crond(cronInfo)
+
         public.WriteLog('计划任务','修改计划任务['+cronInfo['name']+']成功')
         return public.returnMsg(True,'修改成功')
 
@@ -216,6 +222,7 @@ class crontab:
         wRes = self.WriteShell(cuonConfig)
         if type(wRes) != bool: return False
         self.CrondReload()
+        return True
 
     #添加计划任务
     def AddCrontab(self,get):
@@ -243,7 +250,7 @@ class crontab:
         1,get['save'],get['backupTo'],get['sType'],get['sName'],get['sBody'],
         get['urladdress'], get["save_local"], get['notice'], get['notice_channel'])
         addData=public.M('crontab').add(columns,values)
-        public.add_security_logs('计划任务',' 添加计划任务['+get['name']+']成功'+str(values))
+        public.add_security_logs('计划任务','添加计划任务['+get['name']+']成功'+str(values))
         if type(addData) == str:
             return public.returnMsg(False, addData)
         if addData>0:
@@ -369,8 +376,8 @@ class crontab:
             if os.path.exists(sfile): os.remove(sfile)
 
             public.M('crontab').where("id=?",(id,)).delete()
+            public.add_security_logs("删除计划任务", "删除计划任务:" + find['name'])
             public.WriteLog('TYPE_CRON', 'CRONTAB_DEL',(find['name'],))
-            public.add_security_logs("删除计划任务", " 删除计划任务:" + find['name'])
             return public.returnMsg(True, 'DEL_SUCCESS')
         except:
             return public.returnMsg(False, 'DEL_ERROR')

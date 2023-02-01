@@ -181,4 +181,4 @@ class panelWarning:
             public.writeFile(result_file,json.dumps([m_info['status'],m_info['msg'],m_info['check_time'],m_info['taking']]))
             return public.returnMsg(True,'已重新检测')
         except:
-            return public.returnMsg(False,'错误的模块名称')
+            return public.returnMsg(False,'检测失败')

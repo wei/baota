@@ -188,7 +188,7 @@ class main:
         if not check_res['status']:
             return check_res
         pdata = {
-            "name": template_info['name'],
+            "name": args.name,
             "remark": public.xsssec(args.remark),
             "path": template_info['path']
         }
@@ -577,6 +577,7 @@ class main:
         else:
             yaml = "{}/docker-compose.yaml".format(args.path)
             yam = "{}/docker-compose.yam".format(args.path)
+            yml = "{}/docker-compose.yml".format(args.path)
             if os.path.exists(yaml):
                 res = [{
                     "project_name":args.path.split("/")[-1],
@@ -587,6 +588,12 @@ class main:
                 res = [{
                     "project_name":args.path.split("/")[-1],
                     "conf_file": yam,
+                    "remark": "从本地添加"
+                }]
+            elif os.path.exists(yml):
+                res = [{
+                    "project_name": args.path.split("/")[-1],
+                    "conf_file": yml,
                     "remark": "从本地添加"
                 }]
             else:

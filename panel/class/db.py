@@ -13,6 +13,7 @@ os.chdir('/www/server/panel')
 if not 'class/' in sys.path:
     sys.path.insert(0,'class/')
 import public
+import PluginLoader
 
 class Sql():
     #------------------------------
@@ -27,9 +28,12 @@ class Sql():
     __OPT_FIELD  = "*"             # field条件
     __OPT_PARAM  = ()              # where值
     __LOCK = '/dev/shm/sqlite_lock.pl'
+    __LAST_KEY = 'BT-0x:'
+    __encrypt_keys = ['password','salt','email','mysql_root','db_password']
+    __default_db_file = 'data/default.db'
 
     def __init__(self):
-        self.__DB_FILE = 'data/default.db'
+        self.__DB_FILE = self.__default_db_file
 
     def __enter__(self):
         return self
@@ -89,11 +93,13 @@ class Sql():
         return self
 
 
-    def limit(self,limit):
+    def limit(self,limit,offset = 0):
         #LIMIT条件
 
-        if limit:
+        if limit and not offset:
             self.__OPT_LIMIT = " LIMIT {}".format(limit)
+        elif limit and offset:
+            self.__OPT_LIMIT = " LIMIT {},{}".format(offset,limit)
         return self
 
 
@@ -132,6 +138,7 @@ class Sql():
                 data = tmp
                 del(tmp)
             self._close()
+            data = self.de_crypt(data)
             return data
         except Exception as ex:
             return "error: " + str(ex)
@@ -199,6 +206,7 @@ class Sql():
         self.write_lock()
         self.__GetConn()
         self.__DB_CONN.text_factory = str
+        param = self.en_crypt(keys,param)
         try:
             values=""
             for key in keys.split(','):
@@ -239,6 +247,7 @@ class Sql():
         self.write_lock()
         self.__GetConn()
         self.__DB_CONN.text_factory = str
+        param = self.en_crypt(keys,param)
         try:
             values=""
             for key in keys.split(','):
@@ -255,12 +264,76 @@ class Sql():
         self._close()
         self.__DB_CONN.commit()
 
+    def _encrypt(self,data):
+        # 加密数据
+        if not isinstance(data,str): return data
+        if not data: return data
+        if data.startswith(self.__LAST_KEY): return data
+
+        result = PluginLoader.db_encrypt(data)
+        if result['status'] == True:
+            return self.__LAST_KEY + result['msg']
+        return data
+
+    def _decrypt(self,data):
+        # 解密数据
+        if not isinstance(data,str): return data
+        if not data: return data
+        if data.startswith(self.__LAST_KEY):
+            res =  PluginLoader.db_decrypt(data[6:])['msg']
+            return res
+        return data
+
+
+    def en_crypt(self,keys,param):
+        # 加密指定字段
+        try:
+            if not param or not keys: return param
+            if self.__DB_FILE.find(self.__default_db_file) != -1: return param
+
+            new_param = []
+            keys_list = keys.split(',')
+            for i in range(len(keys_list)):
+                key = keys_list[i]
+                value = param[i]
+                if key in self.__encrypt_keys:
+                    value = self._encrypt(value)
+                new_param.append(value)
+            return tuple(new_param)
+        except:
+            public.print_log(public.get_error_info())
+            return param
+
+    def de_crypt(self,data):
+        # 解密字段
+        try:
+            if not data: return data
+            if self.__DB_FILE.find(self.__default_db_file) != -1: return data
+            if isinstance(data,dict):
+                for key in data.keys():
+                    if not isinstance(data[key],str): continue
+                    if data[key].startswith(self.__LAST_KEY):
+                        data[key] = self._decrypt(data[key])
+            elif isinstance(data,list):
+                for i in range(len(data)):
+                    for key in data[i].keys():
+                        if not isinstance(data[i][key],str): continue
+                        if data[i][key].startswith(self.__LAST_KEY):
+                            data[i][key] = self._decrypt(data[i][key])
+            elif isinstance(data,str):
+                if data.startswith(self.__LAST_KEY):
+                    data = self._decrypt(data)
+            return data
+        except:
+            public.print_log(public.get_error_info())
+            return data
 
     def save(self,keys,param):
         #更新数据
         self.write_lock()
         self.__GetConn()
         self.__DB_CONN.text_factory = str
+        param = self.en_crypt(keys,param)
         try:
             opt = ""
             for key in keys.split(','):

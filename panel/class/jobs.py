@@ -23,6 +23,7 @@ def control_init():
     clean_hook_log()
     run_new()
     clean_max_log('/www/server/cron',1024*1024*5,20)
+    clean_max_log("/www/server/panel/plugin/webhook/script",1024*1024*1) # 当webhook日志文件大于1M时清理，保留最新的100行
     #check_firewall()
     check_dnsapi()
     clean_php_log()
@@ -40,6 +41,18 @@ def control_init():
     remove_other()
     deb_bashrc()
     upgrade_gevent()
+    upgrade_polkit()
+
+def upgrade_polkit():
+    '''
+        @name 修复polkit提权漏洞(CVE-2021-4034)
+        @author hwliang
+        @return void
+    '''
+    upgrade_log_file = '{}/logs/upgrade_polkit.log'.format(public.get_panel_path())
+    tip_file = '{}/data/upgrade_polkit.pl'.format(public.get_panel_path())
+    if os.path.exists(tip_file): return
+    os.system("nohup {} {}/script/polkit_upgrade.py &> {}".format(public.get_python_bin(),public.get_panel_path(),upgrade_log_file))
 
 def clear_other_files():
     dirPath = '/www/server/phpmyadmin/pma'

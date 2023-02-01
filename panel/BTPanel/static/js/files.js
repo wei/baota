@@ -2722,7 +2722,7 @@ var bt_file = {
 
     // 产品推荐
     this.change_file_menu_icon('rsync', 'rsync', '专业版');
-    this.change_file_menu_icon('file_real_time_log', 'file_real_time_log', '专业版');
+    this.change_file_menu_icon('file_real_time_log', 'file_real_time_log', '企业版');
   },
   /**
    * @description 修改右键专属文字提醒

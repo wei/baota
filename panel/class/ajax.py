@@ -967,7 +967,7 @@ class ajax:
         if public.get_webserver() == 'openlitespeed':
             filename = "/www/server/panel/vhost/openlitespeed/detail/phpmyadmin.conf"
         conf = public.readFile(filename)
-        if not conf: return public.returnMsg(False,'ERROR')
+        if not conf: return public.returnMsg(False, '未安装nginx或apache,无法设置!')
         if hasattr(get,'port'):
             mainPort = public.readFile('data/port.pl').strip()
             rulePort = ['80','443','21','20','8080','8081','8089','11211','6379']
@@ -1144,7 +1144,10 @@ class ajax:
         result['port'] = int(re.search('PORT=(\d+)',conf).groups()[0])
         result['maxconn'] = int(re.search('MAXCONN=(\d+)',conf).groups()[0])
         result['cachesize'] = int(re.search('CACHESIZE=(\d+)',conf).groups()[0])
-        tn = telnetlib.Telnet(result['bind'],result['port'])
+        try:
+            tn = telnetlib.Telnet(result['bind'], result['port'])
+        except:
+            raise public.PanelError('获取负载状态失败，请检查服务是否启动!')
         tn.write(b"stats\n")
         tn.write(b"quit\n")
         data = tn.read_all()

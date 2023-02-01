@@ -857,6 +857,7 @@ var database = {
                     param: { datab_name : dataname,type : typename },
                     load: true,
                     default: "[" + dataname + "] 数据库增量备份列表为空", //数据为空时的默认提示
+                    height: 340,
                     column: [
                       { fid: 'excute_time', title: '备份时间', type: 'text',width: '150px' },
                       { fid: 'type', title: '类型', type: 'text',width: '75px',
@@ -959,7 +960,8 @@ var database = {
                                           name: 'upload_alioss',
                                           width: '390px',
                                           value: mulpValues,
-                                          list: database.backuptoList
+                                          list: database.backuptoList,
+                                          placeholder: '请选择数据备份到',
                                         }
                                       },
                                       {
@@ -1271,7 +1273,9 @@ var database = {
                                       type: 'multipleSelect',
                                       name: 'upload_alioss',
                                       width: '390px',
-                                      list: database.backuptoList
+                                      value: ['localhost'],
+                                      list: database.backuptoList,
+                                      placeholder: '请选择数据备份到'
                                     }
                                   },
                                   {
@@ -1435,8 +1439,8 @@ var database = {
                     $('#bt_incbackup_table').html('')
                     table(backupType.val())
                   })
-                  $('#bt_incbackup_table .tootls_group.tootls_top .pull-left').append('<div class="inlineBlock ml5"><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>【使用提醒】此功能为企业版专享功能，目前处于公测阶段，将于2023年1月16日后转为收费功能。</div>')
                   $('#bt_incbackup_table').append("<ul class='help-info-text c7'>\
+                    <li><span class='glyphicon glyphicon-alert' style='color: #f39c12; margin-right: 10px;'></span>【使用提醒】此功能为企业版专享功能，目前处于公测阶段，将于2023年1月16日后转为收费功能。</li>\
                     <li>备份大小：备份大小包含完全备份数据大小和增量备份数据大小</li>\
                     <li>备份会保留一个星期的备份数据，当备份时，检测到完全备份为一个星期前，会重新完全备份</li>\
                     <li>请勿同一时间添加多个备份任务，否则可能因同一时间执行多个备份任务导致文件句柄数打开过多或者爆内存</li>\
@@ -1789,6 +1793,7 @@ var database = {
         param: params,
         load: true,
         default:  type === 0 ? "数据库备份列表为空":"表备份列表为空", //数据为空时的默认提示
+        height: 340,
         column: [
           { fid: 'excute_time', title: '备份时间', width: 150, type: 'text' },
           { fid: 'name', title: type === 0 ? '数据库名' : '表名', type: 'text' },
@@ -1885,7 +1890,8 @@ var database = {
                               name: 'upload_alioss',
                               width: '390px',
                               value: mulpValues,
-                              list: database.backuptoList
+                              list: database.backuptoList,
+                              placeholder: '请选择数据备份到'
                             }
                           },
                           {
@@ -2184,7 +2190,9 @@ var database = {
                           type: 'multipleSelect',
                           name: 'upload_alioss',
                           width: '390px',
-                          list: database.backuptoList
+                          value: ['localhost'],
+                          list: database.backuptoList,
+                          placeholder: '请选择数据备份到'
                         }
                       },
                       {
@@ -2309,8 +2317,8 @@ var database = {
             //分页数量默认 : 20条
           }]
       })
-      $('#dbbackup_list .tootls_group.tootls_top .pull-left').append('<div class="inlineBlock ml5"><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>【使用提醒】此功能为企业版专享功能，目前处于公测阶段，将于2023年1月16日后转为收费功能。</div>')
       $('#dbbackup_list').append("<ul class='help-info-text c7'>\
+          <li><span class='glyphicon glyphicon-alert' style='color: #f39c12; margin-right: 10px;'></span>【使用提醒】此功能为企业版专享功能，目前处于公测阶段，将于2023年1月16日后转为收费功能。</li>\
           <li>备份大小：备份大小包含完全备份数据大小和增量备份数据大小</li>\
           <li>备份会保留一个星期的备份数据，当备份时，检测到完全备份为一个星期前，会重新完全备份</li>\
           <li>请勿同一时间添加多个备份任务，否则可能因同一时间执行多个备份任务导致文件句柄数打开过多或者爆内存</li>\

@@ -458,6 +458,7 @@ class acme_v2:
         if not self._config['orders'][index]['auth_type'] in ['http','tls']:
             return True
         acme_path = '{}/.well-known/acme-challenge'.format(self._config['orders'][index]['auth_to'])
+        acme_path = acme_path.replace("//",'/')
         write_log("|-验证目录：{}".format(acme_path))
         if os.path.exists(acme_path):
             public.ExecShell("rm -f {}/*".format(acme_path))
@@ -471,6 +472,7 @@ class acme_v2:
     def write_auth_file(self, auth_to, token, acme_keyauthorization):
         try:
             acme_path = '{}/.well-known/acme-challenge'.format(auth_to)
+            acme_path = acme_path.replace("//",'/')
             if not os.path.exists(acme_path):
                 os.makedirs(acme_path)
                 public.set_own(acme_path, 'www')
@@ -805,7 +807,6 @@ fullchain.pem       粘贴到证书输入框
                     to_key_file = to_path + '/privateKey.pem'
                     if not os.path.exists(to_pem_file):
                         continue
-                    if path == paths[-1]: is_panel = True
                 # 获取目标证书的基本信息
                 to_cert_init = self.get_cert_init(to_pem_file)
                 # 判断证书品牌是否一致
@@ -834,9 +835,11 @@ fullchain.pem       粘贴到证书输入框
                 public.writeFile(to_info, json.dumps(cert_init))
                 write_log(
                     "|-检测到{}下的证书与本次申请的证书重叠，且到期时间较早，已替换为新证书!".format(to_path))
+                if path == paths[-1]: is_panel = True
+
         # 重载web服务
         public.serviceReload()
-        if is_panel: public.restart_panel()
+        # if is_panel: public.restart_panel()
 
     # 检查指定证书是否在订单列表
     def check_order_exists(self, pem_file):

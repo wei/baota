@@ -15,7 +15,6 @@ import sys
 import json
 import re
 import time
-import shlex
 
 os.chdir('/www/server/panel')
 if not 'class/' in sys.path:
@@ -642,12 +641,12 @@ class backup:
             if not is_cloud_db:
                 # 本地数据库 @author hwliang<2021-01-08>
                 password = public.M('config').where('id=?',(1,)).getField('mysql_root')
-                password = shlex.quote(str(password))
+                password = public.shell_quote(str(password))
                 os.environ["MYSQL_PWD"] = password
                 backup_cmd = mysqldump_bin + " -E -R --default-character-set="+ character +" --force --hex-blob --opt " + db_name + " -u root -p" + password + " 2>"+self._err_log+"| gzip > " + dfile
             else:
                 # 远程数据库 @author hwliang<2021-01-08>
-                password = shlex.quote(str(conn_config['db_password']))
+                password = public.shell_quote(str(conn_config['db_password']))
                 os.environ["MYSQL_PWD"] = password
                 backup_cmd = mysqldump_bin + " -h " + conn_config['db_host'] + " -P " + str(conn_config['db_port']) + " -E -R --default-character-set="+ character +" --force --hex-blob --opt " + db_name + " -u " + str(conn_config['db_user']) + " -p"+password+" 2>"+self._err_log+"| gzip > " + dfile
             public.ExecShell(backup_cmd)

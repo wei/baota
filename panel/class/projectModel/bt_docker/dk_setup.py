@@ -16,26 +16,28 @@ import json
 import public
 import projectModel.bt_docker.dk_public as dp
 
-class main:
 
-    def get_config(self,args):
+class main:
+    def get_config(self, args):
         import projectModel.bt_docker.dk_public as dp
         # 获取加速配置
         registry_mirrors = self.get_registry_mirrors(args)
         if not registry_mirrors["status"]:
             return registry_mirrors
         else:
-            registry_mirrors = registry_mirrors['msg']
+            if not isinstance(registry_mirrors['msg'], list):
+                registry_mirrors['msg'] = [registry_mirrors['msg']]
         service_status = self.get_service_status()
-        return public.returnMsg(True,{
-            "registry_mirrors":registry_mirrors,
-            "service_status":service_status,
-            "installed": self.check_docker_program(),
-            "monitor_status": self.get_monitor_status(),
-            "monitor_save_date": dp.docker_conf()['SAVE']
-        })
+        return public.returnMsg(
+            True, {
+                "registry_mirrors": registry_mirrors['msg'],
+                "service_status": service_status,
+                "installed": self.check_docker_program(),
+                "monitor_status": self.get_monitor_status(),
+                "monitor_save_date": dp.docker_conf()['SAVE']
+            })
 
-    def set_monitor_save_date(self,args):
+    def set_monitor_save_date(self, args):
         """
         :param save_date: int 例如30 表示 30天
         :param args:
@@ -47,15 +49,16 @@ class main:
         try:
             save_date = int(args.save_date)
         except:
-            return public.returnMsg(False,"监控保存时间需要为正整数！")
+            return public.returnMsg(False, "监控保存时间需要为正整数！")
         if save_date > 999:
-            return public.returnMsg(False,"监控数据不能保留超过999天！")
+            return public.returnMsg(False, "监控数据不能保留超过999天！")
         if not docker_conf:
             docker_conf = "SAVE={}".format(save_date)
-            public.writeFile(conf_path,docker_conf)
-            return public.returnMsg(True,"设置成功！")
-        docker_conf = re.sub("SAVE\s*=\s*\d+","SAVE={}".format(save_date),docker_conf)
-        public.writeFile(conf_path,docker_conf)
+            public.writeFile(conf_path, docker_conf)
+            return public.returnMsg(True, "设置成功！")
+        docker_conf = re.sub("SAVE\s*=\s*\d+", "SAVE={}".format(save_date),
+                             docker_conf)
+        public.writeFile(conf_path, docker_conf)
         dp.write_log("设置监控时间为[{}]天！".format(save_date))
         return public.returnMsg(True, "设置成功！")
 
@@ -75,7 +78,7 @@ class main:
             return False
 
     # docker服务状态设置
-    def docker_service(self,args):
+    def docker_service(self, args):
         """
         :param act start/stop/restart
         :param args:
@@ -90,7 +93,8 @@ class main:
             exec_str += "&& systemctl {} docker.socket".format(args.act)
         public.ExecShell(exec_str)
         dp.write_log("将 Docker 服务状态设置为 [{}] 成功".format(act_dict[args.act]))
-        return public.returnMsg(True, "将状态设置为 [{}] 成功".format(act_dict[args.act]))
+        return public.returnMsg(True,
+                                "将状态设置为 [{}] 成功".format(act_dict[args.act]))
 
     # 获取加速配置
     def get_registry_mirrors(self, args):
@@ -102,7 +106,8 @@ class main:
                 return public.returnMsg(True, [])
             return public.returnMsg(True, conf['registry-mirrors'])
         except:
-            return public.returnMsg(False, '失败！失败原因：{}'.format(public.get_error_info()))
+            return public.returnMsg(
+                False, '失败！失败原因：{}'.format(public.get_error_info()))
 
     # 设置加速配置
     def set_registry_mirrors(self, args):
@@ -122,34 +127,48 @@ class main:
                     return public.returnMsg(True, '设置成功')
                 del (conf['registry-mirrors'])
             else:
-                registry_mirrors = args.registry_mirrors_address.strip().split('\n')
+                registry_mirrors = args.registry_mirrors_address.strip().split(
+                    '\n')
                 for i in registry_mirrors:
-                    if not re.search('https?://',i):
-                        return public.returnMsg(False, '加速地址[{}]格式错误<br>参考：https://mirror.ccs.tencentyun.com'.format(i))
-
-                conf['registry-mirrors'] = public.xsssec2(registry_mirrors)
-                # if not conf['registry-mirrors']:
-                #     del(conf['registry-mirrors'])
-            public.writeFile('/etc/docker/daemon.json', json.dumps(conf, indent=2))
+                    if not re.search('https?://', i):
+                        return public.returnMsg(
+                            False,
+                            '加速地址[{}]格式错误<br>参考：https://mirror.ccs.tencentyun.com'
+                            .format(i))
+                tmp_registry = registry_mirrors
+                if isinstance(registry_mirrors, list) and registry_mirrors:
+                    tmp_registry = registry_mirrors[0]
+                conf['registry-mirrors'] = public.xsssec2(tmp_registry)
+                if isinstance(conf['registry-mirrors'], str):
+                    conf['registry-mirrors'] = [conf['registry-mirrors']]
+            public.writeFile('/etc/docker/daemon.json',
+                             json.dumps(conf, indent=2))
             dp.write_log("设置Docker加速成功!")
             return public.returnMsg(True, '设置成功')
         except:
-            return public.returnMsg(False, '设置失败！失败原因:{}'.format(public.get_error_info()))
+            return public.returnMsg(
+                False, '设置失败！失败原因:{}'.format(public.get_error_info()))
 
     def get_monitor_status(self):
         """
         :return:
         """
         # 进程是否存在
-        res = public.process_exists("python",cmdline="/www/server/panel/class/projectModel/bt_docker/dk_monitor.py")
+        res = public.process_exists(
+            "python",
+            cmdline=
+            "/www/server/panel/class/projectModel/bt_docker/dk_monitor.py")
         if res:
             return res
-        res = public.process_exists("python3", cmdline="/www/server/panel/class/projectModel/bt_docker/dk_monitor.py")
+        res = public.process_exists(
+            "python3",
+            cmdline=
+            "/www/server/panel/class/projectModel/bt_docker/dk_monitor.py")
         if res:
             return res
         return res
 
-    def set_docker_monitor(self,args):
+    def set_docker_monitor(self, args):
         """
         开启docker监控获取docker相取资源信息
         :param act: start/stop
@@ -162,17 +181,22 @@ class main:
             python = "/www/server/panel/pyenv/bin/python3"
         cmd_line = "/www/server/panel/class/projectModel/bt_docker/dk_monitor.py"
         if args.act == "start":
-            shell = "nohup {} {} &".format(python,cmd_line)
+            shell = "nohup {} {} &".format(python, cmd_line)
             public.ExecShell(shell)
             time.sleep(1)
             if self.get_monitor_status():
                 dp.write_log("Docker监控启动成功！")
-                return public.returnMsg(True,"启动监控成功！")
-            return public.returnMsg(False,"启动监控失败！")
+                return public.returnMsg(True, "启动监控成功！")
+            return public.returnMsg(False, "启动监控失败！")
         else:
-            pid = dp.get_process_id("python","/www/server/panel/class/projectModel/bt_docker/dk_monitor.py")
+            pid = dp.get_process_id(
+                "python",
+                "/www/server/panel/class/projectModel/bt_docker/dk_monitor.py")
             if not pid:
-                pid = dp.get_process_id("python3", "/www/server/panel/class/projectModel/bt_docker/dk_monitor.py")
+                pid = dp.get_process_id(
+                    "python3",
+                    "/www/server/panel/class/projectModel/bt_docker/dk_monitor.py"
+                )
             public.ExecShell("kill -9 {}".format(pid))
             dp.write_log("Docker监控成功停止！")
             return public.returnMsg(True, "Docker监控成功停止！")
@@ -188,7 +212,7 @@ class main:
             return False
         return True
 
-    def install_docker_program(self,args):
+    def install_docker_program(self, args):
         """
         安装docker和docker-compose
         :param args:
@@ -199,6 +223,12 @@ class main:
         # Docker_Install_File = "/www/server/panel/install/docker_install.sh"
         # execstr = "wget -O {} http://download.bt.cn/install/0/docker_install.sh -T 5"
         execstr = "/bin/bash /www/server/panel/install/install_soft.sh 0 install docker_install"
-        public.M('tasks').add('id,name,type,status,addtime,execstr',(None, mmsg,'execshell','0',time.strftime('%Y-%m-%d %H:%M:%S'),execstr))
-        public.httpPost(public.GetConfigValue('home') + '/api/panel/plugin_total',{"pid": "1111111", 'p_name': "Docker商用模块"}, 3)
-        return public.returnMsg(True,"安装任务已添加到队列中！")
+        public.M('tasks').add('id,name,type,status,addtime,execstr',
+                              (None, mmsg, 'execshell', '0',
+                               time.strftime('%Y-%m-%d %H:%M:%S'), execstr))
+        public.httpPost(
+            public.GetConfigValue('home') + '/api/panel/plugin_total', {
+                "pid": "1111111",
+                'p_name': "Docker商用模块"
+            }, 3)
+        return public.returnMsg(True, "安装任务已添加到队列中！")

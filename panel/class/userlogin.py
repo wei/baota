@@ -255,7 +255,7 @@ class userlogin:
         html_token_key = public.get_csrf_html_token_key()
         session[html_token_key] = public.GetRandomString(48)
         session[html_token_key.replace("https_","")] = public.GetRandomString(48)
-        session['client_hash'] = public.get_client_hash()
+        #session['client_hash'] = public.get_client_hash()
 
 
     def set_cdn_host(self,get):

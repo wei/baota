@@ -1422,23 +1422,25 @@ var bt = {
   onlineService: function(help){
     layer.open({
       type: 1,
-      area: ['250px', '280px'],
+      area: ['200px', '272px'],
       title: false,
       closeBtn: 2,
       shift: 0,
       content: '<div class="service_consult">\
-          <div class="service_consult_title">请打开微信"扫一扫"</div>\
-          <div class="contact_consult" style="margin-bottom: 5px;">\
+          <div class="service_consult_title">在线客服</div>\
+          <div class="contact_consult" style="margin: 10px auto 8px auto;">\
             <div id="contact_consult_qcode">\
-              <img src="/static/images/customer-qrcode.png" alt="" />\
+              <img src="/static/images/customer-qrcode.png" alt="" style="border: none;" />\
             </div>\
           </div>\
-          <div>【在线客服】</div>\
-          <ul class="c7 helpList" style="margin-top:20px;text-align: center;">\
-              <li>工作时间：9:15 - 18:00</li>\
-          </ul>\
+          <div class="wechat-title">\
+          <img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAAAAXNSR0IArs4c6QAAATlJREFUSEvtVrFOw0AMfed8AxJsZWGAgQHBXP4DCQa+Ioou7g18BRIg9T/KDGJggIGFbiDxDXGQowSBuGvrFISEmtF+7/nis312RVEMiWgIoMT375aIjpj5KeJrTMy8JSJjAPsRzEhErl1Zlhd1XZ8kRKZEdMjM0xlBBiIyATCIYZxzl857X6uTiHaY+TElZrUz87aIPCjvI0gIwVmF5uG7H1gFmZepxv85XTdqCCEcLMQ0gLz3jbbTOm/rPdkLBt0v0E77xysq2it9T2nhuTzPN4ho10KyYEXkXvvkBcC6hWjEvmqQMwCnANZa8p1RJAbfa41vAM7/0cUzczOiZ43zvunrtPVOntuO3+wrluJ12qspvFBm/+bR+u03nhPrkKZk2ZVINUZO964sy44Ta9FSK5GuQ1VVXb0DLf+sHQ9tLL0AAAAASUVORK5CYII=">\
+          <span class="scan-title">微信扫码</span></div>\
+          <hr style="width: 158px;height: 1px;background: #E6E6E6;margin: 10px auto;">\
+          <div style="font-size: 14px;"><a href="https://www.bt.cn/new/wechat_customer" target="_blank" class="btlink">点击咨询客服<div class="icon-r"></div></a></div>\
       </div>',
-      success:function(){
+      success:function(layers){
+        $(layers).css('border-radius','4px')
         var html = '';
         if(Array.isArray(help)){
           for (var i = 0; i < help.length; i++) {
@@ -4741,6 +4743,14 @@ bt.soft = {
         }
       })
     } else {
+      var voucherIntroduce = ''
+      voucherIntroduce = '<div class="pro-left-introduce '+_data.type+'"><div class="pro-left-title"><div><span>抵扣券</span></div><span>抵扣券授权</span></div>\
+			<div class="pro-left-list">\
+				<div class="pro-left-list-title">抵扣券来源:</div>\
+				<div class="pro-left-list-content"><ul><li>官网后台购买</li><li>活动页购买</li><li>推广赠送</li><li>更换绑定IP</li></ul></div>\
+                <div class="pro-price-herf"><a target="_blank" href="https://www.bt.cn/new/activity.html">查看更多活动</a></div>\
+			</div></div>'
+      $('.libPay-product-introduce').empty().append(voucherIntroduce)
       var _voucherList = _data.data;
       if (_voucherList === undefined || _voucherList.length <= 0) {
         $(".libPay-layer-item.aShow p").hide()
@@ -4748,7 +4758,7 @@ bt.soft = {
       }
       $(".libPay-layer-item.aShow p").show()
       // $('.libPay-footer-tips').addClass('hide')
-      var _arry = {},voucherIntroduce = ''
+      var _arry = {}
 
       this.each(_voucherList, function (index, item) {
         if (!_arry.hasOwnProperty(item.product_id)) {
@@ -4761,12 +4771,6 @@ bt.soft = {
         }
         _arry[item.product_id]['list'].push(item)
       })
-      voucherIntroduce = '<div class="pro-left-introduce '+_data.type+'"><div class="pro-left-title"><div><span>抵扣券</span></div><span>抵扣券授权</span></div>\
-			<div class="pro-left-list">\
-				<div class="pro-left-list-title">抵扣券来源:</div>\
-				<div class="pro-left-list-content"><ul><li>官网后台购买</li><li>活动页购买</li><li>推广赠送</li><li>更换绑定IP</li></ul></div>\
-                <div class="pro-price-herf"><a target="_blank" href="https://www.bt.cn/new/activity.html">查看更多活动</a></div>\
-			</div></div>'
       //抵扣券分类
       var _ul = $('.libVoucher-type ul').empty()
       $.each(_arry, function (index, oitem) {
@@ -4782,7 +4786,6 @@ bt.soft = {
 
           //抵扣券列表
           var _vlist = $('.libVoucher-list ul').empty()
-          $('.libPay-product-introduce').empty().append(voucherIntroduce)
           var v_data = $(this).data()
           $.each(v_data.list, function (index, item) {
             var _v_li = $('<li class="pay-cycle-btn ' + (index == 0 ? "active" : "") + '"><span>' + (item.unit == 'month' && item.cycle == 999 ? '永久' : (item.cycle + that.pro.conver_unit(item.unit))) + '</span></li>').data(item).click(function () {
@@ -5066,7 +5069,7 @@ bt.soft = {
         break;
       case 2://对公转账
         $('.libPaycode-foo-txt').css('margin-top','18px')
-        $('.libBank-box').css({'display':'inline-block','width':'270px'})
+        $('.libBank-box').css({'display':'inline-block','width':'260px'})
         $('.payqcode-box,.pay-wx,.payment_results_tips').hide()
         $('.org_price').css('display','block')
         break;

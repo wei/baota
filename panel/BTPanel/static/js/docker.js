@@ -159,7 +159,7 @@ var docker = {
                             _port.push(item[0]['HostPort']+'-->'+index)
                         }
                     })
-                    return '<span>'+_port.join()+'</span>'
+                    return '<span><span title="点击查看详情" class="event_details size_ellipsis" style="width:350px">'+ _port.join() +'</span><textarea class="event_textarea" style="display: none;width: 350px;max-width: 350px;min-height: 24px;height: 100px;resize: auto;border: 1px solid #ddd;" readonly>'+_port.join()+'</textarea></span>'
                 }
             },{
                 width:150,
@@ -440,6 +440,21 @@ var docker = {
                 }]
             }],
             success:function(){
+                $('.event_details').unbind('click').on('click',function (e) {
+                    $('.event_details').show()
+                    $('.event_textarea').hide()
+                    $(this).hide().siblings().show()
+                    $(document).click(function (ev) {
+                    if(ev.target.innerHTML.indexOf('event_textarea') === -1){
+                        $('.event_details').show()
+                        $('.event_textarea').hide()
+                    }
+                    ev.stopPropagation();
+                    ev.preventDefault();
+                    });
+                    e.stopPropagation();
+                    e.preventDefault();
+                })
                 $('#dk_container_table tbody td').unbind('mouseenter').mouseenter(function(e){
                     var _tdSPAN = $(this).find('span:first-child').not('.glyphicon')
                     if(e.target.cellIndex == 2){
@@ -2707,7 +2722,7 @@ var docker = {
     */
     transform_cont_chart_data:function(row){
         var that = this,_time = new Date().getTime();
-        this.ajax_task_method('stats',{data:{id:row.id},tips:false,model_name:{dk_model_name:'status'}},function(res){
+        this.ajax_task_method('stats',{data:{ id: row.id, dk_status: row.status },tips:false,model_name:{dk_model_name:'status'}},function(res){
             var _data = res.msg;
             if(!res.status){
                 that.remove_cont_chart_data();
@@ -2727,7 +2742,7 @@ var docker = {
             that.cont_chart.network_list['rx'].push([_time, bt.format_size(_data.rx,false,null,'KB')])
             // console.log(that.cont_chart_id.cpu.getOption());
             //实时更新图表数据
-            that.cont_chart_id.cpu.setOption({
+            that.cont_chart_id.cpu && that.cont_chart_id.cpu.setOption({
                 series:[
                     {
                         name: 'CPU',
@@ -2736,7 +2751,7 @@ var docker = {
                 ],
                 xAxis:that.cont_chart.time_list
             })
-            that.cont_chart_id.mem.setOption({
+            that.cont_chart_id.mem && that.cont_chart_id.mem.setOption({
                 series: [
                     {
                         name: '内存',
@@ -2748,7 +2763,7 @@ var docker = {
                     }
                 ]
             })
-            that.cont_chart_id.disk.setOption({
+            that.cont_chart_id.disk && that.cont_chart_id.disk.setOption({
                 series: [
                     {
                         name: '读取',
@@ -2760,7 +2775,7 @@ var docker = {
                     }
                 ]
             })
-            that.cont_chart_id.network.setOption({
+            that.cont_chart_id.network && that.cont_chart_id.network.setOption({
                 series: [
                     {
                         name: '上行',

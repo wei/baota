@@ -267,20 +267,31 @@ def get_mode_and_user(path):
     return data
 
 
+class ijson:
+    def loads(self, data):
+        return json.loads(data)
+
+    def dumps(self, data):
+        try:
+            try:
+                return json.dumps(data)
+            except:
+                return json.dumps(data, ensure_ascii=False)
+        except:
+            return json.dumps(self.returnMsg(False, "错误的响应: %s" % str(data)))
+
+
 def GetJson(data):
     """
     将对象转换为JSON
     @data 被转换的对象(dict/list/str/int...)
     """
-    from json import dumps
     if data == bytes: data = data.decode('utf-8')
-    try:
-        try:
-            return dumps(data)
-        except:
-            return dumps(data,ensure_ascii=False)
-    except:
-        return dumps(returnMsg(False,"错误的响应: %s" % str(data)))
+    ijson_obj = ijson()
+    data = ijson_obj.dumps(data)
+    del(ijson_obj)
+    return data
+
 
 def getJson(data):
     return GetJson(data)
@@ -3890,6 +3901,9 @@ def check_site_path(site_path):
         @return bool
     '''
     try:
+        if site_path in ['/usr/local/lighthouse']:
+            return True
+
         if site_path in ['/','/usr','/dev','/home','/media','/mnt','/opt','/tmp','/var']:
             return False
         whites = ['/www/server/tomcat','/www/server/stop','/www/server/phpmyadmin']
@@ -4519,6 +4533,15 @@ def print_log(_info,_level = 'DEBUG'):
     '''
     log_body = "[{}][{}] - {}\n".format(format_date(),_level.upper(),_info)
     return WriteFile(get_panel_log_file(),log_body,'a+')
+
+
+def print_error():
+    '''
+        @name 打印错误信息到日志文件
+        @author hwliang
+        @return void
+    '''
+    print_log(get_error_info(),'ERROR')
 
 
 
@@ -6056,10 +6079,30 @@ def create_rsa_key():
         prv_key = 'rsa_private_key'
         if pub_key in session and prv_key in session:
             return True
-        from Crypto.PublicKey import RSA
-        key = RSA.generate(1024)
-        private_key = key.exportKey("PEM")
-        public_key = key.publickey().exportKey("PEM")
+        try:
+            from Crypto.PublicKey import RSA
+            key = RSA.generate(1024)
+            private_key = key.exportKey("PEM")
+            public_key = key.publickey().exportKey("PEM")
+        except:
+            is_re_install = '{}/data/pycryptodome_re_install.pl'.format(get_panel_path())
+            if not os.path.exists(is_re_install):
+                os.system("nohup btpip install pycryptodome -I &> /dev/null &")
+                writeFile(is_re_install,'True')
+
+            priv_pem = '/tmp/private.pem'
+            pub_pem = '/tmp/public.pem'
+            ExecShell("openssl genrsa -out {} 1024".format(priv_pem))
+            ExecShell("openssl rsa -pubout -in {} -out {}".format(priv_pem,pub_pem))
+            if not os.path.exists(priv_pem) or not os.path.exists(pub_pem):
+                return False
+
+            private_key = readFile(priv_pem,'rb')
+            public_key = readFile(pub_pem,'rb')
+
+            if os.path.exists(priv_pem): os.remove(priv_pem)
+            if os.path.exists(pub_pem): os.remove(pub_pem)
+
         session[pub_key] = public_key.decode('utf-8')
         session[prv_key] = private_key.decode('utf-8')
 
@@ -6120,7 +6163,9 @@ def rsa_decrypt(data):
         # 分片解密
         decrypted_str = b""
         for d in data.split("\n"):
+            if not d: continue
             res = base64.b64decode(d)
+            if not res: continue
             decrypted_data = cipher_private.decrypt(res, None)
             decrypted_str += decrypted_data
         return decrypted_str.decode('utf-8')
@@ -6161,14 +6206,47 @@ def rsa_encrypt_for_private_key(data):
         print_log(get_error_info())
         return ''
 
+
 def get_client_hash():
     '''
         @name 获取客户端HASH
         @author hwliang
         @return str
     '''
-    from flask import request
-    client_hash = md5(request.headers.get('User-Agent') +'_'+ request.remote_addr)
+    from flask import session,request
+    is_tmp_login = session.get('tmp_login')
+    if is_tmp_login:
+        client_hash = md5(request.remote_addr)
+    else:
+        skey = 'client_ips'
+        ckey = 'client_sync_count'
+        client_ips = session.get(skey,[])
+        client_sync_count = session.get(ckey,0)
+
+        # 是否唯一IP
+        if len(client_ips) <= 1:
+            # 唯一IP连续访问次数超过100次，使用IP+UA生成HASH
+            r_max = 101
+            if client_sync_count >= r_max-1:
+                client_hash = md5(request.headers.get('User-Agent') +'_'+ request.remote_addr)
+                if client_sync_count < r_max:
+                    session['client_hash'] = client_hash
+                    client_sync_count += 1
+                    session[ckey] = client_sync_count
+                return client_hash
+
+            # 记录IP
+            if not request.remote_addr in client_ips:
+                client_ips.append(request.remote_addr)
+                session[skey] = client_ips
+
+            # 记录访问次数
+            client_sync_count += 1
+            session[ckey] = client_sync_count
+
+        # 非唯一IP，使用UA生成HASH
+        client_hash = md5(request.headers.get('User-Agent'))
+
     return client_hash
 
 def check_client_hash():
@@ -6177,6 +6255,9 @@ def check_client_hash():
         @author hwliang
         @return bool
     '''
+    # 是否关闭验证
+    not_tip = '{}/data/not_check_ip.pl'.format(get_panel_path())
+    if os.path.exists(not_tip): return True
     from BTPanel import session
     skey = 'client_hash'
     client_hash = get_client_hash()
@@ -6185,5 +6266,27 @@ def check_client_hash():
         return True
 
     if session[skey] != client_hash:
+        WriteLog('用户登录','客户端HASH验证失败,已强制退出登录!')
         return False
     return True
+
+
+def shell_quote(cmd):
+    '''
+        @name shell转义
+        @author hwliang
+        @param cmd str 要转义的命令
+        @return str
+    '''
+    if not cmd: return ''
+    if isinstance(cmd,bytes): cmd = cmd.decode('utf-8')
+    if not isinstance(cmd,str): return cmd
+    try:
+        import shlex
+        return shlex.quote(cmd)
+    except:
+        try:
+            import pipes
+            return pipes.quote(cmd)
+        except:
+            return cmd

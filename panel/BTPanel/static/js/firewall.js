@@ -5866,7 +5866,9 @@ var contDetect = {
 						$('select[name="site_name"]').change();
 						$('select[name="site_name"]').attr('disabled', 'disabled');
 						$('.access-form-item').hide();
+            $('input[name="name"]').val($('input[name="site_url"]').val() + methodMap[method]);
 					} else {
+            $('.access-form-item').show();
 						if (!isEdit) $('select[name="site_name"]').removeAttr('disabled');
 					}
 				});

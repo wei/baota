@@ -111,7 +111,7 @@ class panelMongoDB():
 
         if not 'authorization' in data:data['authorization'] = "disabled"
 
-        public.writeFile('/www/server/1.txt',json.dumps(data))
+        # public.writeFile('/www/server/1.txt',json.dumps(data))
         return data
 
 
@@ -385,7 +385,9 @@ class main(databaseBase):
 
         return data
 
-        #导入
+
+
+    #导入
     def InputSql(self,args):
         name = args.name
         file = args.file
@@ -402,15 +404,17 @@ class main(databaseBase):
         if not public.process_exists("mongod") and not int(find['sid']):
             return public.returnMsg(False,"Mongodb服务还未开启！")
         info = self.get_info_by_db_id(find['id'])
-        sql_dump = '{}/mongodb/bin/mongo'.format(public.get_setup_path())
+        sql_dump = '{}/mongodb/bin/mongorestore'.format(public.get_setup_path())
         if not os.path.exists(sql_dump): return public.returnMsg(False,'缺少备份工具，请先通过软件管理安装MongoDB!')
+
+        if os.path.isfile(file): file = os.path.dirname(file)
 
         if self.get_local_auth(get):
             shell = "{} -h {} --port {} -u {} -p {} -d {} --drop {} ".format(sql_dump,info['db_host'],info['db_port'],info['db_user'],info['db_password'],find['name'] ,file)
         else:
             shell = "{} -h {} --port {} -d {} --drop {}".format(sql_dump,info['db_host'],info['db_port'],find['name'] ,file)
         public.ExecShell(shell)
-
+        public.print_log(shell)
         public.WriteLog("TYPE_DATABASE", '导入数据库[{}]成功'.format(name))
         return public.returnMsg(True, 'DATABASE_INPUT_SUCCESS');
 

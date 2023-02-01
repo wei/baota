@@ -481,7 +481,7 @@ def bt_cli(u_input = 0):
         print("(1) 重启面板服务           (8) 改面板端口")
         print("(2) 停止面板服务           (9) 清除面板缓存")
         print("(3) 启动面板服务           (10) 清除登录限制")
-        print("(4) 重载面板服务")
+        print("(4) 重载面板服务           (11) 设置是否开启IP + User-Agent验证")
         print("(5) 修改面板密码           (12) 取消域名绑定限制")
         print("(6) 修改面板用户名         (13) 取消IP访问限制")
         print("(7) 强制修改MySQL密码      (14) 查看面板默认信息")
@@ -652,10 +652,16 @@ def bt_cli(u_input = 0):
     elif u_input == 10:
         os.system("/etc/init.d/bt reload")
     elif u_input == 11:
-        auth_file = 'data/admin_path.pl'
-        if os.path.exists(auth_file): os.remove(auth_file)
-        os.system("/etc/init.d/bt reload")
-        print("|-已取消入口限制,请在URL地址中增加/login访问面板")
+        not_tip = '{}/data/not_check_ip.pl'.format(public.get_panel_path())
+        if os.path.exists(not_tip):
+            os.remove(not_tip)
+            print("|-已开启IP + User-Agent检测")
+            print("|-此功能可以有效防止[重放攻击]")
+        else:
+            public.writeFile(not_tip,'True')
+            print("|-已关闭IP + User-Agent检测")
+            print("|-注意：关闭此功能有被[重放攻击]的风险")
+
     elif u_input == 12:
         auth_file = 'data/domain.conf'
         if os.path.exists(auth_file): os.remove(auth_file)

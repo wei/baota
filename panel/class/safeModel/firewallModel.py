@@ -311,7 +311,7 @@ class main(safeBase):
             pass
         return ips
 
-    def check_add_ports(self, ports):
+    def check_add_ports(self, ports, protocol, types):
         """
         @name 检测端口是否已添加
         @auther hezhihong
@@ -319,6 +319,10 @@ class main(safeBase):
         """
         all_port = public.M('firewall_new').order('addtime desc').select()
         for i2 in all_port:
+            protocol_types = False
+            if i2['protocol'].find(protocol) != -1 and i2['types'] == types:
+                protocol_types = True
+            if not protocol_types: continue
             start_port = end_port = ''
             if i2['ports'].find('-') != -1:
                 start_port = i2['ports'].split('-')[0]
@@ -387,9 +391,11 @@ class main(safeBase):
         port_list = ports.split(',')
         result = self.check_port(port_list)  # 检测端口
         if result: return result
-        # 检测端口是否已经添加过 hezhihong
-        add_result = self.check_add_ports(ports)
-        if 'status' in add_result: return add_result
+
+        # # 检测端口是否已经添加过 hezhihong
+        # add_result = self.check_add_ports(ports, protocol, types)
+        # if 'status' in add_result: return add_result
+        #@ps 无需检测端口是否已经添加过，因为正常情况下，有的端口就是要添加多个规则的，比如80端口针对不同的IP地址放行  @hwliang 2022-12-27
 
         allow_ips = []
         if address:

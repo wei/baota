@@ -204,6 +204,8 @@ def request_check():
             return public.returnJson(False, 'INIT_REQUEST_CHECK_LOCAL_ERR'), json_header
 
     if request.path in ['/site','/ftp','/database','/soft','/control','/firewall','/files','/xterm','/crontab','/config']:
+        if request.path in ['/config'] and request.args.get('action') in ['get_tmp_token']:
+            return
         if not public.is_bind():
             return redirect('/bind',302)
         if public.is_error_path():
@@ -375,6 +377,7 @@ def modify_password():
     # if not session.get('password_expire',False): return redirect('/',302)
     data = {}
     g.title = '密码已过期，请修改!'
+    data['public_key'] = public.get_rsa_public_key().replace("\n","")
     return render_template('modify_password.html', data=data)
 
 
@@ -1811,18 +1814,22 @@ def check_csrf():
     return True
 
 
-def publicObject(toObject, defs, action=None, get=None,is_csrf=True):
+def publicObject(toObject, defs, action=None, get=None, is_csrf=True):
     try:
         # 模块访问前置检查
-        if is_csrf and public.get_csrf_sess_html_token_value() and session.get('login',None):
-            if not check_csrf(): return public.ReturnJson(False, 'INIT_CSRF_ERR'), json_header
+        if is_csrf and public.get_csrf_sess_html_token_value() and session.get(
+                'login', None):
+            if not check_csrf():
+                return public.ReturnJson(False, 'INIT_CSRF_ERR'), json_header
 
         if not get: get = get_input()
         if action: get.action = action
 
         if hasattr(get, 'path'):
             get.path = get.path.replace('//', '/').replace('\\', '/')
-            if get.path.find('./') != -1: return public.ReturnJson(False, 'INIT_PATH_NOT_SAFE'), json_header
+            if get.path.find('./') != -1:
+                return public.ReturnJson(False,
+                                         'INIT_PATH_NOT_SAFE'), json_header
             if get.path.find('->') != -1:
                 get.path = get.path.split('->')[0].strip()
             get.path = public.xssdecode(get.path)
@@ -1836,12 +1843,18 @@ def publicObject(toObject, defs, action=None, get=None,is_csrf=True):
             get.dfile = get.dfile.replace('//', '/').replace('\\', '/')
             get.dfile = public.xssdecode(get.dfile)
 
-
         if hasattr(toObject, 'site_path_check'):
-            if not toObject.site_path_check(get): return public.ReturnJson(False, 'INIT_ACCEPT_NOT'), json_header
-        return run_exec().run(toObject, defs, get)
+            if not toObject.site_path_check(get):
+                return public.ReturnJson(False, 'INIT_ACCEPT_NOT'), json_header
+        run_obj = run_exec()
+        res = run_obj.run(toObject, defs, get)
+        del(run_obj)
+        return res
     except:
         return error_500(None)
+    finally:
+        del(toObject)
+        del(get)
 
 
 def check_login(http_token=None):

@@ -14,8 +14,16 @@
 import db
 import public
 import json
+import os
+
+def check_db():
+    db_path = "/www/server/panel/data/docker.db"
+    if not os.path.exists(db_path) or os.path.getsize(db_path) == 0:
+        execstr = "wget -O {} https://download.bt.cn/install/src/docker.db".format(db_path)
+        public.ExecShell(execstr)
 
 def sql(table):
+    check_db()
     with db.Sql() as sql:
         sql.dbfile("docker")
         return sql.table(table)

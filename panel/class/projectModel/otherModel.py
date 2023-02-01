@@ -303,7 +303,22 @@ class main(projectBase):
             @param pid: int<进程id>
             @return dict
         '''
-        process_info = {}
+        process_info = {
+            'name': '-',
+            'pid': pid,
+            'ppid': 0,
+            'create_time': 0,
+            'status': 'sleeping',
+            'user': 'root',
+            'momory_used': 0,
+            'cpu_percent': 0,
+            'io_write_bytes':0,
+            'connections': [],
+            'connects': 0,
+            'open_files':[],
+            'threads':0,
+            'exe':'-'
+        }
         try:
             if not os.path.exists('/proc/{}'.format(pid)): return process_info
             p = psutil.Process(pid)
@@ -412,6 +427,8 @@ class main(projectBase):
         project_info['listen_ok'] = True
         if project_info['load_info']:
             for pid in project_info['load_info'].keys():
+                if not 'connections' in project_info['load_info'][pid]:
+                    project_info['load_info'][pid]['connections'] = []
                 for conn in project_info['load_info'][pid]['connections']:
                     if not conn['status'] == 'LISTEN': continue
                     if not conn['local_port'] in project_info['listen']:
@@ -823,7 +840,11 @@ class main(projectBase):
         if 'project_path' in project_find['project_config']:
             jar_path = project_find['project_config']['project_path']
         else:
-            jar_path = '/root'
+            if os.path.isfile(project_find['path']):
+                project_path = os.path.dirname(project_find['path'])
+                jar_path=project_path
+            else:
+                jar_path = project_find['path']
         # 启动脚本
         start_cmd = '''#!/bin/bash
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
@@ -1171,6 +1192,7 @@ echo $! > {pid_file}'''.format(
     def xsssec(self,text):
         return text.replace('<', '&lt;').replace('>', '&gt;')
 
+
     def last_lines(self,filename, lines=1):
         block_size = 3145928
         block = ''
@@ -1196,6 +1218,7 @@ echo $! > {pid_file}'''.format(
             fsock.close()
         return block[start:]
 
+
     def get_project_log(self, get):
         '''
         @name 取项目日志
@@ -1210,7 +1233,7 @@ echo $! > {pid_file}'''.format(
         if not os.path.exists(log_file): return public.returnMsg(False, '日志文件不存在')
         if os.path.getsize(log_file)>3145928:
             return public.returnMsg(True,self.xsssec(self.last_lines(log_file, 3000)))
-        return public.returnMsg(True, self.xsssec(public.GetNumLines(log_file,3000)))
+        return public.returnMsg(True, self.xsssec(public.GetNumLines(log_file,1000)))
 
     def auto_run(self):
         '''

@@ -182,7 +182,7 @@
     <button style="display: none;" id="bt_copys" class="bt_copy" data-clipboard-text=""></button>
     <a style="display: none;" id="defaultPath">{{session['config']['sites_path']}}</a>
     {% block content %}{% endblock %}
-    <div id="wechat-customer" class="wechat-customer hide" >
+    <!-- <div id="wechat-customer" class="wechat-customer hide" >
       <div class="describe-title">在线客服</div>
       <div class="qrcode-wechat">
         <div id="wechatCustomerQrcode"><img src="/static/images/customer-qrcode.png" /></div>
@@ -191,6 +191,20 @@
         <img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAAAAXNSR0IArs4c6QAAATlJREFUSEvtVrFOw0AMfed8AxJsZWGAgQHBXP4DCQa+Ioou7g18BRIg9T/KDGJggIGFbiDxDXGQowSBuGvrFISEmtF+7/nis312RVEMiWgIoMT375aIjpj5KeJrTMy8JSJjAPsRzEhErl1Zlhd1XZ8kRKZEdMjM0xlBBiIyATCIYZxzl857X6uTiHaY+TElZrUz87aIPCjvI0gIwVmF5uG7H1gFmZepxv85XTdqCCEcLMQ0gLz3jbbTOm/rPdkLBt0v0E77xysq2it9T2nhuTzPN4ho10KyYEXkXvvkBcC6hWjEvmqQMwCnANZa8p1RJAbfa41vAM7/0cUzczOiZ43zvunrtPVOntuO3+wrluJ12qspvFBm/+bR+u03nhPrkKZk2ZVINUZO964sy44Ta9FSK5GuQ1VVXb0DLf+sHQ9tLL0AAAAASUVORK5CYII=" />
         <span class="scan-title">微信扫码</span>
       </div>
+      <span class="layui-layer-setwin wechat-close"><a href="javascript:;" class="layui-layer-ico layui-layer-close layui-layer-close2"></a></span>
+    </div> -->
+    <div id="wechat-customer" class="wechat-customer hide">
+      <div class="describe-title">在线客服</div>
+      <div class="qrcode-wechat">
+        <div id="wechatCustomerQrcode">
+          <img src="/static/images/customer-qrcode.png"  style="width: 80px;height: 80px;" alt="" />
+        </div>
+      </div>
+      <div class="wechat-title">
+      <img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAAAAXNSR0IArs4c6QAAATlJREFUSEvtVrFOw0AMfed8AxJsZWGAgQHBXP4DCQa+Ioou7g18BRIg9T/KDGJggIGFbiDxDXGQowSBuGvrFISEmtF+7/nis312RVEMiWgIoMT375aIjpj5KeJrTMy8JSJjAPsRzEhErl1Zlhd1XZ8kRKZEdMjM0xlBBiIyATCIYZxzl857X6uTiHaY+TElZrUz87aIPCjvI0gIwVmF5uG7H1gFmZepxv85XTdqCCEcLMQ0gLz3jbbTOm/rPdkLBt0v0E77xysq2it9T2nhuTzPN4ho10KyYEXkXvvkBcC6hWjEvmqQMwCnANZa8p1RJAbfa41vAM7/0cUzczOiZ43zvunrtPVOntuO3+wrluJ12qspvFBm/+bR+u03nhPrkKZk2ZVINUZO964sy44Ta9FSK5GuQ1VVXb0DLf+sHQ9tLL0AAAAASUVORK5CYII=">
+      <span class="scan-title">微信扫码</span></div>
+      <hr style="width: 88px;height: 1px;background: #E6E6E6;margin: 10px auto;">
+      <div><a href="https://www.bt.cn/new/wechat_customer" target="_blank" class="btlink">点击咨询客服<div class="icon-r"></div></a></div>
       <span class="layui-layer-setwin wechat-close"><a href="javascript:;" class="layui-layer-ico layui-layer-close layui-layer-close2"></a></span>
     </div>
     <div class="toolbar-right hide">

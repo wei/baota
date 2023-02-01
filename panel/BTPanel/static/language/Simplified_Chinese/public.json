@@ -258,7 +258,7 @@
   "FILE_SHELL_EXEC": "命令已发送",
   "FILE_SHELL_EMPTY": "当前没有SHELL在执行!",
   "FIREWALL_IP_FORMAT": "您输入的IP地址不合法!",
-  "FIREWALL_IP_EXISTS": "您要放屏蔽的IP已存在屏蔽列表，无需重复处理!",
+  "FIREWALL_IP_EXISTS": "您要放行或屏蔽的IP已存在列表内，请勿重复添加!",
   "FIREWALL_PORT_EXISTS": "您要放行的端口已存在，无需重复放行!",
   "FIREWALL_PORT_PANEL": "失败，不能删除当前面板端口!",
   "FIREWALL_SSH_STOP": "SSH服务已停用",

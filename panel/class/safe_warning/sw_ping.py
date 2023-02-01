@@ -41,7 +41,6 @@ def check_run():
         if conf:
             if int(conf)!=1:
                 return False,'当前未开启【禁Ping】功能，存在服务器被ICMP攻击或被扫的风险'
-        else:
-            return True,"无风险"
+        return True,"无风险"
     except:
         return True,"无风险"

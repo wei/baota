@@ -693,7 +693,7 @@ SetLink
                     admin_user = mysql_obj._USER
                     m_version = mysql_obj.query('select version();')[0][0]
 
-                if m_version.find('5.7') == 0  or m_version.find('8.0') == 0:
+                if m_version.find('5.7') != -1  or m_version.find('8.0') != -1:
                     accept = self.map_to_list(mysql_obj.query("select Host from mysql.user where User='{}'".format(admin_user)))
                     for my_host in accept:
                         mysql_obj.execute("UPDATE mysql.user SET authentication_string='' WHERE User='{}' and Host='{}'".format(admin_user,my_host[0]))
@@ -739,7 +739,7 @@ SetLink
         if self.sid:
             m_version = mysql_obj.query('select version();')[0][0]
 
-        if m_version.find('5.7') == 0  or m_version.find('8.0') == 0 :
+        if m_version.find('5.7') != -1  or m_version.find('8.0') != -1 :
             accept = self.map_to_list(mysql_obj.query("select Host from mysql.user where User='" + name + "' AND Host!='localhost'"))
             mysql_obj.execute("update mysql.user set authentication_string='' where User='" + username + "'")
             result = mysql_obj.execute("ALTER USER `%s`@`localhost` IDENTIFIED BY '%s'" % (username,newpassword))
@@ -777,7 +777,6 @@ SetLink
     #备份
     def ToBackup(self,get):
         #try:
-        import shlex
         id = get['id']
         db_find = public.M('databases').where("id=?",(id,)).find()
         name = db_find['name']
@@ -796,7 +795,7 @@ SetLink
             try:
                 password = public.M('config').where('id=?',(1,)).getField('mysql_root')
                 if not password: return public.returnMsg(False,'数据库密码不能为空')
-                password = shlex.quote(str(password))
+                password = public.shell_quote(str(password))
                 os.environ["MYSQL_PWD"] = password
                 public.ExecShell(mysqldump_bin + " -R -E --triggers=false --default-character-set="+ public.get_database_character(name) +" --force --opt \"" + name + "\"  -u root -p"+password+" | gzip > " + backupName)
             except Exception as e:
@@ -810,7 +809,7 @@ SetLink
                 conn_config = json.loads(db_find['conn_config'])
                 res = self.CheckCloudDatabase(conn_config)
                 if isinstance(res,dict): return res
-                password = shlex.quote(str(conn_config['db_password']))
+                password = public.shell_quote(str(conn_config['db_password']))
                 os.environ["MYSQL_PWD"] = password
                 public.ExecShell(mysqldump_bin + " -h "+ conn_config['db_host'] +" -P "+ str(int(conn_config['db_port'])) +" -R -E --triggers=false --default-character-set=" + public.get_database_character(name) + " --force --opt \"" + str(db_find['name']) + "\"  -u "+ str(conn_config['db_user']) +" -p"+password+" | gzip > " + backupName)
             except Exception as e:
@@ -822,7 +821,7 @@ SetLink
                 conn_config = public.M('database_servers').where('id=?',db_find['sid']).find()
                 res = self.CheckCloudDatabase(conn_config)
                 if isinstance(res,dict): return res
-                password = shlex.quote(str(conn_config['db_password']))
+                password = public.shell_quote(str(conn_config['db_password']))
                 os.environ["MYSQL_PWD"] = password
                 public.ExecShell(mysqldump_bin + " -h "+ conn_config['db_host'] +" -P "+ str(int(conn_config['db_port'])) +" -R -E --triggers=false --default-character-set=" + public.get_database_character(name) + " --force --opt \"" + str(db_find['name']) + "\"  -u "+ str(conn_config['db_user']) +" -p"+password+" | gzip > " + backupName)
             except Exception as e:
@@ -869,7 +868,6 @@ SetLink
     #导入
     def InputSql(self,get):
         #try:
-        import shlex
         name = get['name']
         file = get['file']
         root = public.M('config').where('id=?',(1,)).getField('mysql_root')
@@ -917,17 +915,17 @@ SetLink
             try:
                 if db_find['db_type'] in ['0',0]:
                     password = public.M('config').where('id=?',(1,)).getField('mysql_root')
-                    password = shlex.quote(str(password))
+                    password = public.shell_quote(str(password))
                     os.environ["MYSQL_PWD"] = password
                     public.ExecShell(mysql_bin + " -uroot -p" + password + " --force \"" + name + "\" < " +'"'+ input_path +'"')
                 elif db_find['db_type'] in ['1',1]:
                     conn_config = json.loads(db_find['conn_config'])
-                    password = shlex.quote(str(conn_config['db_password']))
+                    password = public.shell_quote(str(conn_config['db_password']))
                     os.environ["MYSQL_PWD"] = password
                     public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p" + password + " --force \"" + name + "\" < " +'"'+ input_path +'"')
                 elif db_find['db_type'] in ['2',2]:
                     conn_config = public.M('database_servers').where('id=?',db_find['sid']).find()
-                    password = shlex.quote(str(conn_config['db_password']))
+                    password = public.shell_quote(str(conn_config['db_password']))
                     os.environ["MYSQL_PWD"] = password
                     public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p" + password + " --force \"" + name + "\" < " +'"'+ input_path +'"')
             except Exception as e:
@@ -943,17 +941,17 @@ SetLink
             try:
                 if db_find['db_type'] in ['0',0]:
                     password = public.M('config').where('id=?',(1,)).getField('mysql_root')
-                    password = shlex.quote(str(password))
+                    password = public.shell_quote(str(password))
                     os.environ["MYSQL_PWD"] = password
                     public.ExecShell(mysql_bin + " -uroot -p" + password + " --force \"" + name + "\" < " +'"'+ file +'"')
                 elif db_find['db_type'] in ['1',1]:
                     conn_config = json.loads(db_find['conn_config'])
-                    password = shlex.quote(str(conn_config['db_password']))
+                    password = public.shell_quote(str(conn_config['db_password']))
                     os.environ["MYSQL_PWD"] = password
                     public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p" + password + " --force \"" + name + "\" < " +'"'+ file +'"')
                 elif db_find['db_type'] in ['2',2]:
                     conn_config = public.M('database_servers').where('id=?',db_find['sid']).find()
-                    password = shlex.quote(str(conn_config['db_password']))
+                    password = public.shell_quote(str(conn_config['db_password']))
                     os.environ["MYSQL_PWD"] = password
                     public.ExecShell(mysql_bin + " -h "+ conn_config['db_host'] +" -P "+str(int(conn_config['db_port']))+" -u"+str(conn_config['db_user'])+" -p" + password + " --force \"" + name + "\" < " +'"'+ file +'"')
             except Exception as e:

@@ -904,13 +904,23 @@ class system:
 
 
         if get.type != 'stop':
+            time.sleep(0.5)
             if not self.check_service_status(get.name):
                 if len(result[1]) > 1 and get.name != 'pure-ftpd' and get.name != 'redis':
                     return public.returnMsg(False, '<p>启动失败： <p>' + result[1].replace('\n','<br>'))
                 else:
                     return public.returnMsg(False,'{}服务启动失败'.format(get.name))
         else:
-            if self.check_service_status(get.name): return public.returnMsg(False, '服务停止失败!')
+            # 等待进程停止运行
+            n = 0
+            num = 5
+            while self.check_service_status(get.name):
+                time.sleep(0.5)
+                n += 1
+                if n > num: break
+            if n > num:  # 超时
+                return public.returnMsg(False, '服务停止失败!')
+
         return public.returnMsg(True,'SYS_EXEC_SUCCESS')
 
     def check_service_status(self,name):

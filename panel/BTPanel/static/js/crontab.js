@@ -369,7 +369,7 @@ var crontab = {
         config[3].label = '备份类型'
         config[3].group[0].placeholder = ''
         config[3].group[4].placeholder = ''
-        config[3].group[4].value = 'localhost'
+        config[3].group[4].value = ['localhost']
         config[3].group[4].width = '300px'
         config[3].group[2].list = allDatabases
         config[3].group[4].list = backuptolist
@@ -1212,21 +1212,42 @@ var crontab = {
 											</div>\
 										</div>',
                   success: function () {
+                    var nScrollHight = 0;  //滚动距离总长(注意不是滚动条的长度)
+                    var nScrollTop = 0;   //滚动到的当前位置
+                    var nDivHight = $(".crontab-log").height();
+                    var isDb = true
+                    $(".crontab-log").scroll(function(){
+                      nScrollHight = $(this)[0].scrollHeight;
+                      nScrollTop = $(this)[0].scrollTop;
+                      var paddingBottom = parseInt( $(this).css('padding-bottom') ),paddingTop = parseInt( $(this).css('padding-top') );
+                      isDb = false
+                      //判断是否滚动到底部
+                      if(nScrollTop + paddingBottom + paddingTop + nDivHight >= nScrollHight){
+                        isDb = true
+                      }
+                    });
+                    var data_text = ''
                     log_interval = setInterval(function () {
                       bt_tools.send({
                         url: '/crontab?action=GetLogs',
                         data: { id: row.id }
                       }, function (res) {
                         if (res.status) {
-                          render_content(res)
+                          var arr = res.msg.split('\n')
+                          if(data_text === res.msg && arr[arr.length - 1].indexOf('-------') > -1) {
+                            clearInterval(log_interval)
+                            return
+                          }
+                          if(isDb) render_content(res)
                         }
                       })
-                    }, 1000)
+                    }, 2000)
                     render_content(rdata)
                     function render_content(data) {
+                      data_text = data.msg
                       var log_body = data.msg === '' ? '当前日志为空' : data.msg,setchmod = $(".setchmod pre"),crontab_log = $('.crontab-log')[0]
                       setchmod.text(log_body);
-                      crontab_log.scrollTop = crontab_log.scrollTop !== crontab_log.scrollHeight && crontab_log.scrollTop !== 0 ? crontab_log.scrollTop : crontab_log.scrollHeight;
+                      crontab_log.scrollTop = crontab_log.scrollHeight;
                     }
                     $('#clearLogs').on('click', function () {
                       clearInterval(log_interval)

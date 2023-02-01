@@ -16,6 +16,7 @@ class safeBase:
     #转换时间格式
     def to_date(self,date_str):
         tmp = re.split('\s+',date_str)
+        if len(tmp) < 3: return date_str
         s_date = str(datetime.now().year) + '-' + self._months.get(tmp[0]) + '-' + tmp[1] + ' ' + tmp[2]
         time_array = time.strptime(s_date, "%Y-%m-%d %H:%M:%S")
         time_stamp = int(time.mktime(time_array))
@@ -24,16 +25,19 @@ class safeBase:
 
     def to_date2(self,date_str):
         tmp = date_str.split()
+        if len(tmp) < 4: return date_str
         s_date = str(tmp[-1]) + '-' + self._months.get(tmp[1],tmp[1]) + '-' + tmp[2] + ' ' + tmp[3]
         return s_date
 
     def to_date3(self,date_str):
         tmp = date_str.split()
+        if len(tmp) < 4: return date_str
         s_date = str(datetime.now().year) + '-' + self._months.get(tmp[1],tmp[1]) + '-' + tmp[2] + ' ' + tmp[3]
         return s_date
 
     def to_date4(self,date_str):
         tmp = date_str.split()
+        if len(tmp) < 3: return date_str
         s_date = str(datetime.now().year) + '-' + self._months.get(tmp[0],tmp[0]) + '-' + tmp[1] + ' ' + tmp[2]
         return s_date
 
