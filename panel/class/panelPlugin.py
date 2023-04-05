@@ -372,9 +372,11 @@ class panelPlugin:
         plugin_path_panel = self.__plugin_path + input_plugin_name
         if input_install_opt == 'r' and os.path.exists(
                 filename + '/' + i_opts[input_install_opt]):
+            public.ExecShell(f"echo \"repair\" > {filename}/repair.pl")
             i_opts[input_install_opt] = 'install.sh install'
         if input_install_opt == 'u' and os.path.exists(
                 filename + '/' + i_opts[input_install_opt]):
+            public.ExecShell(f"echo \"upgrade\" > {filename}/upgrade.pl")
             i_opts[input_install_opt] = 'install.sh install'
         if not os.path.exists(plugin_path_panel):
             os.makedirs(plugin_path_panel)
@@ -790,11 +792,11 @@ class panelPlugin:
         if not pluginInfo: return public.returnMsg(False, '指定插件不存在!')
         self.mutex_title = pluginInfo['mutex']
         if not self.check_mutex(pluginInfo['mutex']):
-            return public.returnMsg(False, '请先卸载[%s]' % self.mutex_title)
+            return public.returnMsg(False, '请到[软件商店]先卸载[%s]' % self.mutex_title)
         if not hasattr(get, 'id'):
             if not self.check_dependnet(pluginInfo['dependnet']):
                 return public.returnMsg(
-                    False, '依赖以下软件,请先安装[%s]' % pluginInfo['dependnet'])
+                    False, '依赖以下软件,请到[软件商店]先安装[%s]' % pluginInfo['dependnet'])
         if 'version' in get:
             for versionInfo in pluginInfo['versions']:
                 if versionInfo['m_version'] != get.version: continue
@@ -818,7 +820,7 @@ class panelPlugin:
                     if not self.check_dependnet(versionInfo['dependnet']):
                         return public.returnMsg(
                             False,
-                            '依赖以下软件,请先安装[%s]' % versionInfo['dependnet'])
+                            '依赖以下软件,请到[软件商店]先安装[%s]' % versionInfo['dependnet'])
 
         if pluginInfo['type'] != 5:
             result = self.install_sync(pluginInfo, get)
@@ -1350,7 +1352,9 @@ class panelPlugin:
             version = tmp[1]
         isTask = '1'
         for task in self.__tasks:
-            tmpt = public.getStrBetween('[', ']', task['name'])
+            try:
+                tmpt = public.getStrBetween('[', ']', task['name'])
+            except:continue
             if not tmpt: continue
             tmp1 = tmpt.split('-')
             name1 = tmp1[0].lower()
@@ -1453,6 +1457,14 @@ class panelPlugin:
         newList = []
         for sInfo in sList:
             if sInfo['type'] in sType: newList.append(sInfo)
+
+            try:
+                n_type = int(sInfo['ex2'])
+                if n_type == sInfo['type']: continue
+
+                if n_type in sType: newList.append(sInfo)
+            except:pass
+
         return newList
 
     #检查权限
@@ -1503,6 +1515,8 @@ class panelPlugin:
 
     #取软件列表
     def get_soft_list(self, get=None):
+        if 'query' in get:
+            get.query = get.query.strip()
         softList = self.get_cloud_list(get)
         if not softList:
             get.force = 1
@@ -1525,7 +1539,6 @@ class panelPlugin:
             softList['list'] = self.get_page(softList['list'], get)
             softList['list']['data'] = self.check_isinstall(
                 softList['list']['data'])
-
         #softlist['list']['data']中name字段匹配get.query的数据排序最前面 hezhihong
         if 'query' in get and get.query and softList['list']['data']:
             query_str = get.query.lower()

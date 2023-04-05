@@ -18,7 +18,7 @@ import public
 
 class sms_msg:
 
-    _APIURL = 'https://www.bt.cn/api/wmsg';
+    _APIURL = 'http://www.bt.cn/api/wmsg';
     __UPATH = panelPath + '/data/userInfo.json';
     conf_path = panelPath + '/data/sms_main.json'
 
@@ -210,7 +210,7 @@ class sms_msg:
         except Exception as e:
             # print("短信发送异常:")
             # print(e)
-            return public.returnMsg(False,result)
+            return public.returnMsg(False,public.get_error_info())
 
     def uninstall(self):
         if os.path.exists(self.conf_path):

@@ -225,7 +225,7 @@
                     // 默认添加的参数
                     _configD['name'] = _this.module_name;
                     _configD['id'] = res ? param['id'] : new Date().getTime();
-                    eData['title'] = $('.panel_push_form .projectBox .bt_select_content').html();
+                    eData['title'] = $('.projectBox .bt_select_content').html();
 
                     //删除推送类型
                     $.each(_this.msg_list,function(index,item){
@@ -234,7 +234,7 @@
 
                     //拼接选中推送方式
                     var isCheck = []
-                    $('.panel_push_form .module-check').not('.check_disabled').each(function(){
+                    $('.module-check').not('.check_disabled').each(function(){
                         if($(this).find('input').prop('checked')){
                             isCheck.push($(this).find('input').prop('name'))
                         }

@@ -4,7 +4,7 @@
         "title":"邮箱",
         "version":"1.1",
         "date":"2022-08-10",
-        "help":"https://www.bt.cn/bbs/thread-66183-1-1.html",
+        "help":"https://www.bt.cn/bbs/thread-108097-1-1.html",
         "ps":"宝塔邮箱消息通道，用于接收面板消息推送"
     },
     {
@@ -12,7 +12,7 @@
         "title":"钉钉",
         "version":"1.2",
         "date":"2022-08-10",
-        "help":"https://www.bt.cn/bbs/thread-44497-1-1.html",
+        "help":"https://www.bt.cn/bbs/thread-108081-1-1.html",
         "ps":"宝塔钉钉消息通道，用于接收面板消息推送"
     },
     {
@@ -20,7 +20,7 @@
         "title":"飞书",
         "version":"1.2",
         "date":"2022-08-10",
-        "help":"https://www.bt.cn/bbs/",
+        "help":"https://www.bt.cn/bbs/thread-108274-1-1.html",
         "ps":"宝塔飞书消息通道，用于接收面板消息推送"
     },
 	{
@@ -28,7 +28,7 @@
         "title":"企业微信",
         "version":"1.2",
         "date":"2022-08-10",
-        "help":"https://www.bt.cn/bbs/thread-52540-1-1.html",
+        "help":"https://www.bt.cn/bbs/thread-108116-1-1.html",
         "ps":"宝塔企业微信消息通道，用于接收面板消息推送"
     },
 	{
@@ -36,7 +36,7 @@
         "title":"短信通知",
         "version":"1.1",
         "date":"2022-08-02",
-        "help":"https://www.bt.cn",
+        "help":"https://www.bt.cn/bbs/thread-108758-1-1.html",
         "ps":"宝塔短信通知，用于接收面板消息推送"
     },
     {
@@ -44,7 +44,7 @@
         "title":"微信公众号",
         "version":"1.0",
         "date":"2022-08-02",
-        "help":"https://www.bt.cn",
+        "help":"https://www.bt.cn/bbs/thread-108309-1-1.html",
         "ps":"宝塔微信公众号，用于接收面板消息推送"
     }
 ]

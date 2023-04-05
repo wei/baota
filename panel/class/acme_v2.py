@@ -296,7 +296,7 @@ class acme_v2:
 
         # 请求创建订单
         res = self.acme_request(self._apis['newOrder'], payload)
-        if not res.status_code in [201]:  # 如果创建失败
+        if not res.status_code in [201,200]:  # 如果创建失败
             e_body = res.json()
             if 'type' in e_body:
                 # 如果随机数失效
@@ -311,7 +311,7 @@ class acme_v2:
                     self.get_kid()
                     self.get_nonce(force=True)
                     res = self.acme_request(self._apis['newOrder'], payload)
-            if not res.status_code in [201]:
+            if not res.status_code in [201,200]:
                 a_auth = res.json()
 
                 ret_title = self.get_error(str(a_auth))

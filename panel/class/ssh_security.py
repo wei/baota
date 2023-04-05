@@ -23,12 +23,26 @@ class ssh_security:
         "rsa": "/root/.ssh/id_rsa",
         "dsa": "/root/.ssh/id_dsa"
     }
+    open_ssh_login = public.get_panel_path() + '/data/open_ssh_login.pl'
+
     __SSH_CONFIG='/etc/ssh/sshd_config'
     __ip_data = None
     __ClIENT_IP='/www/server/panel/data/host_login_ip.json'
     __REPAIR={"1":{"id":1,"type":"file","harm":"高","repaired":"1","level":"3","name":"确保SSH MaxAuthTries 设置为3-6之间","file":"/etc/ssh/sshd_config","Suggestions":"加固建议   在/etc/ssh/sshd_config 中取消MaxAuthTries注释符号#, 设置最大密码尝试失败次数3-6 建议为4","repair":"MaxAuthTries 4","rule":[{"re":"\nMaxAuthTries\\s*(\\d+)","check":{"type":"number","max":7,"min":3}}],"repair_loophole":[{"re":"\n?#?MaxAuthTries\\s*(\\d+)","check":"\nMaxAuthTries 4"}]},"2":{"id":2,"repaired":"1","type":"file","harm":"高","level":"3","name":"SSHD 强制使用V2安全协议","file":"/etc/ssh/sshd_config","Suggestions":"加固建议   在/etc/ssh/sshd_config 文件按如相下设置参数","repair":"Protocol 2","rule":[{"re":"\nProtocol\\s*(\\d+)","check":{"type":"number","max":3,"min":1}}],"repair_loophole":[{"re":"\n?#?Protocol\\s*(\\d+)","check":"\nProtocol 2"}]},"3":{"id":3,"repaired":"1","type":"file","harm":"高","level":"3","name":"设置SSH空闲超时退出时间","file":"/etc/ssh/sshd_config","Suggestions":"加固建议   在/etc/ssh/sshd_config 将ClientAliveInterval设置为300到900，即5-15分钟，将ClientAliveCountMax设置为0-3","repair":"ClientAliveInterval 600  ClientAliveCountMax 2","rule":[{"re":"\nClientAliveInterval\\s*(\\d+)","check":{"type":"number","max":900,"min":300}}],"repair_loophole":[{"re":"\n?#?ClientAliveInterval\\s*(\\d+)","check":"\nClientAliveInterval 600"}]},"4":{"id":4,"repaired":"1","type":"file","harm":"高","level":"3","name":"确保SSH LogLevel 设置为INFO","file":"/etc/ssh/sshd_config","Suggestions":"加固建议   在/etc/ssh/sshd_config 文件以按如下方式设置参数（取消注释）","repair":"LogLevel INFO","rule":[{"re":"\nLogLevel\\s*(\\w+)","check":{"type":"string","value":["INFO"]}}],"repair_loophole":[{"re":"\n?#?LogLevel\\s*(\\w+)","check":"\nLogLevel INFO"}]},"5":{"id":5,"repaired":"1","type":"file","harm":"高","level":"3","name":"禁止SSH空密码用户登陆","file":"/etc/ssh/sshd_config","Suggestions":"加固建议  在/etc/ssh/sshd_config 将PermitEmptyPasswords配置为no","repair":"PermitEmptyPasswords no","rule":[{"re":"\nPermitEmptyPasswords\\s*(\\w+)","check":{"type":"string","value":["no"]}}],"repair_loophole":[{"re":"\n?#?PermitEmptyPasswords\\s*(\\w+)","check":"\nPermitEmptyPasswords no"}]},"6":{"id":6,"repaired":"1","type":"file","name":"SSH使用默认端口22","harm":"高","level":"3","file":"/etc/ssh/sshd_config","Suggestions":"加固建议   在/etc/ssh/sshd_config 将Port 设置为6000到65535随意一个, 例如","repair":"Port 60151","rule":[{"re":"Port\\s*(\\d+)","check":{"type":"number","max":65535,"min":22}}],"repair_loophole":[{"re":"\n?#?Port\\s*(\\d+)","check":"\nPort 65531"}]}}
     __root_login_types = {'yes':'yes - 可密码和密钥登录','no':'no - 禁止登录','without-password':'without-password - 只能密钥登录','forced-commands-only':'forced-commands-only - 只能执行命令'}
     def __init__(self):
+        if not public.M('sqlite_master').where('type=? AND name=?', ('table', 'ssh_login_record')).count():
+            public.M('').execute('''CREATE TABLE ssh_login_record (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                addr TEXT,
+                server_ip TEXT,
+                user_agent TEXT,
+                ssh_user TEXT,
+                login_time INTEGER DEFAULT 0,
+                close_time INTEGER DEFAULT 0,
+                video_addr TEXT);''')
+            public.M('').execute('CREATE INDEX ssh_login_record ON ssh_login_record (addr);')
+
         if not os.path.exists(self.__ClIENT_IP):
             public.WriteFile(self.__ClIENT_IP,json.dumps([]))
         self.__mail=send_mail.send_mail()
@@ -793,6 +807,60 @@ disown $!'''%(self.return_python())
         import ssh_authentication
         ssh_class=ssh_authentication.ssh_authentication()
         return public.returnMsg(True, ssh_class.get_pin())
+
+    def get_login_record(self,get):
+        if os.path.exists(self.open_ssh_login):
+
+            return public.returnMsg(True,'')
+        else:
+            return public.returnMsg(False,'')
+    def start_login_record(self,get):
+        if os.path.exists(self.open_ssh_login):
+            return public.returnMsg(True,'')
+        else:
+            public.writeFile(self.open_ssh_login,"True")
+            return public.returnMsg(True,'')
+    def stop_login_record(self,get):
+        if os.path.exists(self.open_ssh_login):
+            os.remove(self.open_ssh_login)
+            return public.returnMsg(True,'')
+        else:
+            return public.returnMsg(True,'')
+    # 获取登录记录列表
+    def get_record_list(self, get):
+        if 'limit' in get:
+            limit = int(get.limit.strip())
+        else:
+            limit = 12
+        import page
+        page = page.Page()
+        count = public.M('ssh_login_record').order("id desc").count()
+        info = {}
+        info['count'] = count
+        info['row'] = limit
+        info['p'] = 1
+        if hasattr(get, 'p'):
+            info['p'] = int(get['p'])
+        info['uri'] = get
+        info['return_js'] = ''
+        if hasattr(get, 'tojs'):
+            info['return_js'] = get.tojs
+        data = {}
+        # 获取分页数据
+        data['page'] = page.GetPage(info, '1,2,3,4,5,8')
+
+        data['data'] = public.M('ssh_login_record').order('id desc').limit(
+            str(page.SHIFT) + ',' + str(page.ROW)).select()
+
+        return data
+
+    def get_file_json(self,get):
+
+        if os.path.exists(get.path):
+            ret=json.loads(public.ReadFile(get.path))
+            return  ret
+        else:
+            return ''
 
 if __name__ == '__main__':
     import sys

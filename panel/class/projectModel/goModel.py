@@ -679,7 +679,7 @@ class main(projectBase):
         for i in pids:
             try:
                 p = psutil.Process(i)
-                p.kill()
+                p.terminate()
             except:
                 pass
         return public.return_data(True, '进程已全部结束')
@@ -803,7 +803,7 @@ echo $! > {pid_file}'''.format(
         public.set_mode(script_file,755)
         public.set_own(script_file,project_find['project_config']['run_user'])
         # 执行脚本文件
-        p = public.ExecShell("bash {}".format(script_file),user=project_find['project_config']['run_user'])
+        p = public.ExecShell("bash {}".format(script_file),user=project_find['project_config']['run_user'],env=os.environ.copy())
         time.sleep(1)
         if not os.path.exists(pid_file):
             return public.returnMsg(False,'启动失败,请尝试切换启动用户')

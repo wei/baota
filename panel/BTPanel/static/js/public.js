@@ -4677,9 +4677,11 @@ var product_recommend = {
    * @description 或指定版本事件
    * @param {} name
    */
-  get_version_event:function (item,param,config) {
+	get_version_event:function (item,param,config,payFlag) {
     bt.soft.get_soft_find(item.name,function(res){
       if(!item.isBuy){
+				if(payFlag === 'icon') item.pay = 48
+				if(payFlag === 'text') item.pay = 49
         product_recommend.recommend_product_view(item, config)
       }else if(!res.setup){
         bt.soft.install(item.name)
@@ -4790,13 +4792,25 @@ var product_recommend = {
         })
         // 立即购买
         $('.buyNow').click(function(){
-          switch (status.advanced) {
-            case 'pro':
-              bt.soft['updata_' + status.advanced](data.pay);
-              break;
-            case 'ltd':
-              bt.soft['updata_' + status.advanced](false, data.pay);
-              break;
+          if(data['limit']){
+            var isLtd = data['limit'] === 'ltd'
+            var params = {
+              totalNum: 51,
+              limit: data['limit'],
+              pid:  isLtd ? 100000032 : 100000011,
+            }
+            if(data.pay) params['totalNum'] = data.pay
+            if(isLtd) params['closePro'] = true
+            bt.soft.product_pay_view(params);
+          }else{
+            switch (status.advanced) {
+              case 'pro':
+                bt.soft['updata_' + status.advanced](data.pay);
+                break;
+              case 'ltd':
+                bt.soft['updata_' + status.advanced](false, data.pay);
+                break;
+            }
           }
         })
       }
@@ -5444,7 +5458,7 @@ function renderMailConfigView(data) {
                   <ul class="help-info-text c7">\
                           <li>推荐使用465端口，协议为SSL/TLS</li>\
                           <li>25端口为SMTP协议，587端口为STARTTLS协议</li>\
-                          <li><a href="https://www.bt.cn/bbs/thread-71298-1-1.html" target="_blank" class="btlink">配置教程</a></li>\
+                          <li><a href="'+data.help+'" target="_blank" class="btlink">配置教程</a></li>\
                   </ul>\
           </div>',
     success: function() {
@@ -5670,7 +5684,7 @@ function renderAccountAlertView() {
       $('.btn-send-test').click(function () {
         bt_tools.send({ url: '/config?action=get_msg_fun', data: { module_name: 'wx_account', fun_name: 'push_data', msg: '发送测试信息' } }, function (res) {
           if (res.status) {
-            var num = $('.account_remaining').text();
+            var num = Number($('.account_remaining').html());
             if (!isNaN(num)) {
               num -= 1;
               $('.account_remaining').text(num);

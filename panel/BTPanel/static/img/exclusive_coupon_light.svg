@@ -1,0 +1,53 @@
+<svg width="792.820557" height="656.200195" viewBox="0 0 792.821 656.2" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<desc>
+			Created with Pixso.
+	</desc>
+	<ellipse id="椭圆 268" cx="408.910278" cy="398.060791" rx="370.142914" ry="234.763123" transform="rotate(-3.53403 408.91 398.061)" fill="url(#paint_radial_23_315_0)" fill-opacity="0.6"/>
+	<path id="矢量 938" d="M245.262 368.07L253.821 352.287L141.417 261.034L116.378 307.209L245.262 368.07Z" fill-rule="evenodd" fill="url(#paint_linear_23_316_0)" fill-opacity="0.500000"/>
+	<path id="矢量 953" d="M242.909 309.541L253.274 300.3L173.705 176.859L143.382 203.892L242.909 309.541Z" fill-rule="evenodd" fill="url(#paint_linear_23_317_0)" fill-opacity="0.500000"/>
+	<path id="矢量 954" d="M320.377 290.243L334.878 282.787L288.458 141.495L246.035 163.309L320.377 290.243Z" fill-rule="evenodd" fill="url(#paint_linear_23_318_0)" fill-opacity="0.500000"/>
+	<path id="矢量 955" d="M382.778 287.754L400.429 286.619L409.797 137.538L358.157 140.858L382.778 287.754Z" fill-rule="evenodd" fill="url(#paint_linear_23_319_0)" fill-opacity="0.500000"/>
+	<path id="矢量 956" d="M450.585 269.216L466.745 275.179L529.236 141.689L481.959 124.243L450.585 269.216Z" fill-rule="evenodd" fill="url(#paint_linear_23_320_0)" fill-opacity="0.500000"/>
+	<path id="矢量 957" d="M520.896 277.438L538.05 289.409L632.835 178.673L582.652 143.649L520.896 277.438Z" fill-rule="evenodd" fill="url(#paint_linear_23_321_0)" fill-opacity="0.500000"/>
+	<path id="矢量 958" d="M548.641 319.123L559.433 337.625L689.915 280.182L658.342 226.052L548.641 319.123Z" fill-rule="evenodd" fill="url(#paint_linear_23_322_0)" fill-opacity="0.500000"/>
+	<ellipse id="椭圆 269" cx="385.206421" cy="244.815430" rx="372.257996" ry="221.544479" transform="rotate(-3.53403 385.206 244.815)" fill="url(#paint_radial_23_326_0)" fill-opacity="0.42"/>
+	<defs>
+		<radialGradient id="paint_radial_23_315_0" cx="0.000000" cy="0.000000" r="1.000000" gradientUnits="userSpaceOnUse" gradientTransform="translate(408.91 368.242) rotate(-84.4604) scale(205.906 324.645)">
+			<stop stop-color="#F4DF76"/>
+			<stop offset="0.816794" stop-color="#F4DF76" stop-opacity="0.000000"/>
+			<stop offset="1.000000" stop-color="#F4DF76" stop-opacity="0.000000"/>
+		</radialGradient>
+		<linearGradient id="paint_linear_23_316_0" x1="128.897385" y1="284.121826" x2="276.024384" y2="374.212677" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#FFFBE6" stop-opacity="0.000000"/>
+			<stop offset="1.000000" stop-color="#F4DF76"/>
+		</linearGradient>
+		<linearGradient id="paint_linear_23_317_0" x1="158.543442" y1="190.375214" x2="268.252563" y2="327.881927" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#FFFBE6" stop-opacity="0.000000"/>
+			<stop offset="1.000000" stop-color="#F4DF76"/>
+		</linearGradient>
+		<linearGradient id="paint_linear_23_318_0" x1="267.246338" y1="152.401947" x2="342.166199" y2="313.822174" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#FFFBE6" stop-opacity="0.000000"/>
+			<stop offset="1.000000" stop-color="#F4DF76"/>
+		</linearGradient>
+		<linearGradient id="paint_linear_23_319_0" x1="383.976715" y1="139.197769" x2="395.428314" y2="318.209900" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#FFFBE6" stop-opacity="0.000000"/>
+			<stop offset="1.000000" stop-color="#F4DF76"/>
+		</linearGradient>
+		<linearGradient id="paint_linear_23_320_0" x1="505.597717" y1="132.965942" x2="450.811859" y2="302.268707" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#FFFBE6" stop-opacity="0.000000"/>
+			<stop offset="1.000000" stop-color="#F4DF76"/>
+		</linearGradient>
+		<linearGradient id="paint_linear_23_321_0" x1="607.743408" y1="161.161011" x2="515.145081" y2="310.675903" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#FFFBE6" stop-opacity="0.000000"/>
+			<stop offset="1.000000" stop-color="#F4DF76"/>
+		</linearGradient>
+		<linearGradient id="paint_linear_23_322_0" x1="674.128845" y1="253.117371" x2="530.102356" y2="346.547729" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#FFFBE6" stop-opacity="0.000000"/>
+			<stop offset="1.000000" stop-color="#F4DF76"/>
+		</linearGradient>
+		<radialGradient id="paint_radial_23_326_0" cx="0.000000" cy="0.000000" r="1.000000" gradientUnits="userSpaceOnUse" gradientTransform="translate(385.207 244.815) rotate(90) scale(187.418 314.915)">
+			<stop offset="0.007634" stop-color="#F0DA70"/>
+			<stop offset="0.900763" stop-color="#EBD778" stop-opacity="0.000000"/>
+		</radialGradient>
+	</defs>
+</svg>

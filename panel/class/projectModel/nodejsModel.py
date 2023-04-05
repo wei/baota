@@ -1298,7 +1298,7 @@ echo $! > {pid_file}
         public.set_mode(script_file,755)
 
         # 执行脚本文件
-        p = public.ExecShell("bash {}".format(script_file),user=project_find['project_config']['run_user'])
+        p = public.ExecShell("bash {}".format(script_file),user=project_find['project_config']['run_user'],env=os.environ.copy())
         time.sleep(1)
         n = 0
         while n < 5:

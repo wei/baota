@@ -278,7 +278,7 @@ class ijson:
             except:
                 return json.dumps(data, ensure_ascii=False)
         except:
-            return json.dumps(self.returnMsg(False, "错误的响应: %s" % str(data)))
+            return json.dumps({'status':False,'msg':"错误的响应: %s" % str(data)})
 
 
 def GetJson(data):
@@ -291,7 +291,6 @@ def GetJson(data):
     data = ijson_obj.dumps(data)
     del(ijson_obj)
     return data
-
 
 def getJson(data):
     return GetJson(data)
@@ -391,6 +390,12 @@ def WriteLog(type,logMsg,args=(),not_web = False):
                 rep = '{'+str(i+1)+'}'
                 logMsg = logMsg.replace(rep,args[i])
         if type in keys: type = _LAN_LOG[type]
+
+        try:
+            if 'login_address' in session:
+                logMsg = '{} {}'.format(session['login_address'], logMsg)
+        except:pass
+
         sql = db.Sql()
         mDate = time.strftime('%Y-%m-%d %X',time.localtime())
         data = (uid,username,type,logMsg + tmp_msg,mDate)
@@ -903,7 +908,10 @@ def writeSpeed(title,used,total,speed = 0):
     if not title:
         data = {'title':None,'progress':0,'total':0,'used':0,'speed':0}
     else:
-        progress = int((100.0 * used / total))
+        try:
+            progress = int((100.0 * used / total))
+        except:
+            progress = 0
         data = {'title':title,'progress':progress,'total':total,'used':used,'speed':speed}
     writeFile('/tmp/panelSpeed.pl',json.dumps(data))
     return True
@@ -1643,40 +1651,6 @@ def xssencode(text):
     except:
         return text.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
 
-
-#xss 防御
-def xsssec(text):
-    return text.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
-
-#xss 防御
-def xsssec2(text):
-    return text.replace('<', '&lt;').replace('>', '&gt;')
-
-#xss version
-def xss_version(text):
-    try:
-        if not text or not isinstance(text,str): return text
-        text = text.strip()
-        list=['`','~','&','#','/','*','$','@','<','>','\"','\'',';','%',',','\\u']
-        ret=[]
-        for i in text:
-            if i in list:
-                i=''
-            ret.append(i)
-        str_convert = ''.join(ret)
-        return str_convert
-    except:
-        return text.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
-
-#xss 防御
-def xssencode2(text):
-    try:
-        from cgi import html
-        text2=html.escape(text, quote=True)
-        return text2
-    except:
-        return text.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
-
 def html_decode(text):
     '''
         @name HTML解码
@@ -1704,6 +1678,56 @@ def html_encode(text):
         return text2
     except:
         return text
+
+#xss 防御
+def xsssec(text):
+    return text.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
+
+#xss 防御
+def xsssec2(text):
+    return text.replace('<', '&lt;').replace('>', '&gt;')
+
+#xss version
+def xss_version(text):
+    try:
+        if not text or not isinstance(text,str): return text
+        text = text.strip()
+        list=['`','~','&','#','/','*','$','@','<','>','\"','\'',';','%',',','\\u']
+        ret=[]
+        for i in text:
+            if i in list:
+                i=''
+            ret.append(i)
+        str_convert = ''.join(ret)
+        return str_convert
+    except:
+        return text.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
+
+#获取数据库配置信息
+def get_mysql_info():
+    data = {}
+    try:
+        CheckMyCnf()
+        myfile = '/etc/my.cnf'
+        mycnf = readFile(myfile)
+        rep = "datadir\s*=\s*(.+)\n"
+        data['datadir'] = re.search(rep,mycnf).groups()[0]
+        rep = "port\s*=\s*([0-9]+)\s*\n"
+        data['port'] = re.search(rep,mycnf).groups()[0]
+    except:
+        data['datadir'] = '/www/server/data'
+        data['port'] = '3306'
+    return data
+
+
+#xss 防御
+def xssencode2(text):
+    try:
+        from cgi import html
+        text2=html.escape(text, quote=True)
+        return text2
+    except:
+        return text.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
 # 取缓存
 def cache_get(key):
     from BTPanel import cache
@@ -3674,7 +3698,7 @@ def check_login_area(login_ip,login_type = 'panel'):
     ip_info = get_ips_area([login_ip])
 
     if 'status' in ip_info:
-        login_ip_area = '企业版专享'
+        login_ip_area = '****（开通企业版可查看）'
     else :
         ip_info = ip_info[login_ip]
         if not 'city' in ip_info:
@@ -3722,13 +3746,61 @@ def get_free_ips_area(ips):
     res = PluginLoader.module_run("freeip","get_ip_area",args)
     return res
 
+
+def get_free_ip_info(address):
+    '''
+    @name 免费IP库 获取ip地址所在地
+    @param ip<string>
+    @return dict
+    '''
+    ip = address.split(':')[0]
+    if not is_ipv4(ip):
+        return {'info':'未知归属地'}
+    if is_local_ip(ip):
+        return {'info':'内网地址','local':True}
+
+    ip_info = {}
+    sfile = '{}/data/ip_area.json'.format(get_panel_path())
+    try:
+        ip_info = json.loads(readFile(sfile))
+    except: pass
+
+    if ip in ip_info:
+        return ip_info[ip]
+    try:
+        param = get_user_info()
+
+        # 解决登陆不上宝塔账号切换节点时获取归属地信息userinfo传参的问题
+        if len(param.keys()) < 1:
+            param = {
+                'uid': 9999999999999,
+                'serverid': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+            }
+        param['ip'] = address
+        headers = {"host": "www.bt.cn"}
+        if param['uid'] == 9999999999999:
+            res = json.loads(HttpPost('http://42.157.129.47/api/ip/info', param, timeout=1, headers=headers))
+        else:
+            res = json.loads(httpPost('https://www.bt.cn/api/ip/info', param))
+
+        if address in res:
+            info = res[address]
+            ip_info[ip] = info
+            ip_info[ip]['info'] = '{} {} {} {}'.format(info['carrier'],info['country'],info['province'],info['city']).strip()
+            ip_info[ip]['ip'] = ip
+            writeFile(sfile,json.dumps(ip_info))
+            return res[address]
+    except: pass
+
+    return {'info':'未知归属地'}
+
 #使用免费IP库获取IP地区
 def free_login_area(login_ip,login_type = 'panel'):
     """
     @name 使用免费IP库获取IP地区
     @login_type 登录类型 panel:宝塔面板登录, ssh:ssh登录
     """
-        #判断是否开启免费IP库
+    #判断是否开启免费IP库
     if os.path.exists('{}/data/{}_login_area.pl'.format(get_panel_path(),'btpanel')):
         return False,{}
     login_ip_area = ''
@@ -3761,7 +3833,6 @@ def free_login_area(login_ip,login_type = 'panel'):
     return status,data
 
 
-
 #登陆告警
 def login_send_body(is_type,username,login_ip,port):
     send_type = ""
@@ -3792,8 +3863,8 @@ def login_send_body(is_type,username,login_ip,port):
             data=M("logs").where("id=?",id).setField("log",logs+login_ip_area)
     else:
         login_ip_area = ''
-    add_security_logs('登录成功',server_ip_area + login_ip_area, False)
 
+    add_security_logs('登录成功',server_ip_area + login_ip_area, False)
     if not send_type:
         return False
 
@@ -3901,7 +3972,7 @@ def check_site_path(site_path):
         @return bool
     '''
     try:
-        if site_path in ['/usr/local/lighthouse']:
+        if site_path.find('/usr/local/lighthouse/') >= 0:
             return True
 
         if site_path in ['/','/usr','/dev','/home','/media','/mnt','/opt','/tmp','/var']:
@@ -4137,6 +4208,9 @@ def get_setup_path():
     '''
     return '/www/server'
 
+def get_soft_path():
+    return get_setup_path()
+
 def get_panel_path():
     '''
         @name 取面板根目录
@@ -4164,6 +4238,19 @@ def get_class_path():
         @return string
     '''
     return "{}/class".format(get_panel_path())
+
+def decode_data(srcBody):
+    """
+    遍历解码字符串
+    """
+    arrs = ['utf-8', 'GBK', 'ANSI', 'BIG5']
+    for encoding in arrs:
+        try:
+            data = srcBody.decode(encoding)
+            return encoding, data
+        except:
+            pass
+    return False, None
 
 def get_logs_path():
     '''
@@ -4531,6 +4618,8 @@ def print_log(_info,_level = 'DEBUG'):
         @param _level<string> 日志级别
         @return void
     '''
+    if type(_info) == dict:
+        _info = json.dumps(_info)
     log_body = "[{}][{}] - {}\n".format(format_date(),_level.upper(),_info)
     return WriteFile(get_panel_log_file(),log_body,'a+')
 
@@ -4542,7 +4631,6 @@ def print_error():
         @return void
     '''
     print_log(get_error_info(),'ERROR')
-
 
 
 def to_date(format = "%Y-%m-%d %H:%M:%S",times = None):
@@ -4609,37 +4697,25 @@ def error_not_login(e = None,_src = None):
     if _src:
         return e
     else:
-        return render_template('autherr.html')
+        return error_404(e)
 
 def error_403(e):
     from BTPanel import Response,session
     # if not session.get('login',None): return error_not_login()
-    errorStr = '''<html>
-<head><title>403 Forbidden</title></head>
-<body>
-<center><h1>403 Forbidden</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>'''
+    errorStr = '''<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n'''
     headers = {
         "Content-Type": "text/html"
     }
-    return Response(errorStr, status=403, headers=headers)
+    return Response(errorStr, status="403 Forbidden", headers=headers)
 
 def error_404(e):
     from BTPanel import Response,session
     # if not session.get('login',None): return error_not_login()
-    errorStr = '''<html>
-<head><title>404 Not Found</title></head>
-<body>
-<center><h1>404 Not Found</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>'''
+    errorStr = "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
     headers = {
         "Content-Type": "text/html"
     }
-    return Response(errorStr, status=404, headers=headers)
+    return Response(errorStr, status="404 Not Found", headers=headers)
 
 
 def get_password_config():
@@ -5120,13 +5196,14 @@ def set_search_history(mod_name,key,val):
 
     if not mod_name in result: result[mod_name] = {}
     if not key in result[mod_name]:  result[mod_name][key] = []
-
     n_list = []
     for item in result[mod_name][key]:
         if item['val'].strip() != val.strip(): n_list.append(item)
 
     n_list.append({'val':val,'time':int(time.time())})
-    result[mod_name][key] = n_list[0:max]
+
+    result[mod_name][key] = n_list[len(n_list) - max:]
+
 
     writeFile(d_file,json.dumps(result))
     return True
@@ -5775,8 +5852,11 @@ def is_nginx_process_exists():
         @author hwliang
         @return bool
     '''
-    _exe = ['server/nginx/sbin/nginx']
-    return is_process_exists_by_exe(_exe)
+    _exe = ('server/nginx/sbin/nginx', 'server/nginx/nginx/sbin/nginx')
+    for i in _exe:
+        result = is_process_exists_by_exe(i)
+        if result: return result
+    return False
 
 def is_httpd_process_exists():
     '''
@@ -6001,6 +6081,7 @@ def get_improvement():
     return os.path.exists(tip_file)
 
 
+
 def is_spider():
     '''
         @name 判断是否为爬虫
@@ -6010,6 +6091,7 @@ def is_spider():
     import panelDefense
     p = panelDefense.bot_safe()
     return not p.spider(request.headers.get('User-Agent'),request.remote_addr)
+
 
 
 # def get_rsa_public_key_file():
@@ -6103,7 +6185,7 @@ def create_rsa_key():
             if os.path.exists(priv_pem): os.remove(priv_pem)
             if os.path.exists(pub_pem): os.remove(pub_pem)
 
-        session[pub_key] = public_key.decode('utf-8')
+        session[pub_key] = public_key.decode('utf-8').replace("\n","")
         session[prv_key] = private_key.decode('utf-8')
 
         # writeFile(private_key_file,private_key,'wb+')
@@ -6270,7 +6352,6 @@ def check_client_hash():
         return False
     return True
 
-
 def shell_quote(cmd):
     '''
         @name shell转义
@@ -6290,3 +6371,149 @@ def shell_quote(cmd):
             return pipes.quote(cmd)
         except:
             return cmd
+
+
+def get_div(div):
+    sql = M('sqlite_master')
+    if not sql.where('type=? AND name=? AND sql LIKE ?', ('table', 'div_list','%div%')).count():
+        sql_str = '''CREATE TABLE IF NOT EXISTS `div_list` (
+`id` INTEGER PRIMARY KEY AUTOINCREMENT,
+`div` TEXT
+)'''
+        sql.execute(sql_str)
+    my_div = sql.table('div_list').where('id=1',()).getField('div')
+    if not my_div:
+        sql.table('div_list').insert({'div': div})
+        my_div = div
+    return my_div
+
+
+def set_tasks_run(data):
+    '''
+        @name 设置运行时间
+        @param data dict 数据
+        @param data.type int 类型 1:面板 2：插件
+        @param data.time int 执行时间（必传）
+        @param data.name str 插件名称、模块名称（必传）
+        @param data.title str 插件中文名（必传）
+        @param data.fun str 执行方法（必传）
+        @param data.args dict 参数
+
+    '''
+    spath = '{}/data/tasks'.format(get_panel_path())
+    if not os.path.exists(spath): os.makedirs(spath,384)
+
+    task_file = '{}/{}'.format(spath,md5(str(time.time())))
+    writeFile(task_file,json.dumps(data))
+    return returnMsg(True,task_file)
+
+
+def Get_ip_info(get_speed=False):
+    '''
+    获取bt官网ip归属地列表
+    @author wzz <wzz@bt.cn>
+    @return: list[dict{}]
+    '''
+    ipv6 = {
+        "continent": "",
+        "country": "",
+        "province": "",
+        "city": "ipv6 地址",
+        "region": "",
+        "carrier": "",
+        "division": "",
+        "en_country": "",
+        "en_short_code": "",
+        "longitude": "",
+        "latitude": "",
+        "info": "该节点为ipv6地址,若服务器无ipv6请勿选择!",
+        "ip": "",
+        "level": None
+    }
+    host_list = json.loads(readFile("config/hosts.json"))
+    ips_result = []
+    # 推荐，一般，较差，不推荐，不测速时，ipv6，用户服务器IP
+    level = (1, 2, 3, 4, 5, 6, 0)
+    # 获取本机公网IP归属地相关信息
+    headers = {"host": "www.bt.cn"}
+    url = 'http://42.157.129.47/Api/getIpAddress'
+    m_str = HttpGet(url, headers=headers)
+    ipaddress = re.search(r"^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}$", m_str).group(0)
+    s_ip_info = get_free_ip_info(f"{ipaddress}:80")
+    if "ip" in s_ip_info.keys():
+        s_ip_info["info"] = "本服务器公网IP归属地信息"
+        s_ip_info["level"] = level[-1]
+        ips_result.append(s_ip_info)
+    # 获取bt官网归属地
+    for ip in host_list:
+        # 获取节点响应延迟
+        if get_speed: n_net, n_ping = get_timeout(f"https://{ip}" + ':80/net_test', 1)
+        if not is_ipv4(ip):
+            ipv6['ip'] = ip
+            # ipv6地址默认一般推荐
+            ipv6['level'] = level[-2]
+            if get_speed: ipv6['speed'] = ""
+            ips_result.append(ipv6)
+            continue
+        ip_result = get_free_ip_info(f"{ip}:80")
+        if "ip" in ip_result.keys():
+            ip_result['level'] = level[-3]
+            if get_speed:
+                if int(n_ping) < 100: ip_result['level'] = level[0]
+                if 100 < int(n_ping) < 500: ip_result['level'] = level[1]
+                if int(n_ping) > 500: ip_result['level'] = level[2]
+                ip_result["speed"] = n_ping + 500
+            ips_result.append(ip_result)
+    if len(ips_result) < 2 and ips_result[-1]["city"] == "ipv6 地址": ips_result.pop(-1)
+    return ips_result
+
+def set_home_host2(host):
+    """
+    @name 设置官网hosts
+    @author wzz<wzz@bt.cn>
+    @param host IP地址
+    @return void
+    """
+    msg = "请尝试点击【清理旧节点】,如果仍然不行,请联系堡塔运维! https://www.bt.cn/bbs"
+    www_set = ExecShell(f"echo \"{host} www.bt.cn\" >> /etc/hosts")
+    api_set = ExecShell(f"echo \"{host} api.bt.cn\" >> /etc/hosts")
+    if not www_set[1] and not api_set[1]: return returnMsg(True, "节点设置成功")
+    if www_set[1]: return returnMsg(False, f"节点设置失败: {www_set[1]}, {msg}")
+    if api_set[1]: return returnMsg(False, f"节点设置失败: {api_set[1]}, {msg}")
+    return returnMsg(False, f"节点设置失败: {msg}")
+
+def Clean_bt_host():
+    '''
+    删除bt.cn相关的hosts绑定信息
+    @author wzz <wzz@bt.cn>
+    @return:
+    '''
+    check_hosts = ExecShell("grep \"bt.cn\" /etc/hosts")
+    if check_hosts[0]:
+        result = ExecShell("sed -i \"/bt.cn/d\" /etc/hosts")
+        if result[1]: return returnMsg(False, f"旧节点清理失败: {result[1]}")
+        return returnMsg(True, "旧节点已清理")
+    return returnMsg(True, "hosts没有绑定旧节点无需清理")
+
+def Set_bt_host(ip=None):
+    '''
+    设置bt官网(www && api)指定hosts节点
+    @author wzz <wzz@bt.cn>
+    @param get: 手动设置 get.ip 官网传ip地址,从public.Get_ip_info方法获取 | 自动设置
+    @return:
+    '''
+    Clean_bt_host()
+
+    if ip: return set_home_host2(ip)
+
+    ips_info = Get_ip_info()
+    headers = {"host": "www.bt.cn"}
+    for host in ips_info:
+        new_url = f"https://{host['ip']}"
+        res = HttpGet(new_url, 1, headers)
+        if res:
+            writeFile(f"{get_panel_path()}/data/home_host.pl", host["ip"])
+            result = set_home_host2(host["ip"])
+            if result["status"]:
+                return returnMsg(True, f"已自动选择为{host['province']}{host['city']}的最优节点,运营商是: {host['carrier']}")
+    return returnMsg(False, "自动选择节点失败,请尝试手动设置")

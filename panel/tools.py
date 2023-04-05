@@ -227,7 +227,8 @@ def get_host_all():
         net_ip = net_ip.strip()
         if not net_ip in ip_list:
             ip_list.append(net_ip)
-    ip_list = [ip_list[-1],ip_list[0]]
+    if len(ip_list) > 1:
+        ip_list = [ip_list[-1],ip_list[0]]
     return ip_list
 
 
@@ -644,6 +645,11 @@ def bt_cli(u_input = 0):
         os.system("/etc/init.d/bt reload")
         print("|-已将面板端口修改为：%s" % input_port)
         print("|-若您的服务器提供商是[阿里云][腾讯云][华为云]或其它开启了[安全组]的服务器,请在安全组放行[%s]端口才能访问面板" % input_port)
+        panelPath = '/www/server/panel/data/o.pl'
+        if not os.path.exists(panelPath): return False
+        o = public.readFile(panelPath).strip()
+        if 'tencent' == o:
+            print("|-若使用腾讯轻量云-Linux专享版面板，则不需要添加至安全组")
     elif u_input == 9:
         sess_file = '/www/server/panel/data/session'
         if os.path.exists(sess_file):
@@ -661,7 +667,6 @@ def bt_cli(u_input = 0):
             public.writeFile(not_tip,'True')
             print("|-已关闭IP + User-Agent检测")
             print("|-注意：关闭此功能有被[重放攻击]的风险")
-
     elif u_input == 12:
         auth_file = 'data/domain.conf'
         if os.path.exists(auth_file): os.remove(auth_file)

@@ -2735,3 +2735,84 @@ class config:
         public.WriteLog('面板设置',msg)
         return public.returnMsg(True,msg)
 
+    def stop_nps(self, get):
+        if 'software_name' not in get:public.returnMsg(False, '参数错误')
+        public.WriteFile("data/%s_nps.pl"%get.software_name, "")
+        return public.returnMsg(True, '关闭成功')
+
+
+    def get_nps(self, get):
+        if 'software_name' not in get:public.returnMsg(False, '参数错误')
+        software_name=get.software_name
+        data = {}
+        # conf = self.get_config(None)
+        data['safe_day'] = 0
+        #判断运行天数
+        if os.path.exists("data/%s_nps_time.pl"%software_name):
+            try:
+                nps_time=int(public.ReadFile("data/%s_nps_time.pl"%software_name))
+                data['safe_day']=int((time.time() - nps_time) / 86400)
+
+            except:
+                public.WriteFile("data/%s_nps_time.pl"%software_name, "%s"%time.time())
+        else:
+            public.WriteFile("data/%s_nps_time.pl" % software_name, "%s" % time.time())
+
+        if not os.path.exists("data/%s_nps.pl"%software_name):
+            # 如果安全运行天数大于5天 并且没有没有填写过nps的信息
+            data['nps'] = False
+        else:
+            data['nps'] = True
+        return data
+
+    def write_nps(self, get):
+        '''
+            @name nps 提交
+            @param rate 评分
+            @param feedback 反馈内容
+
+        '''
+        if 'product_type' not in get:public.returnMsg(False, '参数错误')
+        if 'software_name' not in get: public.returnMsg(False, '参数错误')
+        software_name=get.software_name
+        product_type=get.product_type
+        import json, requests
+        api_url = 'https://www.bt.cn/api/v2/contact/nps/submit'
+        user_info = json.loads(public.ReadFile("{}/data/userInfo.json".format(public.get_panel_path())))
+        if 'rate' not in get:
+            return public.returnMsg(False, "参数错误")
+        if 'feedback' not in get:
+            get.feedback = ""
+        if 'phone_back' not in get:
+            get.phone_back = 0
+        else:
+            if get.phone_back == 1:
+                get.phone_back = 1
+            else:
+                get.phone_back = 0
+
+        if 'questions' not in get:
+            return public.returnMsg(False, "参数错误")
+
+        try:
+            get.questions = json.loads(get.questions)
+        except:
+            return public.returnMsg(False, "参数错误")
+
+        data = {
+            "uid": user_info['uid'],
+            "access_key": user_info['access_key'],
+            "serverid": user_info['serverid'],
+            "product_type": product_type,
+            "rate": get.rate,
+            "feedback": get.feedback,
+            "phone_back": get.phone_back,
+            "questions": json.dumps(get.questions)
+        }
+        public.print_log(data)
+        try:
+            requests.post(api_url, data=data, timeout=10).json()
+            public.WriteFile("data/{}_nps.pl".format(software_name), "1")
+        except:
+            pass
+        return public.returnMsg(True, "提交成功")

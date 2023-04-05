@@ -68,6 +68,11 @@ class weixin_msg:
         """
         data = {}
         if self.__weixin_info :
+
+            #全局配置开关,1开启，0关闭
+            if not 'state' in self.__weixin_info:
+                self.__weixin_info['state'] = 1
+
             data = self.__weixin_info
 
             if not 'list' in data: data['list'] = {}
@@ -75,7 +80,7 @@ class weixin_msg:
             title = '默认'
             if 'title' in data: title = data['title']
 
-            data['list']['default'] = {'title':title,'data':data['weixin_url']}
+            data['list']['default'] = {'title':title,'data':data['weixin_url'],'state':self.__weixin_info['state']}
             data['default'] = self.__get_default_channel()
         return data
 

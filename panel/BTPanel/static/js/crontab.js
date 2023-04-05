@@ -388,7 +388,7 @@ var crontab = {
         config[4].display = true;
         config[7].display = true;
         config[7].group.list = ''
-        config[7].group.unit = '<span class="alertMsg"><span class="glyphicon glyphicon-alert" style="color: #f39c12; margin-right: 10px;"></span>【使用提醒】此功能为企业版专享功能，目前处于公测阶段，将于2023年1月16日后转为收费功能。当前数据库暂不支持SQLServer、MongoDB、Redis、PgSQL备份</span>'
+        config[7].group.unit = '<span class="alertMsg">1、【使用提醒】此功能为企业版专享功能，目前处于公测阶段，将于2023年1月16日后转为收费功能。当前数据库暂不支持SQLServer、MongoDB、Redis、PgSQL备份<br/><span>2、注意：增量备份暂时固定默认备份目录是：/www/backup</span></span>'
         if (Add) {
           config[2].group[0].value = 'hour-n'
           config[2].group[3].value = '3'
@@ -454,41 +454,35 @@ var crontab = {
         break;
       case 'syncTime':
         config[1].group.value = '定期同步服务器时间'
-        config[5].group.value = 'echo "|-检查ntpdate命令是否就绪.."\n'
-        +'is_ntpdate=$(which ntpdate)\n'
-        +'if [ "$is_ntpdate" = "" ];then\n'
-        +'   if [ -f /usr/bin/apt ];then\n'
-        +'       apt install ntpdate -y\n'
-        +'   else\n'
-        +'       is_dnf=$(which dnf)\n'
-        +'       if [ "$is_dnf" = "" ];then\n'
-        +'                yum install ntpdate -y\n'
-        +'       fi\n'
-        +'   fi\n'
-        +'fi\n'
-        +'is_ntpdate=$(which ntpdate)\n'
-        +'is_http=0\n'
-        +'if [ "$is_ntpdate" != "" ];then\n'
-        +'    echo "|-正在尝试从1.pool.bt.cn同步时间..";\n'
-        +'    ntpdate -u 1.pool.bt.cn\n'
-        +'    if [ $? = 1 ];then\n'
-        +'       echo "|-正在尝试从0.asia.pool.ntp.org同步时间..";\n'
-        +'       ntpdate -u 0.asia.pool.ntp.org\n'
-        +'   fi\n'
-        +'else\n'
-        +'    is_http=1\n'
-        +'fi\n'
-        +'if [ $? = 1 ] || [ $is_http = 1 ];then\n'
-        +'    echo "|-正在尝试从www.bt.cn同步时间..";\n'
-        +'    getBtTime=$(curl -sS --connect-timeout 3 -m 60 http://www.bt.cn/api/index/get_time)\n'
-        +'    if [ "${getBtTime}" ];then\n'
-        +'        echo "|-设置时间: "$(date -s "$(date -d @$getBtTime +"%Y-%m-%d %H:%M:%S")")\n'
-        +'    fi\n'
-        +'fi\n'
-        +'echo "|-正在尝试将当前系统时间写入硬件..";\n'
-        +'hwclock -w\n'
-        +'echo "|-当前时间为：$(date)"\n'
-        +'echo "|-时间同步完成!";\n'
+        config[5].group.value = 'which ntpdate > /dev/null\n' +
+        'if [ $? = 1 ];then\n' +
+        '\tif [ -f "/etc/redhat-release" ];then\n' +
+        '\t\tyum install -y ntpdate\n' +
+        '\telse\n' +
+        '\t\tapt-get install -y ntpdate\n' +
+        '\tfi\n' +
+        'fi\n' +
+        'echo "|-正在尝试从cn.pool.ntp.org同步时间..";\n' +
+        'ntpdate -u cn.pool.ntp.org\n' +
+        'if [ $? = 1 ];then\n' +
+        '\techo "|-正在尝试从0.pool.ntp.org同步时间..";\n' +
+        '\tntpdate -u 0.pool.ntp.org\n' +
+        'fi\n' +
+        'if [ $? = 1 ];then\n' +
+        '\techo "|-正在尝试从2.pool.ntp.org同步时间..";\n' +
+        '\tntpdate -u 2.pool.ntp.org\n' +
+        'fi\n' +
+        'if [ $? = 1 ];then\n' +
+        '\techo "|-正在尝试从www.bt.cn同步时间..";\n' +
+        '\tgetBtTime=$(curl -sS --connect-timeout 3 -m 60 http://www.bt.cn/api/index/get_time)\n' +
+        '\tif [ "${getBtTime}" ];then\t\n' +
+        '\t\tdate -s "$(date -d @$getBtTime +"%Y-%m-%d %H:%M:%S")"\n' +
+        '\tfi\n' +
+        'fi\n' +
+        'echo "|-正在尝试将当前系统时间写入硬件..";\n' +
+        'hwclock -w\n' +
+        'date\n' +
+        'echo "|-时间同步完成!";'
         break;
       case 'rememory':
         config[1].group.value = '释放内存'
@@ -871,7 +865,8 @@ var crontab = {
           fid: 'save',
           title: "保存数量",
           template: function (row) {
-            return '<span>' + (row.save > 0 ? +row.save + '份' : '-') + '</span>'
+						if(row.sType == 'enterpriseBackup' || row.sType == 'logs') return '<span>' + (row.save > 0 ? +row.save + '份' : '-') + '</span>'
+						return '<div><span>' + (row.save > 0 ? +row.save + '份' : '-') + '</span><span class="btlink crontab_show_backup" data-id="'+ row.id+'" data-name="'+row.name +'"> '+(row.save > 0 ? '[查看]' : '')+'</span></div>'
           }
         }, {
           fid: 'backupTo',
@@ -1291,6 +1286,58 @@ var crontab = {
           }]
         }
       ],
+			success:function(){
+				$('.crontab_show_backup').click(function(){
+					var backup_id = Number($(this).data('id')),backup_name = $(this).data('name')
+					var content_html = '<div style="padding:20px"><div id="backup_table_show"></div></div>'
+					layer.open({
+						type: 1,
+						closeBtn:2,
+						title:backup_name+'-备份文件',
+						content: content_html,
+						area: ['700px', '530px'],
+						success:function(){
+							var backup_table = bt_tools.table({
+								el: '#backup_table_show',
+								url: '/crontab?action=get_backup_list',
+								param: {cron_id: backup_id},
+								autoHeight: true,
+								default: "列表为空",
+								pageName: 'backup',
+								column: [
+									{fid: 'name', title: '文件名称',width:180,fixed:true},
+									{fid: 'addtime', title: '备份时间'},
+									{fid: 'filename', title: '备份到',width:220,fixed:true},
+									{fid: 'size', title: '文件大小',template:function(row){
+										return bt.format_size(row.size)
+									}},
+									{
+										title:'操作',
+										type: 'group',
+										align: 'right',
+										group: [{
+											title: '下载',
+											event: function (row, index, ev, key, that) {
+												window.open('/download?filename=' + encodeURIComponent(row.filename));
+											}
+										}],
+									},
+								],
+								tootls: [ {
+									type: 'page',
+									positon: ['right', 'bottom'], // 默认在右下角
+									pageParam: 'p', //分页请求字段,默认为 : p
+									page: 1, //当前分页 默认：1
+									numberParam: 'rows',
+									//分页数量请求字段默认为 : limit
+									defaultNumber: 10
+									//分页数量默认 : 20条
+								}]
+							})
+						}
+					})
+				})
+			},
       // 渲染完成
       tootls: [{ // 批量操作
         type: 'batch', //batch_btn

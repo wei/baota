@@ -21,11 +21,11 @@ class userlogin:
         if self.limit_address('?') < 1: return public.returnJson(False,'您多次登录失败,暂时禁止登录,请等待{}秒后重试!'.format(int(self.limit_expire_time - time.time()))),json_header
         post.username = post.username.strip()
         format_error = '参数格式错误'
+
         # 核验用户名密码格式
         post.username = public.rsa_decrypt(post.username)
         if len(post.username) != 32:
             return public.returnMsg(False,format_error),json_header
-
         post.password = public.rsa_decrypt(post.password)
         if len(post.password) != 32:
             return public.returnMsg(False,format_error),json_header
@@ -129,17 +129,17 @@ class userlogin:
 
     def request_tmp(self,get):
         try:
-            if not hasattr(get,'tmp_token'): return public.returnJson(False,'错误的参数!'),json_header
+            if not hasattr(get,'tmp_token'): return public.error_not_login()
             if len(get.tmp_token) == 48:
                 return self.request_temp(get)
-            if len(get.tmp_token) != 64: return public.returnJson(False,'错误的参数!'),json_header
-            if not re.match(r"^\w+$",get.tmp_token):return public.returnJson(False,'错误的参数!'),json_header
+            if len(get.tmp_token) != 64: return public.error_not_login()
+            if not re.match(r"^\w+$",get.tmp_token):return public.error_not_login()
 
             save_path = '/www/server/panel/config/api.json'
             data = json.loads(public.ReadFile(save_path))
-            if not 'tmp_token' in data or not 'tmp_time' in data: return public.returnJson(False,'验证失败!'),json_header
-            if (time.time() - data['tmp_time']) > 120: return public.returnJson(False,'过期的Token'),json_header
-            if get.tmp_token != data['tmp_token']: return public.returnJson(False,'错误的Token'),json_header
+            if not 'tmp_token' in data or not 'tmp_time' in data: return public.error_not_login()
+            if (time.time() - data['tmp_time']) > 120: return public.error_not_login()
+            if get.tmp_token != data['tmp_token']: return public.error_not_login()
             userInfo = public.M('users').where("id=?",(1,)).field('id,username').find()
             session['login'] = True
             session['username'] = userInfo['username']
@@ -159,34 +159,34 @@ class userlogin:
             self.set_cdn_host(get)
             return redirect('/')
         except:
-            return public.returnJson(False,'登录失败,' + public.get_error_info()),json_header
+            return public.error_not_login()
 
 
     def request_temp(self,get):
         try:
-            if len(get.__dict__.keys()) > 2: return '存在无意义参数!'
-            if not hasattr(get,'tmp_token'): return '错误的参数!'
-            if len(get.tmp_token) != 48: return '错误的参数!'
-            if not re.match(r"^\w+$",get.tmp_token):return '错误的参数!'
+            if len(get.__dict__.keys()) > 2: return public.error_not_login()
+            if not hasattr(get,'tmp_token'): return public.error_not_login()
+            if len(get.tmp_token) != 48: return public.error_not_login()
+            if not re.match(r"^\w+$",get.tmp_token):return public.error_not_login()
             skey = public.GetClientIp() + '_temp_login'
-            if not public.get_error_num(skey,10): return '连续10次验证失败，禁止1小时'
+            if not public.get_error_num(skey,10): return public.error_not_login()
 
             s_time = int(time.time())
             if public.M('temp_login').where('state=? and expire>?',(0,s_time)).field('id,token,salt,expire').count()==0:
                 public.set_error_num(skey)
-                return '验证失败2!'
+                return public.error_not_login()
 
             data = public.M('temp_login').where('state=? and expire>?',(0,s_time)).field('id,token,salt,expire').find()
             if not data:
                 public.set_error_num(skey)
-                return '验证失败!'
+                return public.error_not_login()
             if not isinstance(data,dict):
                 public.set_error_num(skey)
-                return '验证失败!'
+                return public.error_not_login()
             r_token = public.md5(get.tmp_token + data['salt'])
             if r_token != data['token']:
                 public.set_error_num(skey)
-                return '验证失败!'
+                return public.error_not_login()
             public.set_error_num(skey,True)
             userInfo = public.M('users').where("id=?",(1,)).field('id,username').find()
             session['login'] = True
@@ -214,7 +214,7 @@ class userlogin:
             return redirect('/')
         except:
             public.print_log(public.get_error_info(),'ERROR')
-            return '登录失败，登录过程发生错误'
+            return public.error_not_login()
 
 
     def login_token(self):
@@ -256,7 +256,6 @@ class userlogin:
         session[html_token_key] = public.GetRandomString(48)
         session[html_token_key.replace("https_","")] = public.GetRandomString(48)
         #session['client_hash'] = public.get_client_hash()
-
 
     def set_cdn_host(self,get):
         try:
@@ -347,7 +346,33 @@ class userlogin:
                 public.writeFile(default_pl,"********")
             except:
                 pass
-            return public.returnJson(True,'LOGIN_SUCCESS'),json_header
+
+            address = public.GetClientIp()
+            port =  str(request.environ.get('REMOTE_PORT'))
+
+            login_address = '{}(未知)'.format(address,)
+            #返回增加登录地区
+            res = public.returnMsg(True,'LOGIN_SUCCESS')
+            res['login_time'] = time.time()
+            try:
+                ip_info = public.get_free_ip_info(address)
+                if 'city' in ip_info:
+                    res['ip_info'] = ip_info
+                login_address = '{}({})'.format(address,ip_info['info'])
+            except:
+                print(public.get_error_info())
+
+            last_login = {}
+            last_file = 'data/last_login.pl'
+            try:
+                last_login = json.loads(public.readFile(last_file))
+            except:pass
+            public.writeFile(last_file,json.dumps(res))
+
+            res['last_login'] = last_login
+            session['login_address'] = public.xsssec(login_address)
+
+            return public.getJson(res),json_header
         except Exception as ex:
             stringEx = str(ex)
             if stringEx.find('unsupported') != -1 or stringEx.find('-1') != -1:

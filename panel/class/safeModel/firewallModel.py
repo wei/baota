@@ -1,14 +1,14 @@
-#coding: utf-8
-#-------------------------------------------------------------------
+# coding: utf-8
+# -------------------------------------------------------------------
 # 宝塔Linux面板
-#-------------------------------------------------------------------
+# -------------------------------------------------------------------
 # Copyright (c) 2015-2099 宝塔软件(http://bt.cn) All rights reserved.
-#-------------------------------------------------------------------
+# -------------------------------------------------------------------
 # Author: hwliang <hwl@bt.cn>
-#-------------------------------------------------------------------
+# -------------------------------------------------------------------
 
 # 系统防火墙
-#------------------------------
+# ------------------------------
 import sys, os, json, re, time, sqlite3
 from xml.etree.ElementTree import ElementTree, Element
 from safeModel.base import safeBase
@@ -20,10 +20,10 @@ import public
 
 
 class main(safeBase):
-
     __isFirewalld = False
     __isUfw = False
     __Obj = None
+    _add_sid = 0
     _ip_list = []
     _port_list = []
     _ufw_default = '/etc/default/ufw'
@@ -37,8 +37,7 @@ class main(safeBase):
     _white_list_file = "/www/server/panel/plugin/firewall/whitelist.txt"  # 证书验证IP
 
     _white_list = []
-    _firewall_create_tip = '{}/data/firewall_sqlite.pl'.format(
-        public.get_panel_path())
+    _firewall_create_tip = '{}/data/firewall_sqlite.pl'.format(public.get_panel_path())
 
     def __init__(self):
         if os.path.exists('/usr/sbin/firewalld'): self.__isFirewalld = True
@@ -75,8 +74,7 @@ class main(safeBase):
         if os.path.exists(self._white_list_file):
             n_path = self._white_list_file.replace('plugin', 'data')
             if not os.path.exists(n_path):
-                public.writeFile(n_path,
-                                 public.readFile(self._white_list_file))
+                public.writeFile(n_path, public.readFile(self._white_list_file))
 
         if os.path.exists(self._country_path):
             n_path = self._country_path.replace('plugin', 'data')
@@ -119,11 +117,11 @@ class main(safeBase):
             isPing = True
 
         data['ping'] = isPing
-        data['status'] = public.get_firewall_status()
+        data['status'] = self.get_firewall_status()
         return data
 
     # 服务状态获取
-    def get_firewall_status(self, get):
+    def get_firewall_status(self):
         if self.__isUfw:
             res = public.ExecShell('ufw status verbose')[0]
             if res.find('inactive') != -1: return False
@@ -151,42 +149,45 @@ class main(safeBase):
             if get.status == "stop":
                 public.ExecShell('/usr/sbin/ufw disable')
             elif get.status == "start":
-                public.ExecShell('/usr/sbin/ufw enable')
+                public.ExecShell('echo y|/usr/sbin/ufw enable')
             elif get.status == "reload":
                 public.ExecShell('/usr/sbin/ufw reload')
             elif get.status == "restart":
-                public.ExecShell(
-                    '/usr/sbin/ufw disable && /usr/sbin/ufw ufw enable')
+                public.ExecShell('/usr/sbin/ufw disable && /usr/sbin/ufw enable')
 
             # ufw防火墙启动时重载一次sysctl
             # 解决deian系统启动ufw后禁ping失效 by linxiao/2022-10-26
             if get.status != "stop":
                 filename = '/etc/sysctl.conf'
                 ctl_content = public.readFile(filename)
-                if ctl_content and ctl_content.find(
-                        "net.ipv4.icmp_echo") != -1:
+                if ctl_content and ctl_content.find("net.ipv4.icmp_echo") != -1:
                     public.ExecShell("sysctl -p")
 
+            # 同步端口规则 hezhihong
+            if get.status == "start": self.sync_rules()
             return public.returnMsg(True, '防火墙已{}'.format(result[get.status]))
         if self.__isFirewalld:
             public.ExecShell('systemctl {} firewalld'.format(get.status))
+            # 同步端口规则 hezhihong
+            if get.status == "start": self.sync_rules()
             return public.returnMsg(True, '防火墙已{}'.format(result[get.status]))
         else:
             public.ExecShell('service iptables {}'.format(get.status))
+            # 同步端口规则 hezhihong
+            if get.status == "start": self.sync_rules()
         return public.returnMsg(True, '防火墙已{}'.format(result[get.status]))
 
     # 重载防火墙配置
     def FirewallReload(self):
         if self.__isUfw:
-            public.ExecShell('/usr/sbin/ufw reload')
-            return
+            public.ExecShell('/usr/sbin/ufw reload')  # 兼容安装了多个防火墙的情况 hezhihong  # return
         if self.__isFirewalld:
             public.ExecShell('firewall-cmd --reload')
         else:
             public.ExecShell('/etc/init.d/iptables save')
             public.ExecShell('/etc/init.d/iptables restart')
 
-    #端口扫描
+    # 端口扫描
     def CheckPort(self, port):
         import socket
         localIP = '127.0.0.1'
@@ -206,6 +207,7 @@ class main(safeBase):
         return result
 
         # 查询入栈规则
+
     def get_rules_list(self, args):
         if self.__isFirewalld:
             self.__Obj = firewalld()
@@ -222,13 +224,11 @@ class main(safeBase):
         sql = public.M('firewall_new')
 
         if hasattr(args, 'query'):
-            where = " ports like '%{search}%' or brief like '%{search}%' or address like '%{search}%'".format(
-                search=args.query)
+            where = " ports like '%{search}%' or brief like '%{search}%' or address like '%{search}%'".format(search=args.query)
 
         count = sql.where(where, ()).count()
         data = public.get_page(count, int(p), int(limit))
-        data['data'] = sql.where(where, ()).limit('{},{}'.format(
-            data['shift'], data['row'])).order('addtime desc').select()
+        data['data'] = sql.where(where, ()).limit('{},{}'.format(data['shift'], data['row'])).order('addtime desc').select()
         res_data = data['data']
         for i in range(len(res_data)):
             if not 'ports' in res_data[i]:
@@ -236,8 +236,7 @@ class main(safeBase):
                 continue
             d = res_data[i]
             _port = d['ports']
-            if _port.find(':') != -1 or _port.find('.') != -1 or _port.find(
-                    '-') != -1:
+            if _port.find(':') != -1 or _port.find('.') != -1 or _port.find('-') != -1:
                 d['status'] = -1
             else:
                 d['status'] = self.CheckPort(int(_port))
@@ -251,7 +250,7 @@ class main(safeBase):
         @检测防火墙规则
         """
         port = args['port']
-        find = public.M('firewall_new').where('ports=?', (str(port), )).find()
+        find = public.M('firewall_new').where('ports=?', (str(port),)).find()
         if find:
             return True
         return False
@@ -333,44 +332,180 @@ class main(safeBase):
                 port_list = ports.split(',')
                 for port in port_list:
                     if end_port:
-                        if int(port) >= int(start_port) and int(port) <= int(
-                                end_port):
-                            return public.returnMsg(
-                                False, '{}端口已在端口{}中，请勿重复添加！'.format(
-                                    port, i2['ports']))
+                        if int(port) >= int(start_port) and int(port) <= int(end_port):
+                            return public.returnMsg(False, '{}端口已在端口{}中，请勿重复添加！'.format(port, i2['ports']))
                     else:
                         if port == start_port:
-                            return public.returnMsg(
-                                False, '{}端口已经添加过，请勿重复添加！'.format(port))
+                            return public.returnMsg(False, '{}端口已经添加过，请勿重复添加！'.format(port))
             elif ports.find('-') != -1:
                 add_start = ports.split('-')[0]
                 add_end = ports.split('-')[1]
                 if end_port:
-                    if (int(add_start) >= int(start_port)
-                            and int(add_start) <= int(end_port)) or (
-                                int(add_end) >= int(start_port)
-                                and int(add_end) <= int(end_port)):
-                        return public.returnMsg(
-                            False, '{}端口范围与现有防火墙规则端口{}重叠，请勿重复添加！'.format(
-                                ports, i2['ports']))
+                    if (int(add_start) >= int(start_port) and int(add_start) <= int(end_port)) or (
+                            int(add_end) >= int(start_port) and int(add_end) <= int(end_port)):
+                        return public.returnMsg(False, '{}端口范围与现有防火墙规则端口{}重叠，请勿重复添加！'.format(ports, i2['ports']))
                 else:
-                    if int(add_start) <= int(start_port) and int(
-                            add_end) >= int(start_port):
-                        return public.returnMsg(
-                            False, '{}端口范围包含已添加端口{}，请勿重复添加！'.format(
-                                ports, i2['ports']))
+                    if int(add_start) <= int(start_port) and int(add_end) >= int(start_port):
+                        return public.returnMsg(False, '{}端口范围包含已添加端口{}，请勿重复添加！'.format(ports, i2['ports']))
             else:
                 if end_port:
-                    if int(ports) >= int(start_port) and int(ports) <= int(
-                            end_port):
-                        return public.returnMsg(
-                            False,
-                            '{}端口已在端口{}中，请勿重复添加！'.format(ports, i2['ports']))
+                    if int(ports) >= int(start_port) and int(ports) <= int(end_port):
+                        return public.returnMsg(False, '{}端口已在端口{}中，请勿重复添加！'.format(ports, i2['ports']))
                 else:
                     if ports == start_port:
-                        return public.returnMsg(
-                            False, '{}端口已经添加过，请勿重复添加！'.format(ports))
+                        return public.returnMsg(False, '{}端口已经添加过，请勿重复添加！'.format(ports))
         return {}
+
+    def sync_rules(self):
+        """
+        @name 同步防火墙规则
+        @auther hezhihong
+        """
+        # 检测面板端口是否修改
+        panel_port = str(public.get_panel_port())
+        args = public.dict_obj()
+        args.protocol = "tcp"
+        args.ports = panel_port
+        args.types = "accept"
+        args.source = ""
+        args.brief = ""
+        if not public.M('firewall_new').where('ports=? and protocol LIKE ?', (args.ports, '%' + args.protocol + '%')).count():
+            self.create_rules(args)
+
+        rules_list = public.M('firewall_new').select()
+        if self.__isUfw:
+            with open('/etc/ufw/user.rules', 'r') as f:
+                content = f.read()
+                start_index = content.find('### RULES ###')
+                end_index = content.find('### END RULES ###')
+                result = content[start_index + 15:end_index]
+            rules_result = result.split('\n')
+        elif self.__isFirewalld:
+            allow_ports = public.ExecShell("firewall-cmd --list-ports")[0].split(' ')
+            rich_rules = public.ExecShell("firewall-cmd --list-rich-rules")[0].split('\n')
+        else:
+            pass
+
+        for i in rules_list:
+            if i['ports'] == panel_port and 'tcp' in i['protocol']: continue
+            args.protocol = i['protocol']
+            args.ports = i['ports']
+            args.types = i['types']
+            args.source = i['address']
+            args.brief = i['brief']
+            args.domain = i['domain']
+            args.add = 1
+
+            # 添加域名规则
+            if args.domain:
+                self.set_domain_ip2(args)
+            # 添加端口规则
+            else:
+                # 解决系统防火墙未启动时，宝塔面板开启后端口同步到系统防火墙中
+                if self.__isUfw:
+                    sum = 0
+                    for rule in rules_result:
+                        try:
+                            if "###" in rule:
+                                rep = r'(\w+)\s(\w+)\s(\w+)\s(\d+.\d+.\d+.\d+/\d+)\s(\w+)\s(\d+.\d+.\d+.\d+[/\d+]+)'
+                                rule_result = re.search(rep, rule)
+                                if rule_result:
+                                    r_result = rule_result.groups()
+                                    if r_result[1] == 'any':
+                                        protocol = "tcp/udp"
+                                    elif r_result[1] == 'tcp':
+                                        protocol = "tcp"
+                                    else:
+                                        protocol = "udp"
+                                    if i['ports'] == r_result[2] and protocol in i['protocol'] and i['address'] == r_result[-1]:
+                                        sum += 1
+                        except:
+                            continue
+                    if sum == 0:
+                        self.create_rules2(args)
+
+                elif self.__isFirewalld:
+                    sum = 0
+                    for port in allow_ports:
+                        port = port.split('/')
+                        if not i['address']:
+                            if i['ports'] == port[0].strip('\n') and port[1].strip('\n') in i['protocol']:
+                                sum += 1
+                    for r_rule in rich_rules:
+                        try:
+                            if "rule" in r_rule:
+                                rule = r_rule.split(' ')
+                                if i['address'] and "address" in r_rule:
+                                    protocol = rule[-2].split('=')[-1].strip('\"')
+                                    address = rule[3].split('=')[-1].strip('\"')
+                                    if i['ports'] in rule[5] and protocol in i['protocol'] and i['address'] == address:
+                                        sum += 1
+                                if not i['address'] and "address" not in r_rule:
+                                    protocol = rule[-2].split('=')[-1].strip('\"')
+                                    if i['ports'] in rule[3] and protocol in i['protocol']:
+                                        sum += 1
+                        except:
+                            continue
+                    if sum == 0:
+                        self.create_rules2(args)
+                else:
+                    pass
+
+        self.FirewallReload()
+        return public.returnMsg(True, '同步成功')
+
+    # 添加入栈规则
+    def create_rules2(self, get):
+        '''
+        get 里面 有  protocol port type address brief   五个参数
+        protocol == ['tcp','udp']
+        port = 端口
+        types == [accept、drop] # 放行和禁止
+        address  地址，允许放行的ip，如果全部就是：0.0.0.0/0;另外可以包含“,"或者"-"
+        表示区间IP
+        brief   备注说明
+        '''
+        # return 222
+        protocol = get.protocol
+        ports = get.ports.strip()
+        types = get.types
+        address = get.source.strip()
+        port_list = ports.split(',')
+        result = self.check_port(port_list)  # 检测端口
+        if result: return result
+
+        allow_ips = []
+        if address:
+            sources = [sip.strip() for sip in address.split(",") if sip.strip()]
+            rep2 = "^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(\/\d{1,2})?$"
+            _ips = []
+            for source_ip in sources:
+                if source_ip.find("-") != -1:
+                    _ips += self.parse_ip_interval(source_ip)
+                else:
+                    _ips.append(source_ip)
+
+            for source_ip in _ips:
+                if not re.search(rep2, source_ip) and not public.is_ipv6(source_ip):
+                    return public.returnMsg(False, 'FIREWALL_IP_FORMAT')
+                allow_ips.append(source_ip)
+        if not allow_ips:
+            allow_ips.append("")
+        for source_ip in allow_ips:
+            if self.__isUfw:
+                for port in port_list:
+                    if port.find('-') != -1:
+                        port = port.replace('-', ':')
+                    self.add_ufw_rule(source_ip, protocol, port, types)
+            else:
+                if self.__isFirewalld:
+                    for port in port_list:
+                        if port.find(':') != -1:
+                            port = port.replace(':', '-')
+                        self.add_firewall_rule(source_ip, protocol, port, types)
+                else:
+                    for port in port_list:
+                        self.add_iptables_rule(source_ip, protocol, port, types)
 
     # 添加入栈规则
     def create_rules(self, get):
@@ -383,25 +518,29 @@ class main(safeBase):
         表示区间IP
         brief   备注说明
         '''
+        # return 222
         protocol = get.protocol
         ports = get.ports.strip()
         types = get.types
         address = get.source.strip()
         brief = get.brief.strip()
         port_list = ports.split(',')
+        is_add = 2 if 'add' not in get else get.add
+        domain_total = '' if ("domain" not in get or not get.domain) else get.domain.strip()
+        domain = '' if ("domain" not in get or not get.domain) else get.domain.strip() + '|' + address
+        # sid = 0 if 'sid' not in get else get.sid
         result = self.check_port(port_list)  # 检测端口
+        # return 222
         if result: return result
 
         # # 检测端口是否已经添加过 hezhihong
         # add_result = self.check_add_ports(ports, protocol, types)
         # if 'status' in add_result: return add_result
-        #@ps 无需检测端口是否已经添加过，因为正常情况下，有的端口就是要添加多个规则的，比如80端口针对不同的IP地址放行  @hwliang 2022-12-27
+        # @ps 无需检测端口是否已经添加过，因为正常情况下，有的端口就是要添加多个规则的，比如80端口针对不同的IP地址放行  @hwliang 2022-12-27
 
         allow_ips = []
         if address:
-            sources = [
-                sip.strip() for sip in address.split(",") if sip.strip()
-            ]
+            sources = [sip.strip() for sip in address.split(",") if sip.strip()]
             rep2 = "^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(\/\d{1,2})?$"
             _ips = []
             for source_ip in sources:
@@ -412,12 +551,10 @@ class main(safeBase):
                     _ips.append(source_ip)
 
             for source_ip in _ips:
-                if not re.search(rep2,
-                                 source_ip) and not public.is_ipv6(source_ip):
+                if not re.search(rep2, source_ip) and not public.is_ipv6(source_ip):
                     return public.returnMsg(False, 'FIREWALL_IP_FORMAT')
-                query_result = public.M('firewall_new').where\
-                    ('ports=? and address=? and protocol=? and types=?',
-                    (ports, source_ip, protocol, types,)).count()
+                query_result = public.M('firewall_new').where('ports=? and address=? and protocol=? and types=?',
+                                                              (ports, source_ip, protocol, types,)).count()
                 if query_result > 0:
                     continue
                 allow_ips.append(source_ip)
@@ -434,18 +571,19 @@ class main(safeBase):
                     for port in port_list:
                         if port.find(':') != -1:
                             port = port.replace(':', '-')
-                        self.add_firewall_rule(source_ip, protocol, port,
-                                               types)
+                        self.add_firewall_rule(source_ip, protocol, port, types)
                 else:
                     for port in port_list:
-                        self.add_iptables_rule(source_ip, protocol, port,
-                                               types)
+                        self.add_iptables_rule(source_ip, protocol, port, types)
             addtime = time.strftime('%Y-%m-%d %X', time.localtime())
             for port in port_list:
-                result = public.M('firewall_new').add(
-                    'ports,brief,protocol,address,types,addtime',
-                    (port, public.xsssec(brief), protocol, source_ip, types,
-                     addtime))
+                if is_add == 1: continue
+                self._add_sid = public.M('firewall_new').add('ports,brief,protocol,address,types,addtime,domain,sid',
+                                                             (port, public.xsssec(brief), protocol, source_ip, types, addtime, domain, 0))
+                if domain:
+                    domain_sid = public.M('firewall_domain').add('types,domain,port,address,brief,addtime,sid,protocol,domain_total', (
+                        types, domain, ports, address, public.xsssec(brief), addtime, self._add_sid, protocol, domain_total))
+                    public.M('firewall_new').where("id=?", (self._add_sid,)).save('sid', domain_sid)
         if len(allow_ips) > 0:
             self.FirewallReload()
         return public.returnMsg(True, 'ADD_SUCCESS')
@@ -459,6 +597,10 @@ class main(safeBase):
         types == [accept、drop] # 放行和禁止
         address  地址，允许放行的ip
         '''
+        # 检测是否开启防火墙 hezhihong
+        if not self.get_firewall_status():
+            return public.returnMsg(False, '请开启防火墙后再操作！')
+
         id = get.id
         address = get.address
         protocol = get.protocol
@@ -466,12 +608,12 @@ class main(safeBase):
         types = get.types
         if self.__isUfw:
             self.del_ufw_rule(address, protocol, ports, types)
+        # 兼容同时安装多个防火墙的情况 hezhihong
+        if self.__isFirewalld:
+            self.del_firewall_rule(address, protocol, ports, types)
         else:
-            if self.__isFirewalld:
-                self.del_firewall_rule(address, protocol, ports, types)
-            else:
-                self.del_iptables_rule(address, protocol, ports, types)
-        public.M('firewall_new').where("id=?", (id, )).delete()
+            self.del_iptables_rule(address, protocol, ports, types)
+        public.M('firewall_new').where("id=?", (id,)).delete()
         self.FirewallReload()
         return public.returnMsg(True, 'DEL_SUCCESS')
 
@@ -484,42 +626,49 @@ class main(safeBase):
         types==['reject','accept'] # 放行和禁止
         address  地址，允许放行的ip，如果全部就是：0.0.0.0/0
         '''
+        # 检测是否开启防火墙 hezhihong
+        if not self.get_firewall_status():
+            return public.returnMsg(False, '请开启防火墙后再操作！')
+
         id = get.id
+        # return 33
         protocol = get.protocol
+        # return 33
         ports = get.ports.strip()
         types = get.types
         address = get.source.strip()
         brief = get.brief.strip()
+
+        domain = '' if 'domain' not in get else get.domain
+        domain_total = domain.split('|')[0]
+        sid = 0 if 'sid' not in get else get.sid
+        # return 33
         if address:
             rep = "^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(\/\d{1,2})?$"
-            if not re.search(rep, get.source) and not public.is_ipv6(
-                    get.source):
+            if not re.search(rep, get.source) and not public.is_ipv6(get.source):
                 return public.returnMsg(False, 'FIREWALL_IP_FORMAT')
-        data = public.M('firewall_new').where('id=?', (id, )).field(
-            'id,address,protocol,ports,types,brief,addtime').find()
-        _address = data.get("address", "")
-        _protocol = data.get("protocol", "")
-        _port = data.get("ports", "")
-        _type = data.get("types", "")
+        data = public.M('firewall_new').where('id=?', (id,)).field('id,address,protocol,ports,types,brief,addtime,domain').find()
+        if data:
+            _address = data.get("address", "")
+            _protocol = data.get("protocol", "")
+            _port = data.get("ports", "")
+            _type = data.get("types", "")
+        else:
+            _address = _protocol = _port = _type = ""
         if self.__isUfw:
-            self.edit_ufw_rule(_address, _protocol, _port, _type, address,
-                               protocol, ports, types)
+            self.edit_ufw_rule(_address, _protocol, _port, _type, address, protocol, ports, types)
         else:
             if self.__isFirewalld:
-                self.edit_firewall_rule(_address, _protocol, _port, _type,
-                                        address, protocol, ports, types)
+                self.edit_firewall_rule(_address, _protocol, _port, _type, address, protocol, ports, types)
             else:
-                self.edit_iptables_rule(_address, _protocol, _port, _type,
-                                        address, protocol, ports, types)
+                self.edit_iptables_rule(_address, _protocol, _port, _type, address, protocol, ports, types)
         addtime = time.strftime('%Y-%m-%d %X', time.localtime())
-        public.M('firewall_new').where('id=?', id).update({
-            'address': address,
-            'protocol': protocol,
-            'ports': ports,
-            'types': types,
-            'brief': brief,
-            'addtime': addtime
-        })
+        public.M('firewall_new').where('id=?', id).update(
+            {'address': address, 'protocol': protocol, 'ports': ports, 'types': types, 'brief': brief, 'addtime': addtime, 'sid': sid,
+             'domain': domain})
+        if domain:
+            public.M('firewall_domain').where("id=?", (sid,)).save('sid,types,brief,protocol,domain_total',
+                                                                   (id, types, brief, protocol, domain_total))
         try:
             if int(ports) == 22:
                 self.delete_service()
@@ -533,53 +682,40 @@ class main(safeBase):
         if not address:
             if protocol.find('/') != -1:
                 if types == "accept":
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --add-port=' +
-                        ports + '/tcp')
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --add-port=' +
-                        ports + '/udp')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --add-port=' + ports + '/tcp')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --add-port=' + ports + '/udp')
                 else:
-                    public.ExecShell(
-                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 port protocol="tcp" port="%s" drop"'
-                        % (ports))
-                    public.ExecShell(
-                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 port protocol="udp" port="%s" drop"'
-                        % (ports))
+                    public.ExecShell('firewall-cmd --permanent --add-rich-rule="rule family=ipv4 port protocol="tcp" port="%s" drop"' % (ports))
+                    public.ExecShell('firewall-cmd --permanent --add-rich-rule="rule family=ipv4 port protocol="udp" port="%s" drop"' % (ports))
             else:
                 if types == "accept":
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --add-port=' +
-                        ports + '/' + protocol + '')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --add-port=' + ports + '/' + protocol + '')
                 else:
                     public.ExecShell(
-                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 port protocol="%s" port="%s" drop"'
-                        % (protocol, ports))
+                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 port protocol="%s" port="%s" drop"' % (protocol, ports))
             return True
         if public.is_ipv6(address):
             if protocol.find('/') != -1:
                 public.ExecShell(
-                    'firewall-cmd --permanent --add-rich-rule="rule family=ipv6 source address="%s" port protocol="tcp" port="%s" %s"'
-                    % (address, ports, types))
+                    'firewall-cmd --permanent --add-rich-rule="rule family=ipv6 source address="%s" port protocol="tcp" port="%s" %s"' % (
+                        address, ports, types))
                 public.ExecShell(
-                    'firewall-cmd --permanent --add-rich-rule="rule family=ipv6 source address="%s" port protocol="udp" port="%s" %s"'
-                    % (address, ports, types))
+                    'firewall-cmd --permanent --add-rich-rule="rule family=ipv6 source address="%s" port protocol="udp" port="%s" %s"' % (
+                        address, ports, types))
             else:
-                public.ExecShell(
-                    'firewall-cmd --permanent --add-rich-rule="rule family=ipv6 source address="%s" port protocol="%s" port="%s" %s"'
-                    % (address, protocol, ports, types))
+                public.ExecShell('firewall-cmd --permanent --add-rich-rule="rule family=ipv6 source address="%s" port protocol="%s" port="%s" %s"' % (
+                    address, protocol, ports, types))
         else:
             if protocol.find('/') != -1:
                 public.ExecShell(
-                    'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address="%s" port protocol="tcp" port="%s" %s"'
-                    % (address, ports, types))
+                    'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address="%s" port protocol="tcp" port="%s" %s"' % (
+                        address, ports, types))
                 public.ExecShell(
-                    'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address="%s" port protocol="udp" port="%s" %s"'
-                    % (address, ports, types))
+                    'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address="%s" port protocol="udp" port="%s" %s"' % (
+                        address, ports, types))
             else:
-                public.ExecShell(
-                    'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address="%s" port protocol="%s" port="%s" %s"'
-                    % (address, protocol, ports, types))
+                public.ExecShell('firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address="%s" port protocol="%s" port="%s" %s"' % (
+                    address, protocol, ports, types))
         return True
 
     # firewall端口规则删除
@@ -587,159 +723,125 @@ class main(safeBase):
         if not address:
             if protocol.find('/') != -1:
                 if types == "accept":
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --remove-port='
-                        + ports + '/tcp')
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --remove-port='
-                        + ports + '/udp')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --remove-port=' + ports + '/tcp')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --remove-port=' + ports + '/udp')
                 else:
-                    public.ExecShell(
-                        'firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 port protocol="tcp" port="%s" drop"'
-                        % (ports))
-                    public.ExecShell(
-                        'firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 port protocol="udp" port="%s" drop"'
-                        % (ports))
+                    public.ExecShell('firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 port protocol="tcp" port="%s" drop"' % (ports))
+                    public.ExecShell('firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 port protocol="udp" port="%s" drop"' % (ports))
             else:
                 if types == "accept":
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --remove-port='
-                        + ports + '/' + protocol + '')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --remove-port=' + ports + '/' + protocol + '')
                 else:
                     public.ExecShell(
-                        'firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 port protocol="%s" port="%s" drop"'
-                        % (protocol, ports))
+                        'firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 port protocol="%s" port="%s" drop"' % (protocol, ports))
             self.update_panel_data(ports)
             return True
         if public.is_ipv6(address):
             if protocol.find('/') != -1:
                 public.ExecShell(
-                    'firewall-cmd --permanent --remove-rich-rule="rule family="ipv6" source address="%s" port protocol="tcp" port="%s" %s"'
-                    % (address, ports, types))
+                    'firewall-cmd --permanent --remove-rich-rule="rule family="ipv6" source address="%s" port protocol="tcp" port="%s" %s"' % (
+                        address, ports, types))
                 public.ExecShell(
-                    'firewall-cmd --permanent --remove-rich-rule="rule family="ipv6" source address="%s" port protocol="udp" port="%s" %s"'
-                    % (address, ports, types))
+                    'firewall-cmd --permanent --remove-rich-rule="rule family="ipv6" source address="%s" port protocol="udp" port="%s" %s"' % (
+                        address, ports, types))
             else:
                 public.ExecShell(
-                    'firewall-cmd --permanent --remove-rich-rule="rule family="ipv6" source address="%s" port protocol="%s" port="%s" %s"'
-                    % (address, protocol, ports, types))
+                    'firewall-cmd --permanent --remove-rich-rule="rule family="ipv6" source address="%s" port protocol="%s" port="%s" %s"' % (
+                        address, protocol, ports, types))
         else:
             if protocol.find('/') != -1:
                 public.ExecShell(
-                    'firewall-cmd --permanent --remove-rich-rule="rule family="ipv4" source address="%s" port protocol="tcp" port="%s" %s"'
-                    % (address, ports, types))
+                    'firewall-cmd --permanent --remove-rich-rule="rule family="ipv4" source address="%s" port protocol="tcp" port="%s" %s"' % (
+                        address, ports, types))
                 public.ExecShell(
-                    'firewall-cmd --permanent --remove-rich-rule="rule family="ipv4" source address="%s" port protocol="udp" port="%s" %s"'
-                    % (address, ports, types))
+                    'firewall-cmd --permanent --remove-rich-rule="rule family="ipv4" source address="%s" port protocol="udp" port="%s" %s"' % (
+                        address, ports, types))
             else:
                 public.ExecShell(
-                    'firewall-cmd --permanent --remove-rich-rule="rule family="ipv4" source address="%s" port protocol="%s" port="%s" %s"'
-                    % (address, protocol, ports, types))
+                    'firewall-cmd --permanent --remove-rich-rule="rule family="ipv4" source address="%s" port protocol="%s" port="%s" %s"' % (
+                        address, protocol, ports, types))
         return True
 
     # firewall端口规则编辑
-    def edit_firewall_rule(self, _address, _protocol, _port, _type, address,
-                           protocol, ports, types):
+    def edit_firewall_rule(self, _address, _protocol, _port, _type, address, protocol, ports, types):
         if not _address:
             if _protocol.find('/') != -1:
                 if _type == "accept":
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --remove-port='
-                        + _port + '/tcp')
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --remove-port='
-                        + _port + '/udp')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --remove-port=' + _port + '/tcp')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --remove-port=' + _port + '/udp')
                 else:
-                    public.ExecShell(
-                        'firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 port protocol="tcp" port="%s" drop"'
-                        % (ports))
-                    public.ExecShell(
-                        'firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 port protocol="udp" port="%s" drop"'
-                        % (ports))
+                    public.ExecShell('firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 port protocol="tcp" port="%s" drop"' % (ports))
+                    public.ExecShell('firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 port protocol="udp" port="%s" drop"' % (ports))
             else:
                 if _type == "accept":
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --remove-port='
-                        + _port + '/' + _protocol + '')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --remove-port=' + _port + '/' + _protocol + '')
                 else:
                     public.ExecShell(
-                        'firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 port protocol="%s" port="%s" drop"'
-                        % (protocol, ports))
+                        'firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 port protocol="%s" port="%s" drop"' % (protocol, ports))
         else:
             if public.is_ipv6(_address):
                 if _protocol.find('/') != -1:
                     public.ExecShell(
-                        'firewall-cmd --permanent --remove-rich-rule="rule family="ipv6" source address="%s" port protocol="tcp" port="%s" %s"'
-                        % (_address, _port, _type))
+                        'firewall-cmd --permanent --remove-rich-rule="rule family="ipv6" source address="%s" port protocol="tcp" port="%s" %s"' % (
+                            _address, _port, _type))
                     public.ExecShell(
-                        'firewall-cmd --permanent --remove-rich-rule="rule family="ipv6" source address="%s" port protocol="udp" port="%s" %s"'
-                        % (_address, _port, _type))
+                        'firewall-cmd --permanent --remove-rich-rule="rule family="ipv6" source address="%s" port protocol="udp" port="%s" %s"' % (
+                            _address, _port, _type))
                 else:
                     public.ExecShell(
-                        'firewall-cmd --permanent --remove-rich-rule="rule family="ipv6" source address="%s" port protocol="%s" port="%s" %s"'
-                        % (_address, _protocol, _port, _type))
+                        'firewall-cmd --permanent --remove-rich-rule="rule family="ipv6" source address="%s" port protocol="%s" port="%s" %s"' % (
+                            _address, _protocol, _port, _type))
             else:
                 if _protocol.find('/') != -1:
                     public.ExecShell(
-                        'firewall-cmd --permanent --remove-rich-rule="rule family="ipv4" source address="%s" port protocol="tcp" port="%s" %s"'
-                        % (_address, _port, _type))
+                        'firewall-cmd --permanent --remove-rich-rule="rule family="ipv4" source address="%s" port protocol="tcp" port="%s" %s"' % (
+                            _address, _port, _type))
                     public.ExecShell(
-                        'firewall-cmd --permanent --remove-rich-rule="rule family="ipv4" source address="%s" port protocol="udp" port="%s" %s"'
-                        % (_address, _port, _type))
+                        'firewall-cmd --permanent --remove-rich-rule="rule family="ipv4" source address="%s" port protocol="udp" port="%s" %s"' % (
+                            _address, _port, _type))
                 else:
                     public.ExecShell(
-                        'firewall-cmd --permanent --remove-rich-rule="rule family="ipv4" source address="%s" port protocol="%s" port="%s" %s"'
-                        % (_address, _protocol, _port, _type))
+                        'firewall-cmd --permanent --remove-rich-rule="rule family="ipv4" source address="%s" port protocol="%s" port="%s" %s"' % (
+                            _address, _protocol, _port, _type))
         if not address:
             if protocol.find('/') != -1:
                 if types == "accept":
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --add-port=' +
-                        ports + '/tcp')
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --add-port=' +
-                        ports + '/udp')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --add-port=' + ports + '/tcp')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --add-port=' + ports + '/udp')
                 else:
-                    public.ExecShell(
-                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 port protocol="tcp" port="%s" drop"'
-                        % (ports))
-                    public.ExecShell(
-                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 port protocol="udp" port="%s" drop"'
-                        % (ports))
+                    public.ExecShell('firewall-cmd --permanent --add-rich-rule="rule family=ipv4 port protocol="tcp" port="%s" drop"' % (ports))
+                    public.ExecShell('firewall-cmd --permanent --add-rich-rule="rule family=ipv4 port protocol="udp" port="%s" drop"' % (ports))
             else:
                 if types == "accept":
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --add-port=' +
-                        ports + '/' + protocol + '')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --add-port=' + ports + '/' + protocol + '')
                 else:
                     public.ExecShell(
-                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 port protocol="%s" port="%s" drop"'
-                        % (protocol, ports))
+                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 port protocol="%s" port="%s" drop"' % (protocol, ports))
         else:
             if public.is_ipv6(address):
                 if protocol.find('/') != -1:
                     public.ExecShell(
-                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv6 source address="%s" port protocol="tcp" port="%s" %s"'
-                        % (address, ports, types))
+                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv6 source address="%s" port protocol="tcp" port="%s" %s"' % (
+                            address, ports, types))
                     public.ExecShell(
-                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv6 source address="%s" port protocol="udp" port="%s" %s"'
-                        % (address, ports, types))
+                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv6 source address="%s" port protocol="udp" port="%s" %s"' % (
+                            address, ports, types))
                 else:
                     public.ExecShell(
-                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv6 source address="%s" port protocol="%s" port="%s" %s"'
-                        % (address, protocol, ports, types))
+                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv6 source address="%s" port protocol="%s" port="%s" %s"' % (
+                            address, protocol, ports, types))
             else:
                 if protocol.find('/') != -1:
                     public.ExecShell(
-                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address="%s" port protocol="tcp" port="%s" %s"'
-                        % (address, ports, types))
+                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address="%s" port protocol="tcp" port="%s" %s"' % (
+                            address, ports, types))
                     public.ExecShell(
-                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address="%s" port protocol="udp" port="%s" %s"'
-                        % (address, ports, types))
+                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address="%s" port protocol="udp" port="%s" %s"' % (
+                            address, ports, types))
                 else:
                     public.ExecShell(
-                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address="%s" port protocol="%s" port="%s" %s"'
-                        % (address, protocol, ports, types))
+                        'firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address="%s" port protocol="%s" port="%s" %s"' % (
+                            address, protocol, ports, types))
         return True
 
     # ufw 端口规则添加
@@ -750,18 +852,13 @@ class main(safeBase):
                 public.ExecShell('ufw ' + rule + ' ' + ports + '/tcp')
                 public.ExecShell('ufw ' + rule + ' ' + ports + '/udp')
             else:
-                public.ExecShell('ufw ' + rule + ' ' + ports + '/' + protocol +
-                                 '')
+                public.ExecShell('ufw ' + rule + ' ' + ports + '/' + protocol + '')
         else:
             if protocol.find('/') != -1:
-                public.ExecShell('ufw ' + rule + ' proto tcp from ' + address +
-                                 ' to any port ' + ports + '')
-                public.ExecShell('ufw ' + rule + ' proto udp from ' + address +
-                                 ' to any port ' + ports + '')
+                public.ExecShell('ufw ' + rule + ' proto tcp from ' + address + ' to any port ' + ports + '')
+                public.ExecShell('ufw ' + rule + ' proto udp from ' + address + ' to any port ' + ports + '')
             else:
-                public.ExecShell('ufw ' + rule + ' proto ' + protocol +
-                                 ' from ' + address + ' to any port ' + ports +
-                                 '')
+                public.ExecShell('ufw ' + rule + ' proto ' + protocol + ' from ' + address + ' to any port ' + ports + '')
 
     # ufw 端口规则删除
     def del_ufw_rule(self, address, protocol, ports, types):
@@ -771,23 +868,17 @@ class main(safeBase):
                 public.ExecShell('ufw delete ' + rule + ' ' + ports + '/tcp')
                 public.ExecShell('ufw delete ' + rule + ' ' + ports + '/udp')
             else:
-                public.ExecShell('ufw delete ' + rule + ' ' + ports + '/' +
-                                 protocol + '')
+                public.ExecShell('ufw delete ' + rule + ' ' + ports + '/' + protocol + '')
         else:
             if protocol.find('/') != -1:
-                public.ExecShell('ufw delete ' + rule + ' proto tcp from ' +
-                                 address + ' to any port ' + ports + '')
-                public.ExecShell('ufw delete ' + rule + ' proto udp from ' +
-                                 address + ' to any port ' + ports + '')
+                public.ExecShell('ufw delete ' + rule + ' proto tcp from ' + address + ' to any port ' + ports + '')
+                public.ExecShell('ufw delete ' + rule + ' proto udp from ' + address + ' to any port ' + ports + '')
             else:
-                public.ExecShell('ufw delete ' + rule + ' proto ' + protocol +
-                                 ' from ' + address + ' to any port ' + ports +
-                                 '')
+                public.ExecShell('ufw delete ' + rule + ' proto ' + protocol + ' from ' + address + ' to any port ' + ports + '')
         self.update_panel_data(ports)
 
     # ufw 端口规则修改
-    def edit_ufw_rule(self, _address, _protocol, _port, _type, address,
-                      protocol, ports, types):
+    def edit_ufw_rule(self, _address, _protocol, _port, _type, address, protocol, ports, types):
         _rule = "allow" if _type == "accept" else "deny"
         rules = "allow" if types == "accept" else "deny"
         if _address == "":
@@ -795,63 +886,41 @@ class main(safeBase):
                 public.ExecShell('ufw delete ' + _rule + ' ' + _port + '/tcp')
                 public.ExecShell('ufw delete ' + _rule + ' ' + _port + '/udp')
             else:
-                public.ExecShell('ufw delete ' + _rule + ' ' + _port + '/' +
-                                 _protocol + '')
+                public.ExecShell('ufw delete ' + _rule + ' ' + _port + '/' + _protocol + '')
         else:
             if _protocol.find('/') != -1:
-                public.ExecShell('ufw delete ' + _rule + ' proto tcp from ' +
-                                 _address + ' to any port ' + _port + '')
-                public.ExecShell('ufw delete ' + _rule + ' proto udp from ' +
-                                 _address + ' to any port ' + _port + '')
+                public.ExecShell('ufw delete ' + _rule + ' proto tcp from ' + _address + ' to any port ' + _port + '')
+                public.ExecShell('ufw delete ' + _rule + ' proto udp from ' + _address + ' to any port ' + _port + '')
             else:
-                public.ExecShell('ufw delete ' + _rule + ' proto ' +
-                                 _protocol + ' from ' + _address +
-                                 ' to any port ' + _port + '')
+                public.ExecShell('ufw delete ' + _rule + ' proto ' + _protocol + ' from ' + _address + ' to any port ' + _port + '')
         if address == "":
             if protocol.find('/') != -1:
                 public.ExecShell('ufw ' + rules + ' ' + ports + '/tcp')
                 public.ExecShell('ufw ' + rules + ' ' + ports + '/udp')
             else:
-                public.ExecShell('ufw ' + rules + ' ' + ports + '/' +
-                                 protocol + '')
+                public.ExecShell('ufw ' + rules + ' ' + ports + '/' + protocol + '')
         else:
             if protocol.find('/') != -1:
-                public.ExecShell('ufw ' + rules + ' proto tcp from ' +
-                                 address + ' to any port ' + ports + '')
-                public.ExecShell('ufw ' + rules + ' proto udp from ' +
-                                 address + ' to any port ' + ports + '')
+                public.ExecShell('ufw ' + rules + ' proto tcp from ' + address + ' to any port ' + ports + '')
+                public.ExecShell('ufw ' + rules + ' proto udp from ' + address + ' to any port ' + ports + '')
             else:
-                public.ExecShell('ufw ' + rules + ' proto ' + protocol +
-                                 ' from ' + address + ' to any port ' + ports +
-                                 '')
+                public.ExecShell('ufw ' + rules + ' proto ' + protocol + ' from ' + address + ' to any port ' + ports + '')
 
     # iptables端口规则添加
     def add_iptables_rule(self, address, protocol, ports, types):
         rule = "ACCEPT" if types == "accept" else "DROP"
         if not address:
             if protocol.find('/') != -1:
-                public.ExecShell(
-                    'iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport '
-                    + ports + ' -j ' + rule + '')
-                public.ExecShell(
-                    'iptables -I INPUT -p tcp -m state --state NEW -m udp --dport '
-                    + ports + ' -j ' + rule + '')
+                public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport ' + ports + ' -j ' + rule + '')
+                public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m udp --dport ' + ports + ' -j ' + rule + '')
             else:
-                public.ExecShell(
-                    'iptables -I INPUT -p tcp -m state --state NEW -m ' +
-                    protocol + ' --dport ' + ports + ' -j ' + rule + '')
+                public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m ' + protocol + ' --dport ' + ports + ' -j ' + rule + '')
         else:
             if protocol.find('/') != -1:
-                public.ExecShell('iptables -I INPUT -s ' + address +
-                                 ' -p tcp --dport ' + ports + ' -j ' + rule +
-                                 '')
-                public.ExecShell('iptables -I INPUT -s ' + address +
-                                 ' -p udp --dport ' + ports + ' -j ' + rule +
-                                 '')
+                public.ExecShell('iptables -I INPUT -s ' + address + ' -p tcp --dport ' + ports + ' -j ' + rule + '')
+                public.ExecShell('iptables -I INPUT -s ' + address + ' -p udp --dport ' + ports + ' -j ' + rule + '')
             else:
-                public.ExecShell('iptables -I INPUT -s ' + address + ' -p ' +
-                                 protocol + ' --dport ' + ports + ' -j ' +
-                                 rule + '')
+                public.ExecShell('iptables -I INPUT -s ' + address + ' -p ' + protocol + ' --dport ' + ports + ' -j ' + rule + '')
         return True
 
     # iptables端口规则删除
@@ -859,88 +928,51 @@ class main(safeBase):
         rule = "ACCEPT" if types == "accept" else "DROP"
         if not address:
             if protocol.find('/') != -1:
-                public.ExecShell(
-                    'iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport '
-                    + ports + ' -j ' + rule + '')
-                public.ExecShell(
-                    'iptables -D INPUT -p tcp -m state --state NEW -m udp --dport '
-                    + ports + ' -j ' + rule + '')
+                public.ExecShell('iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport ' + ports + ' -j ' + rule + '')
+                public.ExecShell('iptables -D INPUT -p tcp -m state --state NEW -m udp --dport ' + ports + ' -j ' + rule + '')
             else:
-                public.ExecShell(
-                    'iptables -D INPUT -p tcp -m state --state NEW -m ' +
-                    protocol + ' --dport ' + ports + ' -j ' + rule + '')
+                public.ExecShell('iptables -D INPUT -p tcp -m state --state NEW -m ' + protocol + ' --dport ' + ports + ' -j ' + rule + '')
         else:
             if protocol.find('/') != -1:
-                public.ExecShell('iptables -D INPUT -s ' + address +
-                                 ' -p tcp --dport ' + ports + ' -j ' + rule +
-                                 '')
-                public.ExecShell('iptables -D INPUT -s ' + address +
-                                 ' -p udp --dport ' + ports + ' -j ' + rule +
-                                 '')
+                public.ExecShell('iptables -D INPUT -s ' + address + ' -p tcp --dport ' + ports + ' -j ' + rule + '')
+                public.ExecShell('iptables -D INPUT -s ' + address + ' -p udp --dport ' + ports + ' -j ' + rule + '')
             else:
-                public.ExecShell('iptables -D INPUT -s ' + address + ' -p ' +
-                                 protocol + ' --dport ' + ports + ' -j ' +
-                                 rule + '')
+                public.ExecShell('iptables -D INPUT -s ' + address + ' -p ' + protocol + ' --dport ' + ports + ' -j ' + rule + '')
         return True
 
     # iptables端口规则编辑
-    def edit_iptables_rule(self, _address, _protocol, _port, _type, address,
-                           protocol, ports, types):
+    def edit_iptables_rule(self, _address, _protocol, _port, _type, address, protocol, ports, types):
         rule1 = "ACCEPT" if _type == "accept" else "DROP"
         rule2 = "ACCEPT" if types == "accept" else "DROP"
         if not _address:
             if _protocol.find('/') != -1:
-                public.ExecShell(
-                    'iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport '
-                    + _port + ' -j ' + rule1 + '')
-                public.ExecShell(
-                    'iptables -D INPUT -p tcp -m state --state NEW -m udp --dport '
-                    + _port + ' -j ' + rule1 + '')
+                public.ExecShell('iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport ' + _port + ' -j ' + rule1 + '')
+                public.ExecShell('iptables -D INPUT -p tcp -m state --state NEW -m udp --dport ' + _port + ' -j ' + rule1 + '')
             else:
-                public.ExecShell(
-                    'iptables -D INPUT -p tcp -m state --state NEW -m ' +
-                    _protocol + ' --dport ' + _port + ' -j ' + rule1 + '')
+                public.ExecShell('iptables -D INPUT -p tcp -m state --state NEW -m ' + _protocol + ' --dport ' + _port + ' -j ' + rule1 + '')
         else:
             if _protocol.find('/') != -1:
-                public.ExecShell('iptables -D INPUT -s ' + _address +
-                                 ' -p tcp --dport ' + _port + ' -j ' + rule1 +
-                                 '')
-                public.ExecShell('iptables -D INPUT -s ' + _address +
-                                 ' -p udp --dport ' + _port + ' -j ' + rule1 +
-                                 '')
+                public.ExecShell('iptables -D INPUT -s ' + _address + ' -p tcp --dport ' + _port + ' -j ' + rule1 + '')
+                public.ExecShell('iptables -D INPUT -s ' + _address + ' -p udp --dport ' + _port + ' -j ' + rule1 + '')
             else:
-                public.ExecShell('iptables -D INPUT -s ' + _address + ' -p ' +
-                                 _protocol + ' --dport ' + _port + ' -j ' +
-                                 rule1 + '')
+                public.ExecShell('iptables -D INPUT -s ' + _address + ' -p ' + _protocol + ' --dport ' + _port + ' -j ' + rule1 + '')
         if not address:
             if protocol.find('/') != -1:
-                public.ExecShell(
-                    'iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport '
-                    + ports + ' -j ' + rule2 + '')
-                public.ExecShell(
-                    'iptables -I INPUT -p tcp -m state --state NEW -m udp --dport '
-                    + ports + ' -j ' + rule2 + '')
+                public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport ' + ports + ' -j ' + rule2 + '')
+                public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m udp --dport ' + ports + ' -j ' + rule2 + '')
             else:
-                public.ExecShell(
-                    'iptables -I INPUT -p tcp -m state --state NEW -m ' +
-                    protocol + ' --dport ' + ports + ' -j ' + rule2 + '')
+                public.ExecShell('iptables -I INPUT -p tcp -m state --state NEW -m ' + protocol + ' --dport ' + ports + ' -j ' + rule2 + '')
         else:
             if protocol.find('/') != -1:
-                public.ExecShell('iptables -I INPUT -s ' + address +
-                                 ' -p tcp --dport ' + ports + ' -j ' + rule2 +
-                                 '')
-                public.ExecShell('iptables -I INPUT -s ' + address +
-                                 ' -p udp --dport ' + ports + ' -j ' + rule2 +
-                                 '')
+                public.ExecShell('iptables -I INPUT -s ' + address + ' -p tcp --dport ' + ports + ' -j ' + rule2 + '')
+                public.ExecShell('iptables -I INPUT -s ' + address + ' -p udp --dport ' + ports + ' -j ' + rule2 + '')
             else:
-                public.ExecShell('iptables -I INPUT -s ' + address + ' -p ' +
-                                 protocol + ' --dport ' + ports + ' -j ' +
-                                 rule2 + '')
+                public.ExecShell('iptables -I INPUT -s ' + address + ' -p ' + protocol + ' --dport ' + ports + ' -j ' + rule2 + '')
         return True
 
     # 修改面板数据
     def update_panel_data(self, ports):
-        res = public.M('firewall').where("port=?", (ports, )).delete()
+        res = public.M('firewall').where("port=?", (ports,)).delete()
 
     # 查询IP规则
     def get_ip_rules_list(self, args):
@@ -953,16 +985,290 @@ class main(safeBase):
         sql = public.M('firewall_ip')
 
         if hasattr(args, 'query'):
-            where = " address like '%{search}%' or brief like '%{search}%' ".format(
-                search=args.query)
+            where = " address like '%{search}%' or brief like '%{search}%' ".format(search=args.query)
 
         count = sql.where(where, ()).count()
         data = public.get_page(count, int(p), int(limit))
-        data['data'] = sql.where(where, ()).limit('{},{}'.format(
-            data['shift'], data['row'])).order('addtime desc').select()
-
+        data['data'] = sql.where(where, ()).limit('{},{}'.format(data['shift'], data['row'])).order('addtime desc').select()
         data['data'] = public.return_area(data['data'], 'address')
         return data
+
+    def check_a_ip(self, address):
+        """
+        @name 检测A记录是否为域名
+        @author hezhihong
+        """
+        if address:
+            if public.is_ipv4(address) or public.is_ipv6(address):
+                return address
+            if address[-1] == '.':
+                address = address[:-1]
+            if public.is_domain(address): return self.get_a_ip(address)
+        return address
+
+    def get_a_ip(self, hostname):
+        '''
+        @name 检测主机名是否有A记录
+        @author hezhihong
+        :param hostname:
+        :return:
+        '''
+        if not self.install_dnspython():
+            return public.returnMsg(False, '请先安装dnspython模块')
+        import dns.resolver
+        # 尝试3次
+        a_ip = []
+        for i in range(3):
+            try:
+                resolver = dns.resolver.Resolver()
+                resolver.timeout = 1
+                try:
+                    result = resolver.query(hostname, 'A')
+                except:
+                    result = resolver.resolve(hostname, 'A')
+                for i in result.response.answer:
+                    for j in i.items:
+                        try:
+                            A_ip = str(j).strip()
+                            if A_ip[-1] == '.': A_ip = A_ip[:-1]
+                        except:
+                            pass
+                        if A_ip not in a_ip:
+                            a_ip.append(A_ip)
+
+            except:
+                pass
+
+        # 去除域名
+        if len(a_ip) > 1:
+            for i2 in a_ip:
+                if public.is_ipv4(i2) or public.is_ipv6(i2):
+                    continue
+                if public.is_domain(i2):
+                    a_ip.remove(i2)
+        return a_ip
+
+    def install_dnspython(self):
+        """
+        @name 安装dnspython模块
+        @author hezhihong
+        """
+        # 检测dns解析
+        try:
+            import dns.resolver
+            return True
+        except:
+            if os.path.exists('/www/server/panel/pyenv'):
+                public.ExecShell('/www/server/panel/pyenv/bin/pip install dnspython')
+            else:
+                public.ExecShell('pip3 install dnspython')
+            try:
+                import dns.resolver
+                return True
+            except:
+                return False
+
+    def del_domain_ip(self, args):
+        """
+        @name 删除域名设置
+        @author hezhihong
+        """
+
+        if 'id' not in args or not args.id or 'sid' not in args:
+            return public.returnMsg(False, '参数错误')
+        domain_id = int(args.sid)
+
+        # 删除IP规则
+        if domain_id > 0:
+            # 删除域名解析
+            public.M('firewall_domain').where('id=?', (str(domain_id),)).delete()
+        # 删除端口规则
+        if 'ports' in args:
+            self.remove_rules(args)
+        # 删除IP规则
+        else:
+            self.remove_ip_rules(args)
+
+        # 当没有域名解析时，删除计划任务
+        if not public.M('firewall_domain').count():
+            pdata = public.M('crontab').where('name=?', '[勿删]系统防火墙域名解析检测任务').select()
+            if pdata:
+                for i in pdata:
+                    args = {"id": i['id']}
+                    import crontab
+                    crontab.crontab().DelCrontab(args)
+
+        return public.returnMsg(True, '删除成功')
+
+    def add_crontab(self):
+        """
+        @name 构造日志切割任务
+        @author hezhihong
+        """
+        python_path = ''
+        try:
+            python_path = public.ExecShell('which btpython')[0].strip("\n")
+        except:
+            try:
+                python_path = public.ExecShell('which python')[0].strip("\n")
+            except:
+                pass
+        if not python_path: return False
+        if not public.M('crontab').where('name=?', ('[勿删]系统防火墙域名解析检测任务',)).count():
+            cmd = '{} {}'.format(python_path, '/www/server/panel/script/firewall_domain.py')
+            args = {"name": "[勿删]系统防火墙域名解析检测任务", "type": 'minute-n', "where1": '5', "hour": '', "minute": '', "sName": "",
+                    "sType": 'toShell', "notice": '', "notice_channel": '', "save": '', "save_local": '1', "backupTo": '', "sBody": cmd,
+                    "urladdress": ''}
+            import crontab
+            res = crontab.crontab().AddCrontab(args)
+            if res and "id" in res.keys():
+                return True
+            return False
+        return True
+
+    def __check_auth(self):
+        try:
+            from pluginAuth import Plugin
+            plugin_obj = Plugin(False)
+            plugin_list = plugin_obj.get_plugin_list()
+            if int(plugin_list['ltd']) > time.time():
+                return True
+            return False
+        except:
+            return False
+
+    def set_domain_ip2(self, args):
+        """
+        @name 设置域名规则
+        @author hezhihong
+        """
+        pay = self.__check_auth()
+        if not pay: return public.returnMsg(False, '当前功能为企业版专享')
+        if not args.domain: return public.returnMsg(False, '请输入域名')
+        ports = ''
+        if 'ports' in args and args.ports: ports = args.ports
+        ip = args.source
+
+        # 添加计划任务
+        self.add_crontab()
+        # 添加端口规则
+        # {"protocol":"tcp","ports":"819","choose":"point","address":"125.93.252.236","types":"accept","brief":"","source":"125.93.252.236"}
+        args.address = ip
+        args.source = ip
+        if ports:
+            if public.is_ipv6(ip):
+                return public.returnMsg(False, '域名解析为ipv6地址，不支持端口规则')
+            self.create_rules2(args)
+        # 添加IP规则
+        else:
+            # return 333
+            self.create_ip_rules(args)
+
+        return public.returnMsg(True, '域名{}解析添加成功'.format(args.domain))
+
+    def set_domain_ip(self, args):
+        """
+        @name 设置域名规则
+        @author hezhihong
+        """
+        pay = self.__check_auth()
+        if not pay: return public.returnMsg(False, '当前功能为企业版专享')
+        if not args.domain: return public.returnMsg(False, '请输入域名')
+        ports = ''
+        if 'ports' in args and args.ports: ports = args.ports
+        protocol = '' if 'protocol' not in args else args.protocol
+        a_ip = self.get_a_ip(args.domain)
+        # return a_ip
+        if a_ip and len(a_ip) < 2 and public.is_domain(a_ip[0]):
+            # return 111
+            a_ip = [self.check_a_ip(a_ip[0])]
+        # return a_ip
+        if not a_ip:
+            return public.returnMsg(False, '域名解析未解析或解析未生效，如已解析，请10分钟后再次尝试')
+        if public.M('firewall_domain').where("domain=? and types=? and port=? and protocol=?", (args.domain, args.types, ports, protocol,)).count():
+            return public.returnMsg(False, '域名{}已存在'.format(args.domain))
+
+        # 添加计划任务
+        self.add_crontab()
+        # 添加端口规则
+        # {"protocol":"tcp","ports":"819","choose":"point","address":"125.93.252.236","types":"accept","brief":"","source":"125.93.252.236"}
+        for ip in a_ip:
+            args.address = ip
+            args.source = ip
+            if ports:
+                if public.is_ipv6(ip):
+                    return public.returnMsg(False, '域名解析为ipv6地址，不支持端口规则')
+                self.create_rules(args)
+            # 添加IP规则
+            else:
+                # return 333
+                self.create_ip_rules(args)
+
+        return public.returnMsg(True, '域名{}解析添加成功'.format(args.domain))
+
+    def modify_domain_ip(self, args):
+        """
+        @name 修改域名规则(当修改为指定域名或从指定域名修改为其他时，需要调用此方法)
+        @name hezhihong
+        """
+        pay = self.__check_auth()
+        if not pay: return public.returnMsg(False, '当前功能为企业版专享')
+
+        # 检测是否开启防火墙 hezhihong
+        if not self.get_firewall_status():
+            return public.returnMsg(False, '请开启防火墙后再操作！')
+
+        modify_args = public.dict_obj()
+        modify_args.id = args.id
+        modify_args.types = args.types
+        modify_args.brief = args.brief
+        modify_args.address = args.address
+        modify_args.sid = 0 if 'sid' not in args else args.sid
+        ports = '' if 'ports' not in args else args.ports
+        domain = '' if 'domain' not in args else args.domain
+        if ports: modify_args.ports = ports
+        choose = '' if 'choose' not in args else args.choose
+        if int(args.sid) > 0:
+            pdata = public.M('firewall_domain').where('id=?', (args.sid,)).find()
+        # 修改端口规则
+        if ports:
+            modify_args.protocol = args.protocol
+            # 已经指定域名
+            if int(args.sid) > 0:
+                # 当修改为指定域名时
+                if choose == 'domain':
+                    # 当修改为不同域名时
+                    if domain != pdata['domain']:
+                        self.del_domain_ip(args)
+                        self.set_domain_ip(args)
+                    # 当修改为相同域名时
+                    else:
+                        pdata['protocol'] = args.protocol
+                        pdata['types'] = args.types
+                        pdata['brief'] = public.xsssec(args.brief)
+                        addtime = time.strftime('%Y-%m-%d %X', time.localtime())
+                        pdata['addtime'] = addtime
+                        public.M('firewall_domain').where('id=?', pdata['id']).update(pdata)
+                        self.modify_rules(args)
+                    return public.returnMsg(True, '修改成功')
+                else:
+                    args.domain = ''
+                    self.del_domain_ip(args)
+                    self.create_rules(args)
+                    return public.returnMsg(True, '修改成功')
+            # 当未指定域名时
+            else:
+                # 修改为指定域名
+                if domain:
+                    self.remove_rules(args)
+                    self.set_domain_ip(args)
+                    return public.returnMsg(True, '修改成功')
+        # 修改IP规则
+        else:
+            if int(args.sid) > 0:
+                modify_args.address = pdata['address']
+                modify_args.domain = pdata['domain']
+            return self.modify_ip_rules(modify_args)
 
     # IP地址检测
     def check_ip(self, address_list):
@@ -1003,9 +1309,7 @@ class main(safeBase):
         ip_list = self.get_ip(address)
         if isinstance(ip_list, dict):
             return
-        public.ExecShell(
-            'firewall-cmd --permanent --zone=public --new-ipset=' + address +
-            ' --type=hash:net')
+        public.ExecShell('firewall-cmd --permanent --zone=public --new-ipset=' + address + ' --type=hash:net')
         xml_path = "/etc/firewalld/ipsets/%s.xml" % address
         tree = ElementTree()
         tree.parse(xml_path)
@@ -1013,14 +1317,11 @@ class main(safeBase):
         for ip in ip_list:
             entry = Element("entry")
             entry.text = ip
-            root.append(entry)
-            # public.ExecShell('firewall-cmd --permanent --zone=public --ipset='+ address + ' --add-entry='+ip)
+            root.append(entry)  # public.ExecShell('firewall-cmd --permanent --zone=public --ipset='+ address + ' --add-entry='+ip)
         self.format(root)
         tree.write(xml_path, 'utf-8', xml_declaration=True)
         # public.ExecShell('firewall-cmd --permanent --zone=public --add-rich-rule=\'rule source ipset="'+ address +'" accept\'')
-        public.ExecShell(
-            'firewall-cmd --permanent --zone=public --add-rich-rule=\'rule source ipset="'
-            + address + '" ' + types + '\'')
+        public.ExecShell('firewall-cmd --permanent --zone=public --add-rich-rule=\'rule source ipset="' + address + '" ' + types + '\'')
 
     def handle_ufw_ip(self, address, types):
         ip_list = self.get_ip(address)
@@ -1029,72 +1330,65 @@ class main(safeBase):
         public.ExecShell('ipset create ' + address + ' hash:net')
         for ip in ip_list:
             public.ExecShell('ipset add ' + address + ' ' + ip)
-        public.ExecShell('iptables -I INPUT -m set --match-set ' + address +
-                         ' src -j ' + types.upper())
+        public.ExecShell('iptables -I INPUT -m set --match-set ' + address + ' src -j ' + types.upper())
 
     # 添加IP规则
     def create_ip_rules(self, get):
         _address = get.address.strip()
         types = get.types  # types in [accept, drop]
         brief = get.brief
+        domain_total = '' if ('domain' not in get or not get.domain) else get.domain.strip()
+        domain = '' if ('domain' not in get or not get.domain) else get.domain.strip() + '|' + _address
+        # sid = 0 if 'sid' not in get else get.sid
         address_list = _address.split(',')
         result = self.check_ip(address_list)
-        if result:
-            return result
+        if result: return result
         for address in address_list:
-            if public.M('firewall_ip').where("address=?",
-                                             (address, )).count() > 0:
+            if public.M('firewall_ip').where("address=? and types=? and domain=?", (address, types, domain)).count() > 0:
                 return public.returnMsg(False, 'FIREWALL_IP_EXISTS')
             if self.__isUfw:
                 _rule = "allow" if types == "accept" else "deny"
                 if address.find('-') != -1:
                     self.handle_ufw_ip(address, types)
                 else:
-                    is_debian = True if public.get_os_version().lower().find(
-                        "debian") != -1 else False
+                    is_debian = True if public.get_os_version().lower().find("debian") != -1 else False
                     if not is_debian:
                         if _rule == "allow":
                             if public.is_ipv6(address):
-                                public.ExecShell('ufw ' + _rule + ' from ' +
-                                                 address + ' to any')
+                                public.ExecShell('ufw ' + _rule + ' from ' + address + ' to any')
                             else:
-                                public.ExecShell('ufw insert 1 ' + _rule +
-                                                 ' from ' + address +
-                                                 ' to any')
+                                public.ExecShell('ufw insert 1 ' + _rule + ' from ' + address + ' to any')
                         else:
-                            public.ExecShell('ufw ' + _rule + ' from ' +
-                                             address + ' to any')
+                            public.ExecShell('ufw ' + _rule + ' from ' + address + ' to any')
                     else:
-                        public.ExecShell('iptables -I INPUT -s ' + address +
-                                         ' -j ' + types.upper())
+                        public.ExecShell('iptables -I INPUT -s ' + address + ' -j ' + types.upper())
             else:
                 if self.__isFirewalld:
                     if address.find('-') != -1:
                         self.handle_firewall_ip(address, types)
                     else:
                         if types == "accept":
-                            public.ExecShell(
-                                'firewall-cmd --permanent --add-source=' +
-                                address + ' --zone=trusted')
+                            public.ExecShell('firewall-cmd --permanent --add-source=' + address + ' --zone=trusted')
                         else:
                             if public.is_ipv6(address):
                                 public.ExecShell(
-                                    'firewall-cmd --permanent --add-rich-rule=\'rule family=ipv6 source address="'
-                                    + address + '" ' + types + '\'')
+                                    'firewall-cmd --permanent --add-rich-rule=\'rule family=ipv6 source address="' + address + '" ' + types + '\'')
                             else:
                                 public.ExecShell(
-                                    'firewall-cmd --permanent --add-rich-rule=\'rule family=ipv4 source address="'
-                                    + address + '" ' + types + '\'')
+                                    'firewall-cmd --permanent --add-rich-rule=\'rule family=ipv4 source address="' + address + '" ' + types + '\'')
                 else:
                     if address.find('-') != -1:
                         self.handle_ufw_ip(address, types)
                     else:
-                        public.ExecShell('iptables -I INPUT -s ' + address +
-                                         ' -j ' + types.upper())
+                        public.ExecShell('iptables -I INPUT -s ' + address + ' -j ' + types.upper())
             addtime = time.strftime('%Y-%m-%d %X', time.localtime())
-            public.M('firewall_ip').add(
-                'address,types,brief,addtime',
-                (address, types, public.xsssec(brief), addtime))
+            self._add_sid = public.M('firewall_ip').add('address,types,brief,addtime,domain,sid',
+                                                        (address, types, public.xsssec(brief), addtime, domain, 0,))
+            if domain:
+                domain_sid = public.M('firewall_domain').add('types,domain,port,address,brief,addtime,sid,protocol,domain_total', (
+                    types, domain, '', address, public.xsssec(brief), addtime, self._add_sid, '', domain_total))
+                public.M('firewall_ip').where("id=?", (self._add_sid,)).save('sid',
+                                                                             domain_sid)  # public.M('firewall_domain').where("id=?", (sid, )).save(  #     'sid', self._add_sid)
         self.FirewallReload()
         return public.returnMsg(True, 'ADD_SUCCESS')
 
@@ -1108,49 +1402,35 @@ class main(safeBase):
             if self.__isUfw:
                 _rule = "allow" if types == "accept" else "deny"
                 if address.find('-') != -1:
-                    public.ExecShell('iptables -D INPUT -m set --match-set ' +
-                                     address + ' src -j ' + types.upper())
+                    public.ExecShell('iptables -D INPUT -m set --match-set ' + address + ' src -j ' + types.upper())
                     public.ExecShell('ipset destroy ' + address)
                 else:
-                    is_debian = True if public.get_os_version().lower().find(
-                        "debian") != -1 else False
+                    is_debian = True if public.get_os_version().lower().find("debian") != -1 else False
                     if not is_debian:
-                        public.ExecShell('ufw delete ' + _rule + ' from ' +
-                                         address + ' to any')
+                        public.ExecShell('ufw delete ' + _rule + ' from ' + address + ' to any')
                     else:
-                        public.ExecShell("iptables -D INPUT -s " + address +
-                                         " -j " + types.upper())
+                        public.ExecShell("iptables -D INPUT -s " + address + " -j " + types.upper())
             else:
                 if self.__isFirewalld:
                     if address.find('-') != -1:
                         public.ExecShell(
-                            'firewall-cmd --permanent --zone=public --remove-rich-rule=\'rule source ipset="'
-                            + address + '" ' + types + '\'')
-                        public.ExecShell(
-                            'firewall-cmd --permanent --zone=public --delete-ipset='
-                            + address)
+                            'firewall-cmd --permanent --zone=public --remove-rich-rule=\'rule source ipset="' + address + '" ' + types + '\'')
+                        public.ExecShell('firewall-cmd --permanent --zone=public --delete-ipset=' + address)
                     else:
-                        public.ExecShell(
-                            'firewall-cmd --permanent --remove-source=' +
-                            address + ' --zone=trusted')
+                        public.ExecShell('firewall-cmd --permanent --remove-source=' + address + ' --zone=trusted')
                         if public.is_ipv6(address):
                             public.ExecShell(
-                                'firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv6 source address="'
-                                + address + '" ' + types + '\'')
+                                'firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv6 source address="' + address + '" ' + types + '\'')
                         else:
                             public.ExecShell(
-                                'firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv4 source address="'
-                                + address + '" ' + types + '\'')
+                                'firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv4 source address="' + address + '" ' + types + '\'')
                 else:
                     if address.find('-') != -1:
-                        public.ExecShell(
-                            'iptables -D INPUT -m set --match-set ' + address +
-                            ' src -j ' + types.upper())
+                        public.ExecShell('iptables -D INPUT -m set --match-set ' + address + ' src -j ' + types.upper())
                         public.ExecShell('ipset destroy ' + address)
                     else:
-                        public.ExecShell('iptables -D INPUT -s ' + address +
-                                         ' -j ' + types.upper())
-            public.M('firewall_ip').where("id=?", (id, )).delete()
+                        public.ExecShell('iptables -D INPUT -s ' + address + ' -j ' + types.upper())
+            public.M('firewall_ip').where("id=?", (id,)).delete()
             self.update_panel_data(address)  # 删除面板自带防火墙的表数据
         self.FirewallReload()
         return public.returnMsg(True, '所有IP规则已被删除。')
@@ -1163,50 +1443,36 @@ class main(safeBase):
         if self.__isUfw:
             _rule = "allow" if types == "accept" else "deny"
             if address.find('-') != -1:
-                public.ExecShell('iptables -D INPUT -m set --match-set ' +
-                                 address + ' src -j ' + types.upper())
+                public.ExecShell('iptables -D INPUT -m set --match-set ' + address + ' src -j ' + types.upper())
                 public.ExecShell('ipset destroy ' + address)
             else:
-                is_debian = True if public.get_os_version().lower().find(
-                    "debian") != -1 else False
+                is_debian = True if public.get_os_version().lower().find("debian") != -1 else False
                 if not is_debian:
-                    public.ExecShell('ufw delete ' + _rule + ' from ' +
-                                     address + ' to any')
+                    public.ExecShell('ufw delete ' + _rule + ' from ' + address + ' to any')
                 else:
-                    public.ExecShell('ufw delete ' + _rule + ' from ' +
-                                     address + ' to any')
-                    public.ExecShell("iptables -D INPUT -s " + address +
-                                     " -j " + types.upper())
+                    public.ExecShell('ufw delete ' + _rule + ' from ' + address + ' to any')
+                    public.ExecShell("iptables -D INPUT -s " + address + " -j " + types.upper())
         else:
             if self.__isFirewalld:
                 if address.find('-') != -1:
                     public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --remove-rich-rule=\'rule source ipset="'
-                        + address + '" ' + types + '\'')
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --delete-ipset='
-                        + address)
+                        'firewall-cmd --permanent --zone=public --remove-rich-rule=\'rule source ipset="' + address + '" ' + types + '\'')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --delete-ipset=' + address)
                 else:
-                    public.ExecShell(
-                        'firewall-cmd --permanent --remove-source=' + address +
-                        ' --zone=trusted')
+                    public.ExecShell('firewall-cmd --permanent --remove-source=' + address + ' --zone=trusted')
                     if public.is_ipv6(address):
                         public.ExecShell(
-                            'firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv6 source address="'
-                            + address + '" ' + types + '\'')
+                            'firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv6 source address="' + address + '" ' + types + '\'')
                     else:
                         public.ExecShell(
-                            'firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv4 source address="'
-                            + address + '" ' + types + '\'')
+                            'firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv4 source address="' + address + '" ' + types + '\'')
             else:
                 if address.find('-') != -1:
-                    public.ExecShell('iptables -D INPUT -m set --match-set ' +
-                                     address + ' src -j ' + types.upper())
+                    public.ExecShell('iptables -D INPUT -m set --match-set ' + address + ' src -j ' + types.upper())
                     public.ExecShell('ipset destroy ' + address)
                 else:
-                    public.ExecShell('iptables -D INPUT -s ' + address +
-                                     ' -j ' + types.upper())
-        public.M('firewall_ip').where("id=?", (id, )).delete()
+                    public.ExecShell('iptables -D INPUT -s ' + address + ' -j ' + types.upper())
+        public.M('firewall_ip').where("id=?", (id,)).delete()
         self.update_panel_data(address)  # 删除面板自带防火墙的表数据
         self.FirewallReload()
         return public.returnMsg(True, 'DEL_SUCCESS')
@@ -1218,107 +1484,84 @@ class main(safeBase):
         types = get.types
         brief = get.brief
         result = self.check_ip([address])
+        sid = 0 if 'sid' not in get else get.sid
+        domain = '' if 'domain' not in get else get.domain
+        domain_total = domain.split('|')[0]
+        # return 22
         if result:
             return result
-        data = public.M('firewall_ip').where(
-            'id=?', (id, )).field('id,address,types,brief,addtime').find()
+        data = public.M('firewall_ip').where('id=?', (id,)).field('id,address,types,brief,addtime').find()
         _address = data.get("address", "")
         _type = data.get("types", "")
         if self.__isUfw:
             rule1 = "allow" if _type == "accept" else "deny"
             if _address.find('-') != -1:
-                public.ExecShell('iptables -D INPUT -m set --match-set ' +
-                                 _address + ' src -j ' + _type.upper())
+                public.ExecShell('iptables -D INPUT -m set --match-set ' + _address + ' src -j ' + _type.upper())
                 public.ExecShell('ipset destroy ' + _address)
             else:
-                is_debian = True if public.get_os_version().lower().find(
-                    "debian") != -1 else False
+                is_debian = True if public.get_os_version().lower().find("debian") != -1 else False
                 if not is_debian:
-                    public.ExecShell('ufw delete ' + rule1 + ' from ' +
-                                     address + ' to any')
+                    public.ExecShell('ufw delete ' + rule1 + ' from ' + address + ' to any')
                 else:
-                    cmd = "iptables -D INPUT -s " + address + " -j " + _type.upper(
-                    )
-                    public.ExecShell(cmd)
-                # public.ExecShell('ufw delete ' + rule1 + ' from ' + _address + ' to any')
+                    cmd = "iptables -D INPUT -s " + address + " -j " + _type.upper()
+                    public.ExecShell(cmd)  # public.ExecShell('ufw delete ' + rule1 + ' from ' + _address + ' to any')
             rule2 = "allow" if types == "accept" else "deny"
             if address.find('-') != -1:
                 self.handle_ufw_ip(address, types)
             else:
-                is_debian = True if public.get_os_version().lower().find(
-                    "debian") != -1 else False
+                is_debian = True if public.get_os_version().lower().find("debian") != -1 else False
                 if not is_debian:
                     if rule2 == "allow":
                         if public.is_ipv6(address):
-                            public.ExecShell('ufw ' + rule2 + ' from ' +
-                                             address + ' to any')
+                            public.ExecShell('ufw ' + rule2 + ' from ' + address + ' to any')
                         else:
-                            public.ExecShell('ufw insert 1 ' + rule2 +
-                                             ' from ' + address + ' to any')
+                            public.ExecShell('ufw insert 1 ' + rule2 + ' from ' + address + ' to any')
                     else:
-                        public.ExecShell('ufw ' + rule2 + ' from ' + address +
-                                         ' to any')
+                        public.ExecShell('ufw ' + rule2 + ' from ' + address + ' to any')
                 else:
-                    public.ExecShell('iptables -I INPUT -s ' + address +
-                                     ' -j ' + types.upper())
+                    public.ExecShell('iptables -I INPUT -s ' + address + ' -j ' + types.upper())
         else:
             if self.__isFirewalld:
                 if _address.find('-') != -1:
                     public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --remove-rich-rule=\'rule source ipset="'
-                        + _address + '" ' + _type + '\'')
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --delete-ipset='
-                        + _address)
+                        'firewall-cmd --permanent --zone=public --remove-rich-rule=\'rule source ipset="' + _address + '" ' + _type + '\'')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --delete-ipset=' + _address)
                 else:
-                    public.ExecShell(
-                        'firewall-cmd --permanent --remove-source=' +
-                        _address + ' --zone=trusted')
+                    public.ExecShell('firewall-cmd --permanent --remove-source=' + _address + ' --zone=trusted')
                     if public.is_ipv6(address):
                         public.ExecShell(
-                            'firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv6 source address="'
-                            + _address + '" ' + _type + '\'')
+                            'firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv6 source address="' + _address + '" ' + _type + '\'')
                     else:
                         public.ExecShell(
-                            'firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv4 source address="'
-                            + _address + '" ' + _type + '\'')
+                            'firewall-cmd --permanent --remove-rich-rule=\'rule family=ipv4 source address="' + _address + '" ' + _type + '\'')
                 if address.find('-') != -1:
                     brief = address
                     self.handle_firewall_ip(address, types)
                 else:
                     if types == "accept":
-                        public.ExecShell(
-                            'firewall-cmd --permanent --add-source=' +
-                            address + ' --zone=trusted')
+                        public.ExecShell('firewall-cmd --permanent --add-source=' + address + ' --zone=trusted')
                     else:
                         if public.is_ipv6(address):
                             public.ExecShell(
-                                'firewall-cmd --permanent --add-rich-rule=\'rule family=ipv6 source address="'
-                                + address + '" ' + types + '\'')
+                                'firewall-cmd --permanent --add-rich-rule=\'rule family=ipv6 source address="' + address + '" ' + types + '\'')
                         else:
                             public.ExecShell(
-                                'firewall-cmd --permanent --add-rich-rule=\'rule family=ipv4 source address="'
-                                + address + '" ' + types + '\'')
+                                'firewall-cmd --permanent --add-rich-rule=\'rule family=ipv4 source address="' + address + '" ' + types + '\'')
             else:
                 if _address.find('-') != -1:
-                    public.ExecShell('iptables -D INPUT -m set --match-set ' +
-                                     _address + ' src -j ' + types.upper())
+                    public.ExecShell('iptables -D INPUT -m set --match-set ' + _address + ' src -j ' + types.upper())
                     public.ExecShell('ipset destroy ' + _address)
                 else:
-                    public.ExecShell('iptables -D INPUT -s ' + _address +
-                                     ' -j ' + _type.upper())
+                    public.ExecShell('iptables -D INPUT -s ' + _address + ' -j ' + _type.upper())
                 if address.find('-') != -1:
                     self.handle_ufw_ip(address, types)
                 else:
-                    public.ExecShell('iptables -I INPUT -s ' + address +
-                                     ' -j ' + types.upper())
+                    public.ExecShell('iptables -I INPUT -s ' + address + ' -j ' + types.upper())
         addtime = time.strftime('%Y-%m-%d %X', time.localtime())
-        public.M('firewall_ip').where('id=?', id).update({
-            'address': address,
-            'types': types,
-            'brief': brief,
-            'addtime': addtime
-        })
+        public.M('firewall_ip').where('id=?', id).update(
+            {'address': address, 'types': types, 'brief': brief, 'addtime': addtime, 'sid': sid, 'domain': domain})
+        if domain:
+            public.M('firewall_domain').where('id=?', (sid,)).save('sid,types,brief,domain_total', (id, types, brief, domain_total))
         self.FirewallReload()
         return public.returnMsg(True, '操作成功')
 
@@ -1352,8 +1595,7 @@ class main(safeBase):
 
         count = sql.where(where, ()).count()
         data = public.get_page(count, int(p), int(limit))
-        data['data'] = sql.where(where, ()).limit('{},{}'.format(
-            data['shift'], data['row'])).order('addtime desc').select()
+        data['data'] = sql.where(where, ()).limit('{},{}'.format(data['shift'], data['row'])).order('addtime desc').select()
         return data
 
     # 添加端口转发
@@ -1369,13 +1611,11 @@ class main(safeBase):
             return public.returnMsg(False, 'PORT_CHECK_RANGE')
         rep = "^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(\/\d{1,2})?$"
         if d_ip:
-            if not re.search(rep, get.d_address) and not public.is_ipv6(
-                    get.d_address):
+            if not re.search(rep, get.d_address) and not public.is_ipv6(get.d_address):
                 return public.returnMsg(False, 'FIREWALL_IP_FORMAT')
             if d_ip in ["127.0.0.1", "localhost"]:
                 d_ip = ""
-        if public.M('firewall_trans').where("start_port=?",
-                                            (s_port, )).count() > 0:
+        if public.M('firewall_trans').where("start_port=?", (s_port,)).count() > 0:
             return public.returnMsg(False, '该端口已存在，请勿重复添加！')
         if self.__isUfw:
             content = self.ufw_handle_add(s_port, d_port, d_ip, protocol)
@@ -1386,9 +1626,7 @@ class main(safeBase):
             else:
                 self.iptables_handle_add(s_port, d_port, d_ip, protocol)
         addtime = time.strftime('%Y-%m-%d %X', time.localtime())
-        public.M('firewall_trans').add(
-            'start_port, ended_ip, ended_port, protocol, addtime',
-            (s_port, d_ip, d_port, protocol, addtime))
+        public.M('firewall_trans').add('start_port, ended_ip, ended_port, protocol, addtime', (s_port, d_ip, d_port, protocol, addtime))
         self.FirewallReload()
         return public.returnMsg(True, 'ADD_SUCCESS')
 
@@ -1407,7 +1645,7 @@ class main(safeBase):
                 self.firewall_handle_del(s_port, d_port, d_ip, protocol)
             else:
                 self.iptables_handle_del(s_port, d_port, d_ip, protocol)
-        public.M('firewall_trans').where("id=?", (id, )).delete()
+        public.M('firewall_trans').where("id=?", (id,)).delete()
         self.FirewallReload()
         return public.returnMsg(True, 'DEL_SUCCESS')
 
@@ -1423,40 +1661,27 @@ class main(safeBase):
             return public.returnMsg(False, 'PORT_CHECK_RANGE')
         if not re.search(rep1, d_port):
             return public.returnMsg(False, 'PORT_CHECK_RANGE')
-        data = public.M('firewall_trans').where('id=?', (id, )).field(
-            'id,start_port,ended_ip,ended_port,protocol,addtime').find()
+        data = public.M('firewall_trans').where('id=?', (id,)).field('id,start_port,ended_ip,ended_port,protocol,addtime').find()
         start_port = data.get("start_port", "")
         ended_ip = data.get("ended_ip", "")
         ended_port = data.get("ended_port", "")
         protocol = data.get("protocol", "")
         if d_ip:
             rep = "^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(\/\d{1,2})?$"
-            if not re.search(rep, get.d_address) and not public.is_ipv6(
-                    get.d_address):
+            if not re.search(rep, get.d_address) and not public.is_ipv6(get.d_address):
                 return public.returnMsg(False, 'FIREWALL_IP_FORMAT')
             if d_ip in ["127.0.0.1", "localhost"]:
                 d_ip = ""
         if self.__isUfw:
-            content = self.ufw_handle_update(start_port, ended_ip, ended_port,
-                                             protocol, s_port, d_ip, d_port,
-                                             pool)
+            content = self.ufw_handle_update(start_port, ended_ip, ended_port, protocol, s_port, d_ip, d_port, pool)
             self.save_profile(self._ufw_before, content)
         else:
             if self.__isFirewalld:
-                self.firewall_handle_update(start_port, ended_ip, ended_port,
-                                            protocol, s_port, d_ip, d_port,
-                                            pool)
+                self.firewall_handle_update(start_port, ended_ip, ended_port, protocol, s_port, d_ip, d_port, pool)
             else:
-                self.iptables_handle_update(start_port, ended_ip, ended_port,
-                                            protocol, s_port, d_ip, d_port,
-                                            pool)
+                self.iptables_handle_update(start_port, ended_ip, ended_port, protocol, s_port, d_ip, d_port, pool)
         addtime = time.strftime('%Y-%m-%d %X', time.localtime())
-        public.M('firewall_trans').where('id=?', id).update({
-            'start_port': s_port,
-            "ended_ip": d_ip,
-            "ended_port": d_port,
-            "protocol": pool
-        })
+        public.M('firewall_trans').where('id=?', id).update({'start_port': s_port, "ended_ip": d_ip, "ended_port": d_port, "protocol": pool})
         self.FirewallReload()
         return public.returnMsg(True, '操作成功.')
 
@@ -1469,17 +1694,14 @@ class main(safeBase):
         result = array.index(":POSTROUTING ACCEPT [0:0]")
         if d_ip == "":
             if protocol.find('/') != -1:
-                _string = "-A PREROUTING -p tcp --dport {1} -j REDIRECT --to-port {2}\n".format(
-                    s_port, d_port)
-                _string = _string + "-A PREROUTING -p udp --dport {1} -j REDIRECT --to-port {2}".format(
-                    s_port, d_port)
+                _string = "-A PREROUTING -p tcp --dport {1} -j REDIRECT --to-port {2}\n".format(s_port, d_port)
+                _string = _string + "-A PREROUTING -p udp --dport {1} -j REDIRECT --to-port {2}".format(s_port, d_port)
             else:
-                _string = "-A PREROUTING -p {0} --dport {1} -j REDIRECT --to-port {2}".format(
-                    protocol, s_port, d_port)
+                _string = "-A PREROUTING -p {0} --dport {1} -j REDIRECT --to-port {2}".format(protocol, s_port, d_port)
         else:
-            _string = "-A PREROUTING -p {0} --dport {1} -j DNAT --to-destination {2}:{3}\n".format(
-                protocol, s_port, d_ip,
-                d_port) + "-A POSTROUTING -d {0} -j MASQUERADE".format(d_ip)
+            _string = "-A PREROUTING -p {0} --dport {1} -j DNAT --to-destination {2}:{3}\n".format(protocol, s_port, d_ip,
+                                                                                                   d_port) + "-A POSTROUTING -d {0} -j MASQUERADE".format(
+                d_ip)
         array.insert(result + 1, _string)
         return '\n'.join(array)
 
@@ -1487,33 +1709,29 @@ class main(safeBase):
     def ufw_handle_del(self, s_port, d_port, d_ip, protocol):
         content = self.get_profile(self._ufw_before)
         if d_ip == "":
-            _string = "-A PREROUTING -p {0} --dport {1} -j REDIRECT --to-port {2}\n".format(
-                protocol, s_port, d_port)
+            _string = "-A PREROUTING -p {0} --dport {1} -j REDIRECT --to-port {2}\n".format(protocol, s_port, d_port)
         else:
-            _string = "-A PREROUTING -p {0} --dport {1} -j DNAT --to-destination {2}:{3}\n".format(
-                protocol, s_port, d_ip,
-                d_port) + "-A POSTROUTING -d {0} -j MASQUERADE\n".format(d_ip)
+            _string = "-A PREROUTING -p {0} --dport {1} -j DNAT --to-destination {2}:{3}\n".format(protocol, s_port, d_ip,
+                                                                                                   d_port) + "-A POSTROUTING -d {0} -j MASQUERADE\n".format(
+                d_ip)
         content = content.replace(_string, "")
         return content
 
     # 处理ufw的端口转发修改
-    def ufw_handle_update(self, start_port, ended_ip, ended_port, protocol,
-                          s_port, d_ip, d_port, pool):
+    def ufw_handle_update(self, start_port, ended_ip, ended_port, protocol, s_port, d_ip, d_port, pool):
         content = self.get_profile(self._ufw_before)
         if ended_ip == "":
-            s_string = "-A PREROUTING -p {0} --dport {1} -j REDIRECT --to-port {2}\n".format(
-                protocol, start_port, ended_port)
+            s_string = "-A PREROUTING -p {0} --dport {1} -j REDIRECT --to-port {2}\n".format(protocol, start_port, ended_port)
         else:
-            s_string = "-A PREROUTING -p {0} --dport {1} -j DNAT --to-destination {2}:{3}\n".format(
-                protocol, start_port, ended_ip, ended_port
-            ) + "-A POSTROUTING -d {0} -j MASQUERADE\n".format(ended_ip)
+            s_string = "-A PREROUTING -p {0} --dport {1} -j DNAT --to-destination {2}:{3}\n".format(protocol, start_port, ended_ip,
+                                                                                                    ended_port) + "-A POSTROUTING -d {0} -j MASQUERADE\n".format(
+                ended_ip)
         if d_ip == "":
-            d_string = "-A PREROUTING -p {0} --dport {1} -j REDIRECT --to-port {2}\n".format(
-                pool, s_port, d_port)
+            d_string = "-A PREROUTING -p {0} --dport {1} -j REDIRECT --to-port {2}\n".format(pool, s_port, d_port)
         else:
-            d_string = "-A PREROUTING -p {0} --dport {1} -j DNAT --to-destination {2}:{3}\n".format(
-                pool, s_port, d_ip,
-                d_port) + "-A POSTROUTING -d {0} -j MASQUERADE\n".format(d_ip)
+            d_string = "-A PREROUTING -p {0} --dport {1} -j DNAT --to-destination {2}:{3}\n".format(pool, s_port, d_ip,
+                                                                                                    d_port) + "-A POSTROUTING -d {0} -j MASQUERADE\n".format(
+                d_ip)
         content = content.replace(s_string, d_string)
         return content
 
@@ -1521,13 +1739,9 @@ class main(safeBase):
     def firewall_handle_add(self, s_port, d_port, d_ip, protocol):
         if protocol.find('/') != -1:
             public.ExecShell(
-                "firewall-cmd --permanent --zone=public --add-forward-port=port="
-                + s_port + ":proto=tcp:toaddr=" + d_ip + ":toport=" + d_port +
-                "")
+                "firewall-cmd --permanent --zone=public --add-forward-port=port=" + s_port + ":proto=tcp:toaddr=" + d_ip + ":toport=" + d_port + "")
             public.ExecShell(
-                "firewall-cmd --permanent --zone=public --add-forward-port=port="
-                + s_port + ":proto=udp:toaddr=" + d_ip + ":toport=" + d_port +
-                "")
+                "firewall-cmd --permanent --zone=public --add-forward-port=port=" + s_port + ":proto=udp:toaddr=" + d_ip + ":toport=" + d_port + "")
         else:
             cmd = "firewall-cmd --permanent --zone=public --add-forward-port=port=" + s_port + ":proto=" + protocol + ":toaddr=" + d_ip + ":toport=" + d_port + ""
             public.ExecShell(cmd)
@@ -1536,178 +1750,102 @@ class main(safeBase):
     def firewall_handle_del(self, s_port, d_port, d_ip, protocol):
         if protocol.find('/') != -1:
             public.ExecShell(
-                "firewall-cmd --permanent --zone=public --remove-forward-port=port="
-                + s_port + ":proto=tcp:toaddr=" + d_ip + ":toport=" + d_port +
-                "")
+                "firewall-cmd --permanent --zone=public --remove-forward-port=port=" + s_port + ":proto=tcp:toaddr=" + d_ip + ":toport=" + d_port + "")
             public.ExecShell(
-                "firewall-cmd --permanent --zone=public --remove-forward-port=port="
-                + s_port + ":proto=udp:toaddr=" + d_ip + ":toport=" + d_port +
-                "")
+                "firewall-cmd --permanent --zone=public --remove-forward-port=port=" + s_port + ":proto=udp:toaddr=" + d_ip + ":toport=" + d_port + "")
         else:
             public.ExecShell(
-                "firewall-cmd --permanent --zone=public --remove-forward-port=port="
-                + s_port + ":proto=" + protocol + ":toaddr=" + d_ip +
-                ":toport=" + d_port + "")
+                "firewall-cmd --permanent --zone=public --remove-forward-port=port=" + s_port + ":proto=" + protocol + ":toaddr=" + d_ip + ":toport=" + d_port + "")
 
     # 处理firewall的端口转发修改
-    def firewall_handle_update(self, start_port, ended_ip, ended_port,
-                               protocol, s_port, d_ip, d_port, pool):
+    def firewall_handle_update(self, start_port, ended_ip, ended_port, protocol, s_port, d_ip, d_port, pool):
         if protocol.find('/') != -1:
             public.ExecShell(
-                "firewall-cmd --permanent --zone=public --remove-forward-port=port="
-                + start_port + ":proto=tcp:toaddr=" + ended_ip + ":toport=" +
-                ended_port + "")
+                "firewall-cmd --permanent --zone=public --remove-forward-port=port=" + start_port + ":proto=tcp:toaddr=" + ended_ip + ":toport=" + ended_port + "")
             public.ExecShell(
-                "firewall-cmd --permanent --zone=public --remove-forward-port=port="
-                + start_port + ":proto=udp:toaddr=" + ended_ip + ":toport=" +
-                ended_port + "")
+                "firewall-cmd --permanent --zone=public --remove-forward-port=port=" + start_port + ":proto=udp:toaddr=" + ended_ip + ":toport=" + ended_port + "")
         else:
             public.ExecShell(
-                "firewall-cmd --permanent --zone=public --remove-forward-port=port="
-                + start_port + ":proto=" + protocol + ":toaddr=" + ended_ip +
-                ":toport=" + ended_port + "")
+                "firewall-cmd --permanent --zone=public --remove-forward-port=port=" + start_port + ":proto=" + protocol + ":toaddr=" + ended_ip + ":toport=" + ended_port + "")
         if pool.find('/') != -1:
             public.ExecShell(
-                "firewall-cmd --permanent --zone=public --add-forward-port=port="
-                + s_port + ":proto=tcp:toaddr=" + d_ip + ":toport=" + d_port +
-                "")
+                "firewall-cmd --permanent --zone=public --add-forward-port=port=" + s_port + ":proto=tcp:toaddr=" + d_ip + ":toport=" + d_port + "")
             public.ExecShell(
-                "firewall-cmd --permanent --zone=public --add-forward-port=port="
-                + s_port + ":proto=udp:toaddr=" + d_ip + ":toport=" + d_port +
-                "")
+                "firewall-cmd --permanent --zone=public --add-forward-port=port=" + s_port + ":proto=udp:toaddr=" + d_ip + ":toport=" + d_port + "")
         else:
             public.ExecShell(
-                "firewall-cmd --permanent --zone=public --add-forward-port=port="
-                + s_port + ":proto=" + pool + ":toaddr=" + d_ip + ":toport=" +
-                d_port + "")
+                "firewall-cmd --permanent --zone=public --add-forward-port=port=" + s_port + ":proto=" + pool + ":toaddr=" + d_ip + ":toport=" + d_port + "")
 
     # 处理iptables的端口转发添加
     def iptables_handle_add(self, s_port, d_port, d_ip, protocol):
         if d_ip == "":
             if protocol.find('/') != -1:
-                public.ExecShell(
-                    "iptables -t nat -A PREROUTING -p tcp --dport " + s_port +
-                    " -j REDIRECT --to-port " + d_port + '')
-                public.ExecShell(
-                    "iptables -t nat -A PREROUTING -p udp --dport " + s_port +
-                    " -j REDIRECT --to-port " + d_port + '')
+                public.ExecShell("iptables -t nat -A PREROUTING -p tcp --dport " + s_port + " -j REDIRECT --to-port " + d_port + '')
+                public.ExecShell("iptables -t nat -A PREROUTING -p udp --dport " + s_port + " -j REDIRECT --to-port " + d_port + '')
             else:
-                public.ExecShell("iptables -t nat -A PREROUTING -p " +
-                                 protocol + " --dport " + s_port +
-                                 " -j REDIRECT --to-port " + d_port + '')
+                public.ExecShell("iptables -t nat -A PREROUTING -p " + protocol + " --dport " + s_port + " -j REDIRECT --to-port " + d_port + '')
         else:
             if protocol.find('/') != -1:
-                public.ExecShell(
-                    "iptables -t nat -A PREROUTING -p tcp --dport " + s_port +
-                    " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
-                public.ExecShell(
-                    "iptables -t nat -A PREROUTING -p udp --dport " + s_port +
-                    " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
-                public.ExecShell(
-                    "iptables -t nat -A POSTROUTING -j MASQUERADE")
+                public.ExecShell("iptables -t nat -A PREROUTING -p tcp --dport " + s_port + " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
+                public.ExecShell("iptables -t nat -A PREROUTING -p udp --dport " + s_port + " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
+                public.ExecShell("iptables -t nat -A POSTROUTING -j MASQUERADE")
             else:
-                public.ExecShell("iptables -t nat -A PREROUTING -p " +
-                                 protocol + " --dport " + s_port +
-                                 " -j DNAT --to-destination " + d_ip + ":" +
-                                 d_port + '')
                 public.ExecShell(
-                    "iptables -t nat -A POSTROUTING -j MASQUERADE")
+                    "iptables -t nat -A PREROUTING -p " + protocol + " --dport " + s_port + " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
+                public.ExecShell("iptables -t nat -A POSTROUTING -j MASQUERADE")
         return True
 
     # 处理iptables的端口转发删除
     def iptables_handle_del(self, s_port, d_port, d_ip, protocol):
         if d_ip == "":
             if protocol.find('/') != -1:
-                public.ExecShell(
-                    "iptables -t nat -D PREROUTING -p tcp --dport " + s_port +
-                    " -j REDIRECT --to-port " + d_port + '')
-                public.ExecShell(
-                    "iptables -t nat -D PREROUTING -p udp --dport " + s_port +
-                    " -j REDIRECT --to-port " + d_port + '')
+                public.ExecShell("iptables -t nat -D PREROUTING -p tcp --dport " + s_port + " -j REDIRECT --to-port " + d_port + '')
+                public.ExecShell("iptables -t nat -D PREROUTING -p udp --dport " + s_port + " -j REDIRECT --to-port " + d_port + '')
             else:
-                public.ExecShell("iptables -t nat -D PREROUTING -p " +
-                                 protocol + " --dport " + s_port +
-                                 " -j REDIRECT --to-port " + d_port + '')
+                public.ExecShell("iptables -t nat -D PREROUTING -p " + protocol + " --dport " + s_port + " -j REDIRECT --to-port " + d_port + '')
         else:
             if protocol.find('/') != -1:
-                public.ExecShell(
-                    "iptables -t nat -D PREROUTING -p tcp --dport " + s_port +
-                    " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
-                public.ExecShell(
-                    "iptables -t nat -D PREROUTING -p udp --dport " + s_port +
-                    " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
-                public.ExecShell(
-                    "iptables -t nat -D POSTROUTING -j MASQUERADE")
+                public.ExecShell("iptables -t nat -D PREROUTING -p tcp --dport " + s_port + " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
+                public.ExecShell("iptables -t nat -D PREROUTING -p udp --dport " + s_port + " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
+                public.ExecShell("iptables -t nat -D POSTROUTING -j MASQUERADE")
             else:
-                public.ExecShell("iptables -t nat -D PREROUTING -p " +
-                                 protocol + " --dport " + s_port +
-                                 " -j DNAT --to-destination " + d_ip + ":" +
-                                 d_port + '')
                 public.ExecShell(
-                    "iptables -t nat -D POSTROUTING -j MASQUERADE")
+                    "iptables -t nat -D PREROUTING -p " + protocol + " --dport " + s_port + " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
+                public.ExecShell("iptables -t nat -D POSTROUTING -j MASQUERADE")
         return True
 
     # 处理iptables的端口转发删除
-    def iptables_handle_update(self, start_port, ended_ip, ended_port,
-                               protocol, s_port, d_ip, d_port, pool):
+    def iptables_handle_update(self, start_port, ended_ip, ended_port, protocol, s_port, d_ip, d_port, pool):
         if ended_ip == "":
             if protocol.find('/') != -1:
-                public.ExecShell(
-                    "iptables -t nat -D PREROUTING -p tcp --dport " + s_port +
-                    " -j REDIRECT --to-port " + d_port + '')
-                public.ExecShell(
-                    "iptables -t nat -D PREROUTING -p udp --dport " + s_port +
-                    " -j REDIRECT --to-port " + d_port + '')
+                public.ExecShell("iptables -t nat -D PREROUTING -p tcp --dport " + s_port + " -j REDIRECT --to-port " + d_port + '')
+                public.ExecShell("iptables -t nat -D PREROUTING -p udp --dport " + s_port + " -j REDIRECT --to-port " + d_port + '')
             else:
-                public.ExecShell("iptables -t nat -D PREROUTING -p " +
-                                 protocol + " --dport " + s_port +
-                                 " -j REDIRECT --to-port " + d_port + '')
+                public.ExecShell("iptables -t nat -D PREROUTING -p " + protocol + " --dport " + s_port + " -j REDIRECT --to-port " + d_port + '')
         else:
             if protocol.find('/') != -1:
-                public.ExecShell(
-                    "iptables -t nat -D PREROUTING -p tcp --dport " + s_port +
-                    " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
-                public.ExecShell(
-                    "iptables -t nat -D PREROUTING -p udp --dport " + s_port +
-                    " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
-                public.ExecShell(
-                    "iptables -t nat -D POSTROUTING -j MASQUERADE")
+                public.ExecShell("iptables -t nat -D PREROUTING -p tcp --dport " + s_port + " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
+                public.ExecShell("iptables -t nat -D PREROUTING -p udp --dport " + s_port + " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
+                public.ExecShell("iptables -t nat -D POSTROUTING -j MASQUERADE")
             else:
-                public.ExecShell("iptables -t nat -D PREROUTING -p " +
-                                 protocol + " --dport " + s_port +
-                                 " -j DNAT --to-destination " + d_ip + ":" +
-                                 d_port + '')
                 public.ExecShell(
-                    "iptables -t nat -D POSTROUTING -j MASQUERADE")
+                    "iptables -t nat -D PREROUTING -p " + protocol + " --dport " + s_port + " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
+                public.ExecShell("iptables -t nat -D POSTROUTING -j MASQUERADE")
         if d_ip == "":
             if pool.find('/') != -1:
-                public.ExecShell(
-                    "iptables -t nat -A PREROUTING -p tcp --dport " + s_port +
-                    " -j REDIRECT --to-port " + d_port + '')
-                public.ExecShell(
-                    "iptables -t nat -A PREROUTING -p udp --dport " + s_port +
-                    " -j REDIRECT --to-port " + d_port + '')
+                public.ExecShell("iptables -t nat -A PREROUTING -p tcp --dport " + s_port + " -j REDIRECT --to-port " + d_port + '')
+                public.ExecShell("iptables -t nat -A PREROUTING -p udp --dport " + s_port + " -j REDIRECT --to-port " + d_port + '')
             else:
-                public.ExecShell("iptables -t nat -A PREROUTING -p " +
-                                 protocol + " --dport " + s_port +
-                                 " -j REDIRECT --to-port " + d_port + '')
+                public.ExecShell("iptables -t nat -A PREROUTING -p " + protocol + " --dport " + s_port + " -j REDIRECT --to-port " + d_port + '')
         else:
             if pool.find('/') != -1:
-                public.ExecShell(
-                    "iptables -t nat -A PREROUTING -p tcp --dport " + s_port +
-                    " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
-                public.ExecShell(
-                    "iptables -t nat -A PREROUTING -p udp --dport " + s_port +
-                    " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
-                public.ExecShell(
-                    "iptables -t nat -A POSTROUTING -j MASQUERADE")
+                public.ExecShell("iptables -t nat -A PREROUTING -p tcp --dport " + s_port + " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
+                public.ExecShell("iptables -t nat -A PREROUTING -p udp --dport " + s_port + " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
+                public.ExecShell("iptables -t nat -A POSTROUTING -j MASQUERADE")
             else:
-                public.ExecShell("iptables -t nat -A PREROUTING -p " +
-                                 protocol + " --dport " + s_port +
-                                 " -j DNAT --to-destination " + d_ip + ":" +
-                                 d_port + '')
                 public.ExecShell(
-                    "iptables -t nat -A POSTROUTING -j MASQUERADE")
+                    "iptables -t nat -A PREROUTING -p " + protocol + " --dport " + s_port + " -j DNAT --to-destination " + d_ip + ":" + d_port + '')
+                public.ExecShell("iptables -t nat -A POSTROUTING -j MASQUERADE")
         return True
 
     # 开启端口转发
@@ -1715,22 +1853,18 @@ class main(safeBase):
         if self.__isUfw:
             content1 = self.get_profile(self._ufw_default)
             content2 = self.get_profile(self._ufw_sysctl)
-            content1 = content1.replace('DEFAULT_FORWARD_POLICY="DROP"',
-                                        'DEFAULT_FORWARD_POLICY="ACCEPT"')
-            content2 = content2.replace('#net/ipv4/ip_forward=1',
-                                        'net/ipv4/ip_forward=1')
+            content1 = content1.replace('DEFAULT_FORWARD_POLICY="DROP"', 'DEFAULT_FORWARD_POLICY="ACCEPT"')
+            content2 = content2.replace('#net/ipv4/ip_forward=1', 'net/ipv4/ip_forward=1')
             self.save_profile(self._ufw_default, content1)
             self.save_profile(self._ufw_sysctl, content2)
             self.FirewallReload()
             return True
         if self.__isFirewalld:
-            public.ExecShell(
-                'echo "\nnet.ipv4.ip_forward=1" >> /etc/sysctl.conf')
+            public.ExecShell('echo "\nnet.ipv4.ip_forward=1" >> /etc/sysctl.conf')
             public.ExecShell('firewall-cmd --add-masquerade --permanent')
             self.FirewallReload()
         else:
-            public.ExecShell(
-                'echo "\nnet.ipv4.ip_forward=1" >> /etc/sysctl.conf')
+            public.ExecShell('echo "\nnet.ipv4.ip_forward=1" >> /etc/sysctl.conf')
             public.ExecShell('sysctl -p /etc/sysctl.conf')
             self.FirewallReload()
         return True
@@ -1743,30 +1877,23 @@ class main(safeBase):
             content1 = self.get_profile(self._ufw_default)
             content2 = self.get_profile(self._ufw_sysctl)
             if get.status == 'open':
-                content1 = content1.replace('DEFAULT_FORWARD_POLICY="DROP"',
-                                            'DEFAULT_FORWARD_POLICY="ACCEPT"')
-                content2 = content2.replace('#net/ipv4/ip_forward=1',
-                                            'net/ipv4/ip_forward=1')
+                content1 = content1.replace('DEFAULT_FORWARD_POLICY="DROP"', 'DEFAULT_FORWARD_POLICY="ACCEPT"')
+                content2 = content2.replace('#net/ipv4/ip_forward=1', 'net/ipv4/ip_forward=1')
             else:
-                content1 = content1.replace('DEFAULT_FORWARD_POLICY="ACCEPT"',
-                                            'DEFAULT_FORWARD_POLICY="DROP"')
-                content2 = content2.replace('net/ipv4/ip_forward=1',
-                                            '#net/ipv4/ip_forward=1')
+                content1 = content1.replace('DEFAULT_FORWARD_POLICY="ACCEPT"', 'DEFAULT_FORWARD_POLICY="DROP"')
+                content2 = content2.replace('net/ipv4/ip_forward=1', '#net/ipv4/ip_forward=1')
             self.save_profile(self._ufw_default, content1)
             self.save_profile(self._ufw_sysctl, content2)
             self.FirewallReload()
-            return public.returnMsg(True,
-                                    '开启' if get.status == "open" else "关闭")
+            return public.returnMsg(True, '开启' if get.status == "open" else "关闭")
         if self.__isFirewalld:
             if get.status == 'open':
                 public.ExecShell('firewall-cmd --add-masquerade --permanent')
             else:
-                public.ExecShell(
-                    'firewall-cmd --remove-masquerade --permanent')
+                public.ExecShell('firewall-cmd --remove-masquerade --permanent')
             self.FirewallReload()
         else:
-            public.ExecShell(
-                'echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf')
+            public.ExecShell('echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf')
             public.ExecShell('sysctl -p /etc/sysctl.conf')
         return public.returnMsg(True, "关闭端口转发")
 
@@ -1793,8 +1920,7 @@ class main(safeBase):
                 white_list = []
                 for ip_obj in white_list_ips:
                     white_list += ip_obj["ips"]
-                self._white_list = white_list
-                # public.WriteLog("firewall_debug", str(white_list))
+                self._white_list = white_list  # public.WriteLog("firewall_debug", str(white_list))
             return self._white_list
         except Exception as e:
             public.WriteLog("firewall", "加载白名单列表失败！")
@@ -1811,13 +1937,7 @@ class main(safeBase):
                     os.system("nohup btpip install IPy &>/dev/null &")
                     public.WriteFile(ipy_tips, 'True')
 
-            release_ips = [
-                IPy.IP("127.0.0.1"),
-                IPy.IP("172.16.1.1"),
-                IPy.IP("10.0.0.1"),
-                IPy.IP("192.168.0.0"),
-                IPy.IP(self.get_host_ip())
-            ]
+            release_ips = [IPy.IP("127.0.0.1"), IPy.IP("172.16.1.1"), IPy.IP("10.0.0.1"), IPy.IP("192.168.0.0"), IPy.IP(self.get_host_ip())]
 
             white_list = self.load_white_list()
 
@@ -1834,9 +1954,7 @@ class main(safeBase):
 
     def handle_firewall_country(self, brief, ip_list, types, port_list):
         try:
-            public.ExecShell(
-                'firewall-cmd --permanent --zone=public --new-ipset=' + brief +
-                ' --type=hash:net')
+            public.ExecShell('firewall-cmd --permanent --zone=public --new-ipset=' + brief + ' --type=hash:net')
             xml_path = "/etc/firewalld/ipsets/%s.xml" % brief
             tree = ElementTree()
             tree.parse(xml_path)
@@ -1851,13 +1969,9 @@ class main(safeBase):
             if port_list:
                 for port in port_list:
                     public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --add-rich-rule=\'rule source ipset="'
-                        + brief + '" port port="' + port + '" protocol=tcp ' +
-                        types + '\'')
+                        'firewall-cmd --permanent --zone=public --add-rich-rule=\'rule source ipset="' + brief + '" port port="' + port + '" protocol=tcp ' + types + '\'')
             else:
-                public.ExecShell(
-                    'firewall-cmd --permanent --zone=public --add-rich-rule=\'rule source ipset="'
-                    + brief + '" ' + types + '\'')
+                public.ExecShell('firewall-cmd --permanent --zone=public --add-rich-rule=\'rule source ipset="' + brief + '" ' + types + '\'')
         except Exception as e:
             return {"status": "error", "msg": e}
 
@@ -1870,16 +1984,12 @@ class main(safeBase):
                 _string = _string + 'ipset add ' + brief + ' ' + ip + '\n'
         tmp_file.write(_string)
         tmp_file.close()
-        public.ExecShell('ipset create ' + brief +
-                         ' hash:net; /bin/bash /tmp/firewall_tmp.sh')
+        public.ExecShell('ipset create ' + brief + ' hash:net; /bin/bash /tmp/firewall_tmp.sh')
         if port_list:
             for port in port_list:
-                public.ExecShell('iptables -I INPUT -m set --match-set ' +
-                                 brief + ' src -p tcp --destination-port ' +
-                                 port + ' -j ' + types.upper())
+                public.ExecShell('iptables -I INPUT -m set --match-set ' + brief + ' src -p tcp --destination-port ' + port + ' -j ' + types.upper())
         else:
-            public.ExecShell('iptables -I INPUT -m set --match-set ' + brief +
-                             ' src -j ' + types.upper())
+            public.ExecShell('iptables -I INPUT -m set --match-set ' + brief + ' src -j ' + types.upper())
 
     # 查询区域规则
     def get_country_list(self, args):
@@ -1893,13 +2003,11 @@ class main(safeBase):
         sql = public.M('firewall_country')
 
         if hasattr(args, 'query'):
-            where = " country like '%{search}%' or brief like '%{search}%'".format(
-                search=args.query)
+            where = " country like '%{search}%' or brief like '%{search}%'".format(search=args.query)
 
         count = sql.where(where, ()).count()
         data = public.get_page(count, int(p), int(limit))
-        data['data'] = sql.where(where, ()).limit('{},{}'.format(
-            data['shift'], data['row'])).order('addtime desc').select()
+        data['data'] = sql.where(where, ()).limit('{},{}'.format(data['shift'], data['row'])).order('addtime desc').select()
         return data
 
     # 添加区域规则
@@ -1911,9 +2019,8 @@ class main(safeBase):
         rep = "^\d{1,5}(:\d{1,5})?$"
         port_list = []
 
-        #检测该区域是否已添加过全部端口规则 hezhihong
-        add_list = public.M('firewall_country').where(
-            "country=?", (country, )).field('ports').select()
+        # 检测该区域是否已添加过全部端口规则 hezhihong
+        add_list = public.M('firewall_country').where("country=?", (country,)).field('ports').select()
         for add in add_list:
             if not add['ports']:
                 return public.returnMsg(False, '该区域已添加过，请勿重复添加！')
@@ -1923,8 +2030,7 @@ class main(safeBase):
             for port in port_list:
                 if not re.search(rep, port):
                     return public.returnMsg(False, 'PORT_CHECK_RANGE')
-                if public.M('firewall_country').where(
-                        "country=? and ports=?", (country, port)).count() > 0:
+                if public.M('firewall_country').where("country=? and ports=?", (country, port)).count() > 0:
                     return public.returnMsg(False, '该区域已添加过，请勿重复添加！')
         self.get_os_info()
         content = self.get_profile(self._ips_path)
@@ -1940,8 +2046,7 @@ class main(safeBase):
             self.handle_ufw_country(brief, ip_list, types, port_list)
         else:
             if self.__isFirewalld:
-                result = self.handle_firewall_country(brief, ip_list, types,
-                                                      port_list)
+                result = self.handle_firewall_country(brief, ip_list, types, port_list)
                 if result:
                     return result
             else:
@@ -1949,13 +2054,9 @@ class main(safeBase):
         addtime = time.strftime('%Y-%m-%d %X', time.localtime())
         if port_list:
             for port in port_list:
-                public.M('firewall_country').add(
-                    'country,types,brief,ports,addtime',
-                    (country, types, brief, port, addtime))
+                public.M('firewall_country').add('country,types,brief,ports,addtime', (country, types, brief, port, addtime))
         else:
-            public.M('firewall_country').add(
-                'country,types,brief,ports,addtime',
-                (country, types, brief, '', addtime))
+            public.M('firewall_country').add('country,types,brief,ports,addtime', (country, types, brief, '', addtime))
         self.FirewallReload()
         return public.returnMsg(True, 'ADD_SUCCESS')
 
@@ -1970,45 +2071,30 @@ class main(safeBase):
         if "not_reload" in get:
             reload = get.not_reload.lower() == "true"
 
-        public.M('firewall_country').where("id=?", (id, )).delete()
+        public.M('firewall_country').where("id=?", (id,)).delete()
         if self.__isUfw:
             if not ports:
-                public.ExecShell('iptables -D INPUT -m set --match-set ' +
-                                 brief + ' src -j ' + types.upper())
+                public.ExecShell('iptables -D INPUT -m set --match-set ' + brief + ' src -j ' + types.upper())
             else:
-                public.ExecShell('iptables -D INPUT -m set --match-set ' +
-                                 brief + ' src -p tcp --destination-port ' +
-                                 ports + ' -j ' + types.upper())
-            if not public.M('firewall_country').where("country=?",
-                                                      (country, )).count() > 0:
+                public.ExecShell('iptables -D INPUT -m set --match-set ' + brief + ' src -p tcp --destination-port ' + ports + ' -j ' + types.upper())
+            if not public.M('firewall_country').where("country=?", (country,)).count() > 0:
                 public.ExecShell('ipset destroy ' + brief)
         else:
             if self.__isFirewalld:
                 if not ports:
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --remove-rich-rule=\'rule source ipset="'
-                        + brief + '" ' + types + '\'')
+                    public.ExecShell('firewall-cmd --permanent --zone=public --remove-rich-rule=\'rule source ipset="' + brief + '" ' + types + '\'')
                 else:
                     public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --remove-rich-rule=\'rule source ipset="'
-                        + brief + '" port port="' + ports + '" protocol=tcp ' +
-                        types + '\'')
-                if not public.M('firewall_country').where(
-                        "country=?", (country, )).count() > 0:
-                    public.ExecShell(
-                        'firewall-cmd --permanent --zone=public --delete-ipset='
-                        + brief)
+                        'firewall-cmd --permanent --zone=public --remove-rich-rule=\'rule source ipset="' + brief + '" port port="' + ports + '" protocol=tcp ' + types + '\'')
+                if not public.M('firewall_country').where("country=?", (country,)).count() > 0:
+                    public.ExecShell('firewall-cmd --permanent --zone=public --delete-ipset=' + brief)
             else:
                 if not ports:
-                    public.ExecShell('iptables -D INPUT -m set --match-set ' +
-                                     brief + ' src -j ' + types.upper())
+                    public.ExecShell('iptables -D INPUT -m set --match-set ' + brief + ' src -j ' + types.upper())
                 else:
-                    public.ExecShell('iptables -D INPUT -m set --match-set ' +
-                                     brief +
-                                     ' src -p tcp --destination-port ' +
-                                     ports + ' -j ' + types.upper())
-                if not public.M('firewall_country').where(
-                        "country=?", (country, )).count() > 0:
+                    public.ExecShell(
+                        'iptables -D INPUT -m set --match-set ' + brief + ' src -p tcp --destination-port ' + ports + ' -j ' + types.upper())
+                if not public.M('firewall_country').where("country=?", (country,)).count() > 0:
                     public.ExecShell('ipset destroy ' + brief)
         if reload:
             self.FirewallReload()
@@ -2021,9 +2107,7 @@ class main(safeBase):
         # types = get.types
         # brief = get.brief
         # country = get.country
-        data = public.M('firewall_country').where(
-            'id=?',
-            (id, )).field('id,country,types,brief,ports,addtime').find()
+        data = public.M('firewall_country').where('id=?', (id,)).field('id,country,types,brief,ports,addtime').find()
         ori_get = public.dict_obj()
         ori_get.id = id
         ori_get.types = data.get("types", "")
@@ -2045,22 +2129,16 @@ class main(safeBase):
             addtime = time.strftime('%Y-%m-%d %X', time.localtime())
             for i in range(len(result)):
                 if "address" not in result[i].keys(): continue
-                tmp = self.check_db_exists(result[i]['ports'],
-                                           result[i]['address'],
-                                           result[i]['types'])
+                tmp = self.check_db_exists(result[i]['ports'], result[i]['address'], result[i]['types'])
                 protocol = result[i]['protocol']
                 ports = result[i]['ports']
                 types = result[i]['types']
                 address = result[i]['address']
                 if not tmp:
                     if ports:
-                        public.M('firewall_new').add(
-                            'ports,protocol,address,types,brief,addtime',
-                            (ports, protocol, address, types, '', addtime))
+                        public.M('firewall_new').add('ports,protocol,address,types,brief,addtime', (ports, protocol, address, types, '', addtime))
                     else:
-                        public.M('firewall_ip').add(
-                            'address,types,brief,addtime',
-                            (address, types, '', addtime))
+                        public.M('firewall_ip').add('address,types,brief,addtime', (address, types, '', addtime))
             for i in range(len(arry)):
                 if arry[i]['port']:
                     tmp = self.check_trans_data(arry[i]['port'])
@@ -2069,9 +2147,8 @@ class main(safeBase):
                     d_port = arry[i]['to-port']
                     address = arry[i]['address']
                     if not tmp:
-                        public.M('firewall_trans').add(
-                            'start_port,ended_ip,ended_port,protocol,addtime',
-                            (s_port, address, d_port, protocol, addtime))
+                        public.M('firewall_trans').add('start_port,ended_ip,ended_port,protocol,addtime',
+                                                       (s_port, address, d_port, protocol, addtime))
         except Exception as e:
             file = open('error.txt', 'w')
             return public.returnMsg(False, e)
@@ -2086,33 +2163,27 @@ class main(safeBase):
             if port.find('.') != -1:
                 tmp = self.check_db_exists('', port, 'drop')
                 if not tmp:
-                    public.M('firewall_ip').add('address,types,brief,addtime',
-                                                (port, 'drop', '', addtime))
+                    public.M('firewall_ip').add('address,types,brief,addtime', (port, 'drop', '', addtime))
             else:
                 tmp = self.check_db_exists(port, '', 'accept')
                 if not tmp:
-                    public.M('firewall_new').add(
-                        'ports,brief,protocol,address,types,addtime',
-                        (port, brief, 'tcp/udp', '', 'accept', addtime))
+                    public.M('firewall_new').add('ports,brief,protocol,address,types,addtime', (port, brief, 'tcp/udp', '', 'accept', addtime))
 
     # 检查数据库是否存在
     def check_db_exists(self, ports, address, types):
         if ports:
-            data = public.M('firewall_new').field(
-                'id,ports,protocol,address,types,brief,addtime').select()
+            data = public.M('firewall_new').field('id,ports,protocol,address,types,brief,addtime').select()
             for dt in data:
                 if dt['ports'] == ports: return dt
             return False
         else:
-            data = public.M('firewall_ip').field(
-                'id,address,types,brief,addtime').select()
+            data = public.M('firewall_ip').field('id,address,types,brief,addtime').select()
             for dt in data:
                 if dt["address"] == address and dt["types"] == types: return dt
             return False
 
     def check_trans_data(self, ports):
-        data = public.M('firewall_trans').field(
-            'id,start_port,ended_ip,ended_port,protocol,addtime').select()
+        data = public.M('firewall_trans').field('id,start_port,ended_ip,ended_port,protocol,addtime').select()
         for dt in data:
             if dt['start_port'] == ports: return dt
         return False
@@ -2135,12 +2206,15 @@ class main(safeBase):
             data_list = public.M('firewall_country').order("id desc").select()
         if not data_list:
             data_list = []
-        # 将数据换成一行一条 hezhihong
-        write_str = ""
+        # 将数据格式换成以|分割的字符串 hezhihong
+        write_string = ""
         if data_list:
             for i in data_list:
-                write_str += json.dumps(i, ensure_ascii=False) + "\n"
-        public.writeFile(filename, write_str)
+                for v in i.keys():
+                    if v == 'domain': i[v] = i[v].replace('|', '#')
+                    write_string += str(i[v]) + "|"
+                write_string += '\n'
+        public.writeFile(filename, write_string)
         return public.returnMsg(True, filename)
 
     # 规则导出：本地
@@ -2148,11 +2222,7 @@ class main(safeBase):
         filename = args.filename
         mimetype = "application/octet-stream"
         if not os.path.exists(filename): return abort(404)
-        return send_file(filename,
-                         mimetype=mimetype,
-                         as_attachment=True,
-                         attachment_filename=os.path.basename(filename),
-                         cache_timeout=0)
+        return send_file(filename, mimetype=mimetype, as_attachment=True, attachment_filename=os.path.basename(filename), cache_timeout=0)
 
     # 规则导入：json
     def import_rules(self, get):
@@ -2160,7 +2230,53 @@ class main(safeBase):
         file_name = get.file_name  # 文件命:[port.json, ip.json, trans.json, country.json]
         file_path = "{0}{1}".format(self._rule_path, file_name)
         data_list = self.get_profile(file_path)
+        pay = self.__check_auth()
+        not_pay_list = []
+        tmp_data = []
+        # |分隔符格式文件导入 hezhihong
+        if data_list and isinstance(data_list, str):
 
+            if data_list.find('|') != -1:
+                data_list = data_list.split('\n')
+                for data in data_list:
+                    if not data: continue
+                    split_data = data.split('|')
+                    data_dict = {}
+                    data_dict['id'] = split_data[0]
+                    if rule_name == 'port_rule':
+                        if not pay and split_data[7].find('#') != -1:
+                            not_pay_list.append(data)
+                            continue
+                        data_dict['protocol'] = split_data[1]
+                        data_dict['ports'] = split_data[2]
+                        data_dict['types'] = split_data[3]
+                        data_dict['address'] = split_data[4]
+                        data_dict['brief'] = split_data[5]
+                        data_dict['addtime'] = split_data[6]
+                        data_dict['domain'] = split_data[7]
+                    elif rule_name == 'ip_rule':
+                        if not pay and split_data[6].find('#') != -1:
+                            not_pay_list.append(data)
+                            continue
+                        data_dict['types'] = split_data[1]
+                        data_dict['address'] = split_data[2]
+                        data_dict['brief'] = split_data[3]
+                        data_dict['addtime'] = split_data[4]
+                        data_dict['domain'] = split_data[6]
+                    elif rule_name == 'trans_rule':
+                        data_dict['start_port'] = split_data[1]
+                        data_dict['ended_ip'] = split_data[2]
+                        data_dict['ended_port'] = split_data[3]
+                        data_dict['protocol'] = split_data[4]
+                        data_dict['addtime'] = split_data[5]
+                    elif rule_name == 'country_rule':
+                        data_dict['types'] = split_data[1]
+                        data_dict['country'] = split_data[2]
+                        data_dict['brief'] = split_data[3]
+                        data_dict['addtime'] = split_data[4]
+                        data_dict['ports'] = split_data[5]
+                    tmp_data.append(data_dict)
+        data_list = tmp_data
         # 一行一条规则格式文件导入 hezhihong
         if data_list and isinstance(data_list, str):
             data_list = data_list.strip()
@@ -2188,6 +2304,9 @@ class main(safeBase):
                 return public.ReturnMsg(False, "文件为空哦！")
             result = self.hand_import_rules(rule_name, data_list)
         os.remove(file_path)
+        if not_pay_list:
+            not_pay_list = ("<br/>" + "-" * 20 + "<br/>").join(not_pay_list)
+            return public.ReturnMsg(result["status"], "{}<br/>指定域名功能为企业版专享，以下规则未导入：<br/>{}".format(result["msg"], not_pay_list))
         return public.ReturnMsg(result["status"], result["msg"])
 
     # 处理规则导入，读取json文件内容
@@ -2195,12 +2314,9 @@ class main(safeBase):
         table_head = []
         try:
             if rule_name == "port_rule":
-                table_head = [
-                    "id", "protocol", "ports", "types", "address", "brief",
-                    "addtime"
-                ]
+                table_head = ["id", "protocol", "ports", "types", "address", "brief", "addtime", "domain", ]
                 for data in data_list:
-                    #兼容一行一条规则格式文件导入 hezhihong
+                    # 兼容一行一条规则格式文件导入 hezhihong
                     try:
                         data = json.loads(data)
                     except:
@@ -2215,13 +2331,17 @@ class main(safeBase):
                     get.types = data["types"]
                     get.source = data["address"]
                     get.brief = data["brief"]
+                    # 兼容域名导入 hezhihong
+                    if 'domain' in data.keys() and data['domain']:
+                        get.domain = data['domain'].split('#')[0]
+                        get.source = data['domain'].split('#')[1]
                     result = self.create_rules(get)
                     if not result["status"]:
                         continue
             elif rule_name == "ip_rule":
                 table_head = ["id", "types", "address", "brief", "addtime"]
                 for data in data_list:
-                    #兼容一行一条规则格式文件导入 hezhihong
+                    # 兼容一行一条规则格式文件导入 hezhihong
                     try:
                         data = json.loads(data)
                     except:
@@ -2233,16 +2353,17 @@ class main(safeBase):
                     get.types = data["types"]
                     get.address = data["address"]
                     get.brief = data["brief"]
+                    # 兼容域名导入 hezhihong
+                    if 'domain' in data.keys() and data['domain']:
+                        get.domain = data['domain'].split('#')[0]
+                        get.source = data['domain'].split('#')[1]
                     result = self.create_ip_rules(get)
                     if not result["status"]:
                         continue
             elif rule_name == "trans_rule":
-                table_head = [
-                    "id", "start_port", "ended_ip", "ended_port", "protocol",
-                    "addtime"
-                ]
+                table_head = ["id", "start_port", "ended_ip", "ended_port", "protocol", "addtime"]
                 for data in data_list:
-                    #兼容一行一条规则格式文件导入 hezhihong
+                    # 兼容一行一条规则格式文件导入 hezhihong
                     try:
                         data = json.loads(data)
                     except:
@@ -2259,9 +2380,9 @@ class main(safeBase):
                     if not result["status"]:
                         continue
             elif rule_name == "country_rule":
-                table_head = ["id", "types", "country", "brief", "addtime"]
+                table_head = ["id", "types", "country", "brief", "addtime", "ports"]
                 for data in data_list:
-                    #兼容一行一条规则格式文件导入 hezhihong
+                    # 兼容一行一条规则格式文件导入 hezhihong
                     try:
                         data = json.loads(data)
                     except:
@@ -2295,12 +2416,8 @@ class main(safeBase):
             b_path = os.path.dirname(path)
             if not os.path.exists(b_path): os.makedirs(b_path)
 
-            if path in [
-                    self._ips_path, self._country_path, self._white_list_file
-            ]:
-                public.downloadFile(
-                    'https://download.bt.cn/install/lib/{}'.format(
-                        os.path.basename(path)), path)
+            if path in [self._ips_path, self._country_path, self._white_list_file]:
+                public.downloadFile('https://download.bt.cn/install/lib/{}'.format(os.path.basename(path)), path)
 
         content = ""
         with open(path, "r") as fr:
@@ -2337,16 +2454,10 @@ class main(safeBase):
             em.tail = i
 
     def check_table(self):
-        if public.M('sqlite_master').where('type=? AND name=?',
-                                           ('table', 'firewall_new')).count():
-            if public.M('sqlite_master').where(
-                    'type=? AND name=?', ('table', 'firewall_ip')).count():
-                if public.M('sqlite_master').where(
-                        'type=? AND name=?',
-                    ('table', 'firewall_trans')).count():
-                    if public.M('sqlite_master').where(
-                            'type=? AND name=?',
-                        ('table', 'firewall_country')).count():
+        if public.M('sqlite_master').where('type=? AND name=?', ('table', 'firewall_new')).count():
+            if public.M('sqlite_master').where('type=? AND name=?', ('table', 'firewall_ip')).count():
+                if public.M('sqlite_master').where('type=? AND name=?', ('table', 'firewall_trans')).count():
+                    if public.M('sqlite_master').where('type=? AND name=?', ('table', 'firewall_country')).count():
                         return True
         return Sqlite()
 
@@ -2355,9 +2466,7 @@ class main(safeBase):
             public.ExecShell('ufw delete allow ssh')
         else:
             if self.__isFirewalld:
-                public.ExecShell(
-                    'firewall-cmd --zone=public --remove-service=ssh --permanent'
-                )
+                public.ExecShell('firewall-cmd --zone=public --remove-service=ssh --permanent')
             else:
                 pass
         return True
@@ -2376,8 +2485,7 @@ class main(safeBase):
         if tmp["osname"] == "CentOS":
             if tmp["version"].startswith("8"):
                 content = self.get_profile("/etc/firewalld/firewalld.conf")
-                content = content.replace("FirewallBackend=nftables",
-                                          "FirewallBackend=iptables")
+                content = content.replace("FirewallBackend=nftables", "FirewallBackend=iptables")
                 self.save_profile("/etc/firewalld/firewalld.conf", content)
                 public.ExecShell("systemctl restart firewalld")
         return True
@@ -2458,8 +2566,7 @@ class Sqlite():
 
     def create_table(self):
         # 创建firewall_new表记录端口规则
-        if not public.M('sqlite_master').where(
-                'type=? AND name=?', ('table', 'firewall_new')).count():
+        if not public.M('sqlite_master').where('type=? AND name=?', ('table', 'firewall_new')).count():
             public.M('').execute('''CREATE TABLE "firewall_new" (
                 "id" INTEGER PRIMARY KEY AUTOINCREMENT,
                 "protocol" TEXT DEFAULT '',
@@ -2468,24 +2575,20 @@ class Sqlite():
                 "address" TEXT DEFAULT '',
                 "brief" TEXT DEFAULT '',
                 "addtime" TEXT DEFAULT '');''')
-            public.M('').execute(
-                'CREATE INDEX firewall_new_port ON firewall_new (ports);')
+            public.M('').execute('CREATE INDEX firewall_new_port ON firewall_new (ports);')
 
         # 创建firewall_ip表记录IP规则（屏蔽或放行）
-        if not public.M('sqlite_master').where(
-                'type=? AND name=?', ('table', 'firewall_ip')).count():
+        if not public.M('sqlite_master').where('type=? AND name=?', ('table', 'firewall_ip')).count():
             public.M('').execute('''CREATE TABLE "firewall_ip" (
                 "id" INTEGER PRIMARY KEY AUTOINCREMENT,
                 "types" TEXT,
                 "address" TEXT DEFAULT '',
                 "brief" TEXT DEFAULT '',
                 "addtime" TEXT DEFAULT '');''')
-            public.M('').execute(
-                'CREATE INDEX firewall_ip_addr ON firewall_ip (address);')
+            public.M('').execute('CREATE INDEX firewall_ip_addr ON firewall_ip (address);')
 
         # 创建firewall_trans表记录端口转发记录
-        if not public.M('sqlite_master').where(
-                'type=? AND name=?', ('table', 'firewall_trans')).count():
+        if not public.M('sqlite_master').where('type=? AND name=?', ('table', 'firewall_trans')).count():
             public.M('').execute('''CREATE TABLE firewall_trans (
                 "id" INTEGER PRIMARY KEY AUTOINCREMENT,
                 "start_port" TEXT,
@@ -2493,28 +2596,53 @@ class Sqlite():
                 "ended_port" TEXT,
                 "protocol" TEXT DEFAULT '',
                 "addtime" TEXT DEFAULT '');''')
-            public.M('').execute(
-                'CREATE INDEX firewall_trans_port ON firewall_trans (start_port);'
-            )
+            public.M('').execute('CREATE INDEX firewall_trans_port ON firewall_trans (start_port);')
 
         # 创建firewall_country表记录IP规则（屏蔽或放行）
-        if not public.M('sqlite_master').where(
-                'type=? AND name=?', ('table', 'firewall_country')).count():
+        if not public.M('sqlite_master').where('type=? AND name=?', ('table', 'firewall_country')).count():
             public.M('').execute('''CREATE TABLE "firewall_country" (
                 "id" INTEGER PRIMARY KEY AUTOINCREMENT,
                 "types" TEXT,
                 "country" TEXT DEFAULT '',
                 "brief" TEXT DEFAULT '',
                 "addtime" TEXT DEFAULT '');''')
-            public.M('').execute(
-                'CREATE INDEX firewall_country_name ON firewall_country (country);'
-            )
+            public.M('').execute('CREATE INDEX firewall_country_name ON firewall_country (country);')
+
+        # 创建firewall_domain表记录域名规则（屏蔽或放行）
+        if not public.M('sqlite_master').where('type=? AND name=?', ('table', 'firewall_domain')).count():
+            public.M('').execute('''CREATE TABLE "firewall_domain" (
+                "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+                "types" TEXT,
+                "domain" TEXT,
+                "domain_total" TEXT,
+                "port" TEXT,
+                "sid" int DEFAULT 0,
+                "address" TEXT DEFAULT '',
+                "brief" TEXT DEFAULT '',
+                "protocol" TEXT DEFAULT '',
+                "addtime" TEXT DEFAULT '');''')
+            public.M('').execute('CREATE INDEX firewall_domain_addr ON firewall_domain (domain);')
+        # 修复之前已经创建的 firewall_domain 表无 domain_total 字段的问题
+        create_table_str = public.M('sqlite_master').where('type=? AND name=?', ('table', 'firewall_new')).getField('sql')
+        if 'domain_total' not in create_table_str:
+            public.M('').execute('ALTER TABLE "firewall_domain" ADD "domain_total" TEXT DEFAULT ""')
+        # 修复之前已经创建的 firewall_new 表无 domain 字段的问题
+        create_table_str = public.M('sqlite_master').where('type=? AND name=?', ('table', 'firewall_new')).getField('sql')
+        if 'domain' not in create_table_str:
+            public.M('').execute('ALTER TABLE "firewall_new" ADD "domain" TEXT DEFAULT ""')
+        if 'sid' not in create_table_str:
+            public.M('').execute('ALTER TABLE "firewall_new" ADD "sid"  int DEFAULT 0')
+        # 修复之前已经创建的 firewall_ip 表无 domain 字段的问题
+        create_table_str = public.M('sqlite_master').where('type=? AND name=?', ('table', 'firewall_ip')).getField('sql')
+        if 'sid' not in create_table_str:
+            public.M('').execute('ALTER TABLE "firewall_ip" ADD "sid"  int DEFAULT 0')
+        if 'domain' not in create_table_str:
+            public.M('').execute('ALTER TABLE "firewall_ip" ADD "domain" TEXT DEFAULT ""')
+
         # 修复之前已经创建的 firewall_country 表无 ports 字段的问题
-        create_table_str = public.M('sqlite_master').where(
-            'type=? AND name=?', ('table', 'firewall_country')).getField('sql')
+        create_table_str = public.M('sqlite_master').where('type=? AND name=?', ('table', 'firewall_country')).getField('sql')
         if 'ports' not in create_table_str:
-            public.M('').execute(
-                'ALTER TABLE "firewall_country" ADD "ports" TEXT DEFAULT ""')
+            public.M('').execute('ALTER TABLE "firewall_country" ADD "ports" TEXT DEFAULT ""')
 
     def create_trigger(self, sql):
         self.GetConn()

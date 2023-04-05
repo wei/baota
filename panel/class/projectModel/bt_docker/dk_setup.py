@@ -208,6 +208,11 @@ class main:
         """
         docker = "/usr/bin/docker"
         docker_compose = "/usr/bin/docker-compose"
+        if not os.path.exists(docker_compose):
+            dk_compose_list = ["/usr/libexec/docker/cli-plugins/docker-compose", "/usr/local/docker-compose"]
+            for i in dk_compose_list:
+                if os.path.exists(i):
+                    public.ExecShell("ln -sf {} {}".format(i, docker_compose))
         if not os.path.exists(docker) or not os.path.exists(docker_compose):
             return False
         return True

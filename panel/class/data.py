@@ -58,6 +58,7 @@ class data:
         try:
             import OpenSSL
             result = {}
+
             x509 = OpenSSL.crypto.load_certificate(
                 OpenSSL.crypto.FILETYPE_PEM, public.readFile(pem_file))
             # 取产品名称
@@ -96,6 +97,7 @@ class data:
                 result['subject'] = result['dns'][0]
             return result
         except:
+
             return public.get_cert_data(pem_file)
 
 
@@ -174,6 +176,62 @@ class data:
         except:
             return 0
 
+    def get_site_netinfo(self):
+        """
+        @name 获取网站流量
+        """
+        try:
+            import PluginLoader
+            args = public.dict_obj()
+            args.model_index = 'panel'
+            res = PluginLoader.module_run("total","get_site_traffic",args)
+
+            return res
+        except:pass
+        return {}
+
+
+    def get_site_net(self,info,siteName):
+        """
+        @name 获取网站流量
+        @param siteName<string> 网站名称
+        @return dict
+        """
+        try:
+            if info['status']: info = info['data']
+            if siteName in info:
+                return info[siteName]
+        except:pass
+        return {}
+
+
+    def get_waf_status(self,info,siteName):
+        """
+        @name 获取waf状态
+        """
+        if siteName in info:
+            return info[siteName]
+        return {}
+
+    def get_waf_status_all(self):
+        """
+        @name 获取waf状态
+        """
+        data = {}
+        try:
+            path = '/www/server/btwaf/site.json'
+            res = json.loads(public.readFile(path))
+
+            for site in res:
+                data[site] = {}
+                data[site]['status'] = True
+                if 'open' in res[site]:
+                    data[site]['status'] = res[site]['open']
+        except:pass
+
+        return data
+
+
     def get_site_quota(self,path):
         '''
             @name 获取网站目录配额信息
@@ -236,7 +294,6 @@ class data:
                             data['data'][i]['ps'] = '自动备份'
                         else:
                             data['data'][i]['ps'] = '手动备份'
-
                     #判断本地文件是否存在，以确定能否下载
                     data['data'][i]['local']=data['data'][i]['filename'].split('|')[0]
                     data['data'][i]['localexist']=0 if os.path.isfile(data['data'][i]['local']) else 1
@@ -250,10 +307,12 @@ class data:
                         backup_count = SQL.table('backup').where("pid=? AND type=?",(data['data'][i]['id'],type)).count()
                     except:pass
                     data['data'][i]['backup_count'] = backup_count
-
                     if table == 'databases': data['data'][i]['conn_config'] = json.loads(data['data'][i]['conn_config'])
                     data['data'][i]['quota'] = self.get_database_quota(data['data'][i]['name'])
                 if table == 'sites':
+
+                    total_net = self.get_site_netinfo()
+                    waf_data = self.get_waf_status_all()
                     for i in range(len(data['data'])):
                         data['data'][i]['domain'] = SQL.table('domain').where("pid=?",(data['data'][i]['id'],)).count()
                         data['data'][i]['ssl'] = self.get_site_ssl_info(data['data'][i]['name'])
@@ -261,6 +320,9 @@ class data:
                         if not data['data'][i]['status'] in ['0','1',0,1]:
                             data['data'][i]['status'] = '1'
                         data['data'][i]['quota'] = self.get_site_quota(data['data'][i]['path'])
+                        data['data'][i]['net'] = self.get_site_net(total_net,data['data'][i]['name'])
+
+                        data['data'][i]['waf'] = self.get_waf_status(waf_data,data['data'][i]['name'])
             elif table == 'firewall':
                 for i in range(len(data['data'])):
                     if data['data'][i]['port'].find(':') != -1 or data['data'][i]['port'].find('.') != -1 or data['data'][i]['port'].find('-') != -1:
@@ -498,6 +560,7 @@ class data:
             'sites'     :   ("name LIKE ? OR ps LIKE ?",('%'+search+'%','%'+search+'%')),
             'ftps'      :   ("name LIKE ? OR ps LIKE ?",('%'+search+'%','%'+search+'%')),
             'databases' :   ("(name LIKE ? OR ps LIKE ?)",("%"+search+"%","%"+search+"%")),
+            'crontab'   :   ("name LIKE ?", ('%' + (search) + '%')),
             'logs'      :   ("username=? OR type LIKE ? OR log LIKE ?",(search,'%'+search+'%','%'+search+'%')),
             'backup'    :   ("pid=?",(search,)),
             'users'     :   ("id='?' OR username=?",(search,search)),

@@ -67,7 +67,6 @@
 							</div>
 						</div>
 					</div>
-                    <div class="public_key" style="display: block;" data="{{data['public_key']}}"></div>
 					<div class="line" title="面板SSL">
 						<div class="line-title">面板SSL</div>
 						<div class="line-form">
@@ -405,6 +404,11 @@
 						<div class="line-row-tips">
 							建议端口范围8888 - 65535，<span class="color-red"
 						>注意：有安全组的服务器请提前在安全组放行新端口</span
+						>，<a
+								href="https://www.bt.cn/bbs/thread-109457-1-1.html"
+								class="btlink"
+								target="_blank"
+						>了解详情</a
 						>
 						</div>
 					</div>
@@ -555,8 +559,7 @@
 							</button>
 						</div>
 						<div class="line-row-tips">
-							设置面板登录告警提示，每次登录面板都会使用消息推送功能，发送消息至<span
-						></span>
+							<b style="color:#fc6d26">【当前功能已经移植至告警通知】</b>
 						</div>
 					</div>
 
@@ -568,7 +571,7 @@
 							</button>
 						</div>
 						<div class="line-row-tips">
-							设置消息推送提示，服务停止时将消息发送至邮件、钉钉/飞书/企业微信、短信
+							<b style="color:#fc6d26">【当前功能已经移植至告警通知】</b>
 						</div>
 					</div>
 				</div>
@@ -1155,7 +1158,7 @@
 							<div class="line-row-tips">
 								(Google
 								Authenticator，谷歌身份认证)为面板提供动态口令的登录的验证，<a
-									href="https://www.bt.cn/bbs/forum.php?mod=viewthread&tid=37437"
+									href="https://www.bt.cn/bbs/forum.php?mod=viewthread&tid=105839"
 									class="btlink"
 									target="_blank"
 							>了解详情</a
@@ -1296,6 +1299,11 @@
 						<div class="line-row-tips">
 							建议端口范围8888 - 65535，<span class="color-red"
 						>注意：有安全组的服务器请提前在安全组放行新端口</span
+						>，<a
+								href="https://www.bt.cn/bbs/thread-109457-1-1.html"
+								class="btlink"
+								target="_blank"
+						>了解详情</a
 						>
 						</div>
 					</div>
@@ -1400,8 +1408,7 @@
 							</button>
 						</div>
 						<div class="line-row-tips">
-							设置面板登录告警提示，每次登录面板都会使用消息推送功能，发送消息至<span
-						></span>
+							<b style="color:#fc6d26">【当前功能已经移植至告警通知】</b>
 						</div>
 					</div>
 					<div class="line" title="消息推送">
@@ -1412,12 +1419,12 @@
 							</button>
 						</div>
 						<div class="line-row-tips">
-							设置消息推送提示，服务停止时将消息发送至邮件、钉钉/飞书/企业微信/短信
+							<b style="color:#fc6d26">【当前功能已经移植至告警通知】</b>
 						</div>
 					</div>
 				</div>
 			</div>
-			<div class="panel-config alert-view-box" data-type="alertConfig">
+			<div class="panel-config alert-view-box hide" data-type="alertConfig">
 				<div class="tab-nav-border">
 					<span class="on">告警列表</span>
 					<span >告警设置</span>
@@ -1690,20 +1697,42 @@
 			src="{{g.cdn_url}}/js/jquery.qrcode.min.js"
 	></script>
 	<script src="{{g.cdn_url}}/language/{{session['lan']}}/lan.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-	<script src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}&patch=1"></script>
+	<script type="text/javascript" src="{{g.cdn_url}}/js/clipboard.min.js"></script>
+	<script src="{{g.cdn_url}}/js/public.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 	<script src="{{g.cdn_url}}/js/public_backup.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 	<script src="{{g.cdn_url}}/js/tools.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
-    <script src="{{g.cdn_url}}/js/jsencrypt.min.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
+	<script src="{{g.cdn_url}}/js/jsencrypt.min.js?version={{g['version']}}&repair={{data['js_random']}}"></script>
 	<script
 			type="text/javascript"
 			src="{{g.cdn_url}}/amd/require.min.js"
 			data-main="{{g.cdn_url}}/amd/main"
 	></script>
-	<script
-			type="text/javascript"
-			src="{{g.cdn_url}}/js/tools.js?version_20200217={{g['version']}}"
-	></script>
 	<script type="text/javascript">
+		window.localStorage.setItem('mypcip',"{{session['address']}}");
+		var mypcip = window.localStorage.getItem('mypcip')
+		var ipArr = mypcip.split('.'),numberIp = window.localStorage.getItem('mypcipShow')
+		$('.mypcip .cw').text(numberIp !== null && parseInt(numberIp) ? ipArr[0] + '.***.***.' + ipArr[ipArr.length - 1] : mypcip);
+		numberIp !== null && parseInt(numberIp) ? $('.mypcip').removeClass('active') : $('.mypcip').addClass('active')
+
+		$('.mypcip').mousedown(function () {
+			var stime = new Date().getTime();//当前时间
+			$(this).mouseup(function (e) {
+				if(new Date().getTime() - stime < 200) {//鼠标按下和松开的时间间隔小于200为点击事件
+					var is_show = $(this).hasClass('active')
+					$('.mypcip .cw').text(is_show ? ipArr[0] + '.***.***.' + ipArr[ipArr.length - 1] : mypcip);
+					window.localStorage.setItem('mypcipShow',is_show ? 1 : 0);
+					if(is_show) $(this).removeClass('active');
+					else $(this).addClass('active');
+					e.stopPropagation()
+					e.preventDefault()
+				}
+			});
+		})
+		$('.mypcip').on('dblclick', function () {
+			bt.pub.copy_pass(mypcip);
+			bt_tools.msg({msg:'复制成功',status: true});
+		})
+
 		bt.set_cookie('order', 'id desc');
 		bt.set_cookie('serverType', "{{session['webserver']}}");
 		$("#setBox").click(function () {
@@ -1722,6 +1751,11 @@
 		if ($(".current").attr("id") == 'memuAfiles') {
 			is_files_html = true;
 		}
+
+		$('.tabs-item').click(function () {
+			if($(this).data('type') === 'alertConfig') $('.search.pull-right').hide()
+			else $('.search.pull-right').show()
+		})
 
 		function task_stat(my_init) {
 			if (!my_init) {
@@ -1843,8 +1877,8 @@
 		}
 
 		// 消息推送
-		$('.setAlarmType').on('click', function(){open_three_channel_auth('MsgPush')});
-
+		// $('.setAlarmType').on('click', function(){open_three_channel_auth('MsgPush')});
+		$('.setAlarmType').on('click', function(){$('[data-type=alertConfig]').click()});
 
 		$('#onlineCustomer').click(function (){
 			var customer = $("#wechat-customer");
@@ -1873,24 +1907,168 @@
 		})
 
 		$('.toolbar-right .feedback').on('click',function(){
+			if($('.nps_survey').length >= 1) return false;  //防止多层
 			layer.open({
 				type:1,
 				title:false,
-				skin:'feedback-iframe',
-				area:['500px','650px'],
-				content: '<iframe scrolling="auto" allowtransparency="true" style="width: 100%;margin: 0;padding: 0;border: none;height:655px;" id="layui-custom-iframe" name="layui-layer-iframe"  src="https://www.wjx.cn/vm/m0QwH5t.aspx?width=200%&amp;source=iframe" referrerpolicy="no-referrer" rel="noreferrer noopener"></iframe>',
-				success:function (){
-					// setInterval(function (){
-					//   var iframe = $('#layui-layer-iframe').context
-					// 	console.log(iframe.)
-					// 	var headsplitdiv = iframe.querySelector('#headsplitdiv')
-					// 	console.log(headsplitdiv)
-					// 	if(headsplitdiv){
-					//     console.log(headsplitdiv)
-					// 	}
-					// },100)
+				btn:false,
+				area:'520px',
+				skin:'nps_survey',
+				closeBtn: 2,
+				content:'<div class="nps_survey_box"">\
+	           <div class="nps_survey_banner">\
+	                <span>\
+	                    <i></i>\
+	                    <span style="vertical-align: 4px;">宝塔面板NPS问卷</span>\
+	                </span>\
+	           </div>\
+	           <div style="padding:12px 40px 40px;">\
+    	           <div class="nps_survey_score">\
+    	                <div class="survey_title">基于本次使用，您是否愿意把宝塔面板推荐给朋友？</div>\
+    	                <div class="score_title"><span style="font-weight: normal;">请从0-10打个分</span></div>\
+    	                <ul class="survey_score_num initbg">\
+    	                    <li>0</li>\
+    	                    <li>1</li>\
+    	                    <li>2</li>\
+    	                    <li>3</li>\
+    	                    <li>4</li>\
+    	                    <li>5</li>\
+    	                    <li>6</li>\
+    	                    <li>7</li>\
+    	                    <li>8</li>\
+    	                    <li>9</li>\
+    	                    <li>10</li>\
+    	                </ul>\
+    	                <div style="color: #999;display: flex;justify-content: space-between;margin-top: 5px;margin-left: -15px;width: 460px;"><span>非常不愿意</span><span>非常愿意</span></div>\
+    	           </div>\
+    	           <div class="nps_survey_content hide">\
+    	                <div class="nps_survey_line">\
+    	                    <span class="nps_survey_title"><i>*</i>1.您是通过什么方式了解使用宝塔面板的？用宝塔面板解决<b>什么问题</b>？</span>\
+    	                    <p>使用宝塔多久了，使用频率如何等</p>\
+    	                    <input type="text" name="problem_one">\
+    	                </div>\
+    	                <div class="nps_survey_line">\
+    	                    <span class="nps_survey_title"><i>*</i>2.您在使用宝塔面板过程中出现<b>最多的问题</b>是什么?</span>\
+    	                    <p>我们希望找出问题，帮助我们改进产品</p>\
+    	                    <input type="text" name="problem_two">\
+    	                </div>\
+    	                <div class="nps_survey_line">\
+    	                    <span class="nps_survey_title"><i>*</i>3.谈谈您对宝塔面板的<b>建议</b>。</span>\
+    	                    <p>您的建议一旦被采纳很可能在下一个版本更新发布</p>\
+    	                    <input type="text" name="problem_three">\
+    	                </div>\
+    	                <button class="btn btn-success set_survey_info pull-right" style="margin: 25px 0 30px;padding: 6px 40px;">提交</button>\
+    	           </div>\
+    	       </div>\
+	        </div>\
+	        <style>\
+	        .nps_survey_banner{position: relative;background: url(/static/img/feedback/QA_banner.png);width:100%;background-size: 100%;height: 123px;}\
+	        .nps_survey_banner>span{position: absolute;left: 32px;top: 16px;font-size: 17px;color: #fff;}\
+	        .nps_survey_banner i{background-image: url(/static/images/svg/logo-white.svg);background-repeat: no-repeat;background-size: 18px;display: inline-block;width: 20px;height: 20px;}\
+	        .survey_title {font-size: 16px;font-weight: bold;text-align: center;}\
+	        .score_title{font-size:16px;font-weight:bold;color:#20a53a;text-align:center;height: 50px;line-height: 60px;}\
+	        .nps_survey_score ul{margin-top:10px}\
+	        .nps_survey_score li {position:relative;display: inline-block;font-size: 14px;color: #20a53a;width: 32px;height: 32px;margin-right: 5px;border: 1px solid #D0D0D0;border-radius: 20px;text-align: center;line-height: 32px;cursor: pointer;background-color:#CFF3D7;font-weight: bold;}\
+	        .nps_survey_score li:last-child{margin-right:0;}\
+	        .survey_score_num.initbg li{background-color:#fff;font-weight: inherit}\
+	        .survey_score_num li.wafA{border:none}\
+	        .survey_score_num li.wafA:before{content: "";background: url(/static/img/feedback/QA_emoj.png);background-size: 99%;width: 32px;height: 32px;display: inline-block;position: absolute;left: -1px;top: -1px;}\
+	        .nps_survey_content{margin-top: 25px;}\
+	        .nps_survey_line{ font-size:14px;}\
+	        .nps_survey_line .nps_survey_title{margin:20px 0 7px 0;display:block;font-weight: bold;}\
+	        .nps_survey_line p{color:#999;font-size:12px;margin-bottom:5px;}\
+	        .nps_survey_line i,.nps_survey_line b{color:#FC6D26;font-style: inherit;}\
+	        .nps_survey_line input{width:440px;height:28px;border:1px solid #E0E0E0;font-size:12px;}\
+	        .survey_score_num li:nth-child(2).wafA:before{background-position: 0 328px;}\
+	        .survey_score_num li:nth-child(3).wafA:before{background-position: 0 295px;}\
+	        .survey_score_num li:nth-child(4).wafA:before{background-position: 0 262px;}\
+	        .survey_score_num li:nth-child(5).wafA:before{background-position: 0 229px;}\
+	        .survey_score_num li:nth-child(6).wafA:before{background-position: 0 196px;}\
+	        .survey_score_num li:nth-child(7).wafA:before{background-position: 0 163px;}\
+	        .survey_score_num li:nth-child(8).wafA:before{background-position: 0 130px;}\
+	        .survey_score_num li:nth-child(9).wafA:before{background-position: 0 97px;}\
+	        .survey_score_num li:nth-child(10).wafA:before{background-position: 0 64px;}\
+	        .survey_score_num li:nth-child(11).wafA:before{background-position: 0 32px;}\
+	        </style>',
+				success:function(layers,indexs){
+					//客服电话咨询
+					$('.nps-kf-box').click(function (ev) {
+						if ($(this).find('i').hasClass('active')) {
+							$(this).find('i').removeClass('active');
+							$(this).find('input').prop('checked', false)
+						} else {
+							$(this).find('i').addClass('active');
+							$(this).find('input').prop('checked', true)
+						}
+						ev.preventDefault();
+					})
+					var goNum = 0;
+					//评分栏目鼠标经过事件
+					$('.survey_score_num').on('mouseenter','li',function(){
+						$('.nps_survey_content').removeClass('hide')
+						$('.survey_score_num').removeClass('initbg')
+						if(goNum < 1) {
+							$(window).resize()
+							goNum++
+						}
+						var _mouseScore = $(this).index(),
+								_scoreText = ''
+						if(!$(this).hasClass('wafA')){
+							$(this).addClass('wafA').siblings().removeAttr('class')
+							if(_mouseScore <= 6){
+								_scoreText = '<span style="color:#E43434">'+_mouseScore+'分，不愿意</span>'
+								if(_mouseScore == 0) _scoreText = '<span style="color:#E43434">'+_mouseScore+'分，非常不愿意</span>'
+							}else if(_mouseScore == 7 || _mouseScore == 8){
+								_scoreText = _mouseScore+'分，一般'
+							}else{
+								_scoreText = _mouseScore+'分，愿意'
+								if(_mouseScore == 10) _scoreText = _mouseScore+'分，非常愿意'
+							}
 
-					// .style.display = 'none'
+							//设置评分颜色
+							$(this).prevAll().removeAttr('style')
+							$(this).nextAll().attr('style','background-color:#fff;font-weight: inherit;')
+							$(this).css('background-color','#fff')
+
+							$('.score_title').html(_scoreText)
+						}
+					})
+					// 设置调查信息
+					$('.set_survey_info').click(function(){
+						var _score = $('.wafA').index(),
+								_one = $('input[name=problem_one]').val(),
+								_two = $('input[name=problem_two]').val(),
+								_three = $('input[name=problem_three]').val()
+
+						_one = _one == '' ? ' ' : _one
+						_two = _two == '' ? ' ' : _two
+						_three = _three == '' ? ' ' : _three
+						$.post('/config?action=write_nps',{software_name:'panel',product_type:0,rate:_score,questions:JSON.stringify({
+										"LMdrUlYWLMjhjYjczNTUyMDIwcoCSWTt": _one,
+										"PCpsJvGUmMjRjYjczNTUyMDExLGAMKPd": _two,
+										"IYlVujIciMmM4YjczNTUyMDMzfselTpB":_three})},
+								function (rdata) {
+									if(rdata.status){
+										layer.close(indexs)
+										layer.open({
+											title: false,
+											btn: false,
+											shadeClose: true,
+											shade:0.1,
+											closeBtn: 0,
+											skin:'qa_thank_dialog',
+											area: '230px',
+											content: '<div class="qa_thank_box" style="background-color:#F1F9F3;text-align: center;padding: 20px 0;"><img src="/static/img/feedback/QA_like.png" style="width: 55px;"><p style="margin-top: 15px;">感谢您的参与!</p></div>',
+											success: function (layero,index) {
+												$(layero).find('.layui-layer-content').css({'padding': '0','border-radius': '5px'})
+												$(layero).css({'border-radius': '5px','min-width': '230px'})
+
+												setTimeout(function(){layer.close(index)},3000)
+											}
+										})
+									}
+								});
+					})
 				}
 			})
 		})

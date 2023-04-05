@@ -164,7 +164,7 @@ class panelAuth:
         params['num'] = 1 #购买数量
         if 'num' in get: params['num'] = get.num
         if 'source' in get: params['source'] = get.source
-
+        if 'coupon' in get:params['coupon'] = get.coupon
 
         # key = '{}_{}_get_buy_code'.format(params['pid'], params['cycle'])
         # data = cache.get(key)
@@ -237,6 +237,43 @@ class panelAuth:
         pass
 
 
+    def get_coupons(self,get):
+        """
+        @name 获取用户抵扣卷列表
+        @param uid 用户id
+        """
+        params = {}
+        data = self.send_cloud_v2('v2/user/get_coupons', params)
+        return data
+
+    def get_credits(self,get):
+        """
+        @获取用户余额
+        @param uid 用户id
+        """
+        params = {}
+        data = self.send_cloud_v2('v2/user/get_credits', params)
+        return data
+
+    def create_with_credit_by_panel(self,get):
+        """
+        @name 使用余额购买
+        @param uid 用户id
+        @param product_id 产品id
+        @param cycle 购买周期
+        @param num 购买数量
+        @param coupon 优惠券id
+        """
+        params = {}
+        params['product_id'] = int(get.pid)
+        params['cycle'] = get.cycle
+        params['num'] = 1 #购买数量
+        if 'num' in get: params['num'] = get.num
+        if 'coupon' in get: params['coupon'] = get.coupon
+
+        data = self.send_cloud_v2('v2/order/product/create_with_credit_by_panel', params)
+        return data
+
     def rest_unbind_count(self,get):
         """
         @name 获取当前订单可解绑次数
@@ -278,6 +315,18 @@ class panelAuth:
         params['pid'] = getattr(get,'pid',0)
         params['status'] = '0'
         data = self.send_cloud('get_voucher', params)
+        if not data: return []
+        return data
+
+    def get_all_voucher_plugin(self,get):
+        """
+        @name 获取所有可用的优惠券
+        @param pid 产品id, 100000000表示获取所有
+        """
+        params = {}
+        params['pid'] = getattr(get,'pid',0)
+        params['status'] = '0'
+        data = self.send_cloud('get_all_voucher', params)
         if not data: return []
         return data
 
@@ -340,6 +389,9 @@ class panelAuth:
         params['status'] = '0'
         data = self.send_cloud_pro('get_voucher', params)
         return data
+
+
+
 
     def get_order_status(self,get):
         params = {}

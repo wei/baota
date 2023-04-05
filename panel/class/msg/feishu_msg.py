@@ -9,7 +9,6 @@
 # +-------------------------------------------------------------------
 
 import os, sys, public, json, requests
-
 import sys, os
 panelPath = '/www/server/panel'
 os.chdir(panelPath)
@@ -135,7 +134,7 @@ class feishu_msg:
 
                 if len(s_list) > 3:
                     s_title = s_list[0].replace(" ","")
-                    s_list = s_list[3:]
+                    s_list = s_list[1:]
                     s_list.insert(0,s_title)
                     msg = '\n'.join(s_list)
 

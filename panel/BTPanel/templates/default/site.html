@@ -8,6 +8,10 @@
     .warning_scan_body .module_num{
         display: inline-block;
         margin-left: 20px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-right: 20px;
     }
     .warning_scan_body li:first-child .module_head{
         border-top: none;
@@ -153,13 +157,20 @@
     .module_title{
         width: 200px;
         display: inline-block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .module_num{
-        width: 80px;
+        width: 120px;
         display: inline-block;
     }
     .module_type{
         display: inline-block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 220px;
     }
     .warning_scan_head .halving_line {
         margin: 0 auto;

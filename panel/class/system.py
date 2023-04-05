@@ -904,7 +904,13 @@ class system:
 
 
         if get.type != 'stop':
-            time.sleep(0.5)
+            n = 0
+            num = 5
+            while not self.check_service_status(get.name):
+                time.sleep(0.5)
+                n += 1
+                if n > num: break
+
             if not self.check_service_status(get.name):
                 if len(result[1]) > 1 and get.name != 'pure-ftpd' and get.name != 'redis':
                     return public.returnMsg(False, '<p>启动失败： <p>' + result[1].replace('\n','<br>'))

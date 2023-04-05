@@ -190,6 +190,8 @@ var bt_file = {
       _obj['file_btn'] = true
       that.reader_file_list(_obj, function (res) {
         if (!res.msg) that.loadT.close()
+        if(_obj.search) $('.fileAllSize').addClass('hide')
+        else $('.fileAllSize').removeClass('hide')
       })
       e.stopPropagation();
     })
@@ -428,7 +430,7 @@ var bt_file = {
               bt.plugin.get_plugin_byhtml(item.name, function (html) {
                 layer.open({
                   type: 1,
-                  title: '<img style="width: 24px;margin-right: 5px;margin-left: -10px;margin-top: -3px;" src="/static/img/soft_ico/ico-rsync.png">数据同步工具',
+                  title: '<img style="width: 24px;margin-right: 5px;margin-left: -10px;margin-top: -3px;" src="/static/img/soft_ico/ico-rsync.png">文件同步工具',
                   area: '1000px',
                   content: html,
                 })
@@ -888,6 +890,10 @@ var bt_file = {
           oval = $(this).data('value'),
           _this = this;
       if (nval == oval) return false;
+      if (/(\<|\>|\"|\&|\;)/g.test(nval)){
+        layer.msg('备注不能含有 <>"&;符号', { icon: 0 })
+        nval = nval.replaceAll(/(\<|\>|\"|\&|\;)/g,'')
+      }
       bt_tools.send('files/set_file_ps', { filename: item.path, ps_type: 0, ps_body: nval }, function (rdata) {
         $(_this).data('value', nval);
       }, { tips: '设置文件/目录备注', tips: true });
@@ -1502,7 +1508,7 @@ var bt_file = {
         }
         var page = $(res.PAGE);
         page.append('<span class="Pcount-item">每页<select class="showRow">' + select_page_num + '</select>条</span>');
-        $('.filePage').html('<div class="page_num">共' + rdata.is_dir_num + '个目录，' + (that.file_list.length - rdata.is_dir_num) + '个文件，文件大小:<a href="javascript:;" class="btlink" id="file_all_size">计算</a></div>' + page[0].outerHTML);
+        $('.filePage').html('<div class="page_num">共' + rdata.is_dir_num + '个目录，' + (that.file_list.length - rdata.is_dir_num) + '个文件<i class="fileAllSize">，文件大小:<a href="javascript:;" class="btlink" id="file_all_size">计算</a></i></div>' + page[0].outerHTML);
         // if(data.is_operating) data.is_operating = false;
         if (data && data.is_operating && that.file_operating[that.file_pointer] != res.PATH) {
           next_path = that.file_operating[that.file_pointer + 1];
@@ -3055,7 +3061,7 @@ var bt_file = {
   replace_content_view: function () {
     var fileThat = this,extArray = [];
     layer.open({
-      title: '文件查找',
+      title: '文件内容查找',
       type: 1,
       skin: 'replace_content_view',
       area: '550px',
@@ -3065,9 +3071,9 @@ var bt_file = {
           '<div class="tab-nav mb15"><span class="on">基础搜索</span><span>高级搜索</span></div>' +
           '<div class="tabs-con"><div class="tabs-con-child ">'+
           '<div class="replace_content_line">' +
-          '<span class="tname">查找</span>' +
+          '<span class="tname">内容查找</span>' +
           '<div class="info-r">' +
-          '<input class="bt-input-text" id="replaceContentValue" AUTOCOMPLETE="off" type="text" placeholder="请输入查找的文件内容" style="width:417px">' +
+          '<input class="bt-input-text" id="replaceContentValue" AUTOCOMPLETE="off" type="text" placeholder="请输入查找的文件内容" style="width:397px">' +
           '<i class="history_search iconfont icon-xiala"></i>' +
           '<button class="normalBtnStyle checkBtn" onClick="bt_file.searchReplaceContent()" style="vertical-align: top; ">查找</button>' +
           '<ul class="history_search_list hide"></ul>' +
@@ -3076,13 +3082,13 @@ var bt_file = {
           '<div class="replace_content_line">' +
           '<span class="tname">类型</span>' +
           '<div class="info-r">' +
-          '<input name="replaceFileExtsType" id="replaceFileExtsType" class="bt-input-text" placeholder="例：php,html" type="text" value="html,php" style="width:420px">' +
+          '<input name="replaceFileExtsType" id="replaceFileExtsType" class="bt-input-text" placeholder="例：php,html" type="text" value="html,php" style="width:400px">' +
           '</div>' +
           '</div>' +
           '<div class="replace_content_line" style="margin-bottom: 10px;">' +
           '<span class="tname">目录</span>' +
           '<div class="info-r">' +
-          '<input class="bt-input-text" value="' + bt_file.file_path + '" type="text" style="width:420px" id="replaceContentPath">' +
+          '<input class="bt-input-text" value="' + bt_file.file_path + '" type="text" style="width:400px" id="replaceContentPath">' +
           '<div class="file_path_switch replaceHasChild">' +
           '<i class="file_find_checkbox"></i>' +
           '<span class="laberText">包含子目录</span>' +
@@ -3652,7 +3658,7 @@ var bt_file = {
       $('.editFile').click(function () {
         openEditorView(0, $(this).data('filename'), function (val, aceEitor) {
           aceEitor.ace.find(data.text)
-          aceEitor.ace.execCommand('find')
+					aceEitor.ace.execCommand('find')
         })
       })
     })

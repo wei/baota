@@ -142,7 +142,6 @@ class panel_push:
         item = self.__push.format_push_data(push = ["mail",'dingding','weixin',"feishu"],project = 'ssl',type = 'ssl')
         item['cycle'] = 30
         item['title'] = 'SSL到期提醒'
-        item['helps'] = ['SSL到期提醒一天只发送一次','证书夹内【剩余天数不足30天】的所有证书.']
         data.append(item)
 
         item = self.__push.format_push_data(push = ["mail",'dingding','weixin',"feishu"],project = 'endtime',type = 'endtime')
@@ -212,8 +211,6 @@ class panel_push:
 
     def get_push_data(self,data,total):
         if data['type'] == 'services':
-            if "project" not in data:
-                data["project"] = data["type"]
             ser_name =  data['project']
             ser_name = self.__get_service_name(ser_name)
 
@@ -245,9 +242,9 @@ class panel_push:
         elif data['type'] in ['endtime']:
             if time.time() < data['index'] + 86400:
                 return public.returnMsg(False,"一天推送一次，跳过.")
-            import PluginLoader
-            # from panelAuth import Plugin
-            softs = PluginLoader.get_plugin_list(False)
+
+            from pluginAuth import Plugin
+            softs = Plugin(False).get_plugin_list(True)
             if softs['pro'] == 0: return public.returnMsg(False,"永久专业版，跳过.")
 
             if softs['ltd'] == -2 and softs['pro'] == -2:
@@ -355,3 +352,6 @@ class panel_push:
                 result[m_module]['sm_type'] = 'servcies'
                 result[m_module]['sm_args'] = { 'name':'{}'.format(public.GetConfigValue('title')), 'product':data["project"],'product1':data["project"]}
         return result
+
+
+

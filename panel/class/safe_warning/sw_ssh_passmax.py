@@ -24,7 +24,7 @@ _date = '2022-08-10'  # 最后更新时间
 _ignore = os.path.exists("data/warning/ignore/sw_ssh_passmax.pl")
 _tips = [
     "【/etc/login.defs】 使用非密码登陆方式密钥对。请忽略此项, 在/etc/login.defs 中将PASS_MAX_DAYS 参数设置为90-180之间",
-    "PASS_MAX_DAYS 90   需同时执行命令设置root 密码失效时间   命令如下:  chage --maxdays 90 root",
+    "PASS_MAX_DAYS 90   需同时执行命令设置root密码到期时间   命令如下:  chage --maxdays 90 root",
 ]
 _help = ''
 

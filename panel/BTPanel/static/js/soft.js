@@ -206,12 +206,12 @@ var soft = {
         },
         {
           field: 'price',
-          title: '价格',
+          title: '价格/天',
           width: 80,
           templet: function (item) {
             var price = '免费';
             if (item.price > 0) {
-              price = '<span style="color:#fc6d26">￥' + (item.price / (item.name === 'btiplibrary'?365:30)).toFixed(2) + '/天</span>';
+              price = '<span style="color:#fc6d26">≈ ' + (item.price / (item.name === 'btiplibrary'?365:30)).toFixed(2) + '元</span>';
             }
             return price;
           }
@@ -241,6 +241,7 @@ var soft = {
                     plugin: true,
                     renew: item.endtime,
                     ps: ps,
+                    ex1: item.ex1,
                     totalNum:34
                   }) + ')\'> (续费)</a>';
                 } else {
@@ -259,6 +260,7 @@ var soft = {
                     plugin: true,
                     renew: item.endtime,
                     ps: ps,
+                    ex1: item.ex1,
                     totalNum:34
                   }) + ')\'> (续费)</a>';
                 } else {
@@ -348,6 +350,7 @@ var soft = {
                   plugin: true,
                   renew: item.endtime,
                   ps: ps,
+                  ex1: item.ex1,
                   totalNum:buy_type
                 }) + ')\'>' + re_msg + '</a>';
               } else {
@@ -590,6 +593,7 @@ var soft = {
                     type: item.type,
                     pulgin: true,
                     renew: item.endtime,
+                    ex1: item.ex1,
                     ps: ps
                   }) + ');\'>立即购买</button>';
                 } else if (item.endtime == -2) { //已过期
@@ -599,6 +603,7 @@ var soft = {
                     type: item.type,
                     pulgin: true,
                     renew: item.endtime,
+                    ex1: item.ex1,
                     ps: ps
                   }) + ');\'>立即续费</button>';
                 }
@@ -716,7 +721,8 @@ var soft = {
       genre ? tips_info.removeClass('ltd') : tips_info.addClass('ltd');
       advantage_list = genre ? remarks.pro_list : remarks.list;
       $.each(advantage_list, function (index, item) {
-        pro_introduce += '<div class="item"><span class="success_icon"></span><span>' + item + '</span></div>'
+        if(item === '更换授权IP' && !genre) pro_introduce += ''
+        else pro_introduce += '<div class="item">' + item + '</div>'
       })
       pro_introduce += '</div>'
 
@@ -730,20 +736,24 @@ var soft = {
       $.each(remarks.wx_list,function(index,wx_item){
         wx_li+='<div class="kf_fixed">\
             <span class="wechatEnterpriseService" style="vertical-align: middle;"></span>\
-            <span class="btlink">'+wx_item.ps+'</span>\
-            <div class="wx_kf_mask"><p>请打开微信"扫一扫"</p><div id="wx_qcode'+index+'"></div><i class="wechatEnterprise"></i><p>【'+wx_item.ps+'】</p></div>\
+            <span class="btlink" style="font-size:13px;">'+ wx_item.ps +'</span>\
+            <div class="wx_kf_mask"><p>请打开微信"扫一扫"</p><div id="wx_qcode"><img src="/static/images/customer-qrcode.png" /></div><i class="wechatEnterprise"></i><p>【'+wx_item.ps+'】</p></div>\
         </div>'
       })
-      explain.html('<div class="pro_introduce_content"><div class="pro_ic_title"><span class="advantage">' + bt.os + (genre ? '专业版' : '企业版') + '优势 </span><span class="renew_info">' +
-          '<span onclick="' + (genre ? 'bt.soft.updata_pro(33)' : 'bt.soft.updata_ltd(undefined,33)') + '"style="cursor: pointer;' + (is_buy ? ((countTime <= 7 && countTime>=0) ? 'color:red;"' : '"'): '') + '>' + (is_buy ? ('过期时间：' + (function () {
-            var title = bt.format_data(time, 'yyyy-MM-dd');
-            if (countTime <= 7) title += ' (还有' + countTime + '天到期，请及时续费)';
-            if (genre && rdata.pro === 0) title = '永久授权';
-            return title;
-          }())) : '') +
-          '</span><span class="ml5">' + wx_li + '</span></div>' + pro_introduce + '</div>');
-
-      var btn = $('<a title="' + ('立即' + (is_buy ? '续费' : '购买')) + '" href="javascript:;" class="btn btn-success btn-xs va0 ml15" style="margin-left:10px;">' + ('立即' + (is_buy ? '续费' : '购买')) + '</a>')
+      explain.html('<div class="pro_introduce_content">' +
+          '<div class="pro_ic_title">' +
+          '<span class="advantage"></span>' +
+          '<span class="renew_info">' +
+          '<span class="maturity_time" onclick="' + (genre ? 'bt.soft.updata_pro(33)' : 'bt.soft.updata_ltd(undefined,33)') + '"style="cursor: pointer;"' + (is_buy ? ((countTime <= 7 && countTime>=0) ? 'color:red;"' : '"'): '') + '>' + (is_buy ? ('<span>到期时间：</span>' + (function () {
+              var title = bt.format_data(time, 'yyyy-MM-dd');
+              if (countTime <= 7) title += ' (还有' + countTime + '天到期，请及时续费)';
+              if (genre && rdata.pro === 0) title = '永久授权';
+              return title;
+            }())) : '') +
+          '</span></span>' +
+          '<span class="ml5">' + wx_li + '</span>' +
+        '</div>' + pro_introduce + '</div>');
+      var btn = $('<a title="' + ('立即' + (is_buy ? '续费' : '购买')) + '" href="javascript:;" class="btn btn-success btn-xs va0" style="margin-left:10px;">' + ('立即' + (is_buy ? '续费' : '购买')) + '</a>')
       bt.set_cookie('soft_remarks', JSON.stringify(remarks))
       bt.set_cookie('ltd_end', rdata.ltd)
       bt.set_cookie('pro_end', rdata.pro)
@@ -763,6 +773,7 @@ var soft = {
         bt.set_cookie('productPurchase', 1, 1800000)
       })
       $(el).append(tips_info);
+      if(is_buy && rdata.ltd > 0) $('#updata_pro_info .alert.showprofun').addClass('ltd-vip')
       //售前客服二维码
       $.each(remarks.wx_list,function(index,wx_item){
         $('#wx_qcode'+index).qrcode({
@@ -773,13 +784,33 @@ var soft = {
         });
       })
       $('.kf_fixed').click(function(e){
-        var _offset = $(this).offset()
-        $(this).siblings().find('.wx_kf_mask').removeAttr('style')   //关闭同级
-        $(this).find('.wx_kf_mask').css({'left':_offset.left-40,'top':_offset.top+25,'display':'block'})
+        var that = this;
+        $(this).siblings().find('.wx_kf_mask').removeAttr('style');  //关闭同级
+        $(this).find('.wx_kf_mask').show();
         $(document).one('click',function(){
-          $(this).find('.wx_kf_mask').removeAttr('style');
-        })
+          $(that).find('.wx_kf_mask').hide()
+        });
         e.stopPropagation();
+      })
+
+      // 检测授权状态
+      $('.checkAuthorizedPayment').on('click',function(){
+        var load = bt.load('正在检测授权状态，请稍后...');
+        bt.send('check_auth_ip', 'ajax/check_auth_ip', {}, function (rdata) {
+          load.close();
+          if (rdata.api !== rdata.www){
+            layer.msg('当前支付授权状态异常，请联系售前客服', { icon: 2, shade:  [0.3, '#000']});
+            return false
+          }else{
+            layer.msg('支付授权状态正常', { icon: 1, shade:  [0.3, '#000']});
+          }
+        })
+
+        // var AuthorizationStatus = bt.get_cookie('AuthorizedStatus')
+        // if (AuthorizationStatus !== '1'){
+        //   layer.msg('检测到当前授权服务器IP与当前支付服务器IP不一致，无法购买或续费，<sapn class="red">请联系服务器运营商，限制当前出口IP地址为</span>', { icon: 2, time:0, closeBtn:2, shade:  [0.3, '#000']});
+        //   return false
+        // }
       })
     }
   },
@@ -1089,6 +1120,10 @@ var soft = {
           setTimeout(function () {
             layer.msg('导入成功!');
           }, 1000)
+        }else{
+          layer.msg(data.msg, {
+            icon: 2
+          });
         }
       },
       error: function (responseStr) {
@@ -1202,6 +1237,7 @@ var soft = {
       var arrs = datas.public;
       if (name === 'phpmyadmin') arrs = [];
       if (name === 'openlitespeed') arrs.length = 1;
+      if(name === 'pureftpd') arrs.push({type: 'pureftpd_log',title: '日志管理'});
       arrs = arrs.concat(datas[name]);
       if (arrs) {
         for (var i = 0; i < arrs.length; i++) {
@@ -1360,6 +1396,27 @@ var soft = {
     var version = data.name;
     if (data.name.indexOf('php-') >= 0) version = data.name.split('-')[1].replace('.', '');
     switch (key) {
+      case 'pureftpd_log': //ftp日志管理
+        var tabCon = $(".soft-man-con").empty();
+        bt.pub.get_ftp_logs(function (_status) {
+          tabCon.append('<div class="inlineBlock" style="height: 30px;">\
+              <span style="vertical-align: middle;">日志管理开关</span>\
+              <div class="ftp-log ml5" style="float: inherit;display: inline-block;vertical-align: middle;">\
+                  <input class="btswitch btswitch-ios" id="isFtplog" type="checkbox" '+ (_status ? 'checked' : '') +'>\
+                  <label class="btswitch-btn isFtplog" for="isFtplog"></label>\
+              </div>\
+          </div><ul class="help-info-text c7"><li>开启后，将记录所有FTP用户的登录、操作记录</li></ul>');
+          $('.ftp-log .isFtplog').unbind('click').click(function () {
+            var status = $(this).prev().prop('checked');
+            bt.pub.set_ftp_logs(status ? 'stop' : 'start')
+          })
+          var ltd = parseInt(bt.get_cookie('ltd_end')  || -1)
+          if(ltd < 0){
+            tabCon.append('<div class="mask_layer">\
+              <div class="prompt_description" style="margin-top: -60px;">此功能为企业版专享功能，请先购买企业版， <a class="btlink" onclick="bt.soft.product_pay_view({totalNum:51,limit:\''+ "ltd" +'\',closePro:false})">立即购买</a></div></div>')
+          }
+        })
+      break;
       case 'service':
         var tabCon = $(".soft-man-con").empty();
         var status_list = [{
@@ -1851,14 +1908,7 @@ var soft = {
               ps: lan.soft.mysql_set_max_connections
             },
             {
-              items: [{
-                text: lan.soft.mysql_set_restart,
-                type: 'button',
-                name: 'bt_mysql_restart',
-                callback: function (ldata) {
-                  bt.pub.set_server_status('mysqld', 'restart');
-                }
-              },
+              items: [
                 {
                   text: lan.public.save,
                   type: 'button',
@@ -1872,6 +1922,14 @@ var soft = {
                         icon: rdata.status ? 1 : 2
                       });
                     });
+                  }
+                },
+                {
+                  text: lan.soft.mysql_set_restart,
+                  type: 'button',
+                  name: 'bt_mysql_restart',
+                  callback: function (ldata) {
+                    bt.pub.set_server_status('mysqld', 'restart');
                   }
                 }
               ]
@@ -2167,6 +2225,10 @@ var soft = {
         var loadT = bt.load(lan.public.get_the);
         bt.send('GetMemcachedStatus', 'ajax/GetMemcachedStatus', {}, function (rdata) {
           loadT.close();
+					if(!rdata.status) {
+						$('.bt-soft-menu .bt_server').click()
+						return bt.msg(rdata);
+					}
           if (key == 'memcached_set') {
             var form_data = [{
               title: 'BindIP',

@@ -327,8 +327,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
 
         public.WriteLog('TYPE_FILE', 'FILE_UPLOAD_SUCCESS',
                         (args.f_name, args.f_path))
-        # 添加上传功能关键数据收集
-        public.set_module_logs('files_upload', 'upload', 1)
+
         return public.returnMsg(True, '上传成功!')
 
     # 设置文件和目录权限
@@ -1397,8 +1396,10 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                     return public.returnMsg(False,'配置文件保存失败：<p style="color:red;">请勿修改SSL相关配置中注释的404规则</p><p>要修改404配置，找到以下配置位置：</p><pre>#ERROR-PAGE-START  错误页配置</pre>')
 
         if 'st_mtime' in get:
-            st_mtime = str(int(os.stat(get.path).st_mtime))
-            if st_mtime != get['st_mtime']: return public.returnMsg(False,'保存失败，{}文件已发生改变，请刷新内容后重新修改.'.format(get.path))
+            if not 'force' in get or get['force'] != '1':
+                st_mtime = str(int(os.stat(get.path).st_mtime))
+                if st_mtime != get['st_mtime']:
+                    return public.returnMsg(False,'保存失败，{}文件发生改变，可能是该文件已经被其他人修改，请刷新内容后重新修改.'.format(get.path))
 
         his_path = '/www/backup/file_history/'
         if get.path.find(his_path) != -1:
@@ -1652,8 +1653,8 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
                 return public.returnMsg(False,'RAR组件只支持x86_64平台')
         import panelTask
         task_obj = panelTask.bt_task()
-        max_size = 1024*1024*100
-        max_num = 10000
+        max_size = 1024*1024*500
+        max_num = 20000
         total_size = 0
         total_num = 0
         status = True
@@ -1662,7 +1663,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             status,total_size,total_num = self.is_max_size(path,max_size,max_num,total_size,total_num)
             if not status: break
 
-        # 如果被压缩目标小于100MB或文件数量少于1W个，则直接在主线程压缩
+        # 如果被压缩目标小于500MB或文件数量少于2W个，则直接在主线程压缩
         if not status:
             return task_obj._zip(get.path,get.sfile,get.dfile,'/tmp/zip.log',get.z_type)
 
@@ -1684,7 +1685,7 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
             return public.returnMsg(False, '指定压缩包不存在!')
         zip_size = os.path.getsize(get.sfile)
         task_obj = panelTask.bt_task()
-        if zip_size < 1024 * 1024 * 50:
+        if zip_size < 1024 * 1024 * 500:
             return task_obj._unzip(get.sfile, get.dfile, get.password,"/tmp/unzip.log")
 
         task_obj.create_task('解压文件', 2, get.sfile, json.dumps(

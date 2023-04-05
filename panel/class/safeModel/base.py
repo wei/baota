@@ -68,6 +68,8 @@ class safeBase:
         s_key = 'secure'
         if not os.path.exists('/var/log/secure'):
             s_key = 'auth.log'
+        if os.path.exists('/var/log/secure') and os.path.getsize('/var/log/secure') == 0:
+            s_key = 'auth.log'
 
         res = []
         spath = '/var/log/'

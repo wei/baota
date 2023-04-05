@@ -24,6 +24,7 @@ import public
 import db
 import threading
 import panelTask
+import process_task
 task_obj = panelTask.bt_task()
 task_obj.not_web = True
 global pre, timeoutCount, logPath, isTask, oldEdate, isCheck
@@ -224,16 +225,17 @@ def systemTask():
 
         count = 0
         reloadNum = 0
-        disk_wr = 0
         diskio_1 = diskio_2 = networkInfo = cpuInfo = diskInfo = None
         network_up = {}
         network_down = {}
-        process_object = process_task()
+        cycle = 60
         try:
             from panelDaily import panelDaily
             panelDaily().check_databases()
         except Exception as e:
             logging.info(e)
+
+        proc_task_obj = process_task.process_task()
 
         while True:
             if not os.path.exists(filename):
@@ -249,17 +251,14 @@ def systemTask():
             except:
                 day = 30
 
-            tmp = {}
+
+            addtime = int(time.time())
+            deltime = addtime - (day * 86400)
             # 取当前CPU Io
-            tmp['used'] = cpu_percent(interval=1)
-
-            if not cpuInfo:
-                tmp['mem'] = GetMemUsed()
-                cpuInfo = tmp
-
-            if cpuInfo['used'] < tmp['used']:
-                tmp['mem'] = GetMemUsed()
-                cpuInfo = tmp
+            tmp = {}
+            tmp['used'] = proc_task_obj.get_monitor_list(addtime)
+            tmp['mem'] = GetMemUsed()
+            cpuInfo = tmp
 
             # 取当前网络Io
             networkIo_list = net_io_counters(pernic=True)
@@ -280,19 +279,19 @@ def systemTask():
                 tmp['upTotal'] += networkIo[0]
                 tmp['downTotal'] += networkIo[1]
                 tmp['downPackets'][k] = round(
-                    float((networkIo[1] - network_down[k]) / 1024)/5, 2)
+                    float((networkIo[1] - network_down[k]) / 1024)/cycle, 2)
                 tmp['upPackets'][k] = round(
-                    float((networkIo[0] - network_up[k]) / 1024)/5, 2)
+                    float((networkIo[0] - network_up[k]) / 1024)/cycle, 2)
                 tmp['up'] += tmp['upPackets'][k]
                 tmp['down'] += tmp['downPackets'][k]
 
                 network_up[k] = networkIo[0]
                 network_down[k] = networkIo[1]
 
-            if not networkInfo:
-                networkInfo = tmp
-            if (tmp['up'] + tmp['down']) > (networkInfo['up'] + networkInfo['down']):
-                networkInfo = tmp
+            # if not networkInfo:
+            #     networkInfo = tmp
+            # if (tmp['up'] + tmp['down']) > (networkInfo['up'] + networkInfo['down']):
+            networkInfo = tmp
 
             # 取磁盘Io
             disk_ios = True
@@ -303,23 +302,23 @@ def systemTask():
                     if not diskio_1:
                         diskio_1 = diskio_2
                     tmp = {}
-                    tmp['read_count'] = int((diskio_2.read_count - diskio_1.read_count) / 5)
-                    tmp['write_count'] = int((diskio_2.write_count - diskio_1.write_count) / 5)
-                    tmp['read_bytes'] = int((diskio_2.read_bytes - diskio_1.read_bytes) / 5)
-                    tmp['write_bytes'] = int((diskio_2.write_bytes -  diskio_1.write_bytes) / 5)
-                    tmp['read_time'] = int((diskio_2.read_time - diskio_1.read_time) / 5)
-                    tmp['write_time'] = int((diskio_2.write_time - diskio_1.write_time) / 5)
+                    tmp['read_count'] = int((diskio_2.read_count - diskio_1.read_count) / cycle)
+                    tmp['write_count'] = int((diskio_2.write_count - diskio_1.write_count) / cycle)
+                    tmp['read_bytes'] = int((diskio_2.read_bytes - diskio_1.read_bytes) / cycle)
+                    tmp['write_bytes'] = int((diskio_2.write_bytes -  diskio_1.write_bytes) / cycle)
+                    tmp['read_time'] = int((diskio_2.read_time - diskio_1.read_time) / cycle)
+                    tmp['write_time'] = int((diskio_2.write_time - diskio_1.write_time) / cycle)
 
                     if not diskInfo:
                         diskInfo = tmp
 
-                    if (tmp['read_bytes'] + tmp['write_bytes']) > (diskInfo['read_bytes'] + diskInfo['write_bytes']):
-                        diskInfo['read_count'] = tmp['read_count']
-                        diskInfo['write_count'] = tmp['write_count']
-                        diskInfo['read_bytes'] = tmp['read_bytes']
-                        diskInfo['write_bytes'] = tmp['write_bytes']
-                        diskInfo['read_time'] = tmp['read_time']
-                        diskInfo['write_time'] = tmp['write_time']
+                    # if (tmp['read_bytes'] + tmp['write_bytes']) > (diskInfo['read_bytes'] + diskInfo['write_bytes']):
+                    diskInfo['read_count'] = tmp['read_count']
+                    diskInfo['write_count'] = tmp['write_count']
+                    diskInfo['read_bytes'] = tmp['read_bytes']
+                    diskInfo['write_bytes'] = tmp['write_bytes']
+                    diskInfo['read_time'] = tmp['read_time']
+                    diskInfo['write_time'] = tmp['write_time']
 
                     # logging.info(['read: ',tmp['read_bytes'] / 1024 / 1024,'write: ',tmp['write_bytes'] / 1024 / 1024])
                     diskio_1 = diskio_2
@@ -327,90 +326,85 @@ def systemTask():
                 logging.info(public.get_error_info())
                 disk_ios = False
 
-            if count >= 12:
-                try:
-                    sql = db.Sql().dbfile('system')
-                    addtime = int(time.time())
-                    deltime = addtime - (day * 86400)
+            try:
+                sql = db.Sql().dbfile('system')
+                data = (cpuInfo['used'], cpuInfo['mem'], addtime)
+                sql.table('cpuio').add('pro,mem,addtime', data)
+                sql.table('cpuio').where("addtime<?", (deltime,)).delete()
+                data = (networkInfo['up'], networkInfo['down'], networkInfo['upTotal'], networkInfo['downTotal'], dumps(networkInfo['downPackets']), dumps(networkInfo['upPackets']), addtime)
+                sql.table('network').add('up,down,total_up,total_down,down_packets,up_packets,addtime', data)
+                sql.table('network').where("addtime<?", (deltime,)).delete()
+                # logging.info(diskInfo)
+                if os.path.exists('/proc/diskstats') and disk_ios:
+                    data = (diskInfo['read_count'], diskInfo['write_count'], diskInfo['read_bytes'],diskInfo['write_bytes'], diskInfo['read_time'], diskInfo['write_time'], addtime)
+                    sql.table('diskio').add('read_count,write_count,read_bytes,write_bytes,read_time,write_time,addtime', data)
+                    sql.table('diskio').where("addtime<?", (deltime,)).delete()
 
-                    data = (cpuInfo['used'], cpuInfo['mem'], addtime)
-                    sql.table('cpuio').add('pro,mem,addtime', data)
-                    sql.table('cpuio').where("addtime<?", (deltime,)).delete()
-                    data = (networkInfo['up'], networkInfo['down'], networkInfo['upTotal'], networkInfo['downTotal'], dumps(networkInfo['downPackets']), dumps(networkInfo['upPackets']), addtime)
-                    sql.table('network').add('up,down,total_up,total_down,down_packets,up_packets,addtime', data)
-                    sql.table('network').where("addtime<?", (deltime,)).delete()
-                    # logging.info(diskInfo)
-                    if os.path.exists('/proc/diskstats') and disk_ios:
-                        data = (diskInfo['read_count'], diskInfo['write_count'], diskInfo['read_bytes'],diskInfo['write_bytes'], diskInfo['read_time'], diskInfo['write_time'], addtime)
-                        sql.table('diskio').add('read_count,write_count,read_bytes,write_bytes,read_time,write_time,addtime', data)
-                        sql.table('diskio').where("addtime<?", (deltime,)).delete()
+                # LoadAverage
+                load_average = GetLoadAverage()
+                lpro = round(
+                    (load_average['one'] / load_average['max']) * 100, 2)
+                if lpro > 100:
+                    lpro = 100
+                sql.table('load_average').add('pro,one,five,fifteen,addtime', (lpro, load_average['one'], load_average['five'], load_average['fifteen'], addtime))
+                sql.table('load_average').where("addtime<?", (deltime,)).delete()
+                sql.close()
 
-                    # LoadAverage
-                    load_average = GetLoadAverage()
-                    lpro = round(
-                        (load_average['one'] / load_average['max']) * 100, 2)
-                    if lpro > 100:
-                        lpro = 100
-                    sql.table('load_average').add('pro,one,five,fifteen,addtime', (lpro, load_average['one'], load_average['five'], load_average['fifteen'], addtime))
-                    sql.table('load_average').where("addtime<?", (deltime,)).delete()
-                    sql.table('process_high_percent').where("addtime<?", (deltime,)).delete()
-                    sql.table('process_tops').where("addtime<?", (deltime,)).delete()
-                    sql.close()
+                lpro = None
+                load_average = None
+                cpuInfo = None
+                networkInfo = None
+                diskInfo = None
+                data = None
+                count = 0
+                reloadNum += 1
+                if reloadNum > 1440:
+                    reloadNum = 0
 
-                    lpro = None
-                    load_average = None
-                    cpuInfo = None
-                    networkInfo = None
-                    diskInfo = None
-                    data = None
-                    count = 0
-                    reloadNum += 1
-                    if reloadNum > 1440:
-                        reloadNum = 0
-                    process_object.get_monitor_list()
 
-                    # 日报数据收集
-                    if os.path.exists("/www/server/panel/data/start_daily.pl"):
-                        try:
-                            from panelDaily import panelDaily
-                            pd = panelDaily()
-                            t_now = time.localtime()
-                            yesterday  = time.localtime(time.mktime((
-                                t_now.tm_year, t_now.tm_mon, t_now.tm_mday-1,
-                                0,0,0,0,0,0
-                            )))
-                            yes_time_key = pd.get_time_key(yesterday)
-                            con = ReadFile("/www/server/panel/data/store_app_usage.pl")
-                            # logging.info(str(con))
-                            store = False
-                            if con:
-                                if con != str(yes_time_key):
-                                    store = True
-                            else:
+
+                # 日报数据收集
+                if os.path.exists("/www/server/panel/data/start_daily.pl"):
+                    try:
+                        from panelDaily import panelDaily
+                        pd = panelDaily()
+                        t_now = time.localtime()
+                        yesterday  = time.localtime(time.mktime((
+                            t_now.tm_year, t_now.tm_mon, t_now.tm_mday-1,
+                            0,0,0,0,0,0
+                        )))
+                        yes_time_key = pd.get_time_key(yesterday)
+                        con = ReadFile("/www/server/panel/data/store_app_usage.pl")
+                        # logging.info(str(con))
+                        store = False
+                        if con:
+                            if con != str(yes_time_key):
                                 store = True
+                        else:
+                            store = True
 
-                            if store:
-                                date_str = str(yes_time_key)
-                                daily_data = pd.get_daily_data_local(date_str)
-                                if "status" in daily_data.keys():
-                                    if daily_data["status"]:
-                                        score = daily_data["score"]
-                                        if public.M("system").dbfile("system").table("daily").where("time_key=?", (yes_time_key,)).count() == 0:
-                                            public.M("system").dbfile("system").table("daily").add("time_key,evaluate,addtime", (yes_time_key, score, time.time()))
-                                        pd.store_app_usage(yes_time_key)
-                                        WriteFile("/www/server/panel/data/store_app_usage.pl", str(yes_time_key), "w")
-                                    # logging.info("更新应用存储信息:"+str(yes_time_key))
-                                    pd.check_server()
-                        except Exception as e:
-                            logging.info("存储应用空间信息错误:"+str(e))
-                except Exception as ex:
-                    logging.info(str(ex))
+                        if store:
+                            date_str = str(yes_time_key)
+                            daily_data = pd.get_daily_data_local(date_str)
+                            if "status" in daily_data.keys():
+                                if daily_data["status"]:
+                                    score = daily_data["score"]
+                                    if public.M("system").dbfile("system").table("daily").where("time_key=?", (yes_time_key,)).count() == 0:
+                                        public.M("system").dbfile("system").table("daily").add("time_key,evaluate,addtime", (yes_time_key, score, time.time()))
+                                    pd.store_app_usage(yes_time_key)
+                                    WriteFile("/www/server/panel/data/store_app_usage.pl", str(yes_time_key), "w")
+                                # logging.info("更新应用存储信息:"+str(yes_time_key))
+                                pd.check_server()
+                    except Exception as e:
+                        logging.info("存储应用空间信息错误:"+str(e))
+            except Exception as ex:
+                logging.info(str(ex))
             del(tmp)
-            time.sleep(5)
+            time.sleep(cycle)
             count += 1
     except Exception as ex:
         logging.info(ex)
-        time.sleep(30)
+        time.sleep(cycle)
         systemTask()
 
 
@@ -502,7 +496,6 @@ def checkPHPVersion(version):
 
 # 502错误检查线程
 def check502Task():
-    import PluginLoader
     try:
         while True:
             public.auto_backup_panel()
@@ -511,10 +504,8 @@ def check502Task():
             mysql_quota_check()
             siteEdate()
             time.sleep(600)
-            PluginLoader.daemon_panel()
     except Exception as ex:
         logging.info(ex)
-        PluginLoader.daemon_panel()
         time.sleep(600)
         check502Task()
 
@@ -693,162 +684,8 @@ def check_panel_msg():
 def push_msg():
     python_bin = get_python_bin()
     while True:
-        os.system('nohup {} /www/server/panel/script/push_msg.py > /dev/null 2>&1 &'.format(python_bin))
         time.sleep(60)
-
-class process_task:
-
-    __pids = []
-    __last_times = {}
-    __last_dates = {}
-    __cpu_count = cpu_count()
-    __sql = None
-
-    def __init__(self):
-        self.__sql = db.Sql().dbfile('system')
-        csql = '''CREATE TABLE IF NOT EXISTS `process_tops` (
-  `id` INTEGER PRIMARY KEY AUTOINCREMENT,
-  `process_list` REAL,
-  `addtime` INTEGER
-)'''
-        self.__sql.execute(csql, ())
-        csql = '''CREATE TABLE IF NOT EXISTS `process_high_percent` (
-  `id` INTEGER PRIMARY KEY AUTOINCREMENT,
-  `name` REAL,
-  `pid`  REAL,
-  `cmdline` REAL,
-  `cpu_percent` FLOAT,
-  `memory` FLOAT,
-  `cpu_time_total` INTEGER,
-  `addtime` INTEGER
-)'''
-        self.__sql.execute(csql, ())
-        self.__sql.close()
-
-    def get_pids(self):
-        '''
-            @name 获取pid列表
-            @author hwliang<2021-09-04>
-            @return None
-        '''
-        self.__pids = pids()
-
-    def get_cpu_percent(self,pid,cpu_time_total):
-        '''
-            @name 获取pid的cpu占用率
-            @author hwliang<2021-09-04>
-            @param pid 进程id
-            @param cpu_time_total 进程总cpu时间
-            @return 占用cpu百分比
-        '''
-        stime = time.time()
-        if pid in self.__last_times:
-            old_time = self.__last_times[pid]
-        else:
-            self.__last_times[pid] = cpu_time_total
-            self.__last_dates[pid] = stime
-            return 0
-
-        cpu_percent = round(100.00 * float(cpu_time_total - old_time) / (stime - self.__last_dates[pid]) / self.__cpu_count,2)
-        return cpu_percent
-
-    def read_file(self,filename):
-        f = open(filename,'rb')
-        result = f.read()
-        f.close()
-        return result.decode().replace("\u0000"," ").strip()
-
-    def get_monitor_list(self):
-        '''
-            @name 获取监控列表
-            @author hwliang<2021-09-04>
-            @return list
-        '''
-        self.get_pids()
-        monitor_list = {}
-        cpu_src_limit = 30
-        cpu_pre_limit = 80 / self.__cpu_count
-
-        addtime = int(time.time())
-        for pid in self.__pids:
-            try:
-                process_proc_comm = '/proc/{}/comm'.format(pid)
-                process_proc_cmdline = '/proc/{}/cmdline'.format(pid)
-                if pid < 100: continue
-                p = Process(pid)
-
-                cpu_times = p.cpu_times()
-                cpu_time_total = int(sum(cpu_times))
-                pname = self.read_file(process_proc_comm)
-                cmdline = self.read_file(process_proc_cmdline)
-                rss = p.memory_info().rss
-                cpu_percent = self.get_cpu_percent(pid,cpu_time_total)
-                pid = str(pid)
-                ppid = str(p.ppid())
-                if ppid in monitor_list:
-                    monitor_list[ppid]['pid'].append(pid)
-                    monitor_list[ppid]['cpu_time_total'] += cpu_time_total
-                    monitor_list[ppid]['memory'] += rss
-                    monitor_list[ppid]['cpu_percent'] += cpu_percent
-                else:
-                    if pname == 'php-fpm':
-                        if cmdline.find('/www/server/php/') != -1:
-                            pname += '(' + '.'.join(cmdline.split('/')[-3]) + ')'
-                    elif pname in ['mysqld','mysqld_safe']:
-                        pname = 'mysqld,mysql_safe(MySQL)'
-                    elif pname in ['BT-Task','BT-Panel']:
-                        continue
-
-                    monitor_list[pid] = {
-                        'pid':[pid],
-                        'name':pname,
-                        'cmdline': cmdline,
-                        'memory': rss,
-                        'cpu_time_total': cpu_time_total,
-                        'cpu_percent': cpu_percent
-                    }
-
-            except:
-                continue
-
-        process_info_list = []
-        cpu_high_list = []
-        for i in monitor_list:
-            pid_count = len(monitor_list[i]['pid'])
-            monitor_list[i]['pid'] = ','.join(monitor_list[i]['pid'])
-            process_info_list.append(monitor_list[i])
-
-            # 记录CPU占用超过 cpu_pre_limit 的进程
-            if pid_count > 1:
-                if monitor_list[i]['cpu_percent'] >= cpu_src_limit:
-                    cpu_high_list.append(monitor_list[i])
-            else:
-                if monitor_list[i]['cpu_percent'] >= cpu_pre_limit:
-                    cpu_high_list.append(monitor_list[i])
-
-
-        self.__sql = db.Sql().dbfile('system')
-        process_info_list = sorted(process_info_list,key=lambda x:x['cpu_time_total'],reverse=True)
-        self.__sql.table('process_tops').insert({"process_list": dumps(process_info_list[:10]),'addtime':addtime})
-
-        if cpu_high_list:
-            for cpu_high in cpu_high_list:
-                self.__sql.table('process_high_percent').addAll(
-                    'pid,name,cmdline,memory,cpu_time_total,cpu_percent,addtime',
-                    (
-                        cpu_high['pid'],
-                        cpu_high['name'],
-                        cpu_high['cmdline'],
-                        cpu_high['memory'],
-                        cpu_high['cpu_time_total'],
-                        cpu_high['cpu_percent'],
-                        addtime
-                    )
-                )
-            self.__sql.commit()
-
-        self.__sql.close()
-
+        os.system('nohup {} /www/server/panel/script/push_msg.py > /dev/null 2>&1 &'.format(python_bin))
 
 
 def JavaProDaemons():
@@ -944,6 +781,55 @@ def ProDadmons():
             pass
         GoDaemons()
 
+def process_task_thread():
+    '''
+        @name 进程监控
+        @auther hwliang
+    '''
+
+
+    # 进程流量监控，如果文件：/www/server/panel/data/is_net_task.pl 或 /www/server/panel/data/control.conf不存在，则不监控进程流量
+    net_task_obj = process_task.process_network_total()
+    net_task_obj.start()
+
+
+def run_tasks_list():
+    """
+    @name 延时启动任务
+    """
+    spath = '{}/data/tasks'.format(public.get_panel_path())
+
+    try:
+        import PluginLoader
+    except:pass
+
+    while True:
+        if os.path.exists(spath):
+            for file in os.listdir(spath):
+                filename = '{}/{}'.format(spath,file)
+                try:
+                    data = loads(public.readFile(filename))
+                    #超过执行时间
+                    if time.time() > data['time']:
+                        #插件
+                        if data['type'] == 2 :
+                            res = PluginLoader.plugin_run(data['name'], data['fun'], data['args'])
+                            if not res['status']: continue
+
+                            os.remove(filename)
+                            public.WriteLog(data['title'],res['msg'])
+                        elif data['type'] == 1:
+                            #面板
+                            pass
+                except:
+                    os.remove(filename)
+        time.sleep(60)
+
+
+
+
+
+
 def run_thread():
     global thread_dict,task_obj
     tkeys = thread_dict.keys()
@@ -960,6 +846,8 @@ def run_thread():
         "check_panel_msg": check_panel_msg,
         "push_msg": push_msg,
         "ProDadmons":ProDadmons,
+        "process_task_thread":process_task_thread,
+        'run_tasks_list':run_tasks_list
     }
 
     for skey in thread_list.keys():
@@ -967,6 +855,8 @@ def run_thread():
             thread_dict[skey] = threading.Thread(target=thread_list[skey])
             thread_dict[skey].setDaemon(True)
             thread_dict[skey].start()
+
+
 
 def main():
     main_pid = 'logs/task.pid'
@@ -986,7 +876,6 @@ def main():
     sys.stdout.flush()
     sys.stderr.flush()
     task_log_file = 'logs/task.log'
-
     try:
         logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s]: %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S', filename=task_log_file, filemode='a+')

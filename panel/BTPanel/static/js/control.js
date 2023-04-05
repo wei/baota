@@ -1,4 +1,4 @@
- $('.footer').css({
+$('.footer').css({
   'position': 'inherit',
   'padding-left': '180px'
 });  //日报悬浮调整
@@ -219,8 +219,8 @@ var controlObj = {
     },
 
     /**
-    * 获取默认echart配置
-    */
+     * 获取默认echart配置
+     */
     get_default_option: function (startTime, endTime) {
       var interval = ((endTime - startTime) / 3) * 1000;
       return {
@@ -288,9 +288,9 @@ var controlObj = {
     },
 
     /**
-    * 补全数据
-    * @param {*} rdata 
-    */
+     * 补全数据
+     * @param {*} rdata
+     */
     set_data: function (data, startTime, endTime) {
       if (data.length <= 0) return;
       var time;
@@ -312,22 +312,24 @@ var controlObj = {
     get_time: function (date, endDate) {
       var endMonth = endDate.split(' ')[0].split('/');
       endMonth = parseInt(endMonth);
-
       var today = new Date();
       var str = date.split(' ');
       var dateStr = str[0].split('/');
       var timeStr = str[1].split(':');
       var month = parseInt(dateStr[0]);
       var year = today.getFullYear();
-      if (month > endMonth) {
+      var toMonth = today.getMonth()+1;   //当前月份
+      if (month > toMonth || (month == 12 && month == endMonth)) {
         year -= 1;
       }
       var newDate = new Date(year, month - 1, dateStr[1], timeStr[0], timeStr[1]);
       return newDate.getTime();
     },
 
+    cpuTopData:{},
     //cpu
     cpu: function (b, e) {
+      var _that = this;
       var that = controlObj.conTrolView;
       $.get('/ajax?action=GetCpuIo&start=' + b + '&end=' + e, function (rdata) {
         that.set_data(rdata, b, e);
@@ -337,10 +339,10 @@ var controlObj = {
         //var zData = [];
         if (rdata.length > 0) {
           for (var i = 0; i < rdata.length; i++) {
-            // xData.push(rdata[i].addtime);
-            // yData.push(rdata[i].pro);
-            // zData.push(rdata[i].mem);
-            yData.push([rdata[i].addtime, rdata[i].pro]);
+            var item = rdata[i]
+            yData.push([item.addtime, item.pro]);
+            if(_that.cpuTopData === undefined) _that.cpuTopData = {};
+            _that.cpuTopData[item.addtime] = item.cpu_top;
           }
           var startTime = rdata[0].addtime / 1000;
           var endTime = rdata[rdata.length - 1].addtime / 1000;
@@ -354,16 +356,29 @@ var controlObj = {
     },
 
     /**
-    * 获取cpu图表配置
-    */
+     * 获取cpu图表配置
+     */
     get_cpu_option: function (startTime, endTime, yData) {
+      var that = this;
       var option = this.get_default_option(startTime, endTime);
       option.tooltip.formatter = function (config) {
-        var data = config[0];
-        var time = data.data[0];
-        var date = bt.format_data(time / 1000);
-        return date + '<br>' + data.seriesName + ': ' + data.data[1].toFixed(2) + '%';
+        var legendList = '';
+        for (var i = 0; i < config.length; i++) {
+          var item = config[i];
+          legendList += '<div class="select-data"><span class="status" style="background-color: '+ item.color +'"></span><span>'+ item.seriesName + '：' + item.data[1].toFixed(2) +'%</span></div>'
+        }
+        return that.echarts_formatter({
+          time: config[0].axisValueLabel,
+          data: that.cpuTopData[config[0].axisValue],
+          legend: legendList
+        })
       };
+      option.tooltip.padding = 0;
+      option.tooltip.backgroundColor = 'rgba(255,255,255,0.95)';
+      option.tooltip.borderColor = '#eee';
+      option.tooltip.position = function (pos, params, dom, rect, size) {
+        return that.echarts_position('cpuview',{pos:pos,size:size})
+      }
       option.yAxis.name = lan.public.pre;
       option.yAxis.min = 0;
       option.yAxis.max = 100;
@@ -371,7 +386,9 @@ var controlObj = {
         {
           name: 'CPU',
           type: 'line',
-          symbol: 'none',
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: false,
           itemStyle: {
             normal: {
               color: 'rgb(0, 153, 238)'
@@ -383,8 +400,10 @@ var controlObj = {
       return option;
     },
 
+    memTopData:{},
     //内存
     mem: function (b, e) {
+      var _that = this;
       var that = controlObj.conTrolView;
       $.get('/ajax?action=GetCpuIo&start=' + b + '&end=' + e, function (rdata) {
         that.set_data(rdata, b, e);
@@ -394,10 +413,13 @@ var controlObj = {
         var zData = [];
         if (rdata.length > 0) {
           for (var i = 0; i < rdata.length; i++) {
+            var item = rdata[i]
             // xData.push(rdata[i].addtime);
             // yData.push(rdata[i].pro);
             // zData.push(rdata[i].mem);
             zData.push([rdata[i].addtime, rdata[i].mem]);
+            if(_that.memTopData === undefined) _that.memTopData = {};
+            _that.memTopData[item.addtime] = item.memory_top;
           }
           var startTime = rdata[0].addtime / 1000;
           var endTime = rdata[rdata.length - 1].addtime / 1000;
@@ -411,16 +433,37 @@ var controlObj = {
     },
 
     /**
-    * 获取mem图表配置
-    */
+     * 获取mem图表配置
+     */
     get_mem_option: function (startTime, endTime, zData) {
+      var that = this;
       var option = this.get_default_option(startTime, endTime);
       option.tooltip.formatter = function (config) {
-        var data = config[0];
-        var time = data.data[0];
-        var date = bt.format_data(time / 1000);
-        return date + '<br>' + data.seriesName + ': ' + data.data[1].toFixed(2) + '%';
+        var legendList = '';
+        for (var i = 0; i < config.length; i++) {
+          var item = config[i];
+          legendList += '<div class="select-data"><span class="status" style="background-color: '+ item.color +'"></span><span>'+ item.seriesName + '：' + item.data[1].toFixed(2) +'%</span></div>'
+        }
+        return that.echarts_formatter({
+          time: config[0].axisValueLabel,
+          data: that.memTopData[config[0].axisValue],
+          table:[
+            {title:'PID', width:'40px', index: 1},
+            {title:'进程名', index: 2},
+            {title:'内存占用', index: 0, unit:function (val){
+                return bt.format_size(val)
+              }},
+            {title:'启动用户', index: 4},
+          ],
+          legend: legendList
+        })
       };
+      option.tooltip.padding = 0;
+      option.tooltip.backgroundColor = 'rgba(255,255,255,0.95)';
+      option.tooltip.borderColor = '#eee';
+      option.tooltip.position = function (pos, params, dom, rect, size) {
+        return that.echarts_position('memview',{pos:pos,size:size})
+      }
       option.yAxis.name = lan.public.pre;
       option.yAxis.min = 0;
       option.yAxis.max = 100;
@@ -428,7 +471,9 @@ var controlObj = {
         {
           name: lan.index.process_mem,
           type: 'line',
-          symbol: 'none',
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: false,
           itemStyle: {
             normal: {
               color: 'rgb(0, 153, 238)'
@@ -440,8 +485,10 @@ var controlObj = {
       return option;
     },
 
+    diskTopData:{},
     //磁盘io
     disk: function (b, e) {
+      var _that = this;
       var that = controlObj.conTrolView;
       $.get('/ajax?action=GetDiskIo&start=' + b + '&end=' + e, function (rdata) {
         that.set_data(rdata, b, e);
@@ -462,6 +509,7 @@ var controlObj = {
         var is_gt_MB = false;
         var is_gt_GB = false;
         for (var i = 0; i < rdata.length; i++) {
+          var item = rdata[i];
           var read = (rdata[i].read_bytes / 1024).toFixed(3);
           var write = (rdata[i].write_bytes / 1024).toFixed(3);
           // rData.push(read / unit_size);
@@ -472,6 +520,8 @@ var controlObj = {
           wData.push([rdata[i].addtime, write / unit_size]);
           yData.push([rdata[i].addtime,rdata[i].read_count + rdata[i].write_count]);
           zData.push([rdata[i].addtime,rdata[i].read_time + rdata[i].write_time]);
+          if(_that.diskTopData === undefined) _that.diskTopData = {};
+          _that.diskTopData[item.addtime] = item.disk_top;
           var read_MB = read / 1024;
           var write_MB = write / 1024;
           if ((read_MB >= 1 || write_MB >= 1) && !is_gt_MB) {
@@ -510,30 +560,53 @@ var controlObj = {
     },
 
     /**
-    * 获取磁盘IO图表配置
-    */
+     * 获取磁盘IO图表配置
+     */
     get_disk_option: function (unit, startTime, endTime, rData, wData,zData,yData) {
+      var that = this;
       var option = this.get_default_option(startTime, endTime);
+
       option.tooltip.formatter = function (config) {
-        var data = config[0];
-        var time = data.data[0];
-        var date = bt.format_data(time / 1000);
-        var _tips = '';
-        var _style = '<span style="display: inline-block; width: 10px; height: 10px; margin-rigth:10px; border-radius: 50%; background: ';
+        var legendList = '';
         for (var i = 0; i < config.length; i++) {
-          _tips +=  _style + config[i].color + ';"></span>  ' + config[i].seriesName + '：'
-          if(config[i].seriesName == '读取' || config[i].seriesName == '写入'){
-            _tips += config[i].data[1].toFixed(2) + unit + (config.length - 1 !== i ? '<br />' : '');
-          }else{
-            if(config[i].seriesName == '读写次数'){
-              _tips += config[i].data[1] + '次/s' + (config.length - 1 !== i ? '<br />' : '');
-            }else{
-              _tips +=  config[i].data[1] + 'ms' + (config.length - 1 !== i ? '<br />' : '');
-            }
-          }
+          var item = config[i],_unit = '';
+          if(item.seriesName === '读写次数') _unit = '次/s'
+          if(item.seriesName === '读写延迟') _unit = 'ms'
+          if(item.seriesName === '读取' || item.seriesName === '写入') _unit = unit
+          legendList += '<div class="select-data">' +
+              '<span class="status" style="background-color: '+ item.color +'"></span>' +
+              '<span>'+ item.seriesName + '：' + item.data[1].toFixed(2) + ' ' + _unit +'</span>' +
+              '</div>'
         }
-        return "时间：" + date + "<br />" + _tips;
+        return that.echarts_formatter({
+          time: config[0].axisValueLabel,
+          data: that.diskTopData[config[0].axisValue],
+          width: '470px',
+          table:[
+            {title: 'PID', width: '40px',index:3},
+            {title: '进程名',width: '50px', index: 4},
+            {title: '磁盘占用', index: 0, unit:function (val){
+                return bt.format_size(val);
+              }},
+            {title: '读取', index: 1, unit:function (val){
+                return bt.format_size(val);
+              }},
+            {title: '写入', index: 2, unit:function (val){
+                return bt.format_size(val);
+              }},
+            {title: '启动用户', index: 6},
+          ],
+          legend: legendList
+        })
       };
+
+
+      option.tooltip.padding = 0;
+      option.tooltip.backgroundColor = 'rgba(255,255,255,0.95)';
+      option.tooltip.borderColor = '#eee';
+      option.tooltip.position = function (pos, params, dom, rect, size) {
+        return that.echarts_position('diskview',{pos:pos,size:size})
+      }
       option.legend = {
         top: '18px',
         data: ['读取', '写入','读写次数','读写延迟']
@@ -542,7 +615,9 @@ var controlObj = {
         {
           name: '读取',
           type: 'line',
-          symbol: 'none',
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: false,
           itemStyle: {
             normal: {
               color: 'rgb(255, 70, 131)'
@@ -553,7 +628,9 @@ var controlObj = {
         {
           name: '写入',
           type: 'line',
-          symbol: 'none',
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: false,
           itemStyle: {
             normal: {
               color: 'rgba(46, 165, 186, .7)'
@@ -565,7 +642,9 @@ var controlObj = {
         {
           name: '读写次数',
           type: 'line',
-          symbol: 'none',
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: false,
           itemStyle: {
             normal: {
               color: 'rgba(30, 144, 255)'
@@ -577,7 +656,9 @@ var controlObj = {
         {
           name: '读写延迟',
           type: 'line',
-          symbol: 'none',
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: false,
           itemStyle: {
             normal: {
               color: 'rgba(255, 140, 0)'
@@ -684,9 +765,10 @@ var controlObj = {
     },
 
     /**
-    * 获取网络IO图表配置
-    */
+     * 获取网络IO图表配置
+     */
     get_network_option: function (unit, startTime, endTime, yData, zData) {
+      var that = this;
       var option = this.get_default_option(startTime, endTime);
       option.tooltip.formatter = function (config) {
         var data = config[0];
@@ -694,10 +776,24 @@ var controlObj = {
         var date = bt.format_data(time / 1000);
         var _tips = '';
         for (var i = 0; i < config.length; i++) {
-          _tips += '<span style="display: inline-block;width: 10px;height: 10px;margin-rigth:10px;border-radius: 50%;background: ' + config[i].color + ';"></span> ' + config[i].seriesName + '：' + config[i].data[1].toFixed(3) + unit + (config.length - 1 !== i ? '<br />' : '');
+          var item = config[i]
+          _tips += '<div class="select-data">' +
+              '<span class="status" style="background-color: '+ item.color +'"></span>' +
+              '<span>'+ item.seriesName +'：'+ item.data[1].toFixed(3) +' '+ unit +'</span>' +
+              '</div>'
         }
-        return "时间：" + date + "<br />" + _tips;
+        return that.echarts_formatter({
+          width:'280px',
+          time: config[0].axisValueLabel,
+          legend: _tips
+        })
       };
+      option.tooltip.padding = 0;
+      option.tooltip.backgroundColor = 'rgba(255,255,255,0.95)';
+      option.tooltip.borderColor = '#eee';
+      option.tooltip.position = function (pos, params, dom, rect, size) {
+        return that.echarts_position('network',{pos:pos,size:size})
+      }
       option.legend = {
         top: '18px',
         data: [lan.index.net_up, lan.index.net_down]
@@ -706,7 +802,9 @@ var controlObj = {
         {
           name: lan.index.net_up,
           type: 'line',
-          symbol: 'none',
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: false,
           itemStyle: {
             normal: {
               color: 'rgb(255, 140, 0)'
@@ -717,7 +815,9 @@ var controlObj = {
         {
           name: lan.index.net_down,
           type: 'line',
-          symbol: 'none',
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: false,
           itemStyle: {
             normal: {
               color: 'rgb(30, 144, 255)'
@@ -806,7 +906,8 @@ var controlObj = {
               name: '系统资源使用率',
               type: 'line',
               smooth: true,
-              symbol: 'none',
+              showSymbol: true,
+              symbol: 'circle',
               sampling: 'average',
               itemStyle: {
                 normal: {
@@ -819,7 +920,8 @@ var controlObj = {
               name: '1分钟',
               type: 'line',
               smooth: true,
-              symbol: 'none',
+              showSymbol: true,
+              symbol: 'circle',
               sampling: 'average',
               itemStyle: {
                 normal: {
@@ -832,7 +934,8 @@ var controlObj = {
               name: '5分钟',
               type: 'line',
               smooth: true,
-              symbol: 'none',
+              showSymbol: true,
+              symbol: 'circle',
               sampling: 'average',
               itemStyle: {
                 normal: {
@@ -845,7 +948,8 @@ var controlObj = {
               name: '15分钟',
               type: 'line',
               smooth: true,
-              symbol: 'none',
+              showSymbol: true,
+              symbol: 'circle',
               sampling: 'average',
               itemStyle: {
                 normal: {
@@ -863,9 +967,10 @@ var controlObj = {
       })
     },
 
-
+    loadCpuTopData: {},
     // 系统负载
     getload: function (b, e) {
+      var _that = this;
       var that = controlObj.conTrolView;
       $.get('/ajax?action=get_load_average&start=' + b + '&end=' + e, function (rdata) {
         that.set_data(rdata, b, e);
@@ -886,6 +991,8 @@ var controlObj = {
           yData.push([rdata[i].addtime, rdata[i].pro]);
           aData.push([rdata[i].addtime, rdata[i].five]);
           bData.push([rdata[i].addtime, rdata[i].fifteen]);
+          if(_that.loadCpuTopData === undefined) _that.loadCpuTopData = {};
+          _that.loadCpuTopData[rdata[i].addtime] = rdata[i].cpu_top;
         }
         if (rdata.length > 0) {
           var startTime = rdata[0].addtime / 1000;
@@ -900,44 +1007,41 @@ var controlObj = {
     },
 
     /**
-    * 获取平均负载图表配置
-    */
+     * 获取平均负载图表配置
+     */
     get_load_option: function (startTime, endTime, yData, zData, aData, bData) {
+      var that = this;
       var option = this.get_default_option(startTime, endTime);
-			var interval = ((endTime - startTime) / 3) * 1000;
+      var interval = ((endTime - startTime) / 3) * 1000;
+      option.tooltip.padding = 0;
+      option.tooltip.backgroundColor = 'rgba(255,255,255,0.95)';
+      option.tooltip.borderColor = '#eee';
+      option.tooltip.position = function (pos, params, dom, rect, size) {
+        return that.echarts_position('getloadview',{pos:pos,size:size})
+      }
+
       option.tooltip.formatter = function (config) {
-        var line = config[0].axisValueLabel,
-          line_color = '';
+        var tdList = '', selectList = '', resource = '';
         for (var i = 0; i < config.length; i++) {
-          switch (config[i].seriesName) {
+          var item = config[i];
+          switch (item.seriesName){
             case '1分钟':
-              line_color = 'rgb(30, 144, 255)';
-              break;
             case '5分钟':
-              line_color = 'rgb(0, 178, 45)';
-              break;
             case '15分钟':
-              line_color = 'rgb(147, 38, 255)';
+              selectList += '<div class="select-data"><span class="status" style="background-color: '+ item.color +'"></span><span>'+ item.seriesName +'：'+ item.data[1].toFixed(2) +'%</span></div>';
               break;
-            default:
-              line_color = 'rgb(255, 140, 0)';
+            case '资源使用率':
+              resource = item.data[1].toFixed(2)
               break;
           }
-          var color_line = '</br><span style="width: 8px; display: inline-block; height: 8px; background: ' + line_color + '; border-radius: 100px; margin-right: 7px;"></span>',
-						text_line = config[i].seriesName + ': ' + config[i].data[1].toFixed(2);
-					line += color_line + text_line + '%';
-          // if (config[0].componentIndex == 0) {
-					// 	line += color_line + text_line + '%';
-          //   if (config[i].seriesName == '资源使用率') {
-          //   }
-          // } else {
-          //   if (config[i].seriesName != '资源使用率') {
-          //     line += color_line + text_line;
-          //   }
-          // }
         }
-        return line;
+        return that.echarts_formatter({
+          time: config[0].axisValueLabel,
+          data: that.loadCpuTopData[config[0].axisValue],
+          legend: '<div class="select-data"><span class="status"></span><span>资源使用率：'+ resource +'%</span></div><div class="'+ (config[0].seriesName === '资源使用率'?'hide':'') +'">'+ selectList +'</div>'
+        })
       };
+
       option.legend = {
         data: ['1分钟', '5分钟', '15分钟'],
         right: '16%',
@@ -1030,7 +1134,7 @@ var controlObj = {
             lineStyle: {
               color: '#666',
             }
-					},
+          },
         },
         {
           scale: true,
@@ -1063,7 +1167,9 @@ var controlObj = {
         {
           name: '资源使用率',
           type: 'line',
-          symbol: 'none',
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: false,
           lineStyle: {
             normal: {
               width: 2,
@@ -1082,7 +1188,9 @@ var controlObj = {
           yAxisIndex: 1,
           name: '1分钟',
           type: 'line',
-          symbol: 'none',
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: false,
           lineStyle: {
             normal: {
               width: 2,
@@ -1101,7 +1209,9 @@ var controlObj = {
           yAxisIndex: 1,
           name: '5分钟',
           type: 'line',
-          symbol: 'none',
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: false,
           lineStyle: {
             normal: {
               width: 2,
@@ -1120,7 +1230,9 @@ var controlObj = {
           yAxisIndex: 1,
           name: '15分钟',
           type: 'line',
-          symbol: 'none',
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: false,
           lineStyle: {
             normal: {
               width: 2,
@@ -1140,6 +1252,83 @@ var controlObj = {
         fontSize: 12
       };
       return option;
+    },
+
+    // 统计图图例定位
+    echarts_position: function (id,config){
+      var boxWidth = config.size.contentSize[0],
+          boxHeight = config.size.contentSize[1],
+          winWidth = window.innerWidth,
+          winHeight = window.innerHeight,
+          _box = document.getElementById(id).getBoundingClientRect(),
+          _x = config.pos[0] + _box.left,
+          _y = config.pos[1] + _box.top,
+          _top = 0,
+          _left = 0;
+      if(_x + boxWidth + 80  < winWidth){
+        _left = config.pos[0] + 20
+      }else{
+        _left = config.pos[0] - boxWidth - 20
+      }
+
+      if(_y + boxHeight + 80 < winHeight){
+        _top = config.pos[1] + 20
+      }else{
+        _top = config.pos[1] - boxHeight - 20
+      }
+      if(_y - boxHeight < 0) _top = 0 -_box.top + 10
+
+      return [_left, _top]
+    },
+    // 统计图图例
+    echarts_formatter: function (config){
+      var time = config.time, legend = config.legend;
+      var thead = '', tbody = '';
+      if(typeof config.data === 'undefined') config.data = []
+      if(typeof config.table === 'undefined'){
+        config.table = [
+          {title:'PID', width:'40px', index: 1},
+          {title:'进程名', index: 2},
+          {title:'CPU占用', index: 0, unit:'%'},
+          {title:'启动用户', index: 4},
+        ]
+      }
+      for (var i = 0; i < config.data.length; i++) {
+        var item = config.data[i];
+        if(i === 0) thead += '<tr>'
+        tbody += '<tr>'
+        for (var j = 0; j < config.table.length; j++) {
+          var tableItem = config.table[j]
+          if(i === 0) thead += '<th style="width:'+(tableItem.width || 'auto') +'">'+ tableItem.title +'</th>'
+          var value = '', itemVal = item[tableItem.index]
+          if(typeof tableItem.unit === 'function'){
+            value = tableItem.unit(itemVal)
+          }else{
+            value = itemVal + (tableItem.unit || '')
+          }
+          tbody += '<td >'+ value +'</td>'
+        }
+        if(i === 0) thead += '</tr>'
+        tbody += '</tr>'
+      }
+
+      return '<div class="echarts-tooltip" style="width:'+ (config.width || '400px') +'">\
+        <div class="formatter-header">\
+          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAABHNCSVQICAgIfAhkiAAAAgBJREFUWIXtWN1xgzAMlkQ3YoCaYaJji8AWPjJM3AEYCasPNT3XZ2xBk17b43uCiy190b8AOHHixN8GPkpQ3/cmfrfWukfIPUyw73vjvTci8oqIJndGRBwivk3TNPwoQWYeAOC689p4hOgugsFq971KYhBRt8f9pD3IzEOOnIg4ABiJqCOibpomBIARAMbw2xd47+/BAyqoLJiznIi4pmnGmjW2rK615IuGYEbBeLvdBs3dQALTuA0yqwZqageCYBOTOxLs8zy7tm0xltW2Lc7z7Er3qv+AmSV+DzF2GJfL5R6XpZqri0mSBjMRdd8hBwDQNM0Yv3vvTel8kaCIvEbPTpMQaUdJYa11cXbHOnIoJknsCkR8KxFbluW6WoOZi64LskyqI4dNC9YsEcN7f08VLcuy2WmIyGl1qQv1VuZuCUfEqrs1UBN8hLIVT2l1JWW5llYisqfVbRJMhZfKQVo6RMTtKUklixazOMxzJjxvloO1na1hUHNhmCE/dZTOFl0clxZN0FtrVbVSW76qBNNyUCodWqSDR62vFwkGa3zGFyKaPQGeInN3zJ2LoWr86cAAByaa3JqgGTxU8yARdYlrrsx81QydaxuEryObevBQj05bi9K6uQF8xNOaSJWNT+2BX780/a+1MwUzD5rFnYiq9fEpBGM869PHiRMn/jreAZxNPtSJHlfLAAAAAElFTkSuQmCC" alt="path" />\
+          <span>日期：'+ time +'</span>\
+        </div>\
+          <div class="formatter-body">'+ legend +
+          '<div class="process-top5 '+ (config.data.length === 0?'hide':'') +'">\
+            <div class="process-header"></div>\
+            <table>\
+              <thead>\
+              <tr>'+ thead +'</tr>\
+              </thead>\
+              <tbody>'+ tbody +'</tbody>\
+            </table>\
+          </div>\
+        </div>\
+      </div>'
     }
   },
   // 日报
@@ -1148,21 +1337,21 @@ var controlObj = {
     $.post('/daily?action=get_daily_data', { date: paramDate }, function (res) {
       if (!res.status) {
         var product_view = '<div class="daily-thumbnail">' +
-          '<div class="thumbnail-box">' +
-          '<img style="max-width: 400px;box-shadow: 1px 1px 30px rgb(0 0 0 / 10%);" src="/static/img/preview/daily.png">' +
-          '</div>' +
-          '<div class="thumbnail-introduce">' +
-          '<span>日报功能介绍：</span>' +
-          '<ul>' +
-          '<li>服务器运行情况监测</li>' +
-          '<li>CPU、内存、磁盘、进程过载等异常信息记录</li>' +
-          '<li>协助管理员分析服务器</li>' +
-          '</ul>' +
-          '<div class="daily-product-buy">' +
-          '<a title="立即购买" href="javascript:;" class="btn btn-success va0 ml15">立即购买</a>'
+            '<div class="thumbnail-box">' +
+            '<img style="max-width: 400px;box-shadow: 1px 1px 30px rgb(0 0 0 / 10%);" src="/static/img/preview/daily.png">' +
+            '</div>' +
+            '<div class="thumbnail-introduce">' +
+            '<span>日报功能介绍：</span>' +
+            '<ul>' +
+            '<li>服务器运行情况监测</li>' +
+            '<li>CPU、内存、磁盘、进程过载等异常信息记录</li>' +
+            '<li>协助管理员分析服务器</li>' +
+            '</ul>' +
+            '<div class="daily-product-buy">' +
+            '<a title="立即购买" href="javascript:;" class="btn btn-success va0 ml15">立即购买</a>'
         '</div>' +
-          '</div>' +
-          '</div>'
+        '</div>' +
+        '</div>'
         $('.daily-view').html(product_view);
         $('.thumbnail-box').hover(function (e) {
           $(this).addClass('shadow_mask')
@@ -1187,58 +1376,58 @@ var controlObj = {
       $.post('/daily?action=get_daily_list', function (dlist) {
         for (var i = dlist.length; i > 0; i--) {
           var tItem = dlist[i - 1],
-            _code = tItem.evaluate == '正常' ? '#20a53a' : (tItem.evaluate == '良好' ? '#2034a5' : '#ffa700'),
-            _strTime = tItem.time_key.toString(),
-            _timeText = _strTime.substr(0, 4) + '-' + _strTime.substr(4, 2) + '-' + _strTime.substr(6, 2)
+              _code = tItem.evaluate == '正常' ? '#20a53a' : (tItem.evaluate == '良好' ? '#2034a5' : '#ffa700'),
+              _strTime = tItem.time_key.toString(),
+              _timeText = _strTime.substr(0, 4) + '-' + _strTime.substr(4, 2) + '-' + _strTime.substr(6, 2)
           _liHthml += '<li class="' + (tItem.time_key == res.date ? 'active' : '') + '" data-time="' + tItem.time_key + '"><i style="background-color:' + _code + '"></i> ' + _timeText + '</li>'
         }
         var _html = '', txtColor = '', serverData = res.data, resTime = res.date.toString(), timeText = resTime.substr(0, 4) + '-' + resTime.substr(4, 2) + '-' + resTime.substr(6, 2);
         txtColor = res.evaluate == '正常' ? '#20a53a' : (res.evaluate == '良好' ? '#2034a5' : '#ffa700')
         _html = '<div class="daily_time_select">' +
-          '<span>选择日期:</span>' +
-          '<div class="daily_time_box">' +
-          '<span class="daily_box_text">' + timeText + '</span>' +
-          '<ul class="daily_select_list">' + _liHthml + '</ul>' +
-          '</div>' +
-          '</div>' +
-          '<div class="daily-head">' +
-          '<p class="daily-status" style="color:' + txtColor + ';text-align: center;font-size: 46px;">' + res.evaluate + '</p>' +
-          '<p style="text-align: center;margin: 10px 0 30px;">监测时间：' + timeText + ' 00:00:00 - 23:59:59</p>' +
-          '<p style="margin-bottom: 15px;">健康信息提醒：</p>' +
-          '<ul class="report_results ' + (res.evaluate != '正常' ? 'textRed' : '') + '">'
+            '<span>选择日期:</span>' +
+            '<div class="daily_time_box">' +
+            '<span class="daily_box_text">' + timeText + '</span>' +
+            '<ul class="daily_select_list">' + _liHthml + '</ul>' +
+            '</div>' +
+            '</div>' +
+            '<div class="daily-head">' +
+            '<p class="daily-status" style="color:' + txtColor + ';text-align: center;font-size: 46px;">' + res.evaluate + '</p>' +
+            '<p style="text-align: center;margin: 10px 0 30px;">监测时间：' + timeText + ' 00:00:00 - 23:59:59</p>' +
+            '<p style="margin-bottom: 15px;">健康信息提醒：</p>' +
+            '<ul class="report_results ' + (res.evaluate != '正常' ? 'textRed' : '') + '">'
 
         $.each(res.summary, function (index, item) {
           _html += '<li>' + item + '</li>'
         })
         _html += '</ul></div>'
         _html += '<div class="divtable daily-table" style="width:960px;margin:0 auto">' +
-          '<table class="table table-hover">' +
-          '<tbody>' +
-          '<tr class="daily-title"><td width=110>资源</td><td colspan="2">过载次数(五分钟内平均使用率超过80%)</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.cpu.ex ? 'red' : '#20a53a') + '"></i> CPU</td><td colspan="2">' + that.resource_info('cpu', serverData.cpu.detail) + '</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.ram.ex ? 'red' : '#20a53a') + '"></i> 内存</td><td colspan="2">' + that.resource_info('ram', serverData.ram.detail) + '</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.disk.ex ? 'red' : '#20a53a') + '"></i> 磁盘</td><td colspan="2">' + that.resource_info('disk', serverData.disk.detail) + '</td></tr>' +
-          '<tr class="daily-title"><td>常用服务</td><td colspan="2">异常次数(服务出现停止运行的次数)</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.server.nginx.ex ? 'red' : '#20a53a') + '"></i> Nginx</td><td colspan="2">' + that.resource_info('nginx', serverData.server.nginx.detail) + '</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.server.mysql.ex ? 'red' : '#20a53a') + '"></i> Mysql</td><td colspan="2">' + that.resource_info('mysql', serverData.server.mysql.detail) + '</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.server.apache.ex ? 'red' : '#20a53a') + '"></i> Apache</td><td colspan="2">' + that.resource_info('apache', serverData.server.apache.detail) + '</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.server.php.ex ? 'red' : '#20a53a') + '"></i> PHP</td><td colspan="2">' + that.resource_info('php', serverData.server.php.detail) + '</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.server.ftpd.ex ? 'red' : '#20a53a') + '"></i> Ftpd</td><td colspan="2">' + that.resource_info('ftpd', serverData.server.ftpd.detail) + '</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.server.redis.ex ? 'red' : '#20a53a') + '"></i> Redis</td><td colspan="2">' + that.resource_info('redis', serverData.server.redis.detail) + '</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.server.tomcat.ex ? 'red' : '#20a53a') + '"></i> Tomcat</td><td colspan="2">' + that.resource_info('tomcat', serverData.server.tomcat.detail) + '</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.server.memcached.ex ? 'red' : '#20a53a') + '"></i> Memcached</td><td colspan="2">' + that.resource_info('memcached', serverData.server.memcached.detail) + '</td></tr>' +
-          '<tr class="daily-title"><td>备份类型</td><td width=240>备份失败</td><td>未开启备份</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.backup.database.backup.length || serverData.backup.database.no_backup.length ? 'red' : '#20a53a') + '"></i> 数据库</td><td>' + that.resource_info('database_backup', serverData.backup.database.backup) + '</td><td>' + that.resource_info('database_no_backup', serverData.backup.database.no_backup) + '</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.backup.site.backup.length || serverData.backup.site.no_backup.length ? 'red' : '#20a53a') + '"></i> 网站</td><td>' + that.resource_info('site_backup', serverData.backup.site.backup) + '</td><td>' + that.resource_info('site_no_backup', serverData.backup.site.no_backup) + '</td></tr>' +
-          '<tr class="daily-title"><td>异常类型</td><td colspan="2">次数</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.exception.panel.ex ? 'red' : '#20a53a') + '"></i> 面板异常登录</td><td colspan="2">' + that.resource_info('panel', serverData.exception.panel.detail) + '</td></tr>' +
-          '<tr><td><i style="background-color:' + (serverData.exception.ssh.ex ? 'red' : '#20a53a') + '"></i> SSH异常登录</td><td colspan="2">' + that.resource_info('ssh', serverData.exception.ssh.detail) + '</td></tr>' +
-          '</tbody>' +
-          '</table>' +
-          '<ul class="help-info-text c7">' +
-          '<li style="list-style: none;">在系统监控开启的情况下，日报会记录服务器每天运行的异常信息，协助管理员分析服务器前一天是否运行正常。</li>' +
-          '</ul>' +
-          '</div>'
+            '<table class="table table-hover">' +
+            '<tbody>' +
+            '<tr class="daily-title"><td width=110>资源</td><td colspan="2">过载次数(五分钟内平均使用率超过80%)</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.cpu.ex ? 'red' : '#20a53a') + '"></i> CPU</td><td colspan="2">' + that.resource_info('cpu', serverData.cpu.detail) + '</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.ram.ex ? 'red' : '#20a53a') + '"></i> 内存</td><td colspan="2">' + that.resource_info('ram', serverData.ram.detail) + '</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.disk.ex ? 'red' : '#20a53a') + '"></i> 磁盘</td><td colspan="2">' + that.resource_info('disk', serverData.disk.detail) + '</td></tr>' +
+            '<tr class="daily-title"><td>常用服务</td><td colspan="2">异常次数(服务出现停止运行的次数)</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.server.nginx.ex ? 'red' : '#20a53a') + '"></i> Nginx</td><td colspan="2">' + that.resource_info('nginx', serverData.server.nginx.detail) + '</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.server.mysql.ex ? 'red' : '#20a53a') + '"></i> Mysql</td><td colspan="2">' + that.resource_info('mysql', serverData.server.mysql.detail) + '</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.server.apache.ex ? 'red' : '#20a53a') + '"></i> Apache</td><td colspan="2">' + that.resource_info('apache', serverData.server.apache.detail) + '</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.server.php.ex ? 'red' : '#20a53a') + '"></i> PHP</td><td colspan="2">' + that.resource_info('php', serverData.server.php.detail) + '</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.server.ftpd.ex ? 'red' : '#20a53a') + '"></i> Ftpd</td><td colspan="2">' + that.resource_info('ftpd', serverData.server.ftpd.detail) + '</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.server.redis.ex ? 'red' : '#20a53a') + '"></i> Redis</td><td colspan="2">' + that.resource_info('redis', serverData.server.redis.detail) + '</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.server.tomcat.ex ? 'red' : '#20a53a') + '"></i> Tomcat</td><td colspan="2">' + that.resource_info('tomcat', serverData.server.tomcat.detail) + '</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.server.memcached.ex ? 'red' : '#20a53a') + '"></i> Memcached</td><td colspan="2">' + that.resource_info('memcached', serverData.server.memcached.detail) + '</td></tr>' +
+            '<tr class="daily-title"><td>备份类型</td><td width=240>备份失败</td><td>未开启备份</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.backup.database.backup.length || serverData.backup.database.no_backup.length ? 'red' : '#20a53a') + '"></i> 数据库</td><td>' + that.resource_info('database_backup', serverData.backup.database.backup) + '</td><td>' + that.resource_info('database_no_backup', serverData.backup.database.no_backup) + '</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.backup.site.backup.length || serverData.backup.site.no_backup.length ? 'red' : '#20a53a') + '"></i> 网站</td><td>' + that.resource_info('site_backup', serverData.backup.site.backup) + '</td><td>' + that.resource_info('site_no_backup', serverData.backup.site.no_backup) + '</td></tr>' +
+            '<tr class="daily-title"><td>异常类型</td><td colspan="2">次数</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.exception.panel.ex ? 'red' : '#20a53a') + '"></i> 面板异常登录</td><td colspan="2">' + that.resource_info('panel', serverData.exception.panel.detail) + '</td></tr>' +
+            '<tr><td><i style="background-color:' + (serverData.exception.ssh.ex ? 'red' : '#20a53a') + '"></i> SSH异常登录</td><td colspan="2">' + that.resource_info('ssh', serverData.exception.ssh.detail) + '</td></tr>' +
+            '</tbody>' +
+            '</table>' +
+            '<ul class="help-info-text c7">' +
+            '<li style="list-style: none;">在系统监控开启的情况下，日报会记录服务器每天运行的异常信息，协助管理员分析服务器前一天是否运行正常。</li>' +
+            '</ul>' +
+            '</div>'
         $('.daily-view').html(_html);
 
         //选择日期

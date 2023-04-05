@@ -352,17 +352,20 @@ class main:
         return data
 
     def get_container_path(self,detail):
-        import os
-        if not "GraphDriver" in detail:
+        try:
+            import os
+            if not "GraphDriver" in detail:
+                return False
+            if "Data" not in detail["GraphDriver"]:
+                return False
+            if "MergedDir" not in detail["GraphDriver"]["Data"]:
+                return False
+            path = detail["GraphDriver"]["Data"]["MergedDir"]
+            if not os.path.exists(path):
+                return ""
+            return path
+        except:
             return False
-        if "Data" not in detail["GraphDriver"]:
-            return False
-        if "MergedDir" not in detail["GraphDriver"]["Data"]:
-            return False
-        path = detail["GraphDriver"]["Data"]["MergedDir"]
-        if not os.path.exists(path):
-            return ""
-        return path
 
     # 获取容器列表所需的外部数据
     def get_other_data_for_container_list(self,args):

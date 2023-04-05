@@ -385,7 +385,7 @@ class main(projectBase):
             self.__ENGINE = self.__TREE.findall('Service/Engine')[0]
             self.__CONNECTROR = self.__TREE.findall('Service/Connector')
             return True
-        except:
+        except Exception as e:
             return False
 
     def Initialization(self, version):
@@ -1877,7 +1877,7 @@ class main(projectBase):
             #判断是否在/www/  /www/wwwroot
 
             # 执行脚本文件
-            p = public.ExecShell("bash {}".format(script_file),user=project_find['project_config']['run_user'])
+            p = public.ExecShell("bash {}".format(script_file),user=project_find['project_config']['run_user'],env=os.environ.copy())
             time.sleep(1)
             if not os.path.exists(pid_file):
                 return public.returnMsg(False,'启动失败,请尝试切换启动用户')
@@ -2493,7 +2493,7 @@ class main(projectBase):
         for i in pids:
             try:
                 p = psutil.Process(i)
-                p.kill()
+                p.terminate()
             except:
                 pass
         return public.returnMsg(True, '进程已全部结束')
@@ -3354,3 +3354,310 @@ class main(projectBase):
             ret = public.ExecShell(cmd,user=project_find['project_config']['run_user'])
             return public.returnMsg(True,ret)
         return public.returnMsg(False,'当前JDK不存在jstack')
+    
+
+#————————————
+#  批量操作  |
+#————————————
+
+    def multi_remove_project(self,get):
+        '''
+            @name 批量删除项目
+            @author baozi<2023-3-2>
+            @param get<dict_obj>{
+                project_names: list[string] <项目名称>所组成的列表
+            }
+            @return dict
+        '''
+        project_names = get.project_names
+        if isinstance(project_names, list):
+            pjnames = [i.strip() for i in project_names]
+        else:
+            pjnames = []
+
+        projects = public.M('sites').where(f'project_type=? AND name in ({",".join(["?"]*len(pjnames))})',('Java',*pjnames)).select()
+        if not projects:
+            return public.returnMsg(False,"未选中要删除的站点")
+        
+        _duli, _neizh, _springboot, _error_type = [], [], [], []
+        for project in projects:
+            project['project_config'] = json.loads(project['project_config'])
+            if project['project_config']['java_type'] == 'duli':
+                _duli.append(project)
+            elif project['project_config']['java_type'] == 'neizhi':
+                _neizh.append(project)
+            elif project['project_config']['java_type'] == 'springboot':
+                _springboot.append(project)
+            else:
+                _error_type.append("项目:[{}], 项目类型错误\n".format(project["name"]))
+        if _error_type:
+            return public.return_error(data = _error_type)
+        
+        # 执行每种删除的独特操作
+        if _duli:
+            self._multi_remove_duli(_duli)
+        if _neizh:
+            self._multi_remove_neizhi(_neizh)
+        if _springboot:
+            self._multi_remove_springboot(_springboot)
+        
+        # 清除Nginx， Apache 配置文件，并重起服务
+        self._multi_clear_config(projects)
+        # 从面板数据库删除信息
+        project_ids = tuple([i["id"] for i in projects])
+        public.M('domain').where('pid IN ({})'.format(",".join(["?"] * len(projects))), project_ids).delete()
+        public.M('sites').where(f'project_type=? AND name in ({",".join(["?"]*len(pjnames))})',('Java',*pjnames)).delete()
+        public.WriteLog(self._log_name,f'批量删除Java项目:[{"; ".join([i["name"] for i in projects])}]')
+        # 获取域名列表 并删除host
+        for project in projects:
+            for i in project['project_config']['domains']:
+                self.del_hosts(i)
+        
+        return {"status": True, "msg":"删除成功", "project_names": pjnames}
+    
+    def _multi_clear_config(self, projects):
+        for project in projects:
+            self.clear_nginx_config(project)
+            self.clear_apache_config(project)
+        public.serviceReload()
+    
+    def _multi_remove_duli(self, projects):
+        get = public.dict_obj()
+        for project in projects:
+            #关闭独立项目
+            get.domain = project['name']
+            get.type ='stop'
+            self.pendent_tomcat_start(get)
+            #删除项目
+            shutil.rmtree(self.__site_path, project['name'])
+
+    def _multi_remove_tomcat_vhost(self,projects):
+        if not self.__ENGINE: return
+        domains = [project["name"] for project in projects if project["name"] != 'localhost']
+        try:
+            Hosts = self.__ENGINE.getchildren()
+        except:
+            Hosts = list(self.__ENGINE)
+        for host in Hosts:
+            if host.tag != 'Host': continue
+            if host.attrib['name'] in domains:
+                self.__ENGINE.remove(host) 
+        self.save_tomcat()
+
+            
+    def _multi_remove_neizhi(self, projects):
+        version_group = {}
+        res_msg = []
+        # 按版本分组
+        for project in projects:
+            if project['project_config']['tomcat_version'] in version_group:
+                version_group[project['project_config']['tomcat_version']].append(project)
+            else:
+                version_group[project['project_config']['tomcat_version']] = [project, ]
+        # 处理Tomcat配置文件
+        for version, group_projects in version_group.items():
+            if not self.Initialization(version): 
+                res_msg.append("项目[{}]".format(",".join([i["name"] for i in group_projects])) + ":配置文件错误请检查配置文件")
+                continue
+            self._multi_remove_tomcat_vhost(group_projects)
+            get = public.dict_obj()
+            get.version= version
+            get.type='reload'
+            self.start_tomcat(get)
+            
+
+    def _multi_remove_springboot(self, projects):
+        get = public.dict_obj()
+        for project in projects:
+            #停止项目
+            get.project_name = project["name"]
+            self.stop_project(get)
+            #删除项目
+            pid_file = project['project_config']['pids']
+            if os.path.exists(pid_file): os.remove(pid_file)
+            script_file = project['project_config']['scripts']
+            if os.path.exists(script_file): os.remove(script_file)
+            log_file = project['project_config']['logs']
+            if os.path.exists(log_file): os.remove(log_file)
+
+
+    def multi_set_project(self,get):
+        '''
+            @name 批量设置项目
+            @author baozi<2023-3-2>
+            @param get<dict_obj>{
+                project_names: list[string] <项目名称>所组成的列表
+            }
+            @return dict
+        '''
+        project_names = get.project_names
+        set_type = get.operation
+        if set_type not in ["start","stop"]:
+            return public.returnMsg(False,"操作信息错误")
+        if isinstance(project_names, list):
+            pjnames = [i.strip() for i in project_names]
+        else:
+            pjnames = []
+
+        projects = public.M('sites').where(f'project_type=? AND name in ({",".join(["?"]*len(pjnames))})',('Java',*pjnames)).select()
+        if not projects:
+            return public.returnMsg(False,"未选中要启动的站点")
+        
+        
+        neizhi_projects = {'7':False,'8':False,'9':False}
+        _check = self.get_tomcat_version(None)
+        if not _check["tomcat7"]["status"]: neizhi_projects.pop("7")
+        if not _check["tomcat8"]["status"]: neizhi_projects.pop("8")
+        if not _check["tomcat9"]["status"]: neizhi_projects.pop("9")
+        springboot_projects = []
+        duli_projects = []
+        error_list = []
+        for project in projects:
+            project['project_config'] = json.loads(project['project_config'])
+            if project['project_config']['java_type'] == 'neizhi':
+                if project['project_config']['tomcat_version'] in neizhi_projects:
+                    neizhi_projects[project['project_config']['tomcat_version']] = True
+                else:
+                    error_list.append({"project_name":project["name"],  "msg":"启动失败,没有安装Tomcat{}".format(project['project_config']['tomcat_version'])})
+                    pjnames.remove(project["name"])
+
+            if project['project_config']['java_type'] == 'duli':
+                duli_projects.append(project)
+
+            if project['project_config']['java_type'] == 'springboot':
+                springboot_projects.append(project)
+            
+        
+        for tomcat_version, flag in neizhi_projects.items():
+            if flag: 
+                _get = public.dict_obj()
+                _get.type = set_type
+                _get.version = tomcat_version
+                self.start_tomcat(_get)
+        
+        for i in springboot_projects:
+            if set_type == "start":
+                flag, msg = self.__start_springboot_project(i)
+                if not flag:
+                    error_list.append({"project_name":i["name"],  "msg":msg})
+                    pjnames.remove(i["name"])
+            else:
+                self.__stop_springboot_project(i)
+
+        for i in duli_projects:
+            _get = public.dict_obj()
+            _get.domain = i['name']
+            _get.type = set_type
+            self.pendent_tomcat_start(_get)
+        
+        if error_list:
+            return {"status":True, "msg":"部分项目启动失败", "error_list": error_list, "project_names": pjnames}
+        return {"status": True, "msg":"启动成功" if set_type == "start" else "停止成功" , "project_names": pjnames}
+        
+    # springboot 停止
+    def __stop_springboot_project(self, project_info):
+        pid_file = project_info['project_config']['pids']
+        if not os.path.exists(pid_file): return public.returnMsg(False,'项目未启动')
+        try:
+            pid = int(public.readFile(pid_file))
+        except:
+            return False,'项目未启动'
+        pids = self.get_project_pids(pid=pid)
+        if not pids: return False,'项目未启动'
+        self.kill_pids(pids=pids)
+        if os.path.exists(pid_file): os.remove(pid_file)
+        return True, '停止成功'
+
+    # springboot 启动
+    def __start_springboot_project(self, project_find):
+        project_cmd=project_find["project_config"]['project_cmd']
+        # 前置准备
+        log_file = project_find["project_config"]['logs']
+        pid_file= project_find["project_config"]['pids']
+        if  'jar_path' in project_find['project_config']:
+            jar_path=project_find['project_config']['jar_path']
+        else:
+            jar_path='{}'.format(self._springboot)
+        # 启动脚本
+        start_cmd = '''#!/bin/bash
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+cd {jar_path}
+nohup {project_cmd} >> {log_file} 2>&1 &
+echo $! > {pid_file}
+'''.format(
+    jar_path=jar_path,
+    project_cmd=project_cmd,
+    pid_file = pid_file,
+    log_file = log_file,
+)
+        script_file = project_find["project_config"]['scripts']
+        # 写入启动脚本
+        public.writeFile(script_file,start_cmd)
+        if os.path.exists(pid_file): os.remove(pid_file)
+        public.ExecShell("chmod -R 777 /var/tmp/springboot/")
+        #public.ExecShell("chown -R {}:{} {}".format(project_find['project_config']['run_user'],project_find['project_config']['run_user'],self._springboot))
+        public.set_mode(script_file,755)
+        public.ExecShell("chown  {}:{} {}".format(project_find['project_config']['run_user'],project_find['project_config']['run_user'],project_find['path']))
+        #判断是否在/www/  /www/wwwroot
+
+        # 执行脚本文件
+        p = public.ExecShell("bash {}".format(script_file),user=project_find['project_config']['run_user'])
+        time.sleep(1)
+        if not os.path.exists(pid_file):
+            return False,'启动失败,请尝试切换启动用户'
+
+        # 获取PID
+        try:
+            pid = int(public.readFile(pid_file))
+        except:return False, '启动失败'
+        time.sleep(0.4)
+        pids = self.get_project_pids(pid=pid)
+        #if not pids:
+        #    if os.path.exists(pid_file): os.remove(pid_file)
+        #    return public.returnMsg(False,'启动失败<br>{}'.format(public.GetNumLines(log_file,20)))
+        return True, None
+    
+    def multi_check_bind_extranet(self,get):
+        """检查是否可以绑定外网，并执行绑定操作
+        @author baozi <202-03-2>
+        @param: 
+            get  ( dict ):   project_names 要操作的网站列表
+        @return  
+        """
+        if not public.is_apache_nginx():return public.returnMsg(False,'请先安装Apache或者Nginx!')
+        project_names = get.project_names
+        if isinstance(project_names, list):
+            pjnames = [i.strip() for i in project_names]
+        else:
+            pjnames = []
+
+        projects = public.M('sites').where(f'project_type=? AND name in ({",".join(["?"]*len(pjnames))})',('Java',*pjnames)).select()
+        if not projects:
+            return public.returnMsg(False,"未选中要启动的站点")
+        
+        error_list = []
+        flag = False
+        for project in projects:
+            project['project_config'] = json.loads(project['project_config'])
+            if not project['project_config']['domains']: 
+                error_list.append({'project_name':project["name"], "msg" : '请先到【域名管理】选项中至少添加一个域名'})
+                pjnames.remove(project["name"])
+                continue
+            if "bind_extranet" in project['project_config'] and project['project_config']['bind_extranet'] == 1:
+                continue
+            else:
+                flag = True
+            project['project_config']['bind_extranet'] = 1
+            public.M('sites').where("id=?",(project['id'],)).setField('project_config',json.dumps(project['project_config']))
+            self.set_nginx_config(project)
+            self.set_apache_config(project)
+            public.WriteLog(self._log_name,'Java项目{}, 开启外网映射'.format(project))
+        
+        if flag:
+            public.serviceReload()
+
+        if error_list:
+            return  {"status":True, "msg":"部分网站开启外网映射失败", "error_list": error_list, "project_names": pjnames}
+
+        return  {"status":True, "msg":"开启外网映射成功", "project_names": pjnames}

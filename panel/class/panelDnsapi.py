@@ -354,7 +354,6 @@ class AliyunDns(object):
 
     def create_dns_record(self, domain_name, domain_dns_value):
         root, _, acme_txt = extract_zone(domain_name)
-        self.delete_dns_record(domain_name, domain_dns_value)
         if self._type == 1:
             acme_txt = acme_txt.replace('_acme-challenge.','')
             self.add_record(root,'CNAME',acme_txt,domain_dns_value)

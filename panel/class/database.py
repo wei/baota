@@ -1203,7 +1203,7 @@ SetLink
         if hasattr(get,'close'):
             public.writeFile(filename,'')
             return public.returnMsg(True,'LOG_CLOSE')
-        return public.GetNumLines(filename,1000)
+        return public.xsssec(public.GetNumLines(filename,1000))
 
     #二进制日志开关
     def BinLog(self,get):
@@ -1321,17 +1321,17 @@ SetLink
     def GetSlowLogs(self,get):
         path = self.GetMySQLInfo(get)['datadir'] + '/mysql-slow.log'
         if not os.path.exists(path): return public.returnMsg(False,'日志文件不存在!')
-        return public.returnMsg(True,public.GetNumLines(path,100))
+        return public.returnMsg(True,public.xsssec(public.GetNumLines(path,100)))
 
 
     # 获取当前数据库信息
     def GetInfo(self,get):
         info=self.GetdataInfo(get)
-        return info
+        # return info
         if info:
             return info
         else:
-            return public.returnMsg(False,"获取数据库失败!")
+            return public.returnMsg(False,"获取数据库信息失败！请检查远程数据库配置信息")
 
     #修复表信息
     def ReTable(self,get):

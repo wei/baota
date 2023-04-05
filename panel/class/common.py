@@ -27,7 +27,7 @@ class panelSetup:
             if ua.find('spider') != -1 or g.ua.find('bot') != -1:
                 return abort(403)
 
-        g.version = '7.9.8'
+        g.version = '7.9.9'
         g.title = public.GetConfigValue('title')
         g.uri = request.path
         g.debug = os.path.exists('data/debug.pl')
@@ -151,7 +151,9 @@ class panelAdmin(panelSetup):
             if not 'login' in session:
                 api_check = self.get_sk()
                 if api_check:
-                    # session.clear()
+                    if not isinstance(api_check,dict):
+                        if public.get_admin_path() == '/login':
+                            return redirect('/login?err=1')
                     return api_check
                 g.api_request = True
             else:
@@ -202,23 +204,23 @@ class panelAdmin(panelSetup):
     def get_sk(self):
         save_path = '/www/server/panel/config/api.json'
         if not os.path.exists(save_path):
-            return public.error_not_login('/login')
+            return public.error_404(None)
 
 
         try:
             api_config = json.loads(public.ReadFile(save_path))
         except:
             os.remove(save_path)
-            return  public.error_not_login('/login')
+            return  public.error_404(None)
 
         if not api_config['open']:
-            return  public.error_not_login('/login')
+            return  public.error_404(None)
         from BTPanel import get_input
         get = get_input()
         client_ip = public.GetClientIp()
         if not 'client_bind_token' in get:
             if not 'request_token' in get or not 'request_time' in get:
-                return  public.error_not_login('/login')
+                return  public.error_404(None)
 
             num_key = client_ip + '_api'
             if not public.get_error_num(num_key,20):

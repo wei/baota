@@ -14,7 +14,7 @@
 # import sys, os
 # os.chdir('/www/server/panel')
 # sys.path.append("class/")
-import  public, os
+import  public, os, stat
 _title = 'CVE-2021-4034 polkit pkexec 本地提权漏洞检测'
 _version = 1.0  # 版本
 _ps = "CVE-2021-4034 polkit pkexec 本地提权漏洞检测"  # 描述
@@ -34,6 +34,9 @@ def check_run():
         @time 2022-08-12
         @author lkq@bt.cn
     '''
+    st = os.stat('/usr/bin/pkexec')
+    setuid, setgid = bool(st.st_mode & stat.S_ISUID), bool(st.st_mode & stat.S_ISGID)
+    if not setuid: return True, '无风险'
 
     redhat_file = '/etc/redhat-release'
     if os.path.exists(redhat_file):

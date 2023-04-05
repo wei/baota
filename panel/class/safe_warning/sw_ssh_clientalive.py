@@ -42,11 +42,11 @@ def check_run():
             if info_data:
                 if re.search('ClientAliveInterval\s+\d+',info_data):
                     clientalive=re.findall('ClientAliveInterval\s+\d+',info_data)[0]
-                    #clientalive 需要大于300 小于900
+                    #clientalive 需要大于600 小于900
                     if int(clientalive.split(' ')[1]) >= 600 and int(clientalive.split(' ')[1]) <= 900:
                         return True,'无风险'
                     else:
-                        return False,'当前SSH空闲超时时间为：'+clientalive.split(' ')[1]+'，请设置为300-900'
+                        return False,'当前SSH空闲超时时间为：'+clientalive.split(' ')[1]+'，请设置为600-900'
                 else:
                     return True,'无风险'
         except:

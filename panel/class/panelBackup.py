@@ -54,6 +54,9 @@ class backup:
             self.cron_info = self.get_cron_info(cron_info["echo"])
         self._path = public.M('config').where("id=?",(1,)).getField('backup_path')
 
+        if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'backup','%cron_id%')).count():
+            public.M('backup').execute("ALTER TABLE 'backup' ADD 'cron_id' INTEGER DEFAULT 0",())
+
     def echo_start(self):
         print("="*90)
         print("★开始备份[{}]".format(public.format_date()))
@@ -153,7 +156,7 @@ class backup:
 
 
     #备份指定目录
-    def backup_path(self,spath,dfile = None,exclude=[],save=3):
+    def backup_path(self,spath,dfile = None,exclude=[],save=3,echo_id=None):
 
         error_msg = ""
         self.echo_start()
@@ -168,7 +171,7 @@ class backup:
 
         dirname = os.path.basename(spath)
         if not dfile:
-            fname = 'path_{}_{}.tar.gz'.format(dirname,public.format_date("%Y%m%d_%H%M%S"))
+            fname = 'path_{}_{}_{}.tar.gz'.format(dirname,public.format_date("%Y%m%d_%H%M%S"),public.GetRandomString(6))
             dfile = os.path.join(self._path,'path',fname)
 
         if not self.backup_path_to(spath,dfile,exclude):
@@ -198,8 +201,11 @@ class backup:
         filename = dfile
         if self._cloud:
             filename = dfile + '|' + self._cloud._name + '|' + fname
-
+        cron_id = 0
+        if echo_id:
+            cron_id = public.M("crontab").where('echo=?',(echo_id,)).getField('id')
         pdata = {
+            'cron_id': cron_id,
             'type': '2',
             'name': spath,
             'pid': 0,
@@ -221,6 +227,7 @@ class backup:
                     _not_save_local = False
 
                     pdata = {
+                        'cron_id': cron_id,
                         'type': '2',
                         'name': spath,
                         'pid': 0,
@@ -237,9 +244,9 @@ class backup:
                 self.echo_info("本地备份已保留。")
 
         if not self._cloud:
-            backups = public.M('backup').where("type=? and pid=? and name=? and filename NOT LIKE '%|%'",('2',0,spath)).field('id,name,filename').select()
+            backups = public.M('backup').where("cron_id=? and type=? and pid=? and name=? and filename NOT LIKE '%|%'",(cron_id,'2',0,spath)).field('id,name,filename').select()
         else:
-            backups = public.M('backup').where("type=? and pid=? and name=? and filename LIKE ?",('2',0,spath,'%{}%'.format(self._cloud._name))).field('id,name,filename').select()
+            backups = public.M('backup').where("cron_id=? and type=? and pid=? and name=? and filename LIKE ?",(cron_id,'2',0,spath,'%{}%'.format(self._cloud._name))).field('id,name,filename').select()
 
 
         self.delete_old(backups,save,'path')
@@ -265,7 +272,6 @@ class backup:
                 new_backups.append(backups[i])
         if new_backups:
             backups = new_backups[:]
-
         num = len(backups) - int(save)
         if  num > 0:
             self.echo_info('-' * 88)
@@ -288,29 +294,29 @@ class backup:
                 public.M('backup').where('id=?',(backup['id'],)).delete()
                 num -= 1
                 if num < 1: break
-        if data_type=='site':
-            backup_path = public.get_backup_path()+'/site'.replace('//','/')
-            site_lists = os.listdir(backup_path)
-            file_info =[]
-            del_list=[]
-            check_name = 'web_{}_'.format(site_name)
-            for site_v in site_lists:
-                tmp_dict = {}
-                if check_name=='web__':continue
-                if site_v.find(check_name)==-1:continue
-                filename =os.path.join(backup_path,site_v)
-                if os.path.isfile(filename):
-                    tmp_dict['name']=filename
-                    tmp_dict['time']=int(os.path.getmtime(filename))
-                    file_info.append(tmp_dict)
-            if file_info and len(file_info)>int(save):
-                file_info=sorted(file_info,key=lambda keys:keys['time'])
-                del_list=file_info[:-int(save)]
-                for del_file in del_list:
-                    if not del_file:continue
-                    if os.path.isfile(del_file['name']):
-                        os.remove(del_file['name'])
-                        self.echo_info(u"已从磁盘清理过期备份文件：" + del_file['name'])
+        # if data_type=='site':
+        #     backup_path = public.get_backup_path()+'/site'.replace('//','/')
+        #     site_lists = os.listdir(backup_path)
+        #     file_info =[]
+        #     del_list=[]
+        #     check_name = 'web_{}_'.format(site_name)
+        #     for site_v in site_lists:
+        #         tmp_dict = {}
+        #         if check_name=='web__':continue
+        #         if site_v.find(check_name)==-1:continue
+        #         filename =os.path.join(backup_path,site_v)
+        #         if os.path.isfile(filename):
+        #             tmp_dict['name']=filename
+        #             tmp_dict['time']=int(os.path.getmtime(filename))
+        #             file_info.append(tmp_dict)
+        #     if file_info and len(file_info)>int(save):
+        #         file_info=sorted(file_info,key=lambda keys:keys['time'])
+        #         del_list=file_info[:-int(save)]
+        #         for del_file in del_list:
+        #             if not del_file:continue
+        #             if os.path.isfile(del_file['name']):
+        #                 os.remove(del_file['name'])
+        #                 self.echo_info(u"已从磁盘清理过期备份文件：" + del_file['name'])
 
 
 
@@ -329,7 +335,6 @@ class backup:
         dpath = os.path.dirname(dfile)
         if not os.path.exists(dpath):
             os.makedirs(dpath,384)
-
         self.get_exclude(exclude)
         if self._exclude:
             self._exclude = self._exclude.replace(spath + '/','')
@@ -362,8 +367,7 @@ class backup:
         self.echo_info("开始压缩文件：{}".format(public.format_date(times=stime)))
         if os.path.exists(dfile):
             os.remove(dfile)
-        _cmd = "cd " + os.path.dirname(spath) + " && tar zcvf '" + dfile + "' " + self._exclude + " '" + dirname + "' 2>{err_log} 1> /dev/null".format(err_log = self._err_log)
-        public.ExecShell(_cmd)
+        public.ExecShell("cd " + os.path.dirname(spath) + " && tar zcvf '" + dfile + "' " + self._exclude + " '" + dirname + "' 2>{err_log} 1> /dev/null".format(err_log = self._err_log))
         tar_size = os.path.getsize(dfile)
         if tar_size < 1:
             self.echo_error("数据压缩失败")
@@ -379,12 +383,12 @@ class backup:
         return dfile
 
     #备份指定站点
-    def backup_site(self,siteName,save = 3 ,exclude = []):
+    def backup_site(self,siteName,save = 3 ,exclude = [],echo_id = None):
         self.echo_start()
         find = public.M('sites').where('name=?',(siteName,)).field('id,path').find()
         spath = find['path']
         pid = find['id']
-        fname = 'web_{}_{}.tar.gz'.format(siteName,public.format_date("%Y%m%d_%H%M%S"))
+        fname = 'web_{}_{}_{}.tar.gz'.format(siteName,public.format_date("%Y%m%d_%H%M%S"),public.GetRandomString(6))
         dfile = os.path.join(self._path,'site',fname)
         error_msg = ""
         if not self.backup_path_to(spath,dfile,exclude,siteName=siteName):
@@ -414,8 +418,11 @@ class backup:
         filename = dfile
         if self._cloud:
             filename = dfile + '|' + self._cloud._name + '|' + fname
-
+        cron_id = 0
+        if echo_id:
+            cron_id = public.M("crontab").where('echo=?',(echo_id,)).getField('id')
         pdata = {
+            'cron_id': cron_id,
             'type': 0,
             'name': fname,
             'pid': pid,
@@ -437,6 +444,7 @@ class backup:
                     _not_save_local = False
 
                     pdata = {
+                        'cron_id': cron_id,
                         'type': 0,
                         'name': fname,
                         'pid': pid,
@@ -456,23 +464,23 @@ class backup:
 
         #清理多余备份
         if not self._cloud:
-            backups = public.M('backup').where("type=? and pid=? and filename NOT LIKE '%|%'",('0',pid)).field('id,name,filename').select()
+            backups = public.M('backup').where("cron_id=? and type=? and pid=? and filename NOT LIKE '%|%'",(cron_id,'0',pid)).field('id,name,filename').select()
         else:
-            backups = public.M('backup').where('type=? and pid=? and filename LIKE ?',('0',pid,"%{}%".format(self._cloud._name))).field('id,name,filename').select()
+            backups = public.M('backup').where('cron_id=? and type=? and pid=? and filename LIKE ?',(cron_id,'0',pid,"%{}%".format(self._cloud._name))).field('id,name,filename').select()
 
         self.delete_old(backups,save,'site',siteName)
         self.echo_end()
         return dfile
 
     #备份所有数据库
-    def backup_database_all(self,save = 3):
+    def backup_database_all(self,save = 3,echo_id=None):
         databases = public.M('databases').where("type=?","MySQL").field('name').select()
         self._backup_all = True
         failture_count = 0
         results = []
         for database in databases:
             self._error_msg = ""
-            result = self.backup_database(database['name'],save=save)
+            result = self.backup_database(database['name'],save=save,echo_id=echo_id)
             if not result:
                 failture_count += 1
             results.append((database['name'], result, self._error_msg,))
@@ -483,14 +491,14 @@ class backup:
         self._backup_all = False
 
     #备份所有站点
-    def backup_site_all(self,save = 3):
+    def backup_site_all(self,save = 3,echo_id=None):
         sites = public.M('sites').field('name').select()
         self._backup_all = True
         failture_count = 0
         results = []
         for site in sites:
             self._error_msg = ""
-            result = self.backup_site(site['name'],save)
+            result = self.backup_site(site['name'],save,echo_id=echo_id)
             if not result:
                 failture_count += 1
             results.append((site['name'], result, self._error_msg,))
@@ -534,10 +542,10 @@ class backup:
         except: return []
 
     #备份指定数据库
-    def backup_database(self,db_name,dfile = None,save=3):
+    def backup_database(self,db_name,dfile = None,save=3,echo_id=None):
         self.echo_start()
         if not dfile:
-            fname = 'db_{}_{}.sql.gz'.format(db_name,public.format_date("%Y%m%d_%H%M%S"))
+            fname = 'db_{}_{}_{}.sql.gz'.format(db_name,public.format_date("%Y%m%d_%H%M%S"),public.GetRandomString(6))
             dfile = os.path.join(self._path,'database',fname)
         else:
             fname = os.path.basename(dfile)
@@ -692,8 +700,11 @@ class backup:
             os.remove(self._err_log)
 
         pid = public.M('databases').where('name=?',(db_name)).getField('id')
-
+        cron_id = 0
+        if echo_id:
+            cron_id = public.M("crontab").where('echo=?',(echo_id,)).getField('id')
         pdata = {
+            'cron_id': cron_id,
             'type': '1',
             'name': fname,
             'pid': pid,
@@ -715,6 +726,7 @@ class backup:
                     _not_save_local = False
 
                     pdata = {
+                        'cron_id': cron_id,
                         'type': '1',
                         'name': fname,
                         'pid': pid,
@@ -733,9 +745,9 @@ class backup:
 
         #清理多余备份
         if not self._cloud:
-            backups = public.M('backup').where("type=? and pid=? and filename NOT LIKE '%|%'",('1',pid)).field('id,name,filename').select()
+            backups = public.M('backup').where("cron_id=? and type=? and pid=? and filename NOT LIKE '%|%'",(cron_id,'1',pid)).field('id,name,filename').select()
         else:
-            backups = public.M('backup').where('type=? and pid=? and filename LIKE ?',('1',pid,"%{}%".format(self._cloud._name))).field('id,name,filename').select()
+            backups = public.M('backup').where('cron_id=? and type=? and pid=? and filename LIKE ?',(cron_id,'1',pid,"%{}%".format(self._cloud._name))).field('id,name,filename').select()
 
 
         self.delete_old(backups,save,'database')

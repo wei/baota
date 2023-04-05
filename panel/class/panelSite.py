@@ -631,7 +631,6 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
         data['ftpStatus'] = False
         if get.ftp == 'true':
             import ftp
-            get.ps = self.siteName
             result = ftp.ftp().AddUser(get)
             if result['status']:
                 data['ftpStatus'] = True
@@ -647,7 +646,6 @@ set $bt_safe_open "{}/:/tmp/";'''.format(self.sitePath)
             get.db_user = get.datauser
             get.password = get.datapassword
             get.address = '127.0.0.1'
-            get.ps = self.siteName
             result = database.database().AddDatabase(get)
             if result['status']:
                 data['databaseStatus'] = True
@@ -1531,11 +1529,13 @@ listener Default%s{
     def GetDnsApi(self,get):
         api_path = './config/dns_api.json'
         api_init = './config/dns_api_init.json'
-        if not os.path.exists(api_path):
-            if os.path.exists(api_init):
-                import shutil
-                shutil.copyfile(api_init,api_path)
-        apis = json.loads(public.ReadFile(api_path))
+        import shutil,json
+        try:
+            apis = json.loads(public.ReadFile(api_path))
+        except:
+            os.remove(api_path)
+            shutil.copyfile(api_init,api_path)
+            apis = json.loads(public.ReadFile(api_path))
 
         path = '/root/.acme.sh'
         if not os.path.exists(path + '/account.conf'): path = "/.acme.sh"
@@ -3131,19 +3131,20 @@ server
             conf = re.sub(reg,'vhRoot '+Path,conf)
             public.writeFile(file,conf)
 
-        #创建basedir
-        userIni = Path + '/.user.ini'
-        if os.path.exists(userIni): public.ExecShell("chattr -i "+userIni)
-        public.writeFile(userIni, 'open_basedir='+Path+'/:/tmp/')
-        public.ExecShell('chmod 644 ' + userIni)
-        public.ExecShell('chown root:root ' + userIni)
-        public.ExecShell('chattr +i '+userIni)
-        public.set_site_open_basedir_nginx(Name)
-
-        public.serviceReload()
         public.M("sites").where("id=?",(id,)).setField('path',Path)
         public.WriteLog('TYPE_SITE', 'SITE_PATH_SUCCESS',(Name,))
         self.CheckRunPathExists(id)
+
+        # 创建basedir
+        userIni = Path + '/.user.ini'
+        if os.path.exists(userIni): public.ExecShell("chattr -i " + userIni)
+        public.writeFile(userIni, 'open_basedir=' + Path + '/:/tmp/')
+        public.ExecShell('chmod 644 ' + userIni)
+        public.ExecShell('chown root:root ' + userIni)
+        public.ExecShell('chattr +i ' + userIni)
+        public.set_site_open_basedir_nginx(Name)
+        public.serviceReload()
+
         return public.returnMsg(True,  "SET_SUCCESS")
 
     def CheckRunPathExists(self,site_id):
@@ -3393,6 +3394,7 @@ server
     def SetDirUserINI(self,get):
         path = get.path
         runPath = self.GetRunPath(get)
+        if not runPath: return public.returnMsg(False, "运行目录获取失败")
         filename = path+runPath+'/.user.ini'
         siteName = public.M('sites').where('path=?',(get.path,)).getField('name')
         conf = public.readFile(filename)
@@ -3417,12 +3419,15 @@ server
             else:
                 public.writeFile(filename,'open_basedir={}/:/tmp/'.format(path))
             public.ExecShell("chattr +i " + filename)
+            if not os.path.exists(filename): return public.returnMsg(False, '.user.ini文件不存在,设置防跨站失败,请关闭防篡改或其他安全软件后再试!')
             public.set_site_open_basedir_nginx(siteName)
             public.serviceReload()
             return public.returnMsg(True,'SITE_BASEDIR_OPEN_SUCCESS')
         except Exception as e:
             public.ExecShell("chattr +i " + filename)
-            return str(e)
+            if "Operation not permitted" in str(e):
+                return public.returnMsg(False, "{}\t权限拒绝,设置防跨站失败,请关闭防篡改或其他安全软件后再试!".format(str(e)))
+            return public.returnMsg(False, str(e))
 
     def _set_ols_open_basedir(self,get):
         # 设置ols
@@ -3646,11 +3651,13 @@ server
         if self.__check_proxy_even(get,action):
             return public.returnMsg(False, '不能同时设置目录代理和全局代理')
         #判断cachetime类型
+        if not bool(get.cachetime):
+            return public.returnMsg(False, "缓存时间不能为空")
         if get.cachetime:
             try:
                 int(get.cachetime)
             except:
-                return public.returnMsg(False, "请输入数字")
+                return public.returnMsg(False, "缓存时间不能为空")
 
         rep = "http(s)?\:\/\/"
         #repd = "http(s)?\:\/\/([a-zA-Z0-9][-a-zA-Z0-9]{0,62}\.)+([a-zA-Z0-9][a-zA-Z0-9]{0,62})+.?"

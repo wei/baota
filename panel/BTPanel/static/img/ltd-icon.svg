@@ -1,0 +1,59 @@
+<svg width="22.471191" height="20.528015" viewBox="0 0 22.4712 20.528" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<desc>
+			Created with Pixso.
+	</desc>
+	<g id="产品logo">
+		<g id="组合 453">
+			<g id="path">
+				<path d="M7.25928 7.05109L11.2031 20.528L15.1475 7.05109L7.25928 7.05109Z" fill-rule="evenodd" fill="url(#paint_linear_16_49_0)"/>
+			</g>
+			<g id="path">
+				<path d="M8.09131 0L3.54785 0L0 5.64166L5.78027 5.64166L8.09131 0Z" fill-rule="evenodd" fill="url(#paint_linear_16_50_0)"/>
+			</g>
+			<g id="path">
+				<path d="M15.0688 5.64093L12.7578 0L9.64551 0L7.33496 5.64166L15.0688 5.64093Z" fill-rule="evenodd" fill="url(#paint_linear_16_51_0)"/>
+			</g>
+			<g id="path">
+				<path d="M0.327637 7.05225L4.24023 11.9018C4.24951 11.8976 9.33398 18.215 9.33398 18.215L5.74023 7.05225L0.327637 7.05225Z" fill-rule="evenodd" fill="url(#paint_linear_16_52_0)"/>
+			</g>
+			<g id="path">
+				<path d="M14.3125 0L16.6235 5.64093L22.4712 5.64166L18.856 0L14.3125 0Z" fill-rule="evenodd" fill="url(#paint_linear_16_53_0)"/>
+			</g>
+			<g id="path">
+				<path d="M13.1562 18.1219L19.9551 9.74933C19.9424 9.74341 22.1348 7.05225 22.1348 7.05225L16.6626 7.05225L13.1562 18.1219Z" fill-rule="evenodd" fill="url(#paint_linear_16_54_0)"/>
+			</g>
+		</g>
+	</g>
+	<defs>
+		<linearGradient id="paint_linear_16_49_0" x1="11.203277" y1="7.051086" x2="11.203277" y2="20.527998" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#E8A936"/>
+			<stop offset="0.496183" stop-color="#E9C571"/>
+			<stop offset="1.000000" stop-color="#B17726"/>
+		</linearGradient>
+		<linearGradient id="paint_linear_16_50_0" x1="4.045614" y1="0.000000" x2="4.045614" y2="5.641685" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#E8A936"/>
+			<stop offset="0.496183" stop-color="#E9C571"/>
+			<stop offset="1.000000" stop-color="#B17726"/>
+		</linearGradient>
+		<linearGradient id="paint_linear_16_51_0" x1="11.201864" y1="0.000000" x2="11.201864" y2="5.641685" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#E8A936"/>
+			<stop offset="0.496183" stop-color="#E9C571"/>
+			<stop offset="1.000000" stop-color="#B17726"/>
+		</linearGradient>
+		<linearGradient id="paint_linear_16_52_0" x1="4.830815" y1="7.052246" x2="4.830815" y2="18.214973" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#E8A936"/>
+			<stop offset="0.496183" stop-color="#E9C571"/>
+			<stop offset="1.000000" stop-color="#B17726"/>
+		</linearGradient>
+		<linearGradient id="paint_linear_16_53_0" x1="18.391758" y1="0.000000" x2="18.391758" y2="5.641685" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#E8A936"/>
+			<stop offset="0.496183" stop-color="#E9C571"/>
+			<stop offset="1.000000" stop-color="#B17726"/>
+		</linearGradient>
+		<linearGradient id="paint_linear_16_54_0" x1="17.645460" y1="7.052246" x2="17.645460" y2="18.121864" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#E8A936"/>
+			<stop offset="0.496183" stop-color="#E9C571"/>
+			<stop offset="1.000000" stop-color="#B17726"/>
+		</linearGradient>
+	</defs>
+</svg>

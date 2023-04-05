@@ -18,6 +18,16 @@ var firewall = {
         case 'safety':
           that.safety.getFirewallIfo();
           break;
+        case 'logs':
+          bt.set_cookie('firewall_type','safety')
+          bt.set_cookie('logs_type','panelLogs')
+          window.location.href = '/logs'
+          break;
+        case 'logAudit':
+          bt.set_cookie('firewall_type','safety')
+          bt.set_cookie('logs_type','logAudit')
+          window.location.href = '/logs'
+          break;
       }
     })
     $('[data-name="'+ (name || 'safety') +'"]').trigger('click')
@@ -2320,8 +2330,8 @@ var firewall = {
                 $('#whitePathList').append('<ul class="help-info-text c7" style="margin-top:5px;"><li>注意：添加白名单目录要已<code>/</code>结尾</li></ul>')
                 //文件选择
                 $('.glyphicon-folder-open').click(function () {
-                  bt.select_path('add_path','all',function (rdata,type) {
-                    $('[name=path]').val(rdata + (type === 'dir' ? '/':'') )
+                  bt.select_path('add_path','all',function (rdata,list,type) {
+                    $('[name=path]').val(rdata + (rdata.substr(rdata.length - 1, 1) !== "/" ? '/':'') )
                     $('[name=path]').data('type',type === 'files' ? 'file' : type)
                   });
                 })
@@ -2695,7 +2705,10 @@ var firewall = {
               迅睿CMS、pbootcms、苹果CMS、eyoucms、<br>\
               海洋CMS、ThinkCMF、zfaka、dedecms、<br>\
               MetInfo、emlog、帝国CMS、discuz、<br>\
-              Thinkphp、Wordpress\
+              Thinkphp、Wordpress、Z-Blog、极致CMS、<br>\
+              ShopXO、HYBBS、ECShop、SchoolCMS、<br>\
+              phpcms、likeshop、iCMS、WellCMS、<br>\
+              chanzhiEPS、PHPOK、LaySNS\
             </li>\
             <li style="margin-left:0;">可扫描网站中存在的漏洞</li>\
             <li style="margin-left:0;">提供修复/提供付费解决方案</li>\
@@ -5472,7 +5485,7 @@ var contDetect = {
 						return '<a class="bterror" href="javascript:;">' + row.last_risk_count + '</a>'
 					},
 					event: function (row) {
-						if (row.risks === 0) return;
+						if (row.last_risk_count === 0) return;
 						that.showRiskDetails(row);
 					}
 				},

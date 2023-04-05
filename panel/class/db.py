@@ -289,10 +289,10 @@ class Sql():
         # 加密指定字段
         try:
             if not param or not keys: return param
-            if self.__DB_FILE.find(self.__default_db_file) != -1: return param
-
+            if self.__DB_FILE.find(self.__default_db_file) == -1: return param
             new_param = []
             keys_list = keys.split(',')
+            if isinstance(param,str): param = [param]
             for i in range(len(keys_list)):
                 key = keys_list[i]
                 value = param[i]
@@ -308,7 +308,7 @@ class Sql():
         # 解密字段
         try:
             if not data: return data
-            if self.__DB_FILE.find(self.__default_db_file) != -1: return data
+            if self.__DB_FILE.find(self.__default_db_file) == -1: return data
             if isinstance(data,dict):
                 for key in data.keys():
                     if not isinstance(data[key],str): continue

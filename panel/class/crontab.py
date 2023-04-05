@@ -61,6 +61,33 @@ class crontab:
             data.append(tmp)
         return data
 
+    def get_backup_list(self,args):
+        '''
+            @name 获取指定备份任务的备份文件列表
+            @author hwliang
+            @param args<dict> 参数{
+                cron_id<int> 任务ID 必填
+                p<int> 页码 默认1
+                rows<int> 每页显示条数 默认10
+                callback<string> jsonp回调函数  默认为空
+            }
+            @return <dict>{
+                page<str> 分页HTML
+                data<list> 数据列表
+            }
+        '''
+
+        p = args.get('p/d',1)
+        rows = args.get('rows/d',10)
+        tojs = args.get('tojs/s','')
+        callback = args.get('callback/s','') if tojs else tojs
+
+        cron_id = args.get('cron_id/d')
+        count = public.M('backup').where('cron_id=?',(cron_id,)).count()
+        data = public.get_page(count,p,rows,callback)
+        data['data'] = public.M('backup').where('cron_id=?',(cron_id,)).limit(data['row'],data['shift']).select()
+        return data
+
 
     def get_last_exec_time(self,log_file):
         '''
@@ -190,12 +217,11 @@ class crontab:
                       get['minute'],get['save'],get['backupTo'],get['sBody'],
                       get['urladdress'],get['save_local'],get["notice"],
                       get["notice_channel"])
-
+        self.remove_for_crond(cronInfo['echo'])
+        if cronInfo['status'] == 0: return public.returnMsg(False, '当前任务处于停止状态,请开启任务后再修改!')
         if not self.sync_to_crond(cronInfo):
             return public.returnMsg(False,'写入计划任务失败,请检查磁盘是否可写或是否开启了系统加固!')
         public.M('crontab').where('id=?',(id,)).save(columns,values)
-        self.remove_for_crond(cronInfo['echo'])
-
         public.WriteLog('计划任务','修改计划任务['+cronInfo['name']+']成功')
         return public.returnMsg(True,'修改成功')
 
@@ -217,7 +243,6 @@ class crontab:
         cronPath=public.GetConfigValue('setup_path')+'/cron'
         cronName=self.GetShell(cronInfo)
         if type(cronName) == dict: return cronName
-        if cronInfo['status'] == 0: return False
         cuonConfig += ' ' + cronPath+'/'+cronName+' >> '+ cronPath+'/'+cronName+'.log 2>&1'
         wRes = self.WriteShell(cuonConfig)
         if type(wRes) != bool: return False
@@ -253,6 +278,7 @@ class crontab:
         public.add_security_logs('计划任务','添加计划任务['+get['name']+']成功'+str(values))
         if type(addData) == str:
             return public.returnMsg(False, addData)
+        public.WriteLog('计划任务','添加计划任务['+get['name']+']成功')
         if addData>0:
             result = public.returnMsg(True,'ADD_SUCCESS')
             result['id'] = addData

@@ -20,7 +20,7 @@ _level = 2  # 风险级别： 1.提示(低)  2.警告(中)  3.危险(高)
 _date = '2022-8-10'  # 最后更新时间
 _ignore = os.path.exists("data/warning/ignore/sw_panel_swing.pl")
 _tips = [
-    "在【设置】-【面板登录告警】中开启"
+    "在【面板设置】-【通知设置】-【面板登录告警】中开启"
 ]
 _help = ''
 
@@ -36,7 +36,7 @@ def check_run():
         filename = 'data/' + fname
         if os.path.exists(filename):
             return True, '无风险'
-    return False, '请在【设置】-【面板登录告警】中开启'
+    return False, '在【面板设置】-【通知设置】-【面板登录告警】中开启'
 
 
 

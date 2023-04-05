@@ -678,7 +678,7 @@ class panelPush:
 
         count = sql.where(where,()).count()
         data = public.get_page(count,int(p),int(limit))
-        data['data'] = sql.where(where,()).limit('{},{}'.format(data['shift'], data['row'])).order('addtime desc').select()
+        data['data'] = public.M('logs').where(where,()).limit('{},{}'.format(data['shift'], data['row'])).order('id desc').select()
 
         return data
 

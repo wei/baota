@@ -23,7 +23,7 @@ def control_init():
     clean_hook_log()
     run_new()
     clean_max_log('/www/server/cron',1024*1024*5,20)
-    clean_max_log("/www/server/panel/plugin/webhook/script",1024*1024*1) # 当webhook日志文件大于1M时清理，保留最新的100行
+    clean_max_log("/www/server/panel/plugin/webhook/script",1024*1024*1)
     #check_firewall()
     check_dnsapi()
     clean_php_log()
@@ -42,6 +42,37 @@ def control_init():
     deb_bashrc()
     upgrade_gevent()
     upgrade_polkit()
+    hide_docker()
+
+
+def hide_docker():
+    '''
+        @name 隐藏docker菜单
+        @author hwliang
+        @return void
+    '''
+    tip_file = '{}/data/hide_docker.pl'.format(public.get_panel_path())
+    if os.path.exists(tip_file): return
+
+    # 正在使用docker-compose的用户不隐藏
+    docker_compose = "/usr/bin/docker-compose"
+    if os.path.exists(docker_compose): return
+
+    # 获取隐藏菜单配置
+    menu_key = 'memuDocker'
+    hide_menu_json = public.read_config('hide_menu')
+    if not isinstance(hide_menu_json,list):
+        hide_menu_json = []
+    if menu_key in hide_menu_json: return
+
+    # 保存隐藏菜单配置
+    hide_menu_json.append(menu_key)
+    public.save_config('hide_menu',hide_menu_json)
+    public.writeFile(tip_file,'True')
+
+
+
+
 
 def upgrade_polkit():
     '''
@@ -63,6 +94,7 @@ def clear_other_files():
         public.ExecShell("rm -rf {}".format(dirPath))
         public.ExecShell("/etc/init.d/nginx reload")
         public.ExecShell("/etc/init.d/nginx start")
+
     dirPath = '/www/server/adminer'
     if os.path.exists(dirPath):
         public.ExecShell("rm -rf {}".format(dirPath))
@@ -243,7 +275,6 @@ def sql_pacth():
 `addtime` INTEGER
 )'''
         sql.execute(csql,())
-
 
     if not sql.table('sqlite_master').where('type=? AND name=?', ('table', 'security')).count():
         csql = '''CREATE TABLE IF NOT EXISTS `security` (

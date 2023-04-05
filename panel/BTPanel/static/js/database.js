@@ -931,6 +931,7 @@ var database = {
                               return (row.cron_id == [] || row.cron_id.length == 0 ? true : false)
                             },
                             event: function (row, index, ev, key, that) {
+                              if(database.isLtdBackup()) return
                               var editBackup = null;
                               layer.open({
                                 type: 1,
@@ -1209,6 +1210,7 @@ var database = {
                         title: '添加备份任务',
                         active: true,
                         event: function (ev, that) {
+                          if(database.isLtdBackup()) return
                           var addDBbackup = null;
                           layer.open({
                             type: 1,
@@ -1441,6 +1443,7 @@ var database = {
                   })
                   $('#bt_incbackup_table').append("<ul class='help-info-text c7'>\
                     <li><span class='glyphicon glyphicon-alert' style='color: #f39c12; margin-right: 10px;'></span>【使用提醒】此功能为企业版专享功能，目前处于公测阶段，将于2023年1月16日后转为收费功能。</li>\
+                    <li class='color-org'>注意：增量备份暂时固定默认备份目录是：/www/backup</li>\
                     <li>备份大小：备份大小包含完全备份数据大小和增量备份数据大小</li>\
                     <li>备份会保留一个星期的备份数据，当备份时，检测到完全备份为一个星期前，会重新完全备份</li>\
                     <li>请勿同一时间添加多个备份任务，否则可能因同一时间执行多个备份任务导致文件句柄数打开过多或者爆内存</li>\
@@ -1861,6 +1864,7 @@ var database = {
                   return (row.cron_id == [] || row.cron_id.length == 0 ? true : false)
                 },
                 event: function (row, index, ev, key, that) {
+                  if(database.isLtdBackup()) return
                   var editBackup = null;
                   layer.open({
                     type: 1,
@@ -2142,6 +2146,7 @@ var database = {
             title: '添加备份任务',
             active: true,
             event: function (ev, that) {
+              if(database.isLtdBackup()) return
               var addDBbackup = null;
               layer.open({
                 type: 1,
@@ -2319,11 +2324,28 @@ var database = {
       })
       $('#dbbackup_list').append("<ul class='help-info-text c7'>\
           <li><span class='glyphicon glyphicon-alert' style='color: #f39c12; margin-right: 10px;'></span>【使用提醒】此功能为企业版专享功能，目前处于公测阶段，将于2023年1月16日后转为收费功能。</li>\
+          <li class='color-org'>注意：增量备份暂时固定默认备份目录是：/www/backup</li>\
           <li>备份大小：备份大小包含完全备份数据大小和增量备份数据大小</li>\
           <li>备份会保留一个星期的备份数据，当备份时，检测到完全备份为一个星期前，会重新完全备份</li>\
           <li>请勿同一时间添加多个备份任务，否则可能因同一时间执行多个备份任务导致文件句柄数打开过多或者爆内存</li>\
       </ul>");
     }
+  },
+  isLtdBackup: function () {
+    var ltd = parseInt(bt.get_cookie('ltd_end')  || -1)
+    if(ltd <= 0){
+      var item = {
+        name: 'backup',
+        pluginName: '企业增量备份',
+        ps: '指定数据库或指定表增量备份，支持InnoDB和MyISAM两种存储引擎，可增量备份至服务器磁盘、阿里云OSS、腾讯云COS、七牛云存储、华为云存储、百度云存储',
+        preview: false
+      }
+      product_recommend.recommend_product_view(item, {
+        imgArea: ['783px', '588px']
+      })
+      return true
+    }
+    return false
   },
   get_backup: function () {
     var that = this;
@@ -2397,7 +2419,7 @@ var database = {
           shift: 5,
           shadeClose: false,
           content: '\
-            <div class="pd15">\
+            <div class="pd15 bt_table">\
               <div class="clearfix">\
                 <button class="btn btn-default btn-sm" onclick="database.upload_files(\'' + name + '\')">' + lan.database.input_local_up + '</button>\
                 <div class="pull-right">\
@@ -2419,7 +2441,7 @@ var database = {
           columns: [{
             field: 'name',
             title: lan.files.file_name,
-            width: 240,
+            width: 220,
             fixed: true
           },
             {
@@ -2440,8 +2462,8 @@ var database = {
               field: 'opt',
               title: '操作',
               align: 'right',
-              templet: function (item) {
-                return '<a class="btlink" herf="javascrpit:;" onclick="bt.database.input_sql(\'' + bt.rtrim(rdata.PATH, '/') + "/" + item.name + '\',\'' + name + '\')">导入</a>  | <a class="btlink" herf="javascrpit:;" onclick="database.rm_input_file(\'' + bt.rtrim(rdata.PATH, '/') + "/" + item.name + '\',\'' + name + '\')">删除</a>';
+							templet: function (item) {
+                return '<span><a class="btlink" herf="javascrpit:;" onclick="bt.database.input_sql(\'' + bt.rtrim(rdata.PATH, '/') + "/" + item.name + '\',\'' + name + '\')">导入</a>  | <a class="btlink" herf="javascrpit:;" onclick="database.rm_input_file(\'' + bt.rtrim(rdata.PATH, '/') + "/" + item.name + '\',\'' + name + '\')">删除</a></span>';
               }
             },
           ],
@@ -3234,8 +3256,9 @@ var mongodb = {
             var backup = '点击备份',
                 _class = "bt_warning";
             if (row.backup_count > 0) backup = lan.database.backup_ok, _class = "bt_success";
-            return '<span><a href="javascript:;" class="btlink ' + _class + '" onclick="database.database_detail('+row.id+',\''+row.name+'\')">' + backup + (row.backup_count > 0 ? ('(' + row.backup_count + ')') : '') + '</a> | ' +
-                '<a href="javascript:database.input_database(\''+row.name+'\')" class="btlink">'+lan.database.input+'</a></span>';
+            return '<span><a href="javascript:;" class="btlink ' + _class + '" onclick="database.database_detail('+row.id+',\''+row.name+'\')">' + backup + (row.backup_count > 0 ? ('(' + row.backup_count + ')') : '') + '</a>' +
+                '</span>';
+								// <a href="javascript:database.input_database(\''+row.name+'\')" class="btlink">'+lan.database.input+'</a>
           }
         },
         {

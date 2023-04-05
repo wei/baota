@@ -11,11 +11,13 @@
 # SSL接口
 #------------------------------
 from panelAuth import panelAuth
-import public,os,sys,binascii,urllib,json,time,datetime,re
+import public, os, sys, binascii, urllib, json, time, datetime, re
 try:
-    from BTPanel import cache,session
+    from BTPanel import cache, session
 except:
     pass
+
+
 class panelSSL:
     __APIURL = public.GetConfigValue('home') + '/api/Auth'
     __APIURL2 = public.GetConfigValue('home') + '/api/Cert'
@@ -25,6 +27,7 @@ class panelSSL:
     __userInfo = None
     __PDATA = None
     _check_url = None
+
     #构造方法
     def __init__(self):
         pdata = {}
@@ -53,7 +56,7 @@ class panelSSL:
         self.__PDATA = pdata
 
     #获取Token
-    def GetToken(self,get):
+    def GetToken(self, get):
         rtmp = ""
         data = {}
         data['username'] = get.username
@@ -62,14 +65,14 @@ class panelSSL:
         pdata = {}
         pdata['data'] = self.De_Code(data)
         try:
-            rtmp = public.httpPost(self.__BINDURL,pdata)
+            rtmp = public.httpPost(self.__BINDURL, pdata)
             result = json.loads(rtmp)
             result['data'] = self.En_Code(result['data'])
             if result['data']:
                 result['data']['serverid'] = data['serverid']
-                public.writeFile(self.__UPATH,json.dumps(result['data']))
+                public.writeFile(self.__UPATH, json.dumps(result['data']))
                 public.flush_plugin_list()
-            del(result['data'])
+            del (result['data'])
             session['focre_cloud'] = True
             return result
         except Exception as ex:
@@ -79,17 +82,18 @@ class panelSSL:
             raise public.error_conn_cloud(str(ex))
 
     #删除Token
-    def DelToken(self,get):
+    def DelToken(self, get):
         if os.path.exists(self.__UPATH): os.remove(self.__UPATH)
         session['focre_cloud'] = True
-        return public.returnMsg(True,"SSL_BTUSER_UN")
+        return public.returnMsg(True, "SSL_BTUSER_UN")
 
     #获取用户信息
-    def GetUserInfo(self,get):
+    def GetUserInfo(self, get):
         result = {}
         if self.__userInfo:
             userTmp = {}
-            userTmp['username'] = self.__userInfo['username'][0:3]+'****'+self.__userInfo['username'][-4:]
+            userTmp['username'] = self.__userInfo['username'][
+                0:3] + '****' + self.__userInfo['username'][-4:]
             result['status'] = True
             result['msg'] = public.getMsg('SSL_GET_SUCCESS')
             result['data'] = userTmp
@@ -102,62 +106,66 @@ class panelSSL:
         return result
 
     #获取产品列表
-    def get_product_list(self,get):
+    def get_product_list(self, get):
         p_type = 'dv'
         if 'p_type' in get: p_type = get.p_type
         result = self.request('get_product_list?p_type={}'.format(p_type))
         return result
 
     #获取商业证书订单列表
-    def get_order_list(self,get):
+    def get_order_list(self, get):
         result = self.request('get_order_list')
         return result
 
     #获指定商业证书订单
-    def get_order_find(self,get):
+    def get_order_find(self, get):
         self.__PDATA['data']['oid'] = get.oid
         result = self.request('get_order_find')
         return result
 
     #下载证书
-    def download_cert(self,get):
+    def download_cert(self, get):
         self.__PDATA['data']['oid'] = get.oid
         result = self.request('download_cert')
         return result
 
     #部署指定商业证书
-    def set_cert(self,get):
+    def set_cert(self, get):
         siteName = get.siteName
         certInfo = self.get_order_find(get)
         path = '/www/server/panel/vhost/cert/' + siteName
         if not os.path.exists(path):
             public.ExecShell('mkdir -p ' + path)
-        csrpath = path+"/fullchain.pem"
-        keypath = path+"/privkey.pem"
-        pidpath = path+"/certOrderId"
+        csrpath = path + "/fullchain.pem"
+        keypath = path + "/privkey.pem"
+        pidpath = path + "/certOrderId"
 
         other_file = path + '/partnerOrderId'
         if os.path.exists(other_file): os.remove(other_file)
         other_file = path + '/README'
         if os.path.exists(other_file): os.remove(other_file)
 
-        public.writeFile(keypath,certInfo['privateKey'])
-        public.writeFile(csrpath,certInfo['certificate']+"\n"+certInfo['caCertificate'])
-        public.writeFile(pidpath,get.oid)
+        public.writeFile(keypath, certInfo['privateKey'])
+        public.writeFile(
+            csrpath,
+            certInfo['certificate'] + "\n" + certInfo['caCertificate'])
+        public.writeFile(pidpath, get.oid)
         import panelSite
         panelSite.panelSite().SetSSLConf(get)
         public.serviceReload()
-        return public.returnMsg(True,'SET_SUCCESS')
+        return public.returnMsg(True, 'SET_SUCCESS')
 
     #生成商业证书支付订单
-    def apply_order_pay(self,args):
+    def apply_order_pay(self, args):
         self.__PDATA['data'] = json.loads(args.pdata)
         result = self.check_ssl_caa(self.__PDATA['data']['domains'])
         if result: return result
         result = self.request('apply_cert_order')
         return result
 
-    def check_ssl_caa(self,domains,clist = ['sectigo.com','digicert.com','comodoca.com']):
+    def check_ssl_caa(self,
+                      domains,
+                      clist=['sectigo.com', 'digicert.com', 'comodoca.com']):
         '''
             @name 检查CAA记录是否正确
             @param domains 域名列表
@@ -167,9 +175,12 @@ class panelSSL:
         try:
             data = {}
             for domain in domains:
-                root,zone = public.get_root_domain(domain)
-                for d in [domain,root,'_acme-challenge.{}'.format(root),'_acme-challenge.{}'.format(domain)]:
-                    ret = public.query_dns(d,'CAA')
+                root, zone = public.get_root_domain(domain)
+                for d in [
+                        domain, root, '_acme-challenge.{}'.format(root),
+                        '_acme-challenge.{}'.format(domain)
+                ]:
+                    ret = public.query_dns(d, 'CAA')
                     if not ret: continue
 
                     slist = []
@@ -188,17 +199,18 @@ class panelSSL:
                 result['data'] = json.dumps(data)
                 result['caa_list'] = data
                 return result
-        except : pass
+        except:
+            pass
         return False
 
     #检查商业证书支付状态
-    def get_pay_status(self,args):
+    def get_pay_status(self, args):
         self.__PDATA['data']['oid'] = args.oid
         result = self.request('get_pay_status')
         return result
 
     #提交商业证书订单到CA
-    def apply_order(self,args):
+    def apply_order(self, args):
         self.__PDATA['data']['oid'] = args.oid
         result = self.request('apply_cert')
         if result['status'] == True:
@@ -207,7 +219,7 @@ class panelSSL:
         return result
 
     #获取商业证书验证信息
-    def get_verify_info(self,args):
+    def get_verify_info(self, args):
         self.__PDATA['data']['oid'] = args.oid
         verify_info = self.request('get_verify_info')
         is_file_verify = 'fileName' in verify_info
@@ -218,25 +230,28 @@ class panelSSL:
                 siteRunPath = self.get_domain_run_path(domain)
                 if not siteRunPath:
                     if domain[:4] == 'www.': domain = domain[:4]
-                    verify_info['paths'].append(verify_info['path'].replace('example.com',domain))
+                    verify_info['paths'].append(verify_info['path'].replace(
+                        'example.com', domain))
                     continue
                 verify_path = siteRunPath + '/.well-known/pki-validation'
                 if not os.path.exists(verify_path):
                     os.makedirs(verify_path)
                 verify_file = verify_path + '/' + verify_info['fileName']
                 if os.path.exists(verify_file): continue
-                public.writeFile(verify_file,verify_info['content'])
+                public.writeFile(verify_file, verify_info['content'])
             else:
                 if domain[:4] == 'www.': domain = domain[:4]
                 verify_info['hosts'].append(verify_info['host'] + '.' + domain)
                 if 'auth_to' in args:
-                    root,zone = public.get_root_domain(domain)
-                    res = self.create_dns_record(args['auth_to'],verify_info['host'] + '.' + root,verify_info['value'])
+                    root, zone = public.get_root_domain(domain)
+                    res = self.create_dns_record(
+                        args['auth_to'], verify_info['host'] + '.' + root,
+                        verify_info['value'])
                     print(res)
         return verify_info
 
     #处理验证信息
-    def set_verify_info(self,args):
+    def set_verify_info(self, args):
         verify_info = self.get_verify_info(args)
         is_file_verify = 'fileName' in verify_info
         verify_info['paths'] = []
@@ -247,39 +262,40 @@ class panelSSL:
                 siteRunPath = self.get_domain_run_path(domain)
                 if not siteRunPath:
                     #if domain[:4] == 'www.': domain = domain[4:]
-                    verify_info['paths'].append(verify_info['path'].replace('example.com',domain))
+                    verify_info['paths'].append(verify_info['path'].replace(
+                        'example.com', domain))
                     continue
                 verify_path = siteRunPath + '/.well-known/pki-validation'
                 if not os.path.exists(verify_path):
                     os.makedirs(verify_path)
                 verify_file = verify_path + '/' + verify_info['fileName']
                 if os.path.exists(verify_file): continue
-                public.writeFile(verify_file,verify_info['content'])
+                public.writeFile(verify_file, verify_info['content'])
             else:
                 #if domain[:4] == 'www.': domain = domain[4:]
                 verify_info['hosts'].append(verify_info['host'] + '.' + domain)
 
                 if 'auth_to' in args:
-                    root,zone = public.get_root_domain(domain)
-                    self.create_dns_record(args['auth_to'],verify_info['host'] + '.' + root,verify_info['value'])
+                    root, zone = public.get_root_domain(domain)
+                    self.create_dns_record(args['auth_to'],
+                                           verify_info['host'] + '.' + root,
+                                           verify_info['value'])
         return verify_info
 
-
     #获取指定域名的PATH
-    def get_domain_run_path(self,domain):
-        pid = public.M('domain').where('name=?',(domain,)).getField('pid')
+    def get_domain_run_path(self, domain):
+        pid = public.M('domain').where('name=?', (domain, )).getField('pid')
         if not pid: return False
         return self.get_site_run_path(pid)
 
-
-    def get_site_run_path(self,pid):
+    def get_site_run_path(self, pid):
         '''
             @name 获取网站运行目录
             @author hwliang<2020-08-05>
             @param pid(int) 网站标识
             @return string
         '''
-        siteInfo = public.M('sites').where('id=?',(pid,)).find()
+        siteInfo = public.M('sites').where('id=?', (pid, )).find()
         siteName = siteInfo['name']
         sitePath = siteInfo['path']
         webserver_type = public.get_webserver()
@@ -290,7 +306,7 @@ class panelSSL:
             if os.path.exists(filename):
                 conf = public.readFile(filename)
                 rep = r'\s*root\s+(.+);'
-                tmp1 = re.search(rep,conf)
+                tmp1 = re.search(rep, conf)
                 if tmp1: path = tmp1.groups()[0]
 
         elif webserver_type == 'apache':
@@ -298,14 +314,14 @@ class panelSSL:
             if os.path.exists(filename):
                 conf = public.readFile(filename)
                 rep = r'\s*DocumentRoot\s*"(.+)"\s*\n'
-                tmp1 = re.search(rep,conf)
+                tmp1 = re.search(rep, conf)
                 if tmp1: path = tmp1.groups()[0]
         else:
             filename = setupPath + '/panel/vhost/openlitespeed/' + siteName + '.conf'
             if os.path.exists(filename):
                 conf = public.readFile(filename)
                 rep = r"vhRoot\s*(.*)"
-                path = re.search(rep,conf)
+                path = re.search(rep, conf)
                 if not path:
                     path = None
                 else:
@@ -316,40 +332,48 @@ class panelSSL:
         return path
 
     #验证URL是否匹配
-    def check_url_txt(self,args,timeout=5):
+    def check_url_txt(self, args, timeout=5):
         url = args.url
         content = args.content
 
         import http_requests
-        res = http_requests.get(url,s_type='curl',timeout=timeout)
+        res = http_requests.get(url, s_type='curl', timeout=timeout)
         result = res.text
         if not result: return 0
 
-        if result.find('11001') != -1 or result.find('curl: (6)') != -1: return -1
-        if result.find('curl: (7)') != -1 or res.status_code in [403,401]: return -5
-        if result.find('Not Found') != -1 or result.find('not found') != -1 or res.status_code in [404]:return -2
-        if result.find('timed out') != -1:return -3
-        if result.find('301') != -1 or result.find('302') != -1 or result.find('Redirecting...') != -1 or res.status_code in [301,302]:return -4
-        if result == content:return 1
+        if result.find('11001') != -1 or result.find('curl: (6)') != -1:
+            return -1
+        if result.find('curl: (7)') != -1 or res.status_code in [403, 401]:
+            return -5
+        if result.find('Not Found') != -1 or result.find(
+                'not found') != -1 or res.status_code in [404]:
+            return -2
+        if result.find('timed out') != -1: return -3
+        if result.find('301') != -1 or result.find('302') != -1 or result.find(
+                'Redirecting...') != -1 or res.status_code in [301, 302]:
+            return -4
+        if result == content: return 1
         return 0
 
     #更换验证方式
-    def again_verify(self,args):
+    def again_verify(self, args):
         self.__PDATA['data']['oid'] = args.oid
         self.__PDATA['data']['dcvMethod'] = args.dcvMethod
         result = self.request('again_verify')
         return result
 
     #获取商业证书验证结果
-    def get_verify_result(self,args):
+    def get_verify_result(self, args):
         self.__PDATA['data']['oid'] = args.oid
         verify_info = self.request('get_verify_result')
-        if verify_info['status'] in ['COMPLETE',False]: return verify_info
-        is_file_verify = 'CNAME_CSR_HASH' != verify_info['data']['dcvList'][0]['dcvMethod']
+        if verify_info['status'] in ['COMPLETE', False]: return verify_info
+        is_file_verify = 'CNAME_CSR_HASH' != verify_info['data']['dcvList'][0][
+            'dcvMethod']
         verify_info['paths'] = []
         verify_info['hosts'] = []
         if verify_info['data']['application']['status'] == 'ongoing':
-            return public.returnMsg(False,'订单出现问题，CA正在人工验证，若24小时内依然出现此提示，请联系宝塔')
+            return public.returnMsg(False,
+                                    '订单出现问题，CA正在人工验证，若24小时内依然出现此提示，请联系宝塔')
         for dinfo in verify_info['data']['dcvList']:
             is_https = dinfo['dcvMethod'] == 'HTTPS_CSR_HASH'
             if is_https:
@@ -361,103 +385,137 @@ class panelSSL:
             dinfo['domainName'] = domain
             if is_file_verify:
                 #判断是否是Springboot 项目
-                if public.M('sites').where('id=?',(public.M('domain').where('name=?',(dinfo['domainName'])).getField('pid'),)).getField('project_type') == 'Java' or public.M('sites').where('id=?',(public.M('domain').where('name=?',(dinfo['domainName'])).getField('pid'),)).getField('project_type') == 'Go' or public.M('sites').where('id=?',(public.M('domain').where('name=?',(dinfo['domainName'])).getField('pid'),)).getField('project_type') == 'Other':
-                    siteRunPath='/www/wwwroot/java_node_ssl'
+                if public.M('sites').where('id=?', (public.M('domain').where(
+                        'name=?',
+                    (dinfo['domainName'])).getField('pid'), )).getField(
+                        'project_type') == 'Java' or public.M('sites').where(
+                            'id=?', (public.M('domain').where(
+                                'name=?',
+                                (dinfo['domainName'])).getField('pid'), )
+                        ).getField(
+                            'project_type') == 'Go' or public.M('sites').where(
+                                'id=?', (public.M('domain').where(
+                                    'name=?',
+                                    (dinfo['domainName'])).getField('pid'), )
+                            ).getField('project_type') == 'Other':
+                    siteRunPath = '/www/wwwroot/java_node_ssl'
                 else:
                     siteRunPath = self.get_domain_run_path(domain)
                 #if domain[:4] == 'www.': domain = domain[4:]
                 status = 0
-                url = 'http'+ is_https +'://'+ domain +'/.well-known/pki-validation/' + verify_info['data']['DCVfileName']
+                url = 'http' + is_https + '://' + domain + '/.well-known/pki-validation/' + verify_info[
+                    'data']['DCVfileName']
                 get = public.dict_obj()
                 get.url = url
                 get.content = verify_info['data']['DCVfileContent']
                 status = self.check_url_txt(get)
 
-                verify_info['paths'].append({'url':url,'status':status})
+                verify_info['paths'].append({'url': url, 'status': status})
                 if not siteRunPath: continue
 
                 verify_path = siteRunPath + '/.well-known/pki-validation'
                 if not os.path.exists(verify_path):
                     os.makedirs(verify_path)
-                verify_file = verify_path + '/' + verify_info['data']['DCVfileName']
+                verify_file = verify_path + '/' + verify_info['data'][
+                    'DCVfileName']
                 if os.path.exists(verify_file): continue
-                public.writeFile(verify_file,verify_info['data']['DCVfileContent'])
+                public.writeFile(verify_file,
+                                 verify_info['data']['DCVfileContent'])
             else:
                 #if domain[:4] == 'www.': domain = domain[4:]
-                domain,subb = public.get_root_domain(domain)
+                domain, subb = public.get_root_domain(domain)
                 dinfo['domainName'] = domain
-                verify_info['hosts'].append(verify_info['data']['DCVdnsHost'] + '.' + domain)
+                verify_info['hosts'].append(verify_info['data']['DCVdnsHost'] +
+                                            '.' + domain)
 
         return verify_info
 
-
     #取消订单
-    def cancel_cert_order(self,args):
+    def cancel_cert_order(self, args):
         self.__PDATA['data']['oid'] = args.oid
         result = self.request('cancel_cert_order')
         return result
 
-
     #生成商业证书支付订单
-    def apply_cert_order_pay(self,args):
+    def apply_cert_order_pay(self, args):
         pdata = json.loads(args.pdata)
         self.__PDATA['data'] = pdata
         result = self.request('apply_cert_order_pay')
         return result
 
     #获取证书管理员信息
-    def get_cert_admin(self,get):
+    def get_cert_admin(self, get):
         result = self.request('get_cert_admin')
         return result
 
-    def ApplyDVSSL(self,get):
-
+    def ApplyDVSSL(self, get):
         """
         申请证书
         """
-        if not 'orgName' in get: return public.returnMsg(False,'确实必要参数 orgName')
-        if not 'orgPhone' in get: return public.returnMsg(False,'确实必要参数 orgPhone')
-        if not 'orgPostalCode' in get: return public.returnMsg(False,'确实必要参数 orgPostalCode')
-        if not 'orgRegion' in get: return public.returnMsg(False,'确实必要参数 orgRegion')
-        if not 'orgCity' in get: return public.returnMsg(False,'确实必要参数 orgCity')
-        if not 'orgAddress' in get: return public.returnMsg(False,'确实必要参数 orgAddress')
-        if not 'orgDivision' in get: return public.returnMsg(False,'确实必要参数 orgDivision')
+        if not 'orgName' in get:
+            return public.returnMsg(False, '确实必要参数 orgName')
+        if not 'orgPhone' in get:
+            return public.returnMsg(False, '确实必要参数 orgPhone')
+        if not 'orgPostalCode' in get:
+            return public.returnMsg(False, '确实必要参数 orgPostalCode')
+        if not 'orgRegion' in get:
+            return public.returnMsg(False, '确实必要参数 orgRegion')
+        if not 'orgCity' in get:
+            return public.returnMsg(False, '确实必要参数 orgCity')
+        if not 'orgAddress' in get:
+            return public.returnMsg(False, '确实必要参数 orgAddress')
+        if not 'orgDivision' in get:
+            return public.returnMsg(False, '确实必要参数 orgDivision')
 
-        get.id = public.M('domain').where('name=?',(get.domain,)).getField('pid');
-        if hasattr(get,'siteName'):
-            get.path = public.M('sites').where('id=?',(get.id,)).getField('path');
+        get.id = public.M('domain').where('name=?',
+                                          (get.domain, )).getField('pid')
+        if hasattr(get, 'siteName'):
+            get.path = public.M('sites').where('id=?',
+                                               (get.id, )).getField('path')
         else:
-            get.siteName = public.M('sites').where('id=?',(get.id,)).getField('name');
+            get.siteName = public.M('sites').where('id=?',
+                                                   (get.id, )).getField('name')
 
         #当申请二级域名为www时，检测主域名是否绑定到同一网站
         if get.domain[:4] == 'www.':
-            if not public.M('domain').where('name=? AND pid=?',(get.domain[4:],get.id)).count():
-                return public.returnMsg(False,"申请[%s]证书需要验证[%s]请将[%s]绑定并解析到站点!" % (get.domain,get.domain[4:],get.domain[4:]))
+            if not public.M('domain').where('name=? AND pid=?',
+                                            (get.domain[4:], get.id)).count():
+                return public.returnMsg(
+                    False, "申请[%s]证书需要验证[%s]请将[%s]绑定并解析到站点!" %
+                    (get.domain, get.domain[4:], get.domain[4:]))
         #判断是否是Java项目
-        if public.M('sites').where('id=?',(get.id,)).getField('project_type') == 'Java' or public.M('sites').where('id=?',(get.id,)).getField('project_type') == 'Go' or public.M('sites').where('id=?',(get.id,)).getField('project_type') == 'Other':
-            get.path='/www/wwwroot/java_node_ssl/'
-            runPath=''
+        if public.M('sites').where('id=?', (get.id, )).getField(
+                'project_type') == 'Java' or public.M('sites').where(
+                    'id=?', (get.id, )).getField(
+                        'project_type') == 'Go' or public.M('sites').where(
+                            'id=?',
+                            (get.id, )).getField('project_type') == 'Other':
+            get.path = '/www/wwwroot/java_node_ssl/'
+            runPath = ''
         #判断是否是Node项目
-        elif public.M('sites').where('id=?',(get.id,)).getField('project_type') == 'Node':
-            get.path=public.M('sites').where('id=?',(get.id,)).getField('path')
-            runPath=''
+        elif public.M('sites').where(
+                'id=?', (get.id, )).getField('project_type') == 'Node':
+            get.path = public.M('sites').where('id=?',
+                                               (get.id, )).getField('path')
+            runPath = ''
         else:
             runPath = self.GetRunPath(get)
-        if runPath != False and runPath != '/': get.path +=  runPath
+        if runPath != False and runPath != '/': get.path += runPath
         authfile = get.path + '/.well-known/pki-validation/fileauth.txt'
         if not self.CheckDomain(get):
             if not os.path.exists(authfile):
-                return public.returnMsg(False,'无法写入验证文件: {}'.format(authfile))
+                return public.returnMsg(False, '无法写入验证文件: {}'.format(authfile))
             else:
                 msg = '''无法正确访问验证文件<br><a class="btlink" href="{c_url}" target="_blank">{c_url}</a> <br><br>
                 <p></b>可能的原因：</b></p>
                 1、未正确解析，或解析未生效 [请正确解析域名，或等待解析生效后重试]<br>
                 2、检查是否有设置301/302重定向 [请暂时关闭重定向相关配置]<br>
-                3、检查该网站是否已部署HTTPS并设置强制HTTPS [请暂时关闭强制HTTPS功能]<br>'''.format(c_url = self._check_url)
-                return public.returnMsg(False,msg)
+                3、检查该网站是否已部署HTTPS并设置强制HTTPS [请暂时关闭强制HTTPS功能]<br>'''.format(
+                    c_url=self._check_url)
+                return public.returnMsg(False, msg)
 
         action = 'ApplyDVSSL'
-        if hasattr(get,'partnerOrderId'):
+        if hasattr(get, 'partnerOrderId'):
             self.__PDATA['data']['partnerOrderId'] = get.partnerOrderId
             action = 'ReDVSSL'
 
@@ -471,34 +529,39 @@ class panelSSL:
         self.__PDATA['data']['orgName'] = get.orgName
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data'])
         try:
-            result = public.httpPost(self.__APIURL + '/' + action,self.__PDATA)
+            result = public.httpPost(self.__APIURL + '/' + action,
+                                     self.__PDATA)
         except Exception as ex:
             raise public.error_conn_cloud(str(ex))
         try:
             result = json.loads(result)
-        except: return result
+        except:
+            return result
         if 'status' in result:
             if not result['status']: return result
         result['data'] = self.En_Code(result['data'])
         try:
-            if not 'authPath' in result['data']: result['data']['authPath'] = '/.well-known/pki-validation/'
-            authfile = get.path + result['data']['authPath'] + result['data']['authKey']
+            if not 'authPath' in result['data']:
+                result['data']['authPath'] = '/.well-known/pki-validation/'
+            authfile = get.path + result['data']['authPath'] + result['data'][
+                'authKey']
         except:
             if 'authKey' in result['data']:
-                authfile = get.path + '/.well-known/pki-validation/' + result['data']['authKey']
+                authfile = get.path + '/.well-known/pki-validation/' + result[
+                    'data']['authKey']
             else:
-                return public.returnMsg(False,'获取验证文件失败!')
+                return public.returnMsg(False, '获取验证文件失败!')
 
         if 'authValue' in result['data']:
-            public.writeFile(authfile,result['data']['authValue'])
+            public.writeFile(authfile, result['data']['authValue'])
         return result
 
     #完善资料CA(先支付接口)
-    def apply_order_ca(self,args):
+    def apply_order_ca(self, args):
 
         pdata = json.loads(args.pdata)
         result = self.check_ssl_caa(pdata['domains'])
-        if result:  return result
+        if result: return result
 
         self.__PDATA['data'] = pdata
         result = self.request('apply_cert_ca')
@@ -511,11 +574,12 @@ class panelSSL:
         return result
 
     #发送请求
-    def request(self,dname):
+    def request(self, dname):
         self.__PDATA['data'] = json.dumps(self.__PDATA['data'])
-        result= public.returnMsg(False,'请求失败,请稍候重试!')
+        result = public.returnMsg(False, '请求失败,请稍候重试!')
         try:
-            result = public.httpPost(self.__APIURL2 + '/' + dname,self.__PDATA)
+            result = public.httpPost(self.__APIURL2 + '/' + dname,
+                                     self.__PDATA)
         except Exception as ex:
             raise public.error_conn_cloud(str(ex))
         try:
@@ -523,104 +587,117 @@ class panelSSL:
         except:
             pass
         return result
+
     #获取订单列表
-    def GetOrderList(self,get):
-        if hasattr(get,'siteName'):
-            path =   '/etc/letsencrypt/live/'+ get.siteName + '/partnerOrderId'
+    def GetOrderList(self, get):
+        if hasattr(get, 'siteName'):
+            path = '/etc/letsencrypt/live/' + get.siteName + '/partnerOrderId'
             if os.path.exists(path):
                 self.__PDATA['data']['partnerOrderId'] = public.readFile(path)
             else:
                 path = '/www/server/panel/vhost/cert/' + get.siteName + '/partnerOrderId'
                 if os.path.exists(path):
-                    self.__PDATA['data']['partnerOrderId'] = public.readFile(path)
+                    self.__PDATA['data']['partnerOrderId'] = public.readFile(
+                        path)
 
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data'])
         try:
-            rs = public.httpPost(self.__APIURL + '/GetSSLList',self.__PDATA)
+            rs = public.httpPost(self.__APIURL + '/GetSSLList', self.__PDATA)
         except Exception as ex:
             raise public.error_conn_cloud(str(ex))
         try:
             result = json.loads(rs)
-        except: return public.returnMsg(False,'获取失败，请稍候重试!')
+        except:
+            return public.returnMsg(False, '获取失败，请稍候重试!')
 
         result['data'] = self.En_Code(result['data'])
         for i in range(len(result['data'])):
-            result['data'][i]['endtime'] =   self.add_months(result['data'][i]['createTime'],result['data'][i]['validityPeriod'])
+            result['data'][i]['endtime'] = self.add_months(
+                result['data'][i]['createTime'],
+                result['data'][i]['validityPeriod'])
         return result
 
     #计算日期增加(月)
-    def add_months(self,dt,months):
+    def add_months(self, dt, months):
         import calendar
-        dt = datetime.datetime.fromtimestamp(dt/1000)
+        dt = datetime.datetime.fromtimestamp(dt / 1000)
         month = dt.month - 1 + months
         year = dt.year + month // 12
         month = month % 12 + 1
 
-        day = min(dt.day,calendar.monthrange(year,month)[1])
-        return (time.mktime(dt.replace(year=year, month=month, day=day).timetuple()) + 86400) * 1000
-
+        day = min(dt.day, calendar.monthrange(year, month)[1])
+        return (time.mktime(
+            dt.replace(year=year, month=month, day=day).timetuple()) +
+                86400) * 1000
 
     #申请证书
-    def GetDVSSL(self,get):
-        get.id = public.M('domain').where('name=?',(get.domain,)).getField('pid')
-        if hasattr(get,'siteName'):
-            get.path = public.M('sites').where('id=?',(get.id,)).getField('path')
+    def GetDVSSL(self, get):
+        get.id = public.M('domain').where('name=?',
+                                          (get.domain, )).getField('pid')
+        if hasattr(get, 'siteName'):
+            get.path = public.M('sites').where('id=?',
+                                               (get.id, )).getField('path')
         else:
-            get.siteName = public.M('sites').where('id=?',(get.id,)).getField('name')
+            get.siteName = public.M('sites').where('id=?',
+                                                   (get.id, )).getField('name')
 
         #当申请二级域名为www时，检测主域名是否绑定到同一网站
         if get.domain[:4] == 'www.':
-            if not public.M('domain').where('name=? AND pid=?',(get.domain[4:],get.id)).count():
-                return public.returnMsg(False,"申请[%s]证书需要验证[%s]请将[%s]绑定并解析到站点!" % (get.domain,get.domain[4:],get.domain[4:]))
+            if not public.M('domain').where('name=? AND pid=?',
+                                            (get.domain[4:], get.id)).count():
+                return public.returnMsg(
+                    False, "申请[%s]证书需要验证[%s]请将[%s]绑定并解析到站点!" %
+                    (get.domain, get.domain[4:], get.domain[4:]))
 
         #检测是否开启强制HTTPS
         if not self.CheckForceHTTPS(get.siteName):
-            return public.returnMsg(False,'当前网站已开启【强制HTTPS】,请先关闭此功能再申请SSL证书!')
+            return public.returnMsg(False, '当前网站已开启【强制HTTPS】,请先关闭此功能再申请SSL证书!')
 
         #获取真实网站运行目录
         runPath = self.GetRunPath(get)
-        if runPath != False and runPath != '/': get.path +=  runPath
-
+        if runPath != False and runPath != '/': get.path += runPath
 
         #提前模拟测试验证文件值是否正确
         authfile = get.path + '/.well-known/pki-validation/fileauth.txt'
         if not self.CheckDomain(get):
             if not os.path.exists(authfile):
-                return public.returnMsg(False,'无法写入验证文件: {}'.format(authfile))
+                return public.returnMsg(False, '无法写入验证文件: {}'.format(authfile))
             else:
                 msg = '''无法正确访问验证文件<br><a class="btlink" href="{c_url}" target="_blank">{c_url}</a> <br><br>
                 <p></b>可能的原因：</b></p>
                 1、未正确解析，或解析未生效 [请正确解析域名，或等待解析生效后重试]<br>
                 2、检查是否有设置301/302重定向 [请暂时关闭重定向相关配置]<br>
-                3、检查该网站是否设置强制HTTPS [请暂时关闭强制HTTPS功能]<br>'''.format(c_url = self._check_url)
-                return public.returnMsg(False,msg)
+                3、检查该网站是否设置强制HTTPS [请暂时关闭强制HTTPS功能]<br>'''.format(
+                    c_url=self._check_url)
+                return public.returnMsg(False, msg)
 
         action = 'GetDVSSL'
-        if hasattr(get,'partnerOrderId'):
+        if hasattr(get, 'partnerOrderId'):
             self.__PDATA['data']['partnerOrderId'] = get.partnerOrderId
             action = 'ReDVSSL'
 
         self.__PDATA['data']['domain'] = get.domain
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data'])
-        result = public.httpPost(self.__APIURL + '/' + action,self.__PDATA)
+        result = public.httpPost(self.__APIURL + '/' + action, self.__PDATA)
         try:
             result = json.loads(result)
-        except: return result
+        except:
+            return result
         result['data'] = self.En_Code(result['data'])
 
         try:
             if 'authValue' in result['data'].keys():
-                public.writeFile(authfile,result['data']['authValue'])
+                public.writeFile(authfile, result['data']['authValue'])
         except:
             try:
-                public.writeFile(authfile,result['data']['authValue'])
+                public.writeFile(authfile, result['data']['authValue'])
             except:
                 return result
 
         return result
 
     #检测是否强制HTTPS
-    def CheckForceHTTPS(self,siteName):
+    def CheckForceHTTPS(self, siteName):
         conf_file = '/www/server/panel/vhost/nginx/{}.conf'.format(siteName)
         if not os.path.exists(conf_file):
             return True
@@ -632,35 +709,42 @@ class panelSSL:
         return True
 
     #获取运行目录
-    def GetRunPath(self,get):
-        if hasattr(get,'siteName'):
-            get.id = public.M('sites').where('name=?',(get.siteName,)).getField('id')
+    def GetRunPath(self, get):
+        if hasattr(get, 'siteName'):
+            get.id = public.M('sites').where('name=?',
+                                             (get.siteName, )).getField('id')
         else:
-            get.id = public.M('sites').where('path=?',(get.path,)).getField('id')
+            get.id = public.M('sites').where('path=?',
+                                             (get.path, )).getField('id')
         if not get.id: return False
         import panelSite
         result = panelSite.panelSite().GetSiteRunPath(get)
         return result['runPath']
 
-
     #检查域名是否解析
-    def CheckDomain(self,get):
+    def CheckDomain(self, get):
         try:
             #创建目录
             spath = get.path + '/.well-known/pki-validation'
-            if not os.path.exists(spath): public.ExecShell("mkdir -p '" + spath + "'")
+            if not os.path.exists(spath):
+                public.ExecShell("mkdir -p '" + spath + "'")
 
             #生成并写入检测内容
             epass = public.GetRandomString(32)
-            public.writeFile(spath + '/fileauth.txt',epass)
+            public.writeFile(spath + '/fileauth.txt', epass)
 
             #检测目标域名访问结果
-            if get.domain[:4] == 'www.':   #申请二级域名为www时检测主域名
+            if get.domain[:4] == 'www.':  #申请二级域名为www时检测主域名
                 get.domain = get.domain[4:]
 
             import http_requests
             self._check_url = 'http://127.0.0.1/.well-known/pki-validation/fileauth.txt'
-            result = http_requests.get(self._check_url,s_type='curl',timeout=6,headers={"host":get.domain}).text
+            result = http_requests.get(self._check_url,
+                                       s_type='curl',
+                                       timeout=6,
+                                       headers={
+                                           "host": get.domain
+                                       }).text
             self.__test = result
             if result == epass: return True
             self._check_url = self._check_url.replace('127.0.0.1', get.domain)
@@ -670,109 +754,256 @@ class panelSSL:
             return False
 
     #确认域名
-    def Completed(self,get):
+    def Completed(self, get):
         self.__PDATA['data']['partnerOrderId'] = get.partnerOrderId
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data'])
-        if hasattr(get,'siteName'):
-            get.path = public.M('sites').where('name=?',(get.siteName,)).getField('path')
-            if public.M('sites').where('id=?',(public.M('domain').where('name=?',(get.siteName)).getField('pid'),)).getField('project_type') == 'Java' or public.M('sites').where('id=?',(public.M('domain').where('name=?',(get.siteName)).getField('pid'),)).getField('project_type') == 'Go' or public.M('sites').where('id=?',(public.M('domain').where('name=?',(get.siteName)).getField('pid'),)).getField('project_type') == 'Other':
-                runPath='/www/wwwroot/java_node_ssl'
+        if hasattr(get, 'siteName'):
+            get.path = public.M('sites').where(
+                'name=?', (get.siteName, )).getField('path')
+            if public.M('sites').where(
+                    'id=?',
+                (public.M('domain').where('name=?',
+                                          (get.siteName)).getField('pid'), )
+            ).getField('project_type') == 'Java' or public.M('sites').where(
+                    'id=?',
+                (public.M('domain').where('name=?',
+                                          (get.siteName)).getField('pid'), )
+            ).getField('project_type') == 'Go' or public.M('sites').where(
+                    'id=?',
+                (public.M('domain').where('name=?',
+                                          (get.siteName)).getField('pid'),
+                 )).getField('project_type') == 'Other':
+                runPath = '/www/wwwroot/java_node_ssl'
             else:
                 runPath = self.GetRunPath(get)
-            if runPath != False and runPath != '/': get.path +=  runPath
-            tmp = public.httpPost(self.__APIURL + '/SyncOrder',self.__PDATA)
+            if runPath != False and runPath != '/': get.path += runPath
+            tmp = public.httpPost(self.__APIURL + '/SyncOrder', self.__PDATA)
             try:
                 sslInfo = json.loads(tmp)
             except:
-                return public.returnMsg(False,tmp)
+                return public.returnMsg(False, tmp)
 
             sslInfo['data'] = self.En_Code(sslInfo['data'])
             try:
 
-                if public.M('sites').where('id=?',(public.M('domain').where('name=?',(get.siteName)).getField('pid'),)).getField('project_type') == 'Java' or public.M('sites').where('id=?',(public.M('domain').where('name=?',(get.siteName)).getField('pid'),)).getField('project_type') == 'Go' or public.M('sites').where('id=?',(public.M('domain').where('name=?',(get.siteName)).getField('pid'),)).getField('project_type') == 'Other':
+                if public.M('sites').where('id=?', (public.M('domain').where(
+                        'name=?',
+                    (get.siteName)).getField('pid'), )).getField(
+                        'project_type') == 'Java' or public.M('sites').where(
+                            'id=?', (public.M('domain').where(
+                                'name=?', (get.siteName)).getField('pid'), )
+                        ).getField('project_type') == 'Go' or public.M(
+                            'sites').where('id=?', (public.M('domain').where(
+                                'name=?',
+                                (get.siteName)).getField('pid'), )).getField(
+                                    'project_type') == 'Other':
                     spath = '/www/wwwroot/java_node_ssl/.well-known/pki-validation'
                 else:
                     spath = get.path + '/.well-known/pki-validation'
-                if not os.path.exists(spath): public.ExecShell("mkdir -p '" + spath + "'")
-                public.writeFile(spath + '/' + sslInfo['data']['authKey'],sslInfo['data']['authValue'])
+                if not os.path.exists(spath):
+                    public.ExecShell("mkdir -p '" + spath + "'")
+                public.writeFile(spath + '/' + sslInfo['data']['authKey'],
+                                 sslInfo['data']['authValue'])
             except:
-                return public.returnMsg(False,'SSL_CHECK_WRITE_ERR')
+                return public.returnMsg(False, 'SSL_CHECK_WRITE_ERR')
         try:
-            result = json.loads(public.httpPost(self.__APIURL + '/Completed',self.__PDATA))
+            result = json.loads(
+                public.httpPost(self.__APIURL + '/Completed', self.__PDATA))
             if 'data' in result:
                 result['data'] = self.En_Code(result['data'])
         except:
-            result = public.returnMsg(True,'检测中..')
+            result = public.returnMsg(True, '检测中..')
         n = 0
         my_ok = False
         while True:
             if n > 5: break
             time.sleep(5)
-            rRet = json.loads(public.httpPost(self.__APIURL + '/SyncOrder',self.__PDATA))
-            n +=1
+            rRet = json.loads(
+                public.httpPost(self.__APIURL + '/SyncOrder', self.__PDATA))
+            n += 1
             rRet['data'] = self.En_Code(rRet['data'])
             try:
                 if rRet['data']['stateCode'] == 'COMPLETED':
                     my_ok = True
                     break
-            except: return public.get_error_info()
+            except:
+                return public.get_error_info()
         if not my_ok:
 
             return result
         return rRet
 
     #同步指定订单
-    def SyncOrder(self,get):
+    def SyncOrder(self, get):
         self.__PDATA['data']['partnerOrderId'] = get.partnerOrderId
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data'])
-        result = json.loads(public.httpPost(self.__APIURL + '/SyncOrder',self.__PDATA))
+        result = json.loads(
+            public.httpPost(self.__APIURL + '/SyncOrder', self.__PDATA))
         result['data'] = self.En_Code(result['data'])
         return result
 
     #获取证书
-    def GetSSLInfo(self,get):
+    def GetSSLInfo(self, get):
         self.__PDATA['data']['partnerOrderId'] = get.partnerOrderId
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data'])
         time.sleep(3)
-        result = json.loads(public.httpPost(self.__APIURL + '/GetSSLInfo',self.__PDATA))
+        result = json.loads(
+            public.httpPost(self.__APIURL + '/GetSSLInfo', self.__PDATA))
         result['data'] = self.En_Code(result['data'])
         if not 'privateKey' in result['data']: return result
 
         #写配置到站点
-        if hasattr(get,'siteName'):
+        if hasattr(get, 'siteName'):
             try:
                 siteName = get.siteName
                 path = '/www/server/panel/vhost/cert/' + siteName
                 if not os.path.exists(path):
                     public.ExecShell('mkdir -p ' + path)
-                csrpath = path+"/fullchain.pem"
-                keypath = path+"/privkey.pem"
-                pidpath = path+"/partnerOrderId"
+                csrpath = path + "/fullchain.pem"
+                keypath = path + "/privkey.pem"
+                pidpath = path + "/partnerOrderId"
                 #清理旧的证书链
                 public.ExecShell('rm -f ' + keypath)
                 public.ExecShell('rm -f ' + csrpath)
                 public.ExecShell('rm -rf ' + path + '-00*')
-                public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName)
-                public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName + '-00*')
-                public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '.conf')
-                public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '-00*.conf')
+                public.ExecShell('rm -rf /etc/letsencrypt/archive/' +
+                                 get.siteName)
+                public.ExecShell('rm -rf /etc/letsencrypt/archive/' +
+                                 get.siteName + '-00*')
+                public.ExecShell('rm -f /etc/letsencrypt/renewal/' +
+                                 get.siteName + '.conf')
+                public.ExecShell('rm -f /etc/letsencrypt/renewal/' +
+                                 get.siteName + '-00*.conf')
                 public.ExecShell('rm -f ' + path + '/README')
                 public.ExecShell('rm -f ' + path + '/certOrderId')
 
-                public.writeFile(keypath,result['data']['privateKey'])
-                public.writeFile(csrpath,result['data']['cert']+result['data']['certCa'])
-                public.writeFile(pidpath,get.partnerOrderId)
+                public.writeFile(keypath, result['data']['privateKey'])
+                public.writeFile(
+                    csrpath, result['data']['cert'] + result['data']['certCa'])
+                public.writeFile(pidpath, get.partnerOrderId)
                 import panelSite
                 panelSite.panelSite().SetSSLConf(get)
                 public.serviceReload()
-                return public.returnMsg(True,'SET_SUCCESS')
+                return public.returnMsg(True, 'SET_SUCCESS')
             except:
-                return public.returnMsg(False,'SET_ERROR')
+                return public.returnMsg(False, 'SET_ERROR')
         result['data'] = self.En_Code(result['data'])
         return result
 
+    def GetSiteDomain(self, get):
+        """
+        @name 获取网站域名对应的站点名
+        @param cert_list 证书域名列表
+        @auther hezhihong
+        return 证书域名对应的站点名字典，如证书域名未绑定则为空
+        """
+        all_site = []  #所有站点名列表
+        cert_list = []  #证书域名列表
+        site_list = []  #证书域名列表对应的站点名列表
+        all_domain = []  #所有域名列表
+        try:
+            cert_list = json.loads(get.cert_list)
+        except:
+            pass
+        result = {}
+        #取所有站点名和所有站点的绑定域名
+        all_sites = public.M('sites').field('name').select()
+        for site in all_sites:
+            all_site.append(site['name'])
+            if not cert_list: continue
+            tmp_dict = {}
+            tmp_dict['name'] = site['name']
+            pid = public.M('sites').where("name=?",
+                                          (site['name'], )).getField('id')
+            domain_list = public.M('domain').where(
+                "pid=?", (pid, )).field('name').select()
+            for domain in domain_list:
+                all_domain.append(domain['name'])
+        #取证书域名所在的所有域名列表
+        site_domain = []  #证书域名对应的站点名列表
+        if cert_list and all_domain:
+            for cert in cert_list:
+                d_cert = ''
+                if re.match("^\*\..*", cert):
+                    d_cert = cert.replace('*.', '')
+                for domain in all_domain:
+                    if cert == domain:
+                        site_domain.append(domain)
+                    else:
+                        replace_str = domain.split('.')[0] + '.'
+                        if d_cert and d_cert == domain.replace(
+                                replace_str, ''):
+                            site_domain.append(domain)
+        #取证书域名对应的站点名
+        for site in site_domain:
+            site_id = public.M('domain').where("name=?",
+                                               (site, )).getField('pid')
+            site_name = public.M('sites').where("id=?",
+                                                (site_id, )).getField('name')
+            site_list.append(site_name)
+        site_list = sorted(set(site_list), key=site_list.index)
+        result['all'] = all_site
+        result['site'] = site_list
+        return result
+
+    def SetBatchCertToSite(self, get):
+        """
+        @name 批量部署证书
+        @auther hezhihong
+        """
+        ssl_list = []
+        if not hasattr(get, 'BatchInfo') or not get.BatchInfo:
+            return public.returnMsg(False, '参数错误')
+        else:
+            ssl_list = json.loads(get.BatchInfo)
+        if isinstance(ssl_list, list):
+            total_num = len(ssl_list)
+            resultinfo = {
+                "total": total_num,
+                "success": 0,
+                "faild": 0,
+                "successList": [],
+                "faildList": []
+            }
+            successList = []
+            faildList = []
+            successnum = 0
+            failnum = 0
+            for Info in ssl_list:
+                set_result = {}
+                set_result['status'] = True
+                get.certName = set_result['certName'] = Info['certName']
+                get.siteName = set_result['siteName'] = Info['siteName']
+                get.isBatch = True
+                result = self.SetCertToSite(get)
+                if not result:
+                    set_result['status'] = False
+                    failnum += 1
+                    faildList.append(set_result)
+                else:
+                    successnum += 1
+                    successList.append(set_result)
+                public.writeSpeed('setssl', successnum + failnum, total_num)
+            import firewalls
+            get.port = '443'
+            get.ps = 'HTTPS'
+            firewalls.firewalls().AddAcceptPort(get)
+            public.serviceReload()
+            resultinfo['success'] = successnum
+            resultinfo['faild'] = failnum
+            resultinfo['successList'] = successList
+            resultinfo['faildList'] = faildList
+        else:
+            return public.returnMsg(False, '参数类型错误')
+        return resultinfo
+
     #部署证书夹证书
-    def SetCertToSite(self,get):
+    def SetCertToSite(self, get):
+        """
+        @name 兼容批量部署
+        @auther hezhihong
+        """
+
         try:
             result = self.GetCert(get)
             if not 'privkey' in result: return result
@@ -780,31 +1011,37 @@ class panelSSL:
             path = '/www/server/panel/vhost/cert/' + siteName
             if not os.path.exists(path):
                 public.ExecShell('mkdir -p ' + path)
-            csrpath = path+"/fullchain.pem"
-            keypath = path+"/privkey.pem"
+            csrpath = path + "/fullchain.pem"
+            keypath = path + "/privkey.pem"
 
             #清理旧的证书链
             public.ExecShell('rm -f ' + keypath)
             public.ExecShell('rm -f ' + csrpath)
             public.ExecShell('rm -rf ' + path + '-00*')
             public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName)
-            public.ExecShell('rm -rf /etc/letsencrypt/archive/' + get.siteName + '-00*')
-            public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '.conf')
-            public.ExecShell('rm -f /etc/letsencrypt/renewal/'+ get.siteName + '-00*.conf')
+            public.ExecShell('rm -rf /etc/letsencrypt/archive/' +
+                             get.siteName + '-00*')
+            public.ExecShell('rm -f /etc/letsencrypt/renewal/' + get.siteName +
+                             '.conf')
+            public.ExecShell('rm -f /etc/letsencrypt/renewal/' + get.siteName +
+                             '-00*.conf')
             public.ExecShell('rm -f ' + path + '/README')
-            if os.path.exists(path + '/certOrderId'): os.remove(path + '/certOrderId')
+            if os.path.exists(path + '/certOrderId'):
+                os.remove(path + '/certOrderId')
 
-            public.writeFile(keypath,result['privkey'])
-            public.writeFile(csrpath,result['fullchain'])
+            public.writeFile(keypath, result['privkey'])
+            public.writeFile(csrpath, result['fullchain'])
             import panelSite
             return panelSite.panelSite().SetSSLConf(get)
             public.serviceReload()
-            return public.returnMsg(True,'SET_SUCCESS')
+            return public.returnMsg(True, 'SET_SUCCESS')
         except Exception as ex:
-            return public.returnMsg(False,'SET_ERROR,' + public.get_error_info())
+            if 'isBatch' in get: return False
+            return public.returnMsg(False,
+                                    'SET_ERROR,' + public.get_error_info())
 
     #获取证书列表
-    def GetCertList(self,get):
+    def GetCertList(self, get):
         try:
             vpath = '/www/server/panel/vhost/ssl'
             if not os.path.exists(vpath): public.ExecShell("mkdir -p " + vpath)
@@ -821,42 +1058,47 @@ class panelSSL:
             return []
 
     #删除证书
-    def RemoveCert(self,get):
+    def RemoveCert(self, get):
         try:
-            vpath = '/www/server/panel/vhost/ssl/' + get.certName.replace("*.",'')
-            if not os.path.exists(vpath): return public.returnMsg(False,'证书不存在!')
+            vpath = '/www/server/panel/vhost/ssl/' + get.certName.replace(
+                "*.", '')
+            if not os.path.exists(vpath):
+                return public.returnMsg(False, '证书不存在!')
             public.ExecShell("rm -rf " + vpath)
-            return public.returnMsg(True,'证书已删除!')
+            return public.returnMsg(True, '证书已删除!')
         except:
-            return public.returnMsg(False,'删除失败!')
+            return public.returnMsg(False, '删除失败!')
 
     #保存证书
-    def SaveCert(self,get):
+    def SaveCert(self, get):
         try:
             certInfo = self.GetCertName(get)
-            if not certInfo: return public.returnMsg(False,'证书解析失败!')
+            if not certInfo: return public.returnMsg(False, '证书解析失败!')
             vpath = '/www/server/panel/vhost/ssl/' + certInfo['subject']
-            vpath=vpath.replace("*.",'')
+            vpath = vpath.replace("*.", '')
             if not os.path.exists(vpath):
                 public.ExecShell("mkdir -p " + vpath)
-            public.writeFile(vpath + '/privkey.pem',public.readFile(get.keyPath))
-            public.writeFile(vpath + '/fullchain.pem',public.readFile(get.certPath))
-            public.writeFile(vpath + '/info.json',json.dumps(certInfo))
-            return public.returnMsg(True,'证书保存成功!')
+            public.writeFile(vpath + '/privkey.pem',
+                             public.readFile(get.keyPath))
+            public.writeFile(vpath + '/fullchain.pem',
+                             public.readFile(get.certPath))
+            public.writeFile(vpath + '/info.json', json.dumps(certInfo))
+            return public.returnMsg(True, '证书保存成功!')
         except:
-            return public.returnMsg(False,'证书保存失败!')
+            return public.returnMsg(False, '证书保存失败!')
 
     #读取证书
-    def GetCert(self,get):
-        vpath = os.path.join('/www/server/panel/vhost/ssl' , get.certName.replace("*.",''))
-        if not os.path.exists(vpath): return public.returnMsg(False,'证书不存在!')
+    def GetCert(self, get):
+        vpath = os.path.join('/www/server/panel/vhost/ssl',
+                             get.certName.replace("*.", ''))
+        if not os.path.exists(vpath): return public.returnMsg(False, '证书不存在!')
         data = {}
         data['privkey'] = public.readFile(vpath + '/privkey.pem')
         data['fullchain'] = public.readFile(vpath + '/fullchain.pem')
         return data
 
     #获取证书名称
-    def GetCertName(self,get):
+    def GetCertName(self, get):
         return self.get_cert_init(get.certPath)
         # try:
         #     openssl = '/usr/local/openssl/bin/openssl'
@@ -879,9 +1121,9 @@ class panelSSL:
         #     print(public.get_error_info())
         #     return None
 
-    def get_unixtime(self,data,format = "%Y-%m-%d %H:%M:%S"):
+    def get_unixtime(self, data, format="%Y-%m-%d %H:%M:%S"):
         import time
-        timeArray = time.strptime(data,format )
+        timeArray = time.strptime(data, format)
         timeStamp = int(time.mktime(timeArray))
         return timeStamp
 
@@ -892,8 +1134,8 @@ class panelSSL:
         try:
             import OpenSSL
             result = {}
-            x509 = OpenSSL.crypto.load_certificate(
-                OpenSSL.crypto.FILETYPE_PEM, public.readFile(pem_file))
+            x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                                   public.readFile(pem_file))
             # 取产品名称
             issuer = x509.get_issuer()
             result['issuer'] = ''
@@ -921,7 +1163,9 @@ class panelSSL:
             result['dns'] = []
             for i in range(x509.get_extension_count()):
                 s_name = x509.get_extension(i)
-                if s_name.get_short_name() in [b'subjectAltName', 'subjectAltName']:
+                if s_name.get_short_name() in [
+                        b'subjectAltName', 'subjectAltName'
+                ]:
                     s_dns = str(s_name).split(',')
                     for d in s_dns:
                         result['dns'].append(d.split(':')[1])
@@ -939,31 +1183,34 @@ class panelSSL:
                         result['dns'].append(result['subject'])
                 else:
                     result['subject'] = result['dns'][0]
-            result['endtime'] = int(int(time.mktime(time.strptime(result['notAfter'], "%Y-%m-%d")) - time.time()) / 86400)
+            result['endtime'] = int(
+                int(
+                    time.mktime(time.strptime(result['notAfter'], "%Y-%m-%d"))
+                    - time.time()) / 86400)
             return result
         except:
             return None
-
 
     # 转换时间
     def strf_date(self, sdate):
         return time.strftime('%Y-%m-%d', time.strptime(sdate, '%Y%m%d%H%M%S'))
 
     #转换时间
-    def strfToTime(self,sdate):
+    def strfToTime(self, sdate):
         import time
-        return time.strftime('%Y-%m-%d',time.strptime(sdate,'%b %d %H:%M:%S %Y %Z'))
-
+        return time.strftime('%Y-%m-%d',
+                             time.strptime(sdate, '%b %d %H:%M:%S %Y %Z'))
 
     #获取产品列表
-    def GetSSLProduct(self,get):
+    def GetSSLProduct(self, get):
         self.__PDATA['data'] = self.De_Code(self.__PDATA['data'])
-        result = json.loads(public.httpPost(self.__APIURL + '/GetSSLProduct',self.__PDATA))
+        result = json.loads(
+            public.httpPost(self.__APIURL + '/GetSSLProduct', self.__PDATA))
         result['data'] = self.En_Code(result['data'])
         return result
 
     #加密数据
-    def De_Code(self,data):
+    def De_Code(self, data):
         if sys.version_info[0] == 2:
             import urllib
             pdata = urllib.urlencode(data)
@@ -975,7 +1222,7 @@ class panelSSL:
             return binascii.hexlify(pdata).decode()
 
     #解密数据
-    def En_Code(self,data):
+    def En_Code(self, data):
         if sys.version_info[0] == 2:
             import urllib
             result = urllib.unquote(binascii.unhexlify(data))
@@ -992,13 +1239,13 @@ class panelSSL:
     # 手动一键续签
     def renew_lets_ssl(self, get):
         if not os.path.exists('vhost/cert/crontab.json'):
-            return public.returnMsg(False,'当前没有可以续订的证书!')
+            return public.returnMsg(False, '当前没有可以续订的证书!')
 
         old_list = json.loads(public.ReadFile("vhost/cert/crontab.json"))
         cron_list = old_list
         if hasattr(get, 'siteName'):
             if not get.siteName in old_list:
-                return public.returnMsg(False,'当前网站没有可以续订的证书.')
+                return public.returnMsg(False, '当前网站没有可以续订的证书.')
             cron_list = {}
             cron_list[get.siteName] = old_list[get.siteName]
 
@@ -1007,7 +1254,7 @@ class panelSSL:
 
         result = {}
         result['status'] = True
-        result['sucess_list']  = []
+        result['sucess_list'] = []
         result['err_list'] = []
         for siteName in cron_list:
             data = cron_list[siteName]
@@ -1015,18 +1262,20 @@ class panelSSL:
             if ret['status']:
                 result['sucess_list'].append(siteName)
             else:
-                result['err_list'].append({"siteName":siteName,"msg":ret['msg']})
+                result['err_list'].append({
+                    "siteName": siteName,
+                    "msg": ret['msg']
+                })
         return result
 
-
-    def renew_cert_order(self,args):
+    def renew_cert_order(self, args):
         '''
             @name 续签商用证书
             @author cjx
             @version 1.0
         '''
         if not 'pdata' in args:
-            return public.returnMsg(False,'pdata参数不能为空!')
+            return public.returnMsg(False, 'pdata参数不能为空!')
         pdata = json.loads(args.pdata)
         self.__PDATA['data'] = pdata
 
@@ -1037,8 +1286,7 @@ class panelSSL:
             result['verify_info'] = self.get_verify_info(args)
         return result
 
-
-    def GetAuthToken(self,get):
+    def GetAuthToken(self, get):
         """
         登录官网获取Token
         @get.username 官网手机号
@@ -1056,18 +1304,20 @@ class panelSSL:
         pdata = {}
         pdata['data'] = self.De_Code(data)
         try:
-            rtmp = public.httpPost(self.__BINDURL,pdata)
+            rtmp = public.httpPost(self.__BINDURL, pdata)
             result = json.loads(rtmp)
             result['data'] = self.En_Code(result['data'])
             if not result['status']: return result
 
             if result['data']:
-                if result['data']['serverid'] != data['serverid']: # 保存新的serverid
-                    public.writeFile('data/sid.pl',result['data']['serverid'])
-                public.writeFile(self.__UPATH,json.dumps(result['data']))
-                if os.path.exists('data/bind_path.pl'): os.remove('data/bind_path.pl')
+                if result['data']['serverid'] != data[
+                        'serverid']:  # 保存新的serverid
+                    public.writeFile('data/sid.pl', result['data']['serverid'])
+                public.writeFile(self.__UPATH, json.dumps(result['data']))
+                if os.path.exists('data/bind_path.pl'):
+                    os.remove('data/bind_path.pl')
                 public.flush_plugin_list()
-            del(result['data'])
+            del (result['data'])
             session['focre_cloud'] = True
             return result
         except Exception as ex:
@@ -1079,7 +1329,7 @@ class panelSSL:
                 raise public.error_conn_cloud(error)
             # return public.returnMsg(False,'连接服务器失败!<br>{}'.format(rtmp))
 
-    def GetBindCode(self,get):
+    def GetBindCode(self, get):
         """
         获取验证码
         """
@@ -1090,13 +1340,12 @@ class panelSSL:
         pdata = {}
         pdata['data'] = self.De_Code(data)
         try:
-            rtmp = public.httpPost(self.__CODEURL,pdata)
+            rtmp = public.httpPost(self.__CODEURL, pdata)
             result = json.loads(rtmp)
             return result
         except Exception as ex:
             raise public.error_conn_cloud(str(ex))
             # return public.returnMsg(False,'连接服务器失败!<br>' + rtmp)
-
 
     # 解析DNSAPI信息
     def get_dnsapi(self, auth_to):
@@ -1105,7 +1354,9 @@ class panelSSL:
         key = "None"
         secret = "None"
         if len(tmp) < 3:
-            dnsapi_config = json.loads(public.readFile('{}/config/dns_api.json'.format(public.get_panel_path())))
+            dnsapi_config = json.loads(
+                public.readFile('{}/config/dns_api.json'.format(
+                    public.get_panel_path())))
             for dc in dnsapi_config:
                 if dc['name'] != dns_name:
                     continue
@@ -1119,14 +1370,14 @@ class panelSSL:
         return dns_name, key, secret
 
     #获取dnsapi对象
-    def get_dns_class(self,auth_to):
+    def get_dns_class(self, auth_to):
         try:
             import panelDnsapi
             dns_name, key, secret = self.get_dnsapi(auth_to)
             dns_class = getattr(panelDnsapi, dns_name)(key, secret)
             dns_class._type = 1
             return dns_class
-        except :
+        except:
             return None
 
     # 解析域名
@@ -1136,21 +1387,21 @@ class panelSSL:
             return None
         dns_class = self.get_dns_class(auth_to)
         if not dns_class:
-            return public.returnMsg(False,"操作失败，请检查密钥是否正确.")
+            return public.returnMsg(False, "操作失败，请检查密钥是否正确.")
 
         #申请钱删除caa记录
-        root,zone = public.get_root_domain(domain)
+        root, zone = public.get_root_domain(domain)
         try:
-            dns_class.remove_record(public.de_punycode(root),'@','CAA')
-        except :pass
+            dns_class.remove_record(public.de_punycode(root), '@', 'CAA')
+        except:
+            pass
         try:
             dns_class.create_dns_record(public.de_punycode(domain), dns_value)
-            return public.returnMsg(True,'添加成功')
-        except :
-            return public.returnMsg(False,public.get_error_info())
+            return public.returnMsg(True, '添加成功')
+        except:
+            return public.returnMsg(False, public.get_error_info())
 
-
-    def apply_cert_install_pay(self,args):
+    def apply_cert_install_pay(self, args):
         '''
             @name 单独购买人工安装服务
             @param args<dict_obj>{
@@ -1162,54 +1413,56 @@ class panelSSL:
         result = self.request('apply_cert_install_pay')
         return result
 
-
-
-    def check_ssl_method(self,get):
+    def check_ssl_method(self, get):
         """
         @name 检测ssl验证方式
         @domain string 域名
         """
 
         domain = get.domain
-        if public.M('sites').where('id=?',(public.M('domain').where('name=?',(domain)).getField('pid'),)).getField('project_type') == 'Java':
-            siteRunPath='{}/java_node_ssl'.format(public.M("config").getField("sites_path"))
+        if public.M('sites').where('id=?', (public.M('domain').where(
+                'name=?',
+            (domain)).getField('pid'), )).getField('project_type') == 'Java':
+            siteRunPath = '{}/java_node_ssl'.format(
+                public.M("config").getField("sites_path"))
         else:
             siteRunPath = self.get_domain_run_path(domain)
 
         if not siteRunPath:
-            return public.returnMsg(False,'获取网站路径失败，请检查网站是否存在.')
+            return public.returnMsg(False, '获取网站路径失败，请检查网站是否存在.')
 
         verify_path = siteRunPath + '/.well-known/pki-validation'
-        if not os.path.exists(verify_path):  os.makedirs(verify_path)
+        if not os.path.exists(verify_path): os.makedirs(verify_path)
 
         #生成临时文件
-        check_val =  public.GetRandomString(16)
-        verify_file = '{}/{}.txt'.format(verify_path,check_val)
-        public.writeFile(verify_file,check_val)
+        check_val = public.GetRandomString(16)
+        verify_file = '{}/{}.txt'.format(verify_path, check_val)
+        public.writeFile(verify_file, check_val)
         if not os.path.exists(verify_file):
-            return public.returnMsg(False,'创建验证文件失败，请检测是否写入被拦截.')
+            return public.returnMsg(False, '创建验证文件失败，请检测是否写入被拦截.')
 
         res = {}
-        msg = [     '域名【{}】无法正确访问验证文件'.format(domain),
-                    '可能的原因',
-                    '1、未正确解析，或解析未生效 [请正确解析域名，或等待解析生效后重试]',
-                    '2、检查是否有设置301/302重定向 [请暂时关闭重定向相关配置]',
-                    '3、检查该网站是否已经开启反向代理 [请暂时关闭反向代理配置]'
-                ]
+        msg = [
+            '域名【{}】无法正确访问验证文件'.format(domain), '可能的原因',
+            '1、未正确解析，或解析未生效 [请正确解析域名，或等待解析生效后重试]',
+            '2、检查是否有设置301/302重定向 [请暂时关闭重定向相关配置]',
+            '3、检查该网站是否已经开启反向代理 [请暂时关闭反向代理配置]'
+        ]
 
         res['HTTP_CSR_HASH'] = msg
         res['HTTPS_CSR_HASH'] = msg
 
         #检测HTTP/https访问
         args = public.dict_obj()
-        for stype in ['http','https']:
-            args.url = '{}://{}/.well-known/pki-validation/{}.txt'.format(stype,domain,check_val)
+        for stype in ['http', 'https']:
+            args.url = '{}://{}/.well-known/pki-validation/{}.txt'.format(
+                stype, domain, check_val)
             args.content = check_val
-            if self.check_url_txt(args,2) == 1:
+            if self.check_url_txt(args, 2) == 1:
                 res['{}_CSR_HASH'.format(stype).upper()] = 1
 
         #检测caa记录
-        result =  self.check_ssl_caa([domain])
+        result = self.check_ssl_caa([domain])
         if not result:
             res['CNAME_CSR_HASH'] = 1
         else:
@@ -1218,4 +1471,3 @@ class panelSSL:
         if os.path.exists(verify_file):
             os.remove(verify_file)
         return res
-

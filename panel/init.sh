@@ -353,11 +353,12 @@ case "$1" in
                 if [ "$auth_path" == "/" ];then
                         auth_path=/login
                 fi
-
+                LOCAL_IP=$(ip addr | grep -E -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -E -v "^127\.|^255\.|^0\." | head -n 1)
                 echo -e "=================================================================="
                 echo -e "\033[32mBT-Panel default info!\033[0m"
                 echo -e "=================================================================="
-                echo  "Bt-Panel-URL: $pool://$address:$port$auth_path"
+                echo  "外网面板地址: $pool://${address}:${port}${auth_path}"
+                echo  "内网面板地址: $pool://${LOCAL_IP}:${port}${auth_path}"
                 echo -e `$pythonV $panel_path/tools.py username`
                 echo -e "password: $password"
                 echo -e "\033[33mWarning:\033[0m"

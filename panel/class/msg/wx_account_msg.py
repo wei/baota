@@ -90,7 +90,7 @@ class wx_account_msg:
             else:
                 public.WriteFile("data/wx_account_msg.lock",str(start_time))
                 public.run_thread(self.get_web_info2)
-            data=json.loads(public.ReadFile(self.conf_path))
+            data = json.loads(public.ReadFile(self.conf_path))
 
 
             if not 'list' in data: data['list'] = {}
@@ -245,20 +245,31 @@ class wx_account_msg:
 
         try:
             res = {}
+            error,success = 0,0
 
             x = json.loads(public.httpPost(url,data))
+            # public.print_log(json.dumps(x))
             conf = self.get_config(None)['list']
-            result = public.returnMsg(False, '发送失败')
+
+            #立即刷新剩余次数
+            public.run_thread(self.get_web_info2)
+
             res[conf['default']['title']] = 0
             if x['success']:
                 res[conf['default']['title']] = 1
-                result = public.returnMsg(True,'发送成功')
+                success += 1
+            else:
+                error += 1
 
             try:
                 public.write_push_log(self.__module_name,title,res)
             except:pass
 
+            result = public.returnMsg(True,'发送完成,发送成功{},发送失败{}.'.format(success,error))
+            result['success'] = success
+            result['error'] = error
             return result
+
         except:
             print(public.get_error_info())
             return public.returnMsg(False,'微信消息发送失败。 --> {}'.format(public.get_error_info()))
