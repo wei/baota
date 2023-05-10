@@ -1,770 +1,768 @@
-{% extends "layout.html" %}
-
-{% block content %}
-<link rel="stylesheet" href="{{g.cdn_url}}/editor/styles/icons.css">
-<link rel="stylesheet" href="{{g.cdn_url}}/editor/diff/ace-diff.min.css">
-<link rel="stylesheet" href="{{g.cdn_url}}/editor/diff/ace-diff-dark.min.css">
+{% extends "layout.html" %} {% block content %}
+<link rel="stylesheet" href="{{g.cdn_url}}/editor/styles/icons.css" />
+<link rel="stylesheet" href="{{g.cdn_url}}/editor/diff/ace-diff.min.css" />
+<link rel="stylesheet" href="{{g.cdn_url}}/editor/diff/ace-diff-dark.min.css" />
 <style type="text/css">
-    .ssh-config{
-        padding: 6px 0;
-    }
-    .ssh-config-title{
-        line-height: 30px;
-        font-size: 14px;
-        border-bottom: 1px solid #e7e7e7;
-        padding: 5px 5px 8px 10px;
-        font-weight: bold;
-        color: #666;
-        margin-bottom: 10px;
-    }
-    .ssh-config .line .line-input {
-        display: inline-block;
-        position: relative;
-    }
-    .ssh-config .line:hover{
-        background: #a5a5a514;
-        transition: background .2s;
-        cursor: pointer;
-    }
-    .ssh-config .line-title{
-        font-size: 12px;
-        color: #333;
-        display: inline-block;
-        width: 120px;
-        text-align: right;
-        padding-right: 15px;
-        height: 30px;
-        line-height: 30px;
-        vertical-align: top;
-    }
-    .ssh-config .line-item{
-        display: inline-block;
-        vertical-align: top;
-        height: 30px;
-        line-height: 30px;
-    }
-    .ssh-config .line-row{
-        vertical-align: top;
-    }
-    .line-row,.line-row-tips{
-        height: 30px;
-        line-height: 30px;
-        display: inline-block;
-    }
-    .line-input input{
-        height: 30px;
-        line-height: 30px;
-    }
-    .line-row-tips{
-        margin-left: 10px !important;
-        color: #999;
-        vertical-align: top;
-    }
-    .crontab-log{
-        overflow: auto;
-        border: 0 none;
-        line-height: 16px;
-        padding: 15px;
-        white-space: pre-wrap;
-        min-height: 250px;
-        background-color: rgb(51,51,51);
-        color: #f1f1f1;
-        margin-top: 10px;
-        margin-bottom: 0;
-    }
-    .input_file {
-        float: left;
-        height: 35px;
-        border: 0.1px dashed #D0D0D0;
-        padding: 0 0 0 10px;
-        font-size: 14px;
-        outline: none;
-        margin-bottom: 20px;
-    }
-    .select_file {
-        float: left;
-        width: 80px;
-        height: 35px;
-        font-size: 14px;
-        color: #fff;
-        background: #10952a;
-        position: absolute;
-        left: 170px;
-        border: none;
+	.ssh-config {
+		padding: 6px 0;
+	}
+	.ssh-config-title {
+		line-height: 30px;
+		font-size: 14px;
+		border-bottom: 1px solid #e7e7e7;
+		padding: 5px 5px 8px 10px;
+		font-weight: bold;
+		color: #666;
+		margin-bottom: 10px;
+	}
+	.ssh-config .line .line-input {
+		display: inline-block;
+		position: relative;
+	}
+	.ssh-config .line:hover {
+		background: #a5a5a514;
+		transition: background 0.2s;
+		cursor: pointer;
+	}
+	.ssh-config .line-title {
+		font-size: 12px;
+		color: #333;
+		display: inline-block;
+		width: 120px;
+		text-align: right;
+		padding-right: 15px;
+		height: 30px;
+		line-height: 30px;
+		vertical-align: top;
+	}
+	.ssh-config .line-item {
+		display: inline-block;
+		vertical-align: top;
+		height: 30px;
+		line-height: 30px;
+	}
+	.ssh-config .line-row {
+		vertical-align: top;
+	}
+	.line-row,
+	.line-row-tips {
+		height: 30px;
+		line-height: 30px;
+		display: inline-block;
+	}
+	.line-input input {
+		height: 30px;
+		line-height: 30px;
+	}
+	.line-row-tips {
+		margin-left: 10px !important;
+		color: #999;
+		vertical-align: top;
+	}
+	.crontab-log {
+		overflow: auto;
+		border: 0 none;
+		line-height: 16px;
+		padding: 15px;
+		white-space: pre-wrap;
+		min-height: 250px;
+		background-color: rgb(51, 51, 51);
+		color: #f1f1f1;
+		margin-top: 10px;
+		margin-bottom: 0;
+	}
+	.input_file {
+		float: left;
+		height: 35px;
+		border: 0.1px dashed #d0d0d0;
+		padding: 0 0 0 10px;
+		font-size: 14px;
+		outline: none;
+		margin-bottom: 20px;
+	}
+	.select_file {
+		float: left;
+		width: 80px;
+		height: 35px;
+		font-size: 14px;
+		color: #fff;
+		background: #10952a;
+		position: absolute;
+		left: 170px;
+		border: none;
+	}
+	.dividing-line {
+		width: 1px;
+		background: #ccc;
+		height: 20px;
+		vertical-align: middle;
+	}
+	#antiOverviewList .divtable,
+	#reinforceSystem .divtable {
+		margin: 0;
+	}
 
-    }
-    .dividing-line {
-        width: 1px;
-        background: #ccc;
-        height: 20px;
-        vertical-align: middle;
-    }
-    #antiOverviewList .divtable,
-    #reinforceSystem .divtable{
-        margin: 0;
-    }
+	.logs-data-select {
+		margin-bottom: 15px;
+	}
+	.logs-title {
+		display: inline-block;
+		width: auto;
+		height: 35px;
+		font-size: 12px;
+		line-height: 35px;
+		margin-right: 5px;
+	}
+	.logs-unselect {
+		position: relative;
+		display: inline-block;
+		height: 30px;
+		border: 1px solid #e6e6e6;
+		border-radius: 2px;
+		font-size: 13px;
+		line-height: 28px;
+	}
+	.logs-unselect.active .logs-input-list {
+		display: block;
+	}
+	.logs-unselect.active .logs-input-list {
+		animation-name: layui-upbit;
+		animation-duration: 0.3s;
+		animation-fill-mode: both;
+	}
+	.logs-inputs {
+		box-sizing: border-box;
+		padding: 0 30px 0 10px;
+		height: 30px;
+		cursor: pointer;
+	}
+	.logs-unselect .logs-inputs:after {
+		position: absolute;
+		top: 0.8pc;
+		right: 6pt;
+		display: block;
+		width: 0;
+		height: 0;
+		border-color: #c2c2c2 transparent transparent;
+		border-style: solid;
+		border-width: 6px 6px 0;
+		content: '';
+		transition: transform 0.5s;
+	}
+	.logs-input-list {
+		position: absolute;
+		top: 30px;
+		right: -1px;
+		left: -1px;
+		z-index: 899;
+		display: none;
+		box-sizing: border-box;
+		padding: 5px 0;
+		height: auto;
+		min-width: 100%;
+		border: 1px solid #d2d2d2;
+		border-radius: 2px;
+		background-color: #fff;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+	}
+	.logs-input-list dd {
+		padding: 5px 15px;
+		height: 30x;
+	}
 
-    .logs-data-select {
-        margin-bottom: 15px;
-    }
-    .logs-title {
-        display: inline-block;
-        width: auto;
-        height: 35px;
-        font-size: 12px;
-        line-height: 35px;
-        margin-right: 5px;
-    }
-    .logs-unselect {
-        position: relative;
-        display: inline-block;
-        height: 30px;
-        border: 1px solid #e6e6e6;
-        border-radius: 2px;
-        font-size: 13px;
-        line-height: 28px;
-    }
-    .logs-unselect.active .logs-input-list {
-        display: block;
-    }
-    .logs-unselect.active .logs-input-list {
-        animation-name: layui-upbit;
-        animation-duration: .3s;
-        animation-fill-mode: both;
-    }
-    .logs-inputs {
-        box-sizing: border-box;
-        padding: 0 30px 0 10px;
-        height: 30px;
-        cursor: pointer;
-    }
-    .logs-unselect .logs-inputs:after {
-        position: absolute;
-        top: 0.8pc;
-        right: 6pt;
-        display: block;
-        width: 0;
-        height: 0;
-        border-color: #c2c2c2 transparent transparent;
-        border-style: solid;
-        border-width: 6px 6px 0;
-        content: '';
-        transition: transform .5s;
-    }
-    .logs-input-list {
-        position: absolute;
-        top: 30px;
-        right: -1px;
-        left: -1px;
-        z-index: 899;
-        display: none;
-        box-sizing: border-box;
-        padding: 5px 0;
-        height: auto;
-        min-width: 100%;
-        border: 1px solid #d2d2d2;
-        border-radius: 2px;
-        background-color: #fff;
-        box-shadow: 0 2px 4px rgba(0,0,0,.12);
-    }
-    .logs-input-list dd {
-        padding: 5px 15px;
-        height: 30x;
-    }
+	.logs-input-list dd:hover {
+		background-color: #f2f2f2;
+		cursor: pointer;
+	}
+	.logs-input-list dd.logs_checked {
+		background: #20a532 !important;
+		color: #fff;
+	}
+	.logs-page.page-style {
+		padding: 0 5px;
+		height: 30px;
+		font-size: 13px;
+		margin-top: 5px;
+	}
+	.page-style .nextPage {
+		display: inline-block;
+		margin: 0 3px;
+		padding: 0 10px;
+		height: 30px;
+		border-radius: 2px;
+		background-color: #f5f5f5;
+		color: #666;
+		text-align: center;
+		line-height: 30px;
+		cursor: pointer;
+	}
+	.page-style .Pcount {
+		margin-right: 0;
+		margin-left: 5px;
+	}
+	.page a:last-of-type {
+		border-right: 1px solid #ececec;
+	}
+	.firewall-tab-view .tab-nav-border span i {
+		font-style: initial;
+	}
 
-    .logs-input-list dd:hover {
-        background-color: #f2f2f2;
-        cursor: pointer;
-    }
-    .logs-input-list dd.logs_checked {
-        background: #20a532!important;
-        color: #fff;
-    }
-    .logs-page.page-style {
-        padding: 0 5px;
-        height: 30px;
-        font-size: 13px;
-        margin-top: 5px;
-    }
-    .page-style .nextPage{
-        display: inline-block;
-        margin: 0 3px;
-        padding: 0 10px;
-        height: 30px;
-        border-radius: 2px;
-        background-color: #f5f5f5;
-        color: #666;
-        text-align: center;
-        line-height: 30px;
-        cursor: pointer;
-    }
-    .page-style .Pcount {
-        margin-right: 0;
-        margin-left: 5px;
-    }
-    .page a:last-of-type {
-        border-right: 1px solid #ececec;
-    }
-    .firewall-tab-view .tab-nav-border span i{
-        font-style: initial;
-    }
+	.firewall-tab-view .tab-con {
+		padding: 0;
+	}
 
-    .firewall-tab-view .tab-con{
-        padding: 0;
-    }
+	.firewall-tab-view .tab-con .btswitch + .btswitch-btn {
+		width: 2.8rem;
+		height: 1.75rem;
+	}
 
-    .firewall-tab-view .tab-con .btswitch+.btswitch-btn{
-        width: 2.8rem;
-        height: 1.75rem;
-    }
+	.logAuditContent {
+		padding: 0 0 0 15px;
+		margin-left: 15px;
+		width: 100%;
+		flex: 1;
+		border-left: 1px solid #ececec;
+	}
 
-    .logAuditContent{
-        padding: 0 0 0 15px;
-        margin-left: 15px;
-        width: 100%;
-        flex: 1;
-        border-left: 1px solid #ececec;
-    }
+	.logAuditTabContent {
+		display: flex;
+		height: 100%;
+	}
 
-    .logAuditTabContent{
-        display: flex;
-        height: 100%;
-    }
+	.logAuditTabContent .logAuditTab .logAuditItem {
+		height: 35px;
+		line-height: 35px;
+		padding: 0 10px;
+		border-bottom: 1px solid #ececec;
+		cursor: pointer;
+	}
 
-    .logAuditTabContent .logAuditTab .logAuditItem{
-        height: 35px;
-        line-height: 35px;
-        padding:0 10px;
-        border-bottom: 1px solid #ececec;
-        cursor: pointer;
-    }
+	.logAuditTabContent .logAuditTab .logAuditItem:hover,
+	.logAuditTabContent .logAuditTab .logAuditItem.active {
+		background-color: #f2f2f2;
+	}
 
-    .logAuditTabContent .logAuditTab .logAuditItem:hover,
-    .logAuditTabContent .logAuditTab .logAuditItem.active{
-        background-color: #f2f2f2;
-    }
+	.logAuditTabContent .logAuditTab {
+		border: 1px solid #ececec;
+		overflow: auto;
+	}
 
-    .logAuditTabContent .logAuditTab{
-        border:1px solid #ececec;
-        overflow: auto;
-    }
+	.daily-thumbnail {
+		width: 1200px;
+		margin: 80px auto;
+	}
+	.thumbnail-box {
+		position: relative;
+		display: flex;
+		justify-content: center;
+	}
 
-
-    .daily-thumbnail{
-        width: 1200px;
-        margin: 80px auto;
-    }
-    .thumbnail-box{
-        position: relative;
-        display: flex;
-        justify-content: center;
-    }
-
-    .thumbnail-introduce{
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-bottom: 40px;
-    }
-    .thumbnail-introduce span{
-        font-size: 20px;
-        font-weight: bold;
-    }
-    .thumbnail-introduce ul {
-        display: flex;
-        font-size: 16px;
-        line-height: 30px;
-        margin: 20px 0;
-        list-style-type: square;
-    }
-    .thumbnail-introduce ul li + li {
-        margin-left: 40px;
-    }
-    .pluginTipsGg{
-        position: relative;
-        width: 950px;
-        height: 720px;
-        background-color: #f1f1f1;
-        background-size: 100%;
-        background-repeat: no-repeat;
-        background-position: top;
-        border-radius: 4px;
-    }
-    /*.pluginTipsGg:hover::before{*/
-    /*  display: inline-block;*/
-    /*}*/
-    .pluginTipsGg::before {
-        content: '点击预览';
-        display: none;
-        background: #000;
-        opacity: 0.2;
-        color: #fff;
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        line-height: 621px;
-        font-size: 18px;
-        vertical-align: bottom;
-        text-align: center;
-        border-radius: 4px;
-        transition: all 1s;
-    }
-    .tab-list .tabs-item.active:after {
-        content: '';
-        width: 20px;
-        height: 2px;
-        position: absolute;
-        left: 50%;
-        bottom: 0px;
-        background: red;
-        margin-left: -10px;
-        background: #20a53a;
-    }
-    .thumbnail-box .thumbnail-tab {
-        margin-right: 20px;
-        width: 140px;
-        border-left: 1px solid #def2e2;
-    }
-    .thumbnail-tab li {
-        padding: 0 20px;
-        line-height: 36px;
-        cursor: pointer;
-        font-size: 14px;
-    }
-    .thumbnail-tab li.on {
-        border-left: 2px solid #20a53a;
-        color: #20a53a;
-        font-size: 16px;
-        font-weight: bold;
-    }
-    .thumbnail-item {
-        display: none;
-    }
-    .thumbnail-item.show {
-        display: block;
-    }
-    .bt_warning {
-        color: #fc6d26;
-    }
-    /* 安全检测 */
-    .progress-header{
-        display: flex;
-        align-items: center;
-        height: 140px;
-        padding: 20px 20px;
-        text-align: center;
-    }
-    .progresscircle{
-        position: absolute;
-        top: 8px;
-        left: 25px;
-    }
-    .progresscircle p{
-        padding: 5px 0;
-        font-size: 13px;
-        font-weight: 700;
-    }
-    .progresscirclebar.security svg{
-        position: absolute;
-        width: 100px;
-        height: 100px;
-        left: 0;
-        font-weight: 600;
-    }
-    .progresscirclebar span:nth-child(1){
-        font-size: 24px;
-    }
-    .progresscirclebar{
-        position: relative;
-        width: 100px;
-        height: 100px;
-        line-height: 100px;
-        font-size: 18px;
-    }
-    .progresscirclebar.active svg{
-        -webkit-animation: load8 1.1s infinite linear;
-        animation: load8 1.1s infinite linear;
-    }
-    .progress-header-cot:nth-child(1),.progress-header-cot:nth-child(3){
-        min-width: 100px;
-        position: relative;
-    }
-    .progress-header-cot:nth-child(3){
-        display: flex;
-    }
-    .progress-header-cot:nth-child(2) {
-        width: 100%;
-        padding: 0 40px;
-    }
-    .progress-header-cot button,.scan-header-cont button{
-        height: 40px;
-        width: 120px;
-        font-size: 15px;
-        border-radius: 5px;
-    }
-    .progress-header-cot button.cancel_detect{
-        border-color: #999;
-        color: #666;
-        background-color: #fff;
-        font-size: 15px;
-    }
-    .progress-header-cot button.cancel_detect:hover{
-        color: #fc6d26;
-        background: rgba(252,109,38,0.1);
-        border-color: rgba(252,109,38,0.2);
-    }
-    .scanning-progress-title{
-        text-align: left;
-        font-weight: 700;
-        margin: 15px 0;
-        font-size: 20px;
-    }
-    .scanning-progress-title img{
-        margin-right: 10px;
-        vertical-align: sub;
-        width: 24px;
-    }
-    .scanning-progress-title .color-red{
-        color: red;
-    }
-    .scanning-progress-title span{
-        color: #fc6d26;
-    }
-    .color-org{
-        color: #fc6d26;
-    }
-    .scanning-progress-cont{
-        text-align: left;
-        margin: 15px 0;
-        font-size: 14px;
-    }
-    .scanning-progress-bar{
-        display: flex;
-        align-items: center;
-    }
-    .scanning-progress-bar .progress-bar{
-        width: 100%;
-        height: 10px;
-        border-radius: 100px;
-        background-color: #ebeef5;
-        box-shadow: none;
-    }
-    .scanning-progress-bar .progress-bar .progressbar{
-        width: 0;
-        height: 10px;
-        border-radius: 100px;
-        background-color: #20a53a;
-        transition: width 300ms;
-    }
-    .scanning-progress-bar .progressbar_text{
-        margin-left: 10px;
-        width: 32px;
-        font-size: 14px;
-    }
-    .progress_item{
-        margin: 0 20px 20px 20px;
-        padding: 0 20px;
-        background-color: #f7f7f7;
-        border-radius: 4px;
-        border: 1px solid transparent;
-    }
-    .progress_item_header{
-        height: 55px;
-        line-height: 55px;
-        display: flex;
-        justify-content: space-between;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 15px;
-        color: #555;
-    }
-    .progress_item_header .progress_type{
-        display: flex;
-        align-items: center;
-        width: 59.5%;
-        font-weight: bold;
-        line-height: 22px;
-    }
-    .progress_item_header .progress_type img{
-        width: 20px;
-        margin-right: 10px;
-    }
-    .progress_item_header .progress_status{
-        flex: 1;
-    }
-    .progress-cont-list{
-        margin-top: 20px;
-    }
-    .progress_item_body{
-        line-height: 30px;
-        display: none;
-        font-size: 14px;
-    }
-    .progress_item.active .progress_item_body{
-        display: block;
-    }
-    .progress_item_info{
-        margin-bottom: 15px;
-    }
-    .progress_item_info .info_cont{
-        display: flex;
-        color: #666;
-        padding: 10px 30px;
-    }
-    .progress_item_info .info_cont div:nth-child(1){
-        width: 60%;
-    }
-    .progress_item_info .info_cont div:nth-child(2){
-        width: 40%;
-    }
-    .progress_item_info .info_cont div:nth-child(2) span{
-        font-weight: 600;
-    }
-    .progress_item_info.active{
-        background-color: rgba(252,109,38,0.1);
-        padding: 10px 0;
-    }
-    .progress_item_info.active .info_cont{
-        margin: 0 20px;
-        padding: 0 10px 5px 10px;
-        border-bottom: 1px dashed #d9d9d9;
-    }
-    .progress_item_info.active .info_cont_desc{
-        color: #888;
-        border-radius: 4px;
-        padding: 5px 30px 0 30px;
-    }
-    .progress_item_info.active:hover{
-        background-color: rgba(252,109,38,0.2);
-    }
-    .progress_item_info:hover{
-        background-color: #efefef;
-    }
-    .btn_red{
-        font-weight: bold;
-        margin-left: 5px;
-        padding: 1px 5px;
-        text-align: center;
-        border-radius: 3px;
-        color:#fff;
-        background: red;
-    }
-    .btn_normal{
-        font-weight: bold;
-        margin-left: 5px;
-        padding: 1px 5px;
-        text-align: center;
-        border-radius: 3px;
-        color:#fff;
-        background: #f0ad4e;
-    }
-    .select_conter .wsfile_list {
-        display: none;
-        background: #fff;
-        position: absolute;
-        top: 34px;
-        left: -1px;
-        border: 1px solid #ececec;
-        overflow-y: auto;
-        max-height: 280px;
-        width: 203px;
-        z-index: 999;
-        box-shadow: 2px 5px 8px #ccc;
-        font-size: 12px;
-    }
-    .select_conter .wsfile_list.active {
-        display: block;
-    }
-    .select_conter .wsfile_list li {
-        text-align: left;
-        padding: 0 10px;
-    }
-    .select_conter .wsfile_list li:hover {
-        background: #20a53a;
-        color: #fff;
-    }
-    .select_conter .wsfile_list li.active {
-        background: #20a53a;
-        color: #fff;
-    }
-    .select_conter .wsfile_input {
-        display: inline-block;
-        padding-left: 15px;
-        height: 28px;
-        line-height: 28px;
-        vertical-align: top;
-        font-size: 12px;
-    }
-    .firewall-tab-view .tab-con .btswitch+.btswitch-btn.isSpywareDetection {
-        width: 3em;
-        height: 1.8em;
-    }
-    .prog_desc_title{
-        font-weight: 600;
-        font-size: 18px;
-        padding: 0 0 15px 0;
-        color: #555;
-    }
-    .prog_desc_body {
-
-    }
-    .prog_desc_body .prog_desc_item {
-        width: 25%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 20px 0;
-        justify-content: space-around;
-    }
-    .prog_desc_body .prog_desc_item img {
-        width: 60px;
-        opacity: .8;
-    }
-    .prog_desc_body .prog_desc_item span {
-        padding-top: 10px;
-        font-size: 15px;
-        color: #666;
-        font-weight: 600;
-    }
-    #whitePathList .glyphicon-folder-open{
-        font-size: 15px;
-        margin-right: 15px;
-    }
-    /*漏洞扫描*/
-    .scan-header{
-        display: flex;
-        align-items: center;
-        height: 120px;
-        padding: 20px 20px;
-        border-bottom: 1px solid rgb(232, 232, 232);
-        margin-bottom: 15px;
-    }
-    .scan-header-cont:nth-child(1){
-        width: 75px;
-        position: relative;
-    }
-    .safaty_load{
-        display: none;
-        position: absolute;
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        border-top: 3px solid transparent;
-        border-right: 3px solid rgba(32, 165, 58, 100);
-        border-bottom: 3px solid rgba(32, 165, 58, 100);
-        border-left: 3px solid rgba(32, 165, 58, 100);
-        -webkit-animation: load8 1.1s infinite linear;
-        animation: load8 1.1s infinite linear;
-    }
-    @-webkit-keyframes load8 {
-        0% {
-            -webkit-transform: rotate(0deg);
-            transform: rotate(0deg);
-        }
-        100% {
-            -webkit-transform: rotate(360deg);
-            transform: rotate(360deg);
-        }
-    }
-    @keyframes load8 {
-        0% {
-            -webkit-transform: rotate(0deg);
-            transform: rotate(0deg);
-        }
-        100% {
-            -webkit-transform: rotate(360deg);
-            transform: rotate(360deg);
-        }
-    }
-    .scan-header-cont:nth-child(3) {
-        width: 200px;
-        position: relative;
-        display: flex;
-        justify-content: end;
-    }
-    .scan-header-cont:nth-child(2) {
-        width: 100%;
-        padding: 0 20px;
-        line-height: 26px;
-    }
-    .scan-title{
-        font-size: 20px;
-        font-weight: 700;
-    }
-    .scan-subtitle{
-        font-size: 14px;
-    }
-    .scan-title i{
-        font-style: inherit;
-        color: #f0ad4e;
-    }
-    .module_head div{
-        display: inline-block;
-        width: 300px;
-    }
-    .warning_scan_body .module_type{
-        width: auto;
-    }
-    .warning_scan_body .module_num {
-        width: 80px;
-        margin: 0 20px;
-    }
-    .warning_scan_body .module_num span {
-        color: red;
-    }
-    .warning_scan_body li:first-child .module_head {
-        border-top: none;
-    }
-    .module_details_list.active {
-        overflow: hidden;
-        height: auto;
-        margin: 13px 5px 20px 10px;
-        transition: margin 500ms;
-    }
-    .module_details_title>span {
-        display: inline-block;
-        max-width: 350px;
-        display: inline-block;
-        text-overflow: ellipsis;
-        overflow: hidden;
-        white-space: pre;
-        color: #a9a9a9;
-    }
-    .webedit-con .thumbnail-box::before {
-        content: '点击预览';
-        display: none;
-        background: #000;
-        opacity: 0.2;
-        color: #fff;
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 340px;
-        height: 315px;
-        line-height: 340px;
-        font-size: 18px;
-        vertical-align: bottom;
-        border-radius: 4px;
-        transition: all 1s;
-    }
-    .webedit-con .pluginTipsGg1 {
-        width: 340px;
-        height: 315px;
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-        border-radius: 4px;
-    }
-    .module_item{
-        color: #666;
-    }
-    .mt15{
-        margin-top: 15px;
-    }
-    /* 安全检测 end */
-    /* 目录查杀 */
+	.thumbnail-introduce {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		margin-bottom: 40px;
+	}
+	.thumbnail-introduce span {
+		font-size: 20px;
+		font-weight: bold;
+	}
+	.thumbnail-introduce ul {
+		display: flex;
+		font-size: 16px;
+		line-height: 30px;
+		margin: 20px 0;
+		list-style-type: square;
+	}
+	.thumbnail-introduce ul li + li {
+		margin-left: 40px;
+	}
+	.pluginTipsGg {
+		position: relative;
+		width: 950px;
+		height: 720px;
+		background-color: #f1f1f1;
+		background-size: 100%;
+		background-repeat: no-repeat;
+		background-position: top;
+		border-radius: 4px;
+	}
+	/*.pluginTipsGg:hover::before{*/
+	/*  display: inline-block;*/
+	/*}*/
+	.pluginTipsGg::before {
+		content: '点击预览';
+		display: none;
+		background: #000;
+		opacity: 0.2;
+		color: #fff;
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 100%;
+		line-height: 621px;
+		font-size: 18px;
+		vertical-align: bottom;
+		text-align: center;
+		border-radius: 4px;
+		transition: all 1s;
+	}
+	.tab-list .tabs-item.active:after {
+		content: '';
+		width: 20px;
+		height: 2px;
+		position: absolute;
+		left: 50%;
+		bottom: 0px;
+		background: red;
+		margin-left: -10px;
+		background: #20a53a;
+	}
+	.thumbnail-box .thumbnail-tab {
+		margin-right: 20px;
+		width: 140px;
+		border-left: 1px solid #def2e2;
+	}
+	.thumbnail-tab li {
+		padding: 0 20px;
+		line-height: 36px;
+		cursor: pointer;
+		font-size: 14px;
+	}
+	.thumbnail-tab li.on {
+		border-left: 2px solid #20a53a;
+		color: #20a53a;
+		font-size: 16px;
+		font-weight: bold;
+	}
+	.thumbnail-item {
+		display: none;
+	}
+	.thumbnail-item.show {
+		display: block;
+	}
+	.bt_warning {
+		color: #fc6d26;
+	}
+	/* 安全检测 */
+	.progress-header {
+		display: flex;
+		align-items: center;
+		height: 140px;
+		padding: 20px 20px;
+		text-align: center;
+	}
+	.progresscircle {
+		position: absolute;
+		top: 8px;
+		left: 25px;
+	}
+	.progresscircle p {
+		padding: 5px 0;
+		font-size: 13px;
+		font-weight: 700;
+	}
+	.progresscirclebar.security svg {
+		position: absolute;
+		width: 100px;
+		height: 100px;
+		left: 0;
+		font-weight: 600;
+	}
+	.progresscirclebar span:nth-child(1) {
+		font-size: 24px;
+	}
+	.progresscirclebar {
+		position: relative;
+		width: 100px;
+		height: 100px;
+		line-height: 100px;
+		font-size: 18px;
+	}
+	.progresscirclebar.active svg {
+		-webkit-animation: load8 1.1s infinite linear;
+		animation: load8 1.1s infinite linear;
+	}
+	.progress-header-cot:nth-child(1),
+	.progress-header-cot:nth-child(3) {
+		min-width: 100px;
+		position: relative;
+	}
+	.progress-header-cot:nth-child(3) {
+		display: flex;
+	}
+	.progress-header-cot:nth-child(2) {
+		width: 100%;
+		padding: 0 40px;
+	}
+	.progress-header-cot button,
+	.scan-header-cont button {
+		height: 40px;
+		width: 120px;
+		font-size: 15px;
+		border-radius: 5px;
+	}
+	.progress-header-cot button.cancel_detect {
+		border-color: #999;
+		color: #666;
+		background-color: #fff;
+		font-size: 15px;
+	}
+	.progress-header-cot button.cancel_detect:hover {
+		color: #fc6d26;
+		background: rgba(252, 109, 38, 0.1);
+		border-color: rgba(252, 109, 38, 0.2);
+	}
+	.scanning-progress-title {
+		text-align: left;
+		font-weight: 700;
+		margin: 15px 0;
+		font-size: 20px;
+	}
+	.scanning-progress-title img {
+		margin-right: 10px;
+		vertical-align: sub;
+		width: 24px;
+	}
+	.scanning-progress-title .color-red {
+		color: red;
+	}
+	.scanning-progress-title span {
+		color: #fc6d26;
+	}
+	.color-org {
+		color: #fc6d26;
+	}
+	.scanning-progress-cont {
+		text-align: left;
+		margin: 15px 0;
+		font-size: 14px;
+	}
+	.scanning-progress-bar {
+		display: flex;
+		align-items: center;
+	}
+	.scanning-progress-bar .progress-bar {
+		width: 100%;
+		height: 10px;
+		border-radius: 100px;
+		background-color: #ebeef5;
+		box-shadow: none;
+	}
+	.scanning-progress-bar .progress-bar .progressbar {
+		width: 0;
+		height: 10px;
+		border-radius: 100px;
+		background-color: #20a53a;
+		transition: width 300ms;
+	}
+	.scanning-progress-bar .progressbar_text {
+		margin-left: 10px;
+		width: 32px;
+		font-size: 14px;
+	}
+	.progress_item {
+		margin: 0 20px 20px 20px;
+		padding: 0 20px;
+		background-color: #f7f7f7;
+		border-radius: 4px;
+		border: 1px solid transparent;
+	}
+	.progress_item_header {
+		height: 55px;
+		line-height: 55px;
+		display: flex;
+		justify-content: space-between;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 15px;
+		color: #555;
+	}
+	.progress_item_header .progress_type {
+		display: flex;
+		align-items: center;
+		width: 59.5%;
+		font-weight: bold;
+		line-height: 22px;
+	}
+	.progress_item_header .progress_type img {
+		width: 20px;
+		margin-right: 10px;
+	}
+	.progress_item_header .progress_status {
+		flex: 1;
+	}
+	.progress-cont-list {
+		margin-top: 20px;
+	}
+	.progress_item_body {
+		line-height: 30px;
+		display: none;
+		font-size: 14px;
+	}
+	.progress_item.active .progress_item_body {
+		display: block;
+	}
+	.progress_item_info {
+		margin-bottom: 15px;
+	}
+	.progress_item_info .info_cont {
+		display: flex;
+		color: #666;
+		padding: 10px 30px;
+	}
+	.progress_item_info .info_cont div:nth-child(1) {
+		width: 60%;
+	}
+	.progress_item_info .info_cont div:nth-child(2) {
+		width: 40%;
+	}
+	.progress_item_info .info_cont div:nth-child(2) span {
+		font-weight: 600;
+	}
+	.progress_item_info.active {
+		background-color: rgba(252, 109, 38, 0.1);
+		padding: 10px 0;
+	}
+	.progress_item_info.active .info_cont {
+		margin: 0 20px;
+		padding: 0 10px 5px 10px;
+		border-bottom: 1px dashed #d9d9d9;
+	}
+	.progress_item_info.active .info_cont_desc {
+		color: #888;
+		border-radius: 4px;
+		padding: 5px 30px 0 30px;
+	}
+	.progress_item_info.active:hover {
+		background-color: rgba(252, 109, 38, 0.2);
+	}
+	.progress_item_info:hover {
+		background-color: #efefef;
+	}
+	.btn_red {
+		font-weight: bold;
+		margin-left: 5px;
+		padding: 1px 5px;
+		text-align: center;
+		border-radius: 3px;
+		color: #fff;
+		background: red;
+	}
+	.btn_normal {
+		font-weight: bold;
+		margin-left: 5px;
+		padding: 1px 5px;
+		text-align: center;
+		border-radius: 3px;
+		color: #fff;
+		background: #f0ad4e;
+	}
+	.select_conter .wsfile_list {
+		display: none;
+		background: #fff;
+		position: absolute;
+		top: 34px;
+		left: -1px;
+		border: 1px solid #ececec;
+		overflow-y: auto;
+		max-height: 280px;
+		width: 203px;
+		z-index: 999;
+		box-shadow: 2px 5px 8px #ccc;
+		font-size: 12px;
+	}
+	.select_conter .wsfile_list.active {
+		display: block;
+	}
+	.select_conter .wsfile_list li {
+		text-align: left;
+		padding: 0 10px;
+	}
+	.select_conter .wsfile_list li:hover {
+		background: #20a53a;
+		color: #fff;
+	}
+	.select_conter .wsfile_list li.active {
+		background: #20a53a;
+		color: #fff;
+	}
+	.select_conter .wsfile_input {
+		display: inline-block;
+		padding-left: 15px;
+		height: 28px;
+		line-height: 28px;
+		vertical-align: top;
+		font-size: 12px;
+	}
+	.firewall-tab-view .tab-con .btswitch + .btswitch-btn.isSpywareDetection {
+		width: 3em;
+		height: 1.8em;
+	}
+	.prog_desc_title {
+		font-weight: 600;
+		font-size: 18px;
+		padding: 0 0 15px 0;
+		color: #555;
+	}
+	.prog_desc_body {
+	}
+	.prog_desc_body .prog_desc_item {
+		width: 25%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 20px 0;
+		justify-content: space-around;
+	}
+	.prog_desc_body .prog_desc_item img {
+		width: 60px;
+		opacity: 0.8;
+	}
+	.prog_desc_body .prog_desc_item span {
+		padding-top: 10px;
+		font-size: 15px;
+		color: #666;
+		font-weight: 600;
+	}
+	#whitePathList .glyphicon-folder-open {
+		font-size: 15px;
+		margin-right: 15px;
+	}
+	/*漏洞扫描*/
+	.scan-header {
+		display: flex;
+		align-items: center;
+		height: 120px;
+		padding: 20px 20px;
+		border-bottom: 1px solid rgb(232, 232, 232);
+		margin-bottom: 15px;
+	}
+	.scan-header-cont:nth-child(1) {
+		width: 75px;
+		position: relative;
+	}
+	.safaty_load {
+		display: none;
+		position: absolute;
+		width: 60px;
+		height: 60px;
+		border-radius: 50%;
+		border-top: 3px solid transparent;
+		border-right: 3px solid rgba(32, 165, 58, 100);
+		border-bottom: 3px solid rgba(32, 165, 58, 100);
+		border-left: 3px solid rgba(32, 165, 58, 100);
+		-webkit-animation: load8 1.1s infinite linear;
+		animation: load8 1.1s infinite linear;
+	}
+	@-webkit-keyframes load8 {
+		0% {
+			-webkit-transform: rotate(0deg);
+			transform: rotate(0deg);
+		}
+		100% {
+			-webkit-transform: rotate(360deg);
+			transform: rotate(360deg);
+		}
+	}
+	@keyframes load8 {
+		0% {
+			-webkit-transform: rotate(0deg);
+			transform: rotate(0deg);
+		}
+		100% {
+			-webkit-transform: rotate(360deg);
+			transform: rotate(360deg);
+		}
+	}
+	.scan-header-cont:nth-child(3) {
+		width: 200px;
+		position: relative;
+		display: flex;
+		justify-content: end;
+	}
+	.scan-header-cont:nth-child(2) {
+		width: 100%;
+		padding: 0 20px;
+		line-height: 26px;
+	}
+	.scan-title {
+		font-size: 20px;
+		font-weight: 700;
+	}
+	.scan-subtitle {
+		font-size: 14px;
+	}
+	.scan-title i {
+		font-style: inherit;
+		color: #f0ad4e;
+	}
+	.module_head div {
+		display: inline-block;
+		width: 300px;
+	}
+	.warning_scan_body .module_type {
+		width: auto;
+	}
+	.warning_scan_body .module_num {
+		width: 80px;
+		margin: 0 20px;
+	}
+	.warning_scan_body .module_num span {
+		color: red;
+	}
+	.warning_scan_body li:first-child .module_head {
+		border-top: none;
+	}
+	.module_details_list.active {
+		overflow: hidden;
+		height: auto;
+		margin: 13px 5px 20px 10px;
+		transition: margin 500ms;
+	}
+	.module_details_title > span {
+		display: inline-block;
+		max-width: 350px;
+		display: inline-block;
+		text-overflow: ellipsis;
+		overflow: hidden;
+		white-space: pre;
+		color: #a9a9a9;
+	}
+	.webedit-con .thumbnail-box::before {
+		content: '点击预览';
+		display: none;
+		background: #000;
+		opacity: 0.2;
+		color: #fff;
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 340px;
+		height: 315px;
+		line-height: 340px;
+		font-size: 18px;
+		vertical-align: bottom;
+		border-radius: 4px;
+		transition: all 1s;
+	}
+	.webedit-con .pluginTipsGg1 {
+		width: 340px;
+		height: 315px;
+		background-size: contain;
+		background-repeat: no-repeat;
+		background-position: center;
+		border-radius: 4px;
+	}
+	.module_item {
+		color: #666;
+	}
+	.mt15 {
+		margin-top: 15px;
+	}
+	/* 安全检测 end */
+	/* 目录查杀 */
 	@keyframes load8 {
 		from {
 			transform: rotate(0deg);
@@ -783,7 +781,6 @@
 		}
 	}
 
-
 	.spyware_detection_view {
 		padding: 20px;
 	}
@@ -792,7 +789,7 @@
 		display: flex;
 		align-items: center;
 		padding-bottom: 20px;
-		border-bottom: 1px solid #F1F1F1;
+		border-bottom: 1px solid #f1f1f1;
 	}
 
 	.spyware_detection_head .head_icon {
@@ -811,7 +808,7 @@
 
 	.spyware_detection_head .head_icon .start_icon {
 		width: 50px;
-    height: 50px;
+		height: 50px;
 	}
 
 	.spyware_detection_head .head_icon .status_loading {
@@ -820,8 +817,8 @@
 		left: 50%;
 		margin-top: -33px;
 		margin-left: -33px;
-    width: 66px;
-    height: 66px;
+		width: 66px;
+		height: 66px;
 		border: 2px solid #20a53a;
 		border-top: 2px solid transparent;
 		border-radius: 50%;
@@ -834,88 +831,88 @@
 		border-top-color: transparent;
 	}
 
-    .spyware_detection_head .scanned_num {
-        margin-left: 4px;
-    }
+	.spyware_detection_head .scanned_num {
+		margin-left: 4px;
+	}
 
-    .spyware_detection_head .total_num {
-        margin-right: 4px;
-    }
+	.spyware_detection_head .total_num {
+		margin-right: 4px;
+	}
 
-    .spyware_detection_head .tqnum {
-        margin: 0 4px;
-        color: red;
-    }
+	.spyware_detection_head .tqnum {
+		margin: 0 4px;
+		color: red;
+	}
 
-    .spyware_detection_head .head_left {
-        flex: 1;
-        width: 0;
-        height: 76px;
-        margin: 0 15px;
-        padding-top: 12px;
-    }
+	.spyware_detection_head .head_left {
+		flex: 1;
+		width: 0;
+		height: 76px;
+		margin: 0 15px;
+		padding-top: 12px;
+	}
 
-    .spyware_detection_head .info {
-        display: flex;
-        align-items: center;
-        margin-bottom: 8px;
-        font-size: 18px;
-        color: #444;
-        font-weight: 600;
-    }
+	.spyware_detection_head .info {
+		display: flex;
+		align-items: center;
+		margin-bottom: 8px;
+		font-size: 18px;
+		color: #444;
+		font-weight: 600;
+	}
 
-    .spyware_detection_head .file {
-        width: 100%;
-        word-break: break-all;
-        font-size: 12px;
-        color: #666;
-    }
+	.spyware_detection_head .file {
+		width: 100%;
+		word-break: break-all;
+		font-size: 12px;
+		color: #666;
+	}
 
-    .spyware_detection_head .btn {
-        width: 100px;
-        height: 38px;
-    }
+	.spyware_detection_head .btn {
+		width: 100px;
+		height: 38px;
+	}
 
-    .spyware_detection_progress {
-        display: flex;
-        align-items: center;
-    }
+	.spyware_detection_progress {
+		display: flex;
+		align-items: center;
+	}
 
-    .spyware_detection_progress .progress_bar {
-        position: relative;
-        flex: 1;
-        height: 2px;
-        border-radius: 100px;
-        background-color: #ebeef5;
-    }
+	.spyware_detection_progress .progress_bar {
+		position: relative;
+		flex: 1;
+		height: 2px;
+		border-radius: 100px;
+		background-color: #ebeef5;
+	}
 
-    .spyware_detection_progress .progress_bar .inner {
-        position: absolute;
-        left: 0;
-        top: 0;
-        height: 100%;
-        background-color: #20a53a;
-        border-radius: 100px;
-        transition: width .6s ease;
-    }
+	.spyware_detection_progress .progress_bar .inner {
+		position: absolute;
+		left: 0;
+		top: 0;
+		height: 100%;
+		background-color: #20a53a;
+		border-radius: 100px;
+		transition: width 0.6s ease;
+	}
 
-    .spyware_detection_progress .text {
-        width: 40px;
-        margin-left: 10px;
-        text-align: right;
-    }
+	.spyware_detection_progress .text {
+		width: 40px;
+		margin-left: 10px;
+		text-align: right;
+	}
 
-    .spyware_detection_body {
-        margin-top: 20px;
-    }
+	.spyware_detection_body {
+		margin-top: 20px;
+	}
 
-    .spyware_detection_view .divtable {
-        border: 1px solid #ddd;
-    }
+	.spyware_detection_view .divtable {
+		border: 1px solid #ddd;
+	}
 
-    .spyware_detection_view .divtable table {
-        border: none;
-    }
+	.spyware_detection_view .divtable table {
+		border: none;
+	}
 
 	.text_ellipsis {
 		text-overflow: ellipsis;
@@ -952,7 +949,7 @@
 		background-color: #20a532;
 		border-radius: 1px;
 	}
-	.cont-detect .card-cont{
+	.cont-detect .card-cont {
 		height: 345px;
 	}
 	.cont-detect .card-echarts {
@@ -970,7 +967,7 @@
 		border-bottom: none;
 	}
 
-	.new-table .tootls_group.tootls_top, 
+	.new-table .tootls_group.tootls_top,
 	.cont-detect .tootls_group.tootls_top {
 		margin-bottom: 10px;
 	}
@@ -978,7 +975,7 @@
 	.new-table .divtable,
 	.cont-detect .divtable {
 		margin-top: 0;
-		border: .5px solid #ddd;
+		border: 0.5px solid #ddd;
 	}
 	.new-table .divtable table,
 	.cont-detect .divtable table {
@@ -989,7 +986,7 @@
 		border: none;
 	}
 
-	.table-hover>tbody>tr.no-tr:hover {
+	.table-hover > tbody > tr.no-tr:hover {
 		background-color: transparent;
 	}
 
@@ -1032,9 +1029,9 @@
 		justify-content: center;
 		padding: 22px 0;
 		border-radius: 4px;
-		-webkit-box-shadow:0px 0px 5px 1px rgba(62,66,66,0.13);
-		-moz-box-shadow: 0px 0px 5px 1px rgba(62,66,66,0.13);
-		box-shadow: 0px 0px 5px 1px rgba(62,66,66,0.13);
+		-webkit-box-shadow: 0px 0px 5px 1px rgba(62, 66, 66, 0.13);
+		-moz-box-shadow: 0px 0px 5px 1px rgba(62, 66, 66, 0.13);
+		box-shadow: 0px 0px 5px 1px rgba(62, 66, 66, 0.13);
 	}
 
 	.cont-detect .info-panel .cols::after {
@@ -1047,7 +1044,7 @@
 		height: 60px;
 		background: url('/static/img/content_detect/bg.png') no-repeat center;
 		background-size: contain;
-		opacity: .2;
+		opacity: 0.2;
 	}
 
 	.cont-detect .info-panel .cols + .cols {
@@ -1080,7 +1077,6 @@
 		color: #20a53a;
 	}
 
-
 	.form-radio {
 		display: flex;
 		align-items: center;
@@ -1100,19 +1096,19 @@
 	}
 	.form-content .group-input .bt-input-text {
 		border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
+		border-bottom-right-radius: 0;
 	}
 	.form-content .unit {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-    width: 44px;
+		width: 44px;
 		border: 1px solid #ccc;
-    border-left: 0;
-    border-radius: 2px;
+		border-left: 0;
+		border-radius: 2px;
 		border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    background-color: #f6f6f6;
+		border-bottom-left-radius: 0;
+		background-color: #f6f6f6;
 		vertical-align: middle;
 	}
 	.monitor-form .form-label {
@@ -1125,11 +1121,11 @@
 	}
 	.form-checkbox input {
 		margin: 0;
-    margin-right: 6px;
+		margin-right: 6px;
 	}
 	.form-checkbox .checkbox-label {
 		position: relative;
-		top: -.5px;
+		top: -0.5px;
 		line-height: 1;
 	}
 	.form-config {
@@ -1160,613 +1156,614 @@
 		flex: 1;
 		max-width: none;
 	}
-	.ace_conter_toolbar .pull-left>span {
+	.ace_conter_toolbar .pull-left > span {
 		display: flex;
 	}
-	.ace_conter_toolbar .pull-left>span>i {
+	.ace_conter_toolbar .pull-left > span > i {
 		flex: 1;
 		width: 0;
 		white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
-    .warning_scan_body .safe_state{
-        border: 1px solid #e8e8e8;
-        height: 490px;
-        line-height: 489px;
-        text-align: center;
-        font-size: 20px;
-    }
+	.warning_scan_body .safe_state {
+		border: 1px solid #e8e8e8;
+		height: 490px;
+		line-height: 489px;
+		text-align: center;
+		font-size: 20px;
+	}
 	/* end */
 </style>
 <div class="main-content">
-    <div class="container-fluid" style="padding-bottom: 50px;">
-        <div id="cutTab" class="pos-box bgw mtb15">
-            <div class="tab-list">
-                <div class="tabs-item active" data-name="safety">系统防火墙</div>
-                <div class="tabs-item" data-name="ssh">SSH管理</div>
-                <div class="tabs-item" data-name="safeDetect">安全检测</div>
-                <div class="tabs-item" data-name="contDetect">违规词检测</div>
-                <div class="tabs-item" data-name="intrusion">入侵防御</div>
-                <div class="tabs-item" data-name="system">系统加固</div>
-                <div class="tabs-item" data-name="logAudit">日志审计</div>
-                <div class="tabs-item" data-name="logs">面板日志</div>
-            </div>
-        </div>
-        <div class="safe container-fluid bgw mtb15 pd15 radius4 state-content">
-            <div class="safety-header" style="display: none">
-                <div class="inlineBlock" style="height: 30px;">
-                    <span style="vertical-align: middle;">防火墙开关</span>
-                    <div class="ssh-item" style="float: inherit;display: inline-block;vertical-align: middle;">
-                        <input class="btswitch btswitch-ios" id="isFirewall" type="checkbox" checked="" />
-                        <label class="btswitch-btn isFirewall" for="isFirewall"></label>
-                    </div>
-                </div>
-                <div class="inlineBlock mlr15 dividing-line"></div>
-                <div class="inlineBlock mr10" style="height: 30px;">
-                    <span style="vertical-align: middle;">禁ping</span>
-                    <div class="ssh-item" style="float: inherit;display: inline-block;vertical-align: middle;">
-                        <input class="btswitch btswitch-ios" id="ssh_ping" type="checkbox" checked="" />
-                        <label class="btswitch-btn" for="ssh_ping"></label>
-                    </div>
-                </div>
-                <div class="inlineBlock mlr15 dividing-line"></div>
-                <div class="inlineBlock mr10" style="height: 30px;">
-                    <div class="weblog">
-                        <span class="f12 c5">{{data['lan']['S1']}}</span><a class="btlink mr10" href="javascript:openPath('{{session['logsPath']}}');">{{session['logsPath']}}</a><em id="logSize" style="font-style: normal">0KB</em>
-                        <button class="btn btn-default btn-sm ml10" onclick="firewall.safety.clear_logs_files();">{{data['lan']['BTN5']}}</button>
-                    </div>
-                </div>
-            </div>
-            <div class="ssh-header" style="display: none">
-                <div class="inlineBlock" style="height: 30px;">
-                    <span style="vertical-align: middle;">SSH开关</span>
-                    <div class="ssh-item" style="float: inherit;display: inline-block;vertical-align: middle;">
-                        <input class="btswitch btswitch-ios" id="isSsh" type="checkbox" checked="" />
-                        <label class="btswitch-btn isSsh" for="isSsh"></label>
-                    </div>
-                </div>
-                <div class="inlineBlock mlr15 dividing-line"></div>
-                <div class="inlineBlock" style="height: 30px;line-height: 30px; vertical-align: top;">
-                    <span style="vertical-align: middle;">SSH登录详情：</span>
-                    <span class="inlineBlock ml10" style="vertical-align: middle;" id="sshDetailed"></span>
-                </div>
-                <!--                <div class="inlineBlock mlr15 dividing-line"></div>-->
-                <!--                <div class="inlineBlock" style="height: 30px;line-height: 30px; vertical-align: top;">-->
-                <!--                    <span style="vertical-align: middle;">防爆破(fail2ban)：</span>-->
-                <!--                    <span class="inlineBlock ml10" style="vertical-align: middle;" id="fail2ban"></span>-->
-                <!--                </div>-->
-            </div>
-            <div class="intrusion-header" style="display: none">
-                <div class="inlineBlock" style="height: 30px;">
-                    <span style="vertical-align: middle;">入侵防御开关</span>
-                    <div class="ssh-item" style="float: inherit;display: inline-block;vertical-align: middle;">
-                        <input class="btswitch btswitch-ios" id="isIntrusion" type="checkbox" checked="" />
-                        <label class="btswitch-btn isIntrusion" for="isIntrusion"></label>
-                    </div>
-                </div>
-                <div class="inlineBlock mlr15 dividing-line"></div>
-                <div class="inlineBlock" style="height: 30px;line-height: 30px; vertical-align: top;">
-                    <span style="vertical-align: middle;">总拦截次数:</span>
-                    <span class="inlineBlock ml10" style="vertical-align: middle;">
-                        <span class="totlaDays"></span>
-                    </span>
-                </div>
-                <div class="inlineBlock mlr15 dividing-line"></div>
-                <div class="inlineBlock" style="height: 30px;line-height: 30px; vertical-align: top;">
-                    <span style="vertical-align: middle;">保护天数:</span>
-                    <span class="inlineBlock ml10" style="vertical-align: middle;">
-                        <span class="totlaTimes"></span>
-                    </span>
-                </div>
-            </div>
-            <div class="system-header" style="display: none">
-                <div class="inlineBlock" style="height: 30px;">
-                    <span style="vertical-align: middle;">系统加固开关</span>
-                    <div class="ssh-item" style="float: inherit;display: inline-block;vertical-align: middle;">
-                        <input class="btswitch btswitch-ios" id="isReinforcement" type="checkbox" checked="" />
-                        <label class="btswitch-btn isReinforcement" for="isReinforcement"></label>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="bgw mtb15 pd15 tab-view-box firewall-tab-view">
-            <div class="tab-con show w-full" id="safety" style="padding: 0">
-                <div class="tab-nav-border">
-                    <span class="on">端口规则：<i>0</i></span>
-                    <span>IP规则：<i>0</i></span>
-                    <span>端口转发：<i>0</i></span>
-                    <span>地区规则：<i>0</i></span>
-                </div>
-                <div class="tab-con" style="padding-top: 15px;overflow: none;">
-                    <div class="tab-block on" id="portRules"></div>
-                    <div class="tab-block" id="ipRule"></div>
-                    <div class="tab-block" id="portForward"></div>
-                    <div class="tab-block" id="countryRegion"></div>
-                </div>
-            </div>
-            <div class="tab-con hide" id="sshView">
-                <div class="tab-nav-border">
-                    <span class="on">基础设置</span>
-                    <span>SSH登录日志</span>
-                </div>
-                <div class="tab-con" style="padding-top: 10px;overflow: none;">
-                    <div class="tab-block on">
-                        <div class="ssh-config">
-                            <div class="ptb10">
-                                <div class="line" title="SSH端口">
-                                    <div class="line-title">SSH端口</div>
-                                    <div class="line-input">
-                                        <input type="text" class="bt-input-text" value="22" name="ssh_port" style="width: 120px;" />
-                                        <button type="button" class="btn btn-success btn-sm ml5 save_ssh_port">保存</button>
-                                    </div>
-                                    <div class="line-row-tips">当前SSH协议所使用的的端口，默认为22</div>
-                                </div>
-                                <div class="line" title="root登录设置">
-                                    <div class="line-title">root登录设置</div>
-                                    <div class="line-item">
-                                        <!-- <div class="line-row">
+	<div class="container-fluid" style="padding-bottom: 50px">
+		<div id="cutTab" class="pos-box bgw mtb15">
+			<div class="tab-list">
+				<div class="tabs-item active" data-name="safety">系统防火墙</div>
+				<div class="tabs-item" data-name="ssh">SSH管理</div>
+				<div class="tabs-item" data-name="safeDetect">安全检测</div>
+				<div class="tabs-item" data-name="contDetect">违规词检测</div>
+				<div class="tabs-item" data-name="intrusion">入侵防御</div>
+				<div class="tabs-item" data-name="system">系统加固</div>
+				<!-- <div class="tabs-item" data-name="logAudit">日志审计</div>
+                <div class="tabs-item" data-name="logs">面板日志</div> -->
+			</div>
+		</div>
+		<div class="safe container-fluid bgw mtb15 pd15 radius4 state-content">
+			<div class="safety-header" style="display: none">
+				<div class="inlineBlock" style="height: 30px">
+					<span style="vertical-align: middle">防火墙开关</span>
+					<div class="ssh-item" style="float: inherit; display: inline-block; vertical-align: middle">
+						<input class="btswitch btswitch-ios" id="isFirewall" type="checkbox" checked="" />
+						<label class="btswitch-btn isFirewall" for="isFirewall"></label>
+					</div>
+				</div>
+				<div class="inlineBlock mlr15 dividing-line"></div>
+				<div class="inlineBlock mr10" style="height: 30px">
+					<span style="vertical-align: middle">禁ping</span>
+					<div class="ssh-item" style="float: inherit; display: inline-block; vertical-align: middle">
+						<input class="btswitch btswitch-ios" id="ssh_ping" type="checkbox" checked="" />
+						<label class="btswitch-btn" for="ssh_ping"></label>
+					</div>
+				</div>
+				<div class="inlineBlock mlr15 dividing-line"></div>
+				<div class="inlineBlock mr10" style="height: 30px">
+					<div class="weblog">
+						<span class="f12 c5">{{data['lan']['S1']}}</span><a class="btlink mr10" href="javascript:openPath('{{session['logsPath']}}');">{{session['logsPath']}}</a
+						><em id="logSize" style="font-style: normal">0KB</em>
+						<button class="btn btn-default btn-sm ml10" onclick="firewall.safety.clear_logs_files();">{{data['lan']['BTN5']}}</button>
+					</div>
+				</div>
+			</div>
+			<div class="ssh-header" style="display: none">
+				<div class="inlineBlock" style="height: 30px">
+					<span style="vertical-align: middle">SSH开关</span>
+					<div class="ssh-item" style="float: inherit; display: inline-block; vertical-align: middle">
+						<input class="btswitch btswitch-ios" id="isSsh" type="checkbox" checked="" />
+						<label class="btswitch-btn isSsh" for="isSsh"></label>
+					</div>
+				</div>
+				<div class="inlineBlock mlr15 dividing-line"></div>
+				<div class="inlineBlock" style="height: 30px; line-height: 30px; vertical-align: top">
+					<span style="vertical-align: middle">SSH登录详情：</span>
+					<span class="inlineBlock ml10" style="vertical-align: middle" id="sshDetailed"></span>
+				</div>
+				<!--                <div class="inlineBlock mlr15 dividing-line"></div>-->
+				<!--                <div class="inlineBlock" style="height: 30px;line-height: 30px; vertical-align: top;">-->
+				<!--                    <span style="vertical-align: middle;">防爆破(fail2ban)：</span>-->
+				<!--                    <span class="inlineBlock ml10" style="vertical-align: middle;" id="fail2ban"></span>-->
+				<!--                </div>-->
+			</div>
+			<div class="intrusion-header" style="display: none">
+				<div class="inlineBlock" style="height: 30px">
+					<span style="vertical-align: middle">入侵防御开关</span>
+					<div class="ssh-item" style="float: inherit; display: inline-block; vertical-align: middle">
+						<input class="btswitch btswitch-ios" id="isIntrusion" type="checkbox" checked="" />
+						<label class="btswitch-btn isIntrusion" for="isIntrusion"></label>
+					</div>
+				</div>
+				<div class="inlineBlock mlr15 dividing-line"></div>
+				<div class="inlineBlock" style="height: 30px; line-height: 30px; vertical-align: top">
+					<span style="vertical-align: middle">总拦截次数:</span>
+					<span class="inlineBlock ml10" style="vertical-align: middle">
+						<span class="totlaDays"></span>
+					</span>
+				</div>
+				<div class="inlineBlock mlr15 dividing-line"></div>
+				<div class="inlineBlock" style="height: 30px; line-height: 30px; vertical-align: top">
+					<span style="vertical-align: middle">保护天数:</span>
+					<span class="inlineBlock ml10" style="vertical-align: middle">
+						<span class="totlaTimes"></span>
+					</span>
+				</div>
+			</div>
+			<div class="system-header" style="display: none">
+				<div class="inlineBlock" style="height: 30px">
+					<span style="vertical-align: middle">系统加固开关</span>
+					<div class="ssh-item" style="float: inherit; display: inline-block; vertical-align: middle">
+						<input class="btswitch btswitch-ios" id="isReinforcement" type="checkbox" checked="" />
+						<label class="btswitch-btn isReinforcement" for="isReinforcement"></label>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="bgw mtb15 pd15 tab-view-box firewall-tab-view">
+			<div class="tab-con show w-full" id="safety" style="padding: 0">
+				<div class="tab-nav-border">
+					<span class="on">端口规则：<i>0</i></span>
+					<span>IP规则：<i>0</i></span>
+					<span>端口转发：<i>0</i></span>
+					<span>地区规则：<i>0</i></span>
+				</div>
+				<div class="tab-con" style="padding-top: 15px; overflow: none">
+					<div class="tab-block on" id="portRules"></div>
+					<div class="tab-block" id="ipRule"></div>
+					<div class="tab-block" id="portForward"></div>
+					<div class="tab-block" id="countryRegion"></div>
+				</div>
+			</div>
+			<div class="tab-con hide" id="sshView">
+				<div class="tab-nav-border">
+					<span class="on">基础设置</span>
+					<span>SSH登录日志</span>
+				</div>
+				<div class="tab-con" style="padding-top: 10px; overflow: none">
+					<div class="tab-block on">
+						<div class="ssh-config">
+							<div class="ptb10">
+								<div class="line" title="SSH端口">
+									<div class="line-title">SSH端口</div>
+									<div class="line-input">
+										<input type="text" class="bt-input-text" value="22" name="ssh_port" style="width: 120px" />
+										<button type="button" class="btn btn-success btn-sm ml5 save_ssh_port">保存</button>
+									</div>
+									<div class="line-row-tips">当前SSH协议所使用的的端口，默认为22</div>
+								</div>
+								<div class="line" title="root登录设置">
+									<div class="line-title">root登录设置</div>
+									<div class="line-item">
+										<!-- <div class="line-row">
                                             <div class="ssh-item" style="margin-left: 0; margin-top: 5px;padding: 0;">
                                                 <input class="btswitch btswitch-ios" id="root_login" type="checkbox" name="root_login">
                                                 <label class="btswitch-btn" for="root_login" style="margin-bottom: 0;"></label>
                                             </div>
                                         </div>
                                         <div class="line-row-tips">是否允许root登录ssh</div> -->
-                                        <select class="bt-input-text" name="root_login">
-                                            <option value="yes">正在获取</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="line" title="SSH密码登录">
-                                    <div class="line-title">SSH密码登录</div>
-                                    <div class="line-item">
-                                        <div class="line-row">
-                                            <div class="ssh-item" style="margin-left: 0; margin-top: 5px;padding: 0;">
-                                                <input class="btswitch btswitch-ios" id="ssh_paw" type="checkbox" name="ssh_paw">
-                                                <label class="btswitch-btn" for="ssh_paw" style="margin-bottom: 0;"></label>
-                                            </div>
-                                        </div>
-                                        <div class="line-row-tips">SSH的默认登录方式</div>
-                                    </div>
-                                </div>
-                                <div class="line" title="SSH密钥登录">
-                                    <div class="line-title">SSH密钥登录</div>
-                                    <div class="line-item">
-                                        <div class="line-row">
-                                            <div class="ssh-item" style="margin-left: 0; margin-top: 5px;padding: 0;">
-                                                <input class="btswitch btswitch-ios" id="ssh_pubkey" type="checkbox" name="ssh_pubkey">
-                                                <label class="btswitch-btn" for="ssh_pubkey" style="margin-bottom: 0;"></label>
-                                            </div>
-                                        </div>
-                                        <button type="button" class="btn btn-success btn-xs ml5 checkKey" style="vertical-align: initial;">查看密钥</button>
-                                        <button type="button" class="btn btn-default btn-xs ml5 downloadKey" style="vertical-align: initial;">下载</button>
-                                        <div class="line-row-tips">推荐使用密钥登录，关闭密码，安全性更高</div>
-                                    </div>
-                                </div>
-                                <div class="line" title="SSH登录告警">
-                                    <div class="line-title">SSH登录告警</div>
-                                    <div class="line-item">
-                                        <div class="line-row mr5">
-                                            <a href="javascript:;" class="bt_warning setSshLoginAlarm">告警通知未配置</a>
-                                        </div>
-                                        <button type="button" class="btn btn-success btn-xs ml5 setSshLoginAlarm" style="vertical-align: initial;">设置登录告警</button>
-                                        <div class="line-row-tips">设置SSH登录告警，发生异常登录时，将实时推送告警消息至企业微信、钉钉、邮箱等告警通知</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="tab-block">
-                        <div id="loginLogsContent">
-                            <div class="w-full">
-                                <div id="loginAllLogs"></div>
-                            </div>
-                            <div class="w-full" style="display: none">
-                                <div id="loginSuccessLogs"></div>
-                            </div>
-                            <div class="w-full" style="display: none">
-                                <div id="loginErrorLogs"></div>
-                            </div>
-                        </div>
-                        <div class="daily-thumbnail" style="display: none">
-                            <div class="thumbnail-introduce">
-                                <span>SSH登录日志</span>
-                                <ul>
-                                    <li>记录和查看当前SSH登录日志</li>
-                                </ul>
-                                <div class="daily-product-buy">
-                                    <a href="javascript:;" class="btn btn-success va0 mr10 " onclick="product_recommend.pay_product_sign('ltd',100,'ltd')">立即购买</a>
-                                </div>
-                            </div>
-                            <div class="thumbnail-box">
-                                <ul class="thumbnail-tab">
-                                    <li class="on">SSH登录日志</li>
-                                </ul>
-                                <div class="thumbnail-item show">
-                                    <div class="pluginTipsGg" style="background-image: url('/static/img/ssh/1.png');"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="tab-con hide" id="safeDetect">
-                <div class="tab-nav-border">
-                    <span class="on">动态查杀</span>
-                    <span>安全检测</span>
-                    <span>漏洞扫描</span>
-                </div>
-                <div class="tab-con" style="padding: 15px 0;overflow: none;">
-                    <div class="tab-block on">
-                        <div id="spywareDetectionList"></div>
-                    </div>
-                    <div class="tab-block">
-                        <div id="safeDetectList"></div>
-                    </div>
-                    <div class="tab-block">
-                        <div id="getScanList"></div>
-                    </div>
-                </div>
-                <div class="installSoft" style="display: none">
-                    <div class="daily-thumbnail">
-                        <div class="thumbnail-introduce">
-                            <span>安全检测功能介绍</span>
-                            <ul>
-                                <li>实时检测木马</li>
-                                <li>安全扫描加固</li>
-                                <li>漏洞扫描</li>
-                            </ul>
-                            <div class="daily-product-buy">
-                                <!-- <a class="btn btn-default mr10" title="产品预览" href="https://www.bt.cn/bbs/thread-50998-1-1.html" target="_blank">产品预览</a> -->
-                                <a href="javascript:;" class="btn btn-success va0 ml15 buyIntrusion" onclick="product_recommend.pay_product_sign('ltd',101,'ltd')">立即购买</a>
-                            </div>
-                        </div>
-                        <div class="thumbnail-box">
-                            <ul class="thumbnail-tab">
-                                <li class="on">动态查杀</li>
-                                <li>安全检测</li>
-                                <li>漏洞扫描</li>
-                            </ul>
-                            <div class="thumbnail-item show">
-                                <div class="pluginTipsGg" style="background-image: url(/static/img/safe_detect/1.png);"></div>
-                            </div>
-                            <div class="thumbnail-item">
-                                <div class="pluginTipsGg" style="background-image: url(/static/img/safe_detect/2.png);"></div>
-                            </div>
-                            <div class="thumbnail-item">
-                                <div class="pluginTipsGg" style="background-image: url(/static/img/safe_detect/3.png);"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-						<div class="tab-con hide" id="contDetect">
-							<div class="tab-nav-border">
-								<span class="on">概览</span>
-								<span>监控列表</span>
-								<span>检测历史</span>
-								<span>风险列表</span>
-							</div>
-							<div class="tab-con cont-detect">
-								<div class="tab-block on">
-									<div class="col-xs-12 col-sm-7 col-md-8 col-content">
-										<div class="pr8">
-											<div class="info-panel">
-												<div class="cols">
-													<div class="name">
-														<img src="/static/img/content_detect/1.png" />
-														<span>监控网站</span>
-													</div>
-													<div class="value monitor-site-num">0</div>
-												</div>
-												<div class="cols">
-													<div class="name">
-														<img src="/static/img/content_detect/2.png" />
-														<span>总风险次数</span>
-													</div>
-													<div class="value risk-total-num">0</div>
-												</div>
-												<div class="cols">
-													<div class="name">
-														<img src="/static/img/content_detect/3.png" />
-														<span>今日风险次数</span>
-													</div>
-													<div class="value today-risk-num cursor">0</div>
-												</div>
-												<div class="cols">
-													<div class="name">
-														<img src="/static/img/content_detect/4.png" />
-														<span>今日巡检次数</span>
-													</div>
-													<div class="value today-inspection-num">0</div>
-												</div>
-											</div>
-											<div class="card-border">
-												<div class="card-title">网站内容检测</div>
-												<div class="card-cont">
-													<div class="no-border" id="site-cont-table"></div>
-												</div>
-											</div>
-											<div class="card-border">
-												<div class="card-title">风险动态</div>
-												<div class="card-cont">
-													<div class="no-border" id="risk-dynamic-table"></div>
-												</div>
+										<select class="bt-input-text" name="root_login">
+											<option value="yes">正在获取</option>
+										</select>
+									</div>
+								</div>
+								<div class="line" title="SSH密码登录">
+									<div class="line-title">SSH密码登录</div>
+									<div class="line-item">
+										<div class="line-row">
+											<div class="ssh-item" style="margin-left: 0; margin-top: 5px; padding: 0">
+												<input class="btswitch btswitch-ios" id="ssh_paw" type="checkbox" name="ssh_paw" />
+												<label class="btswitch-btn" for="ssh_paw" style="margin-bottom: 0"></label>
 											</div>
 										</div>
+										<div class="line-row-tips">SSH的默认登录方式</div>
 									</div>
-									<div class="col-xs-12 col-sm-5 col-md-4 col-content">
-										<div class="pl7">
-											<div class="card-border">
-												<div class="card-title">风险历史</div>
-												<div class="card-echarts" id="detect-statistics">
-													<div class="no-data">风险历史数据为空</div>
-												</div>
-											</div>
-											<div class="card-border">
-												<div class="card-title">近7日巡检情况</div>
-												<div class="card-echarts" id="week-risk"></div>
-											</div>
-											<div class="card-border">
-												<div class="card-title">敏感词排行</div>
-												<div class="card-echarts" id="sensitive-word">
-													<div class="no-data">敏感词排行数据为空</div>
-												</div>
+								</div>
+								<div class="line" title="SSH密钥登录">
+									<div class="line-title">SSH密钥登录</div>
+									<div class="line-item">
+										<div class="line-row">
+											<div class="ssh-item" style="margin-left: 0; margin-top: 5px; padding: 0">
+												<input class="btswitch btswitch-ios" id="ssh_pubkey" type="checkbox" name="ssh_pubkey" />
+												<label class="btswitch-btn" for="ssh_pubkey" style="margin-bottom: 0"></label>
 											</div>
 										</div>
+										<button type="button" class="btn btn-success btn-xs ml5 checkKey" style="vertical-align: initial">查看密钥</button>
+										<button type="button" class="btn btn-default btn-xs ml5 downloadKey" style="vertical-align: initial">下载</button>
+										<div class="line-row-tips">推荐使用密钥登录，关闭密码，安全性更高</div>
 									</div>
 								</div>
-								<div class="tab-block">
-									<div id="cont-monitor-table"></div>
-								</div>
-								<div class="tab-block">
-									<div id="detect-history-table"></div>
-								</div>
-								<div class="tab-block">
-									<div id="risk-table"></div>
-								</div>
-							</div>
-							<div class="cont-detect-soft" style="display: none;">
-								<div class="daily-thumbnail">
-									<div class="thumbnail-introduce">
-											<span>违规词检测功能介绍</span>
-											<ul>
-													<li>违规词内容检测</li>
-													<li>网页内容修改检测</li>
-													<li>输出检测报告</li>
-											</ul>
-											<div class="daily-product-buy">
-													<a href="javascript:;" class="btn btn-success va0 ml15 buyIntrusion" onclick="product_recommend.pay_product_sign('ltd', 111, 'ltd')">立即购买</a>
-											</div>
+								<div class="line" title="SSH登录告警">
+									<div class="line-title">SSH登录告警</div>
+									<div class="line-item">
+										<div class="line-row mr5">
+											<a href="javascript:;" class="bt_warning setSshLoginAlarm">告警通知未配置</a>
+										</div>
+										<button type="button" class="btn btn-success btn-xs ml5 setSshLoginAlarm" style="vertical-align: initial">设置登录告警</button>
+										<div class="line-row-tips">设置SSH登录告警，发生异常登录时，将实时推送告警消息至企业微信、钉钉、邮箱等告警通知</div>
 									</div>
-									<div class="thumbnail-box">
-											<ul class="thumbnail-tab">
-													<li class="on">概览</li>
-													<li>监控列表</li>
-													<li>检测历史</li>
-													<li>风险列表</li>
-													<li>检测报告</li>
-											</ul>
-											<div class="thumbnail-item show">
-													<div class="pluginTipsGg" style="background-image: url(/static/img/content_detect/details/1.png);"></div>
-											</div>
-											<div class="thumbnail-item">
-													<div class="pluginTipsGg" style="background-image: url(/static/img/content_detect/details/2.png);"></div>
-											</div>
-											<div class="thumbnail-item">
-													<div class="pluginTipsGg" style="background-image: url(/static/img/content_detect/details/3.png);"></div>
-											</div>
-											<div class="thumbnail-item">
-													<div class="pluginTipsGg" style="background-image: url(/static/img/content_detect/details/4.png);"></div>
-											</div>
-											<div class="thumbnail-item">
-													<div class="pluginTipsGg" style="background-color: #fff; border: 1px solid #eee; overflow: auto;">
-														<img style="display: block; width: 100%" src="/static/img/content_detect/details/5.png" alt="" />
-													</div>
-											</div>
-									</div>
-							</div>
+								</div>
 							</div>
 						</div>
-            <div class="tab-con hide" id="intrusion">
-                <div class="tab-nav-border">
-                    <span class="on">概览</span>
-                    <span>进程白名单</span>
-                    <span>拦截日志</span>
-                    <span>操作日志</span>
-                </div>
-                <div class="tab-con" style="padding: 15px 0; overflow: none;">
-                    <div class="tab-block on">
-                        <div id="antiOverviewList"></div>
-                        <ul class="help-info-text c7">
-                            <li>开启防提权，系统会针对该用户操作命令进行限制，并记录跟踪</li>
-                            <li>不开启防提权，系统只针对该用户操作过的命令做记录跟踪</li>
-                            <li>目前防提权默认只针对www,redis,mysql操作引起的提权问题进行处理</li>
-                            <li style="color:red">消息推送需要更新至最新面板的版本(2020-06-17日之后安装的版本|或者2020-06-17日之后点击过修复面板)</li>
-                        </ul>
-                    </div>
-                    <div class="tab-block">
-                        <div id="antiProcessWhiteList"></div>
-                    </div>
-                    <div class="tab-block">
-                        <div id="antiInterceptLog"></div>
-                    </div>
-                    <div class="tab-block">
-                        <div id="antiOperationLog"></div>
-                    </div>
-                </div>
-                <div class="installSoft" style="display: none">
-                    <div class="daily-thumbnail">
-                        <div class="thumbnail-introduce">
-                            <span>入侵防御功能介绍</span>
-                            <ul>
-                                <li>阻止程序挂马</li>
-                                <li>阻止挖矿病毒</li>
-                                <li>webshell提权</li>
-                            </ul>
-                            <div class="daily-product-buy">
-                                <a class="btn btn-default mr10" title="产品预览" href="https://www.bt.cn/bbs/thread-50998-1-1.html" target="_blank">产品预览</a>
-                                <a href="javascript:;" class="btn btn-success va0 mr10 installIntrusion">立即安装</a>
-                                <a href="javascript:;" class="btn btn-success va0 ml15 buyIntrusion" onclick="product_recommend.pay_product_sign('ltd',105,'ltd')">立即购买</a>
-                            </div>
-                        </div>
-                        <div class="thumbnail-box">
-                            <ul class="thumbnail-tab">
-                                <li class="on">概览</li>
-                                <li>进程白名单</li>
-                                <li>拦截日志</li>
-                                <li>操作日志</li>
-                            </ul>
-                            <div class="thumbnail-item show">
-                                <div class="pluginTipsGg" style="background-image: url(/static/img/intrusion/1.png);"></div>
-                            </div>
-                            <div class="thumbnail-item">
-                                <div class="pluginTipsGg" style="background-image: url(/static/img/intrusion/2.png);"></div>
-                            </div>
-                            <div class="thumbnail-item">
-                                <div class="pluginTipsGg" style="background-image: url(/static/img/intrusion/3.png);"></div>
-                            </div>
-                            <div class="thumbnail-item">
-                                <div class="pluginTipsGg" style="background-image: url(/static/img/intrusion/4.png);"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="tab-con hide" id="system">
-                <div class="tab-nav-border">
-                    <span class="on">防护配置</span>
-                    <span>封锁IP</span>
-                    <span>操作日志</span>
-                </div>
-                <div class="tab-con" style="padding: 15px 0;overflow: none;">
-                    <div class="tab-block on">
-                        <div id="reinforceSystem"></div>
-                        <ul class="help-info-text c7">
-                            <li>【异常进程监控】与【SSH服务加固】会占用一定服务器开销</li>
-                            <li>开启系统加固功能后，一些如软件安装等敏感操作将被禁止</li>
-                            <li>开启【SSH服务加固】之后，用户登录SSH的行为将受到监控，若连续多次登录失败，将采取封IP措施</li>
-                            <li style="color:red;">【注意】如果您需要安装软件或插件，请先将系统加固关闭!</li>
-                        </ul>
-                    </div>
-                    <div class="tab-block">
-                        <div>
-                            <input class="bt-input-text" name="system_address" type="text" value="" placeholder="IP地址" style="width: 250px; margin-right: 6px;" />
-                            <button class="btn btn-success btn-sm system_add_ip">添加</button>
-                        </div>
-                        <div id="reinforceBlockIp"></div>
-                        <ul class="help-info-text c7">
-                            <li>【封锁IP】此处封锁的IP仅针对SSH服务，即被封锁的IP将无法连接SSH</li>
-                            <li>【添加】手动添加的IP封锁只能手动解封!</li>
-                        </ul>
-                    </div>
-                    <div class="tab-block">
-                        <div id="reinforceLog"></div>
-                        <div id="reinforceLogPage" class="page"></div>
-                    </div>
-                </div>
-                <div class="installSoft" style="display: none">
-                    <div class="daily-thumbnail">
-                        <div class="thumbnail-introduce">
-                            <span>系统加固功能介绍</span>
-                            <ul>
-                                <li>阻止系统被植入木马</li>
-                                <li>加固系统安全配置</li>
-                            </ul>
-                            <div class="daily-product-buy">
-                                <!--                                <a class="btn btn-default mr10" title="产品预览" href="https://www.bt.cn/bbs/thread-50998-1-1.html" target="_blank">产品预览</a>-->
-                                <a href="javascript:;" class="btn btn-success va0 mr10 installSystem">立即安装</a>
-                                <a href="javascript:;" class="btn btn-success va0 ml15 buySystem" onclick="product_recommend.pay_product_sign('ltd',102,'ltd')">立即购买</a>
-                            </div>
-                        </div>
-                        <div class="thumbnail-box">
-                            <ul class="thumbnail-tab">
-                                <li class="on">防护配置</li>
-                                <li>封锁IP</li>
-                                <li>操作日志</li>
-                            </ul>
-                            <div class="thumbnail-item show">
-                                <div class="pluginTipsGg" style="background-image: url('/static/img/system/1.png');"></div>
-                            </div>
-                            <div class="thumbnail-item">
-                                <div class="pluginTipsGg" style="background-image: url('/static/img/system/2.png');"></div>
-                            </div>
-                            <div class="thumbnail-item">
-                                <div class="pluginTipsGg" style="background-image: url('/static/img/system/3.png');"></div>
-                            </div>
-                            <div class="thumbnail-item">
-                                <div class="pluginTipsGg" style="background-image: url('/static/img/system/4.png');"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="tab-con hide" id="logAudit">
-                <div class="logAuditTabContent">
-                    <div class="logAuditTab"></div>
-                    <div class="logAuditContent">
-                        <div id="logAuditTable"></div>
-                        <div id="logAuditPages" class="page" style="display: flex;justify-content: flex-end"></div>
-                        <div id="logAuditPre" style="display: none;"></div>
-                    </div>
-                </div>
-                <div class="daily-thumbnail" style="display: none">
-                    <div class="thumbnail-introduce">
-                        <span>日志审计</span>
-                        <ul>
-                            <li>对当前服务的各种日志进行采集分析和存储管理</li>
-                        </ul>
-                        <div class="daily-product-buy">
-                            <a href="javascript:;" class="btn btn-success va0 mr10 " onclick="product_recommend.pay_product_sign('ltd',103,'ltd')">立即购买</a>
-                        </div>
-                    </div>
-                    <div class="thumbnail-box">
-                        <ul class="thumbnail-tab">
-                            <li class="on">日志审计</li>
-                        </ul>
-                        <div class="thumbnail-item show">
-                            <div class="pluginTipsGg" style="background-image: url('/static/img/logAudit/1.png');"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="installSoft" style="display: none">
-                    <div class="daily-thumbnail">
-                        <div class="thumbnail-introduce">
-                            <span>日志审计功能介绍</span>
-                            <ul>
-                                <li>分析和解析常用日志</li>
-                            </ul>
-                            <div class="daily-product-buy">
-                                <a href="javascript:;" class="btn btn-success va0 ml15 buyLogAudit" onclick="product_recommend.pay_product_sign('ltd',104,'ltd')">立即购买</a>
-                            </div>
-                        </div>
-                        <div class="thumbnail-box">
-                            <ul class="thumbnail-tab">
-                                <li class="on">日志列表</li>
-                            </ul>
-                            <div class="thumbnail-item show">
-                                <div class="pluginTipsGg" style="background-image: url(/static/img/logAudit/1.png);"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="tab-con hide" id="logsBody">
-                <div class="tab-nav-border">
-                    <span class="on">操作日志</span>
-                    <span>运行日志</span>
-                </div>
-                <div class="tab-con" style="padding-top: 15px;overflow: none;">
-                    <div class="tab-block on">
-                        <div id="operationLog"></div>
-                    </div>
-                    <div class="tab-block">
-                        <div id="runningLog"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+					</div>
+					<div class="tab-block">
+						<div id="loginLogsContent">
+							<div class="w-full">
+								<div id="loginAllLogs"></div>
+							</div>
+							<div class="w-full" style="display: none">
+								<div id="loginSuccessLogs"></div>
+							</div>
+							<div class="w-full" style="display: none">
+								<div id="loginErrorLogs"></div>
+							</div>
+						</div>
+						<div class="daily-thumbnail" style="display: none">
+							<div class="thumbnail-introduce">
+								<span>SSH登录日志</span>
+								<ul>
+									<li>记录和查看当前SSH登录日志</li>
+								</ul>
+								<div class="daily-product-buy">
+									<a href="javascript:;" class="btn btn-success va0 mr10" onclick="product_recommend.pay_product_sign('ltd',100,'ltd')">立即购买</a>
+								</div>
+							</div>
+							<div class="thumbnail-box">
+								<ul class="thumbnail-tab">
+									<li class="on">SSH登录日志</li>
+								</ul>
+								<div class="thumbnail-item show">
+									<div class="pluginTipsGg" style="background-image: url('/static/img/ssh/1.png')"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="tab-con hide" id="safeDetect">
+				<div class="tab-nav-border">
+					<span class="on">动态查杀</span>
+					<span>安全检测</span>
+					<span>漏洞扫描</span>
+				</div>
+				<div class="tab-con" style="padding: 15px 0; overflow: none">
+					<div class="tab-block on">
+						<div id="spywareDetectionList"></div>
+					</div>
+					<div class="tab-block">
+						<div id="safeDetectList"></div>
+					</div>
+					<div class="tab-block">
+						<div id="getScanList"></div>
+					</div>
+				</div>
+				<div class="installSoft" style="display: none">
+					<div class="daily-thumbnail">
+						<div class="thumbnail-introduce">
+							<span>安全检测功能介绍</span>
+							<ul>
+								<li>实时检测木马</li>
+								<li>安全扫描加固</li>
+								<li>漏洞扫描</li>
+							</ul>
+							<div class="daily-product-buy">
+								<!-- <a class="btn btn-default mr10" title="产品预览" href="https://www.bt.cn/bbs/thread-50998-1-1.html" target="_blank">产品预览</a> -->
+								<a href="javascript:;" class="btn btn-success va0 ml15 buyIntrusion" onclick="product_recommend.pay_product_sign('ltd',101,'ltd')">立即购买</a>
+							</div>
+						</div>
+						<div class="thumbnail-box">
+							<ul class="thumbnail-tab">
+								<li class="on">动态查杀</li>
+								<li>安全检测</li>
+								<li>漏洞扫描</li>
+							</ul>
+							<div class="thumbnail-item show">
+								<div class="pluginTipsGg" style="background-image: url(/static/img/safe_detect/1.png)"></div>
+							</div>
+							<div class="thumbnail-item">
+								<div class="pluginTipsGg" style="background-image: url(/static/img/safe_detect/2.png)"></div>
+							</div>
+							<div class="thumbnail-item">
+								<div class="pluginTipsGg" style="background-image: url(/static/img/safe_detect/3.png)"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="tab-con hide" id="contDetect">
+				<div class="tab-nav-border">
+					<span class="on">概览</span>
+					<span>监控列表</span>
+					<span>检测历史</span>
+					<span>风险列表</span>
+				</div>
+				<div class="tab-con cont-detect">
+					<div class="tab-block on">
+						<div class="col-xs-12 col-sm-7 col-md-8 col-content">
+							<div class="pr8">
+								<div class="info-panel">
+									<div class="cols">
+										<div class="name">
+											<img src="/static/img/content_detect/1.png" />
+											<span>监控网站</span>
+										</div>
+										<div class="value monitor-site-num">0</div>
+									</div>
+									<div class="cols">
+										<div class="name">
+											<img src="/static/img/content_detect/2.png" />
+											<span>总风险次数</span>
+										</div>
+										<div class="value risk-total-num">0</div>
+									</div>
+									<div class="cols">
+										<div class="name">
+											<img src="/static/img/content_detect/3.png" />
+											<span>今日风险次数</span>
+										</div>
+										<div class="value today-risk-num cursor">0</div>
+									</div>
+									<div class="cols">
+										<div class="name">
+											<img src="/static/img/content_detect/4.png" />
+											<span>今日巡检次数</span>
+										</div>
+										<div class="value today-inspection-num">0</div>
+									</div>
+								</div>
+								<div class="card-border">
+									<div class="card-title">网站内容检测</div>
+									<div class="card-cont">
+										<div class="no-border" id="site-cont-table"></div>
+									</div>
+								</div>
+								<div class="card-border">
+									<div class="card-title">风险动态</div>
+									<div class="card-cont">
+										<div class="no-border" id="risk-dynamic-table"></div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-xs-12 col-sm-5 col-md-4 col-content">
+							<div class="pl7">
+								<div class="card-border">
+									<div class="card-title">风险历史</div>
+									<div class="card-echarts" id="detect-statistics">
+										<div class="no-data">风险历史数据为空</div>
+									</div>
+								</div>
+								<div class="card-border">
+									<div class="card-title">近7日巡检情况</div>
+									<div class="card-echarts" id="week-risk"></div>
+								</div>
+								<div class="card-border">
+									<div class="card-title">敏感词排行</div>
+									<div class="card-echarts" id="sensitive-word">
+										<div class="no-data">敏感词排行数据为空</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="tab-block">
+						<div id="cont-monitor-table"></div>
+					</div>
+					<div class="tab-block">
+						<div id="detect-history-table"></div>
+					</div>
+					<div class="tab-block">
+						<div id="risk-table"></div>
+					</div>
+				</div>
+				<div class="cont-detect-soft" style="display: none">
+					<div class="daily-thumbnail">
+						<div class="thumbnail-introduce">
+							<span>违规词检测功能介绍</span>
+							<ul>
+								<li>违规词内容检测</li>
+								<li>网页内容修改检测</li>
+								<li>输出检测报告</li>
+							</ul>
+							<div class="daily-product-buy">
+								<a href="javascript:;" class="btn btn-success va0 ml15 buyIntrusion" onclick="product_recommend.pay_product_sign('ltd', 111, 'ltd')">立即购买</a>
+							</div>
+						</div>
+						<div class="thumbnail-box">
+							<ul class="thumbnail-tab">
+								<li class="on">概览</li>
+								<li>监控列表</li>
+								<li>检测历史</li>
+								<li>风险列表</li>
+								<li>检测报告</li>
+							</ul>
+							<div class="thumbnail-item show">
+								<div class="pluginTipsGg" style="background-image: url(/static/img/content_detect/details/1.png)"></div>
+							</div>
+							<div class="thumbnail-item">
+								<div class="pluginTipsGg" style="background-image: url(/static/img/content_detect/details/2.png)"></div>
+							</div>
+							<div class="thumbnail-item">
+								<div class="pluginTipsGg" style="background-image: url(/static/img/content_detect/details/3.png)"></div>
+							</div>
+							<div class="thumbnail-item">
+								<div class="pluginTipsGg" style="background-image: url(/static/img/content_detect/details/4.png)"></div>
+							</div>
+							<div class="thumbnail-item">
+								<div class="pluginTipsGg" style="background-color: #fff; border: 1px solid #eee; overflow: auto">
+									<img style="display: block; width: 100%" src="/static/img/content_detect/details/5.png" alt="" />
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="tab-con hide" id="intrusion">
+				<div class="tab-nav-border">
+					<span class="on">概览</span>
+					<span>进程白名单</span>
+					<span>拦截日志</span>
+					<span>操作日志</span>
+				</div>
+				<div class="tab-con" style="padding: 15px 0; overflow: none">
+					<div class="tab-block on">
+						<div id="antiOverviewList"></div>
+						<ul class="help-info-text c7">
+							<li>开启防提权，系统会针对该用户操作命令进行限制，并记录跟踪</li>
+							<li>不开启防提权，系统只针对该用户操作过的命令做记录跟踪</li>
+							<li>目前防提权默认只针对www,redis,mysql操作引起的提权问题进行处理</li>
+							<li style="color: red">消息推送需要更新至最新面板的版本(2020-06-17日之后安装的版本|或者2020-06-17日之后点击过修复面板)</li>
+						</ul>
+					</div>
+					<div class="tab-block">
+						<div id="antiProcessWhiteList"></div>
+					</div>
+					<div class="tab-block">
+						<div id="antiInterceptLog"></div>
+					</div>
+					<div class="tab-block">
+						<div id="antiOperationLog"></div>
+					</div>
+				</div>
+				<div class="installSoft" style="display: none">
+					<div class="daily-thumbnail">
+						<div class="thumbnail-introduce">
+							<span>入侵防御功能介绍</span>
+							<ul>
+								<li>阻止程序挂马</li>
+								<li>阻止挖矿病毒</li>
+								<li>webshell提权</li>
+							</ul>
+							<div class="daily-product-buy">
+								<a class="btn btn-default mr10" title="产品预览" href="https://www.bt.cn/bbs/thread-50998-1-1.html" target="_blank">产品预览</a>
+								<a href="javascript:;" class="btn btn-success va0 mr10 installIntrusion">立即安装</a>
+								<a href="javascript:;" class="btn btn-success va0 ml15 buyIntrusion" onclick="product_recommend.pay_product_sign('ltd',105,'ltd')">立即购买</a>
+							</div>
+						</div>
+						<div class="thumbnail-box">
+							<ul class="thumbnail-tab">
+								<li class="on">概览</li>
+								<li>进程白名单</li>
+								<li>拦截日志</li>
+								<li>操作日志</li>
+							</ul>
+							<div class="thumbnail-item show">
+								<div class="pluginTipsGg" style="background-image: url(/static/img/intrusion/1.png)"></div>
+							</div>
+							<div class="thumbnail-item">
+								<div class="pluginTipsGg" style="background-image: url(/static/img/intrusion/2.png)"></div>
+							</div>
+							<div class="thumbnail-item">
+								<div class="pluginTipsGg" style="background-image: url(/static/img/intrusion/3.png)"></div>
+							</div>
+							<div class="thumbnail-item">
+								<div class="pluginTipsGg" style="background-image: url(/static/img/intrusion/4.png)"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="tab-con hide" id="system">
+				<div class="tab-nav-border">
+					<span class="on">防护配置</span>
+					<span>封锁IP</span>
+					<span>操作日志</span>
+				</div>
+				<div class="tab-con" style="padding: 15px 0; overflow: none">
+					<div class="tab-block on">
+						<div id="reinforceSystem"></div>
+						<ul class="help-info-text c7">
+							<li>【异常进程监控】与【SSH服务加固】会占用一定服务器开销</li>
+							<li>开启系统加固功能后，一些如软件安装等敏感操作将被禁止</li>
+							<li>开启【SSH服务加固】之后，用户登录SSH的行为将受到监控，若连续多次登录失败，将采取封IP措施</li>
+							<li style="color: red">【注意】如果您需要安装软件或插件，请先将系统加固关闭!</li>
+						</ul>
+					</div>
+					<div class="tab-block">
+						<div>
+							<input class="bt-input-text" name="system_address" type="text" value="" placeholder="IP地址" style="width: 250px; margin-right: 6px" />
+							<button class="btn btn-success btn-sm system_add_ip">添加</button>
+						</div>
+						<div id="reinforceBlockIp"></div>
+						<ul class="help-info-text c7">
+							<li>【封锁IP】此处封锁的IP仅针对SSH服务，即被封锁的IP将无法连接SSH</li>
+							<li>【添加】手动添加的封锁IP，解封时间为永久，只能手动解封!</li>
+						</ul>
+					</div>
+					<div class="tab-block">
+						<div id="reinforceLog"></div>
+						<div id="reinforceLogPage" class="page"></div>
+					</div>
+				</div>
+				<div class="installSoft" style="display: none">
+					<div class="daily-thumbnail">
+						<div class="thumbnail-introduce">
+							<span>系统加固功能介绍</span>
+							<ul>
+								<li>阻止系统被植入木马</li>
+								<li>加固系统安全配置</li>
+							</ul>
+							<div class="daily-product-buy">
+								<!--                                <a class="btn btn-default mr10" title="产品预览" href="https://www.bt.cn/bbs/thread-50998-1-1.html" target="_blank">产品预览</a>-->
+								<a href="javascript:;" class="btn btn-success va0 mr10 installSystem">立即安装</a>
+								<a href="javascript:;" class="btn btn-success va0 ml15 buySystem" onclick="product_recommend.pay_product_sign('ltd',102,'ltd')">立即购买</a>
+							</div>
+						</div>
+						<div class="thumbnail-box">
+							<ul class="thumbnail-tab">
+								<li class="on">防护配置</li>
+								<li>封锁IP</li>
+								<li>操作日志</li>
+							</ul>
+							<div class="thumbnail-item show">
+								<div class="pluginTipsGg" style="background-image: url('/static/img/system/1.png')"></div>
+							</div>
+							<div class="thumbnail-item">
+								<div class="pluginTipsGg" style="background-image: url('/static/img/system/2.png')"></div>
+							</div>
+							<div class="thumbnail-item">
+								<div class="pluginTipsGg" style="background-image: url('/static/img/system/3.png')"></div>
+							</div>
+							<div class="thumbnail-item">
+								<div class="pluginTipsGg" style="background-image: url('/static/img/system/4.png')"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="tab-con hide" id="logAudit">
+				<div class="logAuditTabContent">
+					<div class="logAuditTab"></div>
+					<div class="logAuditContent">
+						<div id="logAuditTable"></div>
+						<div id="logAuditPages" class="page" style="display: flex; justify-content: flex-end"></div>
+						<div id="logAuditPre" style="display: none"></div>
+					</div>
+				</div>
+				<div class="daily-thumbnail" style="display: none">
+					<div class="thumbnail-introduce">
+						<span>日志审计</span>
+						<ul>
+							<li>对当前服务的各种日志进行采集分析和存储管理</li>
+						</ul>
+						<div class="daily-product-buy">
+							<a href="javascript:;" class="btn btn-success va0 mr10" onclick="product_recommend.pay_product_sign('ltd',103,'ltd')">立即购买</a>
+						</div>
+					</div>
+					<div class="thumbnail-box">
+						<ul class="thumbnail-tab">
+							<li class="on">日志审计</li>
+						</ul>
+						<div class="thumbnail-item show">
+							<div class="pluginTipsGg" style="background-image: url('/static/img/logAudit/1.png')"></div>
+						</div>
+					</div>
+				</div>
+				<div class="installSoft" style="display: none">
+					<div class="daily-thumbnail">
+						<div class="thumbnail-introduce">
+							<span>日志审计功能介绍</span>
+							<ul>
+								<li>分析和解析常用日志</li>
+							</ul>
+							<div class="daily-product-buy">
+								<a href="javascript:;" class="btn btn-success va0 ml15 buyLogAudit" onclick="product_recommend.pay_product_sign('ltd',104,'ltd')">立即购买</a>
+							</div>
+						</div>
+						<div class="thumbnail-box">
+							<ul class="thumbnail-tab">
+								<li class="on">日志列表</li>
+							</ul>
+							<div class="thumbnail-item show">
+								<div class="pluginTipsGg" style="background-image: url(/static/img/logAudit/1.png)"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="tab-con hide" id="logsBody">
+				<div class="tab-nav-border">
+					<span class="on">操作日志</span>
+					<span>运行日志</span>
+				</div>
+				<div class="tab-con" style="padding-top: 15px; overflow: none">
+					<div class="tab-block on">
+						<div id="operationLog"></div>
+					</div>
+					<div class="tab-block">
+						<div id="runningLog"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
 <script type="text/template" id="aceTmplate">
 	<div id="ace_conter">
@@ -1816,266 +1813,264 @@
 	</div>
 </script>
 <script type="text/template" id="aceShortcutKeys">
-<div class ="keysUp_left">
-			<div class="keysUp-row">
-					<div class="keysUp-title">常用快捷键</div>
-					<div class="keysUp-content">
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">S</span>
-									<span class="keysUp-tips">保存文件</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">C</span>
-									<span class="keysUp-tips">复制内容</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">X</span>
-									<span class="keysUp-tips">剪切内容</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">V</span>
-									<span class="keysUp-tips">粘贴内容</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">A</span>
-									<span class="keysUp-tips">全选内容</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Z</span>
-									<span class="keysUp-tips">撤销操作</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Y</span>
-									<span class="keysUp-tips">反撤销操作</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">F</span>
-									<span class="keysUp-tips">搜索内容</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">H</span>
-									<span class="keysUp-tips">替换内容</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAACkElEQVQ4T62UTWhTQRDHZ6bhFZpK9CAetEoPocF6MG83jRaqFvHjIgrFQ9WLQkHsyZMWvAkFL978QET0YPVUxUuLFFK/Ynk7W0tAqeIHFFEoQqGGWKt9I6+Y2Mh7iQcX9jT//c3Of2cW4T8vXMmbnp5eNT8/34uIKtgAoESEEXGsubl5MJVKfa2Xvwo4OTm52/f9sahDWusqfZiuSuB53gARDYYJRWQ4k8n0WGsPAMAPpdTo37qJiYnNVUBmvg8AB0MzIx5TSt1m5msA0IeIIyIyS0SffN/fFNiDiLMVYD6fX+84znsAcMKAi4uLTZ2dnd+YeRYA1kZUca4CZOZDAHAvwr/XWuuU53ktRDQT5TEi/jHZGHMVEVsRsSAiz3zfd2KxWKvv+6cR8ZZS6gwznwKASxHAj1rrlsoNc7lcrLu7+2eI0RsaGxs3ptPpvDFmHBF3RgCva637KsBCobBmYWFhLxHtAYCEiIw2NDQ8d133VRlgrR0XkVAgIvYopYaXgcx8EgCuRGQe0lofLceMMSeIKCsiwct+EZG3sVjsoeM4hfb29uIy0BhzAxGPhwGJ6Kzruhestf2lUmmoq6trrta0IDM3IeKUiCTDhEtLS23ZbPYNMwsAzIjIIxGxIvKOiILeawuK1FpfDM6jMWYXIuYispa01nFr7X4RGanRLjuUUk+Wgcw8AACh4wYAd7TWR5g5aJWgZcLWy0QioZLJ5Pcy8DEitohIUPYHRNwOANuCoIj0ZjKZu7WmAwBuaq0r/qPneVs7OjqmVqY2xmwBgN5isXg+Ho+vJqLPNR6iX2t9uRyv+x3VmQ4goozruvzPwEBord0nIod/W7EOER8AwFMiepFOp6uqq3vDWj0XFvsFsp0JRWHn0UYAAAAASUVORK5CYII=" /></span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Alt</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">0</span>
-									<span class="keysUp-tips">折叠代码</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAACkElEQVQ4T62UTWhTQRDHZ6bhFZpK9CAetEoPocF6MG83jRaqFvHjIgrFQ9WLQkHsyZMWvAkFL978QET0YPVUxUuLFFK/Ynk7W0tAqeIHFFEoQqGGWKt9I6+Y2Mh7iQcX9jT//c3Of2cW4T8vXMmbnp5eNT8/34uIKtgAoESEEXGsubl5MJVKfa2Xvwo4OTm52/f9sahDWusqfZiuSuB53gARDYYJRWQ4k8n0WGsPAMAPpdTo37qJiYnNVUBmvg8AB0MzIx5TSt1m5msA0IeIIyIyS0SffN/fFNiDiLMVYD6fX+84znsAcMKAi4uLTZ2dnd+YeRYA1kZUca4CZOZDAHAvwr/XWuuU53ktRDQT5TEi/jHZGHMVEVsRsSAiz3zfd2KxWKvv+6cR8ZZS6gwznwKASxHAj1rrlsoNc7lcrLu7+2eI0RsaGxs3ptPpvDFmHBF3RgCva637KsBCobBmYWFhLxHtAYCEiIw2NDQ8d133VRlgrR0XkVAgIvYopYaXgcx8EgCuRGQe0lofLceMMSeIKCsiwct+EZG3sVjsoeM4hfb29uIy0BhzAxGPhwGJ6Kzruhestf2lUmmoq6trrta0IDM3IeKUiCTDhEtLS23ZbPYNMwsAzIjIIxGxIvKOiILeawuK1FpfDM6jMWYXIuYispa01nFr7X4RGanRLjuUUk+Wgcw8AACh4wYAd7TWR5g5aJWgZcLWy0QioZLJ5Pcy8DEitohIUPYHRNwOANuCoIj0ZjKZu7WmAwBuaq0r/qPneVs7OjqmVqY2xmwBgN5isXg+Ho+vJqLPNR6iX2t9uRyv+x3VmQ4goozruvzPwEBord0nIod/W7EOER8AwFMiepFOp6uqq3vDWj0XFvsFsp0JRWHn0UYAAAAASUVORK5CYII=" /></span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Alt</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Shift</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">0</span>
-									<span class="keysUp-tips">展开代码</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Esc</span>
-									<span class="keysUp-tips">退出搜索、取消自动提示</span>
-							</div>
-					</div>
-			</div>
-			<div class="keysUp-row">
-					<div class="keysUp-title">光标移动</div>
-					<div class="keysUp-content">
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Home</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">End</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">Up</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">Left</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">Down</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">Right</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Home</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">End</span>
-									<span class="keysUp-tips">光标移动到文档首/尾</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">P</span>
-									<span class="keysUp-tips">跳转到匹配的标签</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">pageUp</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">pageDown</span>
-									<span class="keysUp-tips">光标上/下翻页</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Alt</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Left</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">Right</span>
-									<span class="keysUp-tips">光标移动到行首/尾</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">I</span>
-									<span class="keysUp-tips">跳转到指定行</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Alt</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Up</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">Down</span>
-									<span class="keysUp-tips">上/下增加光标</span>
-							</div>
-					</div>
-			</div>
-	</div>
-	<div class ="keysUp_right">
-			<div class="keysUp-row">
-					<div class="keysUp-title">内容选择</div>
-					<div class="keysUp-content">
-							<div class="keysUp-item">
-									<span class="keysUp-btn">鼠标框选——拖动</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Shift</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Home</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">End</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">Up</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">Left</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">Down</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">Right</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Shift</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">pageUp</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">PageDown</span>
-									<span class="keysUp-tips">上下翻页选中</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Shift</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Home</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-tips">当前光标至头/尾</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Alt</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">鼠标拖动</span>
-									<span class="keysUp-tips">块选择</span>
-							</div>
-					</div>
-			</div>
-			<div class="keysUp-row">
-					<div class="keysUp-title">编辑</div>
-					<div class="keysUp-content">
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">/</span>
-									<span class="keysUp-tips">注释&取消注释</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Tab</span>
-									<span class="keysUp-tips">对齐</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Shift</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Tab</span>
-									<span class="keysUp-tips">整体前移</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Delete</span>
-									<span class="keysUp-tips">删除</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">D</span>
-									<span class="keysUp-tips">删除整行</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Alt</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Shift</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Up</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">Down</span>
-									<span class="keysUp-tips">复制行并添加到上一行/下一行</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Alt</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Delete</span>
-									<span class="keysUp-tips">删除光标右侧内容</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Alt</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Up</span>
-									<span class="keysUp-symbols">/</span>
-									<span class="keysUp-btn">Down</span>
-									<span class="keysUp-tips">当前行和上一行/下一行交换</span>
-							</div>
-							<div class="keysUp-item">
-									<span class="keysUp-btn">Ctrl</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">Shift</span>
-									<span class="keysUp-symbol">+</span>
-									<span class="keysUp-btn">D</span>
-									<span class="keysUp-tips">复制行并添加到下面</span>
-							</div>
-					</div>
-			</div>
-	</div>
+	<div class ="keysUp_left">
+				<div class="keysUp-row">
+						<div class="keysUp-title">常用快捷键</div>
+						<div class="keysUp-content">
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">S</span>
+										<span class="keysUp-tips">保存文件</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">C</span>
+										<span class="keysUp-tips">复制内容</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">X</span>
+										<span class="keysUp-tips">剪切内容</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">V</span>
+										<span class="keysUp-tips">粘贴内容</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">A</span>
+										<span class="keysUp-tips">全选内容</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Z</span>
+										<span class="keysUp-tips">撤销操作</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Y</span>
+										<span class="keysUp-tips">反撤销操作</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">F</span>
+										<span class="keysUp-tips">搜索内容</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">H</span>
+										<span class="keysUp-tips">替换内容</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAACkElEQVQ4T62UTWhTQRDHZ6bhFZpK9CAetEoPocF6MG83jRaqFvHjIgrFQ9WLQkHsyZMWvAkFL978QET0YPVUxUuLFFK/Ynk7W0tAqeIHFFEoQqGGWKt9I6+Y2Mh7iQcX9jT//c3Of2cW4T8vXMmbnp5eNT8/34uIKtgAoESEEXGsubl5MJVKfa2Xvwo4OTm52/f9sahDWusqfZiuSuB53gARDYYJRWQ4k8n0WGsPAMAPpdTo37qJiYnNVUBmvg8AB0MzIx5TSt1m5msA0IeIIyIyS0SffN/fFNiDiLMVYD6fX+84znsAcMKAi4uLTZ2dnd+YeRYA1kZUca4CZOZDAHAvwr/XWuuU53ktRDQT5TEi/jHZGHMVEVsRsSAiz3zfd2KxWKvv+6cR8ZZS6gwznwKASxHAj1rrlsoNc7lcrLu7+2eI0RsaGxs3ptPpvDFmHBF3RgCva637KsBCobBmYWFhLxHtAYCEiIw2NDQ8d133VRlgrR0XkVAgIvYopYaXgcx8EgCuRGQe0lofLceMMSeIKCsiwct+EZG3sVjsoeM4hfb29uIy0BhzAxGPhwGJ6Kzruhestf2lUmmoq6trrta0IDM3IeKUiCTDhEtLS23ZbPYNMwsAzIjIIxGxIvKOiILeawuK1FpfDM6jMWYXIuYispa01nFr7X4RGanRLjuUUk+Wgcw8AACh4wYAd7TWR5g5aJWgZcLWy0QioZLJ5Pcy8DEitohIUPYHRNwOANuCoIj0ZjKZu7WmAwBuaq0r/qPneVs7OjqmVqY2xmwBgN5isXg+Ho+vJqLPNR6iX2t9uRyv+x3VmQ4goozruvzPwEBord0nIod/W7EOER8AwFMiepFOp6uqq3vDWj0XFvsFsp0JRWHn0UYAAAAASUVORK5CYII=" /></span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Alt</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">0</span>
+										<span class="keysUp-tips">折叠代码</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAACkElEQVQ4T62UTWhTQRDHZ6bhFZpK9CAetEoPocF6MG83jRaqFvHjIgrFQ9WLQkHsyZMWvAkFL978QET0YPVUxUuLFFK/Ynk7W0tAqeIHFFEoQqGGWKt9I6+Y2Mh7iQcX9jT//c3Of2cW4T8vXMmbnp5eNT8/34uIKtgAoESEEXGsubl5MJVKfa2Xvwo4OTm52/f9sahDWusqfZiuSuB53gARDYYJRWQ4k8n0WGsPAMAPpdTo37qJiYnNVUBmvg8AB0MzIx5TSt1m5msA0IeIIyIyS0SffN/fFNiDiLMVYD6fX+84znsAcMKAi4uLTZ2dnd+YeRYA1kZUca4CZOZDAHAvwr/XWuuU53ktRDQT5TEi/jHZGHMVEVsRsSAiz3zfd2KxWKvv+6cR8ZZS6gwznwKASxHAj1rrlsoNc7lcrLu7+2eI0RsaGxs3ptPpvDFmHBF3RgCva637KsBCobBmYWFhLxHtAYCEiIw2NDQ8d133VRlgrR0XkVAgIvYopYaXgcx8EgCuRGQe0lofLceMMSeIKCsiwct+EZG3sVjsoeM4hfb29uIy0BhzAxGPhwGJ6Kzruhestf2lUmmoq6trrta0IDM3IeKUiCTDhEtLS23ZbPYNMwsAzIjIIxGxIvKOiILeawuK1FpfDM6jMWYXIuYispa01nFr7X4RGanRLjuUUk+Wgcw8AACh4wYAd7TWR5g5aJWgZcLWy0QioZLJ5Pcy8DEitohIUPYHRNwOANuCoIj0ZjKZu7WmAwBuaq0r/qPneVs7OjqmVqY2xmwBgN5isXg+Ho+vJqLPNR6iX2t9uRyv+x3VmQ4goozruvzPwEBord0nIod/W7EOER8AwFMiepFOp6uqq3vDWj0XFvsFsp0JRWHn0UYAAAAASUVORK5CYII=" /></span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Alt</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Shift</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">0</span>
+										<span class="keysUp-tips">展开代码</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Esc</span>
+										<span class="keysUp-tips">退出搜索、取消自动提示</span>
+								</div>
+						</div>
+				</div>
+				<div class="keysUp-row">
+						<div class="keysUp-title">光标移动</div>
+						<div class="keysUp-content">
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Home</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">End</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">Up</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">Left</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">Down</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">Right</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Home</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">End</span>
+										<span class="keysUp-tips">光标移动到文档首/尾</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">P</span>
+										<span class="keysUp-tips">跳转到匹配的标签</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">pageUp</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">pageDown</span>
+										<span class="keysUp-tips">光标上/下翻页</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Alt</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Left</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">Right</span>
+										<span class="keysUp-tips">光标移动到行首/尾</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">I</span>
+										<span class="keysUp-tips">跳转到指定行</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Alt</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Up</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">Down</span>
+										<span class="keysUp-tips">上/下增加光标</span>
+								</div>
+						</div>
+				</div>
+		</div>
+		<div class ="keysUp_right">
+				<div class="keysUp-row">
+						<div class="keysUp-title">内容选择</div>
+						<div class="keysUp-content">
+								<div class="keysUp-item">
+										<span class="keysUp-btn">鼠标框选——拖动</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Shift</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Home</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">End</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">Up</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">Left</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">Down</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">Right</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Shift</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">pageUp</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">PageDown</span>
+										<span class="keysUp-tips">上下翻页选中</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Shift</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Home</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-tips">当前光标至头/尾</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Alt</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">鼠标拖动</span>
+										<span class="keysUp-tips">块选择</span>
+								</div>
+						</div>
+				</div>
+				<div class="keysUp-row">
+						<div class="keysUp-title">编辑</div>
+						<div class="keysUp-content">
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">/</span>
+										<span class="keysUp-tips">注释&取消注释</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Tab</span>
+										<span class="keysUp-tips">对齐</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Shift</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Tab</span>
+										<span class="keysUp-tips">整体前移</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Delete</span>
+										<span class="keysUp-tips">删除</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">D</span>
+										<span class="keysUp-tips">删除整行</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Alt</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Shift</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Up</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">Down</span>
+										<span class="keysUp-tips">复制行并添加到上一行/下一行</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Alt</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Delete</span>
+										<span class="keysUp-tips">删除光标右侧内容</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Alt</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Up</span>
+										<span class="keysUp-symbols">/</span>
+										<span class="keysUp-btn">Down</span>
+										<span class="keysUp-tips">当前行和上一行/下一行交换</span>
+								</div>
+								<div class="keysUp-item">
+										<span class="keysUp-btn">Ctrl</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">Shift</span>
+										<span class="keysUp-symbol">+</span>
+										<span class="keysUp-btn">D</span>
+										<span class="keysUp-tips">复制行并添加到下面</span>
+								</div>
+						</div>
+				</div>
+		</div>
 </script>
-{% endblock %}
-{% block scripts %}
-{{ super() }}
+{% endblock %} {% block scripts %} {{ super() }}
 <script type="text/javascript" src="{{g.cdn_url}}/js/echarts.min.js?version={{g['version']}}"></script>
 <script type="text/javascript" src="{{g.cdn_url}}/js/jquery.dragsort-0.5.2.min.js"></script>
 <script type="text/javascript" src="{{g.cdn_url}}/editor/ace.js" defer></script>

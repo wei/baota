@@ -13,16 +13,16 @@ class panelWarning:
     __path = '/www/server/panel/data/warning'
     __ignore = __path + '/ignore'
     __result = __path + '/result'
+    __risk = __path + '/risk'
     def __init__(self):
         if not os.path.exists(self.__ignore):
             os.makedirs(self.__ignore,384)
         if not os.path.exists(self.__result):
             os.makedirs(self.__result,384)
-
-
+        if not os.path.exists(self.__risk):
+            os.makedirs(self.__risk, 384)
 
     def get_list(self,args):
-        #self.sync_rule()
         p = public.get_modules('class/safe_warning')
         data = {
             'security':[],
@@ -31,6 +31,7 @@ class panelWarning:
         }
 
         for m_name in p.__dict__.keys():
+            ignore_file = self.__ignore + '/' + m_name + '.pl'
             # 忽略的检查项
             if p[m_name]._level == 0: continue
 
@@ -47,17 +48,6 @@ class panelWarning:
             }
             result_file = self.__result + '/' + m_name + '.pl'
 
-            # not_force = True
-            # if 'force' in args:
-            #     not_force = m_info['ignore']
-
-            # if os.path.exists(result_file) and not_force:
-            #     try:
-            #         m_info['status'],m_info['msg'],m_info['check_time'],m_info['taking'] = json.loads(public.readFile(result_file))
-            #     except:
-            #         if os.path.exists(result_file): os.remove(result_file)
-            #         continue
-            # else:
             try:
                 s_time = time.time()
                 m_info['status'],m_info['msg'] = p[m_name].check_run()
@@ -67,7 +57,6 @@ class panelWarning:
             except:
                 continue
 
-            ignore_file = self.__ignore + '/' + m_name + '.pl'
             m_info['ignore'] = os.path.exists(ignore_file)
             if m_info['ignore']:
                 data['ignore'].append(m_info)
@@ -75,11 +64,19 @@ class panelWarning:
                 if m_info['status']:
                     data['security'].append(m_info)
                 else:
+                    risk_file = self.__risk + '/' + m_name + '.pl'
+                    public.writeFile(risk_file, json.dumps(m_info))
                     data['risk'].append(m_info)
 
         data['risk'] = sorted(data['risk'],key=lambda x: x['level'],reverse=True)
         data['security'] = sorted(data['security'],key=lambda x: x['level'],reverse=True)
         data['ignore'] = sorted(data['ignore'],key=lambda x: x['level'],reverse=True)
+        # 获取支持一键修复的列表
+        try:
+            is_autofix = public.read_config("safe_autofix")
+        except:
+            is_autofix = []
+        data['is_autofix'] = is_autofix
         return data
 
 
@@ -148,8 +145,7 @@ class panelWarning:
             public.writeFile(ignore_file,'1')
         return public.returnMsg(True,'设置成功!')
 
-
-    def check_find(self,args):
+    def check_find(self, args):
         '''
             @name 检测指定项
             @author hwliang<2020-08-04>
@@ -173,12 +169,22 @@ class panelWarning:
                 'help': p[m_name]._help
             }
 
+            # 解决已经在忽略列表中，但是如果仍然需要检查的话可以检查
+            ignore_file = self.__ignore + '/' + m_name + '.pl'
+            if os.path.exists(ignore_file):
+                from cachelib import SimpleCache
+                cache = SimpleCache(5000)
+                ikey = 'warning_list'
+                cache.delete(ikey)
+                os.remove(ignore_file)
+
             result_file = self.__result + '/' + m_name + '.pl'
             s_time = time.time()
-            m_info['status'],m_info['msg'] = p[m_name].check_run()
-            m_info['taking'] = round(time.time() - s_time,4)
+            m_info['status'], m_info['msg'] = p[m_name].check_run()
+            m_info['taking'] = round(time.time() - s_time, 4)
             m_info['check_time'] = int(time.time())
-            public.writeFile(result_file,json.dumps([m_info['status'],m_info['msg'],m_info['check_time'],m_info['taking']]))
-            return public.returnMsg(True,'已重新检测')
+            public.writeFile(result_file, json.dumps(
+                [m_info['status'], m_info['msg'], m_info['check_time'], m_info['taking']]))
+            return public.returnMsg(True, '已重新检测')
         except:
-            return public.returnMsg(False,'检测失败')
+            return public.returnMsg(False, '检测失败')

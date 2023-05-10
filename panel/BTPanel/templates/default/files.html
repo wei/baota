@@ -311,7 +311,7 @@
 <div class="main-content">
     <a style="display: none;" id="recycle_bin" data="{{data['recycle_bin']}}"></a>
 	<!-- aceEditors -->
-	<div class="file_bodys radius4">
+	<div class="file_bodys radius4" style="min-width: 1116px;">
 		<div class="file_path_views">
             <div class="file_path_upper" title="上一层">
                 <span class="glyphicon glyphicon-arrow-left"></span>
@@ -383,6 +383,11 @@
             </div>
             <!-- 挂载磁盘列表 -->
             <div class="nav_group mount_disk_list"></div>
+            <div class="nav_group tamper_core">
+                <div class="nav_btn">
+                    <span class="nav_btn_title"><span class="glyphicon glyphicon-vip ltd-font-icon"></span>&nbsp;企业级防篡改</span>
+                </div>
+            </div>
 			<div class="float_r menu-header-foot">
                 <div class="file_menu_tips"><span class="glyphicon glyphicon-info-sign"></span><span>文件操作可使用右键</span></div>
                 <div class="nav_group multi hide">
@@ -470,7 +475,7 @@
                 </div>
             </div>
             <div class="file_list_shadow file_shadow_top" style="opacity: 0;"></div>
-            <div class="file_list_content"></div>
+            <div class="file_list_content file_manage"></div>
             <div class="file_list_shadow file_shadow_bottom" style="opacity: 0;"></div>
 			<div class="onselectstart"></div>
         </div>
@@ -976,6 +981,268 @@
         </div>
     </div>
 </script>
+<style type="text/css">
+    .compFilesPreview {
+        padding: 20px;
+        font-size: 12px
+    }
+
+    .compToolbarHeader {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 15px;
+    }
+
+    .compDirNavbar {
+        padding: 0 5px;
+        padding-bottom: 15px;
+        display: flex;
+        align-items: center;
+    }
+
+    .compDirNavbar .returnUpperStory {
+        display: inline-block;
+        padding-right: 10px;
+        margin-right: 10px;
+        border-right: 1px solid #999;
+    }
+
+    .compDirNavbar .returnUpperStory a{
+      text-decoration: none;
+    }
+
+    .compDirNavbar .dirList,
+    .compDirNavbar .dirItem {
+        display: flex;
+        align-items: center;
+        max-width: 120px;
+    }
+
+    .compDirNavbar .dirItem_more {
+       width: 50px;
+    }
+
+    .compDirNavbar .dirItem_more a {
+        padding: 0 5px;
+        text-decoration: none;
+    }
+
+    .compDirNavbar .dirItem a {
+        max-width: 100px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .compDirNavbar .dirItem .iconfont,
+    .compDirNavbar .dirItem_more .iconfont  {
+        margin: 0 5px;
+        font-weight: 700;
+        color: #888;
+    }
+
+    .compDirNavbar .dirItem .iconfont:before {
+        position: relative;
+        top: 1px;
+    }
+
+    .compfileListBody {
+        max-height: 390px;
+        overflow: auto;
+        user-select: none;
+    }
+
+    .compfileList .compfileListHeader,
+    .compfileListBody .compBodyItemTd {
+        height: 38px;
+        line-height: 38px;
+        background-color: #f6f6f6;
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid #ececec;
+    }
+
+    .compfileListHeader .compHeaderItem,
+    .compfileListBody .compBodyItemTd .compBodyItem {
+        padding: 0 10px;
+        display: flex;
+    }
+
+    .compfileListBody .compBodyItemTd .compBodyItem .openDir {
+        color: #888;
+        display: flex;
+        align-items: center;
+        height: 22px;
+        line-height: 22px;
+    }
+
+    .compfileListBody .compBodyItemTd .compBodyItem .openDir:hover {
+        color: #20a53a;
+    }
+
+    .compfileListBody .compBodyItemTd:hover span.hide {
+        display: inline-block !important;
+    }
+
+    .compfileListHeader .compHeaderItem {
+        border-right: 1px solid #ccc;
+    }
+
+    .compfileListHeader .compHeaderItem:last-child {
+        border-right: none;
+    }
+
+    .compfileListHeader .compHeaderItem span {
+        display: inline-block;
+        height: 18px;
+        line-height: 18px;
+        width: 100%;
+        color: #666;
+    }
+
+    .compfileListHeader .compHeaderItem .fileCheck,
+    .compfileListBody .compBodyItemTd .compBodyItem .fileCheck {
+        width: 16px;
+        height: 16px;
+        border-radius: 2px;
+        border: 1px solid #d2d2d2;
+        background-color: #fff;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .compfileListHeader .compHeaderItem .fileCheck.active2::after,
+    .compfileListBath .cust—checkbox.active2::after {
+        content: '';
+        position: absolute;
+        display: block;
+        height: 2px;
+        width: 8px;
+        left: 50%;
+        top: 50%;
+        margin-top: -1px;
+        margin-left: -4px;
+        background-color: #fff;
+    }
+
+    .compfileListBody .compBodyItemTd.active {
+        background: #f0f9f7 !important;
+    }
+
+    .compfileListBody .compBodyItemTd.active .compBodyItem:last-child span {
+        display: inline-block !important;
+    }
+
+    .compfileListHeader .compHeaderItem .fileCheck.active2,
+    .compfileListHeader .compHeaderItem .fileCheck.active,
+    .compfileListBath .cust—checkbox.active,
+    .compfileListBath .cust—checkbox.active2,
+    .compfileListBody .compBodyItemTd.active .fileCheck {
+        background-color: #20a53a;
+        border-color: #20a53a;
+    }
+
+    .compfileListHeader .compHeaderItem .fileCheck.active::after,
+    .compfileListBody .compBodyItemTd.active .fileCheck::after,
+    .compfileListBath .cust—checkbox.active::after {
+        content: '';
+        position: absolute;
+        display: block;
+        left: 50%;
+        top: 50%;
+        margin-left: -2px;
+        margin-top: -6px;
+        width: 5px;
+        height: 10px;
+        border: solid #fff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+    }
+
+    .compfileListBody .compBodyItemTd {
+        height: 40px;
+        line-height: 40px;
+        background-color: #fff;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .compfileListBody .compBodyItemTd:hover {
+        background: #f0f9f7 !important;
+    }
+
+    .compfileListBody .compBodyItemTd .compBodyItem {
+        color: #666;
+        position: relative;
+    }
+
+    .compfileListBody .compBodyItemTd .compBodyItem .file_icon {
+        width: 22px;
+        height: 22px;
+        margin-top: -11px;
+        top: 50%;
+        left: 5px;
+    }
+
+    .compfileListBody .compBodyItemTd .compBodyItem .fileName {
+        display: inline-block;
+        margin-left: 22px;
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .compfileListBath {
+        margin-top: 15px;
+    }
+
+    .compfileListBath .bt_batch {
+        display: flex;
+    }
+
+    .compfileListBath .bt_batch label {
+        width: 40px;
+        margin: 0;
+        height: 28px;
+        display: flex;
+        padding: 0 10px;
+        align-items: center;
+    }
+
+    .compfileListBath .cust—checkbox {
+        width: 16px;
+        height: 16px;
+        border-radius: 2px;
+        border: 1px solid #d2d2d2;
+        background-color: #fff;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .compfileListBath .cust—checkbox-input {
+        display: none;
+    }
+
+    #batchTable .divtable .table {
+        border: none;
+    }
+
+    #batchTable .divtable {
+        border: 1px solid #ddd;
+    }
+
+    #batchTable .table>tbody>tr>td {
+        border-top: .5px solid #ddd;
+    }
+
+    .zipPreview.layui-layer-page .layui-layer-content {
+        overflow: inherit !important;
+    }
+</style>
 {% endblock %}
 {% block scripts %}
   {{ super() }}

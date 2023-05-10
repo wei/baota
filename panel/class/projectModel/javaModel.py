@@ -829,9 +829,14 @@ class main(projectBase):
                 url2='http://127.0.0.1:{}'.format(project_find['project_config']['port'])
         else:
             url2='http://127.0.0.1:{}'.format(project_find['project_config']['port'])
+
+        if project_find["project_config"]["java_type"] =="springboot":
+            _site_path = project_find["project_config"]["static_path"] if ("static_path" in project_find["project_config"] and project_find["project_config"]["static_path"]) else project_find["project_config"]["jar_path"]
+        else:  
+            _site_path = project_find['path']
         config_body = config_body.format(
             api_url = '/' if not 'api_url' in project_find['project_config'] else project_find['project_config']['api_url'] ,
-            site_path =project_find['path'] if not 'static_path' in project_find['project_config'] else project_find['project_config']['static_path'],
+            site_path = _site_path,
             domains = ' '.join(domains),
             project_name = project_name,
             panel_path = self._panel_path,
@@ -910,6 +915,11 @@ class main(projectBase):
         from panelSite import panelSite
         s = panelSite()
 
+        if project_find["project_config"]["java_type"] == "springboot":
+            _site_path = project_find["project_config"]["jar_path"]
+        else:  
+            _site_path = project_find['path']
+
         # 根据端口列表生成配置
         for p in ports:
             # 生成SSL配置
@@ -936,7 +946,7 @@ class main(projectBase):
 
             # 生成vhost主体配置
             apache_config_body += config_body.format(
-                site_path = project_find['path'],
+                site_path = _site_path,
                 server_name = '{}.{}'.format(p,project_name),
                 domains = ' '.join(domains),
                 log_path = public.get_logs_path(),
@@ -953,7 +963,11 @@ class main(projectBase):
                 s.apacheAddPort(p)
 
         # 写.htaccess
-        rewrite_file = "{}/.htaccess".format(project_find['path'])
+        if project_find["project_config"]["java_type"] =="springboot":
+            _path = project_find["project_config"]["static_path"] if ("static_path" in project_find["project_config"] and project_find["project_config"]["static_path"]) else project_find["project_config"]["jar_path"]
+            rewrite_file = "{}/.htaccess".format(_path)
+        else:
+            rewrite_file = "{}/.htaccess".format(project_find['path'])
         if not os.path.exists(rewrite_file): public.writeFile(rewrite_file,'# 请将伪静态规则或自定义Apache配置填写到此处\n')
 
         # 写配置文件
@@ -2357,13 +2371,14 @@ class main(projectBase):
                 return public.returnMsg(False, 'springboot用户建立失败,疑是安全软件拦截。手动建立用户操作如下: useradd -s /sbin/nologin springboot')
         if not 'project_jdk' in get: return public.returnMsg(False, "请输入你的JDK路径")
         if not 'project_jar' in get: return public.returnMsg(False, "请输入你的jar路径")
-        if not 'project_name' in get: return public.returnMsg(False, "请输入你的项目名称")
+        if not 'project_name' in get and get.project_name.strip(): return public.returnMsg(False, "请输入你的项目名称")
         if not 'port' in get: return public.returnMsg(False, "请输入你的项目端口号")
         if not 'run_user' in get: return public.returnMsg(False, "请输入你的项目用户")
         # if not 'auth' in get: return public.returnMsg(False, "请输入是否开机自启动")
         if not 'project_cmd' in get: return public.returnMsg(False, "请输入你的项目启动命令")
         if not 'project_ps' in get: return public.returnMsg(False, "请输入你的项目启动命令")
         if not 'is_separation' in get:get.is_separation=0
+        get.project_name = get.project_name.strip()
         project_path = os.path.dirname(get.project_jar)
         if not public.check_site_path(project_path):
             a,c = public.get_sys_path()
@@ -2374,13 +2389,11 @@ class main(projectBase):
                 return public.returnMsg(False, "前后端分离不支持Apache")
             get.is_separation=1
         ##静态资源目录
-        if not 'static_path' in get:
+        if get.is_separation and not 'static_path' in get:
             get.static_path = '/www/wwwroot/'+get.project_name.split('/')[0]
         if not 'api_url' in get:
              get.api_url = '/'
-
-        else:
-            if get.api_url[-1] == '/':
+        elif get.api_url != '/' and get.api_url[-1] == '/':
                 get.api_url = get.api_url[:-1]
         if not hasattr(get,'auth'):
             get.auth='0'
@@ -2451,7 +2464,7 @@ class main(projectBase):
                     'logs':self._springboot_logs_path+'/'+get.project_name.strip()+'.log',
                     'scripts':self._springboot_run_scripts+'/'+get.project_name.strip()+'.sh',
                     'is_separation':get.is_separation,
-                    'static_path':get.static_path,
+                    'static_path':getattr(get, "static_path", None),
                     'api_url':get.api_url,
                     'host_url':get.host_url,
                 }

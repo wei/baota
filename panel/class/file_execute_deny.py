@@ -117,7 +117,7 @@ class FileExecuteDeny:
         deny_name = args.deny_name
         if not re.match(r"^\w+$",deny_name): return public.returnMsg(False,'规则名称只能是字母、数字、下划线组成!')
         dir = args.dir
-        suffix = args.suffix
+        suffix = args.suffix.strip('|')
         website = args.website
         self._init_conf(website)
         conf = public.readFile(self.ng_website_conf)

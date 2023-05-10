@@ -10,7 +10,8 @@
 # |   告警消息队列
 # +--------------------------------------------------------------------
 import public,send_mail
-import time,os,sys,json
+import time,sys,json
+import os
 class send_to_user:
     '''
     建立数据库
@@ -106,10 +107,24 @@ class send_to_user:
             data = []
         return data
 
+
+    def start_main(self,path):
+        if not os.path.exists(path): return False
+        module = os.path.basename(path).split('.')[0]
+        module_dir = os.path.dirname(path)
+        sys.path.insert(0, "{}".format(module_dir))
+        module_main = __import__('{}'.format(module))
+        try:
+            public.mod_reload(module_main)
+        except:
+            pass
+        return eval('module_main.{}()'.format(module))
+
     '''
     读取数据库中的值、写入到数据库中
     '''
     def read_thread(self):
+        import os
         if not public.M('send_settings').count():return False
         send_data=public.M('send_settings').field('id,name,type,path,send_type,inser_time,last_time,time_frame').select()
         for i in send_data:
@@ -135,9 +150,49 @@ class send_to_user:
                         public.M('send_settings').where("id=?", (i['id'],)).update({"last_time": int(time.time())})
                     except:
                         os.remove(i['path'])
+            if i['type'] == 'python_script':
+                import os
+                if os.path.exists(i['path']):
+                    mod_obj=self.start_main(i['path'])
+                    msg=mod_obj.start()
+                    if msg:
+                        self.inser_send_msg(i['name'], i['send_type'], msg, 'python_script', int(time.time()))
+                public.M('send_settings').where("id=?", (i['id'],)).update({"last_time": int(time.time())})
+            if i['type']=='plugin_mod':
+                #插件模块
+                import os, sys
+                sys.path.insert(0, "/www/server/panel/class/")
+                import PluginLoader
+                get = public.dict_obj()
+                get.plugin_get_object = 1
+                fun_obj = PluginLoader.plugin_run(i['name'], i['path'], get)
+                #执行插件的方法
+                msg=fun_obj(None)
+                if msg:
+                    self.inser_send_msg(i['name'], i['send_type'],msg, 'plugin_mod', int(time.time()))
+                public.M('send_settings').where("id=?", (i['id'],)).update({"last_time": int(time.time())})
 
     def __write_log(self,name, msg):
         public.WriteLog(name+'告警', msg)
+
+    #告警方式
+    def send_mail_data(self,title,body,login_type):
+        try:
+            object = public.init_msg(login_type.strip())
+            if not object:
+                return False
+            if login_type=="mail":
+                data={}
+                data['title'] = title
+                data['msg'] = body
+                object.push_data(data)
+            elif login_type=="wx_account":
+                object.send_msg(body)
+            else:
+                msg = public.get_push_info(title,['>发送内容：' + body])
+                object.push_data(msg)
+        except:
+            pass
 
     '''发送消息线程'''
     def send_msg(self):
@@ -146,14 +201,9 @@ class send_to_user:
         count=1
         for i in send_msg:
             if count>=4:break
-            if i['send_type']=='mail':
-                if public.send_mail(i['name'], i['msg']):
-                    self.__write_log(i['name'], i['msg'])
-                    public.M('send_msg').where("id=?", (i['id'],)).update({"is_send":True})
-            if i['send_type']=='dingding':
-                if public.send_dingding(i['msg']):
-                    self.__write_log(i['name'], i['msg'])
-                    public.M('send_msg').where("id=?", (i['id'],)).update({"is_send": True})
+            self.send_mail_data(i['name'],i['msg'], i['send_type'])
+            self.__write_log(i['name'], i['msg'])
+            public.M('send_msg').where("id=?", (i['id'],)).update({"is_send": True})
             count += 1
         public.M('send_msg').where("is_send=?", (True,)).delete()
 

@@ -58,13 +58,22 @@ class bt_task:
     # 取任务列表前端
     def get_task_lists(self, get):
         sql = public.M(self.__table)
+        where_sql = None
+        where_params = []
         if 'status' in get:
             if get.status == '-3':
-                sql = sql.where('status=? OR status=?', (-1, 0))
+                where_sql = "(status=? OR status=?)"
+                where_params = [-1, 0]
             else:
-                sql = sql.where('status=?', (get.status,))
-        data = sql.field('id,name,type,shell,other,status,exectime,endtime,addtime').order(
-            'id asc').limit('10').select()
+                where_sql = "status=?"
+                where_params = [get.status]
+        if "task_id" in get:
+            if where_sql is None:
+                where_sql = "id=?"
+            else:
+                where_sql += " AND id=?"
+            where_params.append(get.task_id)
+        data = sql.field('id,name,type,shell,other,status,exectime,endtime,addtime').where(where_sql,where_params).order('id asc').limit('10').select()
         if type(data) == str:
             public.WriteLog('任务队列', data,not_web = self.not_web)
             return []

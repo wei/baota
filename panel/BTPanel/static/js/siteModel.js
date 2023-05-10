@@ -244,6 +244,11 @@ CreateWebsiteModel.prototype.reanderProjectList = function () {
 				disabledSelectValue: '请选择需要批量操作的站点!',
 				selectList: [
 					{
+						title: "部署证书",
+						callback: function (that) {
+						  site.set_ssl_cert(that)
+						}
+					},{
 						title: '删除项目',
 						url: '/project/' + _that.type + '/remove_project',
 						param: function (row) {

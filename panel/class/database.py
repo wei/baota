@@ -666,6 +666,11 @@ SetLink
     #设置ROOT密码
     def SetupPassword(self,get):
         password = get['password'].strip()
+
+        if not password: return public.returnMsg(False, 'root密码不能为空')
+        re_list = re.findall("[，。？！；：“”‘’（）【】《》￥&\u4e00-\u9fa5]+", password)
+        if re_list: return public.returnMsg(False, f'数据库密码不能包含中文字符 {" ".join(re_list)}')
+
         try:
             if not password: return public.returnMsg(False,'root密码不能为空')
             if password.find("'") != -1 or password.find('"') != -1: return public.returnMsg(False,"数据库密码不能包含引号")
@@ -726,7 +731,11 @@ SetLink
         username = get['name']
         id = get['id']
         if not newpassword: return public.returnMsg(False,'数据库[%s]密码不能为空' % username)
-        db_find = public.M('databases').where('id=?',(id,)).find()
+
+        re_list = re.findall("[，。？！；：“”‘’（）【】《》￥&\u4e00-\u9fa5]+",newpassword)
+        if re_list: return public.returnMsg(False, f'数据库密码不能包含中文字符 {" ".join(re_list)}')
+
+        db_find = public.M('databases').where("id=? AND LOWER(type)=LOWER('mysql')",(id,)).find()
         name = db_find['name']
 
         if newpassword.find("'") != -1 or newpassword.find('"') != -1: return public.returnMsg(False,"数据库密码不能包含引号")

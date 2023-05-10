@@ -15,6 +15,7 @@ var bt_file = {
   file_path: 'C:/', // 文件目录
   file_page_num: bt.get_storage('local', 'showRow') || 500, //每页个数
   file_list: [], // 文件列表
+  tamper_data: {}, // 文件列表防篡改数据
   file_store_list: [], // 文件收藏列表
   file_store_current: 0, //文件收藏当前分类索引
   file_images_list: [], // 文件图片列表
@@ -29,6 +30,10 @@ var bt_file = {
   cloud_storage_download_list: [],  //云存储下载列表
   cloud_storage_type_list:[],       //云存储类型列表
   cloud_storage_use_status:true,    //判断是否企业版
+  search_history:[],  //搜索历史记录
+  zipPath:'',// ZIP压缩包预览根目录
+  zipType: '',// 压缩包预览类型
+  newPathList: [],
   scroll_width: (function () {
     var odiv = document.createElement('div'),
         styles = {
@@ -462,6 +467,22 @@ var bt_file = {
       that.reader_file_list({ path: path, is_operating: true });
     });
 
+    //企业级防篡改
+    $('.tamper_core .nav_btn').on('click', function () {
+      var ltd = bt.get_cookie('ltd_end')
+      if(ltd < 0) return bt.soft.product_pay_view({ totalNum: 51, limit: 'ltd', closePro: true });
+      var name = 'tamper_core';
+      $.post("plugin?action=get_soft_find", {
+        sName: name
+      }, function (rdata) {
+        if (!rdata.setup) {
+          bt.soft.install(name)
+        }else{
+          bt.soft.set_lib_config(name,rdata.title,rdata.version)
+        }
+      })
+    })
+
     // 回收站
     $('.file_nav_view').on('click', '.recycle_bin', function (ev) {
       fileManage.recycle_bin_view();
@@ -597,15 +618,269 @@ var bt_file = {
       if ($(this).hasClass('topping_file_icon')) { that.cancel_file_topping(data); }
       e.stopPropagation();
     });
+
+    // 文件解锁/锁定
+    $('.file_table_view .file_list_content').on('click', '.file_name .icon-lock', function (e) {
+      var data = $(this).data(),path = data.path
+      //查询查询路径生效的方式
+      get_effective_path(path)
+      function get_effective_path(path) {
+				bt.soft.get_soft_find('tamper_core',function (rdata_res) {
+					if (rdata_res.setup && rdata_res.endtime > -1) {
+						$.post('/tamper_core/get_effective_path.json', {path: path}, function (res) {
+							if(!res.status) {
+								if(res['tip']) {
+										bt.confirm({ title: '提示', msg: '当前'+ res.tip +'，是否开启？' }, function (index) {
+											layer.close(index);
+											bt_tools.send({ url: '/tamper_core/service_admin.json', data: {action:'start'} }, function (rdata) {
+												bt_tools.msg(rdata)
+												if(rdata.status) {
+													setTimeout(function () {
+														get_effective_path(path)
+													},2000)
+												}
+											},'启动服务')
+										});
+								}else{
+										if(res.msg.indexOf('get_effective_path') !== -1) {
+											bt_tools.msg({status:false,msg:'企业级防篡改版本过低，<a href="javascript:;"  class="btlink tamperCoreUpdate">立即升级</a>！'})
+											$('.tamperCoreUpdate').unbind('click').click(function () {
+												bt.soft.get_soft_find('tamper_core', function (item) {
+													if (item.versions.length > 1) {
+														for (var i = 0; i < item.versions.length; i++) {
+															var min_version = item.versions[i]
+															var ret = bt.check_version(item.version, min_version.m_version + '.' + min_version.version);
+															if (ret > 0) {
+																if (ret == 2) bt.soft.update_soft(item.name ,item.title ,min_version.m_version , min_version.version , min_version.update_msg.replace(/\n/g, "_bt_") ,item.type)
+																break;
+															}
+														}
+													} else {
+														var min_version = item.versions[0],
+																is_beta = min_version.beta;
+														var cloud_version = min_version.m_version + '.' + min_version.version;
+														if (item.version != cloud_version && is_beta == item.is_beta) bt.soft.update_soft(item.name ,item.title ,min_version.m_version , min_version.version , min_version.update_msg.replace(/\n/g, "_bt_") ,item.type)
+													}
+												})
+											})
+										}else {
+											bt_tools.msg(res)
+										}
+								}
+							}else{
+								var pid = res.data.pid,lock = res.data.lock,action = res.data.action
+								var url = '',exts_table_data = []
+									is_lock = lock ? '关闭' : '开启',
+									boxcontent = '',rules_path = '',suffix = ''
+								if(pid !== 0){//防篡改存在规则
+									url = 'batch_setting.json'
+								}else{//防篡改不存在规则
+									url = 'create_path.json'
+								}
+								if(data.type == 'dir') {
+									boxcontent = (lock ? '关闭【'+ path+ '/】目录保护后，该目录将恢复所有操作权限' : '开启【'+ path+ '/】目录保护后，该目录禁止所有操作权限')+'，是否继续操作？' 
+								}else{
+									var arr_suffix = data.filename.split('.')
+									suffix = data.filename.indexOf('.') !== -1 ? '.' + arr_suffix[arr_suffix.length - 1] : ''
+									boxcontent = (lock ? '关闭【'+ data.filename +'】文件保护后，该文件将恢复所有操作权限':'开启【'+ data.filename +'】文件保护后，该文件将禁止所有操作权限')+'，是否继续操作？'
+								}
+								var protection_arr = [],group = [],paramAction = [],form1 = {}
+								bt.open({
+									type: 1,
+									title:  '【'+ data.filename +'】'+ is_lock +'保护',
+									area: '500px',
+									closeBtn: 2,
+									btn: ['确定', '取消'],
+									shift: 5,
+									shadeClose: false,
+									content: '<div id="quick_file" style="padding: 20px 20px 20px 30px;"></div>',
+									success: function (layero, index) {
+										console.log(action)
+										$.each(action, function (index, item) {
+											switch (item) {
+												case 'open': 
+												case 'close': 
+													paramAction.push({
+														key: item,
+														values: res.data.rule.path
+													})
+													break;
+												case 'remove_wd':
+													protection_arr.push({title:'删除白名单目录',type: item,data: res.data.white_dir})
+													paramAction.push({
+														key: item,
+														values: res.data.white_dir
+													})
+													break;
+												case 'add_wd':
+													protection_arr.push({title:'添加白名单目录',type: item,data: path + '/'})
+													paramAction.push({
+														key: item,
+														values: path + '/'
+													})
+													break;
+												case 'add_bf':
+													if(res.data.white_files.indexOf(data.filename) === -1) protection_arr.push({title:'添加当前文件【'+data.filename+'】的保护',type: item+'-2',data: data.filename,value: 1})
+													if(suffix !== '' && !protection_arr.some(function (a) {return a.type === 'add_bf-1'})) protection_arr.push({title:'添加所有文件后缀为【'+suffix+'】的保护',type: item+'-1',data: suffix})
+													break;
+												case 'remove_wf':
+													protection_arr.push({title:'添加当前文件【'+data.filename+'】的保护',type: item,data: data.filename,value: 1})
+													if(suffix !== '' && !protection_arr.some(function (a) {return a.type === 'add_bf-1'})) protection_arr.push({title:'添加所有文件后缀为【'+suffix+'】的保护',type: 'add_bf-1',data: suffix})
+													break;
+												case 'remove_bf':
+													if(suffix !== '') protection_arr.push({title:'关闭所有文件后缀为【'+suffix+'】的保护',type: item,data: suffix})
+													break;
+												case 'add_wf':
+													protection_arr.push({title:'关闭当前文件【'+ data.filename +'】的保护',type: (res.data.black_exts.indexOf(suffix) !== -1 ? item : 'remove_bf-1'),data: data.filename,value: 1})
+													if(res.data.black_exts.indexOf(suffix) !== -1) {
+														paramAction.push({
+															key: 'remove_bf',
+															values: data.filename
+														})
+													}
+													break;
+											}
+										})
+										if(pid === 0 && data.type !== 'dir') {
+											protection_arr.push({title:'添加当前文件'+data.filename+'的保护',type: 'add_bf-2',data: data.filename,value: 1})
+											if(suffix !== '') protection_arr.push({title:'添加后缀'+suffix+'的保护',type: 'add_bf-1',data: suffix})
+										}
+										protection_arr = protection_arr.sort(function (a, b) {
+											return (b.value || 0) - (a.value || 0)
+										})
+										$.each(protection_arr, function (index, item) {
+											group.push({
+												type: 'checkbox',
+												style: 'margin-left: 0px;margin-right:10px;',
+												name: item.type,
+												value: item.value ? item.value : 0,
+												title: item.title,
+											})
+										})
+										bt_tools.form({
+											el: '#quick_file',
+											labelWidth: '0',
+											form: [
+												{
+													label: '<i class="hint-confirm-icon"></i>',
+													display: boxcontent ? true : false,
+													group:{
+														type: 'other',
+														boxcontent: '<div style="font-size: 16px;">'+ boxcontent +'</div>'
+													}
+												},{
+													display: data.type == 'dir' ? false : true,
+													class: 'protect_file',
+													group: group
+												}
+											]
+										})
+										if(exts_table_data.length) {
+											$('#quick_file').append('<div id="exts_table" class="table"></div>')
+											bt_tools.table({
+												el: '#exts_table',
+												height: '150px',
+												column: [
+													{ fid: 'ext', title: '文件后缀名',template: function (item) {
+														return '<span>'+ item +'</span>'
+													}},
+												],
+												data: exts_table_data
+											})
+										}
+									},
+									yes: function (index, layero) {
+										var params = {},settings = [],exts = []
+										if(pid!==0) {
+											params['pid'] = pid
+										}else {
+											params['path'] = $('input[name="path"]').val()
+										}
+										//文件弹窗参数
+										if(data.type !== 'dir'){
+											$.each(protection_arr, function (index, item) {
+												var checked = $('input[name="'+ item.type +'"]').prop('checked')
+												if(checked) {
+													if(pid !== 0) {
+														var exits = settings.filter(function (temp) {
+															console.log(temp.key, item.type)
+															return temp.key === item.type.split('-')[0]
+														})
+														if(exits.length) {
+															for (let i = 0; i < settings.length; i++) {
+																if(settings[i].key === item.type.split('-')[0]) {
+																	settings[i].values.push(item.data)
+																}                    
+															}
+														}else{
+															settings.push({
+																key: item.type.split('-')[0],
+																values: [item.data]
+															})
+														}
+													}else{
+														exts.push(item.data)
+													}
+												}
+											})
+										}
+										if(pid !== 0) {
+											if(paramAction.length) {
+												$.each(paramAction, function (index, item) {
+													settings.push(item)
+												})
+											}
+										}
+										if(settings.length) {
+											params['settings'] = JSON.stringify(settings)
+										}
+										//不存在规则参数
+										if(pid === 0) {
+											rules_path =  path
+											params['path'] = data.type !== 'dir' ? rules_path.replace(data.filename,'') : rules_path
+											params['exts'] = JSON.stringify(exts)
+										} 
+										if(pid !== 0 && data.type !== 'dir' && !settings.length) return layer.msg('最少选中一个')
+										bt_tools.send({url: '/tamper_core/'+ url, data: params},function (res) {
+											if(res.status) {
+												bt_tools.msg(res)
+												that.reader_file_list({ path: that.file_path, is_operating: true });
+											}
+										})
+										layer.close(index)
+									}
+								})
+							}
+						})
+					}else{
+						if (!rdata_res.setup && rdata_res.endtime > -1) {
+							bt.soft.install('tamper_core')
+						}else{
+								bt.soft.product_pay_view({"name":rdata_res.title,
+								"pid":rdata_res.pid,
+								"type":rdata_res.type,
+								"plugin":true,
+								"renew":'',
+								"ps":rdata_res.ps,
+								"ex1":rdata_res.ex1,
+								"totalNum":34
+								})
+						}
+					}
+				})
+      }
+      e.stopPropagation();
+    })
+
     // 打开文件夹和文件 --- 双击
     $('.file_table_view .file_list_content').on('dblclick', '.file_tr', function (e) {
       var index = $(this).data('index'),
           data = that.file_list[index];
       if (
-          $(e.target).hasClass('file_check') ||
-          $(e.target).parents('.foo_menu').length > 0 ||
-          $(e.target).hasClass('set_file_ps') ||
-          that.is_editor
+        $(e.target).hasClass('file_check') ||
+        $(e.target).parents('.foo_menu').length > 0 ||
+        $(e.target).hasClass('set_file_ps') ||
+        that.is_editor
       ) return false;
       if (data.type == 'dir') {
         if (data['filename'] == 'Recycle_bin') return fileManage.recycle_bin_view();
@@ -622,7 +897,11 @@ var bt_file = {
             that.open_images_preview(data);
             break;
           case 'compress':
+            if (data.ext === 'zip' || data.ext === 'rar' || data.ext === 'gz') {
+              that.comp_files_preview(data)
+            } else {
             that.unpack_file_to_path(data)
+            }
             break;
         }
       }
@@ -639,7 +918,7 @@ var bt_file = {
         if (data['filename'] == 'Recycle_bin') return fileManage.recycle_bin_view();
         that.reader_file_list({ path: that.file_path + '/' + data['filename'], is_operating: true });
       } else {
-        layer.msg(data.open_type == 'compress' ? '双击解压文件' : data.open_type == 'ont_text' ? '该文件类型不支持编辑' :'双击文件编辑');
+        layer.msg(data.open_type == 'compress' ? '双击解压文件' : data.open_type == 'ont_text' ? '该文件类型不支持编辑' : '双击文件编辑');
       }
       e.stopPropagation();
       e.preventDefault();
@@ -1115,14 +1394,14 @@ var bt_file = {
       _width += $(this).innerWidth();
     });
     _width += $('.menu-header-foot').innerWidth();
-    if (menu_width - _width < (disk_list_width + 5)) {
+    if (menu_width - _width + 8 < (disk_list_width + 5)) {
       $('.nav_group.mount_disk_list').addClass('thezoom').find('.disk_title_group_btn').removeClass('hide');
     } else {
       $('.nav_group.mount_disk_list,.nav_group.multi').removeClass('thezoom');
     }
     $('.file_menu_tips').removeAttr('style')
-    if (this.area[0] < 1500) {
-      indexs = Math.ceil(((1500 - this.area[0]) / 68));
+    if (this.area[0] < 1600) {
+      indexs = Math.ceil(((1600 - this.area[0]) / 68));
       $('.batch_group_list>.nav_btn_group').each(function (index) {
         if (index >= $('.batch_group_list>.nav_btn_group').length - (indexs + 2)) {
           $(this).hide()
@@ -1493,6 +1772,7 @@ var bt_file = {
         return that.reader_file_list({ path: '/www' })
       }
       that.file_path = that.path_check(res.PATH);
+      that.tamper_data = res.tamper_data
       that.file_list = $.merge(that.data_reconstruction(res.DIR, 'DIR'), that.data_reconstruction(res.FILES));
       that.file_store_list = res.STORE;
       bt.set_cookie('Path', that.path_check(res.PATH));
@@ -1581,6 +1861,13 @@ var bt_file = {
       for (var i = 0; i < info_ps.length; i++) {
         if (that.path_resolve(that.file_path, itemD[0]) === info_ps[i][0]) fileMsg = info_ps[i][1];
       }
+      var tamper_arr = []
+			if(that.tamper_data){
+				tamper_arr = that.tamper_data[(type == 'DIR' ? 'dirs' : 'files')]
+			}else{
+				that.tamper_data = {}
+			}
+      var type_arr = that.tamper_data.status && tamper_arr.length ?  (tamper_arr[index] ? tamper_arr[index].split(';') : []) : []
       arry.push({
         caret: itemD[8] == '1' ? true : false, // 是否收藏
         down_id: parseInt(itemD[9]), // 是否分享 分享id
@@ -1595,7 +1882,9 @@ var bt_file = {
         user: itemD[3], // 用户权限
         root_level: itemD[4], // 所有者
         soft_link: itemD[5] || '', // 软连接
-        is_search: $('.file_search_input').val() ? true : false //判断是否搜索
+        is_search: $('.file_search_input').val() ? true : false, //判断是否搜索
+        is_lock: parseInt(type_arr[0]) || 0,
+        tamper_proof_id: parseInt(type_arr[1]) || 0,
       });
     });
     return arry;
@@ -2332,13 +2621,13 @@ var bt_file = {
       _html += '<div class="file_tr" data-index="' + index + '" data-filename="' + item.filename + '" ' + (bt.get_cookie('rank') == 'icon' ? 'title="' + path + '&#13;' + lan.files.file_size + ':' + bt.format_size(item.size) + '&#13;' + lan.files.file_etime + ':' + bt.format_data(item.mtime) + '&#13;' + lan.files.file_auth + ':' + item.user + '&#13;' + lan.files.file_own + ':' + item.root_level + '"' : '') + '>' +
           '<div class="file_td file_checkbox"><div class="file_check"></div></div>' +
           '<div class="file_td file_name">' +
+          '<span title="点击'+ (item.is_lock ? '关闭保护，文件可以编辑' : '开启保护，文件无法编辑') +'" data-lock="'+ item.is_lock +'" data-pid="'+ item.tamper_proof_id +'" data-filename="' + item.filename + '" data-path="'+ item.path +'" data-type="'+ item.type +'" class="icon-lock ' + (item.is_lock ? 'icon-file-lock' : 'icon-file-unlock')+'">' +'</span>' +
           '<div class="file_ico_type">' +
           (item.open_type == 'images' ? '<img class="file_images" src="/static/images/layer/loading-2.gif" style="width:20px;height:20px;left:5px;top:12.5px;" />' : '') +
           '<i class="file_icon ' + (item.open_type == 'images' ? 'hide ' : '') + '' + (item.type == 'dir' ? 'file_folder' : (item.ext == '' ? '' : 'file_' + item.ext).replace('//', '/')) + '"></i>' +
           '</div>' +
           '<span class="file_title file_' + item.type + '_status" ' + (bt.get_cookie('rank') == 'icon' ? '' : 'title="' + path + '"') + '><i>' + item.filename + item.soft_link + '</i></span>' + (item.topping ? '<span class="icon-onchange topping_file_icon" style="cursor: pointer;' + ((item.caret && item.down_id != 0) ? 'right:57px' :((item.caret || item.down_id != 0)?'right:30px': 'right:5px')) + '" title="取消置顶"></span>' : '') +(item.caret ? '<span class="icon-onchange iconfont icon-favorites" style="' + (item.down_id != 0 ? 'right:30px' : '') + '" title="文件已收藏，点击取消"></span>' : '') + (item.down_id != 0 ? '<span class="icon-onchange iconfont icon-share1" title="文件已分享，点击查看信息"></span>' : '') +
           '</div>' +
-          '<div class="file_td file_type hide"><span title="' + (item.type == 'dir' ? '文件夹' : that.ext_type_tips(item.ext)) + '">' + (item.type == 'dir' ? '文件夹' : that.ext_type_tips(item.ext)) + '</span></div>' +
           '<div class="file_td file_accept"><span>' + item.user + ' / ' + item.root_level + '</span></div>' +
           '<div class="file_td file_size"><span>' + (item.type == 'dir' ? '<a class="btlink folder_size" href="javascript:;" data-path="' + path + '">计算</a>' : bt.format_size(item.size)) + '</span></div>' +
           '<div class="file_td file_mtime"><span>' + bt.format_data(item.mtime) + '</span></div>' +
@@ -2356,7 +2645,7 @@ var bt_file = {
           '</div>';
     })
     that.render_file_thumbnail()
-    $('.file_list_content').html(_html)
+    $('.file_list_content.file_manage').html(_html)
     if (callback) callback({ is_dir_num: is_dir_num })
     that.clear_table_active(); // 清除表格选中内容
   },
@@ -2414,56 +2703,57 @@ var bt_file = {
    */
   render_file_groud_menu: function (ev, el) {
     var that = this,
-        index = $(el).data('index'),
-        _openTitle = '打开',
-        data = that.file_list[index],
-        compression = ['zip', 'rar', 'gz','tar', 'war', 'tgz', 'bz2', '7z'],
-        config = {
-          open: _openTitle,
-          split_0: true,
-          download: '下载',
-          favorites: '添加到收藏夹',
-          cancel_favorites: '取消收藏',
-          share: '外链分享',
-          cancel_share: '取消分享',
-          topping: '置顶目录/文件',
-          cancel_topping: '取消置顶',
-          rsync: '数据同步',
-          oss_upload: ['上传到云存储', {}],
-          file_real_time_log:'查看日志',
-          split_1: true,
-          dir_kill: '木马扫描',
-          authority: '权限',
-          split_2: true,
-          copy: '复制',
-          shear: '剪切',
-          rename: '重命名',
-          del: '删除',
-          split_3: true,
-          compress: '创建压缩',
-          unzip: '解压',
-          copy_file: '创建副本',
-          open_find_dir: '打开文件所在目录',
-          split_4: true,
-          send_mail: '发送至邮箱',
-          property: '属性'
-        },
-        info_ps = [
-          '/etc',
-          '/home',
-          '/tmp',
-          '/root',
-          '/home',
-          '/usr',
-          '/boot',
-          '/lib',
-          '/mnt',
-          '/www',
-          '/bin',
-          '/dev',
-          '/www/server',
-          '/www/Recycle_bin'
-        ];
+      index = $(el).data('index'),
+      _openTitle = '打开',
+      data = that.file_list[index],
+      compression = ['zip', 'rar', 'gz','tar', 'war', 'tgz', 'bz2', '7z'],
+	  _type = that.determine_file_type(data.ext)
+      config = {
+        open: _openTitle,
+        split_0: true,
+        download: '下载',
+        favorites: '添加到收藏夹',
+        cancel_favorites: '取消收藏',
+        share: '外链分享',
+        cancel_share: '取消分享',
+        topping: '置顶目录/文件',
+        cancel_topping: '取消置顶',
+        rsync: '数据同步',
+        oss_upload: ['上传到云存储', {}],
+        file_real_time_log:'查看日志',
+        split_1: true,
+        dir_kill: '木马扫描',
+        authority: '权限',
+        split_2: true,
+        copy: '复制',
+        shear: '剪切',
+        rename: '重命名',
+        del: '删除',
+        split_3: true,
+        compress: '创建压缩',
+        unzip: '解压',
+        copy_file: '创建副本',
+        open_find_dir: '打开文件所在目录',
+        split_4: true,
+        send_mail: '发送至邮箱',
+        property: '属性'
+      },
+      info_ps = [
+        '/etc',
+        '/home',
+        '/tmp',
+        '/root',
+        '/home',
+        '/usr',
+        '/boot',
+        '/lib',
+        '/mnt',
+        '/www',
+        '/bin',
+        '/dev',
+        '/www/server',
+        '/www/Recycle_bin'
+      ];
     var oss_list = {}
     $.each(that.cloud_storage_upload_list, function (index, item) {
       oss_list['up_'+item.name] = item.title
@@ -2488,6 +2778,13 @@ var bt_file = {
         break;
     }
     config['open'] = (data.type == 'dir' ? '打开' : _openTitle);
+	if (_type === 'compress') {
+	  if (data.ext === 'zip' || data.ext === 'rar' || data.ext === 'gz') {
+	    config['open'] = data.ext.toUpperCase() + '压缩预览';
+	  } else {
+	    delete config['open']; // 判断是否压缩文件,禁用操作
+	  }
+	}
     if (data.type === 'dir') {
       delete config['download']; // 判断是否文件或文件夹,禁用下载
       delete config['send_mail'];
@@ -2496,7 +2793,7 @@ var bt_file = {
       delete config['dir_kill'];
       delete config['rsync']; // 判断是否文件夹，删除数据同步
     }
-    if (data.open_type == 'compress') delete config['open']; // 判断是否压缩文件,禁用操作
+    // if (data.open_type == 'compress') delete config['open']; // 判断是否压缩文件,禁用操作
     if(data.ext !== 'log') delete config['file_real_time_log'] // 判断是否日志文件,禁用操作
     if (data.down_id != 0) {
       delete config['share']; //已分享
@@ -2753,6 +3050,55 @@ var bt_file = {
   },
 
   /**
+   * @description 文件类型判断，或返回格式类型(不传入type)
+   * @param {String} ext
+   * @param {String} type
+   * @return {Boolean|Object} 返回类型或类型是否支持
+   */
+  determine_file_type: function (ext, type) {
+    var config = {
+      images: ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'tiff', 'ico', 'JPG', 'webp'],
+      compress: ['zip', 'rar', 'gz', 'war', 'tgz', '7z'],
+      video: ['mp4', 'mp3', 'mpeg', 'mpg', 'mov', 'avi', 'webm', 'mkv', 'mkv', 'mp3', 'rmvb', 'wma', 'wmv'],
+      ont_text: ['iso', 'xlsx', 'xls', 'doc', 'docx', 'tiff', 'exe', 'so', '7z', 'bz', 'dmg', 'apk', 'pptx', 'ppt', 'xlsb', 'pdf']
+    },
+      returnVal = false;
+    if (ext) ext = ext.toLowerCase();
+    if (type != undefined) {
+      if (type == 'text') {
+        $.each(config, function (key, item) {
+          $.each(item, function (index, items) {
+            if (items == ext) {
+              returnVal = true;
+              return false;
+            }
+          })
+        });
+        returnVal = !returnVal
+      } else {
+        if (typeof config[type] == "undefined") return false;
+        $.each(config[type], function (key, item) {
+          if (item == ext) {
+            returnVal = true;
+            return false;
+          }
+        });
+      }
+    } else {
+      $.each(config, function (key, item) {
+        $.each(item, function (index, items) {
+          if (items == ext) {
+            returnVal = key;
+            return false;
+          }
+        })
+      });
+      if (typeof returnVal == "boolean") returnVal = 'text';
+    }
+    return returnVal;
+  },
+
+  /**
    * @description 右键菜单事件组
    * @param {Object} data 当前文件或文件夹右键点击的数据和数组下标，以及Dom元素
    * @return void
@@ -2779,6 +3125,9 @@ var bt_file = {
             case 'images':
               this.open_images_preview(data);
               break;
+			case 'compress':
+			  this.comp_files_preview(data);
+			  break;
           }
         }
         break;
@@ -2923,6 +3272,882 @@ var bt_file = {
         break;
     }
   },
+  
+  comp_files_path_cache: {},
+  
+  /**
+   * @description 压缩文件预览
+   * @param {array} data 压缩文件路径
+   */
+  comp_files_preview: function (data) {
+    var that = this;
+    var path = data.path;
+    that.zipPath = path;
+    that.zipType = data.ext;
+    this.comp_files_path_cache = {};
+    this.del_comp_files_cache = [];
+    this.comp_current_dir = '';
+	if(that.zipType.toUpperCase() == "RAR"){
+		layer.msg('暂时不支持该格式的压缩包', {icon: 5})
+		return false
+    } 
+    bt.open({
+      type: 1,
+      title: that.zipType.toUpperCase() + '压缩预览 --【' + path + '】',
+      area: ['740px', '660px'],
+      skin: 'zipPreview',
+      btn: false,
+      success: function () {
+        // var newPathList = [];
+        var $compfileListBody = $('.compfileListBody');
+        var $compFilesPreview = $('.compFilesPreview');
+        var $bathSelect = $('.compfileListBath .bt_table_select_group');
+        var $bathBtn = $('.compfileListBath .set_batch_option');
+        var $checkAll = $compFilesPreview.find('.compHeaderItem .fileCheck,.compfileListBath .cust—checkbox');
+        var comp_path = '/';
+        var zipFileList = [];
+        var timer = 0;
+  
+        bt_tools.send({
+          url: 'files/' + that.zipType + '/get_zip_files',
+          data: { data: JSON.stringify({ sfile: path }) }
+        }, function (rdata) {
+          isDir(rdata, "")
+          rdata = resArray
+          if (!Array.isArray(rdata)) return false;
+          zipFileList = rdata;
+          newPathList = that.obtain_comp_file_tree(rdata);
+          that.comp_files_path_cache[comp_path] = newPathList;
+          renderView('/', newPathList);
+        }, '获取压缩包文件')
+  
+        // 遍历文件生成树结构方法
+        var oldFather = []
+        var resArray = [] // 结果集
+        function isDir(data,name,fatherObj){
+            const dictionary = ["file_size", "compress_size", "compress_type", "filename", "date_time", "is_dir","fullpath"]
+            let a = Object.keys(data)
+            if(fatherObj!==undefined&&!oldFather.includes(fatherObj)){
+                oldFather.push(fatherObj)
+            }
+            if(name!==""){
+                fatherObj ={
+                    name:name,
+                    isDir:true,
+                    size:0,
+                    fileNum:0,
+                    dateTime:0,
+                    subdirectory:[]
+                }
+            }
+            if(a.length===0){
+                oldFather.push(fatherObj)
+                return undefined
+            }
+            let i=0
+            for(var b=0;b<a.length;b++){
+                var res = a[b]
+                i+=1
+                if(!dictionary.includes(res)){
+                    var flag = isDir(data[res],res,fatherObj)
+                    if(flag !== undefined){
+                        if(name!==""){
+                            var resObj = {
+                                name: res,
+                                isDir: false,
+                                size: data[res]["file_size"],
+                                dateTime: data[res]["date_time"],
+                                fullpath: data[res]["fullpath"]
+                            }
+                            fatherObj.size=fatherObj.size+data[res]["file_size"]
+                            fatherObj.fileNum+=1
+                            fatherObj.subdirectory.push(resObj)
+                        }else {
+                            var resObj = {
+                                name: res,
+                                isDir: false,
+                                size: data[res]["file_size"],
+                                dateTime: data[res]["date_time"],
+								fullpath: data[res]["fullpath"]
+                            }
+                            resArray.push(resObj)
+                        }
+                    }else {
+                        if(oldFather.length>1){
+                            let a = JSON.parse(JSON.stringify(oldFather[oldFather.length-1]))
+                            oldFather.pop()
+                            oldFather[oldFather.length-1].subdirectory.push(a)
+                            oldFather[oldFather.length-1].size=a.size
+                            oldFather[oldFather.length-1].fileNum=oldFather[oldFather.length-1].subdirectory.length
+                        }else {
+                            resArray.push(oldFather[0])
+                            oldFather.pop()
+                        }
+                    }
+                }else {
+                    return true
+                }
+            }
+        }
+  
+        function renderView(dir, list) {
+          that.comp_current_dir = dir
+          uncheck()
+          that.render_comp_file_path('.compFilesPreview .compDirNavbar .dirList', dir);
+          that.render_comp_file_tree('.compFilesPreview .compfileListBody', list);
+        }
+        var path_string = ''
+        function openDirectory(data) {
+          comp_path = '/' + data.name;
+          path_string = path_string + comp_path
+          if (data.isDir) {
+            renderView(path_string, data.subdirectory);
+          }
+        }
+  
+        function checkBatch(active, number) {
+          if (!number) number = 0
+          if (active) {
+            $bathSelect.addClass('bt-disabled');
+            $bathBtn.addClass('bt-disabled btn-default').removeClass('btn-success');
+            $bathSelect.find('.bt_select_tips em').text('');
+            $bathSelect.find('.bt_select_tips span').text('请选择批量操作');
+  
+          } else {
+            $bathSelect.removeClass('bt-disabled');
+            $bathBtn.removeClass('bt-disabled btn-default').addClass('btn-success');
+            $bathSelect.find('.bt_select_tips em').text('(已选中' + number + ')');
+          }
+        }
+  
+        function uncheck() {
+          $checkAll.removeClass('active active2');
+          $compfileListBody.find('.compBodyItemTd').removeClass('active');
+          $bathSelect.find('.bt_selects item').removeClass('active');
+          $bathSelect.removeClass('active');
+          checkBatch(true);
+        }
+  
+        // 解压至
+        $('.unzipTo').on('click', function () {
+          that.unpack_file_to_path(data);
+        });
+  
+        // 添加文件
+        $('.addFileToCom').on('click', function () {
+          bt.select_path('addFileToCom', 'multiple', function (path1, pathList) {
+            bt_tools.send({
+              url: 'files/' + that.zipType + '/add_zip_file',
+              data: {
+                data: JSON.stringify({
+                  sfile: path,
+                  r_path: path_string.replace(/^\//, ''),
+                  f_list: pathList.length === 1 && pathList[0].substr(pathList[0].length-1,1) === '/' ? [(path1+'/').replace('//','')] : pathList
+                })
+              }
+            }, function (rdata) {
+              bt.msg(rdata);
+              if (rdata.status) {
+                bt_tools.send({
+                  url: 'files/' + that.zipType + '/get_zip_files',
+                  data: { data: JSON.stringify({ sfile: path }) }
+                }, function (rdata) {
+                  if (Array.isArray(rdata)) return false;
+                  resArray.length = 0
+                  isDir(rdata, "")
+                  rdata = resArray
+                  zipFileList = rdata;
+                  newPathList = that.obtain_comp_file_tree(rdata);
+                  //初始化缓存
+                  that.del_comp_files_cache = []
+                  var strPath = path_string.replace(/^\//, '') === '' ? '/' : path_string.replace(/^\//, '')
+                  that.comp_files_path_cache['/'] = newPathList
+                  var item = newPathList
+                  var str = path_string.replace(/^\//, '') === '' || path_string.replace(/^\//, '') === '/'
+                  var dataName = path_string.replace(/^\//, '').split('/').filter(function (s) { return s !== '' })
+                  that.render_comp_file_path('.compFilesPreview .compDirNavbar .dirList', path_string === '' ? '/' : path_string)
+                  var dataList = item.filter(function (s) { return s.name === dataName[0] })
+                  if (dataName.length > 1) {
+                    for (var i = 1; i < dataName.length; i++) {
+                      dataList = dataList[0].subdirectory.filter(function (s) { return s.name + '' === dataName[i] })
+                    }
+                  }
+                  if (strPath !== '/') that.comp_files_path_cache[strPath] = dataList
+                  that.render_comp_file_tree('.compFilesPreview .compfileListBody', item ? (str ? item : dataList[0].subdirectory) : []);
+                }, '获取压缩包文件')
+              }
+            }, '添加文件至压缩包');
+          }, bt_file.file_path)
+        });
+  
+        // 搜索
+        $compFilesPreview.on('input', '.search_input', function () {
+          var val = $(this).val();
+          clearTimeout(timer);
+          timer = setTimeout(function () {
+            var serachList = [];
+            if (val === '') return false;
+            $.each(zipFileList, function (index, item) {
+              if (item.filename.indexOf(val) > -1) {
+                var pathList = item.filename.split('/')
+                item.title = pathList[pathList.length - 1];
+                serachList.push(item);
+              }
+            });
+            that.render_comp_file_tree('.compFilesPreview .compfileListBody', serachList);
+          }, 500);
+        })
+  
+        //  选中下拉列表
+        $('.compDirNavbar').on('click', '.dirItem', function () {
+  
+          path_string = ''
+          var path = $(this).data('path'), pathDir = ('/' + path).replace('//', '/'), pathList = path.split('/'), indexes = '', data;
+          path = path + '/'
+          path = path.replace('//', '').replace(/^\//, '');
+          if (path === '') path = '/'
+          indexes = pathDir.replace(/^\//, '') + '/';
+          path_string = '/' + indexes;
+          path_string = path_string.replaceAll('//', '/')
+          comp_path = '/' + indexes
+          path_string = path_string.slice(0, path_string.length - 1)
+          old_path = path_string.split('/')
+          if (pathDir === '/') {
+            data = that.comp_files_path_cache['/'];
+          } else {
+            data = that.comp_files_path_cache[('/' + pathDir).replace('//', '')];
+          }
+          renderView(pathDir, (path === '/' ? data : (data[0].subdirectory ? data[0].subdirectory : data)));
+        });
+  
+        // 返回上一层
+        var old_path;
+        $compFilesPreview.on('click', '.returnUpperStory', function () {
+          var pathDir = ('/' + comp_path).replace('//', '/'), pathList = comp_path.split('/'), indexes = '', data;
+          path_string = path_string.replaceAll('//', '/')
+          path_string = path_string.split('/')
+          path_string = path_string.splice(0, path_string.length - 1)
+          path_string = path_string.join("/")
+          if (pathList[pathList.length - 1] === '') pathList.splice(-1, 1);
+          pathDir = pathList.length > 1 ? pathList.join('/') : '/';
+          indexes = pathDir.replace(/^\//, '');
+          old_path = path_string.split('/')
+          if (old_path[old_path.length - 1] === undefined || old_path[old_path.length - 1] === '') {
+            data = that.comp_files_path_cache['/'];
+            comp_path = '/'
+            path_string = '/'
+            old_path = []
+          } else {
+            var temp_old_path = old_path.join('/')
+            var temp_new_path = temp_old_path.slice(1, temp_old_path.length)
+            data = that.comp_files_path_cache[temp_new_path];
+            comp_path = '/' + data[0].name
+          }
+          renderView(path_string, (comp_path === '/' ? data : (data[0].subdirectory ? data[0].subdirectory : data)));
+        });
+  
+        // 单选
+        $compfileListBody.on('click', '.compBodyItemTd', function (ev) {
+          var $this = $(this);
+          $this.find('.fileCheck').trigger('click')
+          ev.preventDefault();
+          ev.stopPropagation();
+        });
+  
+        // 选中当前行
+        $compfileListBody.on('click', '.compBodyItemTd .fileCheck', function (ev) {
+          var $this = $(this);
+          var data = $this.parent().parent().data();
+          var checkData = $this.data();
+          var $parentItem = $(this).parent().parent();
+          if ($parentItem.hasClass('active')) {
+            $parentItem.removeClass('active');
+          } else {
+            $parentItem.addClass('active');
+          }
+          var $checkItem = $compfileListBody.find('.compBodyItemTd');
+          var $checkActiveItem = $compfileListBody.find('.compBodyItemTd.active');
+          var $checkAll = $compFilesPreview.find('.compHeaderItem .fileCheck,.compfileListBath .cust—checkbox');
+          if ($checkActiveItem.length === 0) {
+            $checkAll.removeClass('active2 active');
+            checkBatch(true);
+          }
+          if ($checkActiveItem.length > 0) {
+            $checkAll.addClass('active2').removeClass('active');
+            checkBatch(false, $checkActiveItem.length);
+          }
+          if ($checkActiveItem.length === $checkItem.length) {
+            $checkAll.addClass('active').removeClass('active2');
+          }
+          return false;
+        });
+  
+        // 设置批量选项 批量解压
+        $compFilesPreview.on('click','.set_batch_option', function(ev){
+          var title = $('.compfileListBath .bt_select_tips span').text();
+          var index = $('.bt_table_select_group .bt_selects .item.active').index();
+          if($(this).hasClass('bt-disabled')) return layer.tips('请选择需要批量操作的文件！', $(this), {tips: [1, 'red'], time: 2000})
+          if(index < 0) return layer.tips('请选择需要批量操作的类型', $(this).prev(), {tips: [1, 'red'], time: 2000})
+          var arry = [];
+          bt.open({
+            type: 1,
+            title: title,
+            area: '350px',
+            btn:[index === 0?'解压文件':'删除文件','取消'],
+            content: '<div class="pd15">' +
+                '<div class="line '+ (index === 1?'hide':'') +'" style="border-bottom: 1px solid #ececec;"><span class="tname" style="width:70px;">解压目录</span><div class="info-r" style="margin-left:70px;"><input name="path" id="batchComp" value="'+ bt_file.file_path +'" class="bt-input-text mr5" type="text" style="width:210px; margin-right: 10px;" value=""><span class="glyphicon cursor mr5 glyphicon-folder-open"></span></div></div>'+
+                '<div id="batchTable"></div>' +
+            '</div>',
+            yes: function(indexs){
+              layer.close(indexs)
+              var filenames = [];
+              $.each(arry,function(aindex, item){
+                if(item.isDir){
+                  var temp = path_string.slice(1,path_string.length) + '/'+ item.name
+                  if(temp[0] == '/') temp = temp.slice(1,temp.length)
+                  if(!index){
+                    dir_each(item,temp)
+                  }else{
+                    dir_each_delete(item,temp)
+                  }
+                }else{
+                  filenames.push(item.fullpath)
+                }
+              })
+              for(var i in result_arr){
+                 filenames.push(result_arr[i])              
+              }
+              if(!index){
+                var extract_path = $('#batchComp').val();
+                path_string = path_string.replace('//','/')
+                var zip_path = path_string.slice(1,path_string.length)
+                if(zip_path === ''){
+                  zip_path = ''
+                }
+                bt_tools.send({
+                  url: 'files/'+ that.zipType +'/extract_byfiles',
+                  data: {
+                    data: JSON.stringify({
+                      zip_path:zip_path,
+                      sfile: path,
+                      extract_path: extract_path,
+                      filenames: filenames
+                    })
+                  }
+                }, function(rdata){
+                  bt.msg(rdata);
+                  result_arr = []
+                  uncheck()
+                  that.reader_file_list({}, function (res) {});
+                },'解压压缩包文件')
+              }else{
+                bt_tools.send({
+                  url: 'files/'+ that.zipType +'/delete_zip_file',
+                  data: {
+                    data: JSON.stringify({
+                      sfile: path,
+                      filenames: filenames
+                    })
+                  }
+                }, function(rdata){
+                  bt.msg(rdata);
+                  uncheck();
+                  $.each(filenames,function(aindex, item){
+                    that.del_comp_files_cache.push(item)
+                  })
+                  // 去掉删除掉的文件 重新渲染
+                  var strPath = path_string.replace(/^\//,'') === '' ? '/' : path_string.replace(/^\//,'')
+                  var item = that.comp_files_path_cache[strPath]
+                  var item_del = that.del_comp_files_cache
+                  dataList = item_del.map(function(i){
+                      return i.replace(strPath+'/','')
+                  })// 需要删除的文件
+                  if(dataList.length >= 1){
+                    findObj(item)
+                  }
+                  that.comp_files_path_cache[strPath] = item_data
+                  var str = path_string.replace(/^\//,'') === '' || path_string.replace(/^\//,'') === '/'
+                  that.render_comp_file_tree('.compFilesPreview .compfileListBody', item_data.length ? (str ? item_data : item_data[0].subdirectory):[] );
+                  dataList = []
+                },'删除压缩包文件')
+              }
+            },
+            success: function(layers){
+              var itemActiveList =  $compfileListBody.find('.active');
+              itemActiveList.each(function($index,item){
+                var data = $(this).data()
+                arry.push(data)
+              })
+              $(layers).find('.glyphicon-folder-open').on('click', function(){
+                bt.select_path('batchComp','dir')
+              });
+              bt_tools.table({
+                el: '#batchTable',
+                height:'200px',
+                data: arry,
+                column: [{
+                  fid: 'title',
+                  title: '文件名',
+                  template :function(row){
+                    return '<span>'+ row.name +'</span>'
+                  }
+                },{
+                  fid: 'compress_size',
+                  title: '大小',
+                  template :function(row){
+                    if (row.isDir) { 
+                      var row_size = bt.format_size(row.size)
+                      if(row_size === '0B') return '<span>' + row_size + '</span>'
+                      return '--'
+                    }
+                    else {
+                      return '--'
+                    }
+                  }
+                }]
+              })
+            }
+          })
+        });
+        var dataList = []
+        var item_data = []
+        function findObj(item) {
+          if (!Array.isArray(item)) item = [item]
+          for (var j = 0; j < dataList.length; j++) {
+            item_data = item.filter(function (sub) {
+              if (sub.subdirectory) {
+                sub.subdirectory = sub.subdirectory.filter(function (sub_item) {
+                  if (sub_item.name != dataList[j] && (sub_item.name + '/') != dataList[j] && sub_item.fullpath != dataList[j]) return sub_item
+                })
+                if (sub.subdirectory.length === 0) return item[0]
+                return sub
+              } else {
+                if (sub.name !== dataList[j] && sub.fullpath !== dataList[j] && sub.name + '/' !== dataList[j]) {
+                  return sub
+                }
+              }
+            })
+          }
+        }
+        // 全选或反选
+        $compFilesPreview.on('click', '.compHeaderItem .fileCheck,.compfileListBath .cust—checkbox', function () {
+          var $this = $(this);
+          var $checkItem = $compfileListBody.find('.compBodyItemTd');
+          $bathSelect.find('.bt_selects item').removeClass('active');
+          $bathSelect.removeClass('active');
+  
+          if ($this.hasClass('active')) {
+            $checkAll.removeClass('active');
+            $checkItem.removeClass('active');
+            checkBatch(!$this.hasClass('active'), $checkItem.length);
+          } else {
+            $checkAll.addClass('active').removeClass('active2');
+            $checkItem.addClass('active');
+            checkBatch(!$this.hasClass('active'), $checkItem.length);
+          }
+        });
+  
+        // 渲染下拉列表
+        $compFilesPreview.on('click', '.bt_table_select_group', function (ev) {
+          var $this = $(this);
+          if (!$this.hasClass('bt-disabled')) {
+            $this.addClass('active');
+          }
+        });
+  
+        // 批量选择
+        $compFilesPreview.on('click', '.bt_table_select_group .bt_selects .item', function () {
+          var $this = $(this);
+          var $tips = $compFilesPreview.find('.bt_table_select_group').find('.bt_select_tips');
+          $this.addClass('active').siblings().removeClass('active');
+          setTimeout(function () {
+            $compFilesPreview.find('.bt_table_select_group').removeClass('active');
+            $tips.find('span').text('批量' + $this.text());
+          }, 100);
+        });
+  
+        // 禁用浏览器右键菜单
+        $compfileListBody.on('contextmenu', function (ev) {
+          var html = '';
+          // $compFilesPreview.
+          return false;
+        });
+  
+        // 双击打开
+        $compfileListBody.on('dblclick', '.compBodyItemTd', function (ev) {
+          var data = $(this).data(), $target = $(ev.target);
+          if (!$target.hasClass('fileCheck')) {
+            if (data.isDir) {
+              openDirectory(data);
+            } else {
+              $(this).find('.operateCompFiles').click();
+            }
+          }
+        });
+  
+        // 打开
+        $compfileListBody.on('click', '.compBodyItem .openDir', function (ev) {
+          var arry = []
+          var data = $(this).parent().parent().parent().data();
+          arry.push(data)
+          var item = $('.dirList .dirItem')
+          var str = item.eq(item.length - 1).find('a').prop('title').replace(that.zipPath + '/', '') + '/'
+          var name = (str === '/' ? '' : str) + data.name
+          that.comp_files_path_cache[name] = that.comp_files_path_cache[name] ? that.comp_files_path_cache[name] : arry
+          if (data.isDir) {
+            openDirectory(that.comp_files_path_cache[name][0]);
+          } else {
+            $(this).find('.operateCompFiles').click();
+          }
+          ev.stopPropagation();
+          ev.preventDefault();
+        })
+  
+        // 编辑压缩文件
+        $compfileListBody.on('click', '.compBodyItem .operateCompFiles', function (ev) {
+		  var dataPath = $(this).attr('data-path')
+		  var re1 = new RegExp("/", "g");
+		  var idDataPath = '#' + ((dataPath.replace(re1,'_')).replaceAll('.','_'))
+          var data = $(this).parent().parent().parent().data();
+          if (data.title) {
+            var title = data.title.split('.');
+            var ext = title[title.length - 1];
+            ext = that.determine_file_type(ext);
+          }
+          bt.editor({
+            path: data.name,
+            mode: ext,
+            success: function (editor) {
+              bt_tools.send({
+                url: 'files/' + that.zipType + '/get_fileinfo_by',
+                data: { data: JSON.stringify({ sfile: path, filename: data.fullpath }) }
+              }, function (rdata) {
+                if (!rdata.status) layer.msg(rdata.msg)
+                editor.setValue(rdata.data === null ? '' : rdata.data)
+                editor.moveCursorTo(0, 0);
+                editor.focus();
+              }, '获取文件内容')
+            },
+            // 保存后的回调
+            saveCallback: function (editor) {
+              bt_tools.send({
+                url: 'files/' + that.zipType + '/write_zip_file',
+                data: { data: JSON.stringify({ sfile: path, filename: data.fullpath, data: editor.getValue() }) }
+              }, function (rdata) {
+				var modifyTime = parseInt(new Date().getTime()/1000)
+				var spanTime = '<span>' + bt.format_data(modifyTime) + '</span>'
+				var arrEach = function (arr) { 
+				arr.forEach(item => {
+				if (item.fullpath == dataPath) { 
+					item.dateTime = modifyTime
+					} else { 
+						if ('subdirectory' in item) { 
+				             arrEach(item.subdirectory)
+						}
+					}
+				 });
+				}
+				arrEach(newPathList)
+				$(idDataPath).html(spanTime)
+				bt.msg(rdata)
+              }, '保存文件内容')
+            }
+          })
+          ev.stopPropagation();
+          ev.preventDefault();
+        })
+  
+        // 解压文件 单个
+        $compfileListBody.on('click', '.decompFiles', function (ev) {
+          var data = $(this).parent().parent().parent().data();
+          bt.open({
+            type: 1,
+            title: '解压压缩包文件-[' + data.name + ']',
+            area: '350px',
+            btn: ['解压文件', '取消'],
+            content: '<div class="pd15">' +
+              '<div class="line"><span class="tname" style="width:70px;">解压目录</span><div class="info-r" style="margin-left:70px;"><input name="path" id="batchComp" value="' + bt_file.file_path + '" class="bt-input-text mr5" type="text" style="width:210px; margin-right: 10px;" value=""><span class="glyphicon cursor mr5 glyphicon-folder-open"></span></div></div>' +
+              '</div>',
+            success: function (layers) {
+              $(layers).find('.glyphicon-folder-open').on('click', function () {
+                bt.select_path('batchComp', 'dir')
+              });
+            },
+            yes: function (indexs) {
+              layer.close(indexs);
+              var extract_path = $('#batchComp').val();
+              var fullpath = [data.fullpath]
+              var temp = path_string.slice(1, path_string.length)
+              if (data.isDir) {
+                temp = temp + '/' + data.name
+                dir_each(data, temp)
+              } else {
+                result_arr = fullpath
+              }
+              var zip_path = path_string.slice(1, path_string.length)
+              if (zip_path === '') zip_path = ''
+              bt_tools.send({
+                url: 'files/' + that.zipType + '/extract_byfiles',
+                data: {
+                  data: JSON.stringify({
+                    zip_path: zip_path,
+                    sfile: path,
+                    extract_path: extract_path,
+                    filenames: result_arr
+                  })
+                }
+              }, function (rdata) {
+                result_arr = []
+                bt.msg(rdata);
+                that.reader_file_list({}, function (res) { });
+              }, '解压压缩包文件')
+            }
+          })
+          ev.stopPropagation();
+          ev.preventDefault();
+        })
+  
+        // 文件赋值遍历方法
+        var result_arr = []
+        function dir_each(dir, path) {
+          if (dir.isDir) {
+            result_arr.push(path + '/')
+            var sub_item = dir.subdirectory
+            for (var r = 0; r < sub_item.length; r++) {
+              path = path + '/' + sub_item[r].name
+              dir_each(sub_item[r], path)
+            }
+          } else {
+            result_arr.push(dir.fullpath)
+          }
+        }
+        function dir_each_delete(dir, path) {
+          if (dir.isDir) {
+            var sub_item = dir.subdirectory
+            for (var k = 0; k < sub_item.length; k++) {
+              dir_each_delete(sub_item[k], path)
+              if (sub_item[k].fullpath) path = sub_item[k].fullpath.replace(sub_item[k].name, '')
+            }
+            result_arr.push(path)
+          } else {
+            result_arr.push(dir.fullpath)
+          }
+        }
+        // 删除压缩文件single
+        $compfileListBody.on('click', '.compBodyItem .deleteCompFiles', function (ev) {
+          var data = $(this).parent().parent().parent().data();
+          layer.confirm('删除当前文件，删除后文件将彻底，是否继续操作？', {
+            title: '删除压缩包文件-[' + data.name + ']',
+            area: '350px',
+            closeBtn: 2,
+            icon: 0
+          }, function (indexs) {
+            var fullpath = [data.fullpath]
+            var temp = path_string.slice(1, path_string.length)
+            if (data.isDir) {
+              temp = temp + '/' + data.name
+              dir_each_delete(data, temp)
+            } else {
+              result_arr = fullpath
+            }
+            bt_tools.send({
+              url: 'files/' + that.zipType + '/delete_zip_file',
+              data: { data: JSON.stringify({ sfile: path, filenames: result_arr }) }
+            }, function (rdata) {
+              bt.msg(rdata);
+              that.del_comp_files_cache.push(data.name)
+              // 去掉删除掉的文件 重新渲染
+              var strPath = path_string.replace(/^\//, '') === '' ? '/' : path_string.replace(/^\//, '')
+              var item = that.comp_files_path_cache[strPath]
+              var item_del = that.del_comp_files_cache
+              dataList = item_del.map(function (i) {
+                return i.replace(strPath + '/', '')
+              })// 需要删除的文件
+              if (dataList.length >= 1) {
+                findObj(item)
+              }
+              var str = path_string.replace(/^\//, '') === '' || path_string.replace(/^\//, '') === '/'
+              that.render_comp_file_tree('.compFilesPreview .compfileListBody', item ? (str ? item : item_data[0].subdirectory) : []);
+              layer.close(indexs);
+            }, '删除压缩包文件')
+          })
+          ev.stopPropagation();
+          ev.preventDefault();
+        })
+  
+      },
+      content: '<div class="compFilesPreview">' +
+        '<div class="compToolbarHeader tootls_group">' +
+        '<div class="toolbar-left">' +
+        '<button class="btn btn-sm btn-success mr10 unzipTo" title="解压总文件压缩包至指定文件夹">解压至</button>' +
+        (that.zipType === 'rar' ? '' : '<button class="btn btn-sm btn-default addFileToCom" title="添加文件至当前压缩包">添加文件</button>') +
+        '</div>' +
+        '</div>' +
+        '<div class="compDirNavbar">' +
+        '<div class="returnUpperStory">' +
+        '<a href="javascript:;" class="btlink">返回上一层</a>' +
+        '</div>' +
+        '<div class="dirList"></div>' +
+        '</div>' +
+        '<div class="compfileList">' +
+        '<div class="compfileListHeader">' +
+        '<div class="compHeaderItem" style="width: 40px"><div class="fileCheck" data-type="all"></div></div>' +
+        '<div class="compHeaderItem" style="width: 23%;"><span>名称</span></div>' +
+        '<div class="compHeaderItem" style="width: 14%;"><span>大小</span></div>' +
+        '<div class="compHeaderItem" style="flex: 1;"><span>修改时间</span></div>' +
+        '<div class="compHeaderItem" style="width: 19%;text-align: right;"><span>操作</span></div>' +
+        '</div>' +
+        '<div class="compfileListBody file_list_content" ' + (that.zipType === 'rar' ? 'style="max-height: 380px;"' : '') + '></div>' +
+        '</div>' +
+        '<div class="compfileListBath">' +
+        '<div class="bt_batch">' +
+        '<label><i class="cust—checkbox" data-checkbox="all"></i><input type="checkbox" class="cust—checkbox-input"></label>' +
+        '<div class="bt_table_select_group bt-disabled not-select">' +
+        '<span class="bt_select_value">' +
+        '<span class="bt_select_tips"><span>请选择批量操作</span><em></em></span>' +
+        '<span class="glyphicon glyphicon-triangle-bottom ml5"></span>' +
+        '</span>' +
+        '<ul class="bt_selects">' +
+        '<li class="item">解压文件</li>' +
+        '<li class="item">删除文件</li>' +
+        '</ul>' +
+        '</div>' +
+        '<button type="button" class="btn btn-default btn-sm set_batch_option bt-disabled">批量操作</button>' +
+        '</div>' +
+        '</div>' +
+        (that.zipType === 'rar' ? '<ul class="help-info-text c7"><li>RAR压缩预览不支持添加文件至当前压缩包</li></ul>' : '') +
+        '</div>'
+    })
+  },
+  
+  /**
+   * @description 获得文件树数据
+   * @param {array} list 所有文件
+   * @param {string} path 当前路径
+   */
+  obtain_comp_file_tree: function (list, path) {
+    var root = [];
+    for (var i = 0; i < list.length; i++) {
+      var item = list[i]
+      if (item.name) {
+        var chain = item.name.split("/"); // 获取当前文件或目录层级
+      }
+      var currentHierarchy = root; // 将生成的目录结构缓存
+      for (var j = 0; j < chain.length; j++) {
+        var wantedNode = chain[j]
+        if (wantedNode === '') {
+          continue;
+        }
+        var lastHierarchy = currentHierarchy;
+  
+        // 遍历root是否已有该层级
+        for (var k = 0; k < currentHierarchy.length; k++) {
+          if (currentHierarchy[k].title === wantedNode) {
+            currentHierarchy = currentHierarchy[k].children;
+            break;
+          }
+        }
+  
+        if (lastHierarchy === currentHierarchy) {
+          var newNode = {}
+          $.extend(newNode, {
+            children: [],
+            title: wantedNode
+          }, item)
+          // 清空多余children结构
+          if (j === chain.length - 1) {
+            delete newNode.children;
+          }
+          currentHierarchy.push(newNode);
+          currentHierarchy = newNode.children;
+        }
+      }
+    }
+    return root;
+  },
+  
+  /**
+   * @description 渲染文件树
+   * @param {string} el 插入节点
+   * @param {array} list 数据结构
+   */
+  render_comp_file_tree: function (el, list) {
+    var $el = $(el), that = this;
+    if (!Array.isArray(list)) list = []
+    // $el.attr('class','')
+    // $el.removeClass('file_list_content')
+    $el.empty();
+    for (var i = 0; i < list.length; i++) {
+      var item = list[i]
+      if (item.name) {
+        var title = item.name.split('.');
+        var ext = title[title.length - 1];
+      }
+      var openType = this.determine_file_type(ext);
+      if (this.del_comp_files_cache.indexOf(item.name) > -1) continue;
+      $el.append($('<div class="compBodyItemTd">' +
+        '<div class="compBodyItem" style="width: 40px"><div class="fileCheck"></div></div>' +
+        '<div class="compBodyItem" style="width: 23%;">' +
+        '<span>' +
+        '<a href="javascript:;" class="openDir">' +
+        '<i class="file_icon file_' + (item.isDir ? 'folder' : ext) + '"></i>' +
+        '<span class="fileName" title="' + item.name + '">' + item.name + '</span>' +
+        '</a>' +
+        '</span>' +
+        '</div>' +
+        '<div class="compBodyItem" style="width: 14%;"><span>' + (!item.isDir ? bt.format_size(item.size) : '--') + '</span></div>' +
+		'<div class="compBodyItem" id="' + (item.fullpath ? ((item.fullpath.replaceAll('/','_').replaceAll('.','_'))) : ' ') +'" style="flex: 1;"><span>'+ (!item.isDir ?  (isNaN(item.dateTime) ? item.dateTime : bt.format_data(item.dateTime)) : '--') +'</span></div>' +
+        '<div class="compBodyItem" style="width: 19%; justify-content: flex-end;">' +
+        '<span class="hide">' +
+        (openType !== 'text' || !!item.isDir || that.zipType === 'rar' ?'':'<a href="javascript:;" class="btlink operateCompFiles" data-path="' + (item.fullpath ? item.fullpath  : ' ') + '" data-event="editor">编辑</a>&nbsp;&nbsp;|&nbsp;&nbsp;')  +
+        '<a href="javascript:;" class="btlink decompFiles" data-event="decompression">解压</a>&nbsp;&nbsp;|&nbsp;&nbsp;' +
+        '<a href="javascript:;" class="btlink deleteCompFiles" data-event="delel">删除</a>' +
+        '</span>' +
+        '</div>' +
+        '</div>').data(item));
+    }
+  },
+  /**
+   * @description 渲染压缩文件路径
+   * @param {string} el 插入节点
+   * @param {string} path 路径
+   */
+  render_comp_file_path: function (el, path) {
+    var that = this;
+    path = path.replace('//', '/')
+    var $el = $(el), pathList = path.split('/'), currentPath = '', $returnUpperStory = $el.parent().find('.returnUpperStory');
+    var html = '<div class="dirItem_more"><a href="javascript:;" title="部分目录已经省略">...</a><i class="iconfont icon-arrow-right"></i></div>';
+    $el.empty();
+    if (pathList[pathList.length - 1] === '') pathList.splice(-1, 1);
+    if (pathList.length === 1) {
+      $returnUpperStory.hide();
+    } else {
+      $returnUpperStory.show();
+    }
+    for (var i = 0; i < pathList.length; i++) {
+      var item = pathList[i];
+      currentPath += '/' + item;
+      if (i > 2 && i < pathList.length - 1 && pathList.length > 4) {
+        i == pathList.length - 2 ? $el.append(html) : ''
+      } else {
+        $el.append($('<div class="dirItem">' +
+          '<a href="javascript:;" title="' + that.zipPath + currentPath.replace('//', '/') + '" class="' + ((i === pathList.length - 1) ? '' : 'btlink') + '">' + (i === 0 ? '当前压缩包' : item) + '</a><i class="iconfont icon-arrow-right"></i>' +
+          '</div>').data('path', currentPath.replace('//', '/')));
+      }
+    }
+  
+  },
+  
+  /**
+   * @description 搜索文件树
+   * @param {string} el 插入节点
+   * @param {arry} list 渲染数据
+   */
+  search_comp_file_tree: function (el, list) {
+  
+  },
+  
+  
   /**
    * @descripttion 列表批量处理
    * @param {String} stype 操作

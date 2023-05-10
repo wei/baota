@@ -1,5 +1,9 @@
 var bt = {
 	os: 'Linux',
+	isInteger: function (obj) {
+		//是否整数
+		return (obj | 0) === obj
+	},
 	check_ip: function (
 		ip //验证ip
 	) {
@@ -5543,7 +5547,7 @@ bt.soft = {
 			});
 			return false;
 		}
-		if (config.ps !== undefined) config.ps = config.ex1 || config.ps.replace(/#1/g, '<').replace(/#2/g, '>').replace(/#3/g, '"').replace(/#4/g, "'");
+		if (config.ps !== undefined) config.ps = format_introduce(config.ex1) || config.ps.replace(/#1/g, '<').replace(/#2/g, '>').replace(/#3/g, '"').replace(/#4/g, "'");
 		var that = this;
 		var user_info = JSON.parse(bt_user_info);
 		var username = user_info.data.username;
@@ -5562,6 +5566,16 @@ bt.soft = {
 				return false;
 			}
 		};
+		// 格式化介绍
+		function format_introduce(introduce) {
+			if (!introduce) return '';
+			var html = '<ol>',introArray = introduce.split('|');
+			for (var i = 0; i < introArray.length; i++) {
+				html += '<li style="margin: 0 7px 14px 16px;list-style: disc;">' + introArray[i] + '</li>';
+			}
+			html += '</ol>';
+			return html;
+		}
 		layer.open({
 			type: 1,
 			title: false,
@@ -8577,6 +8591,13 @@ bt.soft = {
 		var _this = this,
 			type = bt.get_cookie('softType');
 
+		if (type !== '5' && type !== 5)
+			bt.soft.monitor_soft_download_speed({
+				plugin_name: name,
+				name: title,
+				version: version,
+				min_version: min_version,
+			});
 		bt.send(
 			'install_plugin',
 			'plugin/install_plugin',
@@ -8587,22 +8608,6 @@ bt.soft = {
 				upgrade: version,
 			},
 			function (rdata) {
-				if(!rdata.status){
-					layer.confirm(rdata.msg,{title:false,btn:false,cancel:function(){
-				    	if(!rdata.status){
-				        layer.closeAll()
-				    	}
-						}
-					});
-					return
-				}
-				if (type !== '5' && type !== 5)
-				bt.soft.monitor_soft_download_speed({
-				plugin_name: name,
-				name: title,
-				version: version,
-				min_version: min_version,
-			});
 				if (rdata.install_opt) {
 					_this.show_plugin_info(
 						$.extend(true, {}, rdata, {
@@ -8758,6 +8763,40 @@ bt.soft = {
 							]);
 						}
 					},
+					cancel: function (index) {
+						if(name === 'disk_analysis') {
+						    var taskId = $('#DiskAnalysis').data('taskId')
+						     if($('#DiskAnalysis').data('taskStatus')) {
+						         layer.confirm(
+    								'取消扫描，将会中断当前扫描目录进程，是否继续？',
+    								{
+    									title: '取消扫描',
+    									closeBtn: 2,
+    									icon: 3,
+    								},
+    								function (indexs) {
+    									layer.close(indexs);
+    									layer.close(index)
+    									bt_tools.send({url: '/plugin?action=a&name=disk_analysis&s=remove_task',data: {
+													id: parseInt(taskId),
+												}},
+    										function (rdata) {
+    											if (!rdata.status) return bt_tools.msg(rdata);
+    										},
+    										{
+    											load: '取消扫描任务',
+    										}
+    									);
+    								}
+    							);
+						     }else{
+						         layer.close(index)
+						     }
+						}else{
+							layer.close(index)
+						}
+						return false
+					}
 				});
 				/*rtmp = rhtml.split('<script type="javascript/text">')
         if (rtmp.length < 2) {

@@ -656,9 +656,9 @@ def send_mail_time():
     while True:
         try:
             os.system("nohup " + get_python_bin() +" /www/server/panel/script/mail_task.py > /dev/null 2>&1 &")
-            time.sleep(180)
+            time.sleep(50)
         except:
-            time.sleep(360)
+            time.sleep(50)
             send_mail_time()
 
 #5个小时更新一次更新软件列表

@@ -7,7 +7,9 @@
 # Author: hwliang <hwl@bt.cn>
 #-------------------------------------------------------------------
 import public, os, sys, json, time, psutil, re, shutil, requests
-from BTPanel import session, cache, send_file
+try:
+    from BTPanel import session, cache, send_file
+except:pass
 from pluginAuth import Plugin
 if sys.version_info[0] == 3: from importlib import reload
 

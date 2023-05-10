@@ -1755,7 +1755,7 @@ var bt_tools = {
 					var that = this,
 						help = data.help || false,
 						labelWidth = data.formLabelWidth || this.config.formLabelWidth;
-					if (data.display === false) return '';
+					if (data.display === false) return '<div class="line" style="padding:0"></div>';
 					return (
 						'<div class="line' +
 						_that.$verify(data['class']) +
@@ -1983,6 +1983,18 @@ var bt_tools = {
 					case 'multipleSelect':
 						// 使用规则  【配置中必须含有value字段（无需默认值设置空数组）、需要选中的下拉项以数组逗号隔开】
 						html += that.$reader_multipleSelect(item, style, attribute, index);
+						that.$check_event_bind('custom_select', {
+							click: {
+								type: 'custom_select',
+								children: '.bt_select_value',
+							},
+						});
+						that.$check_event_bind('custom_select_item', {
+							click: {
+								type: 'custom_select_item',
+								children: 'li.item',
+							},
+						});
 						that.$check_event_bind('icon_trem_close', {
 							click: {
 								type: 'icon_trem_close',

@@ -3769,19 +3769,17 @@ def get_free_ip_info(address):
         return ip_info[ip]
     try:
         param = get_user_info()
-
-        # 解决登陆不上宝塔账号切换节点时获取归属地信息userinfo传参的问题
-        if len(param.keys()) < 1:
-            param = {
-                'uid': 9999999999999,
-                'serverid': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-            }
         param['ip'] = address
-        headers = {"host": "www.bt.cn"}
-        if param['uid'] == 9999999999999:
-            res = json.loads(HttpPost('http://42.157.129.47/api/ip/info', param, timeout=1, headers=headers))
-        else:
-            res = json.loads(httpPost('https://www.bt.cn/api/ip/info', param))
+        res = json.loads(httpPost('https://www.bt.cn/api/ip/info_json', param))
+        # 解决无法访问官网时获取ip归属地的问题
+        if not address in res:
+            host_list = json.loads(readFile("config/hosts.json"))
+            headers = {"host": "www.bt.cn"}
+            for host in host_list:
+                try:
+                    new_url = "https://{}/api/ip/info_json?ip={}".format(host, address)
+                    res = HttpGet(new_url, 1, headers=headers)
+                except: continue
 
         if address in res:
             info = res[address]
@@ -6310,7 +6308,7 @@ def get_client_hash():
             # 唯一IP连续访问次数超过100次，使用IP+UA生成HASH
             r_max = 101
             if client_sync_count >= r_max-1:
-                client_hash = md5(request.headers.get('User-Agent') +'_'+ request.remote_addr)
+                client_hash = md5(request.remote_addr)
                 if client_sync_count < r_max:
                     session['client_hash'] = client_hash
                     client_sync_count += 1
@@ -6327,7 +6325,7 @@ def get_client_hash():
             session[ckey] = client_sync_count
 
         # 非唯一IP，使用UA生成HASH
-        client_hash = md5(request.headers.get('User-Agent'))
+        client_hash = md5('')
 
     return client_hash
 
@@ -6408,12 +6406,56 @@ def set_tasks_run(data):
     return returnMsg(True,task_file)
 
 
-def Get_ip_info(get_speed=False):
+def Get_ip_info(get_speed=False, get_user=True):
     '''
     获取bt官网ip归属地列表
     @author wzz <wzz@bt.cn>
     @return: list[dict{}]
     '''
+    host_list = json.loads(readFile("config/hosts.json"))
+
+    # 推荐，一般，较差，不推荐，不测速时，ipv6，用户服务器IP
+    level = (1, 2, 3, 4, 5, 6, 0)
+    user_server_ipaddress = []
+    if get_user:
+        user_server_ipaddress = get_user_server_ipaddress(host_list, level)
+    bt_host = get_bt_hosts(get_speed, host_list, level)
+    ips_result = user_server_ipaddress + bt_host
+    if ips_result: return ips_result
+
+def get_user_server_ipaddress(host_list, level):
+    '''
+    获取服务器公网ip归属地信息
+    @param host_list: host列表
+    @param level: 等级元组
+    @return:
+    '''
+    ips_result = []
+    headers = {"host": "www.bt.cn"}
+    for host in host_list:
+        try:
+            new_url = "https://{}/Api/getIpAddress".format(host)
+            m_str = HttpGet(new_url, 1, headers=headers)
+            ipaddress = re.search(r"^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}$", m_str).group(0)
+            s_ip_info = get_free_ip_info("{}".format(ipaddress))
+            if "ip" in s_ip_info.keys():
+                s_ip_info["info"] = "本服务器公网IP归属地信息"
+                s_ip_info["level"] = level[-1]
+                ips_result.append(s_ip_info)
+                return ips_result
+        except:
+            continue
+    return ips_result
+
+def get_bt_hosts(get_speed, host_list, level):
+    '''
+    获取bt官网ip归属地列表
+    @param get_speed: 是否测速
+    @param host_list: 传host列表
+    @param level: 传等级元组
+    @return:
+    '''
+    ips_result = []
     ipv6 = {
         "continent": "",
         "country": "",
@@ -6430,40 +6472,29 @@ def Get_ip_info(get_speed=False):
         "ip": "",
         "level": None
     }
-    host_list = json.loads(readFile("config/hosts.json"))
-    ips_result = []
-    # 推荐，一般，较差，不推荐，不测速时，ipv6，用户服务器IP
-    level = (1, 2, 3, 4, 5, 6, 0)
-    # 获取本机公网IP归属地相关信息
-    headers = {"host": "www.bt.cn"}
-    url = 'http://42.157.129.47/Api/getIpAddress'
-    m_str = HttpGet(url, headers=headers)
-    ipaddress = re.search(r"^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}$", m_str).group(0)
-    s_ip_info = get_free_ip_info(f"{ipaddress}:80")
-    if "ip" in s_ip_info.keys():
-        s_ip_info["info"] = "本服务器公网IP归属地信息"
-        s_ip_info["level"] = level[-1]
-        ips_result.append(s_ip_info)
-    # 获取bt官网归属地
+
     for ip in host_list:
-        # 获取节点响应延迟
-        if get_speed: n_net, n_ping = get_timeout(f"https://{ip}" + ':80/net_test', 1)
-        if not is_ipv4(ip):
-            ipv6['ip'] = ip
-            # ipv6地址默认一般推荐
-            ipv6['level'] = level[-2]
-            if get_speed: ipv6['speed'] = ""
-            ips_result.append(ipv6)
+        try:
+            # 获取节点响应延迟
+            if get_speed: n_net, n_ping = get_timeout("https://{}".format(ip) + ':80/net_test', 1)
+            if not is_ipv4(ip):
+                ipv6['ip'] = ip
+                # ipv6地址默认一般推荐
+                ipv6['level'] = level[-2]
+                if get_speed: ipv6['speed'] = ""
+                ips_result.append(ipv6)
+                continue
+            ip_result = get_free_ip_info("{}".format(ip))
+            if "ip" in ip_result.keys():
+                ip_result['level'] = level[-3]
+                if get_speed:
+                    if int(n_ping) < 100: ip_result['level'] = level[0]
+                    if 100 < int(n_ping) < 500: ip_result['level'] = level[1]
+                    if int(n_ping) > 500: ip_result['level'] = level[2]
+                    ip_result["speed"] = n_ping + 500
+                ips_result.append(ip_result)
+        except:
             continue
-        ip_result = get_free_ip_info(f"{ip}:80")
-        if "ip" in ip_result.keys():
-            ip_result['level'] = level[-3]
-            if get_speed:
-                if int(n_ping) < 100: ip_result['level'] = level[0]
-                if 100 < int(n_ping) < 500: ip_result['level'] = level[1]
-                if int(n_ping) > 500: ip_result['level'] = level[2]
-                ip_result["speed"] = n_ping + 500
-            ips_result.append(ip_result)
     if len(ips_result) < 2 and ips_result[-1]["city"] == "ipv6 地址": ips_result.pop(-1)
     return ips_result
 
@@ -6475,12 +6506,12 @@ def set_home_host2(host):
     @return void
     """
     msg = "请尝试点击【清理旧节点】,如果仍然不行,请联系堡塔运维! https://www.bt.cn/bbs"
-    www_set = ExecShell(f"echo \"{host} www.bt.cn\" >> /etc/hosts")
-    api_set = ExecShell(f"echo \"{host} api.bt.cn\" >> /etc/hosts")
+    www_set = ExecShell("echo \"{} www.bt.cn\" >> /etc/hosts".format(host))
+    api_set = ExecShell("echo \"{} api.bt.cn\" >> /etc/hosts".format(host))
     if not www_set[1] and not api_set[1]: return returnMsg(True, "节点设置成功")
-    if www_set[1]: return returnMsg(False, f"节点设置失败: {www_set[1]}, {msg}")
-    if api_set[1]: return returnMsg(False, f"节点设置失败: {api_set[1]}, {msg}")
-    return returnMsg(False, f"节点设置失败: {msg}")
+    if www_set[1]: return returnMsg(False, "节点设置失败: {}, {}".format(www_set[1],msg))
+    if api_set[1]: return returnMsg(False, "节点设置失败: {}, {}".format(api_set[1],msg))
+    return returnMsg(False, "节点设置失败: {}".format(msg))
 
 def Clean_bt_host():
     '''
@@ -6491,7 +6522,7 @@ def Clean_bt_host():
     check_hosts = ExecShell("grep \"bt.cn\" /etc/hosts")
     if check_hosts[0]:
         result = ExecShell("sed -i \"/bt.cn/d\" /etc/hosts")
-        if result[1]: return returnMsg(False, f"旧节点清理失败: {result[1]}")
+        if result[1]: return returnMsg(False, "旧节点清理失败: {}".format(result[1]))
         return returnMsg(True, "旧节点已清理")
     return returnMsg(True, "hosts没有绑定旧节点无需清理")
 
@@ -6505,15 +6536,16 @@ def Set_bt_host(ip=None):
     Clean_bt_host()
 
     if ip: return set_home_host2(ip)
-
-    ips_info = Get_ip_info()
+    # 如果不传ip则自动设置
+    ips_info = Get_ip_info(get_user=False)
     headers = {"host": "www.bt.cn"}
     for host in ips_info:
-        new_url = f"https://{host['ip']}"
-        res = HttpGet(new_url, 1, headers)
+        new_url = "https://{}".format(host['ip'])
+        res = HttpGet(new_url, 1, headers=headers)
         if res:
-            writeFile(f"{get_panel_path()}/data/home_host.pl", host["ip"])
+            writeFile("{}/data/home_host.pl".format(get_panel_path()), host["ip"])
             result = set_home_host2(host["ip"])
             if result["status"]:
-                return returnMsg(True, f"已自动选择为{host['province']}{host['city']}的最优节点,运营商是: {host['carrier']}")
+                return returnMsg(True, "已自动选择为{}{}的最优节点,运营商是: {}"
+                                 .format(host['province'],host['city'], host['carrier']))
     return returnMsg(False, "自动选择节点失败,请尝试手动设置")

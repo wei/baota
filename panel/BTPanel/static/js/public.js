@@ -4580,10 +4580,198 @@ BindAccount.prototype = {
   getAuthToken: function (param) {
     var _this = this;
     var loadT = bt.load('正在绑定堡塔账号，请稍候...');
+    var _index;
     param.username = rsa.encrypt_public(param.username);
     param.password = rsa.encrypt_public(param.password);
     bt.send('GetAuthToken', 'ssl/GetAuthToken', param, function (rdata) {
       loadT.close();
+      if(!rdata.status && rdata.msg == 6){
+        bt.send('Get_ip_info','ajax/Get_ip_info',{},function(res){
+          layer.open({
+            type: 1,
+            title: false,
+            closeBtn: 2,
+            shift: 0,
+            area:['580px','480px'],
+            btn:false,
+            content:'<div class="error_dialog">'+
+            '<div class="error_title">'+
+              '<span class="error_icon"></span>'+
+              '<div class="error_text">'+
+                '<span style="font-size:20px;">抱歉，连接宝塔官网失败！请切换节点后重试</span>'+
+                '<div class="ip_detail">'+
+                  '<span>当前服务器公网IP：<span id="public_ip">127.0.0.1</span>  </span>'+
+                  '<span>归属地：<span id="public_address">【中国】</span> </span>'+
+                '</div>'+
+              '</div>'+
+            '</div>'+
+            '<div class="error_content">'+
+            '<div class="error_content_title">'+
+              '<span>节点选择</span>'+
+              '</div>'+
+              '<p class="hr_p"></p>'+
+              '<div class="node_select">'+
+                '<div class="node_select_item active">'+
+                '<div class="input_align"><span class="noed_item_radio" id="node_item_radio" data-index="0"></span>'+
+                  '<span>自动选择</span></div><span></span>'+
+                '</div>'+
+              '</div>'+
+              '<div class="node_button_group">'+
+                '<button class="btn btn-success btn-sm swap_node" style="margin-right:10px">切换节点</button>'+
+                '<button class="btn btn-default btn-sm clear_node">恢复默认配置</button>'+
+              '</div>'+
+            '</div>'+
+            '<div class="error_footer">'+
+            '<ul>'+
+            '<li>恢复默认配置：如果当前节点都无法连接，请尝试该操作，该操作会清除所有旧节点信息。</li>'+
+            '<li>选择非推荐节点可能会造成后续使用卡顿或无法登录，请谨慎选择。</li>'+
+            '<li><div style="display:flex;align:center">如果尝试以上操作还是无法绑定宝塔账号，请联系<span class="warning_scan_icon" style="margin-left:4px"></span><a class="btlink qrcode" href="javascript:;">微信客服</a></div></li>'+
+            '</ul>'+
+            '</div>'+
+            '<div id="wechat-customer1" class="wechat-customer1 hide">'+
+                  '<div class="describe-title">在线客服</div>'+
+                  '<div class="qrcode-wechat">'+
+                    '<div id="wechatCustomerQrcode">'+
+                      '<img src="/static/images/customer-qrcode.png"  style="width: 80px;height: 80px;" alt="" />'+
+                    '</div>'+
+                  '</div>'+
+                  '<div class="wechat-title">'+
+                  '<img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAAAAXNSR0IArs4c6QAAATlJREFUSEvtVrFOw0AMfed8AxJsZWGAgQHBXP4DCQa+Ioou7g18BRIg9T/KDGJggIGFbiDxDXGQowSBuGvrFISEmtF+7/nis312RVEMiWgIoMT375aIjpj5KeJrTMy8JSJjAPsRzEhErl1Zlhd1XZ8kRKZEdMjM0xlBBiIyATCIYZxzl857X6uTiHaY+TElZrUz87aIPCjvI0gIwVmF5uG7H1gFmZepxv85XTdqCCEcLMQ0gLz3jbbTOm/rPdkLBt0v0E77xysq2it9T2nhuTzPN4ho10KyYEXkXvvkBcC6hWjEvmqQMwCnANZa8p1RJAbfa41vAM7/0cUzczOiZ43zvunrtPVOntuO3+wrluJ12qspvFBm/+bR+u03nhPrkKZk2ZVINUZO964sy44Ta9FSK5GuQ1VVXb0DLf+sHQ9tLL0AAAAASUVORK5CYII=">'+
+                  '<span class="scan-title">微信扫码</span></div>'+
+                  '<hr style="width: 88px;height: 1px;background: #E6E6E6;margin: 10px auto;">'+
+                  '<div><a href="https://www.bt.cn/new/wechat_customer" target="_blank" class="btlink">点击咨询客服<div class="icon-r"></div></a></div>'+
+                '</div>'+
+          '</div>',
+            success:function(oindex){
+              $('.qrcode').on('click',function(e){
+                if($('#wechat-customer1').hasClass('hide')){
+                  $('#wechat-customer1').removeClass('hide')
+                }else{
+                $('#wechat-customer1').addClass('hide')
+                
+                }
+                $(document).click(function (ev) {
+                  $('#wechat-customer1').addClass('hide')
+                })
+                e.stopPropagation();
+                e.preventDefault();
+              })
+              var level_recommend = {
+                1:'推荐',
+                2:'一般',
+                3:'不推荐',
+                4:'不推荐'
+              }
+              var level_color = {
+                1:'#4FB864',
+                2:'#E9AE51',
+                3:'#f5222d',
+                4:'#f5222d'
+              }
+              if(res){
+                var res_data = res.sort(_this.compare("level"))
+                for(var item = 0;item<res_data.length;item++){
+                  if(res_data[item].level == 0){
+                    $('#public_ip').text(res_data[item].ip)
+                    $('#public_address').text(res_data[item].country+' '+res_data[item].province+' '+res_data[item].city)
+                    continue
+                  }
+                  if(res_data[item].city == 'ipv6 地址'){
+                    $('.node_select').append('<div class="node_select_item">'+
+                  '<div class="input_align" style="width:auto"><span class="noed_item_radio" id="node_item_radio" data-index="'+ (item+1) +'" data-ip="'+ res_data[item].ip +'"></span>'+
+                  '<span class="node_message">'+res_data[item].city+'</span></div>'+
+                  '<span style="font-size:12px;color:#C2C2C2">('+res_data[item].info+')</span>'+
+                  '</div>')
+                  continue
+                  }
+                  $('.node_select').append('<div class="node_select_item" >'+
+                  '<div class="input_align"><span class="noed_item_radio" id="node_item_radio" data-index="'+ (item+1) +'" data-ip="'+ res_data[item].ip +'"></span>'+
+                    '<span>'+ res_data[item].country +' '+res_data[item].province+' '+res_data[item].city+'</span></div><div style="display:flex;align-items:center;margin-left:15px"><span class="node_loading"></span><span style="color:#c4c4c4;font-size:12px;margin-left:4px">测速中</span></div>'+
+                  '</div>')
+                }
+                bt.send('Get_ip_info','ajax/Get_ip_info',{get_speed:'1'},function(res_s){
+                  var res_sdata = res_s.sort(_this.compare("level"))
+                  $('.node_select').empty()
+                  $('.node_select').append('<div class="node_select_item active">'+
+                  '<div class="input_align"><span class="noed_item_radio" id="node_item_radio" data-index="0"></span>'+
+                    '<span>自动选择</span></div><span></span>'+
+                  '</div>')
+                  
+                  for(var item_s = 0;item_s<res_sdata.length;item_s++){
+                    if(res_sdata[item_s].level == 0){
+                      continue
+                    }
+                    $('.node_select').append('<div class="node_select_item">'+
+                    '<div class="input_align"><span class="noed_item_radio" id="node_item_radio'+item_s+'" data-index="'+ (item_s+1) +'" data-ip="'+ res_sdata[item_s].ip +'"></span>'+
+                    '<span class="node_message'+item_s +'">'+ res_sdata[item_s].country +' '+res_sdata[item_s].province+' '+res_sdata[item_s].city+'</span></div>'+
+                    '<div style="margin-left:16px"><span id="node_recommend_speed'+ item_s +'" style="width:50px;display:inline-block;"></span>'+
+                    '<span id="node_recommend_tips'+ item_s +'" class="recommend_tips" style="color:white;margin-left:10px"></span></div>'+
+                  '</div>')
+                    var speed = '#node_recommend_speed'+ item_s,recommend = '#node_recommend_tips'+ item_s
+                    if(res_sdata[item_s].speed) $(speed).text(res_sdata[item_s].speed+'ms')
+                    if(res_sdata[item_s].level){
+                      $(recommend).text(level_recommend[res_sdata[item_s].level])
+                      $(recommend).css('background-color',level_color[res_sdata[item_s].level])
+                    }
+                    if((item_s+1) == _index){
+                      $('.node_select').find('.node_select_item').removeClass('active')
+                      $("span[data-index='"+ _index +"']").parents('.node_select_item').addClass('active')
+                    }
+                    if(res_sdata[item_s].city == 'ipv6 地址'){
+                      $('#node_item_radio'+item_s).parent('.input_align').css('width','auto')
+                      $('.node_message'+item_s).html(
+                        '<span class="node_message">'+res_sdata[item_s].city+'</span>'+
+                        '<span style="font-size:12px;color:#C2C2C2;margin-left:4px;">('+res_sdata[item_s].info+')</span>'+
+                        '</div>'
+                      )
+                    }
+                  }
+                  // 点击单选事件
+                    $('.node_select_item').click(function(){
+                      var _item_s = $(this)
+                      _item_s.addClass('active').siblings().removeClass('active');
+                    })
+                })
+              }
+              // 点击单选事件
+              $('.node_select_item').click(function(){
+                var _item_s = $(this);
+                _item_s.addClass('active').siblings().removeClass('active');
+                _index = $(this).find('#node_item_radio').data('index')
+              })	
+              // 切换节点
+              $('.node_button_group .swap_node').click(function(){
+                layer.confirm('您当前的选中的节点为【'+$('.node_select').find('.active').find('.noed_item_radio').siblings().text()+'】,若后续节点使用卡顿可前往【面板设置】->【面板云端通讯节点配置】更改，是否继续?',{icon:7,btn:['继续','取消']},function(){
+                  bt.send('Set_bt_host','ajax/Set_bt_host',{ip:$('.node_select').find('.active').find('.noed_item_radio').data('ip')},function(result){ 
+                    var loadTt = bt.load('正在尝试再登录，请稍候...');
+                    var timer_loading = setTimeout(function(){
+                      var param = {
+                        username: $("input[name='username']").val(),
+                        password: $("input[name='password']").val()
+                      };
+                      loadTt.close();
+                      layer.closeAll();
+                      _this.getAuthToken(param);											
+                      clearTimeout(timer_loading)
+                    },1000)
+                  })
+                },
+                  function(index){
+                    layer.close(index)
+                  })
+              })
+              // 清理节点
+              $('.node_button_group .clear_node').click(function(){
+                bt.send('Clean_bt_host','ajax/Clean_bt_host',{},function(clear_res){
+                  $("span[data-index='0']").parents('.node_select_item').addClass('active').siblings().removeClass('active')
+                  layer.msg(clear_res.msg,{icon:clear_res.status?1:2})
+                })
+              })
+            }
+          })
+        })
+        return
+      } 
       if (rdata.status) {
         bt.msg(rdata);
         if (rdata.status) window.location.href = "/"
@@ -4597,7 +4785,17 @@ BindAccount.prototype = {
       }
     })
   },
-
+	/**
+   * @description 比对
+   * @param {any} property
+  */
+	compare:function (property) {
+ 	 return function (a, b) {
+    	var value1 = Number(a[property]);
+    	var value2 = Number(b[property]);
+    	return value1 - value2;
+  	}
+	},
   /**
    * @description 倒计时
    * @param {object} param
@@ -5401,21 +5599,23 @@ var fileManage = {
 
 /**
  * @description 安装告警模块视图跳转
+ * @param {String} type 模块类型
+ * @param {Object} el 刷新的元素类名
  */
-function openAlertModuleInstallView(type) {
+function openAlertModuleInstallView(type,el) {
   bt_tools.send({ url: '/config?action=get_msg_configs', data: {} }, function (_configData) {
     switch (type) {
       case 'mail':
-        renderMailConfigView(_configData[type]);
+        renderMailConfigView(_configData[type],el);
         break;
       case 'dingding':
       case 'feishu':
       case 'weixin':
-        renderAlertUrlTypeChannelView(_configData[type]);
+        renderAlertUrlTypeChannelView(_configData[type],el);
         break;
       case 'wx_account':
       case 'sms':
-        alertOtherTypeInstall(_configData[type]);
+        alertOtherTypeInstall(_configData[type],el);
         break;
     }
   })
@@ -5423,7 +5623,7 @@ function openAlertModuleInstallView(type) {
 /**
  * @description 渲染邮箱配置视图
  */
-function renderMailConfigView(data) {
+function renderMailConfigView(data,el) {
   layer.open({
     type:1,
     title: '发送者配置',
@@ -5504,6 +5704,10 @@ function renderMailConfigView(data) {
                   icon: configM.status ? 1 : 2
                 })
                 if($('.alert-view-box').length >= 0) $('.alert-view-box .tab-nav-border span:eq(1)').click()
+                if($('.content_box.news-channel').length > 0) {
+                  $('.bt-w-menu p').eq(0).click()
+                }
+                if(el) $(el).click()
               }
             },'设置邮箱配置')
           } else {
@@ -5526,6 +5730,10 @@ function renderMailConfigView(data) {
               icon: configM.status ? 1 : 2
             })
           }
+          if($('.content_box.news-channel').length > 0) {
+            $('.bt-w-menu p').eq(0).click()
+          }
+          if(el) $(el).click()
         },'设置邮箱配置')
       }
     }
@@ -5534,7 +5742,7 @@ function renderMailConfigView(data) {
 /**
  * @description 渲染url通道方式视图
  */
-function renderAlertUrlTypeChannelView(data) {
+function renderAlertUrlTypeChannelView(data,el) {
   var isEmpty = $.isEmptyObject(data.data)
   layer.open({
     type:1,
@@ -5582,6 +5790,10 @@ function renderAlertUrlTypeChannelView(data) {
                 if ($('.alert-view-box').length >= 0) {
                   $('.alert-view-box .tab-nav-border span:eq('+_index+')').click()
                 }
+                if($('.content_box.news-channel').length > 0) {
+                  $('.bt-w-menu p').eq(0).click()
+                }
+                if(el) $(el).click()
               },'设置' + data.title + '配置')
             }, 100);
           } else {
@@ -5603,6 +5815,10 @@ function renderAlertUrlTypeChannelView(data) {
           if ($('.alert-view-box').length >= 0) {
             $('.alert-view-box .tab-nav-border span:eq('+_index+')').click()
           }
+          if($('.content_box.news-channel').length > 0) {
+            $('.bt-w-menu p').eq(0).click()
+          }
+          if(el) $(el).click()
         },'设置' + data.title + '配置')
       }
     }
@@ -5611,7 +5827,7 @@ function renderAlertUrlTypeChannelView(data) {
 /**
  * @description 微信公众号、短信模块安装
  */
-function alertOtherTypeInstall(data) {
+function alertOtherTypeInstall(data,el) {
   if (!data.setup) {
     bt_tools.send({ url: '/config?action=install_msg_module&name=' + data.name, data: {} }, function (res) {
       layer.msg(res.msg, {
@@ -5626,15 +5842,19 @@ function alertOtherTypeInstall(data) {
         var _index = $('.alert-view-box span.on').index();
         $('.alert-view-box .tab-nav-border span:eq('+_index+')').click()
       }
+      if($('.content_box.news-channel').length > 0) {
+        $('.bt-w-menu p').eq(0).click()
+      }
+      if(el) $(el).click()
     },'创建' + data.title + '模块')
   } else if(data.name === 'wx_account'){
-    renderAccountAlertView();
+    renderAccountAlertView(el);
   }
 }
 /**
  * @description 微信公众号
  */
-function renderAccountAlertView() {
+function renderAccountAlertView(el) {
   layer.open({
     type:1,
     title: '微信公众号',
@@ -5679,7 +5899,7 @@ function renderAccountAlertView() {
       </ul>\
       </div>',
     success: function() {
-      getWxAccountConfig();
+      getWxAccountConfig(el);
       // 发送测试信息
       $('.btn-send-test').click(function () {
         bt_tools.send({ url: '/config?action=get_msg_fun', data: { module_name: 'wx_account', fun_name: 'push_data', msg: '发送测试信息' } }, function (res) {
@@ -5692,14 +5912,14 @@ function renderAccountAlertView() {
           }
         },'测试信息')
       });
-      wxAccountBind();
+      wxAccountBind(el);
     }
   })
 }
 /**
  * @description 获取微信公众号配置
  */
- function getWxAccountConfig() {
+ function getWxAccountConfig(el) {
   bt_tools.send({ url: '/config?action=get_msg_fun', data: {module_name:'wx_account',fun_name:'get_web_info'} }, function (res) {
     if (res.status === false) {
       return layer.msg(res.msg.res,{icon:2})
@@ -5720,6 +5940,10 @@ function renderAccountAlertView() {
     if (data.is_subscribe === 1) {
       $('.bind_account').removeClass('hide');
       $('.nobind_account').addClass('hide');
+      if($('.content_box.news-channel').length > 0) {
+        $('.bt-w-menu p').eq(0).click()
+      }
+      if(el) $(el).click()
     } else {
       $('.bind_account').addClass('hide');
       $('.nobind_account').removeClass('hide');
@@ -5734,7 +5958,7 @@ function renderAccountAlertView() {
   }, {load:'获取绑定信息',verify:false})
 }
 
-function wxAccountBind() {
+function wxAccountBind(el) {
   // 绑定微信公众号
   $('.btn-bind-account').click(function () {
     var that = this
@@ -5755,7 +5979,7 @@ function wxAccountBind() {
         if ($(that).hasClass('bterror')) {
           $('.alert-view-box span.on').click()
         } else {
-          getWxAccountConfig()
+          getWxAccountConfig(el)
         }
       }
     });

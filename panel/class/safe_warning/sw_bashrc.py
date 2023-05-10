@@ -41,5 +41,5 @@ def check_run():
             else:
                 return True,"无风险"
                 # return False,"未设置umask为027"
-        else:
-            return True,"无风险"
+    else:
+        return True,"无风险"

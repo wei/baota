@@ -64,11 +64,6 @@ def check_run():
                     return True,'已开启Fail2ban防爆破'
         except: pass
 
-    if len(status[0]) > 3:
-        status = False
-    else:
-        status = True
-
     if not status:
         return True,'未开启SSH服务'
     if port != '22':

@@ -393,7 +393,7 @@ class system:
     def GetDiskInfo2(self, human=True):
 
         #取磁盘分区信息
-        key = 'sys_disk'
+        key = f'sys_disk_{human}'
         diskInfo = cache.get(key)
         if diskInfo: return diskInfo
         if human:
@@ -413,10 +413,11 @@ class system:
                 disk = re.findall(r"^(.+)\s+([\w\.]+)\s+([\w\.]+)\s+([\w\.]+)\s+([\w\.]+)\s+([\d%]{2,4})\s+(/.{0,100})$",tmp.strip().replace(',','.'))
                 if disk: disk = disk[0]
                 if len(disk) < 6: continue
-                if disk[2].find('M') != -1: continue
+                # if disk[2].find('M') != -1: continue
                 if disk[2].find('K') != -1: continue
                 if len(disk[6].split('/')) > 10: continue
                 if disk[6] in cuts: continue
+                if str(disk[6]).startswith("/snap"): continue
                 if disk[6].find('docker') != -1: continue
                 if disk[1].strip() in ['tmpfs']: continue
                 arr = {}
@@ -608,7 +609,13 @@ class system:
             networkInfo['load'] = self.GetLoadAverage(get)
             networkInfo['mem'] = self.GetMemInfo(get)
             networkInfo['version'] = session['version']
-            networkInfo['disk'] = self.GetDiskInfo2()
+            disk_list = []
+            for disk in self.GetDiskInfo2(False):
+                disk['size'].append(int(disk['size'][0]) - (int(disk['size'][1]) + int(disk['size'][2])))  # 计算系统占用
+                disk['size'] = list(map(lambda num: f"{round(int(num) / 1048576, 2)}G" if str(num).isdigit() and str(num).find('G') == -1 else num, disk['size']))
+                disk['inodes'] = list(map(lambda num: f"{round(int(num) / 1048576, 2)}G" if str(num).isdigit() and str(num).find('G') == -1 else num, disk['inodes']))
+                disk_list.append(disk)
+            networkInfo['disk'] = disk_list
 
         networkInfo['title'] = self.GetTitle()
         networkInfo['time'] = self.GetBootTime()

@@ -40,10 +40,10 @@ def check_run():
         try:
             info_data = public.ReadFile('/etc/ssh/sshd_config')
             if info_data:
-                if re.search('PermitEmptyPasswords\s+no', info_data):
-                    return True, '无风险'
-                else:
+                if re.search('\nPermitEmptyPasswords\\s*yes', info_data):
                     return False, '当前【PermitEmptyPasswords】配置为：yes，请设置为no'
+                else:
+                    return True, '无风险'
         except:
             return True, '无风险'
     return True, '无风险'

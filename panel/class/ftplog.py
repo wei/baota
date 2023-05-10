@@ -149,6 +149,7 @@ class ftplog:
         """
 
         search_str = 'pure-ftpd:'
+        search_str2 = 'pure-ftpd['
         if not hasattr(get, 'user_name'):
             return public.returnMsg(False, '参数不正确！')
         args = public.dict_obj()
@@ -171,9 +172,12 @@ class ftplog:
             for line in lines:
                 if not line: continue
                 login_info = {}
-                if search_str not in line: continue
+                if search_str not in line and search_str2 not in line:
+                    continue
                 tmp_value = ' is now logged in'
                 info = line[:line.find(search_str)].strip()
+                if not info:
+                    info = line[:line.find(search_str2)].strip()
                 hostname = info.split()[-1]
                 exec_time = info.split(hostname)[0].strip()
                 exec_time = self.get_format_time(exec_time)

@@ -17,6 +17,8 @@ class apache:
     setupPath = '/www/server'
     apachedefaultfile = "%s/apache/conf/extra/httpd-default.conf" % (setupPath)
     apachempmfile = "%s/apache/conf/extra/httpd-mpm.conf" % (setupPath)
+    apachedefaultfile_backup = '/tmp/apdefault_file_bk.conf'
+    apachempmfile_backup =  '/tmp/apmpm_file_bk.conf'
 
     def GetProcessCpuPercent(self,i,process_cpu):
         try:
@@ -120,8 +122,8 @@ class apache:
         ps = ["秒，请求超时时间","保持连接","秒，连接超时时间","单次连接最大请求数"]
         gets = ["Timeout","KeepAlive","KeepAliveTimeout","MaxKeepAliveRequests"]
         if public.get_webserver() == 'apache':
-            shutil.copyfile(self.apachedefaultfile, '/tmp/apdefault_file_bk.conf')
-            shutil.copyfile(self.apachempmfile, '/tmp/apmpm_file_bk.conf')
+            shutil.copyfile(self.apachedefaultfile, self.apachedefaultfile_backup)
+            shutil.copyfile(self.apachempmfile, self.apachempmfile_backup)
         conflist = []
         n = 0
         for i in gets:
@@ -163,38 +165,36 @@ class apache:
         apachempmcontent = public.readFile(self.apachempmfile)
         if not "mpm_event_module" in apachempmcontent:
             return public.returnMsg(False,"没有找到 mpm_event_module 配置或 /www/server/apache/conf/extra/httpd-mpm.conf 配置为空")
-        conflist = []
-        getdict = get.__dict__
-        for i in getdict.keys():
-            if i != "__module__" and i != "__doc__" and i != "data" and i != "args" and i != "action":
-                getpost = {
-                    "name": i,
-                    "value": str(getdict[i])
-                }
-                conflist.append(getpost)
-        for c in conflist:
-            if c["name"] == "KeepAlive":
-                if not re.search("on|off", c["value"]):
-                    return public.returnMsg(False, '参数值错误')
-            else:
-                print(c["value"])
-                if not re.search("\d+", c["value"]):
-                    print(c["name"],c["value"])
-                    return public.returnMsg(False, '参数值错误,请输入数字整数 %s %s' % (c["name"],c["value"]))
+        allow_fields = [ "Timeout","KeepAlive","KeepAliveTimeout","MaxKeepAliveRequests", "StartServers",
+                        "MaxSpareThreads","MinSpareThreads","ThreadsPerChild","MaxRequestWorkers","MaxConnectionsPerChild"]
 
-            rep = "%s\s+\w+" % c["name"]
+        for _k in allow_fields:
+            val = get.get(_k)
+            if _k == "KeepAlive":
+                if not val in ['on', 'off']:
+                    return public.returnMsg(False, f'参数值错误({_k})')
+                continue
+            try:
+                val = int(float(val))
+                if val < 0: raise ValueError()
+                val = str(val)
+            except Exception as e:
+                return public.returnMsg(False, f'{_k} 参数值错误,请输入正整数。')
+
+            _kv = (_k, val)
+            rep = f"{_k}\s+\w+"
             if re.search(rep,apachedefaultcontent):
-                newconf = "%s %s" % (c["name"],c["value"])
+                newconf = "%s %s" % _kv
                 apachedefaultcontent = re.sub(rep,newconf,apachedefaultcontent)
             elif re.search(rep,apachempmcontent):
-                newconf = "%s\t\t\t%s" % (c["name"], c["value"])
+                newconf = "%s\t\t\t%s" % _kv
                 apachempmcontent = re.sub(rep, newconf , apachempmcontent)
         public.writeFile(self.apachedefaultfile,apachedefaultcontent)
         public.writeFile(self.apachempmfile, apachempmcontent)
         isError = public.checkWebConfig()
         if (isError != True):
-            shutil.copyfile('/tmp/_file_bk.conf', self.apachedefaultfile)
-            shutil.copyfile('/tmp/proxyfile_bk.conf', self.apachempmfile)
+            shutil.copyfile(self.apachedefaultfile_backup, self.apachedefaultfile)
+            shutil.copyfile(self.apachempmfile_backup, self.apachempmfile)
             return public.returnMsg(False, 'ERROR: 配置出错<br><a style="color:red;">' + isError.replace("\n",
                                                                                             '<br>') + '</a>')
         public.serviceReload()

@@ -6,7 +6,7 @@
 # +-------------------------------------------------------------------
 # | Author: hwliang <hwl@bt.cn>
 # +-------------------------------------------------------------------
-import public,db,os,time,re
+import public,db,os,time,re, json
 from BTPanel import session,cache
 class crontab:
     field = 'id,name,type,where1,where_hour,where_minute,echo,addtime,status,save,backupTo,sName,sBody,sType,urladdress'
@@ -60,6 +60,7 @@ class crontab:
                 tmp['addtime'] = self.get_last_exec_time(log_file)
             data.append(tmp)
         return data
+
 
     def get_backup_list(self,args):
         '''
@@ -150,6 +151,11 @@ class crontab:
     #检查环境
     def checkBackup(self):
         if cache.get('check_backup'): return None
+
+        # 检查备份表是否正确
+        if not public.M('sqlite_master').where('type=? AND name=? AND sql LIKE ?', ('table', 'backup','%cron_id%')).count():
+            public.M('backup').execute("ALTER TABLE 'backup' ADD 'cron_id' INTEGER DEFAULT 0",())
+
         #检查备份脚本是否存在
         filePath=public.GetConfigValue('setup_path')+'/panel/script/backup'
         if not os.path.exists(filePath):
@@ -195,6 +201,9 @@ class crontab:
         id = get['id']
         cuonConfig,get,name = self.GetCrondCycle(get)
         cronInfo = public.M('crontab').where('id=?',(id,)).field(self.field).find()
+        projectlog = self.modify_project_log_split(cronInfo, get)
+        if projectlog.modify():
+            return public.returnMsg(projectlog.flag, projectlog.msg)
         if not get['where1']: get['where1'] = get['week']
         del(cronInfo['id'])
         del(cronInfo['addtime'])
@@ -222,6 +231,8 @@ class crontab:
         if not self.sync_to_crond(cronInfo):
             return public.returnMsg(False,'写入计划任务失败,请检查磁盘是否可写或是否开启了系统加固!')
         public.M('crontab').where('id=?',(id,)).save(columns,values)
+
+
         public.WriteLog('计划任务','修改计划任务['+cronInfo['name']+']成功')
         return public.returnMsg(True,'修改成功')
 
@@ -278,6 +289,7 @@ class crontab:
         public.add_security_logs('计划任务','添加计划任务['+get['name']+']成功'+str(values))
         if type(addData) == str:
             return public.returnMsg(False, addData)
+
         public.WriteLog('计划任务','添加计划任务['+get['name']+']成功')
         if addData>0:
             result = public.returnMsg(True,'ADD_SUCCESS')
@@ -376,7 +388,7 @@ class crontab:
         logFile = public.GetConfigValue('setup_path')+'/cron/'+echo['echo']+'.log'
         if not os.path.exists(logFile):return public.returnMsg(False, 'CRONTAB_TASKLOG_EMPTY')
         log = public.GetNumLines(logFile,2000)
-        return public.returnMsg(True, log)
+        return public.returnMsg(True, public.xsssec(log))
 
     #清理任务日志
     def DelLogs(self,get):
@@ -394,6 +406,7 @@ class crontab:
         try:
             id = get['id']
             find = public.M('crontab').where("id=?",(id,)).field('name,echo').find()
+            if not find: return public.returnMsg(False,'指定任务不存在!')
             if not self.remove_for_crond(find['echo']): return public.returnMsg(False,'无法写入文件，请检查是否开启了系统加固功能!')
             cronPath = public.GetConfigValue('setup_path') + '/cron'
             sfile = cronPath + '/' + find['echo']
@@ -411,7 +424,10 @@ class crontab:
     #从crond删除
     def remove_for_crond(self,echo):
         file = self.get_cron_file()
+        if not os.path.exists(file):
+            return False
         conf=public.readFile(file)
+        if not conf: return False
         if conf.find(str(echo)) == -1: return True
         rep = ".+" + str(echo) + ".+\n"
         conf = re.sub(rep, "", conf)
@@ -543,7 +559,73 @@ echo "--------------------------------------------------------------------------
             if not os.path.exists(u_path):
                 os.makedirs(u_path,472)
                 public.ExecShell("chown root:crontab {}".format(u_path))
+        if not os.path.exists(cron_path):
+            public.writeFile(cron_path,"")
         return cron_path
 
+    def modify_project_log_split(self, cronInfo, get):
 
+        def _test_project_type(self, project_type):
+            if project_type == "Node项目": return "nodojsModel"
+            elif project_type == "Java项目": return "javaModel"
+            elif project_type == "GO项目": return "goModel"
+            elif project_type == "其他项目": return "otherModel"
+            elif project_type == "Python项目": return "pythonModel"
+            else: return None
+
+        def the_init(self, cronInfo, get: dict):
+            self.get = get
+            self.cronInfo = cronInfo
+            self.msg = ""
+            self.flag = False
+            name = get["name"]
+            if name.find("运行日志切割") != -1:
+                try:
+                    project_type, project_name = name.split("]", 2)[1].split("[", 1)
+                    project_type = self._test_project_type(project_type)
+                except:
+                    self.project_type = None
+                    return
+            else:
+                self.project_type = None
+                return
+
+            self.project_type = project_type
+            self.project_name = project_name
+            conf_path = '{}/data/run_log_split.conf'.format(public.get_panel_path())
+            data = json.loads(public.readFile(conf_path))
+            self.log_size = int(data[self.project_name ]["log_size"])/1024/1024
+
+        def modify(self):
+            from importlib import import_module
+            if not self.project_type:
+                return False
+            if self.cronInfo["type"] != self.get['type']:
+                self.msg = "运行日志切割不能修改执行周期的方式"
+                return True
+            get = public.dict_obj()
+            get.name = self.project_name
+            get.log_size = self.log_size
+            if get.log_size != 0:
+                get.hour = "2"
+                get.minute = str(self.get['where1'])
+            else:
+                get.hour = str(self.get['hour'])
+                get.minute = str(self.get['minute'])
+            get.num = str(self.get["save"])
+
+            model = import_module(".{}".format(self.project_type), package="projectModel")
+
+            res = getattr(model.main(), "mamger_log_split")(get)
+            self.msg = res["msg"]
+            self.flag = res["status"]
+
+            return True
+
+        attr = {
+            "__init__": the_init,
+            "_test_project_type": _test_project_type,
+            "modify": modify,
+        }
+        return type("ProjectLog", (object,), attr)(cronInfo, get)
 

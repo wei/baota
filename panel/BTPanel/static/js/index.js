@@ -317,26 +317,688 @@ var index = {
       })
 
       // 磁盘悬浮事件
+      // for (var i = 0; i < rdata.disk.length; i++) {
+      //   var disk = rdata.disk[i], texts = "基础信息</br>"
+      //   texts += "文件系统：" + disk.filesystem + "</br>"
+      //   texts += "类型：" + disk.type + "</br>"
+      //   texts += "挂载点：" + disk.path + "</br>"
+      //   texts += "<strong>Inode信息:</strong></br>"
+      //   texts += "总数：" + disk.inodes[0] + "</br>"
+      //   texts += "已用：" + disk.inodes[1] + "</br>"
+      //   texts += "可用：" + disk.inodes[2] + "</br>"
+      //   texts += "Inode使用率：" + disk.inodes[3] + "</br>"
+      //   texts += "<strong>容量信息</strong></br>"
+      //   texts += "容量：" + disk.size[0] + "</br>"
+      //   texts += "已用：" + disk.size[1] + "</br>"
+      //   texts += "可用：" + disk.size[2] + "</br>"
+      //   texts += "使用率：" + disk.size[3] + "</br>"
+      //   $("#diskChart" + i).data('title', texts).hover(function () {
+      //     layer.tips($(this).data('title'), this, { time: 0, tips: [1, '#999'] });
+      //   }, function () {
+      //     layer.closeAll('tips');
+      //   })
+      // }
+      var is_remove_disk = [],idx = 0,taskStatus = []//扫描状态
       for (var i = 0; i < rdata.disk.length; i++) {
-        var disk = rdata.disk[i], texts = "基础信息</br>"
-        texts += "文件系统：" + disk.filesystem + "</br>"
-        texts += "类型：" + disk.type + "</br>"
-        texts += "挂载点：" + disk.path + "</br>"
-        texts += "<strong>Inode信息:</strong></br>"
-        texts += "总数：" + disk.inodes[0] + "</br>"
-        texts += "已用：" + disk.inodes[1] + "</br>"
-        texts += "可用：" + disk.inodes[2] + "</br>"
-        texts += "Inode使用率：" + disk.inodes[3] + "</br>"
-        texts += "<strong>容量信息</strong></br>"
-        texts += "容量：" + disk.size[0] + "</br>"
-        texts += "已用：" + disk.size[1] + "</br>"
-        texts += "可用：" + disk.size[2] + "</br>"
-        texts += "使用率：" + disk.size[3] + "</br>"
-        $("#diskChart" + i).data('title', texts).hover(function () {
-          layer.tips($(this).data('title'), this, { time: 0, tips: [1, '#999'] });
-        }, function () {
-          layer.closeAll('tips');
+        is_remove_disk.push(true)
+        taskStatus.push(false)
+        var mouseX = 0, mouseY = 0;
+        $(document).mousemove(function (e) {
+          mouseY = e.pageY
+          mouseX = e.pageX 
         })
+        var diskInterval = null
+        $('#diskChart' + i).data('disk',rdata.disk[i]).hover(function () {
+          var disk = $(this).data('disk')
+          clearInterval(diskInterval)
+          var top = $(this).offset().top,
+          left = $(this).offset().left,
+          used_size = parseFloat(disk.size[3].substring(0, disk.size[3].lastIndexOf("%")));
+          idx = $(this).prop('id').replace('diskChart', '')
+          for(var i = 0;i < is_remove_disk.length;i++){
+            if(i !== parseInt(idx) && is_remove_disk[i]) {
+              $('.disk_scanning_tips'+ i).remove()
+            }
+          }
+          if(!$('.disk_scanning_tips'+ idx).length) {
+            layer.open({
+              type: 1,
+              closeBtn: 1,
+              shade: 0,
+              area: '320px',
+              title: false,
+              skin: 'disk_scanning_tips disk_scanning_tips'+ idx,
+              content: '<div class="pd20 disk_scanning" data-index="'+ idx +'">\
+                          <div class="disk_cont">\
+                            <div class="disk-title">\
+                              检测到当前磁盘<div class="'+ ( used_size >= 80 ? used_size >= 90 ? 'bg-red' : 'bg-org' : 'bg-green' ) +'">'+ ( used_size >= 80 ? '空间不足' : '空间充足' )  +'</div>\
+                              <button type="button" data-path="'+ disk.path +'" title="立即清理" class="btn btn-success disk_scanning_btn">立即清理</button></div>\
+                            <div class="disk-item-list active">\
+                              <div class="disk-item-header">\
+                                <div class="disk-header-title">基础信息</div>\
+                                <div class="disk-header-fold">\
+                                  <span>收起</span>\
+                                  <img src="/static/img/arrow-down.svg" style="transform: rotate(180deg);">\
+                                </div>\
+                              </div>\
+                              <div class="disk-item-body">\
+                                <div class="disk-body-list">类型：'+disk.type+'</div>\
+                                <div class="disk-body-list more_wrap"><div>挂载点：</div><div>'+disk.path+'</div></div>\
+                                <div class="disk-body-list"><div class="progressBar"><span style="left: '+ (used_size < 12 ? (used_size + 2) : (used_size-11)) +'%;'+ (used_size < 12 ? 'color:#666;':'') +'">'+ disk.size[3] +'</span><div style="width: '+ disk.size[3] +'; '+ (used_size === 100 ? 'border-radius: 2px;' : '') +'" class="progress '+ (used_size >= 80 ? used_size >= 90 ? 'bg-red' : 'bg-org' : 'bg-green') +'"></div></div></div>\
+                                    <div class="disk-body-list use_disk" style="margin-top: 6px;white-space: pre-line;">可用：'+ parseFloat(disk.size[2])+' ' + disk.size[2].replace(parseFloat(disk.size[2]),'') +'，共：'+ parseFloat(disk.size[0]) + ' ' + disk.size[0].replace(parseFloat(disk.size[0]),'')+'\n已用：'+ parseFloat(disk.size[1]) + ' ' +disk.size[1].replace(parseFloat(disk.size[1]),'') +'，系统占用：'+disk.size[4]  +'</div>\
+                              </div>\
+                            </div>\
+                            <hr />\
+                            <div class="disk-item-list">\
+                              <div class="disk-item-header">\
+                                <div class="disk-header-title">其他信息</div>\
+                                <div class="disk-header-fold">\
+                                  <span>展示</span>\
+                                  <img src="/static/img/arrow-down.svg">\
+                                </div>\
+                              </div>\
+                              <div class="disk-item-body">\
+                                <div class="disk-body-list more_wrap"><div>文件系统：</div><div>'+ disk.filesystem + '</div></div>\
+                                <div class="disk-body-list inodes0">Inode总数：'+ disk.inodes[0] +'</div>\
+                                <div class="disk-body-list inodes1">Inode已用：'+ disk.inodes[1] +'</div>\
+                                <div class="disk-body-list inodes2">Inode可用：'+ disk.inodes[2] +'</div>\
+                                <div class="disk-body-list inodes3">Inode使用率：'+ disk.inodes[3] +'</div>\
+                              </div>\
+                            </div>\
+                          </div>\
+                          <div class="disk_scan_cont hide">\
+                            <div class="disk-scan-header">\
+                              <button type="button" title="后退" class="btn btn-default disk_back_btn" data-index="'+ idx +'" ><span class="disk_back_icon"></span><span>后退</span></button>\
+                              <div>磁盘扫描</div>\
+                            </div>\
+                            <div class="disk-scan-view hide">\
+                              <pre id="scanProgress">正在获取扫描日志</pre>\
+                            </div>\
+                            <div class="disk-file-view hide">\
+                            <div class="disk-file-load" style="position:absolute;width: 100%;height: 100%;top: 0;left:0;display: none;z-index: 99999999;background:rgba(0,0,0,0.3);align-items:center;justify-content: center;">\
+                                <div class="pd15" style="background: #fff;">\
+                                  <img src="/static/img/loading.gif" class="mr10">\
+                                  <span>正在获取文件信息，请稍后...</span>\
+                                </div>\
+                              </div>\
+                              <div class="filescan-nav" id="fileScanPath"></div>\
+                              <div class="filescan-list" id="fileScanTable">\
+                                <div class="filescan-list-title">\
+                                  <div class="filescan-list-title-item text-left">文件名</div>\
+                                  <div class="filescan-list-title-item">大小</div>\
+                                  <div class="filescan-list-title-item text-right">操作</div>\
+                                </div>\
+                                <div class="filescan-list-body"></div>\
+                              </div>\
+                            </div>\
+                          </div>\
+                        </div>',
+              success: function (layero, index) {
+                is_remove_disk[idx] = true
+                // $(layero).find('.layui-layer-close2').addClass('layui-layer-close1').removeClass('layui-layer-close2');
+                $(layero).find('.layui-layer-close2').remove()
+                $(layero).css({
+                  'top': (top+140 - $(window).scrollTop()) +'px',
+                  'left': left - 160,
+                })
+                $(window).resize(function () {
+                  for(var i = 0;i < is_remove_disk.length;i++){
+                    if($('.disk_scanning_tips'+ i).length){
+                        $('.disk_scanning_tips'+ i).css({
+                        'top': ($("#diskChart" + i).offset().top+140 - $(window).scrollTop()) +'px',
+                        'left': $("#diskChart" + i).offset().left - 160,
+                      })
+                    }
+                  }
+                })
+                $(window).scroll(function () {
+                  $(layero).css({
+                    'top': ($("#diskChart" + idx).offset().top+140 - $(window).scrollTop()) +'px',
+                    'left': $("#diskChart" + idx).offset().left - 160,
+                  })
+                })
+                var id = null, // 扫描id
+                    taskPath = '', // 扫描目录
+                    taskList = {}; // 扫描缓存列表
+                //展示收起
+                $(layero).find('.disk-item-header').on('click', function () {
+                  if ($(this).parent().hasClass('active')) {
+                    $(this).parent().removeClass('active');
+                    $(this).find('span').text('展示');
+                    $(this).find('img').removeAttr('style');
+                  } else {
+                    $(this).parent().addClass('active');
+                    $(this).find('span').text('收起');
+                    $(this).find('img').css('transform', 'rotate(180deg)');
+                  }
+                })
+
+                // 后退
+                $(layero).find('.disk_back_btn').on('click', function () {
+                  var path = $(this).data('path'),
+                      index = $(this).data('index')
+                  if(path !== undefined && path !== 'undefined'){
+                    if(path === '') {
+                      $(layero).find('.filescan-nav-item.present').click()
+                      $(this).data('path', 'undefined');
+                    }else{
+                      var rdata = taskList[path.replace('//','/')];
+                      renderFilesTable(rdata, path); // 渲染文件表格
+                      renderFilesPath(path); // 渲染文件路径
+                    }
+                  }else{
+                    if(taskStatus[index]) {
+                      layer.confirm(
+                        '取消扫描，将会中断当前扫描目录进程，是否继续？',
+                        {
+                          title: '取消扫描',
+                          closeBtn: 2,
+                          icon: 3,
+                        },
+                        function (indexs) {
+                          taskStatus[index] = false;
+                          layer.close(indexs);
+                          cancelScanTaskRequest(id, function (rdata) {
+                            if (!rdata.status) return bt_tools.msg(rdata);
+                            renderInitView();
+                          });
+                        }
+                      );
+                    }else{
+                      renderInitView();
+                    }
+                  }
+                })
+                /**
+                 * @description 渲染扫描初始化页面
+                 */
+                function renderInitView() {
+                  id = null
+                  taskStatus[idx] = false
+                  taskPath = ''
+                  taskList = {}
+                  $(layero).find('.disk_cont').removeClass('hide').siblings('.disk_scan_cont').addClass('hide');
+                  $(layero).find('.layui-layer-close1').show()
+                  $(layero).find('.disk-file-view,.disk-scan-view').addClass('hide');
+                  $(layero).find('.disk-file-load').css('display','none')
+                }
+                
+                // 扫描
+                $(layero).find('.disk_scanning_btn').unbind('click').on('click', function () {
+                  // if(taskStatus.some(function (item){ return item === true })) {
+                  // if(bt.get_cookie('taskStatus') === 'true') {
+                  //   return layer.tips('有任务在执行，请稍后再操作！', $(this), {tips: [3, '#f00']});
+                  // }
+                  is_remove_disk[idx] = false;
+                  var $path = $(this).data('path');
+                  //判断是否安装插件
+                  bt.soft.get_soft_find('disk_analysis',function(dataRes){
+                    if(dataRes.setup && dataRes.endtime > 0) {
+                      layer.closeAll()
+                      bt.set_cookie('diskPath', $path)
+                      bt.set_cookie('taskStatus', true)
+                      bt.soft.set_lib_config(dataRes.name,dataRes.title,dataRes.version)
+                    }else{
+                      var item = {
+                        name: 'diskScan',
+                        pluginName: '堡塔硬盘分析工具',
+                        ps: '急速分析磁盘/硬盘占用情况',
+                        preview: false,
+                        limit: 'ltd'
+                      }
+                      product_recommend.recommend_product_view(item, {
+                        imgArea: ['783px', '718px']
+                      })
+                      var is_buy = dataRes.endtime < 0 && dataRes.pid > 0
+                      $('.buyNow').text(is_buy ? '立即购买' : '立即安装').unbind('click').click(function () {
+                        if(is_buy) {
+                          bt.soft.product_pay_view({
+                            name:dataRes.title,
+                            pid:dataRes.pid,
+                            type:dataRes.type,
+                            plugin:true,
+                            renew:-1,
+                            ps:dataRes.ps,
+                            ex1:dataRes.ex1,
+                            totalNum:31
+                          })
+                        }else{ 
+                          bt.soft.install('disk_analysis')
+                        }
+                      })
+                    }
+                  })
+                  return
+                  var ltd = bt.get_cookie('ltd_end')
+                  if(ltd < 0) {
+                    var item = {
+                      name: 'diskScan',
+                      pluginName: '堡塔硬盘分析工具',
+                      ps: '急速分析磁盘/硬盘占用情况',
+                      preview: false,
+                      limit: 'ltd'
+                    }
+                    product_recommend.recommend_product_view(item, {
+                      imgArea: ['783px', '718px']
+                    })
+                  }else{
+                    $.post('/files/size/scan_disk_info', {path: $path}, function (rdata) {
+                      if(!rdata.status) {
+                        if(rdata['code'] && rdata['code'] === 404){
+                          bt.soft.install('disk_analysis')
+                        }
+                      }else{
+                        var $scanView = $(layero).find('.disk-scan-view');
+                        var shellView = $(layero).find('.disk-scan-view pre');
+                        $scanView.removeClass('hide');
+                        $(layero).find('.disk-file-view').addClass('hide')
+                        $(layero).find('.disk_cont').addClass('hide').siblings('.disk_scan_cont').removeClass('hide');
+                        taskStatus[$(layero).find('.disk_scanning').data('index')] = true;
+                        renderScanTitle(shellView,'开始扫描磁盘目录\n',true)
+                        renderScanTitle(shellView,'<span style="display:flex;" class="omit">目录正在扫描中<span>\n')
+                        renderTaskSpeed(function (rdata) {
+                          id = rdata.id;
+                          $(layero).find('.disk_scanning').data('id',id)
+                        },function() {
+                          renderScanTitle(shellView, '扫描完成，等待扫描结果返回\n');
+                          renderFilesView({
+                            path: $path,
+                            init: true,
+                          });
+                        })
+                      }
+                    })
+                  }
+                })
+               
+                /**
+                 * @description 渲染文件列表
+                 * @param {Object} data 数据
+                 */
+                function renderFilesView (data,flag) {
+                  var param = {
+                    root_path: data.path
+                  }
+                  if(data['subdir']) param.path = data.subdir;
+                  if(flag) $(layero).find('.disk-file-load').css('display','flex')
+                  bt_tools.send({url: '/files/size/get_scan_log', data: param}, function (rdata) {
+                    if(flag) $(layero).find('.disk-file-load').css('display','none')
+                    var $fileView = $(layero).find('.disk-file-view');
+                    $fileView.removeClass('hide').prev().addClass('hide');
+                    var path = rdata.fullpath
+                    path = path.replace(/(\\)+/g, '/');
+                    if (data.init) taskPath = path;
+                    if (!taskList.hasOwnProperty(path)) taskList[path] = rdata;
+                    renderFilesTable(rdata, path);
+                    renderFilesPath(path);
+                  });
+                }
+                // 渲染文件表格
+                function renderFilesTable (rdata, path) {
+                  var $fileTableBody = $(layero).find('.filescan-list-body');
+                  var list = rdata.list;
+                  var html = '';
+                  for (var i = 0; i < list.length; i++) {
+                    var item = list[i];
+                    var isDir = item.type == 1
+                    html +=
+                      '<div class="filescan-list-item" data-type="' +
+                      (isDir ? 'folder' : 'files')+ '" data-subdir="'+ rdata.fullpath+ '/' + item.name +'" data-path="' +
+                      (path + '/' + item.name) +
+                      '">' +
+                      '<div class="filescan-list-col text-left nowrap" title="' +
+                      (path + '/' + item.name).replace('//','/') +
+                      '">' +
+                      '<span class="file-type-icon file_' +
+                      (isDir ? 'folder' : 'icon') +
+                      '"></span>' +
+                      '<a class="path cut-path cursor" data-type="' +
+                      (isDir ? 'folder' : 'files') +
+                      '" data-path="' +
+                      (path + '/' + item.name) +
+                      '">' +
+                      item.name +
+                      '</a>' +
+                      '</div>' +
+                      '<div class="filescan-list-col text-left nowrap">' +
+                      bt.format_size(isDir ? item.total_asize : item.asize) +
+                      '</div>' +
+                      '<div class="filescan-list-col text-right">' +
+                      '<a href="javascript:;" data-filename="'+ item.name +'" data-fullpath="'+ rdata.fullpath +'" data-path="' +
+                      (path + '/' + item.name) +
+                      '" data-type="' +
+                      (isDir ? '文件夹' : '文件') +
+                      '" class="btlink remove-files">删除</a>' +
+                      '</div>' +
+                      '</div>';
+                  }
+                  $fileTableBody.html(html); 
+                  // 删除文件
+                  $(layero).find('.remove-files').click(function (e) {
+                    var path = $(this).data('path'),
+                      type = $(this).data('type'),
+                      fullpath = $(this).data('fullpath'),
+                      filename = $(this).data('filename');
+                    delFileDir(
+                      {
+                        path: path,
+                        type: type,
+                        filename: filename,
+                      },
+                      function (rdata) {
+                        bt_tools.msg(rdata);
+                        var list = taskList[fullpath].list.filter(function (item) { return item.name !== filename.toString() })
+                        taskList[fullpath].list = list;
+                        renderFilesTable(taskList[fullpath], fullpath);
+                      }
+                    );
+                    e.stopPropagation();
+                  });
+                  // 打开目录
+                  $(layero).find('.filescan-list-item').click(function () {
+                    var root_path = $(layero).find('.disk_scanning_btn').data('path')
+                    var path = $(this).data('subdir'),
+                      type = $(this).data('type');
+                    if (type !== 'folder' && typeof type !== 'undefined') return false;
+                    if (!taskList.hasOwnProperty(path.replace('//','/'))) {
+                      renderFilesView({
+                        path: root_path,
+                        subdir: path,
+                      },true);
+                    } else {
+                      var rdata = taskList[path.replace('//','/')];
+                      renderFilesTable(rdata, path); // 渲染文件表格
+                      renderFilesPath(path); // 渲染文件路径
+                    }
+                  });
+                }
+                // 渲染文件路径
+                function renderFilesPath (path) {
+                  var html = '';
+                  var newPath = '';
+                  var pathArr = [];
+                  var isLevel = false;
+                  var isInit = true;
+                  var omission_li = []
+                  pathArr = path.replace(taskPath.replace(/(\/\/)+/g, '/'), '').split('/');
+                  if (pathArr.length >= 1 && pathArr[0] !== '') pathArr.unshift('');
+                  if (pathArr.length > 1 && pathArr[1] !== '') {
+                    var upperPath = (getDirPath(path, false) + '/').replace(/(\/\/)+/g, '/');
+                    if (pathArr.length > 1) upperPath = upperPath.replace(/\/$/g, '');
+                    $(layero).find('.disk_back_btn').data('path', upperPath);
+                  }
+                  if (pathArr.length > 2) isInit = true;
+                  for (var i = 0; i < pathArr.length; i++) {
+                    var element = pathArr[i];
+                    newPath += '/' + element;
+                    if (element === '' && i > 0) continue;
+                    var isLast = pathArr.length - 1 === i;
+                    var isFirst = i === 0;
+                    var currentPath = isFirst ? taskPath : taskPath + newPath;
+                    var divider = !isLast ? '<span class="divider">></span>' : '';
+                    var menuPath = isFirst ? '当前目录(' + taskPath + ')' : element;
+                    currentPath = currentPath.replace(/\/\//g, '/');
+                    if(i > 1 && i< pathArr.length - 1 && pathArr.length > 3){
+                      if (isInit) {
+                        html += '<span class="omission">\
+                        <a class="btlink" title="部分目录已经省略">...</a>\
+                        <ul></ul>\
+                        </span><span class="divider">></span>';
+                      }
+                      omission_li.push({menuPath: element, currentPath: currentPath})
+                      isInit = false;
+                    } else {
+                      html +=
+                        '<a class="filescan-nav-item nowrap ' + (isLevel && !isLast ? 'btlink cut-path' : '') + (isFirst ? ' present' : '') + '" data-path="' + currentPath + '" title="' + currentPath + '">' + menuPath + '</a>' + divider;
+                    }
+                  }
+                  $(layero).find('#fileScanPath').html(html);
+                  if(omission_li.length > 0){
+                    var omission = $(layero).find('.omission')
+                    var ul = omission.find('ul')
+                    for (let i = 0; i < omission_li.length; i++) {
+                      const element = omission_li[i];
+                      ul.append('<li><a class="filescan-nav-item cut-path" data-path="' + element.currentPath + '" title="' + element.currentPath + '"><i class="file_folder_icon"></i><span>' + element.menuPath + '</span></a></li>')
+                    }
+                    $(layero).find('.omission').click(function (e) {
+                      if($(this).hasClass('active')){
+                        $(this).removeClass('active')
+                      }else{
+                        $(this).addClass('active')
+                      }
+                      $(document).click(function (ev) {
+                        $(layero).find('.omission').removeClass('active')
+                        ev.stopPropagation();
+                        ev.preventDefault();
+                      });
+                      e.stopPropagation();
+                      e.preventDefault();
+                    })
+                  }
+                  //打开目录按钮
+                  $(layero).find('#fileScanPath .filescan-nav-item').click(function () {
+                    var root_path = $(layero).find('.disk_scanning_btn').data('path')
+                    var path = $(this).data('path'),
+                      type = $(this).data('type');
+                    if (type !== 'folder' && typeof type != 'undefined') return layer.msg('文件暂不支持打开', { icon: 0 });
+                    if (!taskList.hasOwnProperty(path.replace('//','/'))) {
+                      renderFilesView({
+                        path: root_path,
+                        subdir: path,
+                      });
+                    } else {
+                      var rdata = taskList[path.replace('//','/')];
+                      renderFilesTable(rdata, path); // 渲染文件表格
+                      renderFilesPath(path); // 渲染文件路径
+                    }
+                  })
+                }
+                	/**
+                 * @description 获取目录地址
+                 * @param {string} path 路径
+                 * @param {number} param 参数
+                 */
+                function getDirPath(path, param) {
+                  path.replace(/\/$/, '');
+                  var pathArr = path.split('/');
+                  if (pathArr.length === 1) return path;
+                  if (param === -1) pathArr.push(status);
+                  if (typeof param === 'boolean') pathArr.pop();
+                  return pathArr.join('/').replace(/(\/)$/, '');
+                }
+                /**
+                 * @description 渲染文件追加功能
+                 * @param {Element} el 控制器
+                 * @param {String} html 文本
+                 * @param {Boolean} isCover 是否覆盖，默认不覆盖
+                 */
+                function renderScanTitle(el, html, isCover) {
+                  var $el = typeof el === 'string' ? $(layero).find(el) : el;
+                  if (isCover) {
+                    $el.html(html);
+                  } else {
+                    $el.append(html);
+                  }
+                }
+                /**
+                 * @description 渲染扫描进度
+                 * @param {Function} callack 回调函数
+                 * @param {Function} end 结束回调函数
+                 */
+                function renderTaskSpeed(callack, end) {
+                  getScanTaskRequest(false, function (rdata) {
+                    if (rdata.length === 0 || !taskStatus[$(layero).find('.disk_scanning').data('index')]) {
+                      if (end && taskStatus[$(layero).find('.disk_scanning').data('index')]) end(rdata);
+                      taskStatus[$(layero).find('.disk_scanning').data('index')] = false;
+                      return;
+                    }
+                    for (var i = 0; i < rdata.length; i++) {
+                      var item = rdata[i];
+                      if (item.name.indexOf('扫描目录文件大小') > -1) {
+                        if (callack) callack(rdata[0]);
+                        break;
+                      }
+                    }
+                    // 扫描目录文件大小
+                    setTimeout(function () {
+                      renderTaskSpeed(callack, end);
+                    }, 1000);
+                  });
+                }
+                /**
+                 * @description 获取扫描任务
+                 * @param {boolean} load 是否显示加载中
+                 * @param {function} callback 回调函数
+                 */
+                function getScanTaskRequest(load, callback) {
+                  var isLoad = typeof load === 'function';
+                  if (isLoad) callback = load;
+                  bt_tools.send(
+                    'task/get_task_lists',
+                    {
+                      status: -3,
+                    },
+                    function (rdata) {
+                      if (callback) callback(rdata);
+                    },
+                    {
+                      load: isLoad ? '获取扫描任务详情' : false,
+                    }
+                  );
+                }
+
+                /**
+                 * @description 删除文件或目录
+                 * @param {Object} data
+                 */
+                function delFileDir (data, callback) {
+                  if (bt.get_cookie('file_recycle_status')==='true') {
+                    bt.simple_confirm({
+                        title: '删除' + data.type + '【' + data.filename + '】',
+                        msg: '删除'+ data.type +'后，'+ data.type +'将迁移至文件回收站，<span class="color-org">请确认删除的文件是不需要的文件，误删文件可能会导致系统崩溃，</span>是否继续操作？</span>'
+                      }, function () {
+                        delFileRequest(data, function (res) {
+                          if (callback) callback(res);
+                          layer.msg(res.msg, {
+                            icon: res.status ? 1 : 2,
+                          });
+                        });
+                      }
+                    );
+                  } else {
+                    bt.compute_confirm({title: '删除' + data.type + '【' + data.filename + '】', 
+                      msg: '风险操作，当前未开启文件回收站，删除'+ data.type +'将彻底删除，无法恢复，<span class="color-org">请确认删除的文件是不需要的文件，误删文件可能会导致系统崩溃，</span>是否继续操作？'
+                    }, function () {
+                        delFileRequest(data, function (res) {
+                          if (callback) callback(res);
+                          layer.msg(res.msg, {
+                            icon: res.status ? 1 : 2,
+                          });
+                        });
+                      }
+                    );
+                  }
+                }
+                /**
+                 * @description 删除文件（文件和文件夹）
+                 * @param {Object} data 文件目录参数
+                 * @param {Function} callback 回调函数
+                 * @return void
+                 */
+                function delFileRequest(data, callback) {
+                  var _req = data.type === '文件' ? 'DeleteFile' : 'DeleteDir';
+                  bt_tools.send(
+                    'files/' + _req,
+                    {
+                      path: data.path,
+                    },
+                    function (res) {
+                      if (callback) callback(res);
+                    },
+                    {
+                      load: '删除文件/目录',
+                    }
+                  );
+                }
+              },
+              cancel: function(index,layero){
+                  if(taskStatus[$(layero).find('.disk_scanning').data('index')]){
+                    layer.confirm(
+                      '取消扫描，将会中断当前扫描目录进程，是否继续？',
+                      {
+                        title: '取消扫描',
+                        closeBtn: 2,
+                        icon: 3,
+                      },
+                      function (indexs) {
+                        taskStatus[$(layero).find('.disk_scanning').data('index')] = false
+                        layer.close(indexs);
+                        layer.close(index)
+                        cancelScanTaskRequest($(layero).find('.disk_scanning').data('id'), function (rdata) {
+                          if (!rdata.status) return bt_tools.msg(rdata);
+                        });
+                      }
+                    );
+                    return false
+                }
+              }
+            })
+          }
+          /**
+           * @description 删除扫描任务
+           * @param {string} id 任务id
+           * @param {function} callback 回调函数
+           */
+          function cancelScanTaskRequest(id, callback) {
+            bt_tools.send(
+              'task/remove_task',
+              {
+                id: id,
+              },
+              function (rdata) {
+                if (callback) callback(rdata);
+              },
+              {
+                load: '取消扫描任务',
+              }
+            );
+          }
+        },function () {
+          diskInterval = setInterval(function () {
+            if($('.disk_scanning_tips'+idx).length) {
+              var diskX = $('.disk_scanning_tips'+idx).offset().left,diskY = $('.disk_scanning_tips'+idx).offset().top,
+                  diskW = $('.disk_scanning_tips'+idx).width(),diskH = $('.disk_scanning_tips'+idx).height()
+              var diskChartY = $('#diskChart' + idx).offset().top,diskChartX = $('#diskChart' + idx).offset().left,
+                  diskChartW = $('#diskChart' + idx).width(),diskChartH = $('#diskChart' + idx).height()
+              var is_move_disk = mouseX >= diskChartX && mouseX <= diskChartX + diskChartW && mouseY >= diskChartY && mouseY <= diskChartY + diskChartH
+              var is_move = mouseX >= diskX && mouseX <= diskX + diskW && mouseY >= diskY && mouseY <= diskY + diskH
+              if(is_remove_disk[idx] && !is_move && !is_move_disk) {
+                $('.disk_scanning_tips'+ idx).remove()
+              }
+            }else{
+              clearInterval(diskInterval)
+            }
+          }, 500)
+        })
+        if($('.disk_scanning_tips'+i).length){
+          var disk =  $('#diskChart' + i).data('disk')
+          var size3 = parseFloat(disk.size[3].substring(0, disk.size[3].lastIndexOf("%")))
+          $('.disk_scanning_tips' + i +' .disk-body-list .progressBar span').text(disk.size[3]).css({
+            left: (size3 < 12 ? (size3 + 2) : (size3 - 11)) +'%;',
+            color: size3 < 12 ? '#666;' : '#fff'
+          })
+          var progressCss = {
+            width: disk.size[3],
+          }
+          if(size3 === 100) progressCss.borderRadius = '2px'
+          $('.disk_scanning_tips' + i +' .disk-body-list .progressBar .progress').css(progressCss)
+          $('.disk_scanning_tips' + i +' .disk-body-list .progressBar .progress').removeClass('bg-red bg-org bg-green').addClass(size3 >= 80 ? size3 >= 90 ? 'bg-red' : 'bg-org' : 'bg-green')
+          $('.disk_scanning_tips' + i +' .disk-body-list.use_disk').html(parseFloat(disk.size[2])+' ' + disk.size[2].replace(parseFloat(disk.size[2]),'') +'可用，'+ parseFloat(disk.size[1]) + ' ' +disk.size[1].replace(parseFloat(disk.size[1]),'') +'已用，共'+ parseFloat(disk.size[0]) + ' ' + disk.size[0].replace(parseFloat(disk.size[0]),''))
+          $('.disk_scanning_tips' + i +' .disk-body-list.inodes0').html('Inode总数：'+ disk.inodes[0])
+          $('.disk_scanning_tips' + i +' .disk-body-list.inodes1').html('Inode已用：'+ disk.inodes[1])
+          $('.disk_scanning_tips' + i +' .disk-body-list.inodes2').html('Inode可用：'+ disk.inodes[2])
+          $('.disk_scanning_tips' + i +' .disk-body-list.inodes3').html('Inode使用率：'+ disk.inodes[3])
+        }
       }
       _this.get_server_info(rdata);
       if (rdata.installed === false) bt.index.rec_install();
@@ -1427,7 +2089,7 @@ var index = {
           '<div class="warning_scan_head">' +
           '<span class="warning_scan_ps">' + (that.warning_num > 0 ? ('本次扫描共检测到风险项<i>' + that.warning_num + '</i>个,请及时修复！') : '本次扫描检测无风险项，请继续保持！') + '</span>' +
           '<span class="warning_scan_time"></span>' +
-					'<button class="warning_repair_scan">人工修复</button>' +
+          '<button class="warning_auto_repair">一键修复</button>' +
           '<button class="warning_again_scan" style="right:160px;">重新检测</button>' +
           '</div>' +
           '<ol class="warning_scan_body" style="min-height: 528px;"></ol>' +
@@ -1438,78 +2100,256 @@ var index = {
           that.get_warning_list(true, function () {
             layer.msg('扫描成功', { icon: 1 });
             reader_warning_list(that.warning_list);
-					});
-        });
-        $('.warning_scan_body').on('click', '.module_item .module_head', function () {
-          var _parent = $(this).parent(), _parent_index = _parent.index(), _list = $(this).next();
-          if (parseInt($(this).find('.module_num').text()) > 0) {
-            if (_list.hasClass('active')) {
-              _list.css('height', 0);
-              $(this).find('.module_cut_show i').text('查看详情').next().removeClass('glyphicon-menu-up').addClass('glyphicon-menu-down');
-              setTimeout(function () {
-                _list.removeClass('active').removeAttr('style');
-              }, 500);
-            } else {
-              $(this).find('.module_cut_show i').text('点击折叠').next().removeClass('glyphicon-menu-down').addClass('glyphicon-menu-up');
-              _list.addClass('active');
-              var details_list = _list.parent().siblings().find('.module_details_list');
-              details_list.removeClass('active');
-              details_list.prev().find('.module_cut_show i').text('查看详情').next().removeClass('glyphicon-menu-up').addClass('glyphicon-menu-down')
+            if (that.warning_list.risk.length == 0) {
+              $('.warning_auto_repair').css('display', 'none')
+              $('.warning_again_scan').css('right', '20px')
+            }else{
+              $('.warning_auto_repair').css('display', 'inline')
+              $('.warning_again_scan').css('right', '160px')
             }
-          }
+          });
         });
-        $('.warning_repair_scan').click(function () {
-          bt.onlineService()
-        })
-        $('.warning_scan_body').on('click', '.operate_tools a', function () {
-          var index = $(this).index(), data = $(this).data();
-          switch (index) {
-            case 0:
-              if ($(this).hasClass('active')) {
-                $(this).parents('.module_details_head').next().hide();
-                $(this).removeClass('active').text('详情');
+        bt_tools.send({url:'/warning?action=get_list'},function(warInfo) {
+          // 显示数据
+          if (that.warning_list.risk.length == 0) {
+            $('.warning_auto_repair').css('display', 'none')
+            $('.warning_again_scan').css('right', '20px')
+          }
+          $('.warning_auto_repair').click(function () {
+            dialog_forbid_data = [];
+            danger_check_data = [];
+            $.each(that.warning_list.risk, function (index_c, item_c) {
+              //可修复项
+              if ($.inArray(item_c.m_name, warInfo.is_autofix) != -1) {
+                danger_check_data.push(item_c)
               } else {
-                var item = $(this).parents('.module_details_item'), indexs = item.index();
-                $(this).addClass('active').text('折叠');
-                item.siblings().find('.module_details_body').hide();
-                item.siblings().find('.operate_tools a:eq(0)').removeClass('active').text('详情');
-                $(this).parents('.module_details_head').next().show();
-                $('.module_details_list').scrollTop(indexs * 41);
+                dialog_forbid_data.push(item_c)
               }
-              break;
-            case 1:
-              if (data.type != 'ignore') {
-                bt.confirm({ title: '忽略风险', msg: '是否忽略【' + data.title + '】风险,是否继续?' }, function () {
+            });
+
+            var contentHtml =
+                '<div class="dialog">\
+                <div class="forbid">\
+                    <div class="forbid_title">\
+                        <div>\
+                            <span>存在<span style="font-weight:600">' + dialog_forbid_data.length + '</span>项风险不可进行一键修复</span>\
+									<span class="btlink"><a class="btlink" id="look_detail">查看详情</a><div class="daily_details_mask bgw hide"></div></span>\
+								</div>\
+								<span class="btlink warning_repair_scan" style="display:flex;align-items:center;margin-bottom:2px;"><span class="warning_scan_icon"></span><span style="border-bottom:1px solid #20a53a;height:22px">联系人工修复</span></span>\
+							</div>\
+							<div class="forbid_content">\
+								<p>\
+									以上<span style="font-weight:600">' + dialog_forbid_data.length + '</span>项一键修复后可能会导致网站正常访问，服务运行异常等（请手动修复）\
+								</p>\
+							</div>\
+						</div>\
+						<div class="auto_content">\
+							<div>\
+								<span id="choose_auto_repair">请选择需要修复的风险项（已选中：<span id="danger_length" style="font-weight:600">' + 0 + '</span>项）</span>\
+								<div id="auto_repair"></div>\
+							</div>\
+						</div>\
+						<div class="confirm_button">\
+							<span id="is_ltd" style="font-size:12px;color:#f39c12;margin-right:8px">此功能为企业版专享功能，您当前还不是企业用户，<span class="btlink openLtd">立即升级</span></span>\
+							<button id="confirm_button" class="button-link">一键修复</button>\
+						</div>\
+					</div>';
+
+            if (!dialog_forbid_data.length || !danger_check_data.length) height = true
+            var check_data
+            var height = false
+            layer.open({
+              title: '一键修复确认信息',
+              content: contentHtml,
+              btn: false,
+              closeBtn: 2,
+              area: height ? ['600px', '350px'] : ['600px', '420px'],
+              success: function (layero, index) {
+                check_data = bt_tools.table({
+                  el: '#auto_repair',
+                  data: danger_check_data,
+                  load: true,
+                  height: '178px',
+                  column: [
+                    {
+                      type: 'checkbox',
+                      width: 20
+                    },
+                    {
+                      fid: 'title',
+                      title: '检测类型',
+                    },
+                    {
+                      fid: 'ps',
+                      title: '风险项',
+                    },
+                    {
+                      fid: 'level',
+                      title: '风险等级',
+                      width: 100,
+                      template: function (row) {
+                        return row.level == 1 ? '<span style="color:#e8d544">低危</span>' : row.level == 2 ? '<span style="color:#E6A23C">中危</span>' : '<span style="color:red">高危</span>'
+                      }
+                    }
+                  ]
+                });
+                // 判定表格选中长度
+                $('#auto_repair tbody input,#auto_repair thead input').change(function () {
+                  $('#danger_length').text(check_data.checkbox_list.length)
+                  if (check_data.checkbox_list.length) {
+                    $('#confirm_button').attr('disabled', false)
+                    $('#confirm_button').css('background-color', '#20a53a')
+                  } else {
+                    $('#confirm_button').attr('disabled', true)
+                    $('#confirm_button').css('background-color', 'rgb(203, 203, 203)')
+                  }
+                })
+                // 不存在不可修复项时
+                if (!dialog_forbid_data.length) {
+                  $('#choose_auto_repair').html('请选择需要修复的风险项（已选中：<span id="danger_length" style="font-weight:600">' + 0 + '</span>项）</span>')
+                  $('.forbid').css('display', 'none')
+                  $('.dialog').find('hr').css('display', 'none')
+                }
+                if (!danger_check_data.length) {
+                  $('.dialog').find('hr').css('display', 'none')
+                  $('#choose_auto_repair').html('当前暂无可一键修复的风险项！')
+                  $('#confirm_button').attr('disabled', true)
+                  $('#confirm_button').css('background-color', 'rgb(203, 203, 203)')
+                }
+                // 一键修复
+                $('#confirm_button').click(function (e) {
+                  if (check_data.checkbox_list.length != 0) {
+                    var danger_selected_data = []
+                    $.each(check_data.checkbox_list, function (index, item) {
+                      danger_selected_data.push(danger_check_data[item].m_name)
+                    })
+                    that.auto_repair(danger_selected_data, that.warning_list)
+                  } else {
+                    layer.msg('当前无选中风险项!')
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }
+                })
+                // 查看详情列表
+                var _details = '<div class="divtable daliy_details_table"><table class="table table-hover">',
+                    thead = '', _tr = '';
+                $.each(dialog_forbid_data, function (index, item) {
+                  _tr += '<tr><td style="width:34px;height:25px;text-align:center">' + (index + 1) + '</td><td><span class="overflow_hide" style="width:230px" title="' + item.m_name + '">' + item.ps + '</span></td></tr>'
+                })
+                thead = '<thead><tr><th colspan="2">以下' + dialog_forbid_data.length + '项不可进行一键修复</th></tr></thead>'
+                _details += thead + '<tbody>' + _tr + '</tbody></table></div>';
+                $('.daily_details_mask').html(_details)
+
+                $('#look_detail').on('click', function (e) {
+                  $('.daily_details_mask').prev('a').css('color', '#23527c');
+                  if (e.target.localName == 'a') {
+                    if ($('.daily_details_mask').hasClass('hide')) {
+                      $('.daily_details_mask').removeClass('hide').css({left: 260, top: 45})
+                    } else {
+                      $('.daily_details_mask').addClass('hide')
+                      $('.daily_details_mask').prev('a').removeAttr('style')
+                    }
+                  }
+                  $(document).click(function (ev) {
+                    $('.daily_details_mask').addClass('hide').prev('a').removeAttr('style')
+                    ev.stopPropagation();
+                    ev.preventDefault();
+                  })
+                  e.stopPropagation();
+                  e.preventDefault();
+                })
+
+                // 联系客服
+                $('.warning_repair_scan').click(function () {
+                  bt.onlineService();
+                });
+                $('i[data-checkbox=all]').click()
+
+                // 是否为企业版
+                var ltd = parseInt(bt.get_cookie('ltd_end') || -1);
+                if (ltd > 0) {
+                  $('#is_ltd').css('display', 'none')
+                } else {
+                  $('#confirm_button').attr('disabled', true)
+                  $('#confirm_button').css('background-color', 'rgb(203, 203, 203)')
+                }
+                $('.openLtd').click(function () {
+                  product_recommend.pay_product_sign('ltd', 66, 'ltd')
+                })
+              },
+            });
+          });
+          $('.warning_scan_body').on('click', '.module_item .module_head', function () {
+            var _parent = $(this).parent(), _parent_index = _parent.index(), _list = $(this).next();
+            if (parseInt($(this).find('.module_num').text()) > 0) {
+              if (_list.hasClass('active')) {
+                _list.css('height', 0);
+                $(this).find('.module_cut_show i').text('查看详情').next().removeClass('glyphicon-menu-up').addClass('glyphicon-menu-down');
+                setTimeout(function () {
+                  _list.removeClass('active').removeAttr('style');
+                }, 500);
+              } else {
+                $(this).find('.module_cut_show i').text('点击折叠').next().removeClass('glyphicon-menu-down').addClass('glyphicon-menu-up');
+                _list.addClass('active');
+                var details_list = _list.parent().siblings().find('.module_details_list');
+                details_list.removeClass('active');
+                details_list.prev().find('.module_cut_show i').text('查看详情').next().removeClass('glyphicon-menu-up').addClass('glyphicon-menu-down')
+              }
+            }
+          });
+          $('.warning_repair_scan').click(function () {
+            bt.onlineService()
+          })
+          $('.warning_scan_body').on('click', '.operate_tools a', function () {
+            var index = $(this).index(), data = $(this).data();
+            switch (index) {
+              case 0:
+                if ($(this).hasClass('active')) {
+                  $(this).parents('.module_details_head').next().hide();
+                  $(this).removeClass('active').text('详情');
+                } else {
+                  var item = $(this).parents('.module_details_item'), indexs = item.index();
+                  $(this).addClass('active').text('折叠');
+                  item.siblings().find('.module_details_body').hide();
+                  item.siblings().find('.operate_tools a:eq(0)').removeClass('active').text('详情');
+                  $(this).parents('.module_details_head').next().show();
+                  $('.module_details_list').scrollTop(indexs * 41);
+                }
+                break;
+              case 1:
+                if (data.type != 'ignore') {
+                  bt.confirm({ title: '忽略风险', msg: '是否忽略【' + data.title + '】风险,是否继续?' }, function () {
+                    that.warning_set_ignore(data.model, function (res) {
+                      that.get_warning_list(false, function () {
+                        bt.msg(res)
+                        reader_warning_list(that.warning_list);
+                      });
+                    });
+                  });
+                } else {
                   that.warning_set_ignore(data.model, function (res) {
                     that.get_warning_list(false, function () {
                       bt.msg(res)
                       reader_warning_list(that.warning_list);
+                      setTimeout(function () {
+                        $('.module_item.ignore').click();
+                      }, 100)
                     });
                   });
-                });
-              } else {
-                that.warning_set_ignore(data.model, function (res) {
+                }
+                break;
+              case 2:
+                that.waring_check_find(data.model, function (res) {
                   that.get_warning_list(false, function () {
                     bt.msg(res)
                     reader_warning_list(that.warning_list);
-                    setTimeout(function () {
-                      $('.module_item.ignore').click();
-                    }, 100)
                   });
                 });
-              }
-              break;
-            case 2:
-              that.waring_check_find(data.model, function (res) {
-                that.get_warning_list(false, function () {
-                  bt.msg(res)
-                  reader_warning_list(that.warning_list);
-                });
-              });
-              break;
-          }
-        });
-        reader_warning_list(that.warning_list);
+                break;
+            }
+          });
+          reader_warning_list(that.warning_list);
+        })
       }
     })
   },
@@ -1529,7 +2369,119 @@ var index = {
     });
 
   },
-	
+  // 安全风险一键修复
+  auto_repair: function (params, data) {
+    var that = this
+    var loadT = layer.msg('正在修复安全风险，请稍候...', { icon: 16 });
+    var res_data = [];
+    $.post(
+        '/safe/security/set_security',
+        { data: JSON.stringify({ m_name: params }) },
+        function (rdata) {
+          if(rdata.msg == '当前功能为企业版专享'){
+            layer.msg(rdata.msg)
+            return
+          }
+          var res_item = {};
+          res_data = [];
+          $.each(rdata.success, function (index, item) {
+            res_item.status = item.result.status;
+            res_item.type = item.result.type;
+            res_item.msg = item.result.msg;
+            res_item.m_name = item.m_name;
+            res_data.push(res_item);
+            res_item = {};
+          });
+          $.each(rdata.failed, function (index, item) {
+            res_item.status = item.result.status;
+            res_item.type = item.result.type;
+            res_item.msg = item.result.msg;
+            res_item.m_name = item.m_name;
+            res_data.push(res_item);
+            res_item = {};
+          });
+          if (rdata.cannot_automatically.length) {
+            $.each(rdata.cannot_automatically, function (index, item) {
+              res_item.m_name = item;
+              res_item.status = 'ignore'
+              res_data.push(res_item);
+              res_item = {};
+            });
+          }
+          var result_table ='<div><p style="margin-bottom:20px;font-size:16px">修复结果：修复成功<span style="color:#20a53a">'+ rdata.success.length + '</span>项，修复失败<span style="color:red">' + rdata.failed.length + '</span>项，忽略<span style="color:#b9b9b9">' + rdata.cannot_automatically.length + '</span>项</p><div id="auto_repair_result"></div></div>'+
+              '<div class="forbid_content"><br style="margin-bottom:20px;font-size:12px">关闭后将自动重新检测风险项，如未重新检测请手动点击【重新检测】按钮</br>如有修复失败项，请关闭当前窗口，根据解决方案手动进行修复</div>';
+          layer.open({
+            title: '结果确认',
+            content: result_table,
+            closeBtn: 2,
+            area: '540px',
+            btn: false,
+            success: function (layero, index) {
+              $('#auto_repair_result').empty();
+              bt_tools.table({
+                el: '#auto_repair_result',
+                data: res_data,
+                load: true,
+                height: '240px',
+                column: [
+                  {
+                    type: 'text',
+                    title: '风险项',
+                    template: function (row) {
+                      var rowData;
+                      $.each(data.risk, function (index_d, item_d) {
+                        if (item_d.m_name == row.m_name) {
+                          rowData = '<span>' + item_d.title + '</span>';
+                        }
+                      });
+                      return rowData;
+                    },
+                  },
+                  {
+                    type: 'text',
+                    title: '相关信息(网站名或其他)',
+                    width:200,
+                    template: function (row) {
+                      if (row.type.length) {
+                        if(Array.isArray(row.type)) {
+                          var data = row.type.join(',')
+                          return '<span  class="result_span">'+data+'</span>';
+                        }
+                        return '<span class="result_span">'+ row.type +'</span>'
+                      } else {
+                        return '<span>--</span>';
+                      }
+                    },
+                  },
+                  {
+                    title: '操作事项',
+                    type: 'text',
+                    align: 'right',
+                    template: function (row) {
+                      if (row.status == false) {
+                        return '<span style="color:red">修复失败</span>';
+                      } else if (row.status == true) {
+                        return '<span style="color:#20a53a">修复成功</span>';
+                      } else if (row.status == 'ignore') {
+                        return '<span style="color:rgb(102, 102, 102)">忽略风险项</span>';
+                      }
+                    },
+                  },
+                ],
+              });
+            },
+            cancel: function (index, layers) {
+              res_data = [];
+              layer.close(index);
+              var loadT = layer.msg('正在重新检测安全风险，请稍候...', {
+                icon: 16,
+              });
+              $('.warning_again_scan').click()
+            },
+          });
+        }
+    );
+  },
   /**
    * @description 安全风险指定模块是否忽略
    * @param {String} model_name 模块名称

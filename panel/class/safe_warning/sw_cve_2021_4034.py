@@ -34,6 +34,7 @@ def check_run():
         @time 2022-08-12
         @author lkq@bt.cn
     '''
+
     st = os.stat('/usr/bin/pkexec')
     setuid, setgid = bool(st.st_mode & stat.S_ISUID), bool(st.st_mode & stat.S_ISGID)
     if not setuid: return True, '无风险'

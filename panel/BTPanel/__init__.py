@@ -193,6 +193,15 @@ def request_check():
             if session.get('password_expire', False):
                 return redirect('/modify_password', 302)
 
+    # 处理登录页面相对路径的静态文件
+    if request.path.find('/static/') >0:
+        _auth_path = public.get_admin_path()
+        if request.path.find(_auth_path) == 0:
+            if not public.path_safe_check(request.path): return abort(404)  # 路径安全检查
+            static_file = public.get_panel_path() + '/BTPanel' + request.path.replace(_auth_path, '').replace('//', '/')
+            if not os.path.exists(static_file): return abort(404)
+            return send_file(static_file,conditional=True, etag=True)
+
 
 # Flask 请求结束勾子
 @app.teardown_request
@@ -626,7 +635,6 @@ def panel_password(pdata=None):
 
 @app.route('/warning', methods=method_all)
 def panel_warning(pdata=None):
-
     # 首页安全警告
     comReturn = comm.local()
     if comReturn: return comReturn
@@ -635,22 +643,22 @@ def panel_warning(pdata=None):
             return public.ReturnJson(False, 'INIT_CSRF_ERR'), json_header
     get = get_input()
     ikey = 'warning_list'
+    import panelWarning
+    dataObject = panelWarning.panelWarning()
     if get.action == 'get_list':
         result = cache.get(ikey)
         if not result or 'force' in get:
-            if 'force' in get:
-                public.set_module_logs('panelWarning', 'get_list', 1)
-            result = public.ExecShell("{} {}/script/warning_list.py".format(
-                public.get_python_bin(), public.get_panel_path()))[0]
+            result = json.loads('{"ignore":[],"risk":[],"security":[]}')
             try:
-                json.loads(result)
+                public.set_module_logs('panelWarning', 'get_list', 1)
+                defs = ("get_list",)
+                result = publicObject(dataObject, defs, None, pdata)
                 cache.set(ikey, result, 3600)
+                return result
             except:
-                result = '{"ignore":[],"risk":[],"security":[]}'
-        return result, json_header
+                pass
+        return result
 
-    import panelWarning
-    dataObject = panelWarning.panelWarning()
     defs = ('get_list', 'set_ignore', 'check_find')
     if get.action in ['set_ignore', 'check_find']:
         cache.delete(ikey)
@@ -1085,7 +1093,7 @@ def download():
         return public.ReturnJson(False, "INIT_ARGS_ERR"), json_header
     if filename in [
             'alioss', 'qiniu', 'upyun', 'txcos', 'ftp', 'msonedrive',
-            'gcloud_storage', 'gdrive', 'aws_s3'
+            'gcloud_storage', 'gdrive', 'aws_s3', 'obs', 'bos'
     ]:
         return panel_cloud(False)
     if not os.path.exists(filename):
@@ -1121,6 +1129,7 @@ def panel_cloud(is_csrf=True):
     plugin_name = ""
     if _filename.find('|') != -1:
         plugin_name = get.filename.split('|')[1]
+        if "name" not in get: get.name = get.filename.split('|')[-1]
     else:
         plugin_name = get.filename
 
@@ -2803,3 +2812,35 @@ def push(pdata=None):
             'get_push_logs')
     result = publicObject(toObject, defs, None, pdata)
     return result
+
+@sockets.route('/pyenv_webssh')
+def python_env_ssh(ws):
+    # 宝塔终端连接
+    comReturn = comm.local()
+    if comReturn:
+        ws.send(str(comReturn))
+        return
+    if not ws:
+        return 'False'
+    get = ws.receive()
+    if not get:
+        return
+    get = json.loads(get)
+    if not check_csrf_websocket(ws, get):
+        return
+
+    import ssh_terminal
+    from projectModel.pythonModel import  PyenvSshTerminal
+
+    sp = ssh_terminal.ssh_host_admin()
+    ssh_info = sp.get_ssh_info('127.0.0.1')
+    if not ssh_info: ssh_info = sp.get_ssh_info('localhost')
+    if not ssh_info: ssh_info = {"host": "127.0.0.1"}
+    ssh_info['port'] = public.get_ssh_port()
+
+    p = PyenvSshTerminal()
+    p.run(ws, ssh_info)
+    del p
+    if ws.connected:
+        ws.close()
+    return 'False'

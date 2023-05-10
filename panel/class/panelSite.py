@@ -1726,18 +1726,18 @@ listener SSL443 {
 
         if not os.path.exists(file):  file = self.setupPath + '/panel/vhost/nginx/go_' + siteName + '.conf'
         if not os.path.exists(file):  file = self.setupPath + '/panel/vhost/nginx/other_' + siteName + '.conf'
-
+        if not os.path.exists(file):  file = self.setupPath + '/panel/vhost/nginx/python_' + siteName + '.conf'
 
         ng_file = file
-        conf = public.readFile(file)
+        ng_conf = public.readFile(file)
 
         # 是否为子目录设置SSL
         # if hasattr(get,'binding'):
         #    allconf = conf;
         #    conf = re.search("#BINDING-"+get.binding+"-START(.|\n)*#BINDING-"+get.binding+"-END",conf).group()
 
-        if conf:
-            if conf.find('ssl_certificate') == -1:
+        if ng_conf:
+            if ng_conf.find('ssl_certificate') == -1:
                 sslStr = """#error_page 404/404.html;
     ssl_certificate    /www/server/panel/vhost/cert/%s/fullchain.pem;
     ssl_certificate_key    /www/server/panel/vhost/cert/%s/privkey.pem;
@@ -1749,38 +1749,35 @@ listener SSL443 {
     add_header Strict-Transport-Security "max-age=31536000";
     error_page 497  https://$host$request_uri;
 """ % (get.first_domain, get.first_domain,self.get_tls13())
-                if (conf.find('ssl_certificate') != -1):
+                if (ng_conf.find('ssl_certificate') != -1):
                     if 'isBatch' not in get:
                         public.serviceReload()
                         return public.returnMsg(True, 'SITE_SSL_OPEN_SUCCESS')
                     else:
                         return True
 
-                conf = conf.replace('#error_page 404/404.html;', sslStr)
-                conf = re.sub(r"\s+\#SSL\-END","\n\t\t#SSL-END",conf)
+                ng_conf = ng_conf.replace('#error_page 404/404.html;', sslStr)
+                conf = re.sub(r"\s+\#SSL\-END","\n\t\t#SSL-END",ng_conf)
 
                 # 添加端口
                 rep = "listen.*[\s:]+(\d+).*;"
-                tmp = re.findall(rep, conf)
+                tmp = re.findall(rep, ng_conf)
                 if not public.inArray(tmp, '443'):
-                    listen_re =  re.search(rep,conf)
+                    listen_re =  re.search(rep,ng_conf)
                     if not listen_re:
-                        conf = re.sub(r"server\s*{\s*","server\n{\n\t\tlisten 80;\n\t\t",conf)
-                        listen_re =  re.search(rep,conf)
+                        ng_conf = re.sub(r"server\s*{\s*","server\n{\n\t\tlisten 80;\n\t\t",ng_conf)
+                        listen_re =  re.search(rep,ng_conf)
                     listen = listen_re.group()
                     versionStr = public.readFile('/www/server/nginx/version.pl')
                     http2 = ''
                     if versionStr:
                         if versionStr.find('1.8.1') == -1: http2 = ' http2'
                     default_site = ''
-                    if conf.find('default_server') != -1: default_site = ' default_server'
+                    if ng_conf.find('default_server') != -1: default_site = ' default_server'
 
                     listen_ipv6 = ';'
                     if self.is_ipv6: listen_ipv6 = ";\n\t\tlisten [::]:443 ssl"+http2+default_site+";"
-                    conf = conf.replace(listen,listen + "\n\t\tlisten 443 ssl"+http2 + default_site + listen_ipv6)
-                shutil.copyfile(file, self.nginx_conf_bak)
-
-                public.writeFile(file, conf)
+                    ng_conf = ng_conf.replace(listen,listen + "\n\t\tlisten 443 ssl"+http2 + default_site + listen_ipv6)
 
         # Apache配置
         file = self.setupPath + '/panel/vhost/apache/' + siteName + '.conf'
@@ -1807,11 +1804,11 @@ listener SSL443 {
             is_node_apache = False
             file = self.setupPath + '/panel/vhost/apache/other_' + siteName + '.conf'
 
-        conf = public.readFile(file)
-        ap_static_security = self._get_ap_static_security(conf)
-        if conf:
-            ap_proxy = self.get_apache_proxy(conf)
-            if conf.find('SSLCertificateFile') == -1 and conf.find('VirtualHost') != -1:
+        ap_conf = public.readFile(file)
+        ap_static_security = self._get_ap_static_security(ap_conf)
+        if ap_conf:
+            ap_proxy = self.get_apache_proxy(ap_conf)
+            if ap_conf.find('SSLCertificateFile') == -1 and ap_conf.find('VirtualHost') != -1:
                 find = public.M('sites').where("name=?", (siteName,)).field('id,path').find()
                 tmp = public.M('domain').where('pid=?', (find['id'],)).field('name').select()
                 domains = ''
@@ -1832,7 +1829,7 @@ listener SSL443 {
                     vName = ""
                     # rep = r"php-cgi-([0-9]{2,3})\.sock"
                     # version = re.search(rep, conf).groups()[0]
-                    version = public.get_php_version_conf(conf)
+                    version = public.get_php_version_conf(ap_conf)
                     if len(version) < 2:
                         if 'isBatch' not in get:
                             return public.returnMsg(False, 'PHP_GET_ERR')
@@ -1882,10 +1879,10 @@ listener SSL443 {
 </VirtualHost>''' % (vName, path, siteName, domains, public.GetConfigValue('logs_path') + '/' + siteName,
                      public.GetConfigValue('logs_path') + '/' + siteName ,ap_proxy ,get.first_domain, get.first_domain,
                      ap_static_security,phpConfig, path, apaOpt, index)
-                conf = conf + "\n" + sslStr
+                ap_conf = ap_conf + "\n" + sslStr
                 self.apacheAddPort('443')
                 shutil.copyfile(file, self.apache_conf_bak)
-                public.writeFile(file, conf)
+                public.writeFile(file, ap_conf)
                 if is_node_apache: # 兼容Nodejs项目
                     from projectModel.nodejsModel import main
                     m = main()
@@ -1907,6 +1904,9 @@ listener SSL443 {
                     project_find = m.get_project_find(siteName)
                     m.set_apache_config(project_find)
 
+        if ng_conf:  # 因为未查明原因，Apache配置过程中会删除掉nginx配置的备份文件（估计是重复调用了本类中的init操作导致的）
+            shutil.copyfile(ng_file, self.nginx_conf_bak)
+            public.writeFile(ng_file, ng_conf)
         # OLS
         self.set_ols_ssl(get,siteName)
         isError = public.checkWebConfig()
@@ -3957,7 +3957,7 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
                     if get.proxysite[-1] == '/' or get.proxysite.count('/') > 2 or '?' in get.proxysite:
                         php_pass_proxy = re.search('(https?\:\/\/[\w\.]+)', get.proxysite).group(0)
                     # ng_conf = re.sub("location\s+%s" % conf[i]["proxydir"],"location "+get.proxydir,ng_conf)
-                    ng_conf = re.sub("location\s+[\^\~]*\s?%s" % conf[i]["proxydir"], "location " + get.proxydir,ng_conf)
+                    ng_conf = re.sub("location\s+[\^\~]*\s?%s" % conf[i]["proxydir"], "location ^~ " + get.proxydir,ng_conf)
                     ng_conf = re.sub("proxy_pass\s+%s" % conf[i]["proxysite"],"proxy_pass "+get.proxysite,ng_conf)
                     ng_conf = re.sub("location\s+\~\*\s+\\\.\(php.*\n\{\s*proxy_pass\s+%s.*" % (php_pass_proxy),
                                      "location ~* \.(php|jsp|cgi|asp|aspx)$\n{\n\tproxy_pass %s;" % php_pass_proxy,ng_conf)
@@ -4152,7 +4152,7 @@ RewriteRule ^%s(.*)$ http://%s/$1 [P,E=Proxy-Host:%s]
         ng_proxy = '''
 #PROXY-START%s
 
-location %s
+location ^~ %s
 {
     proxy_pass %s;
     proxy_set_header Host %s;
@@ -4335,7 +4335,7 @@ location %s
                 rewriteList['sitePath'] = public.M('sites').where("name=?",(get.siteName,)).getField('path') + runPath['runPath']
             if Java_data:
                 if Java_data['project_config']['java_type'] == 'springboot':
-                    if 'static_path' in Java_data['project_config']:
+                    if "static_path" in Java_data['project_config'] and Java_data['project_config']['static_path']:
                         rewriteList['sitePath']=Java_data['project_config']['static_path']
                     else:
                         rewriteList['sitePath']=Java_data['project_config']['jar_path']

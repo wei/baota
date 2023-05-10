@@ -17,6 +17,7 @@ import pwd
 import cgi
 import shutil
 import re
+import typing
 from BTPanel import session, request
 
 
@@ -525,6 +526,9 @@ session.save_handler = files'''.format(path, sess_path, sess_path)
         data['dir_history'] = public.get_dir_history('files','GetDirList')
         data['search_history'] = public.get_search_history('files','get_list')
         public.set_dir_history('files','GetDirList',data['PATH'])
+
+        # 2023-3-6,增加融入企业级防篡改
+        data = self._check_tamper(data)
 
         return data
 
@@ -2645,6 +2649,7 @@ cd %s
 
         log_file = '/tmp/composer.log'
         user = ''
+        del_cache = self._composer_user_home()
         if 'user' in get:
             user = 'sudo -u {} '.format(get.user)
             if not os.path.exists('/usr/bin/sudo'):
@@ -2652,7 +2657,8 @@ cd %s
                     public.ExecShell("apt install sudo -y > {}".format(log_file))
                 else:
                     public.ExecShell("yum install sudo -y > {}".format(log_file))
-            public.ExecShell("mkdir -p /home/www && chown -R www:www /home/www")
+            # public.ExecShell("mkdir -p /home/www && chown -R www:www /home/www")
+            del_cache = self._composer_user_home()
 
         #设置指定源
         if 'repo' in get:
@@ -2671,8 +2677,9 @@ cd %s
                 composer_exec_str = '{} {} {} {} -vvv'.format(php_bin,composer_bin,get.composer_args,get.composer_cmd)
 
         if os.path.exists(log_file): os.remove(log_file)
-        public.ExecShell("cd {} && export COMPOSER_HOME=/tmp && {} nohup {} &> {} && echo 'BT-Exec-Completed' >> {}  && rm -rf /home/www &".format(get.path,user,composer_exec_str,log_file,log_file))
+        public.ExecShell("cd {} && export COMPOSER_HOME=/tmp && {} nohup {} &> {} && echo 'BT-Exec-Completed' >> {} &".format(get.path,user,composer_exec_str,log_file,log_file))
         public.WriteLog('Composer',"在目录：{}，执行composer {}".format(get.path,get.composer_args))
+        del_cache()
         return public.returnMsg(True,'命令已发送!')
 
     # 取composer版本
@@ -3020,6 +3027,39 @@ cd %s
         return public.returnMsg(True,'添加成功!')
 
 
+#———————————————————
+#  融合企业级防篡改  |
+#———————————————————
 
+    def _check_tamper(self, data):
+        import PluginLoader
+        args = public.dict_obj()
+        args.client_ip = public.GetClientIp()
+        args.fun = "check_dir_safe"
+        args.s = "check_dir_safe"
+        args.file_data = {
+            "base_path":data['PATH'],
+            "dirs":[i.split(";", 1)[0] for i in data["DIR"]],
+            "files":[i.split(";", 1)[0] for i in data["FILES"]]
+        }
+        data["tamper_data"] = PluginLoader.plugin_run("tamper_core", "check_dir_safe", args)
+        return data
 
+    @staticmethod
+    def _composer_user_home() -> typing.Callable:
+        import pwd
+        res = pwd.getpwnam('www')
+        uid = res.pw_uid
+        gid = res.pw_gid
+        if not os.path.exists("/home/www"):
+            del_all = True
+            os.makedirs("/home/www")
+        else:
+            del_all = False
+
+        os.chown("/home/www", uid, gid)
+
+        if del_all:
+            return lambda: shutil.rmtree("/home/www/.cache", ignore_errors=True)
+        return lambda: ()
 

@@ -1,0 +1,33 @@
+#!/usr/bin/python
+#coding: utf-8
+
+import os, re, public
+
+_title = 'MongoDB是否开启安全认证'
+_version = 1.0  # 版本
+_ps = "检查MongoDB是否开启安全认证"  # 描述
+_level = 3  # 风险级别： 1.提示(低)  2.警告(中)  3.危险(高)
+_date = '2023-03-09'  # 最后更新时间
+_ignore = os.path.exists("data/warning/ignore/sw_mongodb_auth.pl")
+_tips = [
+    "在面板数据库MongoDB中打开安全认证开关",
+]
+_help = ''
+
+
+def check_run():
+    '''
+        @name 开始检测
+        @return tuple (status<bool>,msg<string>)
+    '''
+    if not public.process_exists("mongod"):
+        return True, '无风险，MongoDB服务还未开启！'
+    cfile = '{}/mongodb/config.conf'.format(public.get_setup_path())
+    conf = public.readFile(cfile)
+    rep = r".*authorization(\s*):(\s*)enabled"
+    tmp = re.search(rep, conf)
+    if tmp:
+        return True, '无风险'
+    else:
+        return False, '未开启MongoDB安全认证'
+

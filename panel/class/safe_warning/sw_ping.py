@@ -36,10 +36,16 @@ def check_run():
         @return tuple (status<bool>,msg<string>)
     '''
     try:
-        cfile = '/proc/sys/net/ipv4/icmp_echo_ignore_all'
-        conf = public.readFile(cfile)
-        if conf:
-            if int(conf)!=1:
+        isPing = True
+        try:
+            file = '/etc/sysctl.conf'
+            conf = public.readFile(file)
+            rep = r"#*net\.ipv4\.icmp_echo_ignore_all\s*=\s*([0-9]+)"
+            tmp = re.search(rep, conf).groups(0)[0]
+            if tmp == '1': isPing = False
+        except:
+            isPing = True
+        if isPing:
                 return False,'当前未开启【禁Ping】功能，存在服务器被ICMP攻击或被扫的风险'
         return True,"无风险"
     except:

@@ -29,12 +29,11 @@ $('#cutMode .tabs-item').on('click', function () {
       if (initTab.length > 0) {
 				javaModle.get_project_list();
       } else {
-        dynamic.require(['polyfill.min.js', 'vue.min.js', 'vue-components.js', 'java-model.js'], function () {
+        dynamic.require(['vue.min.js', 'polyfill.min.js', 'vue-components.js', 'java-model.js'], function () {
 					initTab.push(index);
         });
       }
       break;
-
     case 'go':
       if(typeof goModel == "undefined"){
         $.getScript('/static/js/siteModel.js',function(ev){
@@ -45,6 +44,26 @@ $('#cutMode .tabs-item').on('click', function () {
       }
 
       break;
+    case 'python':
+    var flag_python = false;
+    site.node.get_cloud_python(function(rdata){
+      for(var i = 0;i<rdata.data.length;i++){
+        if(rdata.data[i].installed != '0'){
+          flag_python = true
+          break
+        }
+      }
+      if(typeof pythonModel == "undefined"){
+        $.getScript('/static/js/sitePython.js',function(ev){
+          window.pythonModel = new CreateWebsiteModel({type:'python',tips:'Python'})
+          if(!flag_python) $('#bt_python_table .mask_layer').removeClass('hide').find('.prompt_description.python-model').html('未安装Python版本，<a href="javascript:;" class="btlink" onclick="pythonModel.getVersionManagement()">点击安装</a>');
+        })
+      }else{
+        pythonModel.renderProjectList()
+        if(!flag_python) $('#bt_python_table .mask_layer').removeClass('hide').find('.prompt_description.python-model').html('未安装Python版本，<a href="javascript:;" class="btlink" onclick="pythonModel.getVersionManagement()">点击安装</a>');
+      }
+    })
+    break;
     case 'other':
       if(typeof otherModel == "undefined"){
         $.getScript('/static/js/siteModel.js',function(ev){
@@ -110,7 +129,15 @@ var site = {
         }
       }
     },
-
+    /**
+		 * @description 获取python版本安装信息
+		 * @param callback {function} 回调函数
+		 */
+		get_cloud_python:function(callback){
+			$.post('project/python/GetCloudPython', {}, function (rdata){
+				if(callback) callback(rdata)
+			})
+		},
     /**
      * @description 选择启动脚本配置
      * @param path {string} 项目目录
@@ -791,30 +818,30 @@ var site = {
      */
     reander_node_domain_manage: function (el, row) {
       var that = this,
-          list = [{
-            class: 'mb0',
-            items: [
-              { name: 'nodedomain', width: '340px', type: 'textarea', placeholder: '如果需要绑定外网，请输入需要映射的域名，该选项可为空<br>多个域名，请换行填写，每行一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88' },
-              {
-                name: 'btn_node_submit_domain',
-                text: '添加',
-                type: 'button',
-                callback: function (sdata) {
-                  var arrs = sdata.nodedomain.split("\n");
-                  var domins = [];
-                  for (var i = 0; i < arrs.length; i++) domins.push(arrs[i]);
-                  that.add_node_project_domain({ project_name: row.name, domains: domins }, function (res) {
-                    bt.msg({ status: res.status, msg: res.data || res.error_msg });
-                    if (res.status) {
-                      $('[name=nodedomain]').val('');
-                      $('.placeholder').css('display', 'block')
-                      project_domian.$refresh_table_list(true);
-                    }
-                  })
-                }
+        list = [{
+          class: 'mb0',
+          items: [
+            { name: 'nodedomain', width: '340px', type: 'textarea', placeholder: '如果需要绑定外网，请输入需要映射的域名，该选项可为空<br>多个域名，请换行填写，每行一个域名，默认为80端口<br>泛解析添加方法 *.domain.com<br>如另加端口格式为 www.domain.com:88' },
+            {
+              name: 'btn_node_submit_domain',
+              text: '添加',
+              type: 'button',
+              callback: function (sdata) {
+                var arrs = sdata.nodedomain.split("\n");
+                var domins = [];
+                for (var i = 0; i < arrs.length; i++) domins.push(arrs[i]);
+                that.add_node_project_domain({ project_name: row.name, domains: domins }, function (res) {
+                  bt.msg({ status: res.status, msg: res.data || res.error_msg });
+                  if (res.status) {
+                    $('[name=nodedomain]').val('');
+                    $('.placeholder').css('display', 'block')
+                    project_domian.$refresh_table_list(true);
+                  }
+                })
               }
-            ]
-          }]
+            }
+          ]
+        }]
       var _form_data = bt.render_form_line(list[0]), loadT = null, placeholder = null;
       el.html(_form_data.html + '<div id="project_domian_list"></div>');
       bt.render_clicks(_form_data.clicks);
@@ -8848,6 +8875,31 @@ var site = {
       } catch (err) {}
     }
   },
+  // 渲染域名列表（添加情况）
+  render_domain_result_table: function (data) {
+    var resultHTML = '', noSSL = typeof data.not_ssl != 'undefined', _num = 0;
+    $.each(data.domains, function (index, item) {
+      _num++;
+      resultHTML += '<tr><td><span class="text-overflow" title="' + item.name + '">' + item.name + (noSSL ? ($.inArray(item.name, data.not_ssl) != -1 ? '<span class="bt-ico-ask" title="非当前域名的泛域名，无法直接使用当前站点部署的ssl证书的域名">!</span>' : '') : '') + '</span></td><td><span style="float:right; color:' + (item.status ? '#20a53a' : 'red') + '" title="'+ item.msg +'">' + item.msg + '</span></td></tr>'
+    })
+    bt.open({
+      type: 1,
+      title: '添加域名结果',
+      area: ['350px', '350px'],
+      shadeClose: false,
+      skin: 'batch_add_domain_result',
+      closeBtn: 2,
+      content: '<div class="batch_title"><span class><span class="batch_icon"></span><span class="batch_text">添加域名完成！</span></span></div><div class="' + (_num > 4 ? 'fiexd_thead' : '') + ' batch_tabel divtable" style="margin: 15px 30px 15px 30px;overflow: auto;height: 200px;"><table class="table table-hover"><thead><tr><th>域名</th><th style="text-align:right;width:120px;">操作结果</th></tr></thead><tbody>' + resultHTML + '</tbody></table></div>',
+      success: function () {
+        if (_num > 4) {
+          $('.batch_add_domain_result .fiexd_thead').scroll(function () {
+            var scrollTop = this.scrollTop;
+            this.querySelector('thead').style.transform = 'translateY(' + (scrollTop - 1) + 'px)';
+          });
+        }
+      }
+    });
+  },
   create_let: function (ddata, callback) {
     bt.site.create_let(ddata, function (ret) {
       if (ret.status) {
@@ -9427,7 +9479,7 @@ var site = {
             var typeList = ['其他证书', 'Let\'s Encrypt', '宝塔SSL', '商业证书'];
             var state = $('<div class="ssl_state_info ' + (!rdata.csr ? 'hide' : '') + '">' +
                 '<div class="state_info_flex">' +
-                '<div class="state_item"><span>证书分类：</span><span><a href="javascript:;" class="btlink cutSslType" data-type="' + rdata.type + '">' + (rdata.type === -1 ? '其他证书' : typeList[rdata.type]) + '</a></span></div>' +
+                '<div class="state_item"><span>证书分类：</span><span><a href="javascript:;" class="btlink cutSslType" data-type="' + (typeList[rdata.type] === '其他证书'? -1 : rdata.type) + '">' + (rdata.type === -1 ? '其他证书' : typeList[rdata.type]) + '</a></span></div>' +
                 '<div class="state_item"><span>证书品牌：</span><span class="ellipsis_text" title="' + certificate.issuer + '">' + certificate.issuer + '</span></div>' +
                 '</div>' +
                 '<div class="state_info_flex">' +

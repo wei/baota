@@ -1324,9 +1324,9 @@ class panelSSL:
             error = str(ex)
             if error.lower().find('json') >= 0:
                 error = '<br>错误：连接宝塔官网异常，请按照以下方法排除问题后重试：<br>解决方法：<a target="_blank" class="btlink" href="https://www.bt.cn/bbs/thread-87257-1-1.html">https://www.bt.cn/bbs/thread-87257-1-1.html</a><br>'
-                raise public.PanelError(error)
+                return public.returnMsg(False, 6)
             else:
-                raise public.error_conn_cloud(error)
+                return public.returnMsg(False, 6)
             # return public.returnMsg(False,'连接服务器失败!<br>{}'.format(rtmp))
 
     def GetBindCode(self, get):

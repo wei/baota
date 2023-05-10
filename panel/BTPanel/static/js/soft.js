@@ -2225,7 +2225,7 @@ var soft = {
         var loadT = bt.load(lan.public.get_the);
         bt.send('GetMemcachedStatus', 'ajax/GetMemcachedStatus', {}, function (rdata) {
           loadT.close();
-					if(!rdata.status) {
+					if(!rdata.bind) {
 						$('.bt-soft-menu .bt_server').click()
 						return bt.msg(rdata);
 					}

@@ -1181,7 +1181,7 @@ export PATH
         for i in pids:
             try:
                 p = psutil.Process(i)
-                p.kill()
+                p.terminate()
             except:
                 pass
         return public.return_data(True, '进程已全部结束')

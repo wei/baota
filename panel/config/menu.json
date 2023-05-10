@@ -49,7 +49,7 @@
     "sort": 6
   },
   {
-    "title": "Web防火墙",
+    "title": "WAF",
     "href": "/btwaf/index",
     "class": "menu_btwaf",
     "id": "memu_btwaf",

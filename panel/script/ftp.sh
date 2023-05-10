@@ -24,4 +24,3 @@ if [ "${1}" == 'install' ];then
 else
 	Uninstall_Ftp
 fi
-
